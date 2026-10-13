@@ -1,4 +1,7 @@
 import * as assert from 'node:assert';
+import { execFile } from 'node:child_process';
+import * as path from 'node:path';
+import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { LSPErrorCodes, ProgressType, WorkDoneProgressBegin, WorkDoneProgressEnd, WorkDoneProgressReport } from 'vscode-languageclient/node';
 import { client, eventually, hover, noErrors, playbook } from './support';
@@ -96,7 +99,9 @@ export function progressCases(): void {
             await noErrors(document.uri);
             const before = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus', {});
             const pending = await start(large + '// unsaved restart\n');
-            await vscode.commands.executeCommand('xtc.restartServer');
+            const script = path.resolve(__dirname, '../../../../scripts/xtc-lsp');
+            await promisify(execFile)('python3', [script, 'restart', '--project', vscode.workspace.workspaceFolders![0].uri.fsPath,
+                '--ide', 'vscode'], { timeout: 70000 });
             assert.ok((await pending.outcome).error, 'Restart retires the pending reader');
             await eventually(async () => { try { process.kill(before.pid, 0); return false; } catch { return true; } },
                 value => value, 'Old server process exits');

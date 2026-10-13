@@ -307,6 +307,25 @@ Compiler provides semantic analysis; Tree-sitter provides syntax-based features 
 type checking. Switching restarts the server and reopens unsaved buffers. Both adapters ship in
 the plugin, so switching does not require rebuilding or changing LSP4IJ.
 
+To restart from a terminal, use the bundled `bin/xtc-lsp` script (Python 3 required), or run it
+from this repository:
+
+```bash
+python3 lang/scripts/xtc-lsp list
+python3 lang/scripts/xtc-lsp restart --project ~/src/platform --ide intellij
+```
+
+The project must already be open in the updated plugin, with an Ecstasy file opened at least once.
+The CLI asks IntelliJ to restart its server and resynchronize unsaved buffers; it does not save files
+or send process signals. Omit `--ide` when only one editor has that exact project root open. If multiple
+windows match, use `--session` with an ID from `list`. A failed startup is reported to the CLI; the
+editor control endpoint remains available for another attempt. A timeout does not automatically retry.
+
+Discovery records live in `~/.xtc/editor-control`. The endpoint binds only to IPv4 loopback and requires
+a per-session token. Unix records are owner-only; Windows records inherit the user-profile directory's
+permissions. Records are removed on project close; stale records left by an IDE crash are ignored.
+For remote IDE sessions, run the CLI on the machine hosting the IDE backend.
+
 The default setting honors the server build's choice, normally Compiler. Development builds can
 still change that default. See [LSP Server README](../lsp-server/README.md) for details.
 
