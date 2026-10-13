@@ -1330,7 +1330,7 @@ public class NameExpression
                 argTarget = left.generateArgument(ctx, code, true, errs);
             }
 
-            Register regFn = code.createRegister(idMethod.getType());
+            Register regFn = code.createRegister(getType());
             if (m_mapTypeParams == null) {
                 code.add(new MBind(argTarget, idMethod, regFn));
             } else {
@@ -1598,7 +1598,7 @@ public class NameExpression
                 aArgBind[i] = ctx.getParameter(iReg);
             } else {
                 // the type itself is the value
-                aArgBind[i] = type;
+                aArgBind[i] = type.getType();
             }
         }
         code.add(new FBind(argFnOrig, anBindIx, aArgBind, argFnResult));
@@ -2668,6 +2668,12 @@ public class NameExpression
                     // resolve the function signature against all the types we know by now
                     typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
+                    // these hidden parameters are bound by FBind, not supplied by callers
+                    if (m_plan == Plan.BindTarget) {
+                        for (int i = cTypeParams - 1; i >= 0; --i) {
+                            typeFn = pool.bindFunctionParam(typeFn, i);
+                        }
+                    }
                 }
 
                 if (m_plan == Plan.BindTarget && typeDesired.isFunction()) {
