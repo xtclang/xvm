@@ -14,26 +14,7 @@ service DirRepository
      * @param dir  the directory that contains the repository contents
      */
     construct(Directory dir) {
-        this.dir           = dir;
-        this.onReadFailure = reportReadFailure;
-    }
-
-    /**
-     * Construct a repository with an observer for unsuccessful candidate reads.
-     *
-     * The observer replaces the default console report and receives the file and exception for
-     * each failed read attempt. Scanning continues so another candidate can satisfy the lookup.
-     * A report does not identify the requested module or establish whether the file was damaged,
-     * written unsuccessfully, or produced by an incompatible compiler. Cached results do not
-     * generate reports. An unchanged failed candidate remains cached as unavailable; a change to
-     * its size or timestamp permits another read, which may report a new failure.
-     *
-     * @param dir            the directory that contains the repository contents
-     * @param onReadFailure  the observer; it must not call back into this repository
-     */
-    construct(Directory dir, function void(File, Exception) onReadFailure) {
-        this.dir           = dir;
-        this.onReadFailure = onReadFailure;
+        this.dir = dir;
     }
 
     // ----- properties ----------------------------------------------------------------------------
@@ -51,8 +32,6 @@ service DirRepository
     private Map<String, FileTemplate> modulesByName = new HashMap();
     private Map<String, ModuleInfo>   modulesByFile = new HashMap();
     private Time                     lastScan      = Time.EPOCH;
-
-    private function void(File, Exception) onReadFailure;
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -113,7 +92,7 @@ service DirRepository
             if (previous != Null && previous.timestamp == file.modified && previous.size == file.size) {
                 info = previous;
             } else {
-                info = new ModuleInfo(file, onReadFailure);
+                info = new ModuleInfo(file);
             }
             newByFile.put(file.name, info);
             if (FileTemplate template ?= info.template) {
@@ -165,7 +144,7 @@ service DirRepository
         Int           size;
         FileTemplate? template;
 
-        construct(File file, function void(File, Exception) onReadFailure) {
+        construct(File file) {
             this.file      = file;
             this.timestamp = file.modified;
             this.size      = file.size;
@@ -175,7 +154,7 @@ service DirRepository
             try {
                 template = tryLoad(file);
             } catch (Exception e) {
-                onReadFailure(file, e);
+                reportReadFailure(file, e);
             }
             this.template = template;
         }
