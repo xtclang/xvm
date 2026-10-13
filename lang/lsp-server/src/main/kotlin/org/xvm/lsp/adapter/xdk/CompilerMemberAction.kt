@@ -83,14 +83,12 @@ internal fun compilerMemberActions(
         if (structure.format != Format.CLASS || structure.isSynthetic || errors.isAbortDesired) {
             return@flatMap emptyList()
         }
+        val insertion = XdkAst.memberInsertion(node) ?: return@flatMap emptyList()
         val info =
             ExecutionTrace.api("TypeConstant.ensureTypeInfo(member-actions)") {
                 structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
             }
         if (errors.hasSeriousErrors() || errors.isAbortDesired) return@flatMap emptyList()
-        val end = node.ensureBody().endPosition
-        val insertion =
-            SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1)
         val methods =
             info.methods.values.filter {
                 it.identity.isTopLevel && it.isVirtual && !it.isCtorOrValidator
