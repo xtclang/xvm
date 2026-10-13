@@ -38,10 +38,7 @@ import org.xvm.asm.Version;
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InstantRepository;
-import org.xvm.compiler.InitializerBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -52,6 +49,9 @@ import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InitializerBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 

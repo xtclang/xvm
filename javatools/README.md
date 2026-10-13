@@ -70,6 +70,11 @@ type constants or constant pool safe to share across workers. The language adapt
 facts it needs into detached models before releasing the attempt. Keeping this boundary explicit
 is essential for a long-running editor that repeatedly replaces analyses of unsaved text.
 
+The five source-binding classes live in `org.xvm.compiler.ast.bindings`, alongside `ast.partial`.
+Compiler-owned collectors write the facts; a one-operation `ast.BindingAst` bridge associates
+lambda parameter registers with written declarations without widening existing AST members.
+See [binding ownership and package boundaries](LSP-COMPILER.md#keep-binding-facts-and-their-writers-together).
+
 ### Analyze declarations and unfinished source explicitly
 
 `analyzeDeclarations` resolves declaration structure without promising a fully validated or

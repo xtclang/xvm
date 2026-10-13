@@ -64,8 +64,6 @@ import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -78,6 +76,8 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
 import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;

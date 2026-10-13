@@ -49,13 +49,13 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Expression.TypeFit;
 import org.xvm.compiler.ast.NameExpression.Meaning;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
