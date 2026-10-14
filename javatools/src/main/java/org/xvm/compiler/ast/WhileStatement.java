@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -374,10 +375,7 @@ public class WhileStatement
                     mapLoopArg = mapArgAfter;
 
                     // discard the clones created in this pass
-                    for (AstNode cond : conds) {
-                        cond.discard(true);
-                    }
-                    block.discard(true);
+                    discardNodes(conds, block);
                     continue; // repeat
                 }
 
@@ -388,10 +386,7 @@ public class WhileStatement
             }
 
             // discard the original nodes (we cloned them already)
-            for (AstNode cond : condsOrig) {
-                cond.discard(true);
-            }
-            blockOrig.discard(true);
+            discardNodes(condsOrig, blockOrig);
 
             // lazily created loop vars are only created inside the validation of this statement
             m_labelVars = null;
@@ -417,6 +412,20 @@ public class WhileStatement
             errs.merge();
             return fValid ? this : null;
         }
+    }
+
+    /**
+     * Discard one generation of loop nodes: either the clones from a validation pass that is being
+     * repeated, or the originals once a pass has been kept.
+     *
+     * @param listConds  the condition nodes to discard
+     * @param stmtBody   the body block to discard
+     */
+    private static void discardNodes(List<AstNode> listConds, StatementBlock stmtBody) {
+        for (AstNode cond : listConds) {
+            cond.discard(true);
+        }
+        stmtBody.discard(true);
     }
 
     @Override
@@ -486,9 +495,7 @@ public class WhileStatement
             //   LOOP_END
             //   EXIT
             //   Break:
-            code.add(new Enter());
-            emitLabelVarCreation(code, regFirst, regCount);
-            code.add(new Loop());
+            emitLoopStart(code, regFirst, regCount);
 
             Op opLast = code.getLastOp();
             block.suppressScope();
@@ -499,9 +506,7 @@ public class WhileStatement
             }
 
             code.add(getContinueLabel());
-            emitLabelVarUpdate(code, regFirst, regCount);
-            code.add(new LoopEnd());
-            code.add(new Exit());
+            emitLoopEnd(code, regFirst, regCount);
 
             return false; // while(true) never completes naturally
         }
@@ -522,9 +527,7 @@ public class WhileStatement
             //   LOOP_END
             //   EXIT
             //   Break:
-            code.add(new Enter());
-            emitLabelVarCreation(code, regFirst, regCount);
-            code.add(new Loop());
+            emitLoopStart(code, regFirst, regCount);
 
             // we explicitly do NOT check the block completion, since our completion is not dependent on
             // the block's ability to complete (since the loop may execute zero times)
@@ -532,9 +535,7 @@ public class WhileStatement
 
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
-            emitLabelVarUpdate(code, regFirst, regCount);
-            code.add(new LoopEnd());
-            code.add(new Exit());
+            emitLoopEnd(code, regFirst, regCount);
 
             return fCompletes;
         }
@@ -554,9 +555,7 @@ public class WhileStatement
         //   LOOP_END
         //   EXIT
         //   Break:
-        code.add(new Enter());
-        emitLabelVarCreation(code, regFirst, regCount);
-        code.add(new Loop());
+        emitLoopStart(code, regFirst, regCount);
         fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -564,11 +563,36 @@ public class WhileStatement
         block.completes(ctx, fCompletes, code, errs);
 
         code.add(getContinueLabel());
+        emitLoopEnd(code, regFirst, regCount);
+
+        return fCompletes;
+    }
+
+    /**
+     * Emit the scope entry, label variable declarations and loop start shared by every looping
+     * form.
+     *
+     * @param code      the code to emit
+     * @param regFirst  the (optional) register for the "first" variable
+     * @param regCount  the (optional) register for the "count" variable
+     */
+    private void emitLoopStart(Code code, Register regFirst, Register regCount) {
+        code.add(new Enter());
+        emitLabelVarCreation(code, regFirst, regCount);
+        code.add(new Loop());
+    }
+
+    /**
+     * Emit the label variable update, loop end and scope exit shared by every looping form.
+     *
+     * @param code      the code to emit
+     * @param regFirst  the (optional) register for the "first" variable
+     * @param regCount  the (optional) register for the "count" variable
+     */
+    private void emitLoopEnd(Code code, Register regFirst, Register regCount) {
         emitLabelVarUpdate(code, regFirst, regCount);
         code.add(new LoopEnd());
         code.add(new Exit());
-
-        return fCompletes;
     }
 
     /**
@@ -628,37 +652,15 @@ public class WhileStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        String sConds = conds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+        String sBody  = indentLines(block.toString(), "    ");
 
-        if (keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR) {
-            sb.append(keyword.getId().TEXT)
-              .append(" (")
-              .append(conds.getFirst());
-
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
-
-            sb.append(")\n")
-              .append(indentLines(block.toString(), "    "));
-        } else {
-            assert keyword.getId() == Token.Id.DO;
-
-            sb.append("do")
-              .append('\n')
-              .append(indentLines(block.toString(), "    "))
-              .append("\nwhile (");
-
-            sb.append(conds.getFirst());
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
-            sb.append(");");
+        if (keyword.getId() == Token.Id.DO) {
+            return "do\n" + sBody + "\nwhile (" + sConds + ");";
         }
 
-        return sb.toString();
+        assert keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR;
+        return keyword.getId().TEXT + " (" + sConds + ")\n" + sBody;
     }
 
     @Override
