@@ -203,54 +203,26 @@ public class CmpChainExpression
             }
         }
 
-        // for this to be a constant expression, either all sub-expressions are constant and the
-        // result is calculated from that, or left-to-right, enough expressions are constant that
-        // the result can be proven to always be false; for "==", see if there is a constant
-        // expression that everything else can be compared to
+        // check every operand, even when a constant prefix already determines the result
         Constant constVal = null;
         if (fValid) {
-            Constant constPrev = null;
-            boolean  fEquality = operators[0].getId() == Id.COMP_EQ;
-            Constant FALSE     = pool.valFalse();
-            boolean  fAllConst = true;
-
-            for (int i = 0; i < cExprs; ++i) {
-                Expression   expr   = listExprs.get(i);
+            boolean fEquality = operators[0].getId() == Id.COMP_EQ;
+            for (Expression expr : listExprs) {
                 boolean      fConst = expr.isConstant();
                 TypeConstant type   = expr.getType();
-
                 if (fEquality
                         ? !typeCommon.supportsEquals (type, fConst)
                         : !typeCommon.supportsCompare(type, fConst)) {
-                    log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
-                                typeCommon.getValueString(), type.getValueString());
+                    log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE, typeCommon.getValueString(), type.getValueString());
                     return null;
                 }
-                if (fConst) {
-                    if (fAllConst) {
-                        if (i > 0) {
-                            try {
-                                constVal = constPrev.apply(operators[i - 1].getId(), expr.toConstant());
-                            } catch (RuntimeException e) {
-                                constVal  = null;
-                                fAllConst = false;
-                            }
-
-                            if (constVal != null && constVal.equals(FALSE)) {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fEquality && m_constEq == null) {
-                        // store off the constant to compare to
-                        m_constEq = expr.toConstant();
-                    }
-                } else {
-                    fAllConst = false;
+                if (fEquality && fConst && m_constEq == null) {
+                    // for "==", store a constant that every other operand can be compared to
+                    m_constEq = expr.toConstant();
                 }
             }
 
+            constVal = foldConstants();
             if (m_constEq != null && m_constEq.equals(pool.valNull())) {
                 fValid = checkNullComparison(ctx, listExprs, errs);
             }
@@ -517,6 +489,35 @@ public class CmpChainExpression
 //        exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);
 
         return true;
+    }
+
+    /**
+     * Fold a chain only when all sub-expressions are constant. Compare adjacent constants from
+     * left to right, stopping once a comparison proves the result false. A runtime operand
+     * prevents folding even after a false constant prefix, so its evaluation is retained.
+     *
+     * @return the folded Boolean constant, or null if the chain must be evaluated at runtime
+     */
+    private Constant foldConstants() {
+        if (!expressions.stream().allMatch(Expression::isConstant)) {
+            return null;
+        }
+        Constant previous = expressions.getFirst().toConstant();
+        Constant result   = null;
+        try {
+            for (int i = 0; i < operators.length; ++i) {
+                Constant next = expressions.get(i + 1).toConstant();
+                result = previous.apply(operators[i].getId(), next);
+                if (result == null || result.equals(pool().valFalse())) {
+                    return result;
+                }
+                previous = next;
+            }
+            return result;
+        } catch (RuntimeException e) {
+            // unsupported constant operations must be evaluated at runtime
+            return null;
+        }
     }
 
     // ----- debugging assistance ------------------------------------------------------------------
