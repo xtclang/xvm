@@ -12,6 +12,7 @@ module TestLambda {
         testVarCapture();
         testComplexCapture();
         testGenericMethodReference();
+        testGenericFunctionReference();
     }
 
     void testVoid() {
@@ -87,6 +88,18 @@ module TestLambda {
 
     void testGenericMethodReference() {
         console.print("\n** testGenericMethodReference()");
+
+        <T> String describe(T value) = $"{T} {value}";
+
+        // the reference binds describe's type parameter to Int
+        function String(Int) f = describe;
+        String result = f(42);
+        console.print("result=" + result);
+        assert result == "Int 42";
+    }
+
+    void testGenericFunctionReference() {
+        console.print("\n** testGenericFunctionReference()");
 
         static <T> String describe(T value) = $"{T} {value}";
 
