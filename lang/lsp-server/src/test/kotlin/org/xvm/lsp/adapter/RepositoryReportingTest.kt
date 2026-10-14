@@ -10,10 +10,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.api.InterpreterConnector
 import org.xvm.asm.ConstantPool
-import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
-import org.xvm.asm.FileRepository
 import org.xvm.asm.FileStructure
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
@@ -40,12 +38,7 @@ class RepositoryReportingTest {
         val file = directory.resolve("Old.xtc").toFile()
         unsupported(file, "Old")
         val repositoryErrors = ErrorList()
-        val repository: ModuleRepository =
-            if (singleFile) {
-                FileRepository(file, true, repositoryErrors)
-            } else {
-                DirRepository(directory.toFile(), true, repositoryErrors)
-            }
+        val repository = ModuleRepository.of(if (singleFile) file else directory.toFile(), true, repositoryErrors)
         val support = EmbeddingSupport.instance()
         val validErrors = ErrorList(100)
         assertThat(support.compile("module Good {}", repository, validErrors)).isNotNull()
