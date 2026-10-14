@@ -652,7 +652,7 @@ public class WhileStatement
 
     @Override
     public String toString() {
-        String sConds = conds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+        String sConds = conds.stream().map(Object::toString).collect(Collectors.joining(", "));
         String sBody  = indentLines(block.toString(), "    ");
 
         if (keyword.getId() == Token.Id.DO) {
