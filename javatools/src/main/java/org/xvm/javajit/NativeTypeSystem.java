@@ -339,6 +339,17 @@ public class NativeTypeSystem
         TypeConstant appenderᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeAppender(), typeChar);
         nativeByType.put(appenderᐸCharᐳ, Builder.N_AppenderChar);
 
+        // TODO we need to think through e.g. "enum vs Enum" type, "class vs Class",
+        //      "function vs Function" etc. and make sure that we're not accidentally doing
+        //      something stupid here, because "enum" type is not the same as "Enum" interface
+        nativeByType.put(pool.typeClass(),    Builder.N_Class);
+        nativeByType.put(pool.typeFunction(), Builder.N_nFunction);
+
+        TypeConstant enumeration = pool.typeEnumeration();
+        nativeByType.put(enumeration, Builder.N_Enumeration);
+        TypeConstant enumerationᐸEnumᐳ = pool.ensureParameterizedTypeConstant(enumeration, pool.typeEnum());
+        nativeByType.put(enumerationᐸEnumᐳ, Builder.N_Enumeration);
+
         TypeConstant[] primitiveTypes = new TypeConstant[] {
                 pool.typeBit(), pool.typeBoolean(), typeChar, pool.typeDec32(), pool.typeDec64(),
                 pool.typeDec128(), pool.typeFloat8e4(), pool.typeFloat8e5(), pool.typeBFloat16(),

@@ -703,7 +703,7 @@ public abstract class OpCallable extends Op {
                 sJitName   = infoMethod.ensureJitMethodName(ts);
                 jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
                 fSpecial   = false;
-                fInterface = typeTarget.isJitInterface();
+                fInterface = typeTarget.isJitInterface(bctx.typeSystem);
                 fCond      = infoMethod.isConditionalReturn(infoTarget);
             } else {
                 MethodConstant   idSuper  = bodySuper.getIdentity();
@@ -725,7 +725,7 @@ public abstract class OpCallable extends Op {
                     cdTarget   = bctx.builder.getCCDesc(typeTarget);
                     sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
                             ensureJitMethodName(ts);
-                    fInterface = typeTarget.isJitInterface();
+                    fInterface = typeTarget.isJitInterface(bctx.typeSystem);
                 }
                 jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
                 fSpecial = true;

@@ -453,7 +453,7 @@ public abstract class OpTest
                 return;
             } else {
                 regTarget.load(code);
-                if (typeTarget.isJitInterface()) {
+                if (typeTarget.isJitInterface(bctx.typeSystem)) {
                     code.checkcast(CD_nObject);
                 }
                 bctx.loadCtx(code);

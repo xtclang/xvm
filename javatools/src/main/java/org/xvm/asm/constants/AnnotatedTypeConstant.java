@@ -19,6 +19,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -633,6 +634,17 @@ public class AnnotatedTypeConstant
                info1.getIdentity().equals(info2.getIdentity())
                         ? info1
                         : null; // ambiguous
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        JitInfo baseInfo = getUnderlyingType().ensureJitInfo(loader.typeSystem);
+// TODO
+//        JitInfo thisInfo = null;
+//        return thisInfo;
+        throw new UnsupportedOperationException("annotated type: " + this);
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

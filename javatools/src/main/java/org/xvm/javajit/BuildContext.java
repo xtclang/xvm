@@ -128,7 +128,7 @@ public class BuildContext {
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getJitCCType();
+        this.jitType       = thisType.getJitCCType(typeSystem);
         this.callChain     = methodInfo.ensureOptimizedMethodChain(typeInfo);
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
@@ -137,7 +137,7 @@ public class BuildContext {
         this.isConstructor = methodInfo.isCtorOrValidator();
         this.isStatic      = jmd.isStandardStatic && !isConstructor;
         this.isOptimized   = jmd.optimizedMD != null;
-        this.isSpecialized = jitType.isJitL2Specialized();
+        this.isSpecialized = jitType.isJitL2Specialized(typeSystem);
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -155,7 +155,7 @@ public class BuildContext {
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getJitCCType();
+        this.jitType       = thisType.getJitCCType(typeSystem);
         this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -168,7 +168,7 @@ public class BuildContext {
         this.isStatic      = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
-        this.isSpecialized = jitType.isJitL2Specialized();
+        this.isSpecialized = jitType.isJitL2Specialized(typeSystem);
         this.typeMatrix    = new TypeMatrix(this);
     }
 
@@ -1172,7 +1172,7 @@ public class BuildContext {
             } else if (isSpecialized &&
                     constant instanceof MethodConstant methodId && methodId.isLambda()) {
                 MethodStructure   lambda = (MethodStructure) methodId.getComponent();
-                SignatureConstant sig    = lambda.resolveSignature(pool(), thisType);
+                SignatureConstant sig    = lambda.resolveJitSignature(typeSystem, thisType);
                 type = lambda.isFunction()
                         ? sig.asFunctionType()
                         : sig.asMethodType(pool(), thisType);
@@ -1472,7 +1472,7 @@ public class BuildContext {
 
         if (dataType.isGenericType()) {
             RegisterInfo regThis = loadThis(code);
-            if (regThis.type().isJitInterface()) {
+            if (regThis.type().isJitInterface(typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             loadCtx(code);
@@ -1522,7 +1522,7 @@ public class BuildContext {
      */
     private RegisterInfo loadFormalType(CodeBuilder code, RegisterInfo targetReg,
                                         FormalConstant formalConst) {
-        if (targetReg.type().isJitInterface()) {
+        if (targetReg.type().isJitInterface(typeSystem)) {
             code.checkcast(CD_nObject);
         }
         loadCtx(code);
@@ -1854,7 +1854,7 @@ public class BuildContext {
         }
 
         if (!typeFrom.isA(typeTo)) {
-            if (!typeFrom.isJitAssignableTo(typeTo) && regFrom.flavor() != NullablePrimitive) {
+            if (!typeFrom.isJitAssignableTo(typeSystem, typeTo) && regFrom.flavor() != NullablePrimitive) {
                 assert allowUpcast;
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
@@ -2137,7 +2137,7 @@ public class BuildContext {
             }
             if (srcFlavor == dstFlavor) {
                 if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
-                        !srcReg.type().isJitAssignableTo(pd.type)) {
+                        !srcReg.type().isJitAssignableTo(typeSystem, pd.type)) {
                     generateCheckCast(code, pd.type);
                 }
                 continue;
@@ -2180,7 +2180,7 @@ public class BuildContext {
 
             case "Specific->Widened",
                  "Specific->WidenedWithDefault":
-                if (srcReg.type().isJitInterface()) {
+                if (srcReg.type().isJitInterface(typeSystem)) {
                     code.checkcast(CD_nObject);
                 }
                 continue;
@@ -2216,7 +2216,7 @@ public class BuildContext {
                  "XvmPrimitive->SpecificWithDefault",
                  "XvmPrimitive->Widened",
                  "XvmPrimitive->WidenedWithDefault":
-                assert srcReg.type().isJitAssignableTo(pd.type);
+                assert srcReg.type().isJitAssignableTo(typeSystem, pd.type);
                 Builder.box(code, srcReg.type());
                 continue;
 
@@ -2679,7 +2679,7 @@ public class BuildContext {
     private void loadPropertyAccessor(CodeBuilder code, RegisterInfo targetReg,
                                       PropertyInfo propInfo, String methodName, JitMethodDesc jmd) {
         TypeConstant ownerType   = propInfo.getOwnerType(builder, targetReg.type());
-        boolean      isInterface = !propInfo.isNative() && ownerType.isJitInterface();
+        boolean      isInterface = !propInfo.isNative() && ownerType.isJitInterface(typeSystem);
 
         assert !jmd.isStandardStatic;
         DirectMethodHandleDesc.Kind kind = isInterface
@@ -2881,7 +2881,7 @@ public class BuildContext {
 
             case "Widened->Specific" -> {
                 TypeConstant dstType = propInfo.getType();
-                if (!srcType.isJitAssignableTo(dstType)) {
+                if (!srcType.isJitAssignableTo(typeSystem, dstType)) {
                     code.checkcast(builder.getCCDesc(dstType));
                 }
             }
@@ -3182,7 +3182,7 @@ public class BuildContext {
             } else {
                 loadFromContext(code, ret.cd, ret.altIndex);
             }
-            if (ret.type.isJitInterface()) {
+            if (ret.type.isJitInterface(typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();
@@ -3672,7 +3672,7 @@ public class BuildContext {
             .dup();
         loadCtx(code);
         referentLoader.run();
-        if (referentType.isJitInterface()) {
+        if (referentType.isJitInterface(typeSystem)) {
             code.checkcast(CD_nObject);
         }
         loadTypeConstant(code, referentType);

@@ -186,7 +186,7 @@ public abstract class Builder {
                 .invokevirtual(CD_TypeConstant, "getConstantPool", md(CD_ConstantPool));
 
             RegisterInfo regThis = bctx.loadThis(code);
-            if (regThis.type().isJitInterface()) {
+            if (regThis.type().isJitInterface(typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             bctx.loadCtx(code);
@@ -475,7 +475,7 @@ public abstract class Builder {
                 MethodStructure lambda = (MethodStructure) methodId.getComponent();
                 jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
                 body    = new MethodBody(lambda);
-                sigType = body.asFunctionType(pool(), containerType);
+                sigType = body.asJitFunctionType(containerType, typeSystem);
 
                 // generate the method itself
                 bctx.buildMethod(jitName, body);
@@ -507,7 +507,7 @@ public abstract class Builder {
             // 2) create the MethodHandle(s)
             JitMethodDesc jmd         = body.getJitDesc(this, containerType);
             boolean       isFunction  = body.getMethodStructure().isFunction();
-            boolean       isInterface = containerType.isJitInterface();
+            boolean       isInterface = containerType.isJitInterface(typeSystem);
 
             DirectMethodHandleDesc.Kind kind = isFunction
                     ? isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_STATIC
@@ -748,7 +748,7 @@ public abstract class Builder {
             RegisterInfo valueReg = loadConstant(bctx, code, values[i]);
             if (valueReg.flavor().isOptimized) {
                 box(code, valueReg);
-            } else if (valueReg.type().isJitInterface()) {
+            } else if (valueReg.type().isJitInterface(typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();
@@ -1014,7 +1014,7 @@ public abstract class Builder {
         }
 
         PropertyInfo xvmInfo = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit = typeContainer.getJitCCType().ensureAccess(Access.PRIVATE);
+        TypeConstant typeJit = typeContainer.getJitCCType(typeSystem).ensureAccess(Access.PRIVATE);
         PropertyInfo jitInfo = typeJit.ensureTypeInfo().findProperty(propId, true);
         if (jitInfo == null) {
             // a relational type can collapse to Object, which may not expose the property
@@ -1029,7 +1029,7 @@ public abstract class Builder {
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
             typeOwner = jitInfo.getOwnerType(this, typeContainer);
-            typeOwner = typeOwner.getJitCCType();
+            typeOwner = typeOwner.getJitCCType(typeSystem);
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
         }
@@ -1052,7 +1052,7 @@ public abstract class Builder {
         code.aload(ctxSlot);
         if (invokeStatic) {
             code.invokestatic(ownerCD, getterName, md);
-        } else if (!isNative && typeOwner.isJitInterface()) {
+        } else if (!isNative && typeOwner.isJitInterface(typeSystem)) {
             code.invokeinterface(ownerCD, getterName, md);
         } else {
             code.invokevirtual(ownerCD, getterName, md);
@@ -1060,7 +1060,7 @@ public abstract class Builder {
 
         TypeConstant jitType = jitInfo.getType();
         TypeConstant xvmType = xvmInfo.getType();
-        if (!jitType.isJitAssignableTo(xvmType)) {
+        if (!jitType.isJitAssignableTo(typeSystem, xvmType)) {
             code.checkcast(getCCDesc(xvmType));
         }
         return xvmInfo;
@@ -1275,9 +1275,9 @@ public abstract class Builder {
      * Invoke the specified method with the opcode required by the property's JVM owner
      * representation.
      */
-   public static CodeBuilder invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
+   public CodeBuilder invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
                                String methodName, MethodTypeDesc md) {
-        if (targetType.isJitInterface()) {
+        if (targetType.isJitInterface(typeSystem)) {
             code.invokeinterface(cd, methodName, md);
         } else {
             code.invokevirtual(cd, methodName, md);
@@ -1928,7 +1928,7 @@ public abstract class Builder {
     public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
                                   MethodConstant ctorId, RegisterInfo outer,
                                   Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
-        TypeConstant targetJIC  = targetType.getJitICType();
+        TypeConstant targetJIC  = targetType.getJitICType(typeSystem);
         TypeInfo     targetInfo = targetJIC.ensureTypeInfo();
         MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
 
@@ -1951,7 +1951,7 @@ public abstract class Builder {
 
             // dispatch to the parent's factory so inherited code constructs the overridden child
             TypeInfo     baseInfo = ctor.getChildConstructorOrigin().getTypeInfo();
-            TypeConstant baseType = baseInfo.getType().getJitICType();
+            TypeConstant baseType = baseInfo.getType().getJitICType(typeSystem);
 
             instorMD = convertConstructToNew(baseInfo, getCCDesc(baseType),
                         (JitCtorDesc) ctor.getJitDesc(this, baseType));
@@ -1968,7 +1968,7 @@ public abstract class Builder {
             ClassDesc    parentCD   = getCCDesc(parentType);
 
             RegisterInfo outerReg = outer.load(code);
-            if (!outerReg.type().isJitAssignableTo(parentType)) {
+            if (!outerReg.type().isJitAssignableTo(typeSystem, parentType)) {
                 code.checkcast(parentCD);
             }
             code.aload(ctxSlot);

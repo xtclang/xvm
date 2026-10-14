@@ -66,8 +66,6 @@ import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
-import org.xvm.javajit.builders.ArrayBuilder;
-
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -104,8 +102,6 @@ import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
-
-import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
@@ -465,7 +461,8 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return the type parameter at the specified index (Object if there are none)
+     * @return the type parameter at the specified index, or Object if the specified index is out
+     *         of bounds of the specified type parameter types on this TypeConstant
      */
     public TypeConstant getParamType(int i) {
         return i < getParamsCount()
@@ -7165,123 +7162,229 @@ public abstract class TypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * Obtain a unique ClassDesc that represents a "JIT Call Class Name" for this type in the
-     * specified TypeSystem.
-     *
-     * @see doc/jit_class_names.txt
+     * @return the JitInfo record for this TypeConstant representing a JIT-able type
      */
-    public ClassDesc getJitCCDesc(TypeSystem ts) {
-        return ClassDesc.of(getJitCCName(ts));
+    public JitInfo ensureJitInfo(TypeSystem ts) {
+        JitInfo jitInfo = m_jitInfo;
+        if (jitInfo != null) {
+            return jitInfo;
+        }
+
+        // get the master instance of this TypeConstant
+        ModuleLoader loader = ts.findOwnerLoader(this);
+        TypeConstant that   = loader.module.getConstantPool().register(this);
+        if (this == that) {
+            // the only things that the JIT builds are canonical (non-specialized or L1 specialized)
+            // types and primitive-optimized (L2 specialized) types
+            assert isSingleUnderlyingClass(true) && (isCanonicalType() || isJitL2Specializable());
+            jitInfo = buildJitInfo(loader);
+        } else {
+            jitInfo = that.ensureJitInfo(ts);
+        }
+
+        m_jitInfo = jitInfo;
+        return jitInfo;
+    }
+
+    /**
+     * @return the JitInfo for this type iff it already exists, otherwise null
+     */
+    protected JitInfo peekJitInfo() {
+        return m_jitInfo;
+    }
+
+    /**
+     * For this type, create a JitInfo that represents the information of how this type maps to the
+     * JIT code creation targeting the JVM.
+     *
+     * @param loader the ModuleLoader responsible for loading the Java class for this type
+     *
+     * @return the JitInfo record for this type
+     */
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        if (isModifyingType()) {
+            return getUnderlyingType().ensureJitInfo(loader.typeSystem);
+        }
+        throw new UnsupportedOperationException("type=" + this.toString());
+    }
+
+    /**
+     * Ensure a unique Java class name for the specified JIT for this type.
+     *
+     * @param loader  the TypeSystem within which to obtain the class name
+     * @param jic     true to build the JIC name; false to build the JCC name
+     *
+     * @return the Java class name for the specified shape of this type
+     */
+    protected String buildJitClassName(ModuleLoader loader, boolean jic) {
+        String name = loader.getXvm().nativeTypeSystem.getReservedName(this);
+        if (name != null) {
+            return name;
+        }
+
+        // check if this type already built and cached its name
+        JitInfo jitInfo = peekJitInfo();
+        if (jitInfo != null) {
+            return jic ? jitInfo.jicName() : jitInfo.jccName();
+        }
+
+        // make sure to use the master instance of the type constant to build the name
+        TypeConstant that = loader.module.getConstantPool().register(this);
+        return this == that
+                ? this.buildJitClassNameImpl(loader, jic)
+                : that.buildJitClassName(loader, jic);
+    }
+
+    /**
+     * This method is (and must remain) idempotent.
+     *
+     * @param loader  the TypeSystem within which to obtain the class name
+     * @param jic     true to build the JIC name; false to build the JCC name
+     *
+     * @return the Java class name to use for this Ecstasy type
+     */
+    protected String buildJitClassNameImpl(ModuleLoader loader, boolean jic) {
+        if (isModifyingType()) {
+            return getUnderlyingType().buildJitClassName(loader, jic);
+        }
+        throw new UnsupportedOperationException("type=" + this.toString());
+    }
+
+    /**
+     * @param ts  the TypeSystem within which this type exists
+     *
+     * @return true iff the JIT JIC name is the same as the JIT JCC name
+     */
+    protected boolean isJitJicJcc(TypeSystem ts) {
+        // first check if the answer is cached
+        JitInfo jitInfo = peekJitInfo();
+        if (jitInfo != null) {
+            return jitInfo.jicName().equals(jitInfo.jccName());
+        }
+
+        // assumption is that all "native reserved names" are jic==jcc
+        return ts.xvm.nativeTypeSystem.getReservedName(this) != null
+                || getUnderlyingType().isJitJicJcc(ts);
+    }
+
+    /**
+     * A cacheable snapshot of information about the JIT transformation of a given Ecstasy type.
+     * <p/>
+     * Terms are defined in the "jit_class_names.txt" doc.
+     */
+    public record JitInfo(
+                TypeConstant type,              // the type for which this JitInfo exists
+                TypeConstant jicType,           // the JIT Instance Class' type
+                JICForm      jicForm,           // an indicator of how the JIC is to be instantiated
+                String       jicName,           // the Java class name to instantiate
+                TypeConstant jccType,           // the JIT Call Class' type
+                boolean      jccInterface,      // true iff the JCC is a Java interface
+                String       jccName) {         // the Java class name to call
+        public JitInfo {
+            assert jicForm != null && (jicType == null) == (jicForm == JICForm.Abstract) && jccType != null;
+        }
+
+        /**
+         * @return the Java {@link ClassDesc} for the JIC
+         */
+        public ClassDesc jicDesc() {
+            // it would be nice to cache this value, but no reason to hold it after the JIT phase
+            return ClassDesc.of(jicName);
+        }
+
+        /**
+         * @return the Java {@link ClassDesc} for the JCC
+         */
+        public ClassDesc jccDesc() {
+            // it would be nice to cache this value, but no reason to hold it after the JIT phase
+            return ClassDesc.of(jccName);
+        }
+    }
+
+    /**
+     * Defines the meaning of a JIT Instance Class (JIC).
+     *
+     * For a given type, there is a "JIT Instance Class" (JIC), which may be null if the type cannot
+     * be instantiated ("Abstract"), may be directly newable ("Simple"), and so on.
+     *
+     * @see org.xvm.javajit.builders.CommonBuilder#assembleNew
+     */
+    public enum JICForm {
+        /**
+         * There is no JIC because the type is not instantiable.
+         */
+        Abstract,
+        /**
+         * The JIC has the simple (Ctx-only) instantiation helper.
+         */
+        Simple,
+        /**
+         * The JIC has the simple-with-type (Ctx, TypeConstant) instantiation helper.
+         */
+        Generic,
+        /**
+         * The JIC has a virtual child (Ctx, Outer) instantiation helper.
+         */
+        Child,
+        /**
+         * The JIC has a virtual child with type (Ctx, TypeConstant, Outer) instantiation helper.
+         */
+        GenericChild,
+        /**
+         * The JIC requires runtime evaluation, because its name depends on type information that is
+         * only available at runtime. For example, the code "new Element[]" (where "Element" is a
+         * Type Parameter Type) needs to have the actual value of "Element" in order to know what
+         * L1/L2 specialized class of "Array" to instantiate.
+         */
+        Dynamic,
+    }
+
+    /**
+     * Ensure a unique Java class name for this type. Do NOT use this to obtain a JIC or JCC name;
+     * use {@link #getJitCCDesc} or {@link #getJitICDesc} instead.
+     *
+     * @param ts  the TypeSystem within which to obtain the class name
+     *
+     * @return the Java class name for this type
+     *
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
+     */
+    public String getJitICName(TypeSystem ts) {
+        return ensureJitInfo(ts).jicName();
+    }
+
+    /**
+     * Ensure a unique Java class name for this type. Do NOT use this to obtain a JIC or JCC name;
+     * use {@link #getJitCCDesc} or {@link #getJitICDesc} instead.
+     *
+     * @param ts  the TypeSystem within which to obtain the class name
+     *
+     * @return the Java class name for this type
+     *
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
+     */
+    public String getJitCCName(TypeSystem ts) {
+        return ensureJitInfo(ts).jccName();
     }
 
     /**
      * Obtain a unique ClassDesc that represents a "JIT Instance Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
     public ClassDesc getJitICDesc(TypeSystem ts) {
-        return ClassDesc.of(getJitICName(ts));
+        return ensureJitInfo(ts).jicDesc();
     }
 
     /**
-     * Ensure a unique Java class name that represents a "JIT Call Class Name" for this type in the
+     * Obtain a unique ClassDesc that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
-    public String getJitCCName(TypeSystem ts) {
-        return getJitCCType().ensureJitName(ts);
-    }
-
-    /**
-     * Ensure a unique Java class name that represents a "JIT Instance Class Name" for this type in
-     * the specified TypeSystem.
-     *
-     * @see doc/jit_class_names.txt
-     */
-    public String getJitICName(TypeSystem ts) {
-        return getJitICType().ensureJitName(ts);
-    }
-
-    /**
-     * Ensure the Java class name for a type already selected by {@link #getJitCCType()} or
-     * {@link #getJitICType()}.
-     */
-    private String ensureJitName(TypeSystem ts) {
-        assert isSingleUnderlyingClass(true);
-
-        String sJitName = m_sJitName;
-        if (sJitName == null) {
-            // get the master instance of the type constant
-            ModuleLoader loader = ts.findOwnerLoader(this);
-            TypeConstant that   = loader.module.getConstantPool().register(this);
-            sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitName(ts);
-            m_sJitName = sJitName;
-        }
-        return sJitName;
-    }
-
-    protected synchronized String buildJitClassName(TypeSystem ts, ModuleLoader loader) {
-        String name = ts.xvm.nativeTypeSystem.getReservedName(this);
-        if (name != null) {
-            return name;
-        }
-
-        ConstantPool     pool = loader.module.getConstantPool();
-        IdentityConstant id   = getSingleUnderlyingClass(true);
-
-        if (id instanceof ModuleConstant) {
-            // the module class uses a synthetic name, not a user-supplied identifier
-            return loader.prefix + Builder.MODULE;
-        }
-
-        if (id.equals(pool.clzArray())) {
-            // see ParameterizedTypeConstant#buildJitClassName
-            TypeConstant typeEl = getParamType(0);
-            if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
-                return Builder.N_ArrayObj;
-            } else if (typeEl.isJitPrimitive()) {
-                return ArrayBuilder.getArrayName(typeEl);
-            } else {
-                // REVIEW CP: this is wrong
-                return Builder.N_ArrayObj;
-            }
-        }
-
-        if (id.equals(pool.clzClass())) {
-            TypeConstant typePublic = this.getParamType(0);
-            if (typePublic.isEnum()) {
-                // proceed into the enumeration handling below
-                id = pool.clzEnumeration();
-            } else {
-                return Builder.N_Class;
-            }
-        }
-
-        if (id.equals(pool.clzEnumeration())) {
-            // Enumeration<Enum> is "Enumeration"; Enumeration<X> is "eX"
-            TypeConstant typeValue = getParamType(0);
-            return typeValue.isFormalType() || !typeValue.isA(pool.typeEnum())
-                    || (typeValue.isSingleUnderlyingClass(true)
-                            && typeValue.getSingleUnderlyingClass(true).equals(pool.clzEnum()))
-                    ? Builder.N_Enumeration
-                    : TypeSystem.enumerationClass(typeValue.getJitCCName(ts));
-        }
-
-        if (id.equals(pool.clzFunction())) {
-            return Builder.N_nFunction;
-        }
-
-        StringBuilder sb = new StringBuilder(id.getClassJitName(ts));
-
-        TypeConstant typeCanonical = getJitCCType();
-        if (typeCanonical.getParamsCount() > 0 || sb.indexOf(HASH_MARKER) >= 0) {
-            // it's critical here to use the class module loader's pool
-            TypeSystem.appendJitSuffix(sb, pool.register(typeCanonical).getPosition());
-        }
-        // the loader's module prefix is already escaped
-        return loader.prefix + TypeSystem.escapeJitName(sb.toString(), true);
+    public ClassDesc getJitCCDesc(TypeSystem ts) {
+        return ensureJitInfo(ts).jccDesc();
     }
 
     /**
@@ -7317,7 +7420,7 @@ public abstract class TypeConstant
      *
      * @return {@code true} iff this type is Specializable
      *
-     * @see doc/jit_class_names.txt
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
     public boolean isJitL2Specializable() {
         if (!isSingleUnderlyingClass(true)) {
@@ -7346,10 +7449,10 @@ public abstract class TypeConstant
      * @return {@code true} iff this type's callable JIT type is a non-canonical parameterization of
      *         a {@link #isJitL2Specializable() specializable} type
      *
-     * @see doc/jit_class_names.txt
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
-    public boolean isJitL2Specialized() {
-        TypeConstant   jitType     = getJitCCType();
+    public boolean isJitL2Specialized(TypeSystem ts) {
+        TypeConstant   jitType     = getJitCCType(ts);
         ClassStructure classStruct = (ClassStructure)
                 jitType.getSingleUnderlyingClass(true).getComponent();
 
@@ -7360,13 +7463,13 @@ public abstract class TypeConstant
      * @return assuming that "this" can be assigned to "that", return false iff the assignment
      *         requires a "checkcast"
      */
-    public boolean isJitAssignableTo(TypeConstant that) {
-        TypeConstant typeThatJit = that.getJitCCType();
+    public boolean isJitAssignableTo(TypeSystem ts, TypeConstant that) {
+        TypeConstant typeThatJit = that.getJitCCType(ts);
         if (typeThatJit.equals(getConstantPool().typeObject())) {
             return true;
         }
 
-        TypeConstant typeThisJit = getJitCCType();
+        TypeConstant typeThisJit = getJitCCType(ts);
 
         // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
         // Ecstasy: M --into--> C, so M.isA(C), but
@@ -7376,44 +7479,42 @@ public abstract class TypeConstant
                 typeThisJit.getExplicitClassInto(true).isA(typeThatJit);
 
         return typeThisJit.equals(typeThatJit) || !fMixinCast &&
-                !isJitL2Specialized() && typeThisJit.isA(typeThatJit);
+                !isJitL2Specialized(ts) && typeThisJit.isA(typeThatJit);
     }
 
     /**
      * @return true iff the specified type is represented by the Java interface and needs to be
      *         cast explicitly to {@code nObject} class to invoke its methods
      */
-    public boolean isJitInterface() {
-        // Tuple and Type are always represented by native classes
-        TypeConstant typeJit = getJitCCType();
-        return typeJit.isInterfaceType()
-                && !typeJit.isTuple()
-                && !typeJit.isTypeOfType();
+    public boolean isJitInterface(TypeSystem ts) {
+        return ensureJitInfo(ts).jccInterface();
     }
 
     /**
      * @return the JitTypeDesc for this type
      */
     public JitTypeDesc getJitDesc(Builder builder) {
+        // REVIEW
+        TypeSystem ts = builder.typeSystem;
         ClassDesc cd;
         if ((cd = JitTypeDesc.getJavaPrimitive(this)) != null) {
-            return new JitTypeDesc(getJitCCType(), Primitive, cd);
+            return new JitTypeDesc(getJitCCType(ts), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this.removeNullable().getJitCCType(), NullablePrimitive, cd);
+            return new JitTypeDesc(this.removeNullable().getJitCCType(ts), NullablePrimitive, cd);
         }
         if ((cd = JitTypeDesc.getXvmPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(getJitCCType(), XvmPrimitive, cd);
+            return new JitTypeDesc(getJitCCType(ts), XvmPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(getJitCCType(), NullableXvmPrimitive, cd);
+            return new JitTypeDesc(getJitCCType(ts), NullableXvmPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getWidenedClass(builder, this)) != null) {
-            return new JitTypeDesc(getJitCCType(), Widened, cd);
+            return new JitTypeDesc(getJitCCType(ts), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getJitCCType(), Specific, builder.getCCDesc(this));
+        return new JitTypeDesc(getJitCCType(ts), Specific, builder.getCCDesc(this));
     }
 
     /**
@@ -7446,16 +7547,10 @@ public abstract class TypeConstant
      *
      * @return a canonical JIT type
      *
-     * @see doc/jit_class_names.txt
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
-    public TypeConstant getJitCCType() {
-        if (isModifyingType()) {
-            return getUnderlyingType().getJitCCType();
-        }
-
-        // Terminal, Virtual or InnerChild
-        assert isSingleUnderlyingClass(true);
-        return removeAutoNarrowing();
+    public TypeConstant getJitCCType(TypeSystem ts) {
+        return ensureJitInfo(ts).jicType;
     }
 
     /**
@@ -7463,13 +7558,10 @@ public abstract class TypeConstant
      * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
      * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
-     * @see doc/jit_class_names.txt
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
-    public TypeConstant getJitICType() {
-        // TODO CP: plug in the new logic
-        TypeConstant type = getJitCCType();
-        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return type;
+    public TypeConstant getJitICType(TypeSystem ts) {
+        return ensureJitInfo(ts).jicType;
     }
 
     /**
@@ -7710,7 +7802,7 @@ public abstract class TypeConstant
                 MethodConstant idFunky   = bodyFunky.getIdentity();
                 TypeConstant   typeFunky = idFunky.getNamespace().getType();
 
-                assert typeFunky.isJitInterface();
+                assert typeFunky.isJitInterface(bctx.typeSystem);
 
                 cd         = ClassDesc.of(TypeSystem.funkyInterface(
                                 bctx.builder.getCCName(typeFunky)));
@@ -7724,7 +7816,7 @@ public abstract class TypeConstant
                 cd         = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = method.ensureJitMethodName(ts);
                 jmd        = method.getJitDesc(bctx.builder, this);
-                fInterface = typeTarget.isJitInterface();
+                fInterface = typeTarget.isJitInterface(bctx.typeSystem);
             }
 
             MethodTypeDesc md;
@@ -7886,7 +7978,7 @@ public abstract class TypeConstant
         code.labelBinding(lblEnd);
     }
 
-    // ----- run-time support ----------------------------------------------------------------------
+    // ----- interpreter support -------------------------------------------------------------------
 
     /**
      * @return a {@link ClassTemplate} instance for this type in the context of the specified container
@@ -8401,9 +8493,9 @@ public abstract class TypeConstant
     private transient xRTType.TypeHandle m_handle;
 
     /**
-     * Cached JIT class name.
+     * Cached JIT class information.
      */
-    private transient String m_sJitName;
+    private transient JitInfo m_jitInfo;
 
     /**
      * Cached normalized representation.

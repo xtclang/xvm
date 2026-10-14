@@ -399,7 +399,7 @@ public class TypeSystem {
         }
 
         return switch (art.shape()) {
-            case Impl -> art.type().isJitInterface()
+            case Impl -> art.type().isJitInterface(this)
                     ? ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
 
@@ -479,7 +479,7 @@ public class TypeSystem {
         NoMod    ("" + NO_MOD), // take ClassFile bytes "as is"
         Future   ("" + FUTURE),
         Exception("" + EXCEPT), // Java RuntimeException "entangled" with the Ecstasy Exception
-        Impl     (""),          // Implementation: this needs to be the last enumerated shape
+        Impl     (""         ), // Implementation: this needs to be the last enumerated shape
         ;
 
         ClassfileShape(String prefix) {

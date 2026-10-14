@@ -78,30 +78,32 @@ public class CastTypeConstant
         return getBaseType().isXvmPrimitive() || getUnderlyingType2().isXvmPrimitive();
     }
 
-    @Override
-    public String getJitCCName(TypeSystem ts) {
-        return this.getJitCCType().getJitCCName(ts);
-    }
-
-    @Override
-    public TypeConstant getJitCCType() {
-        TypeConstant typeBase = getBaseType().getJitCCType();
-        TypeConstant typeCast = getUnderlyingType2().getJitCCType();
-
-        // the code below could be written mush simpler, but first, we want to isolate the
-        // simplest paths and there is a possibility we need to do something special the
-        // "orthogonal" scenario at the bottom
-        if (typeBase.isA(typeCast)) {
-            return typeBase;
-        }
-        if (typeCast.isA(typeBase)) {
-            return typeCast;
-        }
-
-        // the types are orthogonal; keep the base, since this is what the JIT compiler knows;
-        // it will have to cast the targets...
-        return typeBase;
-    }
+// TODO override how we build the JitInfo
+//
+//    @Override
+//    public String getJitCCName(TypeSystem ts) {
+//        return this.getJitCCType().getJitCCName(ts);
+//    }
+//
+//    @Override
+//    public TypeConstant getJitCCType() {
+//        TypeConstant typeBase = getBaseType().getJitCCType();
+//        TypeConstant typeCast = getUnderlyingType2().getJitCCType();
+//
+//        // the code below could be written mush simpler, but first, we want to isolate the
+//        // simplest paths and there is a possibility we need to do something special the
+//        // "orthogonal" scenario at the bottom
+//        if (typeBase.isA(typeCast)) {
+//            return typeBase;
+//        }
+//        if (typeCast.isA(typeBase)) {
+//            return typeCast;
+//        }
+//
+//        // the types are orthogonal; keep the base, since this is what the JIT compiler knows;
+//        // it will have to cast the targets...
+//        return typeBase;
+//    }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

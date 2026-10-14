@@ -12,6 +12,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 
+import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Handy;
 
 /**
@@ -694,16 +695,6 @@ public class MethodBody {
     }
 
     /**
-     * @return the function or method type for the function or method represented by this body
-     */
-    public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
-        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
-        return isFunction()
-                ? sig.asFunctionType()
-                : sig.asMethodType(pool, typeContainer);
-    }
-
-    /**
      * @return the ConstantPool
      */
     private ConstantPool pool() {
@@ -835,12 +826,23 @@ public class MethodBody {
         }
 
         MethodStructure   method = getClassifyingMethodStructure();
-        SignatureConstant sig    = method.resolveSignature(builder.pool(), typeTarget.getJitCCType());
+        TypeSystem        ts     = builder.typeSystem;
+        SignatureConstant sig    = method.resolveJitSignature(ts, typeTarget.getJitCCType(ts));
 
         // TODO consider caching this
         return JitMethodDesc.of(builder, typeTarget, JitMethodDesc.flagsFor(method),
                 sig.getRawParams(), sig.getRawReturns(),
                 method.getTypeParamCount() + method.getRequiredParamCount());
+    }
+
+    /**
+     * @return the function or method type for the function or method represented by this body
+     */
+    public TypeConstant asJitFunctionType(TypeConstant typeContainer, TypeSystem ts) {
+        SignatureConstant sig = getMethodStructure().resolveJitSignature(ts, typeContainer);
+        return isFunction()
+                ? sig.asFunctionType()
+                : sig.asMethodType(ts.pool(), typeContainer);
     }
 
     // ----- fields --------------------------------------------------------------------------------

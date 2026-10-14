@@ -24,6 +24,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
 
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
@@ -804,7 +807,49 @@ public class ParameterizedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType() {
+    protected String buildJitClassNameImpl(ModuleLoader loader, boolean jic) {
+        TypeConstant   type   = getUnderlyingType();
+        TypeConstant[] params = m_atypeParams;
+
+        // there are special cases to handle that exist within the core Ecstasy module
+        ConstantPool     pool = loader.module.getConstantPool();
+        IdentityConstant id   = getSingleUnderlyingClass(true);
+        if (id.getModuleConstant().equals(pool.modEcstasy())) {
+            if (id.equals(pool.clzClass())) {
+                TypeConstant typePublic = this.getParamType(0);
+                if (typePublic.isEnum()) {
+                    type = pool.typeEnumeration();
+                    // TODO make sure there is exactly 1 parameter
+                }
+                // TODO in PTC: also handle Class<Person> -> cPerson
+            } else if (id.equals(pool.clzEnumeration())) {
+
+                // Enumeration<Enum> is "Enumeration"; Enumeration<X> is "eX"
+                TypeConstant typeValue = getParamType(0);
+                return typeValue.isFormalType() || !typeValue.isA(pool.typeEnum())
+                        || (typeValue.isSingleUnderlyingClass(true)
+                        && typeValue.getSingleUnderlyingClass(true).equals(pool.clzEnum()))
+                        ? Builder.N_Enumeration
+                        : TypeSystem.enumerationClass(typeValue.getJitCCName(loader.typeSystem));
+            }
+
+            // move "ignore the params" logic to PTC for this
+            if (id.equals(pool.clzFunction())) {
+                return Builder.N_nFunction;
+            }
+
+        }
+
+        // TODO discard parameters iff all are constrained by non-specializable types
+
+        // the responsibility here is generally to throw away the parameters, because they are only
+        // needed for specialization
+        // TODO
+        return null;
+    }
+
+    @Override
+    public TypeConstant getJitCCType(TypeSystem ts) {
         assert isSingleUnderlyingClass(true);
 
         TypeConstant typeJit = m_typeJitCallable;
@@ -836,12 +881,12 @@ public class ParameterizedTypeConstant
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
             boolean        fDiff        = false;
 
-            TypeConstant[] atypeCanon = toCallableTypes(atypeParams);
+            TypeConstant[] atypeCanon = toCallableTypes(ts, atypeParams);
             if (atypeCanon != null) {
                 atypeParams = atypeCanon;
                 fDiff       = true;
             }
-            atypeCanon = toCallableTypes(atypeReturns);
+            atypeCanon = toCallableTypes(ts, atypeReturns);
             if (atypeCanon != null) {
                 atypeReturns = atypeCanon;
                 fDiff        = true;
@@ -854,7 +899,7 @@ public class ParameterizedTypeConstant
                     : this;
         }
 
-        TypeConstant typeResolved = typeOrig.getJitCCType();
+        TypeConstant typeResolved = typeOrig.getJitCCType(ts);
         boolean      fTrivial     = true;
 
         // we need to normalize the parameters, since omitted defaults must produce the same JCC as
@@ -867,7 +912,7 @@ public class ParameterizedTypeConstant
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
                 aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
-                        aconstOriginal[i].getJitCCType());
+                        aconstOriginal[i].getJitCCType(ts));
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -916,10 +961,10 @@ public class ParameterizedTypeConstant
     /**
      * @return an array of converted callable JIT types; null if no changes were made
      */
-    private TypeConstant[] toCallableTypes(TypeConstant[] atype) {
+    private TypeConstant[] toCallableTypes(TypeSystem ts, TypeConstant[] atype) {
         TypeConstant[] atypeCanonical = atype;
         for (int i = 0, c = atype.length; i < c; ++i) {
-            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getJitCCType());
+            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getJitCCType(ts));
         }
         return atypeCanonical;
     }

@@ -46,7 +46,7 @@ import ClassTemplate.Composition;
  *   its Enum values are instances of the class of Enumeration values (or a subclass thereof), and
  *   no class can extend the class of any Enum.
  */
-const Enumeration<Value extends Enum>
+const Enumeration<Value extends Enum> // TODO "enum" instead of "Enum"?
         extends Class<Value> {
 
     construct(Composition composition, ListMap<String, Type>? canonicalParams = Null) {

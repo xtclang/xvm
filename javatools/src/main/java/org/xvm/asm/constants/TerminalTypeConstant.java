@@ -23,12 +23,17 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
-import org.xvm.runtime.ClassTemplate;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
+
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
+import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
 
@@ -1926,6 +1931,124 @@ public class TerminalTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        if (getFormat() == Format.Typedef) {
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return constId.getReferredToType().ensureJitInfo(loader.typeSystem);
+        }
+
+// JIC
+//        TypeConstant type = getJitCCType();
+//        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+//        return type;
+// JCC
+//        //TODO
+//        if (isModifyingType()) {
+//            return getUnderlyingType().getJitCCType();
+//        }
+//        // Terminal, Virtual or InnerChild
+//        assert isSingleUnderlyingClass(true);
+//        return removeAutoNarrowing();
+
+        TypeConstant jicType = null; // TODO
+        JICForm      jicForm = null;
+        TypeConstant jccType;
+        if (isFormalType()) {
+            jicType = null;
+            jicForm = JICForm.Abstract; // TODO or Dynamic with funky constructors
+            jccType = resolveConstraints();
+        } else {
+            assert isSingleUnderlyingClass(true);
+            jccType = removeAutoNarrowing();
+        }
+
+        String jicName = jicType.buildJitClassName(loader, true);
+        String jccName = jccType.buildJitClassName(loader, false);
+
+// interface calc from TypeConstant
+//        // Tuple and Type are always represented by native classes
+//        TypeConstant typeJit = getJitCCType();
+//        return typeJit.isInterfaceType()
+//                && !typeJit.isTuple()
+//                && !typeJit.isTypeOfType();
+// interface calc from terminal
+//        return isFormalType()
+//                ? resolveConstraints().isJitInterface(bctx.typeSystem)
+//                : super.isJitInterface(ts);
+
+        return new JitInfo(this, jicType, jicForm, jicName, jccType, jccType.isInterfaceType(), jccName);
+    }
+
+    @Override
+    protected String buildJitClassNameImpl(ModuleLoader loader, boolean jic) {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat()) {
+        case Module:
+            // the module class uses a synthetic name, not a user-supplied identifier
+            return loader.prefix + Builder.MODULE;
+
+        case Class:
+            // re-check for substitution of n-Types like Function -> nFunction
+            String name = loader.getXvm().nativeTypeSystem.getReservedName(this);
+            if (name != null) {
+                return name;
+            }
+            // fall through
+        case Package:
+            ConstantPool     pool = loader.module.getConstantPool();
+            IdentityConstant id   = getSingleUnderlyingClass(true);
+            if (id.equals(pool.clzClass())) {
+
+            }
+
+            // TODO remove once n-types are handled above
+            if (id.equals(pool.clzFunction())) {
+                return Builder.N_nFunction;
+            }
+
+            // TODO this is wrong for classes that could be parameterized
+            StringBuilder sb = new StringBuilder(id.getClassJitName(loader.typeSystem));
+
+            TypeConstant typeCanonical = getJitCCType(loader.typeSystem);
+            if (typeCanonical.getParamsCount() > 0 || sb.indexOf(HASH_MARKER) >= 0) {
+                // it's critical here to use the class module loader's pool
+                TypeSystem.appendJitSuffix(sb, pool.register(typeCanonical).getPosition());
+            }
+            // the loader's module prefix is already escaped
+            return loader.prefix + TypeSystem.escapeJitName(sb.toString(), true);
+
+        case Typedef:
+            return ((TypedefConstant) constant).getReferredToType().getJitCCName(loader.typeSystem);
+
+        case Property:
+        case IsConst:
+        case IsEnum:
+        case IsModule:
+        case IsPackage:
+        case IsClass:
+        case NativeClass:
+        case TypeParameter:
+        case FormalTypeChild:
+        case DynamicFormal:
+        case ThisClass:
+        case ParentClass:
+        case ChildClass:
+            // TODO
+        case UnresolvedName:
+        default:
+            throw new IllegalStateException("unexpected defining constant: " + constant);
+        }
+    }
+
+// TODO
+//    @Override
+//    public TypeConstant getJitCCType() {
+//        return isFormalType()
+//                ? resolveConstraints().getJitCCType()
+//                : super.getJitCCType();
+//    }
+
+    @Override
     public boolean isJavaPrimitive() {
         if (isEnumValue()) {
             TypeConstant enumType = getSingleUnderlyingClass(false)
@@ -1970,20 +2093,6 @@ public class TerminalTypeConstant
             };
         }
         return false;
-    }
-
-    @Override
-    public boolean isJitInterface() {
-        return isFormalType()
-                ? resolveConstraints().isJitInterface()
-                : super.isJitInterface();
-    }
-
-    @Override
-    public TypeConstant getJitCCType() {
-        return isFormalType()
-                ? resolveConstraints().getJitCCType()
-                : super.getJitCCType();
     }
 
     // ----- run-time support ----------------------------------------------------------------------

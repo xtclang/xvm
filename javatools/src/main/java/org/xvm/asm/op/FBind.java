@@ -334,7 +334,7 @@ public class FBind
                 // all JIT primitives are immutable, so we can only become mutable after binding to
                 // a non-primitive mutable value
                 if (!argType.isJitPrimitive()) {
-                    computeImmutable(code, slotImm, regArg);
+                    computeImmutable(bctx, code, slotImm, regArg);
                 }
             } else if (!fOptAfter) {
                 assert argType.isJitPrimitive(); // transition from opt -> !opt
@@ -355,7 +355,7 @@ public class FBind
 
                 if (!argType.isJitPrimitive()) {
                     // it can become mutable
-                    computeImmutable(code, slotImm, regArg);
+                    computeImmutable(bctx, code, slotImm, regArg);
                 }
             }
 
@@ -452,13 +452,14 @@ public class FBind
      * Check if the specified (newly bound) argument is mutable and change the immutability flag
      * for the MethodHandle accordingly.
      */
-    private static void computeImmutable(CodeBuilder code, int slotImm, RegisterInfo regArg) {
+    private static void computeImmutable(BuildContext bctx, CodeBuilder code, int slotImm,
+                                         RegisterInfo regArg) {
         // this.immutable &= ((nObject) value).$isImmut();
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
         regArg.load(code);
-        if (regArg.type().isJitInterface()) {
+        if (regArg.type().isJitInterface(bctx.typeSystem)) {
             code.checkcast(CD_nObject);
         }
         code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean))

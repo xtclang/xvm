@@ -459,7 +459,7 @@ public abstract class OpInvocable extends Op {
             if (!typeOwner.equals(typeTarget)) {
                 typeInvoke = typeOwner;
                 cdInvoke   = bctx.builder.getCCDesc(typeOwner);
-                if (!typeTarget.isJitAssignableTo(typeOwner)) {
+                if (!typeTarget.isJitAssignableTo(bctx.typeSystem, typeOwner)) {
                     // the target type could be a mixin, which is a Java interface, so invoking a
                     // method from its "into" class requires a cast to that class
                     code.checkcast(cdInvoke);
@@ -513,7 +513,7 @@ public abstract class OpInvocable extends Op {
         if (fPrimitive) {
             cdInvoke = typeInvoke.getJitCCDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
-        } else if (infoTarget.getType().isJitInterface()) {
+        } else if (infoTarget.getType().isJitInterface(bctx.typeSystem)) {
             code.invokeinterface(cdInvoke, methodName, md);
         } else {
             code.invokevirtual(cdInvoke, methodName, md);

@@ -105,8 +105,8 @@ public class CommonBuilder
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
-        this.jitType       = thisType.getJitCCType();
-        this.isSpecialized = jitType.isJitL2Specialized();
+        this.jitType       = thisType.getJitCCType(typeSystem);
+        this.isSpecialized = jitType.isJitL2Specialized(typeSystem);
         this.isPrimitive   = type.isJitPrimitive();
     }
 
@@ -1743,7 +1743,7 @@ public class CommonBuilder
             TypeConstant   childType   = pool().ensureVirtualChildTypeConstant(jitType, child.getName());
             ClassStructure childStruct = (ClassStructure) child.getComponent();
             TypeConstant   childJIC    = childStruct.getFormalType().resolveGenerics(pool(), childType).
-                                            ensureVirtualParent(jitType, true).getJitICType();
+                                            ensureVirtualParent(jitType, true).getJitICType(typeSystem);
             TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             if (infoJIC.isAbstract()) {
                 continue;
@@ -2630,7 +2630,7 @@ public class CommonBuilder
                     code.checkcast(cdProp);
                 }
 
-                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitInterface())
+                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitInterface(typeSystem))
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -3694,7 +3694,7 @@ public class CommonBuilder
             TypeConstant   srcRetType = srcReturns[0].type;
             TypeConstant   dstRetType = dstReturns[0].type;
 
-            if (!dstRetType.isJitAssignableTo(srcRetType)) {
+            if (!dstRetType.isJitAssignableTo(typeSystem, srcRetType)) {
                 generateCheckCast(code, srcRetType);
             }
 
@@ -3980,7 +3980,7 @@ public class CommonBuilder
 
             TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
 
-            boolean objectDelegation = dstType.isJitInterface() && dstType.equals(pool().typeObject());
+            boolean objectDelegation = dstType.isJitInterface(typeSystem) && dstType.equals(pool().typeObject());
             if (objectDelegation) {
                 // we are delegating an nObject method for an interface; need a cast
                 code.checkcast(CD_nObject);
@@ -3992,7 +3992,7 @@ public class CommonBuilder
                 Builder.load(code, params[i].cd, code.parameterSlot(extraCount + i));
             }
 
-            if (dstType.isJitInterface() && dstMethod.isAbstract() && !objectDelegation) {
+            if (dstType.isJitInterface(typeSystem) && dstMethod.isAbstract() && !objectDelegation) {
                 code.invokeinterface(getCCDesc(dstType), dstName, md);
             } else {
                 code.invokevirtual(getCCDesc(dstType), dstName, md);

@@ -112,9 +112,10 @@ public class JitTypeDesc {
      * @return the widening ClassDesc if the specified type needs to be widened; null otherwise
      */
     public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
+        TypeSystem ts = builder.typeSystem;
         return type.isSingleUnderlyingClass(true)
                 ? null
-                : type.getJitCCDesc(builder.typeSystem);
+                : type.getJitCCDesc(ts);
     }
 
     public static ClassDesc getNullableXvmPrimitiveClass(TypeConstant type) {

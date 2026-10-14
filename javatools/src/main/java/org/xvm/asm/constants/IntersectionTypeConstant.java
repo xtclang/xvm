@@ -15,6 +15,7 @@ import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
@@ -726,31 +727,31 @@ public class IntersectionTypeConstant
     }
 
     @Override
-    public TypeConstant getJitCCType() {
-        return combineJitType(m_constType1, m_constType2);
+    public TypeConstant getJitCCType(TypeSystem ts) {
+        return combineJitType(ts, m_constType1, m_constType2);
     }
 
-    private static TypeConstant combineJitType(TypeConstant type1, TypeConstant type2) {
+    private static TypeConstant combineJitType(TypeSystem ts, TypeConstant type1, TypeConstant type2) {
         if (type1.isFormalType()) {
-            return combineJitType(type1.resolveConstraints(), type2);
+            return combineJitType(ts, type1.resolveConstraints(), type2);
         }
 
         if (type2.isFormalType()) {
-            return combineJitType(type1, type2.resolveConstraints());
+            return combineJitType(ts, type1, type2.resolveConstraints());
         }
 
         if (type1.isJitPrimitive()) {
-            return type1.getJitCCType();
+            return type1.getJitCCType(ts);
         }
 
         if (type2.isJitPrimitive()) {
-            return type2.getJitCCType();
+            return type2.getJitCCType(ts);
         }
 
         // while the original intersection contributions are not assignable to each other, the
         // canonical types might be
-        type1 = type1.getJitCCType();
-        type2 = type2.getJitCCType();
+        type1 = type1.getJitCCType(ts);
+        type2 = type2.getJitCCType(ts);
 
         return type2.isA(type1)
                 ? type1

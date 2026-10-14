@@ -50,6 +50,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
@@ -949,26 +950,29 @@ public class MethodStructure
         }
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
     /**
      * Resolve the signature of this method as being called on the specified type.
      *
-     * @param pool        the ConstantPool to use
+     * @param ts          the JIT TypeSystem
      * @param typeTarget  the target type
      *
      * @return the resolved signature
      */
-    public SignatureConstant resolveSignature(ConstantPool pool, TypeConstant typeTarget) {
+    public SignatureConstant resolveJitSignature(TypeSystem ts, TypeConstant typeTarget) {
+        ConstantPool      pool        = ts.pool();
         SignatureConstant sigResolved =
                 getIdentityConstant().getSignature().resolveGenericTypes(pool, typeTarget);
 
-        TypeConstant typeJit = typeTarget.getJitCCType();
+        TypeConstant typeJit = typeTarget.getJitCCType(ts);
 
         // generic types are passed to lambdas as type parameters; primitive and layer-two
         // specialized targets also need concrete formal types for their specialized JVM descriptors;
         // function targets always use the central nFunction interface, not a specialized wrapper
         if (getTypeParamCount() > 0 &&
                 (isLambda() || typeJit.isJitPrimitive() ||
-                 !typeJit.isFunction() && typeJit.isJitL2Specialized())) {
+                 !typeJit.isFunction() && typeJit.isJitL2Specialized(ts))) {
             SignatureConstant sigOrig = sigResolved;
 
             sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
@@ -984,7 +988,7 @@ public class MethodStructure
                 if (type.containsAutoNarrowing(false)) {
                     type = type.resolveAutoNarrowing(pool, false, typeJit, null);
                 }
-                return type.isJitPrimitive() || type.isJitL2Specialized()
+                return type.isJitPrimitive() || type.isJitL2Specialized(ts)
                         ? type
                         : null;
             });
