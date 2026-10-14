@@ -5,6 +5,7 @@ module TestMisc {
         console.print("hello world!");
 
         testBools();
+        testEqualityChains();
         testChars();
         testInts();
         testStrings();
@@ -90,6 +91,48 @@ module TestMisc {
         console.print("!b=" + !b);
         console.print("~a=" + ~a);
         console.print("~b=" + ~b);
+    }
+
+    void testEqualityChains() {
+        console.print("\n** testEqualityChains()");
+
+        for (Int left : [0, 3]) {
+            for (Int right : [0, 3]) {
+                Boolean expected = left == 3 && right == 3;
+                Boolean actual = left == 3 == right;
+                assert actual == expected;
+
+                if (left == 3 == right) {
+                    assert expected;
+                } else {
+                    assert !expected;
+                }
+                if (!(left == 3 == right)) {
+                    assert !expected;
+                } else {
+                    assert expected;
+                }
+            }
+        }
+
+        for (Int? left : [Null, 3]) {
+            for (Int? right : [Null, 3]) {
+                Boolean expected = left == Null && right == Null;
+                Boolean actual = left == Null == right;
+                assert actual == expected;
+
+                if (left == Null == right) {
+                    assert expected;
+                } else {
+                    assert !expected;
+                }
+                if (!(left == Null == right)) {
+                    assert !expected;
+                } else {
+                    assert expected;
+                }
+            }
+        }
     }
 
     void testChars() {

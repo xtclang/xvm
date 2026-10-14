@@ -10,6 +10,7 @@ module TestLoops {
         testForEachCollection();
         testForEachIterator();
         testForEachSequence();
+        testForEachTupleTargets();
         testForEachConstRange();
         testForEachEnumRange();
     }
@@ -76,6 +77,39 @@ module TestLoops {
         L1: for (String s : strs) {
             console.print($"{s=}");
         }
+    }
+
+    void testForEachTupleTargets() {
+        console.print("\n** testForEachTupleTargets()");
+
+        TupleTargets target = new TupleTargets();
+        Int sum = 0;
+        for ((target.first, target.second) : [(1, 2), (3, 4)]) {
+            sum += target.first + target.second;
+        }
+        assert sum == 10;
+        assert target.first == 3 && target.second == 4;
+
+        Int[] indexed = new Int[2](_ -> 0);
+        sum = 0;
+        for ((indexed[0], indexed[1]) : [(1, 2), (3, 4)]) {
+            sum += indexed[0] + indexed[1];
+        }
+        assert sum == 10;
+        assert indexed == [3, 4];
+
+        Int first = 0;
+        sum = 0;
+        for ((first, target.second) : [(5, 6), (7, 8)]) {
+            sum += first + target.second;
+        }
+        assert sum == 26;
+        assert first == 7 && target.second == 8;
+    }
+
+    class TupleTargets {
+        Int first = 0;
+        Int second = 0;
     }
 
     void testForEachConstRange() {

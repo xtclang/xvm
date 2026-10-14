@@ -34,7 +34,6 @@ import org.xvm.asm.op.JumpLt;
 import org.xvm.asm.op.JumpLte;
 import org.xvm.asm.op.JumpNotEq;
 import org.xvm.asm.op.JumpNotNull;
-import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 
@@ -365,13 +364,19 @@ public class CmpChainExpression
         }
 
         if (constVal != null) {
+            Label labelFalse = fWhenTrue ? new Label("not_eq") : label;
+
             boolean fNull = constVal.equals(pool().valNull());
             for (int i = 0; i < cExprs; i++) {
                 Argument   arg = aArgs[i];
                 OpCondJump op  = fNull
-                        ? new JumpNull(arg, label)
-                        : new JumpEq(typeCmp, arg, constVal, label);
+                        ? new JumpNotNull(arg, labelFalse)
+                        : new JumpNotEq(typeCmp, arg, constVal, labelFalse);
                 code.add(op);
+            }
+            if (fWhenTrue) {
+                code.add(new Jump(label));
+                code.add(labelFalse);
             }
             return;
         }
