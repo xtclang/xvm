@@ -143,13 +143,19 @@ public abstract class Builder {
     }
 
     /**
+     * Ensure a unique ClassDesc for instantiating the specified type.
+     */
+    public ClassDesc getICDesc(TypeConstant type) {
+        return type.getJitICDesc(typeSystem);
+    }
+
+    /**
      * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
      * in this builder's TypeSystem.
      *
      * @see "doc/jit_class_names.txt"
      */
     public String getICName(TypeConstant type) {
-        // TODO
         return type.getJitICName(typeSystem);
     }
 
