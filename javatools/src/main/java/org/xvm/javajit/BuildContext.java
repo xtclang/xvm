@@ -1605,7 +1605,7 @@ public class BuildContext {
         DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
                 containerCD, jitName, jmd.standardMD);
         DirectMethodHandleDesc optMD = isOptimized
-                ? MethodHandleDesc.ofMethod(kind, containerCD, jitName+OPT, jmd.optimizedMD)
+                ? MethodHandleDesc.ofMethod(kind, containerCD, jitName + OPT, jmd.optimizedMD)
                 : null;
 
         TypeConstant fnType = bodySuper.getIdentity().getType();
