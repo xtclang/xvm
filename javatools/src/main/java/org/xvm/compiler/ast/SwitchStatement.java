@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -362,11 +363,7 @@ public class SwitchStatement
         sb.append("switch (");
 
         if (conds != null) {
-            sb.append(conds.getFirst());
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
+            sb.append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append(")\n")
