@@ -121,6 +121,10 @@ public class Exception extends nConst {
         return new IllegalArgument(ctx).$init(ctx, text);
     }
 
+    public static nException $xvmError(Ctx ctx, java.lang.String text, Throwable cause) {
+        return new XvmError(ctx).$init(ctx, text, cause);
+    }
+
     // ----- Const interface -----------------------------------------------------------------------
 
     /**
