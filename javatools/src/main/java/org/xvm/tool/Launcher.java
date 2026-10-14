@@ -16,10 +16,8 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.BuildInfo;
-import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -710,9 +708,7 @@ public abstract class Launcher<T extends LauncherOptions>
         var repos = new java.util.ArrayList<ModuleRepository>(path.size() + 1);
         repos.add(makeBuildRepo());
         for (File file : path) {
-            repos.add(file.isDirectory()
-                ? new DirRepository(file, true, m_repositoryErrors)
-                : new FileRepository(file, true, m_repositoryErrors));
+            repos.add(ModuleRepository.of(file, true, m_repositoryErrors));
         }
         return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }
@@ -753,10 +749,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return a module repository that will store to the specified destination
      */
     protected ModuleRepository configureResultRepo(File fileDest) {
-        var resolved = resolveFile(fileDest);
-        return resolved.isDirectory()
-                ? new DirRepository(resolved, false, m_repositoryErrors)
-                : new FileRepository(resolved, false, m_repositoryErrors);
+        return ModuleRepository.of(resolveFile(fileDest), false, m_repositoryErrors);
     }
 
     /**

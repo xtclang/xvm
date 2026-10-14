@@ -1,14 +1,46 @@
 package org.xvm.asm;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.util.Set;
 import java.util.TreeSet;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * An interface representing the ability to find Modules by identity.
  */
 public interface ModuleRepository {
+    /**
+     * Create a filesystem repository that reports read warnings to standard error.
+     *
+     * @param file      a module directory or file
+     * @param readOnly  true to make the repository read-only
+     *
+     * @return the repository for the given path
+     */
+    static ModuleRepository of(File file, boolean readOnly) {
+        return of(file, readOnly, ErrorListener.STDERR);
+    }
+
+    /**
+     * Create a filesystem repository with a host-supplied diagnostic destination.
+     * An existing directory selects a directory repository; every other path selects a file
+     * repository. A file need not exist yet, allowing a writable repository to create it.
+     *
+     * @param file      a module directory or file
+     * @param readOnly  true to make the repository read-only
+     * @param errs      the destination for module read warnings
+     *
+     * @return the repository for the given path
+     */
+    static ModuleRepository of(File file, boolean readOnly, ErrorListener errs) {
+        return requireNonNull(file, "file").isDirectory()
+                ? new DirRepository(file, readOnly, errs)
+                : new FileRepository(file, readOnly, errs);
+    }
+
     /**
      * Obtain a set of domain names that are known by this repository.
      *

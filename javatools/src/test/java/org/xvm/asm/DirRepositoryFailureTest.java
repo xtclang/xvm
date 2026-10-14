@@ -76,9 +76,7 @@ class DirRepositoryFailureTest extends RepositoryFailureTestSupport {
         var good = new FileStructure("Good");
         good.getModule().setVersion(version);
         good.writeTo(second.resolve("Good.xtc").toFile());
-        ModuleRepository candidate = singleFile
-                ? new FileRepository(old.toFile(), true, errors)
-                : new DirRepository(first.toFile(), true, errors);
+        ModuleRepository candidate = ModuleRepository.of((singleFile ? old : first).toFile(), true, errors);
         var repository = new LinkedRepository(candidate, new DirRepository(second.toFile(), true, errors));
 
         assertNotNull(repository.loadModule("Good"));
