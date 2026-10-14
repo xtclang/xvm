@@ -254,7 +254,7 @@ public abstract class OpInPlace
      */
     protected void buildPrimitiveProperty(BuildContext bctx, CodeBuilder code,
                                           PropertyConstant idProp) {
-        PropertyInfo  infoProp = idProp.getPropertyInfo();
+        PropertyInfo  infoProp = idProp.getPropertyInfo(bctx.thisType);
         JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder, bctx.thisType);
         JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder, bctx.thisType);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
@@ -262,14 +262,8 @@ public abstract class OpInPlace
 
         assert jmdGet.isOptimized || jmdSet.isOptimized;
 
-        MethodTypeDesc mdGet    = jmdGet.optimizedMD;
-        MethodTypeDesc mdSet    = jmdSet.optimizedMD;
-        String         sGetName = infoProp.ensureGetterJitMethodName(bctx.typeSystem) + Builder.OPT;
-        String         sSetName = infoProp.ensureSetterJitMethodName(bctx.typeSystem) + Builder.OPT;
-
         RegisterInfo regTarget = bctx.loadThis(code);
-        bctx.loadCtx(code);
-        code.invokevirtual(regTarget.cd(), sGetName, mdGet);
+        bctx.buildGetProperty(code, regTarget, m_nTarget).load(code);
 
         int op = getOpCode();
         switch (cd.descriptorString()) {
@@ -282,8 +276,8 @@ public abstract class OpInPlace
                 } else {
                     code.iadd();
                 }
-                Builder.adjustIntValue(code, regTarget.type());
-                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                Builder.adjustIntValue(code, pd.type);
+                bctx.buildSetPropertyFromStack(code, m_nTarget, pd.type, pd.flavor);
                 break;
 
             case OP_IP_DECA, OP_IP_INCA:
@@ -297,8 +291,8 @@ public abstract class OpInPlace
                 } else {
                     code.iadd();
                 }
-                Builder.adjustIntValue(code, regTarget.type());
-                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                Builder.adjustIntValue(code, pd.type);
+                bctx.buildSetPropertyFromStack(code, m_nTarget, pd.type, pd.flavor);
                 code.iload(slotTmp); // load the original value on Java stack
                 break;
 
@@ -310,8 +304,8 @@ public abstract class OpInPlace
                     code.iadd();
                 }
                 code.dup();
-                Builder.adjustIntValue(code, regTarget.type());
-                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                Builder.adjustIntValue(code, pd.type);
+                bctx.buildSetPropertyFromStack(code, m_nTarget, pd.type, pd.flavor);
                 break;
 
             default:
@@ -328,7 +322,7 @@ public abstract class OpInPlace
                 } else {
                     code.ladd();
                 }
-                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                bctx.buildSetPropertyFromStack(code, m_nTarget, pd.type, pd.flavor);
                 break;
 
             case OP_IP_DECA, OP_IP_INCA:
@@ -342,7 +336,7 @@ public abstract class OpInPlace
                 } else {
                     code.ladd();
                 }
-                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                bctx.buildSetPropertyFromStack(code, m_nTarget, pd.type, pd.flavor);
                 code.lload(slotTmp); // load the original value on Java stack
                 break;
 
@@ -354,7 +348,7 @@ public abstract class OpInPlace
                     code.ladd();
                 }
                 code.dup2();
-                buildSetProperty(bctx, code, regTarget, cd, sSetName, mdSet);
+                bctx.buildSetPropertyFromStack(code, m_nTarget, pd.type, pd.flavor);
                 break;
 
             default:
@@ -365,20 +359,6 @@ public abstract class OpInPlace
         default:
             throw new IllegalStateException();
         }
-    }
-
-    /**
-     * In: the new value on Java stack.
-     */
-    private void buildSetProperty(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
-                                  ClassDesc cd, String sSetName, MethodTypeDesc mdSet) {
-        int slotTmp = bctx.scope.allocateJavaSlot(cd);
-
-        Builder.store(code, cd, slotTmp);
-        bctx.loadThis(code);
-        bctx.loadCtx(code);
-        Builder.load(code, cd, slotTmp);
-        code.invokevirtual(regTarget.cd(), sSetName, mdSet); // set the new value
     }
 
     /**

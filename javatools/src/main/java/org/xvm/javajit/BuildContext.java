@@ -2599,8 +2599,7 @@ public class BuildContext {
         RegisterInfo  regValue   = createTempRegister(propType);
         JitMethodDesc jmdGet     = loadProperty(code, targetReg, propId, propInfo);
 
-        assignReturn(code, jmdGet, jmdGet.isOptimized, regValue.regId(), regValue.type(), regValue, 0
-        );
+        assignReturn(code, jmdGet, jmdGet.isOptimized, regValue.regId(), regValue.type(), regValue, 0);
         return regValue;
     }
 
