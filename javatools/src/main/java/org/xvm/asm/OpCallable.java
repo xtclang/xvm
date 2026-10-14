@@ -779,7 +779,7 @@ public abstract class OpCallable extends Op {
             cdTarget   = builder.getCCDesc(typeTarget);
             jmdCall    = infoMethod.getJitDesc(builder, typeTarget);
             fSpecial   = false;
-            fInterface = !typeTarget.isSingleUnderlyingClass(false);
+            fInterface = typeTarget.isJitInterface();
             fCond      = infoMethod.isConditionalReturn(infoTarget);
             fFunky     = idFormal != null && infoMethod.containsAbstractFunction();
 
@@ -943,10 +943,27 @@ public abstract class OpCallable extends Op {
      * @param nParentArg  the parent argument, or {@link #A_IGNORE} for a non-child
      */
     protected int buildNew(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
-        MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-        TypeConstant   typeTarget = nParentArg == A_IGNORE
-                ? idCtor.getNamespace().getType()
-                : bctx.getReturnType(m_nRetValue);
+        MethodConstant   idCtor   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        IdentityConstant idTarget = idCtor.getNamespace();
+        TypeConstant     typeTarget;
+
+        if (nParentArg == A_IGNORE) {
+            typeTarget = idTarget.getType();
+        } else {
+            // since the parent is specified, we know it's a NEW_C op
+            ConstantPool   pool        = bctx.pool();
+            ClassStructure structChild = (ClassStructure) idTarget.getComponent();
+            TypeConstant   typeParent  = bctx.getArgumentType(nParentArg).removeAccess();
+
+            if (structChild.isVirtualChild()) {
+                typeTarget = pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName());
+            } else {
+                typeTarget = structChild.isInnerChild()
+                        ? pool.ensureInnerChildTypeConstant(typeParent,
+                            (ClassConstant) structChild.getIdentityConstant())
+                        : structChild.getNormalizedType();
+            }
+        }
 
         JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, nParentArg, anArgValue);
         bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});

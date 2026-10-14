@@ -552,6 +552,15 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff this type represents a virtual child class (excluding interfaces and mixins)
+     */
+    public boolean isVirtualChildClass() {
+        return isSingleUnderlyingClass(true) &&
+                getSingleUnderlyingClass(true).getComponent() instanceof ClassStructure clz &&
+                clz.isVirtualChildClass();
+    }
+
+    /**
      * @return true iff this type represents an anonymous class type
      */
     public boolean isAnonymousClass() {
