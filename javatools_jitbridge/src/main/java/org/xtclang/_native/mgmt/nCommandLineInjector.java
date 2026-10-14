@@ -1,7 +1,6 @@
 package org.xtclang._native.mgmt;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import java.util.List;
@@ -133,29 +132,27 @@ public class nCommandLineInjector {
         ArrayᐸObjectᐳ values;
 
         try {
-            java.lang.Class<?> clz         = typeSystem.loader.loadClass(enumClass);
-            Field              field       = clz.getDeclaredField(Instance);
-            Enumeration        enumeration = (Enumeration) field.get(null);
-            Method             method      = clz.getDeclaredMethod("values$get", Ctx.class);
+            var         clz         = typeSystem.loader.loadClass(enumClass);
+            Field       field       = clz.getDeclaredField(Instance);
+            Enumeration enumeration = (Enumeration) field.get(null);
+            Method      method      = clz.getDeclaredMethod("values$get", Ctx.class);
 
             values = (ArrayᐸObjectᐳ) method.invoke(enumeration, ctx);
 
-            long count = values.size$get$p(ctx);
-            for (long i = 0; i < count; i++) {
+            for (long i = 0, c = values.size$get$p(ctx); i < c; i++) {
                 nEnum e = (nEnum) values.getElement$p(ctx, i);
                 if (e.name$get(ctx).toString().equals(value)) {
                     return e;
                 }
             }
-        } catch (NoSuchFieldException | ClassNotFoundException | InvocationTargetException |
-                 IllegalAccessException | NoSuchMethodException e) {
+        } catch (ReflectiveOperationException e) {
             // this should never happen as the JIT should have generated the code for the fields
             // and methods being accessed via reflection
             throw Exception.$xvmError(ctx, "Error creating enum value", e);
         }
 
         java.lang.String name = type.getSingleUnderlyingClass(false).getName();
-        throw org.xtclang.ecstasy.Exception.$illegalArg(ctx, "Injectable " + name + "=\""
+        throw Exception.$illegalArg(ctx, "Injectable " + name + "=\""
                 + value + "\" does not match any names in enum " + className + " "
                 + values.toString(ctx));
     }
@@ -163,15 +160,15 @@ public class nCommandLineInjector {
     /**
      * Create an instance of a {@code Destringable} type.
      *
-     * @param ctx          the current context
-     * @param type         the type of the destringable to create an instance of
-     * @param stringValue  the string value to pass to the type's constructor
+     * @param ctx    the current context
+     * @param type   the type of the destringable to create an instance of
+     * @param value  the string value to pass to the type's constructor
      *
      * @return a new instance of the specified {@code Destringable} type
      */
-    protected Object createDestringable(Ctx ctx, TypeConstant type, java.lang.String stringValue) {
-        nType nType = org.xtclang.ecstasy.nType.$ensureType(ctx, type);
-        Class clz   = nType.$xvmClass(ctx);
+    protected Object createDestringable(Ctx ctx, TypeConstant type, java.lang.String value) {
+        nType xvmType = nType.$ensureType(ctx, type);
+        Class clz     = xvmType.$xvmClass(ctx);
 
 // TODO class cXXX implements Destringable and does have a method "XXX $new(Ctx ctx, String s)" but
 //  does not have the "synthetic" method "Destringable $new(Ctx ctx, String s)" that Java
@@ -179,8 +176,8 @@ public class nCommandLineInjector {
 //        return ((Destringable) clz).$new(ctx, String.of(ctx, value));
         try {
             Method $new = clz.getClass().getDeclaredMethod("$new", Ctx.class, String.class);
-            return $new.invoke(clz, ctx, String.of(ctx, stringValue));
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            return $new.invoke(clz, ctx, String.of(ctx, value));
+        } catch (ReflectiveOperationException e) {
             throw Exception.$xvmError(ctx, "Error creating Destringable instance", e);
         }
     }
