@@ -256,6 +256,14 @@ public class VirtualChildTypeConstant
         return null;
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getJitCCType() {
+        return getConstantPool().ensureVirtualChildTypeConstant(
+                getParentType().getJitCCType(), getChildName());
+    }
+
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override

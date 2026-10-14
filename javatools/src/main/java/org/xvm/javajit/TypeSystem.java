@@ -614,6 +614,17 @@ public class TypeSystem {
         return flavorClassName(name, FUNKY);
     }
 
+    /**
+     * Build the callable interface name for an already-escaped implementation class name.
+     *
+     * @param name  the JIT name of the implementation class
+     *
+     * @return the JIT name of the callable interface
+     */
+    public static String pureInterface(String name) {
+        return flavorClassName(name, PURE);
+    }
+
     private static String flavorClassName(String name, char flavor) {
         int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
         return new StringBuilder(name.length() + ENUM > 0xFFFF ? 2 : 1)

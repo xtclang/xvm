@@ -342,7 +342,7 @@ public class CommonBuilder
                 }
             }
 
-            code.invokestatic(targetCD, targetName, targetMD);
+            code.invokestatic(targetCD, targetName, targetMD, thisType.isJitInterface());
 
             ClassDesc funkyRetCD  = funkyMD.returnType();
             ClassDesc targetRetCD = targetMD.returnType();
@@ -637,7 +637,7 @@ public class CommonBuilder
             assembleField(classBuilder, prop);
 
             if (initializer != null && extraMethods.add(initializer)) {
-                MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                MethodInfo methodInfo = getPropertyInitializer(initializer);
                 assert methodInfo != null;
                 assembleMethod(classBuilder, methodInfo,
                         initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
@@ -1093,16 +1093,13 @@ public class CommonBuilder
                 valueReg = loadConstant(code, initValue);
             } else {
                 // call the instance property initializer
-                MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                MethodInfo methodInfo = getPropertyInitializer(initializer);
                 assert methodInfo != null;
 
                 JitMethodDesc jmd = methodInfo.getJitDesc(this);
                 assert !jmd.isStandardStatic;
 
-                code.aload(0)
-                    .dup()
-                    .aload(code.parameterSlot(0))
-                    .invokevirtual(CD_this, initializer.ensureJitMethodName(typeSystem), jmd.standardMD);
+                invokePropertyInitializer(code, methodInfo, jmd);
 
                 JitFlavor flavor = type.getJitDesc(this).flavor;
                 if (flavor == NullablePrimitive || flavor == NullableXvmPrimitive) {
@@ -1221,6 +1218,23 @@ public class CommonBuilder
                 code.labelBinding(doneLbl);
             }
         }
+    }
+
+    /**
+     * Find the instance property's initializer in the applicable declaration.
+     */
+    protected MethodInfo getPropertyInitializer(MethodConstant initializer) {
+        return typeInfo.getMethodById(initializer);
+    }
+
+    /**
+     * Invoke the specified property initializer.
+     */
+    protected void invokePropertyInitializer(CodeBuilder code, MethodInfo initializer, JitMethodDesc jmd) {
+        code.aload(0)
+            .dup()
+            .aload(code.parameterSlot(0))
+            .invokevirtual(art.CD(), initializer.ensureJitMethodName(typeSystem), jmd.standardMD);
     }
 
     /**
@@ -1934,6 +1948,7 @@ public class CommonBuilder
 
         classBuilder.withMethodBody(jitName, jmd.standardMD, flags, code -> {
 
+            int ctxSlot    = code.parameterSlot(jmd.standardCtx());
             int extraCount = jmd.getImplicitParamCount();
             JitParamDesc[] optParams = jmd.optimizedParams;
             int            firstParam;
@@ -2233,8 +2248,8 @@ public class CommonBuilder
                         code.areturn();
                     } else {
                         if (optRetIx != stdRetIx) {
-                            loadFromContext(code, optCD, optRetIx);
-                            storeToContext(code, stdCD, stdRetIx);
+                            loadFromContext(code, optCD, optRetIx, ctxSlot);
+                            storeToContext(code, stdCD, stdRetIx, ctxSlot);
                         }
                     }
                     break;
@@ -2245,9 +2260,9 @@ public class CommonBuilder
                         box(code, optType);
                         code.areturn();
                     } else {
-                        loadFromContext(code, optCD, optRetIx);
+                        loadFromContext(code, optCD, optRetIx, ctxSlot);
                         box(code, optType);
-                        storeToContext(code, stdCD, stdRetIx);
+                        storeToContext(code, stdCD, stdRetIx, ctxSlot);
                     }
                     break;
 
@@ -2260,7 +2275,7 @@ public class CommonBuilder
                     Label endIf  = code.newLabel();
 
                     optExt = optReturns[optIx + 1];
-                    loadFromContext(code, CD_boolean, optExt.altIndex);
+                    loadFromContext(code, CD_boolean, optExt.altIndex, ctxSlot);
                     code.iconst_1()
                         .if_icmpeq(ifNull)  // if true, go to Null
                         ;
@@ -2271,9 +2286,9 @@ public class CommonBuilder
                         code.areturn();
                     } else {
                         // load the primitive to box from the context
-                        loadFromContext(code, optDesc.cd, optDesc.altIndex);
+                        loadFromContext(code, optDesc.cd, optDesc.altIndex, ctxSlot);
                         box(code, optType);
-                        storeToContext(code, stdCD, stdIx);
+                        storeToContext(code, stdCD, stdIx, ctxSlot);
                         code.goto_(endIf);
                     }
                     code.labelBinding(ifNull);
@@ -2282,7 +2297,7 @@ public class CommonBuilder
                     if (optIx == 0) {
                         code.areturn();
                     } else {
-                        storeToContext(code, stdCD, stdIx);
+                        storeToContext(code, stdCD, stdIx, ctxSlot);
                         code.labelBinding(endIf);
                     }
                     break;
@@ -2295,13 +2310,13 @@ public class CommonBuilder
                     idx =  optDesc.index == 0 ? 1 : 0;
                     for (; idx < optIndexes.length; idx++) {
                         JitParamDesc optReturn = optReturns[optIndexes[idx]];
-                        loadFromContext(code, optReturn.cd, optReturn.altIndex);
+                        loadFromContext(code, optReturn.cd, optReturn.altIndex, ctxSlot);
                     }
                     box(code, optType);
                     if (optIx <= 0) {
                         code.areturn();
                     } else {
-                        storeToContext(code, stdCD, stdRetIx);
+                        storeToContext(code, stdCD, stdRetIx, ctxSlot);
                     }
                     break;
                 }
@@ -2317,21 +2332,21 @@ public class CommonBuilder
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 2; // skip the Opt returns we will process
                     optExt = optReturns[optIndexes[optIndexes.length - 1]];
-                    loadFromContext(code, CD_boolean, optExt.altIndex);
+                    loadFromContext(code, CD_boolean, optExt.altIndex, ctxSlot);
                     code.iconst_1()
                         .if_icmpeq(ifNull);  // if true, go to Null
 
                     idx = optDesc.index == 0 ? 1 : 0;
                     for (; idx < optIndexes.length - 1; idx++) {
                         JitParamDesc optReturn = optReturns[optIndexes[idx]];
-                        loadFromContext(code, optReturn.cd, optReturn.altIndex);
+                        loadFromContext(code, optReturn.cd, optReturn.altIndex, ctxSlot);
                     }
                     box(code, optType);
 
                     if (optIx <= 0) {
                         code.areturn();
                     } else {
-                        storeToContext(code, stdCD, stdIx);
+                        storeToContext(code, stdCD, stdIx, ctxSlot);
                         code.goto_(endIf);
                     }
                     code.labelBinding(ifNull);
@@ -2340,7 +2355,7 @@ public class CommonBuilder
                     if (optIx <= 0) {
                         code.areturn();
                     } else {
-                        storeToContext(code, stdCD, stdIx);
+                        storeToContext(code, stdCD, stdIx, ctxSlot);
                         code.labelBinding(endIf);
                     }
                     break;
@@ -4303,9 +4318,8 @@ public class CommonBuilder
 
                     code.aload(ctxSlot)
                         .aload(thisSlot)
-                        .invokestatic(cdTarget,
-                                validatorName,
-                                md(CD_void, CD_Ctx, cdTarget));
+                        .invokestatic(cdTarget, validatorName, md(CD_void, CD_Ctx, cdTarget),
+                                typeTarget.isJitInterface());
                 }
             }
 
@@ -4450,10 +4464,11 @@ public class CommonBuilder
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
-        int    baseIndex = TypeSystem.findJitSuffix(bctx.className);
-        String className = baseIndex > 0
-                ? bctx.className.substring(0, baseIndex)
-                : bctx.className;
+        String className = bctx.className;
+        int    baseIndex = TypeSystem.findJitSuffix(className);
+        if (baseIndex > 0) {
+            className = className.substring(0, baseIndex);
+        }
 
         if (Arrays.stream(NO_JIT_LIST).noneMatch(className::endsWith)) {
             // use the enclosing Ecstasy method name to cover all overloads and nested lambdas
