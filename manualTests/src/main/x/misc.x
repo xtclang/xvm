@@ -909,6 +909,11 @@ module TestMisc {
         withVoid.f();
         assert value == "Hello" && withVoid.voidCalled;
 
+        MultipleWithVoid multi = new MultipleWithVoid();
+        Int value2 = multi.f();
+        multi.f();
+        assert value2 == 42 && multi.voidCalled;
+
         class NonVoid {
             String f() = "Hello";
             Int    f() = 42;
@@ -918,10 +923,15 @@ module TestMisc {
             Boolean voidCalled = False;
 
             String f() = "Hello";
+            void   f() {voidCalled = True;}
+        }
 
-            void f() {
-                voidCalled = True;
-            }
+        class MultipleWithVoid {
+            Boolean voidCalled = False;
+
+            String f() = "Hello";
+            Int    f() = 42;
+            void   f() {voidCalled = True;}
         }
     }
 }

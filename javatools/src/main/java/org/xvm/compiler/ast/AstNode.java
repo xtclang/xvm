@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -1422,13 +1421,17 @@ public abstract class AstNode
             Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs) {
         assert !setMethods.isEmpty();
 
-        MethodConstant idBest = null;
-        for (MethodConstant idMethod : setMethods) {
-            if (idBest == null) {
-                idBest = idMethod;
-            } else {
-                // don't take the type parameters into the consideration
-                SignatureConstant sigOld = truncateSignature(idBest,   mapMethods.get(idBest));
+        // an ambiguous pair may still have a better match among the remaining candidates, so we
+        // need to do n*(n-1)/2 comparisons
+        NextMethod: for (MethodConstant idBest : setMethods) {
+            // don't take the type parameters into the consideration
+            SignatureConstant sigOld = truncateSignature(idBest, mapMethods.get(idBest));
+
+            for (MethodConstant idMethod : setMethods) {
+                if (idMethod.equals(idBest)) {
+                    continue;
+                }
+
                 SignatureConstant sigNew = truncateSignature(idMethod, mapMethods.get(idMethod));
 
                 int     cParamsOld = sigOld.getParamCount();
@@ -1467,23 +1470,20 @@ public abstract class AstNode
                     fOldBetter = !fNewBetter;
                 }
 
-                if (fOldBetter || fNewBetter) {
-                    // if both are substitutable to each other, we can take any
-                    // (though we could also get the target's info, find the corresponding
-                    //  TypeInfo and choose a more accommodating MethodInfo)
-                    if (fNewBetter) {
-                        idBest = idMethod;
-                    }
-                } else {
-                    // note: theoretically there could still be one better than either of these two,
-                    // but for now, just assume it's an error at this point
-                    log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-                            idBest.getSignature().removeAutoNarrowing().getValueString());
-                    return null;
+                if (!fOldBetter) {
+                    continue NextMethod;
                 }
             }
+
+            // if both are substitutable to each other, we can take any (though we could also get
+            // the target's info, find the corresponding TypeInfo and choose a more accommodating
+            // MethodInfo)
+            return idBest;
         }
-        return idBest;
+
+        log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
+                setMethods.iterator().next().getSignature().removeAutoNarrowing().getValueString());
+        return null;
     }
 
     private SignatureConstant truncateSignature(MethodConstant idMethod, MethodStructure method) {
