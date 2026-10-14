@@ -12,6 +12,12 @@ import org.xvm.asm.FileStructure.FileInfo;
 
 import org.xvm.asm.constants.ModuleConstant;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
+import static org.xvm.tool.Launcher.READ_FAILURE;
+
 import static org.xvm.util.Handy.BINARY_EXTENSION;
 import static org.xvm.util.Handy.hasBinaryExtension;
 import static org.xvm.util.Handy.removeSourceExtension;
@@ -33,10 +39,23 @@ public class FileRepository
      * @param readOnly  true to make the repository "read-only"
      */
     public FileRepository(File file, boolean readOnly) {
+        this(file, readOnly, ErrorListener.STDERR);
+    }
+
+    /**
+     * Construct a repository with a host-supplied diagnostic destination.
+     *
+     * @param file      the file containing the module(s)
+     * @param readOnly  true to make the repository read-only
+     * @param errs      the destination for read warnings; an unusable candidate does not prevent
+     *                  a later repository from supplying the module
+     */
+    public FileRepository(File file, boolean readOnly, ErrorListener errs) {
         assert file != null && !file.isDirectory();
 
         this.file     = moduleFile(file);
         this.readOnly = readOnly;
+        this.errs     = requireNonNull(errs, "errs");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -304,7 +323,7 @@ public class FileRepository
             return info;
         } catch (Exception e) {
             readFailed = true;
-            System.out.println("Error loading FileInfo from file: " + file + "; " + e.getMessage());
+            errs.warn(READ_FAILURE, NOWHERE, file, e);
             return null;
         }
     }
@@ -319,7 +338,7 @@ public class FileRepository
             return structure;
         } catch (Exception e) {
             readFailed = true;
-            System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
+            errs.warn(READ_FAILURE, NOWHERE, file, e);
             return null;
         }
     }
@@ -359,8 +378,9 @@ public class FileRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File    file;
-    private final boolean readOnly;
+    private final File          file;
+    private final boolean       readOnly;
+    private final ErrorListener errs;
 
     private long    timestamp;
     private long    size;
