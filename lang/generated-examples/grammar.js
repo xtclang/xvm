@@ -155,15 +155,9 @@ module.exports = grammar({
         // The 3-way variant above is not sufficient because some LR states
         // see only `parameter` and `tuple_assignment_element` as candidates.
         [$.parameter, $.tuple_assignment_element],
-        // After narrowing the bare-ident alt of `tuple_assignment_element`
-        // to `choice($.identifier, $.member_expression)` (no longer a full
-        // `_expression`), an LR state inside `for ((identifier ,...))`
-        // can interpret the leading identifier as any of: bare
-        // tuple_assignment_element, start-of-_expression, type_name, or
-        // qualified_type_name. GLR needs all four alive until the trailing
-        // `:` / `=` distinguishes for-iteration vs for-tuple-assignment vs
-        // bare expression.
-        [$.tuple_assignment_element, $._expression, $.type_name, $.qualified_type_name],
+        // In `for ((identifier, ...))`, retain tuple assignment, foreach target,
+        // expression, and type interpretations until `:` / `=` disambiguates.
+        [$.tuple_assignment_element, $._for_tuple_destructure_element, $._expression, $.type_name, $.qualified_type_name],
 
         // Conditional tuple conflicts
         [$.conditional_tuple_element, $._expression],
@@ -969,7 +963,7 @@ module.exports = grammar({
         //   for ((Type1 name1, Type2 name2) : iter)        -- typed bindings
         //   for ((_, _) : map)                              -- both wildcards (discard)
         //   for ((_, Int index) : pairs)                    -- mixed
-        // Each element is either a wildcard `_` or `Type identifier`.
+        // Elements may declare a typed binding, discard a value, or assign an existing target.
         for_tuple_destructure: $ => seq(
             '(',
             $._for_tuple_destructure_element,
@@ -979,6 +973,9 @@ module.exports = grammar({
         _for_tuple_destructure_element: $ => choice(
             $.wildcard,
             seq($.type_expression, $.identifier),
+            $.identifier,
+            $.member_expression,
+            $.index_expression,
         ),
 
         // Supports conditional declaration: while (Element x := expr)
