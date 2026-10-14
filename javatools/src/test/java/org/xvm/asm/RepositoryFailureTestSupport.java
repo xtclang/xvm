@@ -1,42 +1,22 @@
 package org.xvm.asm;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
-import java.nio.charset.StandardCharsets;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.parallel.Isolated;
+import static java.util.stream.Collectors.joining;
 
 /**
- * Captures the repositories' existing console reports without adding a reporting API for tests.
- * Isolation keeps temporary process-wide output redirection separate from other test classes.
+ * Collects repository diagnostics without redirecting process-wide output.
  */
-@Isolated
 abstract class RepositoryFailureTestSupport {
-    @BeforeEach
-    void captureOutput() {
-        original = System.out;
-        captured = new PrintStream(bytes, true, StandardCharsets.UTF_8);
-        System.setOut(captured);
-    }
-
-    @AfterEach
-    void restoreOutput() {
-        System.setOut(original);
-        captured.close();
-    }
-
     String output() {
-        return bytes.toString(StandardCharsets.UTF_8);
+        return reports.stream().map(Object::toString).collect(joining("\n"));
     }
 
     void clearOutput() {
-        bytes.reset();
+        reports.clear();
     }
 
-    private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    private PrintStream original;
-    private PrintStream captured;
+    final List<ErrorListener.ErrorInfo> reports = new ArrayList<>();
+    final ErrorListener errors = ErrorListener.collecting(reports::add);
 }

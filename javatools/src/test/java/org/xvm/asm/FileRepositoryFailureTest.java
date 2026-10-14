@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
@@ -31,12 +34,16 @@ class FileRepositoryFailureTest extends RepositoryFailureTestSupport {
     void invalidHeaderIsReportedAndCanBeRepaired() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, errors);
 
         assertTrue(output().isEmpty(), "construction must not initiate a read");
         assertTrue(repository.getModuleNames().isEmpty());
         assertNull(repository.loadModule("Broken"));
         assertTrue(output().contains(file.toString()));
+        assertEquals(1, reports.size());
+        assertEquals("LAUNCHER-04", reports.getFirst().getCode());
+        assertInstanceOf(Exception.class, reports.getFirst().getParams()[1]);
+        assertFalse(errors.hasSeriousErrors(), "an unavailable candidate must not poison fallback");
 
         clearOutput();
         new FileStructure("Broken").writeTo(file.toFile());
@@ -53,7 +60,7 @@ class FileRepositoryFailureTest extends RepositoryFailureTestSupport {
         var input = new ByteArrayInputStream(contents);
         FileStructure.readFileInfo(input);
         Files.write(file, Arrays.copyOf(contents, contents.length - input.available()));
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, errors);
 
         assertTrue(repository.getModuleNames().contains("Broken"));
         assertNull(repository.loadModule("Broken"));
@@ -72,7 +79,7 @@ class FileRepositoryFailureTest extends RepositoryFailureTestSupport {
     void unchangedFailureIsNotReadAgainWhenTheBurstIntervalExpires() throws Exception {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, errors);
         assertNull(repository.loadModule("Broken"));
         assertTrue(output().contains(file.toString()));
         clearOutput();
@@ -93,7 +100,7 @@ class FileRepositoryFailureTest extends RepositoryFailureTestSupport {
     void removedCandidatesProduceNoFurtherReports() throws IOException {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, errors);
         assertNull(repository.loadModule("Broken"));
         assertTrue(output().contains(file.toString()));
 
@@ -110,7 +117,7 @@ class FileRepositoryFailureTest extends RepositoryFailureTestSupport {
         Path file = directory.resolve("Old.xtc");
         Files.writeString(file, "unreadable candidate");
         byte[] original = Files.readAllBytes(file);
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, errors);
 
         assertNull(repository.loadModule("Missing"));
         assertTrue(output().contains(file.toString()));

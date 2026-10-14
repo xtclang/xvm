@@ -1418,7 +1418,7 @@ public class ModuleInfo {
             try {
                 return readSource(m_file);
             } catch (IOException e) {
-                error(READ_FAILURE, NOWHERE, m_file);
+                error(READ_FAILURE, NOWHERE, m_file, e);
             }
 
             return new char[0];

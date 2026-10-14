@@ -138,6 +138,12 @@ public abstract class Launcher<T extends LauncherOptions>
     protected final ErrorListener m_errors;
 
     /**
+     * Repository reports reach both the host and the console without retaining the launcher.
+     * They describe unavailable candidates, so they do not change the launcher's abort state.
+     */
+    protected final ErrorListener m_repositoryErrors;
+
+    /**
      * The worst severity issue encountered thus far.
      * Tracked in Launcher for control flow decisions (abort/continue).
      */
@@ -159,6 +165,7 @@ public abstract class Launcher<T extends LauncherOptions>
     protected Launcher(T options, Console console, @NotNull ErrorListener errs) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
         m_errors = requireNonNull(errs, "errs");
+        m_repositoryErrors = ErrorListener.tee(m_errors, m_console::err);
         m_options = options;
         moduleCache = new HashMap<>();
     }
@@ -704,8 +711,8 @@ public abstract class Launcher<T extends LauncherOptions>
         repos.add(makeBuildRepo());
         for (File file : path) {
             repos.add(file.isDirectory()
-                ? new DirRepository(file, true)
-                : new FileRepository(file, true));
+                ? new DirRepository(file, true, m_repositoryErrors)
+                : new FileRepository(file, true, m_repositoryErrors));
         }
         return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }
@@ -748,8 +755,8 @@ public abstract class Launcher<T extends LauncherOptions>
     protected ModuleRepository configureResultRepo(File fileDest) {
         var resolved = resolveFile(fileDest);
         return resolved.isDirectory()
-                ? new DirRepository(resolved, false)
-                : new FileRepository(resolved, false);
+                ? new DirRepository(resolved, false, m_repositoryErrors)
+                : new FileRepository(resolved, false, m_repositoryErrors);
     }
 
     /**
@@ -1022,7 +1029,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     public static final String MISSING_PKG_NODE = "LAUNCHER-03";
     /**
-     * Failure reading: {0}
+     * Failure reading: {0}; {1}
      */
     public static final String READ_FAILURE     = "LAUNCHER-04";
 

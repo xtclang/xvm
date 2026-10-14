@@ -256,7 +256,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         prevLibs = repoLib;
         checkErrors("system library linking");
 
-        ModuleInfoRepository repoOutput = new ModuleInfoRepository(infoByName, false);
+        ModuleInfoRepository repoOutput = new ModuleInfoRepository(infoByName, false, m_repositoryErrors);
         prevOutput = repoOutput;
         checkErrors("output repository setup");
 

@@ -12,6 +12,7 @@ import org.xvm.api.InterpreterConnector
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
+import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileRepository
 import org.xvm.asm.FileStructure
 import org.xvm.asm.LinkedRepository
@@ -38,12 +39,24 @@ class RepositoryReportingTest {
         CompilerTestSupport.configure()
         val file = directory.resolve("Old.xtc").toFile()
         unsupported(file, "Old")
+        val repositoryErrors = ErrorList()
         val repository: ModuleRepository =
-            if (singleFile) FileRepository(file, true) else DirRepository(directory.toFile(), true)
+            if (singleFile) {
+                FileRepository(file, true, repositoryErrors)
+            } else {
+                DirRepository(directory.toFile(), true, repositoryErrors)
+            }
         val support = EmbeddingSupport.instance()
         val validErrors = ErrorList(100)
         assertThat(support.compile("module Good {}", repository, validErrors)).isNotNull()
         assertThat(validErrors.errors).isEmpty()
+        assertThat(repositoryErrors.errors).hasSize(1)
+        val report = repositoryErrors.errors.single()
+        assertThat(report.code).isEqualTo("LAUNCHER-04")
+        assertThat(report.message).contains(file.path, "Unsupported .xtc version")
+        assertThat(report.params[1]).isInstanceOf(Exception::class.java)
+        assertThat(report.site()).isEqualTo(ErrorListener.NOWHERE)
+        assertThat(repositoryErrors.hasSeriousErrors()).isFalse()
 
         val missingErrors = ErrorList(100)
         assertThat(support.compile("module Test { package lib import Missing; }", repository, missingErrors)).isNull()
