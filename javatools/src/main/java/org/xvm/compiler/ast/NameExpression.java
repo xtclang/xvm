@@ -2669,10 +2669,9 @@ public class NameExpression
                     typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
                     // these hidden parameters are bound by FBind, not supplied by callers
-                    if (m_plan == Plan.BindTarget) {
-                        for (int i = cTypeParams - 1; i >= 0; --i) {
-                            typeFn = pool.bindFunctionParam(typeFn, i);
-                        }
+                    assert m_plan == Plan.BindTarget || m_plan == Plan.None;
+                    for (int i = cTypeParams - 1; i >= 0; --i) {
+                        typeFn = pool.bindFunctionParam(typeFn, i);
                     }
                 }
 
