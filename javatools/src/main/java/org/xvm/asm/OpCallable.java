@@ -28,6 +28,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCallDesc;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
@@ -55,8 +56,6 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.md;
-
-import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -677,11 +676,11 @@ public abstract class OpCallable extends Op {
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem    ts = bctx.typeSystem;
+        TypeSystem    ts        = bctx.typeSystem;
         ClassDesc     cdTarget;
         String        sJitName;
         JitMethodDesc jmdCall;
-        boolean       fSpecial;
+        JitCallDesc   callSuper = null;
         boolean       fInterface;
         boolean       fCond;
         boolean       fFunky;
@@ -702,34 +701,18 @@ public abstract class OpCallable extends Op {
                 cdTarget   = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
                 jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
-                fSpecial   = false;
                 fInterface = typeTarget.isJitInterface();
                 fCond      = infoMethod.isConditionalReturn(infoTarget);
             } else {
-                MethodConstant   idSuper  = bodySuper.getIdentity();
-                IdentityConstant idCallee = idSuper.getNamespace();
-                Format           format   = idCallee.getComponent().getFormat();
+                callSuper  = bctx.resolveSuperCall();
+                cdTarget   = callSuper.owner();
+                sJitName   = callSuper.name();
+                jmdCall    = callSuper.jmd();
+                fInterface = false;
 
-                if (format == Format.MIXIN) {
-                    // we need to generate a synthetic super
-                    cdTarget = ClassDesc.of(bctx.className);
-                    sJitName = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
-                               + HASH + nDepth;
-
-                    bctx.buildSuper(sJitName, nDepth);
-                    fInterface = false;
-                } else {
-                    TypeConstant typeTarget = bctx.isSpecialized
-                            ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
-                            : idCallee.getType();
-                    cdTarget   = bctx.builder.getCCDesc(typeTarget);
-                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
-                            ensureJitMethodName(ts);
-                    fInterface = typeTarget.isJitInterface();
-                }
-                jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
-                fSpecial = true;
-                fCond    = bodySuper.getMethodStructure().isConditionalReturn();
+                // absence of MethodStructure indicates a synthetic field; it's never conditional
+                MethodStructure methodSuper = bodySuper.getMethodStructure();
+                fCond = methodSuper != null && methodSuper.isConditionalReturn();
             }
             fFunky = false;
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
@@ -778,7 +761,6 @@ public abstract class OpCallable extends Op {
 
             cdTarget   = builder.getCCDesc(typeTarget);
             jmdCall    = infoMethod.getJitDesc(builder, typeTarget);
-            fSpecial   = false;
             fInterface = typeTarget.isJitInterface();
             fCond      = infoMethod.isConditionalReturn(infoTarget);
             fFunky     = idFormal != null && infoMethod.containsAbstractFunction();
@@ -903,11 +885,8 @@ public abstract class OpCallable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmdCall, anArgValue);
 
-        if (fSpecial) {
-            // Note: when the caller is a direct subinterface of the interface being called we need
-            // to use invokespecial on an interface method, which is only legal if we don't
-            // skip levels in the hierarchy
-            code.invokespecial(cdTarget, sJitName, mdCall, fInterface);
+        if (callSuper != null) {
+            callSuper.invoke(code, jmdCall.isOptimized);
         } else if (fFunky || m_nFunctionId == A_SUPER) {
             // funky functions and delegating super calls dispatch on the loaded receiver
             if (fInterface) {
