@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.DiagnosticTag
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.MarkupContent
@@ -16,6 +17,7 @@ internal data class ClientPresentation(
     val workspaceKinds: Set<SymbolKind> = legacyKinds,
     val diagnosticVersions: Boolean = false,
     val diagnosticRelatedInformation: Boolean = false,
+    val diagnosticTags: Set<DiagnosticTag> = emptySet(),
     val workspaceConfiguration: Boolean = false,
     val completionKinds: Set<CompletionItemKind> = legacyCompletionKinds,
     val completionSnippets: Boolean = false,
@@ -28,6 +30,7 @@ internal data class ClientPresentation(
     val linkTooltips: Boolean = false,
     val signatureActiveParameters: Boolean = false,
     val pullDiagnosticRelatedInformation: Boolean = false,
+    val pullDiagnosticTags: Set<DiagnosticTag> = emptySet(),
 ) {
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) {
@@ -100,6 +103,14 @@ internal data class ClientPresentation(
                         ?: legacyKinds,
                 diagnosticVersions = text?.publishDiagnostics?.versionSupport == true,
                 diagnosticRelatedInformation = text?.publishDiagnostics?.relatedInformation == true,
+                diagnosticTags =
+                    text
+                        ?.publishDiagnostics
+                        ?.tagSupport
+                        ?.let { if (it.isLeft) null else it.right }
+                        ?.valueSet
+                        .orEmpty()
+                        .toSet(),
                 workspaceConfiguration = params.capabilities?.workspace?.configuration == true,
                 completionKinds =
                     text
@@ -125,6 +136,13 @@ internal data class ClientPresentation(
                 signatureActiveParameters =
                     text?.signatureHelp?.signatureInformation?.activeParameterSupport == true,
                 pullDiagnosticRelatedInformation = text?.diagnostic?.relatedInformation == true,
+                pullDiagnosticTags =
+                    text
+                        ?.diagnostic
+                        ?.tagSupport
+                        ?.valueSet
+                        .orEmpty()
+                        .toSet(),
             )
         }
 
