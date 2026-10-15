@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **289 scenarios**: X1–X284, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **290 scenarios**: X1–X285, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1267,7 +1267,7 @@ module Hello {
 | 18a.7 | Rerun | IntelliJ **Rerun**, or VS Code **Tasks: Restart Running Task**, while a run is active | The old run stops and a new one starts in the same console (automated in X283) |
 | 18a.8 | Failed build skips the run | Run a module that does not compile | The diagnostics print and nothing runs |
 | 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before |
-| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs |
+| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs (the run is automated in X285) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 
 Known limits: no console input; one program at a time per server (a second concurrent run reports
@@ -1413,7 +1413,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X284 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X285 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1561,7 +1561,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 289 scenarios: X1–X284, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 290 scenarios: X1–X285, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3827,7 +3827,7 @@ visual comparisons; normal native runs leave it alone.
 All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
 startup comparisons are recorded in the [acceptance reports](#acceptance-reports).
 
-### Embedded build and run (X280–X284)
+### Embedded build and run (X280–X285)
 
 These cases switch the workspace or project to the embedded build mode for their duration
 (VS Code `xtc.build.mode`, IntelliJ Build, Execution, Deployment › Ecstasy) and configure only their
@@ -3840,6 +3840,7 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 | X282 | Run RunEcho with the arguments `a b` and `ü`. | Output `args=2:a b\|ü`, unchanged arguments without shell parsing, and exit code 3. |
 | X283 | Run RunForever; after it prints `started`, Rerun it (IntelliJ **Rerun**, VS Code **Tasks: Restart Running Task**); after the new run prints `started`, Stop it. Then run RunNext from its Run lens. | Rerun stops the first run and starts a new one that prints `started` again. The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
 | X284 | Run RunBroken, whose `run` returns a String as an Int. | The run prints the `RunBroken.x:2:` diagnostic and "Build failed; nothing was run.", runs nothing and ends with exit code 1. |
+| X285 | VS Code: start debugging DebugRun (`F5` or a `launch.json` entry). IntelliJ: open DebugRun's Ecstasy Application configuration. | VS Code starts no debug session, says debugging is not available, and runs the module to exit code 4. IntelliJ offers Run but no Debug runner for the configuration, so it never pretends to debug. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
