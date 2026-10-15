@@ -529,8 +529,8 @@ class XtcTextDocumentService(
                                         severity = Diagnostic.Severity.ERROR,
                                         message =
                                             "Ecstasy analysis failed; see the language server log for details",
-                                        code = "ANALYSIS-FAILED",
-                                        source = "xtc",
+                                        code = Diagnostic.Codes.ANALYSIS_FAILED,
+                                        source = Diagnostic.SOURCE,
                                     ),
                                 ),
                             ),
@@ -749,7 +749,7 @@ class XtcTextDocumentService(
         partial: ((T) -> PartialResults.Plan<T>)? = null,
         convert: (List<CompilationResult>) -> T,
     ): CompletableFuture<T> {
-        if (!server.usesPullDiagnostics || (identifier != null && identifier != "xtc")) {
+        if (!server.usesPullDiagnostics || (identifier != null && identifier != XtcLanguageServer.PULL_DIAGNOSTICS_IDENTIFIER)) {
             return CompletableFuture.failedFuture(
                 ResponseErrorException(
                     ResponseError(
