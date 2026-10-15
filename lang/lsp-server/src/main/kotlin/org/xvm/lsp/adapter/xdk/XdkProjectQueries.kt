@@ -835,12 +835,21 @@ internal class XdkProjectQueries(
     }
 
     /**
-     * Candidate syntax is insufficient: every edit must compile and preserve all existing bindings.
+     * Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. A quick
+     * fix names the request's [diagnostics] it resolves, those overlapping the code it repairs, so editors
+     * can offer it on the problem itself.
      */
     fun codeActions(
         uri: String,
         range: Range,
+        diagnostics: List<Diagnostic> = emptyList(),
     ): List<CodeAction> {
+        fun resolved(target: SemanticModel.Range) =
+            diagnostics.filter {
+                val at = it.location
+                SemanticModel.Position(at.endLine, at.endColumn) >= target.start &&
+                    SemanticModel.Position(at.startLine, at.startColumn) <= target.end
+            }
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
         val before = compile(texts, Proof.REPAIR) ?: return emptyList()
@@ -851,7 +860,7 @@ internal class XdkProjectQueries(
                 }
         val actions =
             if (!complete) {
-                autoImports(uri, source, text, range, before)
+                autoImports(uri, source, text, range, before, ::resolved)
             } else {
                 XdkImports.candidates(text).mapNotNull { candidate ->
                     checkCurrent()
@@ -896,6 +905,7 @@ internal class XdkProjectQueries(
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.QUICKFIX,
+                            diagnostics = resolved(candidate.callee.range),
                             edit = WorkspaceEdit(changes.keys.associate { uris.getValue(it) to plan.textEdits(it) }, versioned = true),
                         )
                     }
@@ -920,6 +930,7 @@ internal class XdkProjectQueries(
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.QUICKFIX,
+                            diagnostics = resolved(candidate.use.range),
                             edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                         )
                     }
@@ -1100,16 +1111,16 @@ internal class XdkProjectQueries(
         text: String,
         range: Range,
         before: CompilerRenameFacts,
+        resolved: (SemanticModel.Range) -> List<Diagnostic>,
     ): List<CodeAction> {
         val models = before.models.filter { it.sourceName == source }
         val start = SemanticModel.Position(range.start.line, range.start.column)
         val end = SemanticModel.Position(range.end.line, range.end.column)
-        val names =
+        val unresolved =
             models
                 .flatMap { it.occurrences }
                 .filter { it.symbol == null && it.range.start <= end && it.range.end >= start }
-                .map { it.name }
-                .distinct()
+        val names = unresolved.map { it.name }.distinct()
         val owner =
             project.modules.values.singleOrNull { it.uri == project.scope(uri) }
                 ?: return emptyList()
@@ -1131,6 +1142,11 @@ internal class XdkProjectQueries(
                     CodeAction(
                         "Import '${target.path}' from ${target.module}",
                         CodeAction.CodeActionKind.QUICKFIX,
+                        diagnostics =
+                            unresolved
+                                .filter { it.name == target.name }
+                                .flatMap { resolved(it.range) }
+                                .distinct(),
                         edit =
                             WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                     )
