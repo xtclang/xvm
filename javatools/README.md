@@ -8,7 +8,7 @@ This project uses the library produced by the "javatools_utils" project,
 and the `implicit.x` resource file from the "ecstasy" project.
 
 The compiler also supports the compiler-backed language server. Start with
-[Compiler support for the language server](LSP-COMPILER.md) for a complete walkthrough of the
+[Compiler support for the language server](lsp-compiler.md) for a complete walkthrough of the
 compiler changes, their rationale, the LSP consumers and the regression tests. The
 [architecture overview](#compiler-architecture-for-language-tooling) below provides a shorter introduction.
 
@@ -41,15 +41,15 @@ belong to the current document revision. Running the command-line compiler and p
 cannot supply those answers. Successful compilation also discards or rewrites some of the source
 information that navigation needs; an unfinished buffer may never reach emission at all.
 
-The [compiler guide](LSP-COMPILER.md) explains the design rationale and changes to `javatools`
+The [compiler guide](lsp-compiler.md) explains the design rationale and changes to `javatools`
 that make this possible. The compiler remains independent of LSP, IntelliJ and VS Code.
 It exposes compilation results and source facts; the adapter in `lang/lsp-server` converts those
 facts into immutable editor models, applies document-version checks and implements the protocol.
 
 | Compiler mechanism | Why an editor needs it | Code and contract |
 | --- | --- | --- |
-| Owned diagnostics and explicit stopping | Associate every report with an attempt, retain speculative failures appropriately, and cancel obsolete work without manufacturing source errors. | `ErrorListener`, `ErrorList`, `Reporting`; [diagnostic design](LSP-COMPILER.md#diagnostics-cancellation-and-reporting-scopes). |
-| Snapshot inputs and compilation outcomes | Compile unsaved module/member files together and distinguish successful output from ordinary partial progress after a failure. | `EmbeddingSupport` and the `ModuleInfo` source hooks; [host snapshots and outcomes](LSP-COMPILER.md#source-snapshots-and-compilation-outcomes). |
+| Owned diagnostics and explicit stopping | Associate every report with an attempt, retain speculative failures appropriately, and cancel obsolete work without manufacturing source errors. | `ErrorListener`, `ErrorList`, `Reporting`; [diagnostic design](lsp-compiler.md#diagnostics-cancellation-and-reporting-scopes). |
+| Snapshot inputs and compilation outcomes | Compile unsaved module/member files together and distinguish successful output from ordinary partial progress after a failure. | `EmbeddingSupport` and the `ModuleInfo` source hooks; [host snapshots and outcomes](lsp-compiler.md#source-snapshots-and-compilation-outcomes). |
 | Selected semantic facts | Navigate exact overloads and argument slots without reproducing compiler resolution in the editor. Preserve references lost to constant folding. | `InvocationBinding`, `InitializerBinding` and `EmbeddingSupport.Compilation`. |
 | Declaration and incomplete-source analysis | Answer bounded scope, type and argument queries while the buffer is unfinished, without presenting invalid source as executable code. | `EmbeddingSupport.analyzeDeclarations`, `analyzeIncomplete`, `CursorBinding` and `compiler.ast.partial`. |
 | Source-tree copying | Probe proposed syntax on an independently parented tree without changing the source tree being inspected. | `AstNode.copyTree` and its covariant specializations. |
@@ -74,7 +74,7 @@ is essential for a long-running editor that repeatedly replaces analyses of unsa
 The five source-binding classes live in `org.xvm.compiler.ast.bindings`, alongside `ast.partial`.
 Compiler-owned collectors write the facts; a one-operation `ast.BindingAst` bridge associates
 lambda parameter registers with written declarations without widening existing AST members.
-See [binding ownership and package boundaries](LSP-COMPILER.md#keep-binding-facts-and-their-writers-together).
+See [binding ownership and package boundaries](lsp-compiler.md#keep-binding-facts-and-their-writers-together).
 
 ### Analyze declarations and unfinished source explicitly
 
@@ -127,15 +127,15 @@ Repository lookup remains tolerant: an unreadable candidate can be skipped while
 or repository supplies the module. An unrelated failed candidate does not establish why an import
 is missing. The LSP validates its explicitly configured dependency bytes before accepting immutable
 snapshots; it does not infer dependency errors from repository scans. The
-[diagnostic guide](LSP-COMPILER.md#diagnostics-cancellation-and-reporting-scopes) explains the
+[diagnostic guide](lsp-compiler.md#diagnostics-cancellation-and-reporting-scopes) explains the
 intentional Java API migrations, retained CLI behavior and regression evidence;
 it does not claim universal source or binary compatibility for old Java embedding code.
 
 ## Compiler diagnostics and error listeners
 
 The detailed design and migration guide now lives in
-[Compiler support for the language server](LSP-COMPILER.md#diagnostics-cancellation-and-reporting-scopes).
-It explains [why probes and final propagated listeners replace implicit suppression](LSP-COMPILER.md#why-explicit-probes-and-a-final-propagated-listener),
+[Compiler support for the language server](lsp-compiler.md#diagnostics-cancellation-and-reporting-scopes).
+It explains [why probes and final propagated listeners replace implicit suppression](lsp-compiler.md#why-explicit-probes-and-a-final-propagated-listener),
 diagnostic ownership, scoped reporting, cancellation, compatibility and regression evidence.
 
 ## Assembler
