@@ -8,7 +8,9 @@ See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundari
 ## Features
 
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
-- **Run Configurations** - Run XTC applications via Gradle or `xtc run`
+- **Build and Run** - Build/Rebuild Project and Ecstasy run configurations use the language
+  server's embedded compiler or Gradle, chosen under Settings | Build, Execution, Deployment |
+  Ecstasy ([details](#running-your-application)); `xtc run` remains available per configuration
 - **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
   native file type through TextMate’s syntax factory and editor highlighter.
 - **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
@@ -85,13 +87,48 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 
 ### Running Your Application
 
-1. Open the **Run/Debug Configurations** dialog
-2. Click **+** → **XTC Application**
-3. Configure:
-   - **Module name** - The XTC module to run
-   - **Program arguments** - Arguments to pass to your application
-   - **Use Gradle** - Recommended; uses `./gradlew runXtc`
-4. Click **Run** or **Debug**
+**Settings | Build, Execution, Deployment | Ecstasy → Build and run using** chooses how the project
+builds and runs, like IntelliJ's own setting for Gradle projects. It is stored with the project
+(`.idea/ecstasy-build.xml`):
+
+| Choice | Build / Rebuild Project | Ecstasy run configurations set to *Project default* |
+|--------|-------------------------|------------------------------------------------------|
+| Automatic (default) | Gradle when the project root has a Gradle build, embedded otherwise | Same choice |
+| Embedded compiler | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/`; results and linked diagnostics appear in the **Build** tool window | The server builds the module, then runs it in its execution worker JVM |
+| Gradle | Left to Gradle or the IDE's builder | `./gradlew runXtc` |
+
+Ways to run a module:
+
+- The **▶ Run** lens above the `module` declaration. It appears only on modules that declare a
+  `run` method the runner can call: exactly one method of that name, with at most one required
+  parameter. The lens reuses the module's run configuration or creates a temporary one.
+- **Run Context Configuration** (`Ctrl+Shift+R` on macOS, `Ctrl+Shift+F10` elsewhere) or the
+  editor context menu in an Ecstasy file.
+- A saved **Ecstasy Application** configuration (**Run → Edit Configurations… → + → Ecstasy
+  Application**), from the toolbar or `Shift+F10`.
+
+Build Project is `Cmd+F9` / `Ctrl+F9`; Rebuild Project is in the **Build** menu. In embedded mode
+both save all files first, and build every Ecstasy module, even from *Build Module*.
+
+An Ecstasy Application configuration has:
+
+- **Module name** — the module to run.
+- **Module source** — optional source file URI. Embedded runs use it ahead of the name, because it
+  identifies the module exactly; the Run lens and Run Context Configuration fill it in.
+- **Method name** — the entry method; empty means `run`.
+- **Module arguments** — comma-separated. Embedded runs pass them as a `String[]` when the method
+  requires one, or when arguments are given and it accepts a parameter.
+- **Run with** — *Project default*, *Embedded compiler*, *Gradle* or *xtc command line*.
+  Configurations saved with the older *Use Gradle* checkbox become *Project default* (or *xtc
+  command line* when it was cleared).
+- **Quiet mode** — adds `-q` to Gradle runs.
+
+Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run gets a fresh
+application container in one worker JVM, which is reused across runs and restarted if it dies;
+programs never run inside the language server. A failed build prints its diagnostics in the console,
+linked to the sources, and runs nothing. Embedded runs cannot read console input yet, there is no
+Ecstasy debugger, and `.x` files have no gutter Run icon because the plugin has no PSI parser.
+Embedded mode needs the compiler language service.
 
 ## Development
 
@@ -287,16 +324,20 @@ feature:
 
 1. Open a project with XTC modules
 2. **Run → Edit Configurations...**
-3. Click **+** → **XTC Application**
+3. Click **+** → **Ecstasy Application**
 4. Configure:
    - **Module name**: The XTC module containing your app
-   - **Program arguments**: Any arguments for your app
-   - **Use Gradle**: Recommended for integrated builds
+   - **Module arguments**: Any arguments for your app
+   - **Run with**: *Project default*, or a specific mode
 5. Click **Apply**, then **Run**
 6. Verify:
    - The run configuration appears in the toolbar
-   - Running invokes Gradle's `runXtc` task
+   - In Gradle mode, running invokes Gradle's `runXtc` task
+   - In embedded mode, the console shows the build, the program's output and its exit code, and
+     **Stop** ends a running program
    - Output appears in the Run tool window
+7. With **Build and run using** set to *Embedded compiler*, **Build → Build Project** reports each
+   module and any diagnostics in the **Build** tool window
 
 #### Testing LSP Features (Language Server)
 
@@ -621,9 +662,15 @@ intellij-plugin/
 │   │   │   ├── XtcNewProjectWizard.kt    # New Project wizard entry
 │   │   │   └── XtcNewProjectWizardStep.kt # Wizard step implementation
 │   │   ├── run/
+│   │   │   ├── EmbeddedExecution.kt           # Embedded build/run server access, run routing, reports
+│   │   │   ├── EmbeddedRunProcessHandler.kt   # An embedded run as a process (console, Stop, Rerun)
+│   │   │   ├── XtcBuildConfigurable.kt        # Build, Execution, Deployment | Ecstasy page
+│   │   │   ├── XtcBuildSettings.kt            # Project build mode (automatic, embedded, Gradle)
+│   │   │   ├── XtcProjectTaskRunner.kt        # Embedded Build/Rebuild Project
 │   │   │   ├── XtcRunConfiguration.kt         # Run configuration
 │   │   │   ├── XtcRunConfigurationProducer.kt # Auto-detect runnable files
-│   │   │   └── XtcRunConfigurationType.kt     # Run config type registration
+│   │   │   ├── XtcRunConfigurationType.kt     # Run config type registration
+│   │   │   └── XtcRunModuleAction.kt          # The Run lens's xtc.runModule command
 │   │   └── style/
 │   │       ├── XtcCodeStyleSettings.kt              # XTC-specific code style options
 │   │       └── XtcLanguageCodeStyleSettingsProvider.kt # Code Style settings page
