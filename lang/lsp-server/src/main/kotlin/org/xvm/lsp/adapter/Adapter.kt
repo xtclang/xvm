@@ -40,6 +40,14 @@ interface Adapter : Closeable {
     /** Resolve only a registered matching source, never an arbitrary client-provided file path. */
     fun readOnlyDocument(uri: String): ReadOnlyDocument? = null
 
+    /**
+     * Whether synchronous queries may run while document notifications update this backend. True only when
+     * queries read published, immutable analyses: the server then holds its document lock just to check that
+     * a request is current, so a query that waits for the compiler never blocks `didChange`, cancellation or
+     * other requests. The server still refuses to publish a result for a document that changed meanwhile.
+     */
+    val concurrentQueries: Boolean get() = false
+
     /** Features the server may advertise for this backend. */
     val capabilities: Set<AdapterCapability>
         get() =
