@@ -1,9 +1,5 @@
 package org.xvm.asm;
 
-import org.jetbrains.annotations.NotNull;
-
-import static java.util.Objects.requireNonNull;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -28,6 +24,8 @@ import java.util.function.Consumer;
 
 import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -50,7 +48,10 @@ import org.xvm.compiler.Constants;
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
+
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.at;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -70,7 +71,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p>Here is the Component containment model, with container type on the left and containee type
  * across the top:
  *
- * <pre><code>
+ * <p><code><pre>
  *           Module  Package  Class  MultiMethod  Method  Property  |  Conditional
  * File        x                                                    |
  * Module              x       x       x                    x       |    x (version only)
@@ -79,7 +80,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Property                            x                            |    x
  * MultiMethod                                      x               |
  * Method                      x       x                    x       |    x
- * </code></pre>
+ * </pre></code>
  *
  * <p>Based on the containment model, of these types, there are three groups of containment:
  * <ul>
@@ -3533,7 +3534,7 @@ public abstract class Component
     public static class SimpleCollector
             implements ResolutionCollector {
         public SimpleCollector(@NotNull ErrorListener errs) {
-            f_errs = requireNonNull(errs, "errs");
+            m_errs = requireNonNull(errs, "errs");
         }
 
         @Override
@@ -3550,7 +3551,7 @@ public abstract class Component
 
         @Override
         public ErrorListener getErrorListener() {
-            return f_errs;
+            return m_errs;
         }
 
         /**
@@ -3570,7 +3571,7 @@ public abstract class Component
         /**
          * The error listener.
          */
-        private final ErrorListener f_errs;
+        private final ErrorListener m_errs;
     }
 
     // ----- constants -----------------------------------------------------------------------------

@@ -29,6 +29,8 @@ import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import org.xvm.util.Handy;
 
+import static java.util.Objects.requireNonNull;
+
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
 import static org.xvm.util.Handy.checkReadable;
@@ -38,8 +40,6 @@ import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * The "execute" command:

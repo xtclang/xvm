@@ -853,12 +853,6 @@ editor feature or a new claim of compiler thread safety.
 an unreadable candidate is unavailable, and another candidate or repository may still satisfy
 the request. A damaged unrelated file does not prove why a requested module is absent.
 
-The corrections keep unchanged failed reads in the existing metadata-based cache policy. A
-changed file becomes eligible for retry; after a prior payload failure, a valid header alone is
-not enough to establish a successful replacement. Directory cache rebuilding also avoids marking
-an interrupted rebuild as current. [LinkedRepository](src/main/java/org/xvm/asm/LinkedRepository.java)
-handles a repository with no available version tree instead of dereferencing null.
-
 **This does not add a repository error callback or progress API.** For explicit dependency inputs,
 the LSP validates owned bytes through `FileStructure` before accepting them into
 [XdkDependency](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDependency.kt). It can then
@@ -960,7 +954,6 @@ through its transport and editor integration.
 | Snapshot inputs, outcomes and cached diagnostics through the embedding boundary. | [EmbeddingSourceSnapshotTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/EmbeddingSourceSnapshotTest.kt), [EmbeddingDiagnosticsTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/EmbeddingDiagnosticsTest.kt), [TypeInfoDiagnosticsTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/TypeInfoDiagnosticsTest.kt), [TypeInfoFinalCompositionTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/TypeInfoFinalCompositionTest.kt). |
 | Selected calls, functions, constructors and folded initializers. | [CompilerBindingFactsTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerBindingFactsTest.kt), [BindingIdentitySnapshotTest](src/test/java/org/xvm/api/BindingIdentitySnapshotTest.java). |
 | Declaration analysis, cursor candidates and recovery. | [CompilerDeclarationAnalysisTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerDeclarationAnalysisTest.kt), [CompilerPartialFactsTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerPartialFactsTest.kt), [ParserRecoveryTest](src/test/java/org/xvm/compiler/ParserRecoveryTest.java), [XdkPartialAnalysisTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkPartialAnalysisTest.kt), [XdkDeclarationHeaderTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkDeclarationHeaderTest.kt). |
-| Tolerant lookup, failed-read caching and repaired inputs. | [DirRepositoryFailureTest](src/test/java/org/xvm/asm/DirRepositoryFailureTest.java), [FileRepositoryFailureTest](src/test/java/org/xvm/asm/FileRepositoryFailureTest.java). |
 | Packaged compiler server and editor behavior. | [XdkStdioTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) and the [manual/automated editor playbook](../lang/doc/manual-test-plan.md). |
 
 ### Historical listener regression evidence
@@ -1080,12 +1073,9 @@ source or document in this checkout.
 | [Component.java](src/main/java/org/xvm/asm/Component.java) | Modified | Requires a destination for resolution collectors and reports cyclical contributions through the typed fatal/site API. |
 | [ComponentResolver.java](src/main/java/org/xvm/asm/ComponentResolver.java) | Modified | Removes the default discard listener from the resolution-collector interface. Implementations must choose where resolution diagnostics go. |
 | [ConstantPool.java](src/main/java/org/xvm/asm/ConstantPool.java) | Modified | Exposes implicit-import names without loading or resolving their components, allowing cursor scope queries to enumerate names using the language's own import table. |
-| [DirRepository.java](src/main/java/org/xvm/asm/DirRepository.java) | Modified | Preserves tolerant lookup while caching unchanged failed payload reads, retrying changed candidates and invalidating a directory scan before rebuilding its cache. Adds no reporting callback API. |
 | [ErrorList.java](src/main/java/org/xvm/asm/ErrorList.java) | Modified | Makes retained diagnostics, deduplication, shared default budgets, parent-aware branches and replay explicit. Branch delivery and abort policy remain distinct operations. |
 | [ErrorListener.java](src/main/java/org/xvm/asm/ErrorListener.java) | Modified | Defines diagnostic sites, severity helpers, collection/forwarding/cancellation wrappers, branches and named silence reasons. Separates reporting from abort queries and replaces the blackhole/null conventions. |
-| [FileRepository.java](src/main/java/org/xvm/asm/FileRepository.java) | Modified | Caches failed reads under the existing metadata policy, retries changed files and requires a full payload read after a prior failure. Lookup stays best-effort; write failures still propagate. |
 | [FileStructure.java](src/main/java/org/xvm/asm/FileStructure.java) | Modified | Removes storage and inheritance of an ambient error listener, so a reused module structure cannot carry one host's diagnostic destination into another operation. |
-| [LinkedRepository.java](src/main/java/org/xvm/asm/LinkedRepository.java) | Modified | Handles an underlying repository with no available version tree instead of dereferencing null during combined version lookup. |
 | [MethodStructure.java](src/main/java/org/xvm/asm/MethodStructure.java) | Modified | Uses a shared probe listener for speculative common-type inference and the explicit diagnostic-site API for unsupported dynamic type parameters. |
 | [Reporting.java](src/main/java/org/xvm/asm/Reporting.java) | Added | Adds a scoped diagnostic destination for callbacks that cannot take a listener parameter. Closing a scope restores the previous destination, including after nested calls or exceptions. |
 | [XvmStructure.java](src/main/java/org/xvm/asm/XvmStructure.java) | Modified | Makes structural reporting use the listener supplied by the caller; removes ambient lookup and the boolean return from the logging helper. |
@@ -1226,7 +1216,6 @@ source or document in this checkout.
 | [api/BindingIdentitySnapshotTest.java](src/test/java/org/xvm/api/BindingIdentitySnapshotTest.java) | Added | Checks identity-based method/function/constructor maps at publication boundaries, detached immutable cursor maps and rejection of null entries. |
 | [api/EmbeddingFootprintTest.java](src/test/java/org/xvm/api/EmbeddingFootprintTest.java) | Added | Checks that footprint inspection measures the supplied attempt and does not bootstrap the runtime. |
 | [api/ErrorListenerBoundaryTest.java](src/test/java/org/xvm/api/ErrorListenerBoundaryTest.java) | Added | Checks rejection of missing listeners before compilation/file access and verifies that collectors, stage managers and AST reporting retain an explicitly chosen destination. |
-| [asm/DirRepositoryFailureTest.java](src/test/java/org/xvm/asm/DirRepositoryFailureTest.java) | Added | Exercises corrupt/incompatible candidates, fallback to usable modules, shared failed-read caching, changed-file repair and candidate removal. |
 | [asm/ErrorListenerAbortTest.java](src/test/java/org/xvm/asm/ErrorListenerAbortTest.java) | Added | Checks the shared default budget, unlimited mode, fatal abort policy and the fallback listener's reporting behavior. |
 | [asm/ErrorListenerBranchTest.java](src/test/java/org/xvm/asm/ErrorListenerBranchTest.java) | Added | Checks host and ErrorList branches, full merge delivery, harmless merge on an unbranched listener and the distinction between a bare callback and a stateful collector. |
 | [asm/ErrorListenerCancellationTest.java](src/test/java/org/xvm/asm/ErrorListenerCancellationTest.java) | Added | Checks cancellation through pre-existing branches and merges without replacing the wrapped budget or affecting a separate attempt. |
@@ -1234,10 +1223,8 @@ source or document in this checkout.
 | [asm/ErrorListenerMigrationTest.java](src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java) | Added | Checks duplicate delivery versus buffering, parent budget/abort propagation, retained branch source sites and parser/lexer stopping after the configured budget is spent. |
 | [asm/ErrorListenerSilenceTest.java](src/test/java/org/xvm/asm/ErrorListenerSilenceTest.java) | Added | Checks silence reasons, standalone versus parent-derived silence, idempotent suppression and observation of later parent abort requests. |
 | [asm/ErrorListenerSiteTest.java](src/test/java/org/xvm/asm/ErrorListenerSiteTest.java) | Added | Checks trailing varargs, severity helpers, exhaustive diagnostic sites, tee delivery/abort behavior and replay of retained diagnostics. |
-| [asm/FileRepositoryFailureTest.java](src/test/java/org/xvm/asm/FileRepositoryFailureTest.java) | Added | Exercises invalid headers, truncated payloads, unchanged failed-read caching, repair/removal and propagation of write failures. |
 | [asm/FileStructureErrorListenerTest.java](src/test/java/org/xvm/asm/FileStructureErrorListenerTest.java) | Modified | Replaces ambient-listener expectations with explicit delivery and verifies that reusing a structure does not reuse the previous request's listener. |
 | [asm/ReportingTest.java](src/test/java/org/xvm/asm/ReportingTest.java) | Added | Checks nested destination restoration after exceptions, restoration of an inactive state and rejection of a null active destination. |
-| [asm/RepositoryFailureTestSupport.java](src/test/java/org/xvm/asm/RepositoryFailureTestSupport.java) | Added | Captures and restores process-wide console output under isolated test execution, allowing repository tests to inspect existing reports without adding a production reporting API. |
 
 ### Parser, AST and partial-analysis tests
 

@@ -253,46 +253,36 @@ class XtcRenameEdit
                                     .toString(),
                             )
                         }
-                    val graph = SourceGraphEdit.capture(wrapper.project, wrapper.serverDefinition.id)
-                    val cancellation = CancellationSupport()
-                    val result =
-                        snapshot
-                            .flush()
-                            .thenCompose {
-                                cancellation.checkCanceled()
-                                val server = snapshot.server
-                                cancellation.execute(
-                                    if (server is XtcLanguageServer) {
-                                        server.renameFilesProposal(RenameFilesParams(operations))
-                                    } else {
-                                        server.workspaceService.willRenameFiles(RenameFilesParams(operations)).thenApply { edit ->
-                                            edit?.let {
-                                                check(it.changes.isNullOrEmpty()) { "File operations require versioned edits" }
-                                                RenameProposal(
-                                                    WorkspaceEdit().apply {
-                                                        documentChanges =
-                                                            buildList {
-                                                                addAll(it.documentChanges.orEmpty())
-                                                                addAll(
-                                                                    operations.map { move ->
-                                                                        Either.forRight(RenameFile(move.oldUri, move.newUri))
-                                                                    },
-                                                                )
-                                                            }
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    },
-                                )
-                            }.thenApply { proposal ->
-                                proposal?.let {
-                                    check(it.edit.changes.isNullOrEmpty()) { "File operations require versioned edits" }
-                                    XtcRenameEdit(snapshot, it.edit, it.graph?.let(graph::replacement), command)
+                    propose(
+                        wrapper,
+                        snapshot,
+                        xtc = { it.renameFilesProposal(RenameFilesParams(operations)) },
+                        fallback = { server ->
+                            server.workspaceService.willRenameFiles(RenameFilesParams(operations)).thenApply { edit ->
+                                edit?.let {
+                                    check(it.changes.isNullOrEmpty()) { "File operations require versioned edits" }
+                                    RenameProposal(
+                                        WorkspaceEdit().apply {
+                                            documentChanges =
+                                                buildList {
+                                                    addAll(it.documentChanges.orEmpty())
+                                                    addAll(
+                                                        operations.map { move ->
+                                                            Either.forRight(RenameFile(move.oldUri, move.newUri))
+                                                        },
+                                                    )
+                                                }
+                                        },
+                                    )
                                 }
                             }
-                    result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
-                    result
+                        },
+                    ) { proposal, graph ->
+                        proposal?.let {
+                            check(it.edit.changes.isNullOrEmpty()) { "File operations require versioned edits" }
+                            XtcRenameEdit(snapshot, it.edit, it.graph?.let(graph::replacement), command)
+                        }
+                    }
                 }
 
             /**
@@ -319,43 +309,60 @@ class XtcRenameEdit
                             LSPIJUtils.toPosition(offset, document),
                             name,
                         )
-                    val graph = SourceGraphEdit.capture(wrapper.project, wrapper.serverDefinition.id)
-                    val cancellation = CancellationSupport()
-                    val result =
-                        snapshot
-                            .flush()
-                            .thenCompose {
-                                cancellation.checkCanceled()
-                                val server = snapshot.server
-                                cancellation.execute(
-                                    if (server is XtcLanguageServer) {
-                                        server.renameProposal(params)
-                                    } else {
-                                        server.textDocumentService.rename(params).thenApply {
-                                            it?.let(::RenameProposal)
-                                        }
-                                    },
-                                )
-                            }.thenApply { proposal ->
-                                val edit = proposal?.edit
-                                val hasEdits =
-                                    edit != null &&
-                                        (
-                                            !edit.documentChanges.isNullOrEmpty() ||
-                                                !edit.changes.isNullOrEmpty()
-                                        )
-                                if (hasEdits) {
-                                    XtcRenameEdit(
-                                        snapshot,
-                                        edit,
-                                        proposal.graph?.let(graph::replacement),
-                                    )
-                                } else {
-                                    null
-                                }
+                    propose(
+                        wrapper,
+                        snapshot,
+                        xtc = { it.renameProposal(params) },
+                        fallback = { server ->
+                            server.textDocumentService.rename(params).thenApply {
+                                it?.let(::RenameProposal)
                             }
-                    result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
-                    result
+                        },
+                    ) { proposal, graph ->
+                        val edit = proposal?.edit
+                        val hasEdits =
+                            edit != null &&
+                                (
+                                    !edit.documentChanges.isNullOrEmpty() ||
+                                        !edit.changes.isNullOrEmpty()
+                                )
+                        if (hasEdits) {
+                            XtcRenameEdit(
+                                snapshot,
+                                edit,
+                                proposal.graph?.let(graph::replacement),
+                            )
+                        } else {
+                            null
+                        }
+                    }
                 }
+
+            /**
+             * Flush [snapshot], then ask its server for a proposal: the XTC server through [xtc], which
+             * also reports source-graph changes, and any other server through [fallback]. [finish] turns
+             * the proposal into an edit against the source graph captured before the request. Cancelling
+             * the returned future cancels the server request.
+             */
+            private fun propose(
+                wrapper: LanguageServerWrapper,
+                snapshot: Snapshot,
+                xtc: (XtcLanguageServer) -> CompletableFuture<RenameProposal?>,
+                fallback: (LanguageServer) -> CompletableFuture<RenameProposal?>,
+                finish: (RenameProposal?, SourceGraphEdit.Snapshot) -> XtcRenameEdit?,
+            ): CompletableFuture<XtcRenameEdit?> {
+                val graph = SourceGraphEdit.capture(wrapper.project, wrapper.serverDefinition.id)
+                val cancellation = CancellationSupport()
+                val result =
+                    snapshot
+                        .flush()
+                        .thenCompose {
+                            cancellation.checkCanceled()
+                            val server = snapshot.server
+                            cancellation.execute(if (server is XtcLanguageServer) xtc(server) else fallback(server))
+                        }.thenApply { finish(it, graph) }
+                result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
+                return result
+            }
         }
     }

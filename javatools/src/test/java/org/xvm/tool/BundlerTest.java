@@ -16,11 +16,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.Version;
 import org.xvm.asm.ModuleStructure.ModuleType;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.VersionTree;
 import org.xvm.tool.LauncherOptions.BundlerOptions;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,9 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
 
 import static org.xvm.util.Handy.quoted;
 

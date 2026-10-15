@@ -26,16 +26,16 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Handy;
 
-import static org.xvm.asm.Assignment.AssignedOnce;
-
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
+
+import static org.xvm.asm.Assignment.AssignedOnce;
 
 /**
  * A template expression is a string literal expression containing expressions that will be
  * evaluated and concatenated with the literal portions to produce a resulting string.
  *
- * <p>TODO optimize handling for: $.append($"...") for "append()", "add()"/"+", etc.
+ * TODO optimize handling for: $.append($"...") for "append()", "add()"/"+", etc.
  */
 public class TemplateExpression
         extends Expression {

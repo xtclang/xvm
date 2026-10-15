@@ -18,7 +18,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 
 import org.xvm.util.Hash;
-import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.at;
 
 /**
  * Represent a type constant that will eventually be replaced with a real type constant.
@@ -31,9 +32,9 @@ public class UnresolvedTypeConstant
     /**
      * Construct a place-holder constant that will eventually be replaced with a real type constant.
      *
-     * <p>Note, that outside of "equals" and "toString" implementations, the information held by this
+     * Note, that outside of "equals" and "toString" implementations, the information held by this
      * constant is not used at all. The resolution logic (see
-     * {@link org.xvm.compiler.ast.NamedTypeExpression#resolveNames}) will use its own state to
+     * {@link org.xvm.compiler.ast.NamedTypeExpression#resolveNames) will use its own state to
      * {@link #resolve(Constant) resolve} it.
      *
      * @param pool  the ConstantPool that this TypeConstant should belong to, even though it will
