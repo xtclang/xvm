@@ -1567,6 +1567,13 @@ manual-check notes. Base programs remain the canonical fixtures below; bounded r
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
+Cases may carry `tags` defined by the catalog's `tagDefinitions`, and both run reports copy them.
+`slow` marks the cases whose median took at least 10 seconds in either editor across the recorded
+passing runs up to 2026-10-08; most cases take one to four seconds. The 16 slow cases are X27,
+X50, X65, X67, X97, X108, X122, X142, X143, X144, X145, X146, X148, X265, X277 and CFG1. Full and
+focused runs still include them. A future fast profile could exclude them for quick checks, with
+full runs kept as checkpoints.
+
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
 all 284 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
