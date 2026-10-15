@@ -235,6 +235,12 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 
 Virtual child classes: hard-left implementations and composition-specific super
 
+A "base child" is a virtual child with no same-name super child inherited through its enclosing
+parent's hierarchy. Base children occupy the leftmost column in the diagrams below and are called
+"hard-left" classes. A "derived child" has a same-name super child, whether or not the derived parent
+explicitly declares the child. These terms describe inheritance through the parent hierarchy, not
+inheritance between differently named children.
+
 1. Consider parent classes B and D, where D extends B. B declares virtual children C0 and C1,
    with C1 extending C0; D can override either child. The Ecstasy subtype relationships are:
 
@@ -243,35 +249,48 @@ Virtual child classes: hard-left implementations and composition-specific super
         |         |
        B.C1 <--- D.C1
 
-   The children at the left edge, B.C0 and B.C1, are called "hard left" classes. D.C0 and D.C1
-   refine those children through parent inheritance and are not hard left. Further parent
-   refinements extend this diagram to the right; further child inheritance extends it downward.
+   Both B.C0 and B.C1 are hard-left classes, despite B.C1 extending B.C0. D.C0 and D.C1 are derived
+   children, with same-name super children B.C0 and B.C1; D.C1 remains a derived child even if D
+   does not explicitly declare C1. Further parent inheritance extends this diagram to the right;
+   further child inheritance extends it downward.
 
-   The Java implementation classes preserve the hard-left child inheritance and the parent
-   refinement relationships. Using symbolic Java names, where B_C0 denotes JIC(B.C0):
+   The Java implementation classes preserve inheritance between hard-left classes and inheritance
+   from same-name super children. Using symbolic Java names, where B_C0 denotes JIC(B.C0):
 
        class B_C1 extends B_C0
        class D_C0 extends B_C0
        class D_C1 extends B_C1
 
-   Thus a D_C1 receiver is a Java B_C1 and B_C0, but is NOT a Java D_C0. Preserving the hard-left
+   Thus, a D_C1 receiver is a Java B_C1 and B_C0, but is NOT a Java D_C0. Preserving the hard-left
    inheritance is a requirement: it makes concrete hard-left receiver types safe for all these
    compositions.
 
-2. Callable child types use Java interfaces, including non-generic virtual children. Using B_iC0
-   to denote JCC(B.C0), the corresponding contracts are:
+2. Hard-left callable types use their implementation classes: JCC(B.C0) = B_C0 and
+   JCC(B.C1) = B_C1. Derived-child callable types use interfaces: JCC(D.C0) = D_iC0 and
+   JCC(D.C1) = D_iC1. Every child also has an explicit interface contract, including hard-left
+   classes. The corresponding contracts are:
 
        interface B_iC1 extends B_iC0
        interface D_iC0 extends B_iC0
        interface D_iC1 extends B_iC1, D_iC0
 
-   Each implementation class implements its corresponding callable interface. D_C1 can therefore
+   Each implementation class implements its corresponding child interface. D_C1 can therefore
    be passed as D_iC0 without being cast to the unrelated implementation class D_C0. Parameters,
    returns, properties, and method handles consistently use callable descriptors. Standard and
    optimized signatures follow the same specialization rules as other JCC/JIC pairs.
 
-   The interface contract and the receiver used to compile a body are separate choices: a hard-left
-   body can use a concrete receiver even though its callable contract is an interface.
+   The "super-router" signatures define stable continuation points for super calls whose next body
+   depends on the runtime parent composition. For example, super() in B.C1.foo() must enter
+   B.C0.foo() on a B.C1 receiver, but D.C0.foo() on a D.C1 receiver. A separate virtual
+   super-router method selects that continuation without restarting ordinary foo() dispatch or
+   recompiling B.C1. Its explicit interface receiver lets the selected detached body operate on
+   the same object even when that object is not an instance of the body's Java implementation class,
+   as with D_C1 and D_C0.
+
+   Ordinary hard-left calls use concrete class dispatch. Super-router signatures explicitly use the
+   hard-left class's interface contract, not its JCC, so their descriptors remain stable along parent
+   inheritance. Converting a derived-child interface reference to a hard-left class requires a
+   Java checkcast even though the corresponding Ecstasy subtype relationship is valid.
 
 3. Every hard-left class generates all applicable virtual instance methods, including accessors,
    whether or not the Ecstasy class declares them. Required standard and optimized entry points
@@ -282,98 +301,185 @@ Virtual child classes: hard-left implementations and composition-specific super
    An abstract method without an implementation remains abstract; private methods, functions, and
    constructors are not made virtual by this rule.
 
-   This forwarding body establishes a hard-left method boundary even when the Ecstasy method
+   The forwarding hard-left body establishes a method boundary even when the Ecstasy method
    chain contains no declared body at that class. It must not simply inherit the Java method from
-   the preceding hard-left class, because doing so could bypass an intervening refined child body.
+   the preceding hard-left class, because doing so could bypass an intervening derived-child body.
 
-4. Hard-left bodies use concrete receiver types. A B.C1 body operates on a B_C1 receiver, and a
-   B.C0 body operates on a B_C0 receiver. These types are valid for a D_C1 object and allow direct
-   access to fields supplied by the hard-left implementation hierarchy.
+   For example, suppose B.C0 declares foo(), B.C1 merely inherits it, and both D.C0 and D.C1
+   override foo() with super calls. Java D_C1 extends B_C1, not D_C0. If B_C1 simply inherits
+   foo(), ordinary Java super dispatch from D_C1 would reach B_C0.foo(), skipping D.C0.foo().
+   Generating a forwarding B_C1.foo() establishes the missing boundary: its super$C0$foo
+   continuation selects D.C0.foo() for the D_C1 receiver, which then calls B.C0.foo().
 
-   Each virtual child implementation generates virtual Java "jump-in" methods for the applicable
-   Ecstasy method entries that can be reached by a super call. The name concatenates the target
-   child name and Java method name: jump$<childName>$<JavaMethodName>, for example jump$C0$foo.
+   A super() call from a hard-left body uses a virtual super-router method rather than
+   a fixed Java super call. The caller has a concrete receiver (B_C1 for B.C1 or B_C0 for B.C0),
+   which is valid for a D_C1 object, so the super-router call can use ordinary Java class
+   dispatch.
+
+4. Each virtual child implementation generates virtual Java super-router methods for the
+   applicable Ecstasy method entries that can be reached by a super call. The name concatenates the
+   target child name and Java method name: super$<childName>$<JavaMethodName> (e.g. super$C0$foo).
    Standard and optimized variants follow the corresponding Java signatures and names, such as
-   jump$C0$foo$p; the full method descriptor distinguishes overloads.
+   super$C0$foo$p; the full method descriptor distinguishes overloads.
 
-   A jump-in method takes an explicit interface receiver, followed by the context and method
-   arguments. It routes to the exact s$ body selected by the receiver's effective TypeInfo and
-   optimized method chain, returning its result or just calling it for a void method. The implicit
-   Java dispatch receiver and explicit body receiver are the same object; no delegate is involved.
+   A "detached body" is a static method, e.g. s$foo(D_iC0 receiver, Ctx ctx), that contains
+   the actual Ecstasy code for a virtual child instance method foo(), with its receiver passed
+   explicitly. For a non-hard-left implementation, that receiver is always declared as the child
+   interface. A valid Ecstasy receiver need not belong to the corresponding Java implementation
+   class: D_C1 implements D_iC0 but does not extend D_C0. Therefore D.C0.foo() must run through
+   D_iC0.s$foo(D_iC0 receiver, Ctx, ...), without requiring the receiver to be a Java D_C0.
 
-   The jump-in descriptor remains identical across parent refinements. In particular, a receiver
-   parameter declared as B_iC0 must not become D_iC0 in an override: that would be an overload,
-   not an override. The overriding route casts the receiver to the interface required by its
-   target body. For a void foo(), the generated methods are:
+   Hard-left implementations do not have this receiver mismatch: the Java inheritance hierarchy
+   guarantees that their concrete receiver types remain valid in derived parent compositions.
+   The current implementation also emits hard-left bodies as detached bodies with concrete
+   receivers for uniformity; only non-hard-left implementations require interface receivers.
+
+   The ordinary virtual foo() method routes to the detached body at the head of the effective
+   method chain. A super-router method instead routes to the detached body selected as the
+   next step of a super() call. Both contain only routing code, not a copy of the Ecstasy body.
+
+   Both entrances use Java virtual dispatch, but differ in which overrides participate. When D.C0
+   and D.C1 both declare foo(), ordinary foo() and super$C0$foo select D.C0.foo() on a D_C0
+   receiver. On a D_C1 receiver, however, ordinary foo() selects D.C1.foo(), even when called
+   through a D_iC0 interface reference, while super$C0$foo selects D.C0.foo(). The latter dispatches
+   to D_C1.super$C0$foo, which calls D_iC0.s$foo; Java cannot dispatch directly to D_C0.foo()
+   because D_C1 does not extend D_C0. Thus, a super-router method selects a particular child
+   family within the chain, not the head of the complete chain, and cannot generally replace the
+   ordinary virtual entrance.
+
+   A super-router method takes an explicit interface receiver, followed by the context and method
+   arguments. It routes to the exact detached body selected by the receiver's effective
+   TypeInfo and optimized method chain, returning its result or just calling it for a
+   void method. The implicit Java dispatch receiver and explicit body receiver are the same object;
+   no delegate is involved.
+
+   The super-router descriptor remains identical along parent inheritance. In particular, a
+   receiver parameter declared as B_iC0 must not become D_iC0 in an override: that would be an
+   overload, not an override. The overriding route casts the receiver to the interface required by
+   its target body. For a void foo(), the generated methods are:
 
        // on B_C1
-       void jump$C0$foo(B_iC0 thi$, Ctx ctx) {
+       void super$C0$foo(B_iC0 thi$, Ctx ctx) {
            B_C0.s$foo((B_C0) thi$, ctx);
        }
 
        // on D_C1
        @Override
-       void jump$C0$foo(B_iC0 thi$, Ctx ctx) {
+       void super$C0$foo(B_iC0 thi$, Ctx ctx) {
            D_iC0.s$foo((D_iC0) thi$, ctx);
        }
 
-   A super call in the hard-left B.C1.foo() body becomes:
+   A super() call in the hard-left B.C1.foo() body becomes:
 
-       thi$.jump$C0$foo(thi$, ctx);
+       thi$.super$C0$foo(thi$, ctx);
 
    Virtual dispatch selects B.C0.foo() on a B_C1 object and D.C0.foo() on a D_C1 object. The same
-   rule applies to synthesized forwarding bodies from rule 3, even when B.C1 has no declared
-   Ecstasy body. The hard-left body invokes the jump-in on its concrete receiver; it does not
-   need interface dispatch or knowledge of later parent refinements.
+   rule applies to super() calls in the synthesized forwarding bodies described above, even when
+   B.C1 has no declared Ecstasy body. This super() dispatch uses the caller's concrete receiver;
+   it does not need interface dispatch or knowledge of derived parents.
 
-5. Non-hard-left bodies use interface-compatible receivers where cross-family execution requires
-   it. For example, D.C0.foo() can execute on a D_C1 object through a D_iC0 receiver. Its super
-   target is fixed at B.C0.foo(); it does not need a composition-specific jump-in call. Likewise,
-   the super target of D.C1.foo() is B.C1.foo(). With another parent refinement E, E.C0.foo()
-   has the fixed predecessor D.C0.foo(), and E.C1.foo() has D.C1.foo().
+5. Derived-child bodies use interface-compatible receivers where cross-family execution requires it.
+   For example, D.C0.foo() can execute on a D_C1 object through a D_iC0 receiver. Its super target
+   is fixed at B.C0.foo(); it does not need a composition-specific super-router call. Likewise,
+   the super target of D.C1.foo() is B.C1.foo(). With E extending D, E.C0.foo() has the fixed
+   predecessor D.C0.foo(), and E.C1.foo() has D.C1.foo().
 
    "Fixed super" means entering the exact predecessor body, not calling the ordinary virtual
    method again. A Java super invocation can be used where the JVM receiver/owner relationship
    permits it. An interface-compatible body instead uses an exact body entry point, for example a
-   static helper with an explicit receiver. Casts to hard-left implementation ancestors are valid;
+   detached body with an explicit receiver. Casts to hard-left implementation ancestors are valid;
    casting a D_C1 receiver to D_C0 is not.
 
-   One possible body convention, using illustrative helper names, is:
+   The corresponding detached body signatures are:
 
        B_C0.s$foo(B_C0 thi$, Ctx ctx)           // concrete hard-left body
        B_C1.s$foo(B_C1 thi$, Ctx ctx)           // concrete hard-left body
-       D_iC0.s$foo(D_iC0 thi$, Ctx ctx)         // interface-compatible refined body
-       D_iC1.s$foo(D_iC1 thi$, Ctx ctx)         // interface-compatible refined body
+       D_iC0.s$foo(D_iC0 thi$, Ctx ctx)         // interface-compatible derived-child body
+       D_iC1.s$foo(D_iC1 thi$, Ctx ctx)         // interface-compatible derived-child body
 
-   The Ecstasy method remains virtual; these helpers are implementation body entries, not a
-   change to its language-level calling convention. Ordinary virtual calls select the head of the
-   composition chain. Fixed super calls select a particular body without restarting that dispatch.
+   The Ecstasy method remains virtual; detached bodies are exact implementation call targets,
+   not a change to its language-level calling convention. Ordinary virtual calls select the head
+   of the composition chain. Fixed super calls select a particular body without restarting that
+   dispatch.
 
    For example, super() inside D_iC0.s$foo calls B_C0.s$foo((B_C0) thi$, ctx) directly. It must
-   not call jump$C0$foo again, which on a D_C1 object would re-enter D.C0.foo().
+   not call super$C0$foo again, which on a D_C1 object would re-enter D.C0.foo().
 
-6. When all four classes declare foo() and each override calls super(), the chain for a D.C1
-   receiver is:
+6. The following diagrams assume that B.C0, B.C1, D.C0, and D.C1 all declare foo(), and each
+   override calls super(). They show the generated Java call paths for a D.C1 receiver. In both
+   diagrams, r denotes the same D_C1 object: child in the first Ecstasy example and this in the
+   second. Standard signatures are shown; foo() has no Ecstasy arguments.
 
-       D.C1 body -> B.C1 body -> D.C0 body -> B.C0 body
-                 fixed        jump$C0$foo    fixed
+   Regular call: enter the head of the complete composition chain
 
-   jump$C0$foo on B_C1 routes to the B.C0 body. Its override on D_C1 routes to the D.C0 body,
-   passing the same object through the D_iC0 contract. The compiled B.C1 body is unchanged;
-   generating D_C1 does not rewrite or recompile a previously loaded B_C1 class.
+   Ecstasy:
+
+       D    parent = new D();
+       D.C1 child  = parent.new C1();
+       D.C0 view   = child;
+       view.foo();
+
+   Generated Java call path:
+
+       D_iC0 view = r; view.foo(ctx)
+           |
+           | invokeinterface D_iC0.foo; Java dispatch selects D_C1.foo()
+           v
+       D_C1.foo(Ctx ctx)                              [ordinary entrance; routing only]
+           |
+           | invokestatic; pass r as D_iC1
+           v
+       D_iC1.s$foo(D_iC1 r, Ctx ctx)                  [Ecstasy D.C1.foo() code]
+
+   super() calls: continue from that implementation without restarting ordinary foo() dispatch
+
+   Ecstasy (inside D.C1):
+
+       @Override
+       void foo() {
+           super();
+       }
+
+   Generated Java call path:
+
+       D_iC1.s$foo(D_iC1 r, Ctx ctx)                  [Ecstasy D.C1.foo() code]
+           |
+           | super(): fixed invokestatic; cast r to B_C1
+           v
+       B_C1.s$foo(B_C1 r, Ctx ctx)                    [hard-left Ecstasy B.C1.foo() code]
+           |
+           | super(): invokevirtual B_C1.super$C0$foo(B_iC0, Ctx)
+           | Java dispatch selects the D_C1 override
+           v
+       D_C1.super$C0$foo(B_iC0 r, Ctx ctx)             [super-router; routing only]
+           |
+           | invokestatic; cast r to D_iC0
+           v
+       D_iC0.s$foo(D_iC0 r, Ctx ctx)                  [Ecstasy D.C0.foo() code]
+           |
+           | super(): fixed invokestatic; cast r to B_C0
+           v
+       B_C0.s$foo(B_C0 r, Ctx ctx)                    [hard-left Ecstasy B.C0.foo() code]
+
+   In the super-router method, Java's implicit this and the explicit receiver argument are both r.
+   The casts only change its Java type view; no separate D_C0 object is involved. Results return
+   along the call path. Optimized variants use the same routes with the corresponding $p signatures.
+
+   The compiled B_C1 body is unchanged; generating D_C1 does not rewrite or recompile a
+   previously loaded B_C1 class.
 
    Another required case is:
 
        B.C0 declares foo(); B.C1 inherits it
        D.C0 overrides foo(); D.C1 inherits it
 
-   B_C1 still generates foo() under rule 3. Its forwarding body calls jump$C0$foo, which on D_C1
+   B_C1 still generates foo() under rule 3. Its forwarding body calls super$C0$foo, which on D_C1
    enters D.C0.foo(), followed by B.C0.foo(). The synthetic forwarding body adds no Ecstasy behavior,
    but prevents Java inheritance from skipping the D.C0 override.
 
-7. A bound super function captures the same receiver and the same successor that a direct super
-   call would use. Binding super in a hard-left body binds its virtual jump-in method and explicit
-   receiver argument, preserving composition-specific dispatch. Binding super in a non-hard-left
+7. A bound super function captures the same receiver and the same successor that a direct super call
+   would use. Binding super in a hard-left body binds its virtual super-router method and explicit
+   receiver argument, preserving composition-specific dispatch. Binding super in a derived-child
    body binds its fixed predecessor body entry. Neither case binds the ordinary virtual method at
    the head of the chain.
 
@@ -389,11 +495,11 @@ Virtual child classes: hard-left implementations and composition-specific super
 
    Construction, field initialization, and validators must use the same actual object and obey
    the same receiver rules. Struct writes still bypass ordinary setters. Private helper calls
-   remain lexical rather than becoming virtual jump-in calls. Identity, outer, runtime type,
+   remain lexical rather than becoming virtual super-router calls. Identity, outer, runtime type,
    and mutable state belong to one object; no separate D_C0 delegate is constructed for D_C1.
 
 9. A missing child declaration does not imply an unchanged composition. If D overrides C0 but
-   does not declare C1, D.C1 can still require different jump-in routes, callable contracts,
+   does not declare C1, D.C1 can still require different super-router routes, callable contracts,
    and storage. The parent-side child factory must select an implementation of that effective
    composition, not blindly instantiate the first ancestor with a declared C1.
 
@@ -403,7 +509,7 @@ Virtual child classes: hard-left implementations and composition-specific super
    storage; it is not an unconditional empty phantom class.
 
 10. Bodies are reusable within the required JIT specialization; parent compositions supply the
-    differing jump-in routes and storage accessors. Runtime calls use generated methods,
+    differing super-router routes and storage accessors. Runtime calls use generated methods,
     rather than searching a method-chain table on every call. The design does not require changing
     Ecstasy op production: TypeInfo describes the composition, and the ops identify the operations
     and source contributions to compile.
