@@ -42,12 +42,16 @@ class SharedScenarios(
         val limitations: List<String>,
     )
 
-    /** Retains a scenario's instructions, expectations and IntelliJ coverage from the shared catalog. */
+    /**
+     * Retains a scenario's instructions, expectations and IntelliJ coverage from the shared catalog. [tags]
+     * names catalog `tagDefinitions`, such as `slow`; absent means none.
+     */
     data class Scenario(
         val title: String,
         val manual: List<String>,
         val values: JsonObject,
         val intellij: Coverage,
+        val tags: List<String>? = null,
     ) {
         fun text(key: String): String = requireNotNull(values[key]) { "Missing scenario value $key" }.asString
 
@@ -227,7 +231,9 @@ class SharedScenarios(
             require(scenarios.keys.toList() == expected) {
                 "The catalog must describe the complete playbook in order"
             }
+            val tags = json.getAsJsonObject("tagDefinitions")?.keySet().orEmpty()
             scenarios.forEach { (id, scenario) ->
+                require(tags.containsAll(scenario.tags.orEmpty())) { "Undefined tag in $id: ${scenario.tags}" }
                 require(scenario.intellij.coverage in setOf("full", "partial", "not-implemented")) {
                     "Missing IntelliJ coverage for $id"
                 }
