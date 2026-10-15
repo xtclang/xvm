@@ -20,6 +20,9 @@ and remaining R1–R8 work are in the
 | `1a89eb1a5` | IntelliJ Build, Execution, Deployment › Ecstasy, task runner, run modes, Run lens action | #693 / editor review |
 | `50fb713a0` | Plan status, playbook 18a, documentation notes | With the feature commits |
 | `590935e77` | `javatools/lsp-compiler.md` rename; `AGENTS.md` links | Mirror into #693 and the outside-`lang/` comparison |
+| `b3eea17d0` | VS Code run tasks wait for the program's exit after Stop | With `94a1e8c19` |
+| `e658825c1` | `slow` tags in the shared playbook catalog | Playbook infrastructure (#693) |
+| `4598957ce` | Shared playbook cases X280–X284 and VS Code adapter switching in X137 | With the editor commits (#693) |
 
 The runtime-execution PR would be small (three files) and independent of the compiler foundation
 PRs; it must keep the distinct `runMethod` name, which avoids an overload ambiguity in existing
