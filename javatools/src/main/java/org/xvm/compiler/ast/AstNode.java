@@ -1280,7 +1280,7 @@ public abstract class AstNode
                         ? exprArg.getType()
                         : exprArg.getImplicitType(ctx);
                 if (typeExpr != null && typeExpr.isA(typeParam)) {
-                    fit     = TypeFit.Fit;
+                    fit = TypeFit.Fit;
                     fExact &= typeExpr.equals(typeParam);
                 } else {
                     // if *all* tests fail, report the errors from the first unsuccessful attempt
@@ -1381,10 +1381,6 @@ public abstract class AstNode
             }
             mapMethods.put(idMethod, method);
             matching.accept(sigMethod, listArgs);
-
-            if (fExact) {
-                return;
-            }
         }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic
