@@ -59,6 +59,10 @@ import org.xvm.runtime.Utils;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
@@ -66,11 +70,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
-import static org.xvm.asm.ErrorListener.at;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An XVM Structure that represents a method or a function.
@@ -642,7 +641,7 @@ public class MethodStructure
         m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
-        m_code = code = new Code(this);
+        m_code        = code = new Code(this);
 
         markModified();
 
@@ -814,7 +813,7 @@ public class MethodStructure
      * Given arrays of actual argument types and return types, return a ListMap with the actual
      * (resolved) type parameters types.
      *
-     * <p>For example: given a method: {@code <T, U> T foo(U u, T t)} actual argument types: String, Int and
+     * <p>For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
      * actual return type: Number this method would return a map {"T":Number, "U":String}
      *
      * @param pool           the ConstantPool to use
@@ -1137,13 +1136,13 @@ public class MethodStructure
      * Determine if this method might act as a property initializer. For example, in the property
      * declaration:
      *
-     * <pre><code>
+     * <p><code><pre>
      *     Int MB = KB * KB;
-     * </code></pre>
+     * </pre></code>
      *
      * <p>... the value of the property could be compiled as an initializer function named "=":
      *
-     * <pre><code>
+     * <p><code><pre>
      *     Int MB
      *       {
      *       Int "="()
@@ -1151,7 +1150,7 @@ public class MethodStructure
      *         return KB * KB;
      *     }
      *   }
-     * </code></pre>
+     * </pre></code>
      *
      *
      * @return true iff this method is a public method (not function) named "get" that takes no
@@ -1860,7 +1859,7 @@ public class MethodStructure
         Parameter[] aReturns = new Parameter[cReturns];
         boolean     fCond    = isConditionalReturn();
         for (int i = 0; i < cReturns; ++i) {
-            Parameter param = new Parameter(pool, in, true, i, i==0 && fCond);
+            Parameter param = new Parameter(pool, in, true, i, i == 0 && fCond);
             if (!param.getType().equals(aconstReturnTypes[i])) {
                 throw new IOException("type mismatch between method constant and return " + i + " value type");
             }
@@ -2807,7 +2806,7 @@ public class MethodStructure
             for (int iLine = iFirst; iLine <= iLast; ++iLine) {
                 StringConstant constLine = m_aconstSrc[iLine];
                 if (constLine == null) {
-                    asLine[iLine-iFirst] = "";
+                    asLine[iLine - iFirst] = "";
                 } else {
                     int nIndent = m_anIndents[iLine] - cTrim;
                     if (nIndent != 0) {
@@ -2819,9 +2818,9 @@ public class MethodStructure
                         }
 
                         sb.append(constLine.getValue());
-                        asLine[iLine-iFirst] = sb.toString();
+                        asLine[iLine - iFirst] = sb.toString();
                     } else {
-                        asLine[iLine-iFirst] = constLine.getValue();
+                        asLine[iLine - iFirst] = constLine.getValue();
                     }
                 }
             }
@@ -2843,7 +2842,7 @@ public class MethodStructure
                 for (int iLine = 0; iLine < cLines; ++iLine) {
                     String sLine = asLine[iLine];
                     int    ofEnd = sLine.length();
-                    while (ofEnd > 0 && Character.isWhitespace(sLine.charAt(ofEnd-1))) {
+                    while (ofEnd > 0 && Character.isWhitespace(sLine.charAt(ofEnd - 1))) {
                         --ofEnd;
                     }
 

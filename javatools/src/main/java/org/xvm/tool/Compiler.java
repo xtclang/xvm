@@ -28,6 +28,8 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.util.Handy.parentOf;
@@ -214,8 +216,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         var     verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
-        var       mapTargets     = new LinkedHashMap<File, Node>();
-        int       cSystemModules = 0;
+        var mapTargets     = new LinkedHashMap<File, Node>();
+        int cSystemModules = 0;
         for (ModuleInfo moduleInfo : targets) {
             log(INFO, "Loading and parsing sources for module: {}",
                     moduleInfo.getQualifiedModuleName());
@@ -438,8 +440,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         for (var compiler : compilers) {
             ModuleConstant idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
-                compiler.getErrorListener().log(FATAL, MODULE_MISSING,
-                        new String[]{idMissing.getName()}, null);
+                compiler.getErrorListener().fatal(MODULE_MISSING, NOWHERE, idMissing.getName());
                 return;
             }
         }

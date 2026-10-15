@@ -19,10 +19,10 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -306,7 +306,7 @@ public class ArrayAccessExpression
                 TypeConstant typeInterval = pool.ensureRangeType(pool.typeInt64());
                 if (typeRequired.isA(pool.typeMatrix())
                         && exprCol.testFit(ctx, typeInterval, fExhaustive, probe).isFit()
-                    && exprRow.testFit(ctx, typeInterval, fExhaustive, probe).isFit()) {
+                        && exprRow.testFit(ctx, typeInterval, fExhaustive, probe).isFit()) {
                     // REVIEW same issue as array above
                     TypeConstant typeElement = typeRequired.resolveGenericType("Element");
                     return typeElement == null
@@ -984,7 +984,7 @@ public class ArrayAccessExpression
 
                 assert nLo <= nHi;
             } else {
-                nLo = nHi = index.convertTo(pool.typeInt64()).getIntValue().getInt();
+                nLo      = nHi = index.convertTo(pool.typeInt64()).getIntValue().getInt();
                 fSlice   = false;
                 fReverse = false;
             }
@@ -1205,10 +1205,10 @@ public class ArrayAccessExpression
         Constant[]    aconstVals = constArray.getValue();
         int           cVals      = aconstVals.length;
         PackedInteger piIndex    = constIndex.getValue();
-        if (piIndex.checkRange(0, cVals-1)) {
+        if (piIndex.checkRange(0, cVals - 1)) {
             return aconstVals[piIndex.getInt()];
         } else {
-            log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cVals-1);
+            log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cVals - 1);
             return null;
         }
     }
@@ -1230,7 +1230,7 @@ public class ArrayAccessExpression
         int           cOldVals = aOldVals.length;
         PackedInteger piIndex1 = constIndex.getEffectiveFirst().getIntValue();
         PackedInteger piIndex2 = constIndex.getEffectiveLast() .getIntValue();
-        if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals-1)) {
+        if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals - 1)) {
             int        cNewVals = (int) constIndex.size();
             Constant[] aNewVals = new Constant[cNewVals];
             if (cNewVals > 0) {
@@ -1246,7 +1246,7 @@ public class ArrayAccessExpression
                     ? pool.ensureTupleConstant(typeResult, aNewVals)
                     : pool.ensureArrayConstant(typeResult, aNewVals);
         } else {
-            PackedInteger piIndex = piIndex1.checkRange(0, cOldVals-1) ? piIndex2 : piIndex1;
+            PackedInteger piIndex = piIndex1.checkRange(0, cOldVals - 1) ? piIndex2 : piIndex1;
             log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cOldVals - 1);
             return null;
         }

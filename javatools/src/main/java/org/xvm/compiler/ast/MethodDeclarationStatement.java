@@ -236,7 +236,7 @@ public class MethodDeclarationStatement
     @Override
     public Access getDefaultAccess() {
         // methods are *not* taking the parent's access by default
-        Access  access = getAccess(modifiers);
+        Access access = getAccess(modifiers);
         return access == null ? Access.PUBLIC : access;
     }
 
@@ -367,7 +367,7 @@ public class MethodDeclarationStatement
                         aReturns[0] = new org.xvm.asm.Parameter(pool, pool.typeBoolean(), null, null, true, 0, true);
                     }
                     for (int i = ofReturn; i < cReturns; ++i) {
-                        Parameter param = returns.get(i-ofReturn);
+                        Parameter param = returns.get(i - ofReturn);
                         aReturns[i] = new org.xvm.asm.Parameter(pool,
                                 param.getType().ensureTypeConstant(), param.getName(), null, true, i, false);
                     }
@@ -396,7 +396,7 @@ public class MethodDeclarationStatement
                     return;
                 }
 
-                Access  access = container instanceof MethodStructure
+                Access  access     = container instanceof MethodStructure
                                         ? Access.PRIVATE
                                         : getDefaultAccess();
                 boolean fUsesSuper = !fFunction && !fFinally && !fValidator
@@ -728,7 +728,7 @@ public class MethodDeclarationStatement
                 }
 
                 TypeConstant typeNext = null;
-                int          iNext    = atypeInto.length-1;
+                int          iNext    = atypeInto.length - 1;
                 while (true) {
                     int iFound = -1;
                     for (int i = iNext; i >= 0; i--) {
@@ -849,7 +849,7 @@ public class MethodDeclarationStatement
         ConstantPool pool     = pool();
         TypeConstant typeNext = null;
 
-        for (int iNext = aAnno.length-1; true; iNext--) {
+        for (int iNext = aAnno.length - 1; true; iNext--) {
             TypeConstant typeInto = atypeInto[iNext];
 
             if (!isApplicable(typeInto, typeBase, typeNext)) {
@@ -896,7 +896,7 @@ public class MethodDeclarationStatement
         assert i < j;
 
         Object t = ao[i];
-        System.arraycopy(ao, i+1, ao, i, j-i);
+        System.arraycopy(ao, i + 1, ao, i, j - i);
         ao[j] = t;
     }
 

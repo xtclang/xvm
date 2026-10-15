@@ -948,21 +948,7 @@ public class EmbeddingSupport {
             errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to locate module " + file);
             return false;
         }
-
-        if (module == null) {
-            assert errs.hasSeriousErrors() || errs.isAbortDesired();
-            return false;
-        }
-
-        if (output != null) {
-            try {
-                output.storeModule(module);
-            } catch (IOException e) {
-                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
-                return false;
-            }
-        }
-        return true;
+        return ModuleCompiler.storeCompiled(module, output, errs);
     }
 
     /**

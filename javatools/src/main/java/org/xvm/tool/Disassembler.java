@@ -28,8 +28,9 @@ import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 
 import org.xvm.util.Handy;
 
-import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
+
+import static java.time.ZoneOffset.UTC;
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
 import static org.xvm.util.Handy.readFileBytes;
@@ -96,7 +97,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         final var fileModule = opts.getTarget().orElseThrow(); // validated above
         final var sModule    = fileModule.getName();
 
-        Component component  = null;
+        Component component = null;
 
         if (sModule.endsWith(".xtc")) {
             // it's a file
@@ -281,7 +282,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         LocalDateTime time = null;
         try {
             time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
-        } catch (Exception _) {}
+        } catch (Exception ignore) {}
         if (time == null) {
             buf.append("??? ??  ????");
         } else {
@@ -309,8 +310,8 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             } else {
                 buf.append(' ');
                 // four digit year
-                String s = String.valueOf(10000+time.getYear());
-                buf.append(s.substring(s.length()-4));
+                String s = String.valueOf(10000 + time.getYear());
+                buf.append(s.substring(s.length() - 4));
             }
         }
 
@@ -340,16 +341,16 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 out(buf);
             } else {
                 out(buf);
-                var      aKidNodes  = fsNode.getDirectoryContents();
-                int      cKidNodes  = aKidNodes.length;
-                String   nextIndent = " |- ";
+                var    aKidNodes  = fsNode.getDirectoryContents();
+                int    cKidNodes  = aKidNodes.length;
+                String nextIndent = " |- ";
                 if (!indent.isEmpty()) {
-                    nextIndent = indent.substring(0, indent.length()-4)
+                    nextIndent = indent.substring(0, indent.length() - 4)
                                + (last ? "    " : " |  ")
                                + nextIndent;
                 }
                 for (int i = 0; i < cKidNodes; ++i) {
-                    printNode(aKidNodes[i], nextIndent, i == cKidNodes-1, false, visited, idLen, sizeLen);
+                    printNode(aKidNodes[i], nextIndent, i == cKidNodes - 1, false, visited, idLen, sizeLen);
                 }
             }
             break;
@@ -393,13 +394,13 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         String findString = null;
         try {
             findString = new String(readFileChars(target));
-        } catch (IOException _) {}
+        } catch (IOException ignore) {}
 
         // load the file metadata
-        var    findName     = target.getName();
-        var    findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
-        var    findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
-        int    findSize     = findBytes.length;
+        var findName     = target.getName();
+        var findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
+        var findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
+        int findSize     = findBytes.length;
 
         var pool = component.getConstantPool();
         int matches = 0;

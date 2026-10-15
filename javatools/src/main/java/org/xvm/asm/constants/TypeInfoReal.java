@@ -118,13 +118,13 @@ public class TypeInfoReal
         f_listmapDefaultChain = listmapDefaultChain;
         IdentityHashMap<PropertyInfo, PropertyInfo> mapPropertyCopies = new IdentityHashMap<>();
         IdentityHashMap<MethodInfo, MethodInfo>     mapMethodCopies   = new IdentityHashMap<>();
-        f_mapProps            = ensurePropertyOwnership(mapProps, mapPropertyCopies);
-        f_mapVirtProps        = ensurePropertyOwnership(mapVirtProps, mapPropertyCopies);
-        f_mapMethods          = ensureMethodOwnership(mapMethods, mapMethodCopies);
-        f_mapVirtMethods      = ensureMethodOwnership(mapVirtMethods, mapMethodCopies);
-        f_mapChildren         = ensureChildOwnership(mapChildren);
-        f_setDepends          = setDepends;
-        f_progress            = progress;
+        f_mapProps       = ensurePropertyOwnership(mapProps, mapPropertyCopies);
+        f_mapVirtProps   = ensurePropertyOwnership(mapVirtProps, mapPropertyCopies);
+        f_mapMethods     = ensureMethodOwnership(mapMethods, mapMethodCopies);
+        f_mapVirtMethods = ensureMethodOwnership(mapVirtMethods, mapMethodCopies);
+        f_mapChildren    = ensureChildOwnership(mapChildren);
+        f_setDepends     = setDepends;
+        f_progress       = progress;
 
         // pre-populate the method lookup caches
         // and determine if this type is implicitly abstract
@@ -174,13 +174,13 @@ public class TypeInfoReal
         f_listmapDefaultChain = infoReal.f_listmapDefaultChain;
         IdentityHashMap<PropertyInfo, PropertyInfo> mapPropertyCopies = new IdentityHashMap<>();
         IdentityHashMap<MethodInfo, MethodInfo>     mapMethodCopies   = new IdentityHashMap<>();
-        f_mapProps            = ensurePropertyOwnership(infoReal.f_mapProps, mapPropertyCopies);
-        f_mapVirtProps        = ensurePropertyOwnership(infoReal.f_mapVirtProps, mapPropertyCopies);
-        f_mapMethods          = ensureMethodOwnership(infoReal.f_mapMethods, mapMethodCopies);
-        f_mapVirtMethods      = ensureMethodOwnership(infoReal.f_mapVirtMethods, mapMethodCopies);
-        f_mapChildren         = ensureChildOwnership(infoReal.f_mapChildren);
-        f_setDepends          = null;
-        f_progress            = Progress.Complete;
+        f_mapProps       = ensurePropertyOwnership(infoReal.f_mapProps, mapPropertyCopies);
+        f_mapVirtProps   = ensurePropertyOwnership(infoReal.f_mapVirtProps, mapPropertyCopies);
+        f_mapMethods     = ensureMethodOwnership(infoReal.f_mapMethods, mapMethodCopies);
+        f_mapVirtMethods = ensureMethodOwnership(infoReal.f_mapVirtMethods, mapMethodCopies);
+        f_mapChildren    = ensureChildOwnership(infoReal.f_mapChildren);
+        f_setDepends     = null;
+        f_progress       = Progress.Complete;
 
         f_cacheById = new ConcurrentHashMap<>(
                 ensureMethodOwnership(infoReal.f_cacheById, mapMethodCopies));
@@ -283,7 +283,7 @@ public class TypeInfoReal
     private ListMap<String, ChildInfo> ensureChildOwnership(
             ListMap<String, ChildInfo> mapChildren) {
         IdentityHashMap<ChildInfo, ChildInfo> mapChildCopies = new IdentityHashMap<>();
-        ListMap<String, ChildInfo>             mapOwned       = new ListMap<>(mapChildren.size());
+        ListMap<String, ChildInfo> mapOwned = new ListMap<>(mapChildren.size());
         for (Entry<String, ChildInfo> entry : mapChildren.entrySet()) {
             ChildInfo child = entry.getValue();
             if (child != null) {
@@ -624,15 +624,15 @@ public class TypeInfoReal
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
         mapTypeParams.put("Referent", new ParamInfo("Referent", typeReferent, pool.typeObject()));
 
-        MethodConstant    id        = findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
-        SignatureConstant sig       = id.getSignature();
-        SignatureConstant sigNew    = pool.register(sig.resolveGenericTypes(pool, resolver));
-        MethodConstant    idNew     = pool.ensureMethodConstant(getIdentity(), sigNew);
-        MethodInfo        method    = getMethodById(id);
-        MethodBody        body      = method.getHead();
-        MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
+        MethodConstant    id      = findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
+        SignatureConstant sig     = id.getSignature();
+        SignatureConstant sigNew  = pool.register(sig.resolveGenericTypes(pool, resolver));
+        MethodConstant    idNew   = pool.ensureMethodConstant(getIdentity(), sigNew);
+        MethodInfo        method  = getMethodById(id);
+        MethodBody        body    = method.getHead();
+        MethodBody        bodyNew = new MethodBody(idNew, sigNew, body.getImplementation(), null);
         bodyNew.setMethodStructure(body.getMethodStructure());
-        MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
+        MethodInfo methodNew = new MethodInfo(bodyNew, method.getRank());
 
         // we intentionally add absolutely nothing except the "get" method
         Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(1);
@@ -1274,7 +1274,7 @@ public class TypeInfoReal
      * If the specified property is not visible directly by this TypeInfo due to the private access,
      * obtain its origin's TypeInfo.
      *
-     * <p>Note: this method is used only by the runtime.
+     * Note: this method is used only by the runtime.
      *
      * @param idProp  the property id
      *
@@ -1944,8 +1944,8 @@ public class TypeInfoReal
                         kind.matches(e.getValue())).toArray(Map.Entry[]::new);
 
             for (Entry<MethodConstant, MethodInfo> entry : candidates) {
-                MethodConstant  id        = entry.getKey();
-                MethodInfo      info      = entry.getValue();
+                MethodConstant id   = entry.getKey();
+                MethodInfo     info = entry.getValue();
                 if (cParams < 0 || (cParams <= info.getTotalParamCount() &&
                         cParams >= info.getRequiredParamCount(this))) {
                     setMethods = addMatch(setMethods, info.isFunction() ? id : resolveMethodConstant(id, info));

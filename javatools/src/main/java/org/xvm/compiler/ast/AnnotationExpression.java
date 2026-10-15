@@ -129,10 +129,10 @@ public class AnnotationExpression
             return m_anno;
         }
 
-        Constant         constClass  = toTypeExpression().getIdentityConstant();
-        List<Expression> listArgs    = args;
-        Constant[]       aconstArgs  = Constant.NO_CONSTS;
-        int              cArgs       = listArgs == null ? 0 : listArgs.size();
+        Constant         constClass = toTypeExpression().getIdentityConstant();
+        List<Expression> listArgs   = args;
+        Constant[]       aconstArgs = Constant.NO_CONSTS;
+        int              cArgs      = listArgs == null ? 0 : listArgs.size();
         if (cArgs > 0) {
             aconstArgs = new Constant[cArgs];
             for (int iArg = 0; iArg < cArgs; ++iArg) {
@@ -226,7 +226,7 @@ public class AnnotationExpression
         ValidatingContext ctx      = new ValidatingContext(comp instanceof ModuleStructure module ?
                                                             module : comp.getContainingClass());
 
-        TypeConstant  typeAnno = type == null
+        TypeConstant typeAnno = type == null
                 ? idAnno.getType()
                 : type.ensureTypeConstant();
         if (!typeAnno.isParamsSpecified() && typeAnno.isA(pool.typeRef())) {

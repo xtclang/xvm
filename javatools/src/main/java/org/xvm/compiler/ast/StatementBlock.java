@@ -120,7 +120,7 @@ public class StatementBlock
         assert !(fHasEnclosed & fAddEnclosed);
         if (fHasEnclosed) {
             // insert the new statement before the "enclosed" statements
-            stmts.add(stmts.size()-1, stmt);
+            stmts.add(stmts.size() - 1, stmt);
         } else {
             stmts.add(stmt);
             containsEnclosed |= fAddEnclosed;
@@ -1168,7 +1168,7 @@ public class StatementBlock
             TypeConstant typeThis = getThisClass().getFormalType();
             TypeConstant type;
             int          nReg;
-            int          cSteps = 0;
+            int          cSteps   = 0;
             switch (sName) {
             case "this":
                 if (isConstructor()) {

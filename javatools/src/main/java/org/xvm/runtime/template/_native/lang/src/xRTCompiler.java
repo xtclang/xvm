@@ -16,7 +16,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -232,9 +231,9 @@ public class xRTCompiler
 
     private int completeCompilation(Frame frame, CompilerAdapter compiler,
                                     Exception exception, int[] aiReturn) {
-        List<ComponentTemplateHandle> listFiles = new ArrayList<>();
+        List<ComponentTemplateHandle> listFiles  = new ArrayList<>();
         List<String>                  listErrors = compiler.getErrors();
-        boolean      fSuccess;
+        boolean fSuccess;
         if (exception == null) {
             fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
             if (fSuccess) {
@@ -360,8 +359,8 @@ public class xRTCompiler
         }
 
         /**
-         * This method follows the processing pipeline of {@link Compiler}, allowing re-entry
-         * to the "link" stage.
+         * This method is basically a copy of {@link Compiler#process()} implementation that allows
+         * a re-entry to the "link" stage.
          *
          * @param fReenter if true, skip all steps prior to module linking
          *

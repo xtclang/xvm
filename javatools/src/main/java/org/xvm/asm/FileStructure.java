@@ -91,10 +91,10 @@ public class FileStructure
             throw new IllegalStateException("module already exists");
         }
 
-        m_pool        = pool;
-        m_idModule    = idModule;
-        m_nMajorVer   = VERSION_MAJOR_CUR;
-        m_nMinorVer   = VERSION_MINOR_CUR;
+        m_pool      = pool;
+        m_idModule  = idModule;
+        m_nMajorVer = VERSION_MAJOR_CUR;
+        m_nMinorVer = VERSION_MINOR_CUR;
     }
 
     /**
@@ -157,7 +157,7 @@ public class FileStructure
             if (fAutoClose) {
                 try {
                     in.close();
-                } catch (IOException _) {}
+                } catch (IOException ignore) {}
             }
         }
     }

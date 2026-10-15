@@ -134,7 +134,7 @@ public class MethodInfo
 
         MethodBody[] aOld = m_aBody;
         int          cOld = aOld.length;
-        MethodBody[] aNew = new MethodBody[cOld+1];
+        MethodBody[] aNew = new MethodBody[cOld + 1];
 
         aNew[0] = new MethodBody(idThis, sigThis, Implementation.Capped, nidThat);
         System.arraycopy(aOld, 0, aNew, 1, cOld);
@@ -204,7 +204,7 @@ public class MethodInfo
             }
 
             MethodStructure methodThat = bodyAdd.getMethodStructure();
-            MethodStructure methodThis = aBase[cBase-1].getMethodStructure();
+            MethodStructure methodThis = aBase[cBase - 1].getMethodStructure();
             if (methodThis != null && methodThat != null) {
                 int cParamsAll  = methodThis.getVisibleParamCount();
                 int cParamsReq  = methodThis.getRequiredParamCount();
@@ -220,9 +220,9 @@ public class MethodInfo
             }
         }
 
-        MethodBody tailAdd = aAdd[cAdd-1];
+        MethodBody tailAdd = aAdd[cAdd - 1];
         if (tailAdd.isInto()) {
-            MethodBody tailBase = aBase[cBase-1];
+            MethodBody tailBase = aBase[cBase - 1];
             if (cAdd == 2 && aAdd[0].getImplementation() == Implementation.Capped) {
                 // the "into" is capped in the mixin but nothing else is in the chain, which implies
                 // that there is some other method signature in the mixin that did (and thus, will)
@@ -236,7 +236,7 @@ public class MethodInfo
                 // the "into" from the add narrows the "into" from the base, so use it instead of
                 // the "into" from the base
                 aBase = aBase.clone();
-                aBase[cBase-1] = tailAdd;
+                aBase[cBase - 1] = tailAdd;
                 --cAdd;
             } else if (cAdd == 1) {
                 // discard the duplicate "into" from the add, and since it's the only thing to add,
@@ -356,7 +356,7 @@ public class MethodInfo
     public MethodInfo layerOnVirtualConstructor(MethodInfo that) {
         MethodBody[] aThis = m_aBody;
         int          cThis = -1;
-        for (int i = aThis.length - 1; i >=0; --i) {
+        for (int i = aThis.length - 1; i >= 0; --i) {
             if (aThis[i].isVirtualConstructor()) {
                 // keep all on top of the first virtual
                 cThis = i + 1;
@@ -522,10 +522,10 @@ public class MethodInfo
     public MethodInfo nestNarrowingIdentity(ConstantPool pool, PropertyConstant idProp) {
         assert isCapped();
 
-        MethodBody bodyCap    = getHead();
-        Object     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
+        MethodBody   bodyCap   = getHead();
+        Object       nidTarget = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
                                     resolveNestedIdentity(pool, null);
-        MethodBody[] chainNew = getChain().clone();
+        MethodBody[] chainNew  = getChain().clone();
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
                                      Implementation.Capped, nidTarget);
         return new MethodInfo(chainNew, f_nRank);
@@ -619,9 +619,9 @@ public class MethodInfo
     public MethodInfo rebaseInto() {
         MethodBody[] aBodyNew = m_aBody.clone();
         int          cBodies  = aBodyNew.length;
-        MethodBody   tail     = aBodyNew[cBodies-1];
+        MethodBody   tail     = aBodyNew[cBodies - 1];
         assert tail.isInto();
-        aBodyNew[cBodies-1] = new MethodBody(tail.getIdentity(), tail.getSignature(), Implementation.SansCode);
+        aBodyNew[cBodies - 1] = new MethodBody(tail.getIdentity(), tail.getSignature(), Implementation.SansCode);
         return new MethodInfo(aBodyNew, f_nRank);
     }
 
@@ -642,8 +642,8 @@ public class MethodInfo
      */
     public MethodInfo markImplicitConstructor() {
         assert getHead().isConstructor();
-        MethodBody   bodyOld  = m_aBody[0];
-        MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
+        MethodBody bodyOld = m_aBody[0];
+        MethodBody bodyNew = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
         return new MethodInfo(new MethodBody[] {bodyNew}, f_nRank);
     }
 
@@ -881,7 +881,7 @@ public class MethodInfo
      * @return the last MethodBody in the call chain
      */
     public MethodBody getTail() {
-        return m_aBody[m_aBody.length-1];
+        return m_aBody[m_aBody.length - 1];
     }
 
     /**
@@ -1123,7 +1123,7 @@ public class MethodInfo
      * @return true iff the method chain is delegating
      */
     public boolean isDelegating() {
-        MethodBody     head = getHead();
+        MethodBody head = getHead();
         if (head.getImplementation() == Implementation.Union) {
             return head.getUnionLeft().isDelegating() && head.getUnionRight().isDelegating();
         }
@@ -1211,8 +1211,8 @@ public class MethodInfo
             ArrayList<MethodBody> listDefault = null;
             forAll:
             for (int i = 0, c = chain.length; i < c; ++i) {
-                MethodBody      body   = chain[i];
-                Implementation  impl   = body.getImplementation();
+                MethodBody     body = chain[i];
+                Implementation impl = body.getImplementation();
                 if (impl != Implementation.Native) {
                     MethodStructure method = body.getMethodStructure();
                     if (method != null && method.isNative()) {

@@ -533,7 +533,7 @@ public class CmpExpression
                                  expr1.generateArgument(ctx, code, true, errs), expr2);
             Argument arg2      = expr2.generateArgument(ctx, code, true, errs);
             Argument argResult = LVal.getLocalArgument();
-            OpTest   op = switch (operator.getId()) {
+            OpTest   op        = switch (operator.getId()) {
                 case COMP_EQ ->
                     m_fArg1Null ? new IsNull(arg2, argResult) :
                     m_fArg2Null ? new IsNull(arg1, argResult) :

@@ -626,7 +626,7 @@ public class PropertyDeclarationStatement
                         if (constParam.containsUnresolved()) {
                             return false;
                         }
-                        TypeConstant typeFormal = ctor.getParam(iP).getType();
+                        TypeConstant typeFormal   = ctor.getParam(iP).getType();
                         TypeConstant typeActual   = constParam.getType();
                         TypeConstant typeResolved = typeFormal.resolveTypeParameter(typeActual, sFormal);
                         if (typeResolved != null) {

@@ -112,8 +112,8 @@ public class Parser {
             throw new IllegalArgumentException("Source required");
         }
 
-        m_source          = source;
-        f_errs            = new Reporting(requireNonNull(errs, "errs"));
+        m_source = source;
+        f_errs   = new Reporting(requireNonNull(errs, "errs"));
         // Lexical reports and cancellation follow the active speculative attempt.
         ErrorListener lexicalReports = new ErrorListener() {
             @Override
@@ -161,7 +161,7 @@ public class Parser {
             // during parsing
             m_fDone = true;
 
-            long lStart         = peek().getStartPosition();
+            long lStart = peek().getStartPosition();
             List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
             if (stmts.isEmpty() && !f_errs.get().hasSeriousErrors()) {
                 log(Severity.ERROR, NO_TYPE_FOUND, lStart, m_source.getPosition());
@@ -322,7 +322,7 @@ public class Parser {
             }
 
             if (annotations != null) {
-                for (int i = annotations.size()-1; i >= 0; --i) {
+                for (int i = annotations.size() - 1; i >= 0; --i) {
                     exprResult = new AnnotatedTypeExpression(annotations.get(i), exprResult);
                 }
             }
@@ -514,7 +514,7 @@ public class Parser {
                                     constraints.addAll(params);
                                 }
 
-                                paramnames  = new ArrayList<>();
+                                paramnames = new ArrayList<>();
                                 for (Parameter param : params) {
                                     Token       tokName       = param.getNameToken();
                                     List<Token> listParamName = Collections.singletonList(tokName);
@@ -1243,8 +1243,8 @@ public class Parser {
             return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
                     List.of(), e);
         }
-        long                 lEndPos          = prev().getEndPosition();
-        StatementBlock       body;
+        long           lEndPos = prev().getEndPosition();
+        StatementBlock body;
         switch (peek().getId()) {
         case SEMICOLON:
             body = null;
@@ -1311,7 +1311,7 @@ public class Parser {
                                                                 stmt.getEndPosition());
                 fNeedsSemi = true;
             } else {
-                block      = parseStatementBlock();
+                block = parseStatementBlock();
             }
 
             MethodDeclarationStatement method = new MethodDeclarationStatement(
@@ -3675,7 +3675,7 @@ public class Parser {
                     break;
                 }
 
-                left    = new NameExpression(left, nameNDR, name, null, lEndPos);
+                left = new NameExpression(left, nameNDR, name, null, lEndPos);
                 if (fNormal && nameNext.getStartPosition() < f_cursor && f_cursor <= nameNext.getEndPosition()
                         && canRetainIncompleteAt(nameNext.getEndPosition(), true)) {
                     var hole = incomplete(left, dot, nameNext);
@@ -3840,8 +3840,8 @@ public class Parser {
                 List<Parameter> params = new ArrayList<>();
                 params.add(new Parameter(expr.toTypeExpression(), expectNameOrAny()));
                 while (match(Id.R_PAREN, match(Id.COMMA) == null) == null) {
-                    TypeExpression type  = parseTypeExpression();
-                    Token          name  = expectNameOrAny();
+                    TypeExpression type = parseTypeExpression();
+                    Token          name = expectNameOrAny();
                     params.add(new Parameter(type, name));
                 }
 
@@ -5180,7 +5180,7 @@ public class Parser {
             if (fAllowTypeSequence && peek(Id.COMP_LT)) {
                 Token tokStart = peek();
                 List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false, fHeader);
-                Token tokEnd   = prev();
+                Token tokEnd = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
             } else {
                 types.add(parseIntersectingTypeExpression(true, fHeader));
@@ -5245,8 +5245,8 @@ public class Parser {
         }
 
         do {
-            TypeExpression type  = parseTypeExpression();
-            Token          name  = expectNameOrAny();
+            TypeExpression type = parseTypeExpression();
+            Token          name = expectNameOrAny();
             resources.add(new Parameter(type, name));
         } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
         return resources;
@@ -5283,14 +5283,14 @@ public class Parser {
             }
             if (match(Id.R_PAREN) == null) {
                 while (true) {
-                    TypeExpression type  = parseDeclarationType();
+                    TypeExpression type = parseDeclarationType();
                     var missingName = declarationNameSlot(type);
                     if (missingName.isPresent()) {
                         log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
                         throw new IncompleteHeader(missingName.orElseThrow());
                     }
-                    Token          name  = expect(Id.IDENTIFIER);
-                    Expression     value = null;
+                    Token      name  = expect(Id.IDENTIFIER);
+                    Expression value = null;
                     if (match(Id.ASN) != null) {
                         value = parseExpression();
                     }
@@ -6284,11 +6284,11 @@ public class Parser {
     }
 
     protected static class Mark {
-        long    pos;
-        Token   token;
-        Token   putBack;
-        Token   lastMatch;
-        Token   doc;
+        long  pos;
+        Token token;
+        Token putBack;
+        Token lastMatch;
+        Token doc;
     }
 
     protected Mark mark() {
@@ -6305,10 +6305,10 @@ public class Parser {
         // A nesting-limit or listener abort ends this parse, including after speculative rewind.
         // Token backtracking must not re-enable recovery from an exhausted parser budget.
         m_lexer.restore(mark.pos);
-        m_token          = mark.token;
-        m_tokenPutBack   = mark.putBack;
-        m_tokenPrev      = mark.lastMatch;
-        m_doc            = mark.doc;
+        m_token        = mark.token;
+        m_tokenPutBack = mark.putBack;
+        m_tokenPrev    = mark.lastMatch;
+        m_doc          = mark.doc;
     }
 
     /**
@@ -6641,14 +6641,14 @@ public class Parser {
         Token token = peek();
         if (token == null) {
             sb.append(' ')
-              .append(source.getLine()+1)
+              .append(source.getLine() + 1)
               .append(':')
-              .append(source.getOffset()+1);
+              .append(source.getOffset() + 1);
         } else {
             sb.append(' ')
-              .append(Source.calculateLine(token.getStartPosition())+1)
+              .append(Source.calculateLine(token.getStartPosition()) + 1)
               .append(':')
-              .append(Source.calculateOffset(token.getStartPosition())+1)
+              .append(Source.calculateOffset(token.getStartPosition()) + 1)
               .append(' ')
               .append(token);
         }

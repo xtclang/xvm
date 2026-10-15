@@ -12,10 +12,10 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -636,9 +636,9 @@ public abstract class TypeConstant
      *
      * <p>Consider the following class inheritance diagram:
      * <pre>
-     *    B.C0 &lt;- D.C0
+     *    B.C0 <- D.C0
      *     ^
-     *    B.C1 &lt;- D.C1
+     *    B.C1 <- D.C1
      * </pre>
      *
      * <p>When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
@@ -1053,10 +1053,10 @@ public abstract class TypeConstant
     }
 
     /**
-     * If {@code T1 == T0<E>} and {@code T2.isA(T0)} then return
-     * {@code (T1 + T2) => T2<E + EC2>}, where EC2 is a constraint for E on T2.
+     * If T1 == T0<E> and T2.isA(T0) then return (T1 + T2) => T2<E + EC2>, where EC2 is a constraint
+     * for E on T2.
      *
-     * <p>Note: this obviously doesn't apply to {@code Class<T>} and "into class" annotations.
+     * <p>Note: this obviously doesn't apply to Class<T> and "into class" annotations.
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
                                                         TypeConstant t1, TypeConstant t2) {
@@ -1507,12 +1507,12 @@ public abstract class TypeConstant
     }
 
     /**
-     * Given this (formal) type {@code A<B<C>, D<R>>} that may contain a type parameter "R" and an actual
-     * type {@code A<X<Y>, W<Z>>}, find out what is the actual type of the type parameter "R".
+     * Given this (formal) type A<B<C>, D<R>> that may contain a type parameter "R" and an actual
+     * type A<X<Y>, W<Z>>, find out what is the actual type of the type parameter "R".
      *
      * @return the resolved actual type or null if there is no matching type parameter or
-     *         the actual type topology is not the same as this type and doesn't provide enough
-     *         fidelity (e.g.: formal is {@code Array<R>} and actual is Object)
+     *         tha actual type topology is not the same as this type and doesn't provide enough
+     *         fidelity (e.g.: formal is Array<R> and actual is Object)
      */
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         return getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
@@ -1999,6 +1999,8 @@ public abstract class TypeConstant
      * TypeInfos are all discarded.
      *
      * @param errs  the error list to log to
+     *
+     * @return a completed TypeInfo for Object
      */
     private void ensureObjectTypeInfo(ErrorListener errs) {
         ConstantPool pool       = getConstantPool();
@@ -2154,12 +2156,12 @@ public abstract class TypeConstant
     /**
      * Choose the listener to report the rest of a TypeInfo build to.
      *
-     * <p>Once a contribution has turned out to be incomplete, what follows is reported against a
+     * Once a contribution has turned out to be incomplete, what follows is reported against a
      * type that is known to be missing pieces, so the diagnostics are consequences of what is
      * absent rather than faults in the source. They are suppressed for the remainder of the
      * build; the incompleteness itself is what the caller is told, by the return value.
      *
-     * <p>The choice is made at each use rather than by rebinding the listener, so that the errs
+     * The choice is made at each use rather than by rebinding the listener, so that the errs
      * parameter still means what its signature says all the way down the method.
      *
      * @param fIncomplete  whether the build is already known to be incomplete
@@ -2502,7 +2504,7 @@ public abstract class TypeConstant
             // now that the mixins leading to this mixin are all known, re-walk the dependencies to
             // build the entire set of dependencies minus anything that requires hopping over to
             // this right side column that leads to this mixin
-            setLeft = new HashSet<>(setAll.size()-1);
+            setLeft = new HashSet<>(setAll.size() - 1);
             typeInto.collectContribs(setLeft, setOmit, errs);
             assert !setLeft.contains(idThis);
         } else {
@@ -3678,7 +3680,7 @@ public abstract class TypeConstant
         boolean      fIncomplete = false;
         boolean      fNative     = constId instanceof NativeRebaseConstant;
 
-        for (int i = listProcess.size()-1; i >= 0; --i) {
+        for (int i = listProcess.size() - 1; i >= 0; --i) {
             Contribution contrib = listProcess.get(i);
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
@@ -3707,8 +3709,8 @@ public abstract class TypeConstant
                     fIncomplete = true;
                 }
 
-                var     listExplode          = new ArrayList<PropertyConstant>();
-                boolean fInterface           = struct.getFormat() == Component.Format.INTERFACE;
+                var     listExplode = new ArrayList<PropertyConstant>();
+                boolean fInterface  = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
                         mapVirtProps, nBasePropRank, nBaseMethRank, cascade(fIncomplete, errs))) {
@@ -3999,7 +4001,7 @@ public abstract class TypeConstant
                                                             Implementation.Native), nRank);
                     if (infoSet != null) {
                         infoSet = new MethodInfo(new MethodBody(idSet, idSet.getSignature(),
-                                                                Implementation.Native), nRank+1);
+                                                                Implementation.Native), nRank + 1);
                     }
                 } else {
                     // layer on "implicit" property accessors on top of the base chains;
@@ -4016,7 +4018,7 @@ public abstract class TypeConstant
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
-                                idSet.getSignature(), Implementation.Implicit), nRank+1), false, cascade(!fComplete, errs));
+                                idSet.getSignature(), Implementation.Implicit), nRank + 1), false, cascade(!fComplete, errs));
                     }
                 }
 
@@ -4565,7 +4567,7 @@ public abstract class TypeConstant
 
                     // now we need find a method that would be the unambiguously best choice;
                     // collect the nids into a lookup map (sig->nid)
-                    Map<SignatureConstant, Object> mapNids  = new HashMap<>();
+                    Map<SignatureConstant, Object> mapNids = new HashMap<>();
                     for (Object nid : listMatches) {
                         MethodInfo info = mapVirtMethods.get(nid);
                         if (!info.isCapped()) {
@@ -4756,7 +4758,7 @@ public abstract class TypeConstant
             // method, then cap the nid by redirecting to the narrowed method, otherwise it is
             // an error
             for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet()) {
-                Object nidNarrowed  = entry.getKey();
+                Object nidNarrowed = entry.getKey();
                 if (mapVirtMods.containsKey(nidNarrowed)) {
                     // we ignore every narrowed method signature that did *not* receive a
                     // contribution of its own (i.e. same method signature), because any that did
@@ -5265,9 +5267,9 @@ public abstract class TypeConstant
             // rebase properties should be computed as they were *not* from an interface
             boolean fFromIface = fInterface && !fRebase;
 
-            PropertyConstant  id    = prop.getIdentityConstant();
-            int               nRank = nBasePropRank + mapProps.size();
-            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
+            PropertyConstant id    = prop.getIdentityConstant();
+            int              nRank = nBasePropRank + mapProps.size();
+            PropertyInfo     info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
                                                          fFromIface, nRank, errs);
             mapProps.put(id, info);
 
@@ -5424,12 +5426,12 @@ public abstract class TypeConstant
         }
 
         // check the methods to see if get() and set() call super
-        MethodStructure  methodInit     = null;
-        MethodStructure  methodGet      = null;
-        MethodStructure  methodSet      = null;
-        MethodStructure  methodBadGet   = null;
-        MethodStructure  methodBadSet   = null;
-        int              cCustomMethods = 0;
+        MethodStructure methodInit     = null;
+        MethodStructure methodGet      = null;
+        MethodStructure methodSet      = null;
+        MethodStructure methodBadGet   = null;
+        MethodStructure methodBadSet   = null;
+        int             cCustomMethods = 0;
         for (Component child : prop.children()) {
             if (child instanceof MultiMethodStructure mms) {
                 for (MethodStructure method : mms.methods()) {
@@ -5510,12 +5512,12 @@ public abstract class TypeConstant
                     sName);
         }
 
-        boolean         fRW       = false;
-        boolean         fRO       = false;
-        boolean         fField    = false;
-        Effect          effectGet = Effect.None;
-        Effect          effectSet = Effect.None;
-        Implementation  impl;
+        boolean        fRW       = false;
+        boolean        fRO       = false;
+        boolean        fField    = false;
+        Effect         effectGet = Effect.None;
+        Effect         effectSet = Effect.None;
+        Implementation impl;
         if (fConstant) {
             impl = Implementation.Native;
 
@@ -7238,7 +7240,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public ClassDesc getCallableClassDesc(TypeSystem ts) {
         return ClassDesc.of(getJitCCType().ensureJitClassName(ts));
@@ -7248,7 +7250,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Instance Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public ClassDesc getInstanceeClassDesc(TypeSystem ts) {
         return ClassDesc.of(getJitICType().ensureJitClassName(ts));
@@ -7258,7 +7260,7 @@ public abstract class TypeConstant
      * Ensure a unique Java class name that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public String ensureJitClassName(TypeSystem ts) {
         assert isSingleUnderlyingClass(true);
@@ -7369,7 +7371,7 @@ public abstract class TypeConstant
      *
      * @return {@code true} iff this type is Specializable
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public boolean isJitL2Specializable() {
         if (!isSingleUnderlyingClass(true)) {
@@ -7398,7 +7400,7 @@ public abstract class TypeConstant
      * @return {@code true} iff this type's callable JIT type is a non-canonical parameterization of
      *         a {@link #isJitL2Specializable() specializable} type
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public boolean isJitL2Specialized() {
         TypeConstant   jitType     = getJitCCType();
@@ -7498,7 +7500,7 @@ public abstract class TypeConstant
      *
      * @return a canonical JIT type
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public TypeConstant getJitCCType() {
         if (isModifyingType()) {
@@ -7515,7 +7517,7 @@ public abstract class TypeConstant
      * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
      * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
-     * @see "doc/jit_class_names.txt"
+     * @see doc/jit_class_names.txt
      */
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
@@ -7746,7 +7748,7 @@ public abstract class TypeConstant
             TypeConstant  typeFormal = isFormalType()
                                         ? this
                                         : type1.isFormalType() ? type1 : null;
-            boolean       isFormal = typeFormal != null;
+            boolean       isFormal   = typeFormal != null;
             ClassDesc     cd;
             String        sJitName;
             JitMethodDesc jmd;
@@ -8010,7 +8012,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * Compare for order ({@code <=>}) two object handles that both belong to this type.
+     * Compare for order (<=>) two object handles that both belong to this type.
      *
      * @param frame    the frame
      * @param hValue1  the first handle

@@ -751,7 +751,7 @@ public class NameResolver
 
         m_constant  = constant;
         m_component = null;
-        m_typeMode = constant instanceof TypeParameterConstant
+        m_typeMode  = constant instanceof TypeParameterConstant
                 ? TypeMode.FORMAL_TYPE
                 : m_fTypeGoal ? TypeMode.TYPE : null;
 

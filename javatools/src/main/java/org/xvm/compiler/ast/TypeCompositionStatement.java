@@ -1423,7 +1423,7 @@ public class TypeCompositionStatement
     private void reportAmbiguousConstructor(List<Parameter> listParams, TypeConstant[] atypeParams,
                                             ErrorListener errs) {
         int           cParams = atypeParams.length;
-        StringBuilder sb = new StringBuilder("construct(");
+        StringBuilder sb      = new StringBuilder("construct(");
         for (int i = 0; i < cParams; ++i) {
             if (i > 0) {
                 sb.append(", ");
@@ -2244,7 +2244,7 @@ public class TypeCompositionStatement
                 return false;
             }
 
-            for (int j = i+1; j < c; j++) {
+            for (int j = i + 1; j < c; j++) {
                 Annotation   anno2     = aAnno[j];
                 TypeConstant typeAnno2 = anno2.getAnnotationType();
                 if (typeAnno2.equals(typeAnno)) {

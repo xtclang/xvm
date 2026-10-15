@@ -1464,7 +1464,6 @@ public class InvocationExpression
                             default:
                                 throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
                             }
-
                             return;
                         } else { // _NOT_ m_fCall
                             // the method gets bound to become a function; do this and drop through
@@ -1695,7 +1694,6 @@ public class InvocationExpression
             default:
                 throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
             }
-
             return;
         }
 

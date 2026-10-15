@@ -7,11 +7,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ArrayConstant;
@@ -58,7 +58,7 @@ public class TupleExpression
         this.type        = null;
         this.exprs       = Arrays.asList(aExprs);
         this.m_lStartPos = expr0.getStartPosition();
-        this.m_lEndPos   = aExprs[cExprs-1].getEndPosition();
+        this.m_lEndPos   = aExprs[cExprs - 1].getEndPosition();
 
         expr0.getParent().adopt(this);
 

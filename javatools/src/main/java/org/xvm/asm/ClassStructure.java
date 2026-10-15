@@ -37,13 +37,13 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
@@ -110,7 +110,7 @@ public class ClassStructure
         if (constPath != null) {
             String sPath = constPath.getValue();
             int of = sPath.lastIndexOf('/');
-            return of >= 0 ? sPath.substring(of+1) : sPath;
+            return of >= 0 ? sPath.substring(of + 1) : sPath;
         }
 
         // best guess: walk up to the first "top level" class
@@ -588,7 +588,7 @@ public class ClassStructure
 
         // invalidate cached types
         m_typeNormalized = null;
-        m_typeFormal    = null;
+        m_typeFormal     = null;
         return prop;
     }
 
@@ -644,7 +644,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the formal type (e.g. {@code Map<Key, Value>})
+     * @return the formal type (e.g. Map<Key, Value>)
      */
     public TypeConstant getFormalType() {
         TypeConstant typeFormal = m_typeFormal;
@@ -706,7 +706,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the normalized canonical type (e.g. {@code Map<Object, Object>})
+     * @return the normalized canonical type (e.g. Map<Object, Object>)
      */
     public TypeConstant getNormalizedType() {
         TypeConstant typeNormalized = m_typeNormalized;
@@ -1057,10 +1057,12 @@ public class ClassStructure
      *
      * <p>A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
-     * <pre><code>
+     * <code>
+     *   <pre>
      *     annotation Override
      *         into Class | Property | Method
-     * </code></pre>
+     *   </pre>
+     * </code>
      * In such a case it may be a "real" annotation, if it applies to the class itself.
      *
      * @param typeAnno  the annotation type
@@ -1401,7 +1403,7 @@ public class ClassStructure
             // classes also walk up the parent chain (as long as the chain corresponds to a chain of
             // virtual children and the parent containing them) to find contributions that can lead
             // to the virtual child super
-            oResult = getParent().findVirtualChildSuper(idVirtChild, cDepth+1, setVisited);
+            oResult = getParent().findVirtualChildSuper(idVirtChild, cDepth + 1, setVisited);
         }
 
         return oResult;
@@ -3335,7 +3337,7 @@ public class ClassStructure
 
         // invalidate cached types
         m_typeNormalized = null;
-        m_typeFormal    = null;
+        m_typeFormal     = null;
     }
 
     @Override
@@ -3543,7 +3545,7 @@ public class ClassStructure
 
             Parameter[] aParam = new Parameter[cParams];
             for (int i = 0; i < cParams; i++) {
-                aParam[i] = new Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+                aParam[i] = new Parameter(pool, atypeParam[i], "p" + i, null, false, i, false);
             }
 
             Parameter[] aReturn = new Parameter[cReturns];
@@ -3590,8 +3592,8 @@ public class ClassStructure
         // type parameters
         Map<StringConstant, TypeConstant> mapThisParams = this.m_mapParams;
         Map<StringConstant, TypeConstant> mapThatParams = that.m_mapParams;
-        int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
-        int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
+        int cThisParams = mapThisParams == null ? 0 : mapThisParams.size();
+        int cThatParams = mapThatParams == null ? 0 : mapThatParams.size();
 
         return cThisParams == cThatParams
                 && (cThisParams == 0 || mapThisParams.equals(mapThatParams))

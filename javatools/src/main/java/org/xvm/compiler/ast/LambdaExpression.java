@@ -919,7 +919,7 @@ public class LambdaExpression
     }
 
     MethodStructure instantiateLambda(ErrorListener errs) {
-        TypeConstant[] atypes   = null;
+        TypeConstant[] atypes = null;
         String[]       asParams;
         if (paramNames == null) {
             // build an array of types and an array of names

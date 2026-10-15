@@ -206,7 +206,7 @@ public class ErrorList
 
         return "Count=" + m_cErrors
                 + ", Severity=" +  m_severity.name()
-                + ", Last=" + f_list.get(f_list.size()-1);
+                + ", Last=" + f_list.get(f_list.size() - 1);
     }
 
     // ----- inner class: BranchedErrorListener ----------------------------------------------------

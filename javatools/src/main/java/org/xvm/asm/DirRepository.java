@@ -155,8 +155,6 @@ public class DirRepository
     }
 
     private void rebuildCache(File[] files) {
-        // An unexpected failure must not leave a partially rebuilt cache marked current.
-        lastScan = 0;
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
         if (oldModulesByFile.isEmpty()) {
@@ -243,11 +241,11 @@ public class DirRepository
                     return null;
                 }
 
-                File   file      = new File(m_dir, fileName);
-                long   timestamp = in.readLong();
-                long   size      = in.readLong();
-                boolean err      = in.readBoolean();
-                String name      = err ? null : in.readUTF();
+                File    file      = new File(m_dir, fileName);
+                long    timestamp = in.readLong();
+                long    size      = in.readLong();
+                boolean err       = in.readBoolean();
+                String  name      = err ? null : in.readUTF();
 
                 if (modulesByFile.put(file,
                         new ModuleInfo(file, name, timestamp, size, err)) != null) {
@@ -343,7 +341,7 @@ public class DirRepository
      * @return true if the cache is still good, or false if it needs to be rebuilt
      */
     private boolean isCacheValid() {
-        // Check metadata at the usual interval; a failed read alone does not invalidate the cache.
+        // only scan once a second (at the most)
         if (System.currentTimeMillis() < lastScan + 1000) {
             return true;
         }
@@ -395,17 +393,16 @@ public class DirRepository
         ModuleStructure tryLoad() {
             try {
                 FileStructure struct = new FileStructure(file);
-                readFailed = false;
                 return struct.getModule();
             } catch (Exception e) {
-                readFailed = true;
                 System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
-                return null;
             }
+
+            return null;
         }
 
         ModuleStructure ensureModule() {
-            if (err || readFailed) {
+            if (err) {
                 return null;
             }
 
@@ -428,9 +425,6 @@ public class DirRepository
          * reload it as necessary.
          */
         private transient ModuleStructure module;
-
-        /** A failed lazy read remains unavailable until changed metadata replaces this entry. */
-        private boolean readFailed;
     }
 
     // ----- constants -----------------------------------------------------------------------------

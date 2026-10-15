@@ -2009,7 +2009,7 @@ public abstract class Expression
         // clearly, the last expression in a list cannot have any side effects, as well as an
         // effectively final argument
         int cExprs = listExprs.size();
-        if (iExpr < cExprs-1 && !arg.isEffectivelyFinal()) {
+        if (iExpr < cExprs - 1 && !arg.isEffectivelyFinal()) {
             for (int iRight = iExpr + 1; iRight < cExprs; ++iRight) {
                 if (listExprs.get(iRight).mightAffect(this, arg) == SideEffect.DefYes) {
                     return ensurePointInTime(code, arg);

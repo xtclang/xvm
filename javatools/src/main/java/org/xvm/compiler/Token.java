@@ -7,11 +7,11 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.appendChar;
-import static org.xvm.util.Handy.appendString;
-
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.util.Handy.appendChar;
+import static org.xvm.util.Handy.appendString;
 
 /**
  * Representation of a language token.
@@ -260,7 +260,7 @@ public class Token
         }
 
         // get the location of "this" token
-        long start  = m_lStartPos;
+        long start = m_lStartPos;
 
         // get the location of the end of the new peeled token / start of this token (adjusted)
         long current = source.getPosition();
@@ -650,7 +650,7 @@ public class Token
         }
 
         Id(final String sText, boolean fContextSensitive, boolean fSpecial) {
-            TEXT = sText;
+            TEXT                  = sText;
             this.ContextSensitive = fContextSensitive;
             this.Special          = fSpecial;
         }

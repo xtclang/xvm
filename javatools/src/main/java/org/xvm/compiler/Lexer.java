@@ -1,7 +1,5 @@
 package org.xvm.compiler;
 
-import static java.util.Objects.requireNonNull;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -21,14 +19,16 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.in;
+
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isAsciiLetter;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedChar;
-
-import static org.xvm.asm.ErrorListener.in;
 
 /**
  * An Ecstasy source code parser supporting both demand-based and stream-based
@@ -47,8 +47,10 @@ public class Lexer
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
-        m_source = source;
-        f_errs   = requireNonNull(errs, "errs");
+        requireNonNull(errs, "errs");
+
+        m_source        = source;
+        f_errs = errs;
 
         eatWhitespace();
     }
@@ -131,6 +133,10 @@ public class Lexer
 
             @Override
             public Token next() {
+        // Valid input must also observe cancellation; no diagnostic may be emitted.
+        if (f_errs.isAbortDesired()) {
+            throw new CompilerException("Tokenization aborted");
+        }
                 if (hasNext()) {
                     return atoken[iNext++];
                 }
@@ -1362,7 +1368,7 @@ public class Lexer
                     if (fTemplate) {
                         long lPosStartExpr = source.getPosition();
                         source.rewind();
-                        long lPosEndText   = source.getPosition();
+                        long lPosEndText = source.getPosition();
 
                         // eat from the opening { to the closing } (inclusive of both)
                         Token[] aTokens = eatTemplateExpression(fMultiline);
@@ -1370,7 +1376,7 @@ public class Lexer
 
                         // if the last token was '=', then add the entire expression up to that
                         // point as literal text, and discard the '='
-                        if (cTokens > 1 && aTokens[cTokens-1].getId() == Id.ASN) {
+                        if (cTokens > 1 && aTokens[cTokens - 1].getId() == Id.ASN) {
                             Token[] aTokensOld = aTokens;
                             aTokens = new Token[--cTokens];
                             System.arraycopy(aTokensOld, 0, aTokens, 0, cTokens);
@@ -1432,7 +1438,7 @@ public class Lexer
         int signScalar    = results[1];
 
         // parse optional '.' + value
-        PackedInteger piFraction = null;
+        PackedInteger piFraction       = null;
         int           fractionalDigits = 0;
         if (source.hasNext()) {
             if (source.next() == '.') {
@@ -1516,7 +1522,7 @@ public class Lexer
             }
             if (piExp != null) {
                 long lExp = piExp.getLong();
-                if (lExp > 6144 || lExp < (1-6144)) {
+                if (lExp > 6144 || lExp < (1 - 6144)) {
                     log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                         lStartPos, lPosEnd);
                 } else {
@@ -2143,9 +2149,9 @@ public class Lexer
         long   lStart = source.getPosition();
 
         int  nHour;
-        int  nMin    = 0;
-        int  nSec    = 0;
-        long nPicos  = 0;
+        int  nMin   = 0;
+        int  nSec   = 0;
+        long nPicos = 0;
         int  cDigits;
 
         if ((nHour = eatDigits(2)) >= 0) {
@@ -2375,7 +2381,7 @@ public class Lexer
                 long lPosTokenEnd = source.getPosition();
                 source.rewind();
                 source.rewind();
-                long lPosTextEnd  = source.getPosition();
+                long lPosTextEnd = source.getPosition();
                 source.setPosition(lPosTokenEnd);
                 return new Token(lPosTokenStart, lPosTokenEnd, Id.ENC_COMMENT,
                         extractSource(lPosTextStart, lPosTextEnd));
@@ -2513,7 +2519,7 @@ public class Lexer
     /**
      * Log an error, with the message parameters as a trailing varargs.
      *
-     * <p>The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
+     * The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
      * parameters can be the tail; taking them as an array in the middle is what forces a call site
      * to build one by hand.
      */
@@ -2569,7 +2575,7 @@ public class Lexer
             //   U+0020  32  SP   Space
             //                                               2               1      0
             //                                               0FEDCBA9876543210FEDCBA9
-            return ch <= 32 && ch >= 9 && ((1 << (ch-9)) & 0b111110100000000000011111) != 0;
+            return ch <= 32 && ch >= 9 && ((1 << (ch - 9)) & 0b111110100000000000011111) != 0;
         }
 
         // this handles the following cases:

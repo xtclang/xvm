@@ -74,8 +74,8 @@ public class ModuleInfo {
      * @param moduleName  the module identity obtained from the host's source snapshot
      */
     protected ModuleInfo(File sourceFile, String moduleName) {
-        this.fileSpec      = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
-        this.moduleName    = Objects.requireNonNull(moduleName, "moduleName");
+        this.fileSpec   = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
         if (moduleName.isBlank() || !isExplicitSourceFile(this.fileSpec.getName())) {
             throw new IllegalArgumentException("A module name and .x source root are required");
         }
@@ -709,7 +709,7 @@ public class ModuleInfo {
      *         location, or if serious errors occur loading the source tree
      */
     public Node getSourceTree(ErrorListener errs) {
-        return getSourceTree(errs, (source, listener) -> new Parser(source, listener).parseSource());
+        return getSourceTree(errs, STANDARD_PARSER);
     }
 
     /**
@@ -815,8 +815,8 @@ public class ModuleInfo {
             // at least one of the parameters is required
             assert parent != null || file != null;
 
-            m_parent       = parent;
-            m_file         = file;
+            m_parent = parent;
+            m_file   = file;
         }
 
         /**
@@ -1003,10 +1003,44 @@ public class ModuleInfo {
     }
 
     /**
+     * A source directory or file node. Its parsing goes through a caller-selected parser; the
+     * shorter entry points use the standard parser, and the no-argument form discards the
+     * diagnostics it would report.
+     */
+    public abstract class SourceNode
+            extends Node {
+        /**
+         * Construct a SourceNode.
+         *
+         * @param parent  the parent node
+         * @param file    the file that this node will represent
+         */
+        protected SourceNode(DirNode parent, File file) {
+            super(parent, file);
+        }
+
+        /**
+         * Parse this node and all nodes it contains.
+         */
+        @Override
+        public void parse() {
+            parse(silent(DISCARD));
+        }
+
+        @Override
+        public void parse(ErrorListener errs) {
+            parse(errs, STANDARD_PARSER);
+        }
+
+        @Override
+        public abstract void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse);
+    }
+
+    /**
      * A DirNode represents a source directory, which corresponds to a module or package.
      */
     public class DirNode
-            extends Node {
+            extends SourceNode {
         /**
          * Construct the root DirNode.
          *
@@ -1112,19 +1146,6 @@ public class ModuleInfo {
             String name = file().getName();
             int    dot  = name.indexOf('.');
             return dot >= 0 ? name.substring(0, dot) : name;
-        }
-
-        /**
-         * Parse this node and all nodes it contains.
-         */
-        @Override
-        public void parse() {
-            parse(silent(DISCARD));
-        }
-
-        @Override
-        public void parse(ErrorListener errs) {
-            parse(errs, (source, listener) -> new Parser(source, listener).parseSource());
         }
 
         @Override
@@ -1320,7 +1341,7 @@ public class ModuleInfo {
      * A FileNode represents an individual ".x" source file.
      */
     public class FileNode
-            extends Node {
+            extends SourceNode {
         /**
          * Construct a FileNode.
          *
@@ -1363,7 +1384,7 @@ public class ModuleInfo {
             if (file != null) {
                 String sName = file().getName();
                 if (sName.endsWith(".x")) {
-                    sName = sName.substring(0, sName.length()-2);
+                    sName = sName.substring(0, sName.length() - 2);
                 }
                 return sName;
             }
@@ -1418,7 +1439,7 @@ public class ModuleInfo {
             try {
                 return readSource(m_file);
             } catch (IOException e) {
-                error(READ_FAILURE, NOWHERE, m_file);
+                error(READ_FAILURE, NOWHERE, m_file, e);
             }
 
             return new char[0];
@@ -1461,7 +1482,7 @@ public class ModuleInfo {
 
             boolean fRequireDir = resPath.endsWith("/");
             if (fRequireDir) {
-                resPath = resPath.substring(0, resPath.length()-1);
+                resPath = resPath.substring(0, resPath.length() - 1);
                 if (resPath.endsWith("/")) {
                     return null;
                 }
@@ -1491,16 +1512,6 @@ public class ModuleInfo {
                 }
             }
             return dir;
-        }
-
-        @Override
-        public void parse() {
-            parse(silent(DISCARD));
-        }
-
-        @Override
-        public void parse(ErrorListener errs) {
-            parse(errs, (source, listener) -> new Parser(source, listener).parseSource());
         }
 
         @Override
@@ -1542,13 +1553,13 @@ public class ModuleInfo {
 
         @Override
         public String toString() {
-            String text   = "";
+            String text = "";
 
-            Node   parent = parent();
+            Node parent = parent();
             if (parent != null) {
                 text = parent.toString();
                 if (text.endsWith("/")) {
-                    text = text.substring(0, text.length()-1);
+                    text = text.substring(0, text.length() - 1);
                 }
             }
 
@@ -1845,6 +1856,12 @@ public class ModuleInfo {
 
     private enum Status  {Unknown, NotExists, Exists}
     private enum Content {Unknown, Invalid, Module}
+
+    /**
+     * The parser used when a caller does not supply its own.
+     */
+    private static final BiFunction<Source, ErrorListener, StatementBlock> STANDARD_PARSER =
+            (source, listener) -> new Parser(source, listener).parseSource();
 
     private final File    fileSpec;       // original file spec that was used to create this info
     private final boolean deduce;         // use knowledge of common file layouts to find locations

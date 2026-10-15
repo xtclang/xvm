@@ -739,14 +739,14 @@ public class AssignmentStatement
                         // neither the parent (e.g. "if" or "for") nor the r-value (invocation)
                         // are conditional; need to generate the conditional check ourselves
                         for (int i = 1; i < cAll; i++) {
-                            lValuesAll[i] = lvalueExpr.new Assignable(code.createRegister(lValues[i-1].getType()));
+                            lValuesAll[i] = lvalueExpr.new Assignable(code.createRegister(lValues[i - 1].getType()));
                         }
                         rvalue.generateAssignments(ctx, code, lValuesAll, errs);
 
                         Label label = new Label("skip_copy");
                         code.add(new JumpFalse(regCond, label));
                         for (int i = 0; i < cLVals; i++) {
-                            lValues[i].assign(lValuesAll[i+1].getRegister(), code, errs);
+                            lValues[i].assign(lValuesAll[i + 1].getRegister(), code, errs);
                         }
                         code.add(label);
                     }

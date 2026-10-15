@@ -645,7 +645,7 @@ public class NewExpression
             return null;
         }
 
-        List<Expression> listArgs = args;
+        List<Expression> listArgs    = args;
         MethodConstant   idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                                         MethodKind.Constructor, true, false, null, errsTemp);
         MethodStructure constructor = null;

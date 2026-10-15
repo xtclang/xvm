@@ -87,7 +87,7 @@ public class CompilerCounterAtomicTest {
     public void conditionalStatementLabelIdsAreUniqueUnderParallelAllocation()
             throws Exception {
         withCounter(ConditionalStatement.class, "LABEL_COUNTER", 0, () -> {
-            int             cThreads  = 8;
+            int             cThreads   = 8;
             int             cPerThread = 250;
             Set<Integer>    labels     = ConcurrentHashMap.newKeySet();
             CountDownLatch  start      = new CountDownLatch(1);

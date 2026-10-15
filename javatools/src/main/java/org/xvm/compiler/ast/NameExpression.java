@@ -306,7 +306,7 @@ public class NameExpression
         } else {
             asName = new String[cNames];
         }
-        asName[asName.length-cNames] = getName();
+        asName[asName.length - cNames] = getName();
         return asName;
     }
 
@@ -1071,7 +1071,6 @@ public class NameExpression
                             ? new P_Var(idProp, argTarget, argLVal)
                             : new P_Ref(idProp, argTarget, argLVal));
                 }
-
                 return;
             }
 
@@ -1086,7 +1085,7 @@ public class NameExpression
             }
 
             case BindTarget: {
-                MethodConstant idMethod  = (MethodConstant) argRaw;
+                MethodConstant idMethod = (MethodConstant) argRaw;
                 Argument       argTarget;
                 if (left == null) {
                     int cSteps = m_targetInfo == null ? 0 : m_targetInfo.getStepsOut();
@@ -1155,7 +1154,7 @@ public class NameExpression
                     }
 
                 if (m_mapTypeParams != null) {
-                    Register regFn = code.createRegister(getType());
+                    Register regFn = code.createRegister(argRaw.getType());
                     bindTypeParameters(ctx, code, argRaw, regFn);
                     return regFn;
                 }
@@ -1414,7 +1413,7 @@ public class NameExpression
 
         org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[cParams];
         for (int i = 0; i < cParams; i++) {
-            aparamParam[i] = new org.xvm.asm.Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+            aparamParam[i] = new org.xvm.asm.Parameter(pool, atypeParam[i], "p" + i, null, false, i, false);
         }
 
         org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[cReturns];
@@ -1435,7 +1434,7 @@ public class NameExpression
 
         Code     code      = lambda.createCode();
         Register regTarget = new Register(atypeParam[0], null, 0);
-        switch (cParams-1) {
+        switch (cParams - 1) {
         case 0: {
             switch (cReturns) {
             case 0:
@@ -1662,8 +1661,8 @@ public class NameExpression
                         break;
 
                     case Outer: {
-                        ClassStructure clz   = ctx.getThisClass();
-                        int           cSteps = target.getStepsOut();
+                        ClassStructure clz    = ctx.getThisClass();
+                        int            cSteps = target.getStepsOut();
                         for (int i = cSteps; --i >= 0;) {
                             clz = clz.getContainingClass();
                         }
@@ -2699,12 +2698,10 @@ public class NameExpression
                     // resolve the function signature against all the types we know by now
                     typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
-                    // These hidden parameters are bound by the generated FBind, not supplied by
-                    // callers of the resulting function.
-                    if (m_plan == Plan.None || m_plan == Plan.BindTarget) {
-                        for (int i = cTypeParams - 1; i >= 0; --i) {
-                            typeFn = pool.bindFunctionParam(typeFn, i);
-                        }
+                    // these hidden parameters are bound by FBind, not supplied by callers
+                    assert m_plan == Plan.BindTarget || m_plan == Plan.None;
+                    for (int i = cTypeParams - 1; i >= 0; --i) {
+                        typeFn = pool.bindFunctionParam(typeFn, i);
                     }
                 }
 
@@ -2723,7 +2720,7 @@ public class NameExpression
                         // binding all the default arguments to Register,DEFAULT, but it's
                         // not necessary, due to the runtime compensation
                         // (see Frame.getArgument() check for a missing argument)
-                        for (int i = cArgVisible-1; i > cArgDesired-1; i--) {
+                        for (int i = cArgVisible - 1; i > cArgDesired - 1; i--) {
                             typeFn = pool.bindFunctionParam(typeFn, i);
                         }
                     }

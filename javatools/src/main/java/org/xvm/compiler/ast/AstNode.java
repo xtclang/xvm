@@ -392,7 +392,7 @@ public abstract class AstNode
             String sSrc   = getSource().toString(lStart, lEnd);
 
             if (sSrc.startsWith("{") && sSrc.endsWith("}")) {
-                sSrc = sSrc.substring(1, sSrc.length()-1);
+                sSrc = sSrc.substring(1, sSrc.length() - 1);
             }
             method.configureSource(sSrc, iLine);
         }
@@ -1303,7 +1303,7 @@ public abstract class AstNode
                             typeParam.isA(pool.typeFileNode()) &&
                             lit.getLiteral().getId() == Token.Id.LIT_PATH) {
                         log(errsTemp, Severity.ERROR, Compiler.MISSING_PARAM_RESOURCE,
-                                String.valueOf(i+1), method.getParam(i).getName(),
+                                String.valueOf(i + 1), method.getParam(i).getName(),
                                 lit.getLiteral().getValueText());
                     } else {
                         if (exprArg instanceof NameExpression exprName) {
@@ -1311,7 +1311,7 @@ public abstract class AstNode
                         }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
-                                String.valueOf(i+1), method.getParam(i).getName(),
+                                String.valueOf(i + 1), method.getParam(i).getName(),
                                 method.getIdentityConstant().getSignature().removeAutoNarrowing().getValueString(),
                                 typeParam.removeAutoNarrowing().getValueString(),
                                 typeExpr == null
