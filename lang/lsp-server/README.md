@@ -25,7 +25,7 @@ The [backend comparison](#backend-comparison) and [supported features](#supporte
 describe the adapter boundaries. For the architectural changes required in the compiler, start with
 [the javatools guide](../../javatools/README.md#compiler-architecture-for-language-tooling).
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite build semantics](../../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
 ## Adapter Architecture
 
