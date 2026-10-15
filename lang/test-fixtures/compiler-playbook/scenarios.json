@@ -8857,10 +8857,8 @@
       }
     },
     "X283": {
-      "title": "stopping an embedded run ends it and the worker runs the next program",
-      "manual": [
-        "IntelliJ Rerun performs the same stop-then-run sequence from the Run tool window."
-      ],
+      "title": "stopping or rerunning an embedded run ends it, and the worker runs the next program",
+      "manual": [],
       "values": {
         "file": "RunForever.x",
         "module": "RunForever",
