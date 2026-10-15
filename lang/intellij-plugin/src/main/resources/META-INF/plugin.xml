@@ -37,6 +37,8 @@
                 description="Choose Compiler or Tree-sitter and restart the language server with open buffers preserved">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="A"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="A"/>
+            <!-- The default macOS keymap would otherwise derive Command from $default's ctrl. -->
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl alt X" second-keystroke="A"/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
         <action id="xtc.showReferences" class="com.redhat.devtools.lsp4ij.commands.editor.ShowReferencesAction"/>
@@ -54,6 +56,7 @@
                 description="Show the Ecstasy server log or hide the Language Servers tool window">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="L"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="L"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl alt X" second-keystroke="L"/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
     </actions>
