@@ -1286,6 +1286,54 @@ public class EmbeddingSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             @NotNull ErrorListener    errs) {
+        return start(input, moduleName, version, "run", null, console, rootDir, injections,
+                customInjector, errs);
+    }
+
+    /**
+     * Create a runtime container and invoke the specified entry method of a module.
+     *
+     * <p>The method is selected the way the command-line runner selects it: exactly one method of
+     * that name must exist on the module, and an argument array is passed when the method requires
+     * one, or when arguments are supplied and the method accepts a parameter.
+     *
+     * @param input       the ModuleRepository providing any necessary modules
+     * @param moduleName  the module name to execute; must be loadable from "input"
+     * @param version     (optional) the version of the module to load
+     * @param methodName  the entry method to invoke, conventionally "run"
+     * @param args        the arguments for the entry method; never shell-parsed
+     * @param console     (optional) the PrintWriter for the executing application
+     * @param rootDir     (optional) the root directory for the application's file system, as
+     *                    described for {@link #run(ModuleStructure, PrintWriter, File, Map, ErrorListener)}
+     * @param errs        a means for the container to report uncaught exceptions and other errors
+     *
+     * @return a Control object for the running module, or null if it could not be started, in
+     *         which case the reason is reported to "errs"
+     */
+    public Control runMethod(
+            ModuleRepository       input,
+            String                 moduleName,
+            Version                version,
+            String                 methodName,
+            List<String>           args,
+            PrintWriter            console,
+            File                   rootDir,
+            @NotNull ErrorListener errs) {
+        return start(input, moduleName, version, requireNonNull(methodName, "methodName"),
+                requireNonNull(args, "args").toArray(String[]::new), console, rootDir, null, null, errs);
+    }
+
+    private Control start(
+            ModuleRepository          input,
+            String                    moduleName,
+            Version                   version,
+            String                    methodName,
+            String[]                  args,
+            PrintWriter               console,
+            File                      rootDir,
+            Map<String, List<String>> injections,
+            String                    customInjector,
+            @NotNull ErrorListener    errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
 
@@ -1306,8 +1354,8 @@ public class EmbeddingSupport {
             var connector = ensureConnector();
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
-                    : InterpreterControl.create(connector, module, repository, entry, console,
-                            consoleIn, rootDir, errs);
+                    : InterpreterControl.create(connector, module, repository, methodName, args,
+                            console, rootDir, errs);
         } catch (RuntimeException | AssertionError e) {
             // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
             // assertion in the structure code past this report and out to the host. Errors are
