@@ -38,10 +38,9 @@ import org.xvm.runtime.template._native.io.xExternalConsole;
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
-import static org.xvm.api.EmbeddingSupport.ERR_ENTRY_METHOD;
-import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
-
 import static org.xvm.asm.ErrorListener.at;
+
+import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.

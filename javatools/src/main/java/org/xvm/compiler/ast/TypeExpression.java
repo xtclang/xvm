@@ -52,7 +52,7 @@ public abstract class TypeExpression
      * TypeConstant if necessary.
      *
      * @param ctx  an optional Context; may be null
-     * @param errs an optional ErrorListener; may be null
+     * @param errs the error listener to log to
      *
      * @return a TypeConstant
      */
