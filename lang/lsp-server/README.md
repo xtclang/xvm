@@ -457,7 +457,7 @@ Failed dependencies publish their original source diagnostics and block consumer
 `SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
 Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
 overlapping source graphs are rejected (`SOURCE-GRAPH`). Closing sessions prunes unused cached artifacts.
-These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure, and the `xtc`
+These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure, and the `Ecstasy`
 diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
 (`org.xvm.lsp.model`); compiler codes such as `COMPILER-43` come from the compiler.
 
