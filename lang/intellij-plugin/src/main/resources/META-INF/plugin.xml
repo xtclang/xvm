@@ -81,7 +81,7 @@
         <!-- Build and Rebuild Project in embedded mode; ahead of the IDE's own builder for Ecstasy modules -->
         <projectTaskRunner implementation="org.xtclang.idea.run.XtcProjectTaskRunner" order="first"/>
         <!-- Notification group for LSP status messages -->
-        <notificationGroup id="XTC Language Server"
+        <notificationGroup id="Ecstasy Language Server"
                            displayType="BALLOON"
                            isLogByDefault="true"/>
 
