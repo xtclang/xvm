@@ -6,6 +6,7 @@
 |----------|-------------|
 | [idea-specific](./idea-specific.md) | IntelliJ IDEA plugin enhancements (XDK SDK, run configs, templates) |
 | [vscode-specific](./vscode-specific.md) | VS Code extension enhancements (snippets, settings, DAP) |
+| [plan-embedded-execution](./plan-embedded-execution.md) | Embedded build, Run and future debugging (R1–R8); first Run/Build delivery in both IDEs |
 | [lsp-feature-tiers](./lsp-feature-tiers.md) | Historical research-fork feature tiers; see the IDE integration plan for current status |
 | [plugin-stability-followups](./plugin-stability-followups.md) | Deferred follow-ups from `lsp/vscode2`: tree-sitter download race, `runCode` CLI guard, CI wiring for the headless test, IntelliJ-side naming + verifier sweeps |
 
