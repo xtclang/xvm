@@ -190,7 +190,7 @@ class XtcLanguageServerTest {
         }
 
         @Test
-        @DisplayName("should advertise all implemented capabilities")
+        @DisplayName("should advertise the capabilities the mock backend implements")
         fun shouldAdvertiseImplementedCapabilities() {
             // Core navigation
             assertThat(caps.hoverProvider?.left).describedAs("hover").isTrue()
@@ -199,14 +199,12 @@ class XtcLanguageServerTest {
             assertThat(caps.referencesProvider?.left).describedAs("references").isTrue()
             assertThat(caps.documentSymbolProvider?.left).describedAs("documentSymbol").isTrue()
 
-            // Tree-sitter features
+            // Text-pattern features
             assertThat(caps.documentHighlightProvider?.left)
                 .describedAs("documentHighlight")
                 .isTrue()
-            assertThat(caps.selectionRangeProvider?.left).describedAs("selectionRange").isTrue()
             assertThat(caps.foldingRangeProvider?.left).describedAs("foldingRange").isTrue()
             assertThat(caps.documentLinkProvider).describedAs("documentLink").isNotNull()
-            assertThat(caps.signatureHelpProvider).describedAs("signatureHelp").isNotNull()
 
             // Editing features
             assertThat(caps.renameProvider?.right)
@@ -220,25 +218,23 @@ class XtcLanguageServerTest {
             assertThat(caps.documentRangeFormattingProvider?.right?.rangesSupport)
                 .describedAs("rangeFormatting")
                 .isTrue()
-            assertThat(caps.documentOnTypeFormattingProvider)
-                .describedAs("onTypeFormatting")
-                .isNotNull()
-            assertThat(caps.documentOnTypeFormattingProvider?.firstTriggerCharacter)
-                .describedAs("onTypeFormatting firstTrigger")
-                .isEqualTo("\n")
-            assertThat(caps.documentOnTypeFormattingProvider?.moreTriggerCharacter)
-                .describedAs("onTypeFormatting moreTriggers")
-                .containsExactly("}", ";", ")")
-            assertThat(caps.codeLensProvider).describedAs("codeLens").isNotNull()
-            assertThat(caps.linkedEditingRangeProvider?.left)
-                .describedAs("linkedEditingRange")
-                .isTrue()
-
-            // Workspace features
-            assertThat(caps.workspaceSymbolProvider?.left).describedAs("workspaceSymbol").isTrue()
 
             // Sync
             assertThat(caps.textDocumentSync?.right).describedAs("textDocumentSync").isNotNull()
+        }
+
+        @Test
+        @DisplayName("should not advertise features the mock backend leaves empty")
+        fun shouldNotAdvertiseStubbedCapabilities() {
+            // the mock is also the Tree-sitter fallback; an advertised feature that always answers empty
+            // tells the editor the feature works and that there is simply nothing to show
+            assertThat(caps.selectionRangeProvider).describedAs("selectionRange").isNull()
+            assertThat(caps.signatureHelpProvider).describedAs("signatureHelp").isNull()
+            assertThat(caps.semanticTokensProvider).describedAs("semanticTokens").isNull()
+            assertThat(caps.workspaceSymbolProvider).describedAs("workspaceSymbol").isNull()
+            assertThat(caps.codeLensProvider).describedAs("codeLens").isNull()
+            assertThat(caps.documentOnTypeFormattingProvider).describedAs("onTypeFormatting").isNull()
+            assertThat(caps.linkedEditingRangeProvider).describedAs("linkedEditingRange").isNull()
         }
 
         @Test
@@ -259,15 +255,13 @@ class XtcLanguageServerTest {
 
             // Print the audit report
             println("========================================")
-            println("LSP Capabilities Audit")
+            println("LSP Capabilities Audit (mock backend)")
             println("========================================")
-            println("Implemented (${21} capabilities):")
+            println("Implemented (13 capabilities):")
             println("  hover, completion, definition, references, documentSymbol,")
-            println("  documentHighlight, selectionRange, foldingRange,")
-            println("  documentLink, signatureHelp, workspaceSymbol,")
-            println("  rename (with prepareRename), codeAction, codeLens,")
-            println("  formatting, rangeFormatting, onTypeFormatting, linkedEditingRange,")
-            println("  textDocumentSync, semanticTokens")
+            println("  documentHighlight, foldingRange, documentLink,")
+            println("  rename (with prepareRename), codeAction,")
+            println("  formatting, rangeFormatting, textDocumentSync")
             println()
             println("Not yet implemented (${notYetImplemented.size} capabilities):")
             for (cap in notYetImplemented) {
