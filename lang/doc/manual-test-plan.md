@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **284 scenarios**: X1–X279, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **289 scenarios**: X1–X284, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1263,7 +1263,7 @@ module Hello {
 | 18a.3 | Unsaved edits | Edit without saving, then build | All files are saved first; the build reflects the edit |
 | 18a.4 | Run | Run lens, VS Code editor Run button or IntelliJ Run Context Configuration (`Ctrl+Shift+R` macOS / `Ctrl+Shift+F10`) | `Hello …` printed, then the exit code (VS Code: "Process finished with exit code 0") |
 | 18a.5 | Arguments | Configure arguments `a b,ü` (IntelliJ *Module arguments*; VS Code task `"args": ["a b", "ü"]`) | The program receives them unchanged, without shell parsing |
-| 18a.6 | Stop | Run `module Loop { void run() { while (True) {} } }`, then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
+| 18a.6 | Stop | Run `module Loop { void run() { for (Int count = 0; count >= 0; ++count) {} } }` (an empty `while (True)` is rejected as non-terminating), then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
 | 18a.7 | Rerun | IntelliJ **Rerun** while a run is active | The old run stops and a new one starts in the same console |
 | 18a.8 | Failed build skips the run | Run a module that does not compile | The diagnostics print and nothing runs |
 | 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before |
@@ -1413,7 +1413,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X279 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X284 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1561,7 +1561,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 284 scenarios: X1–X279, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 289 scenarios: X1–X284, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -2397,7 +2397,7 @@ module Advanced {
 | X134 | Configure an unopened Library.x outside the workspace and a local consumer. Change its return type externally, restore it, delete it and recreate it. | Consumer Problems appears/clears from OS file events without opening Library or manually refreshing VFS in either host. |
 | X135 | Use the server-log actions to open/hide the docked log twice, then return to the source. | The log view opens and hides without modifying source. Physical shortcut dispatch, remapped shortcuts and alternate docking are manual checks. |
 | X136 | Open the language-service settings, change inlays, Reset/Cancel, then Apply; inspect effective configuration. | Live presentation changes preserve source and compiler graph ownership; report includes PID, adapter and queue names/count. IntelliJ drives the actual settings components; VS Code uses native configuration and the contributed report command. |
-| X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. | Each applied transport change restarts the existing connection and restores current unsaved text. This is text transport, not incremental compilation. |
+| X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. Then add an unsaved declaration and switch the language adapter to Tree-sitter, then back to the compiler. | Each applied transport or adapter change restarts the connection once (a new server process) and restores the current unsaved text without saving it; the unsaved declaration appears in the outline under each adapter. Transport is text synchronization, not incremental compilation. The compiler adapter is restored afterwards. |
 | X138 | Change indentation to 2, format, then supply an invalid indentation value. | Valid change applies without restarting; invalid settings retain the previous formatter. Effective status identifies native save-hook availability. |
 | X139 | Enable native format-on-save and save an unindented source. In IntelliJ also leave a second dirty document closed, then Save All. In VS Code also select server save formatting with native formatting disabled. | Open and closed IntelliJ documents are indented without formatting-error notifications or a file-cache conflict. VS Code suppresses the server hook when native formatting is enabled; IntelliJ uses native Actions on Save because LSP4IJ has no server save-edit hook. |
 | X140 | Open the shared source with an emoji before an `Int` reference on the same line. Hover and prepare rename on the final `value`. | UTF-16 is explicit; hover resolves `Int` and rename selects exactly `value`, without shifting after the surrogate pair. |
@@ -3826,6 +3826,20 @@ visual comparisons; normal native runs leave it alone.
 
 All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
 startup comparisons are recorded in the [acceptance reports](#acceptance-reports).
+
+### Embedded build and run (X280–X284)
+
+These cases switch the workspace or project to the embedded build mode for their duration
+(VS Code `xtc.build.mode`, IntelliJ Build, Execution, Deployment › Ecstasy) and configure only their
+own modules. Manual steps for the same behavior are in [section 18a](#18a-embedded-build-and-run).
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X280 | Open LensRunnable and LensOnlyLibrary. Give LensOnlyLibrary a `run(String, String)`, then a `run()`. | Only LensRunnable has a **▶ Run** lens at first. Two required parameters still give no lens; adding `run()` adds the LensOnlyLibrary lens. |
+| X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second saves the edit first, fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
+| X282 | Run RunEcho with the arguments `a b` and `ü`. | Output `args=2:a b\|ü`, unchanged arguments without shell parsing, and exit code 3. |
+| X283 | Run RunForever; after it prints `started`, Stop it. Then run RunNext from its Run lens. | The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
+| X284 | Run RunBroken, whose `run` returns a String as an Int. | The run prints the `RunBroken.x:2:` diagnostic and "Build failed; nothing was run.", runs nothing and ends with exit code 1. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
