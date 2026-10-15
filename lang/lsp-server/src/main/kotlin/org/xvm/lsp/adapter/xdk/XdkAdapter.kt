@@ -203,15 +203,37 @@ class XdkAdapter
         }
 
         /** Returns retired scopes so the server can rebuild current document versions. */
-        fun refreshDiscoveredSources(): Set<String> {
+        fun refreshDiscoveredSources(): Set<String> = scanDiscoveredSources()?.install?.invoke().orEmpty()
+
+        /**
+         * A workspace rescan, taken without holding any lock so that a slow filesystem walk never delays
+         * editing. [install] adopts it and returns the affected scopes, or null when an edit, a closed
+         * adapter or a newer graph changed what the scan read, in which case the caller scans again.
+         */
+        class DiscoveryScan internal constructor(
+            val install: () -> Set<String>?,
+        )
+
+        /** Rescans the discovered workspace; null when an explicit graph leaves nothing to discover. */
+        fun scanDiscoveredSources(): DiscoveryScan? {
             val settings = discovery.get()
-            if (settings.explicit) return emptySet()
+            if (settings.explicit) return null
             val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
+            val superseded = { closed || discovery.get() !== settings }
             val catalog =
-                settings.catalog.rescan(settings.folders, buffers) {
-                    closed || discovery.get() !== settings
+                try {
+                    settings.catalog.rescan(settings.folders, buffers, superseded)
+                } catch (failure: RuntimeException) {
+                    // a superseded walk stops by aborting tokenization; the caller scans again
+                    if (superseded()) return DiscoveryScan { null } else throw failure
                 }
-            return installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers }
+            return DiscoveryScan {
+                val current =
+                    synchronized(lifecycle) {
+                        !closed && project === previous && overlays == buffers && discovery.get() === settings
+                    }
+                if (current) installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers } else null
+            }
         }
 
         /**
@@ -279,6 +301,15 @@ class XdkAdapter
             added: List<String>,
             removed: List<String>,
         ): Set<String> {
+            updateWorkspaceFolders(added, removed)
+            return refreshDiscoveredSources()
+        }
+
+        /** Records the folders to discover; the next [scanDiscoveredSources] reads them. */
+        fun updateWorkspaceFolders(
+            added: List<String>,
+            removed: List<String>,
+        ) {
             val deleted = removed.mapNotNull(XdkSources::file).toSet()
             discovery.updateAndGet { settings ->
                 settings.copy(
@@ -289,7 +320,6 @@ class XdkAdapter
                         ).distinct(),
                 )
             }
-            return refreshDiscoveredSources()
         }
 
         override val readOnlyDocumentSchemes = setOf(XdkLibrarySources.SCHEME)
