@@ -99,6 +99,18 @@ public abstract class Builder {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Ensure the backing-field target used by an accessor super call.
+     *
+     * @param body  the Field implementation of a property getter or setter
+     *
+     * @return the call descriptor for accessing the backing field without re-entering
+     *         the custom accessor
+     */
+    public JitCallDesc ensureFieldAccessor(MethodBody body) {
+        throw new UnsupportedOperationException("Field super: " + body);
+    }
+
     public boolean isPrimitive() {
         // in theory, this could be cached as it is in CommonBuilder
         return getThisType().isJitPrimitive();
@@ -2284,13 +2296,13 @@ public abstract class Builder {
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
-    public static final String MODULE         = "¤module"; // the main module class name
-    public static final String LAMBDA         = "lambda¤"; // the base of the lambda function name
-    public static final String EXT            = "$ext";    // a multi-slot extension field of a primitive field
-    public static final String INIT           = "$init";   // the singleton initialization instance method
-    public static final String NEW            = "$new";    // the instance creation static method (i.e. instantiator)
-    public static final String OPT            = "$p";      // methods that contains primitive types
-    public static final String DELEGATE       = "$d";      // methods that delegates to an underlying property
+    public static final String MODULE     = "¤module"; // the main module class name
+    public static final String LAMBDA     = "lambda¤"; // the base of the lambda function name
+    public static final String EXT        = "$ext";    // a multi-slot extension field of a primitive field
+    public static final String INIT       = "$init";   // the singleton initialization instance method
+    public static final String NEW        = "$new";    // the instance creation static method (i.e. instantiator)
+    public static final String OPT        = "$p";      // methods that contains primitive types
+    public static final String DELEGATE   = "$d";      // methods that delegates to an underlying property
 
     // ----- well-known class descriptors ----------------------------------------------------------
 

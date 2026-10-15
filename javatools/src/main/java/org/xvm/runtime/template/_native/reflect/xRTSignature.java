@@ -338,8 +338,8 @@ public class xRTSignature
         protected SignatureHandle(TypeComposition clz, CallChain chain, int nDepth) {
             super(clz);
 
-            f_idMethod = chain.getMethod(nDepth).getIdentityConstant();
-            f_type     = f_idMethod.getSignature().asFunctionType();
+            f_idMethod = chain.getMethodBody(nDepth).getIdentity();
+            f_type     = chain.getMethodBody(nDepth).getSignature().asFunctionType();
             f_method   = null;
             f_chain    = chain;
             f_nDepth   = nDepth;
@@ -380,7 +380,9 @@ public class xRTSignature
 
         public int getParamCount() {
             MethodStructure method = getMethod();
-            return method == null ? 0 : method.getParamCount();
+            return method == null
+                    ? f_idMethod == null ? 0 : f_idMethod.getRawParams().length
+                    : method.getParamCount();
         }
 
         public Parameter getParam(int iArg) {
@@ -399,7 +401,9 @@ public class xRTSignature
 
         public int getReturnCount() {
             MethodStructure method = getMethod();
-            return method == null ? 0 : method.getReturnCount();
+            return method == null
+                    ? f_idMethod == null ? 0 : f_idMethod.getRawReturns().length
+                    : method.getReturnCount();
         }
 
         public Parameter getReturn(int iArg) {
@@ -418,7 +422,7 @@ public class xRTSignature
 
         public int getVarCount() {
             MethodStructure method = getMethod();
-            return method == null ? 0 : method.getMaxVars();
+            return method == null ? getParamCount() : method.getMaxVars();
         }
 
         public boolean isAsync() {
