@@ -16,6 +16,7 @@ import com.intellij.ui.dsl.builder.bindSelected
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
+import org.xtclang.idea.run.XtcRunMode
 import org.xvm.tool.XtcProjectCreator
 import kotlin.io.path.Path
 
@@ -101,7 +102,7 @@ class XtcNewProjectWizardStep(
 
             (settings.configuration as XtcRunConfiguration).apply {
                 this.moduleName = moduleName
-                useGradle = true
+                runWith = XtcRunMode.PROJECT
             }
 
             runManager.addConfiguration(settings)
