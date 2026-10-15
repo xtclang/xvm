@@ -914,6 +914,10 @@ module TestMisc {
         multi.f();
         assert value2 == 42 && multi.voidCalled;
 
+        // A fully exact overload wins over alternatives that widen either argument.
+        ExactArguments exact = new ExactArguments();
+        assert exact.pick("first", "last") == "exact";
+
         class NonVoid {
             String f() = "Hello";
             Int    f() = 42;
@@ -932,6 +936,12 @@ module TestMisc {
             String f() = "Hello";
             Int    f() = 42;
             void   f() {voidCalled = True;}
+        }
+
+        class ExactArguments {
+            String pick(Object first, String last) = "first widened";
+            String pick(String first, Object last) = "last widened";
+            String pick(String first, String last) = "exact";
         }
     }
 }
