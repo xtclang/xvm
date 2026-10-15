@@ -374,6 +374,12 @@ attempt, and `semanticSnapshots(errors)` to copy per-source views sharing one id
 inspect implementation chains through the cancellable host listener. The no-argument
 `semanticSnapshots()` remains passive. Both implementation and explicit cursor inspection can build
 TypeInfo on the serialized compiler worker; request threads query copied facts.
+Because those facts are immutable, compiler-mode requests hold the server's document lock only to
+check that the document is current, not while they wait for the worker (`Adapter.concurrentQueries`).
+A hover or cross-module navigation that waits for a compilation therefore never delays `didChange`,
+`$/cancelRequest` or other requests on the JSON-RPC reader; a result for a document that changed
+meanwhile is still rejected with `ContentModified`. The Tree-sitter and mock adapters keep queries
+and document updates serialized.
 `Compilation.sourceTrees()` supplies structural
 views even when parsing errors prevent an assembled `parsed()` tree. See the
 [acceptance reports](../doc/manual-test-plan.md#acceptance-reports) for verification and
