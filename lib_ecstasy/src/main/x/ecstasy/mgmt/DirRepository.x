@@ -44,18 +44,18 @@ service DirRepository
     @Override
     conditional ModuleTemplate getModule(String name, Version? version = Null) {
         Boolean fresh = ensureCache();
-        if (FileTemplate   template := modulesByName.get(name),
-            ModuleTemplate module   := template.extractVersion(version)) {
-            return True, module;
+        if (FileTemplate   fileTemplate := modulesByName.get(name),
+            ModuleTemplate template     := fileTemplate.extractVersion(version)) {
+            return True, template;
         }
 
         if (!fresh) {
             // refresh the cache before blowing up
             lastScan = Time.EPOCH;
             ensureCache();
-            if (FileTemplate   template := modulesByName.get(name),
-                ModuleTemplate module   := template.extractVersion(version)) {
-                return True, module;
+            if (FileTemplate   fileTemplate := modulesByName.get(name),
+                ModuleTemplate template     := fileTemplate.extractVersion(version)) {
+                return True, template;
             }
         }
         return False;
