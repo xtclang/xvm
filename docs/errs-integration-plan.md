@@ -1600,7 +1600,6 @@ Follow-up commits on 2026-10-15, after the five above:
 | `b3eea17d0` | VS Code run tasks end when the program has exited (a stop followed by a quick run no longer finds the worker busy); `onDidUpdateExecution` for observing terminals | With `94a1e8c19` |
 | `e658825c1` | `tagDefinitions` and `tags` in the shared catalog; 16 cases tagged `slow` from recorded median timings; both harnesses validate and report tags | Playbook infrastructure; independent of the feature, mirror into #693 with the catalog |
 | `4598957ce` | Shared cases X280–X284 (Run lens, embedded build, arguments/exit code, Stop then next run, failed build) and VS Code adapter switching in X137, with drivers and probes in both editors | With the editor commits; the catalog, manual rows and both drivers must travel together |
-
 | `981e61638` | X283 reruns natively before stopping (IntelliJ Rerun, VS Code Tasks: Restart Running Task) | With `4598957ce` |
 | `9e7b63749` | X285: debug launches start no session in VS Code and run the module; IntelliJ offers no Debug runner | With `4598957ce` |
 | `e6157bb74` | IntelliJ shortcuts keep Control+Option+X on the default macOS keymap ("Mac OS X 10.5+"), with a manifest test | With `1a89eb1a5` or as a small standalone plugin fix; user-visible on macOS |
@@ -1646,6 +1645,39 @@ suite checks command registration only; run behavior is covered by the server an
   -PincludeBuildLang=true -PincludeBuildAttachLang=true --continue
 ./gradlew spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
+
+### Language-server hardening (2026-10-15)
+
+Nine commits on `lagergren/errs` after `457fcb570` close seven problems in the language server and
+its editor-facing contract. Like the embedded run work they are local to this branch: not mirrored
+into #693 or any review branch, and in no PR. All paths are under `lang/`, apart from this
+document and `docs/errs.md`. Each commit message records its own validation, problems fixed and
+limits; the behavior is documented in the [server README](../lang/lsp-server/README.md) and the
+[playbook](../lang/doc/manual-test-plan.md).
+
+| Commit | Problem fixed | Extraction target |
+|---|---|---|
+| `a5f590c84` | The server's own diagnostic codes (`DEPENDENCY-FAILED` and others) were string literals copied across files; now `Diagnostic.Codes`, `Diagnostic.SOURCE` and `PULL_DIAGNOSTICS_IDENTIFIER` | #693 server; prerequisite for the next six |
+| `641eb3663` | A compiler query held the document lock while it waited, so `didChange`, cancellation and other requests stalled behind it. `Adapter.concurrentQueries` lets the compiler adapter check currency under the lock and run outside it (`DocumentLockTest`) | #693 server |
+| `f00b0fd7f` | User-facing labels said `xtc`: diagnostic source, problem-matcher source and IntelliJ notification group now say Ecstasy; identifiers, file types and protocol names keep `xtc` | #693 server and both editors |
+| `367ab83ab` | An incremental edit that did not apply was silently ignored, and later answers used stale text. The document is now marked out of sync (`DOCUMENT-OUT-OF-SYNC`, one warning, requests refused) until a full-text change or reopen (`OutOfSyncDocumentTest`) | #693 server |
+| `3f9c1ee43` | Workspace rescans for file events ran on the JSON-RPC reader thread, so a burst of events blocked every request. `CoalescingTask` runs them on one worker and coalesces a burst into at most one more walk (`CoalescingTaskTest`) | #693 server |
+| `69767f0b6` | Quick fixes did not name the diagnostics they resolve, and unreachable code was not tagged. Fixes now carry the client's own diagnostic objects; COMPILER-208 and COMPILER-118 carry `Unnecessary` when the client supports tags (`XdkDiagnosticLinksTest`, `CodeActionDiagnosticsTest`, `DiagnosticPresentationTest`) | #693 server |
+| `c103d16d3` | A module blocked by a failed dependency lost its outline, folding and selection along with its semantics. Those syntax views now come from a standalone parse; semantic views still answer nothing (`XdkBlockedModuleTest`) | #693 server |
+| `eba208bb3` | The DAP placeholder reported verified breakpoints and an invented thread, and the Mock adapter (also the Tree-sitter fallback) advertised seven features that only answer empty. Breakpoints are now unverified with the reason, launch and attach fail with it, and Mock advertises what it implements (`XtcDebugServerTest`) | dap-server and server; DAP part also feeds R6 |
+| `c12797b9f` | Stale documentation: VS Code "stub", Tree-sitter as default, catalog counts, cross-file rename TODO, VS Code minimum version, plugin ZIP name, a withdrawn pool fallback | Travels with whichever docs are mirrored |
+
+Native receipts, FEATURES mode in IntelliJ: `f00b0fd7f` with X2 and 7a.8 (VS Code `run-F073vf`,
+IntelliJ `run-11530416872990029400`); `3f9c1ee43` with X99, X100, X124, X128, X129, X134 and
+CFG1–CFG3 (`run-emsJ2V`, `run-12366877028249825152`); `69767f0b6` with X105, X185–X190, X193,
+X201, X226 and X227 (`run-o1nim0`, `run-15524875032423167052`); `c103d16d3` with X46–X52
+(`run-XSxGa3`, `run-9061656690967320175`). All selected cases passed. No full-catalog run was made
+for this batch.
+
+Final receipt on the `eba208bb3` code (`c12797b9f` changes only docs): `:lang:lsp-server:test` 2,293 tests in 309 classes, 0 failures,
+2 existing skips; `:lang:dap-server:test` 3 tests, 0 failures; `spotlessCheck` passes.
+
+Release evidence for this batch (a full-catalog run in both editors and soak) is deferred.
 
 ### IntelliJ parity backlog (L60)
 
