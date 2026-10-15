@@ -464,7 +464,9 @@ are reused, and obsolete compiler/cursor results cannot publish.
 Failed dependencies publish their original source diagnostics and block consumers with
 `DEPENDENCY-FAILED`; an old successful artifact is not reused. Deleted/unreadable roots report
 `SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
-Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
+Blocked consumers keep their syntax-only views, the outline, folding and selection ranges, parsed
+from their own sources; semantic views (hover, navigation, semantic tokens, completion) and their
+own compiler diagnostics return when the dependencies recover. Cyclic or
 overlapping source graphs are rejected (`SOURCE-GRAPH`). Closing sessions prunes unused cached artifacts.
 These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure,
 `DOCUMENT-OUT-OF-SYNC` (see [document synchronization](#document-synchronization)) and the `Ecstasy`
