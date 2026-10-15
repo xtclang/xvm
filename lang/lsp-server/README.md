@@ -457,7 +457,8 @@ Failed dependencies publish their original source diagnostics and block consumer
 `SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
 Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
 overlapping source graphs are rejected (`SOURCE-GRAPH`). Closing sessions prunes unused cached artifacts.
-These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure, and the `Ecstasy`
+These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure,
+`DOCUMENT-OUT-OF-SYNC` (see [document synchronization](#document-synchronization)) and the `Ecstasy`
 diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
 (`org.xvm.lsp.model`); compiler codes such as `COMPILER-43` come from the compiler.
 
@@ -466,6 +467,18 @@ declarations and source import edges at startup and on watched-file changes; it 
 settings. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
 It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
+
+### Document synchronization
+
+The server uses full-text synchronization unless a client sets
+`initializationOptions.xtcDocumentSync.incremental`; then it applies UTF-16 range edits in order,
+preserving CRLF and bare CR. A batch is applied whole or not at all, and stale versions are ignored.
+If a batch cannot be applied (a range outside the document, or a range edit without negotiated
+incremental sync), the editor has the edit and the server does not, so the server no longer knows the
+text. It then reports only `DOCUMENT-OUT-OF-SYNC` for that file, shows one warning, and refuses other
+requests on it with `RequestFailed` instead of answering for the wrong text. Later range edits are
+ignored. A change that carries the whole text (with any edits after it) resynchronizes, as does
+closing and reopening the file; in full-sync mode the next keystroke does this.
 
 ### Embedded build and run
 
