@@ -8889,6 +8889,22 @@
         "limitations": []
       }
     },
+    "X285": {
+      "title": "debug launches start no fake debugger: VS Code runs the module, IntelliJ offers no Debug runner",
+      "manual": [
+        "The VS Code notice that Ecstasy debugging is not available is checked manually."
+      ],
+      "values": {
+        "file": "DebugRun.x",
+        "module": "DebugRun",
+        "source": "module DebugRun {\n    Int run() = 4;\n}\n",
+        "exitCode": 4
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

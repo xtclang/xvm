@@ -11,12 +11,14 @@ import com.intellij.execution.ExecutionManager
 import com.intellij.execution.ProgramRunnerUtil
 import com.intellij.execution.RunManager
 import com.intellij.execution.configurations.ConfigurationTypeUtil
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ExecutionUtil
+import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.ui.RunContentManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
@@ -135,6 +137,25 @@ object EmbeddedExecutionUi {
             runManager.setTemporaryConfiguration(settings)
             ProgramRunnerUtil.executeConfiguration(settings, DefaultRunExecutor.getRunExecutorInstance())
         }
+    }
+
+    /** Whether the Run and Debug executors have a runner for the module's Ecstasy Application configuration. */
+    @JvmStatic
+    fun runners(
+        project: Project,
+        module: String,
+    ): String {
+        val factory = ConfigurationTypeUtil.findConfigurationType(XtcRunConfigurationType::class.java).configurationFactories.first()
+        val configuration =
+            (factory.createTemplateConfiguration(project) as XtcRunConfiguration).apply {
+                moduleName = module
+                runWith = XtcRunMode.PROJECT
+            }
+        return JsonObject()
+            .apply {
+                addProperty("run", ProgramRunner.getRunner(DefaultRunExecutor.EXECUTOR_ID, configuration) != null)
+                addProperty("debug", ProgramRunner.getRunner(DefaultDebugExecutor.EXECUTOR_ID, configuration) != null)
+            }.toString()
     }
 
     /** Starts capturing runs for a module whose Run lens the driver is about to click. */
