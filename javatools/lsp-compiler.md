@@ -1059,7 +1059,7 @@ source or document in this checkout.
 | File | Change | What changed and why |
 | --- | --- | --- |
 | [README.md](README.md) | Modified | Keeps a short architecture overview and links to this guide for the consolidated diagnostic design, listener migration and compiler contracts. |
-| [LSP-COMPILER.md](LSP-COMPILER.md) | Added | Explains the compiler-to-LSP data flow, API guarantees, partial-analysis limits, compatibility implications and test coverage; this appendix maps those mechanisms to their files. |
+| [lsp-compiler.md](lsp-compiler.md) | Added | Explains the compiler-to-LSP data flow, API guarantees, partial-analysis limits, compatibility implications and test coverage; this appendix maps those mechanisms to their files. |
 | [src/main/java/org/xvm/api/EmbeddingSupport.java](src/main/java/org/xvm/api/EmbeddingSupport.java) | Modified | Returns compilation outcomes, retained source trees and identity-based semantic facts; adds declaration/cursor analysis over source snapshots, explicit bootstrap configuration and footprint inspection without starting the runtime. |
 | [src/main/java/org/xvm/api/ModuleCompiler.java](src/main/java/org/xvm/api/ModuleCompiler.java) | Modified | Requires an explicit listener and reports compilation, input and output failures through it. Retains the simpler module/boolean result APIs and documents repository sharing constraints. |
 | [src/main/java/org/xvm/api/InterpreterControl.java](src/main/java/org/xvm/api/InterpreterControl.java) | Modified | Routes an unhandled interpreted exception through the guaranteed listener with the module as its diagnostic site, removing the nullable-listener discard path. |
