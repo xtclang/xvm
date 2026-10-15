@@ -1600,9 +1600,17 @@ Follow-up commits on 2026-10-15, after the five above:
 | `e658825c1` | `tagDefinitions` and `tags` in the shared catalog; 16 cases tagged `slow` from recorded median timings; both harnesses validate and report tags | Playbook infrastructure; independent of the feature, mirror into #693 with the catalog |
 | `4598957ce` | Shared cases X280–X284 (Run lens, embedded build, arguments/exit code, Stop then next run, failed build) and VS Code adapter switching in X137, with drivers and probes in both editors | With the editor commits; the catalog, manual rows and both drivers must travel together |
 
+| `981e61638` | X283 reruns natively before stopping (IntelliJ Rerun, VS Code Tasks: Restart Running Task) | With `4598957ce` |
+| `9e7b63749` | X285: debug launches start no session in VS Code and run the module; IntelliJ offers no Debug runner | With `4598957ce` |
+| `e6157bb74` | IntelliJ shortcuts keep Control+Option+X on the default macOS keymap ("Mac OS X 10.5+"), with a manifest test | With `1a89eb1a5` or as a small standalone plugin fix; user-visible on macOS |
+| `0f40b48ef` | X286: the adapter chooser from its shortcut, Command Palette/Tools menu, with the shortcut defined once in the catalog | With `4598957ce` |
+
 Native receipts for these cases: VS Code `run-gZtT72` and IntelliJ `run-15778159105160984029`, each
 with X131, X137, X279 and X280–X284 selected, all passing on the first attempt with zero IDE failures.
-No full-catalog run was made for this batch.
+Later focused receipts: X283 with Rerun (VS Code `run-hDSKdy`, IntelliJ `run-11181975215757046696`),
+X285 (`run-4t9Jip`, `run-39985069191560182`) and X286 (`run-uS0Vqw`, `run-7281903318354889687`), all
+passing; IntelliJ ran only its FEATURES mode for these. X286's first two IntelliJ attempts failed and
+exposed the macOS keymap bug fixed in `e6157bb74`. No full-catalog run was made for this batch.
 
 `5a14da284` renamed the new embedding entry point to `runMethod` before commit: an eight-argument
 `run` overload made `LspTest`'s existing all-null call ambiguous. Extracting the runtime PR keeps that
