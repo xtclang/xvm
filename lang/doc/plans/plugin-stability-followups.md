@@ -14,7 +14,7 @@ Scope of the naming pass in this branch was limited to files touched during the 
 - `XtcIconProvider.kt`
 - `XtcIntelliJLanguage.kt`
 
-Likely candidates: user-facing labels, dialog messages, exception messages. Rule remains the same as in `vscode-specific.md`: product entity → "Ecstasy", server product names ("XTC Language Server", "XTC DAP server") and internal identifiers → stay.
+Likely candidates: user-facing labels, dialog messages, exception messages. Rule: user-facing names say "Ecstasy" — including the server, shown as "Ecstasy Language Server" by LSP4IJ, the VS Code output channel, the IntelliJ notification group, and diagnostics (source `Ecstasy`). Identifiers stay `xtc`, because settings, tasks, launch configurations, themes and keybindings refer to them: the VS Code language ID, `xtc.*` settings and commands, the `xtc` task, debugger and problem-matcher names, VS Code task `source` (users reference tasks as `xtc: Build`), the `.xtc` module extension, the `xtc` command-line tool, `source.xtc` grammar scopes, and `xtc` Markdown code fences.
 
 ## Out of scope (mentioned for completeness)
 
