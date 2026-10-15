@@ -63,7 +63,7 @@ There are three kinds of change in this branch:
 
 ## Review the foundations separately from the complete adapter
 
-The [javatools migration guide](../javatools/LSP-COMPILER.md#why-this-is-a-prerequisite-for-the-compiler-backed-lsp)
+The [javatools migration guide](../javatools/lsp-compiler.md#why-this-is-a-prerequisite-for-the-compiler-backed-lsp)
 maps the listener contracts to focused tests and distinguishes required behavior from API design
 choices. [PR #680](https://github.com/xtclang/xvm/pull/680) introduces reporting/state composition.
 The explicit-listener migration moves callers to explicit destinations and suppression; the
