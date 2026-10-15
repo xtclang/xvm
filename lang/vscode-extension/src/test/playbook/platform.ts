@@ -336,6 +336,12 @@ export function platformCases(): void {
             try { return await current.sendRequest<{ pid: number; textSynchronization: string }>('xtc/languageServiceStatus'); }
             catch { return undefined; }
         };
+        const adapterStatus = async () => {
+            const current = getClient();
+            if (!current?.isRunning()) return undefined;
+            try { return await current.sendRequest<{ pid: number; adapter: string }>('xtc/languageServiceStatus'); }
+            catch { return undefined; }
+        };
         let previous = (await status())!.pid;
         try {
             for (const transport of ['incremental', 'full']) {
@@ -352,9 +358,22 @@ export function platformCases(): void {
                     values => values.length > 0, 'Document symbols registered after restart');
                 console.log(`[X137] ${transport} unsaved document ready in ${Date.now() - started}ms`);
             }
+            const unsaved = data.edited.replace('value', 'adapterSwitchProof');
+            await workspace.replace(document, unsaved);
+            const names = (values: vscode.DocumentSymbol[]): string[] => values.flatMap(symbol => [symbol.name, ...names(symbol.children ?? [])]);
+            for (const [choice, expected] of [['treesitter', 'TreeSitter'], ['compiler', 'XDK']]) {
+                await vscode.commands.executeCommand('xtc.selectLanguageAdapter', choice);
+                const after = await eventually(adapterStatus, value => value?.adapter === expected && value.pid !== previous, `Adapter restart into ${choice}`);
+                previous = after!.pid;
+                assert.strictEqual(document.getText(), unsaved);
+                assert.ok(document.isDirty, 'An adapter restart must not save the buffer');
+                await eventually(() => symbols(document), values => names(values).includes('adapterSwitchProof'), `Unsaved declaration analyzed by ${choice}`);
+            }
         } finally {
             await config.update('textSynchronization', original, vscode.ConfigurationTarget.Workspace);
             await eventually(status, value => value?.textSynchronization === config.get('textSynchronization'), 'Original transport restored');
+            await vscode.commands.executeCommand('xtc.selectLanguageAdapter', 'compiler');
+            await eventually(adapterStatus, value => value?.adapter === 'XDK', 'Compiler adapter restored for later cases');
         }
     });
 
