@@ -160,4 +160,25 @@ export function executionCases(): void {
             assert.ok(!run.text.includes('Process finished'), 'Nothing ran');
         });
     });
+
+    playbook('X285', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            let sessions = 0;
+            const subscription = vscode.debug.onDidStartDebugSession(() => sessions++);
+            try {
+                const run = await executions.start('run', data.module, async () => {
+                    const started = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                        { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module });
+                    assert.strictEqual(started, false, 'A launch without a debugger must not start a debug session');
+                }, finished, 'Debug launch runs the module');
+                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                assert.strictEqual(sessions, 0, 'No debug session started');
+            } finally {
+                subscription.dispose();
+            }
+        });
+    });
 }
