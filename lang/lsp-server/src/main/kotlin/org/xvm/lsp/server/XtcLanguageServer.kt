@@ -768,6 +768,11 @@ class XtcLanguageServer(
         return true
     }
 
+    /** Shows [message] to the user as a warning, when a client is connected. */
+    internal fun showWarning(message: String) {
+        client?.showMessage(MessageParams(MessageType.Warning, message))
+    }
+
     private fun reportCompilerConfigError(failure: IllegalArgumentException) {
         val message =
             "Invalid ${CompilerConfiguration.SECTION}; previous source configuration retained: ${failure.message}"
