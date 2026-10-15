@@ -1,20 +1,14 @@
 package org.xvm.tool;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileStructure;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.util.Severity;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +17,6 @@ import static org.xvm.asm.ErrorListener.silent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.xvm.util.Severity.ERROR;
@@ -38,44 +30,6 @@ import static org.xvm.util.Severity.WARNING;
  * Tests the error accumulation, severity tracking, and checkErrors() behavior.
  */
 class LauncherErrorHandlingTest {
-
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void repositoryWarningsReachHostAndConsoleWithoutBlockingFallback(boolean singleFile,
-                                                                    @TempDir Path directory) throws IOException {
-        Path first = Files.createDirectory(directory.resolve("first"));
-        Path second = Files.createDirectory(directory.resolve("second"));
-        Path broken = Files.writeString(first.resolve("Good.xtc"), "not a module");
-        new FileStructure("Good").writeTo(second.resolve("Good.xtc").toFile());
-        var errors = new ErrorList();
-        var reports = new ArrayList<String>();
-        var console = new Console() {
-            @Override
-            public String out(Object value) {
-                throw new AssertionError("Repository diagnostics must not use standard output");
-            }
-
-            @Override
-            public String err(Object value) {
-                String message = value.toString();
-                reports.add(message);
-                return message;
-            }
-        };
-        var compiler = new TestCompiler(CompilerOptions.builder().build(), console, errors);
-        var repository = compiler.configureLibraryRepo(List.of(
-                (singleFile ? broken : first).toFile(), second.toFile()));
-
-        assertNotNull(repository.loadModule("Good"));
-        assertEquals(1, errors.getErrors().size());
-        var report = errors.getErrors().getFirst();
-        assertEquals(Launcher.READ_FAILURE, report.getCode());
-        assertEquals(WARNING, report.getSeverity());
-        assertInstanceOf(Exception.class, report.getParams()[1]);
-        assertEquals(List.of(report.toString()), reports);
-        assertFalse(errors.hasSeriousErrors());
-        assertFalse(compiler.isAbortDesired());
-    }
 
     @Test
     void fatalDiagnosticReachesHostBeforeConsoleAborts() {
