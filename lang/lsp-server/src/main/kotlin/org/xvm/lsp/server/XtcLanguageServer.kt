@@ -331,6 +331,9 @@ class XtcLanguageServer(
     private val compilerSettings = AtomicReference(CompilerSettings())
 
     companion object {
+        /** The pull-diagnostics provider identifier the server registers and accepts in diagnostic requests. */
+        const val PULL_DIAGNOSTICS_IDENTIFIER = "xtc"
+
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
         private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
         private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"
@@ -880,7 +883,7 @@ class XtcLanguageServer(
             if (usesPullDiagnostics) {
                 diagnosticProvider =
                     DiagnosticRegistrationOptions(true, true).apply {
-                        identifier = "xtc"
+                        identifier = PULL_DIAGNOSTICS_IDENTIFIER
                         workDoneProgress = true
                     }
             }
