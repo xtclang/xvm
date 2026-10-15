@@ -3,13 +3,18 @@ package org.xvm.lsp.server
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DiagnosticCapabilities
+import org.eclipse.lsp4j.DiagnosticTag
+import org.eclipse.lsp4j.DiagnosticsTagSupport
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.fromLsp
+import org.xvm.lsp.model.toLsp
 
 /**
  * Checks pull-diagnostic capability negotiation independently of push diagnostics. Related information and
@@ -107,5 +112,43 @@ class DiagnosticPresentationTest {
                 presentation.pullDiagnosticRelatedInformation,
             )
         assertThat(cached.items).allSatisfy { assertThat(it.isRight).isTrue() }
+    }
+
+    @Test
+    fun `tags reach only response paths whose client declares them`() {
+        val presentation =
+            ClientPresentation.read(
+                InitializeParams().apply {
+                    capabilities =
+                        ClientCapabilities().apply {
+                            textDocument =
+                                TextDocumentClientCapabilities().apply {
+                                    publishDiagnostics =
+                                        PublishDiagnosticsCapabilities().apply {
+                                            setTagSupport(DiagnosticsTagSupport(listOf(DiagnosticTag.Unnecessary)))
+                                        }
+                                    diagnostic = DiagnosticCapabilities()
+                                }
+                        }
+                },
+            )
+        assertThat(presentation.diagnosticTags).containsExactly(DiagnosticTag.Unnecessary)
+        assertThat(presentation.pullDiagnosticTags).isEmpty()
+
+        val uri = "file:///Tags.x"
+        val unreachable = Diagnostic.error(Location(uri, 2, 4, 2, 8), "unreachable").copy(tags = setOf(Diagnostic.Tag.UNNECESSARY))
+        assertThat(unreachable.toLsp().tags).containsExactly(DiagnosticTag.Unnecessary)
+        assertThat(Diagnostic.fromLsp(uri, unreachable.toLsp()).tags).containsExactly(Diagnostic.Tag.UNNECESSARY)
+
+        val reports = DiagnosticReports().apply { record(uri, listOf(unreachable)) }
+
+        fun pulled(tags: Set<DiagnosticTag>) =
+            reports
+                .document(uri, null, emptySet(), relatedInformation = false, tags = tags)
+                .left.items
+                .single()
+                .tags
+        assertThat(pulled(presentation.pullDiagnosticTags)).isNull()
+        assertThat(pulled(setOf(DiagnosticTag.Unnecessary))).containsExactly(DiagnosticTag.Unnecessary)
     }
 }
