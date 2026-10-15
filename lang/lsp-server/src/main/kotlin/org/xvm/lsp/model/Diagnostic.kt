@@ -40,8 +40,11 @@ data class Diagnostic(
     }
 
     companion object {
-        /** The source of every diagnostic this server publishes, from the compiler or about it. */
-        const val SOURCE = "xtc"
+        /**
+         * The source of every diagnostic this server publishes, from the compiler or about it. Editors show it
+         * next to the code, as in `Ecstasy(COMPILER-43)`; nothing matches on it.
+         */
+        const val SOURCE = "Ecstasy"
 
         fun error(
             location: Location,

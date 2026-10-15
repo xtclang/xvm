@@ -103,7 +103,7 @@ suite('XdkAdapter playbook', function () {
         assert.strictEqual(result.length, scenario.count);
         assert.strictEqual(vscode.DiagnosticSeverity[result[0].severity].toUpperCase(), scenario.severity);
         assert.ok(result[0].message.toLowerCase().includes(scenario.messageContains.toLowerCase()));
-        assert.strictEqual(result[0].source, 'xtc');
+        assert.strictEqual(result[0].source, 'Ecstasy');
         const declaration = document.positionAt(scenarioOffset(document.getText(), scenario.declaration));
         assert.ok(result[0].range.isEqual(new vscode.Range(declaration, declaration.translate(0, data.warningCount))));
         await nextProblem(document, result);
