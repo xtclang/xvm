@@ -1,9 +1,40 @@
 # Embedded compilation, Run and future debugging
 
-Status: accepted architecture and delivery plan, 2026-09-28. The `errs` compiler/LSP work remains the current
-implementation scope. This plan records the runtime contract it must accommodate; it does not
-claim that embedded IDE Run or debugging is implemented. This investigation is based on source
-inspection; runtime experiments and repeat-run acceptance remain R1 work.
+Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of embedded build and
+Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
+covers parts of R1–R5. Debugging (R6/R7) and the release gate (R8) are not implemented. The audit in
+the next section describes the code before that delivery.
+
+## First delivery (2026-10-15)
+
+Embedded mode is the IDE counterpart of building and running with Gradle, like IntelliJ's *Build and
+run using* choice. Each IDE chooses per folder or project: automatic (Gradle exactly when the root
+has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken for this delivery:
+
+| Question | Decision |
+|----------|----------|
+| Default mode | Automatic: embedded without a Gradle build, Gradle with one |
+| Unsaved buffers | Save all files, then build from disk. Unsaved-buffer builds remain R2 work |
+| Run host | One persistent execution worker JVM per language server, one program at a time |
+| Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled |
+| Compiler queue | Builds reuse the server's serialized compile queue, not a second compiler |
+
+| Area | Delivered |
+|------|-----------|
+| Protocol | `xtc/build`, `xtc/run`, `xtc/stopRun`, `xtc/runnableTargets`; `xtc/runOutput` and `xtc/runExited` notifications for a client-chosen run ID ([server README](../../lsp-server/README.md#embedded-build-and-run)) |
+| Build | [XdkBuild](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkBuild.kt) compiles the module's dependency order into `build/xtc/embedded/`, with per-module outcomes, skipped consumers of failed dependencies and attributable diagnostics |
+| Runnable targets | Read from the module structure the compiler registered: exactly one `run` method with at most one required parameter. Run lenses appear only on such modules; no user code runs |
+| Execution | [RunWorkerProcess](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorkerProcess.kt) starts [RunWorker](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt) lazily over JSON-lines stdio, reuses it and replaces it after death; stray worker output becomes events, never protocol frames |
+| Embedding API | `EmbeddingSupport.runMethod` selects an entry method with the CLI runner's rule and passes exact arguments; [InterpreterControl](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) no longer starts the runner's HTTP host; [runner.x](../../../lib_runner/src/main/x/runner.x) tasks take a method and arguments |
+| VS Code | `xtc.build.mode`; Build/Rebuild (`Cmd`/`Ctrl+F9`), Run lens, editor title Run, `Ctrl+Shift+R`/`Ctrl+Shift+F10`, tasks and `F5` follow it; runs stream into a task terminal and closing it stops the run ([README](../../vscode-extension/README.md#building-and-running)) |
+| IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../intellij-plugin/README.md#running-your-application)) |
+
+Known limits: no console input; one program at a time per server (a second run reports "Another
+program is still running"); every build recompiles the requested modules; IntelliJ Build Module builds
+every module; `.x` files have no IntelliJ gutter Run icon because there is no PSI parser; older
+IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
+new *Module source* field. The commits and validation are recorded in the
+[integration plan](../../../docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
 
 ## What the code already does
 
@@ -151,22 +182,38 @@ this bridge; they cannot be inferred from compiler type hints.
   exceptions, exit results, immediate stop, stop/finish races, close twice, repeated runs and pool
   growth. Separate unsupported injections/JIT/input from verified interpreter support. Measure cold
   and warm latency. Exercise no HTTP listener/port collision in the embedding path.
+  *Partial (2026-10-15):* worker regressions cover success, exit codes, exceptions, named methods,
+  missing methods, arguments with spaces and Unicode, stop then reuse, and no HTTP listener. Changed
+  artifacts, races, double close, pool growth and latency remain.
 - [ ] **R2 — Build results and runnable targets.** Reuse workspace snapshots/artifacts; prove entry
   eligibility and module ownership, arguments/defaults, unsaved compile-before-run, compile failure,
   stale target rejection, renamed roots and correct source revisions. Do not execute user code in
   target discovery. These passive compiler APIs can be extracted before runtime UI integration.
+  *Partial (2026-10-15):* builds report per-module outcomes and diagnostics and skip consumers of
+  failed dependencies; runnable targets come from registered module structures without running
+  code. Clients save before building; unsaved-buffer builds, build revisions/manifests and stale
+  target rejection remain.
 - [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
   replace textual parsing. No per-run CLI or new VM.
+  *Partial (2026-10-15):* entry selection, exact arguments, completion, stop and ordered output work
+  through lib_runner tasks in one runtime, with structured exit events. Console input remains.
 - [ ] **R4 — Persistent worker supervision.** Add configuration/generation handshake, private IPC,
   startup/stop deadlines, bounded output/backpressure, memory measurement and safe idle recycling.
   Verify worker death during a run, restart after crash, parent death, IDE close, XDK change and
   no leaked task/console/process. Bound retained artifacts and native-pool growth independently.
+  *Partial (2026-10-15):* a lazily started worker over private JSON-lines stdio, reused across runs,
+  replaced after death and shut down with the server; it exits when the server's pipe closes. The
+  generation handshake, deadlines, backpressure, memory measurement and idle recycling remain.
 - [ ] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.
   Assert worker reuse and distinct child sessions. Verify IntelliJ without Ultimate functionality.
+  *Partial (2026-10-15):* both IDEs route lens, context, shortcut, task/configuration and Build actions
+  through the shared requests, with Stop and Rerun, using Community and LSP4IJ APIs only. IntelliJ
+  unit tests cover mode resolution, configuration migration and the run lifecycle; the VS Code
+  headless suite checks only command registration. Shared native playbook scenarios remain.
 - [ ] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
   no-debug execution, output, completion, disconnect and terminate to the same session service.
   Advertise only functioning requests. DAP facade shutdown must follow an explicit run ownership policy.

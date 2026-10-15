@@ -2,9 +2,11 @@
 
 The compiler-backed LSP is the default server for the IntelliJ and VS Code integrations.
 It provides diagnostics, semantic highlighting, navigation, completion and compiler-checked
-refactorings, including analysis of incomplete source. Tree-sitter remains a selectable syntax-only
-adapter. See the [manual playbook](doc/manual-test-plan.md) for feature boundaries, test fixtures,
-native harness commands and client compatibility limits.
+refactorings, including analysis of incomplete source. Both editors can also build and run modules
+with that compiler (embedded mode), beside Gradle; see
+[embedded build and run](lsp-server/README.md#embedded-build-and-run). Tree-sitter remains a
+selectable syntax-only adapter. See the [manual playbook](doc/manual-test-plan.md) for feature
+boundaries, test fixtures, native harness commands and client compatibility limits.
 
 Language tooling for the Ecstasy programming language, including LSP server, IDE plugins,
 and editor support.

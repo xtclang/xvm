@@ -1,5 +1,11 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
+**Status (2026-10-15):** not implemented. VS Code debug launches currently run the module without a
+debugger, through the same embedded or Gradle Run as the Run button; IntelliJ keeps DAP registration
+disabled. A DAP `launch` should reuse the embedded build and execution-worker sessions
+(`xtc/build`, `xtc/run`) rather than start its own runtime; see R6/R7 in the
+[execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+
 This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
 ---
