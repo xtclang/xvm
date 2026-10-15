@@ -37,7 +37,8 @@ import org.xvm.lsp.adapter.TextEdit as AdapterTextEdit
 
 /**
  * Exercises sequential UTF-16 patches and save edits against exact document snapshots. Invalid ranges, stale
- * versions and conflicting edits must fail without mutating the server buffer or waiting for compilation.
+ * versions and conflicting edits must fail without mutating the server buffer or waiting for compilation; a
+ * change that cannot be applied puts the document out of sync until a full-text change.
  */
 class DocumentSynchronizationTest {
     private val uri = "file:///Sync.x"
@@ -159,24 +160,29 @@ class DocumentSynchronizationTest {
                     .newText,
             ).isEqualTo("aXYb\r\nline")
             assertThat(compilation.isDone).isFalse()
-            // A malformed batch must not publish even its valid prefix or advance the version.
+            // A malformed batch must not publish even its valid prefix. The editor applied it anyway, so
+            // the server no longer knows the text: it refuses queries rather than answer for the wrong text.
             documents.didChange(
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(uri, 3),
                     listOf(patch(0, 0, 0, 1, "Z"), patch(9, 0, 9, 0, "!")),
                 ),
             )
-            assertThat(
-                documents
-                    .willSaveWaitUntil(save)
-                    .get(10, SECONDS)
-                    .single()
-                    .newText,
-            ).isEqualTo("aXYb\r\nline")
+            assertThat(compilation.isDone).isFalse()
+            assertThatThrownBy { documents.willSaveWaitUntil(save).get(10, SECONDS) }.hasMessageContaining("out of sync")
+            // later patches would apply to the wrong text and are ignored
             documents.didChange(
                 DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(uri, 3),
+                    VersionedTextDocumentIdentifier(uri, 4),
                     listOf(patch(0, 0, 0, 1, "Q")),
+                ),
+            )
+            assertThatThrownBy { documents.willSaveWaitUntil(save).get(10, SECONDS) }.hasMessageContaining("out of sync")
+            // a full-text change resynchronizes, including the patches that follow it in the same batch
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(uri, 5),
+                    listOf(TextDocumentContentChangeEvent("aXYb\r\nline"), patch(0, 0, 0, 1, "Q")),
                 ),
             )
             assertThat(
@@ -217,6 +223,15 @@ class DocumentSynchronizationTest {
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(uri, 2),
                     listOf(patch(0, 0, 0, 1, "!")),
+                ),
+            )
+            // the refused patch leaves the editor and server texts apart, so queries are refused
+            assertThatThrownBy { documents.willSaveWaitUntil(save).get(10, SECONDS) }.hasMessageContaining("out of sync")
+            // full sync's next change carries the whole text, which resynchronizes the document
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(uri, 3),
+                    listOf(TextDocumentContentChangeEvent(source)),
                 ),
             )
             assertThat(documents.willSaveWaitUntil(save).get(10, SECONDS)).isEmpty()
