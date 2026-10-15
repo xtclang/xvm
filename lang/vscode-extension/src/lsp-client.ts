@@ -19,6 +19,7 @@ import { compilerBuildModels } from './compiler-paths';
 import { BuildModel } from './build-model';
 import { LibraryOptions } from './library-configuration';
 import { libraryOptions } from './library-settings';
+import { attachEmbeddedExecution, endAllRuns } from './embedded-execution';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
@@ -245,6 +246,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     );
 
     client = connection;
+    attachEmbeddedExecution(connection);
 
     activeConnectionKey = requestedKey;
     const startingClient = client;
@@ -270,6 +272,10 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                 .catch(error => outputChannel.warn(`Could not record Ecstasy log session: ${error}`));
         }
         
+        if (newState === State.Stopped) {
+            endAllRuns('The Ecstasy language server stopped, ending the run.');
+        }
+
         const status = stateMap[newState as keyof typeof stateMap];
         if (status) {
             updateStatusBar(status);
