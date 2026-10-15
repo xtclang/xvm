@@ -57,10 +57,14 @@ intermittent IntelliJ X105 acceptance issues; exact receipts and remaining bound
 
 The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
 compile/build and execution contracts for both clients, a persistent execution worker and fresh
-application containers per run. R1–R8 track that separate implementation. Current Run commands
-still launch Gradle/CLI processes; the DAP server remains a transport stub. Compiler/LSP completion
-does not imply completion of either execution or debugging. Current compiler changes must retain
-artifact/source revisions and cancellation boundaries suitable for those future consumers.
+application containers per run. R1–R8 track that separate implementation. Since 2026-10-15 both
+editors have an embedded build/run mode beside Gradle: Build, Rebuild, Run lenses, Run shortcuts and
+run configurations build with the server's compiler and run in its execution worker
+([first delivery](plan-embedded-execution.md#first-delivery-2026-10-15)), covering parts of R1–R5.
+The DAP server remains a transport stub, and VS Code debug launches run without a debugger.
+Compiler/LSP completion does not imply completion of either execution or debugging. Current compiler
+changes must retain artifact/source revisions and cancellation boundaries suitable for those future
+consumers.
 
 ## What's Implemented
 
@@ -262,7 +266,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Backend/protocol and selected acceptance pass in both editors. | L70 / X127, X131 |
 | File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. X130's Move/Undo/Redo/resource assertions pass the October 5 full VS Code run; its earlier intermittent Explorer repaint failure remains UP16. X218 still fails VS Code overlapping-move Undo (UP23). IntelliJ supports the ordered transaction. Bounded cross-package qualification passes X161; explicit graph replacement uses `xtc/renameFiles` and shared X162/X163. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
-| Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
+| Server-side `workspace/executeCommand` | Module Run lenses invoke the client's `xtc.runModule` command, which follows the editor's build mode; embedded build/run uses the custom `xtc/build` and `xtc/run` requests rather than server commands | L73 |
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
 | Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
 | Inline completion | Compiler names/values, automatic ambiguity suppression and explicit alternatives; selected-range and revision guards | L76; native IntelliJ invocation/selection remains UP26 |
@@ -541,7 +545,9 @@ An IntelliJ IDEA plugin providing XTC support:
 **Core Components:**
 - **`XtcLanguageServerFactory`** / **`XtcLspConnectionProvider`** - Out-of-process LSP server integration via LSP4IJ
 - **`XtcNewProjectWizard`** / **`XtcNewProjectWizardStep`** - New Project wizard
-- **`XtcRunConfiguration`** / **`XtcRunConfigurationType`** / **`XtcRunConfigurationProducer`** - Run configurations
+- **`XtcRunConfiguration`** / **`XtcRunConfigurationType`** / **`XtcRunConfigurationProducer`** - Run configurations (embedded, Gradle or `xtc` CLI)
+- **`XtcBuildSettings`** / **`XtcBuildConfigurable`** / **`XtcProjectTaskRunner`** - Build, Execution, Deployment › Ecstasy mode and embedded Build/Rebuild Project
+- **`EmbeddedRunProcessHandler`** / **`XtcRunModuleAction`** - Embedded runs as native processes; the Run lens command
 - **`XtcTextMateBundleProvider`** - TextMate grammar for syntax highlighting
 - **`XtcIconProvider`** - XTC file icons
 - **`XtcEnterHandlerDelegate`** - IntelliJ-local Enter repair for brace/empty-block indentation
@@ -612,12 +618,12 @@ Full tree-sitter support for fast, incremental parsing:
 
 3. **Complete VS Code extension**
    - Finish LSP client integration
-   - Add commands (new project, run, build)
+   - Add commands (new project, run, build) — run, build and rebuild exist in embedded and Gradle modes
    - Package and test
 
 4. **Polish IntelliJ plugin**
    - Test project wizard with `xtc init`
-   - Verify run configurations work
+   - Verify run configurations work, in embedded and Gradle modes
    - Build and test plugin ZIP
    - Test out-of-process LSP server launch on all platforms
    - Continue reducing IntelliJ/TextMate/LSP overlap issues and stale sandbox failure modes

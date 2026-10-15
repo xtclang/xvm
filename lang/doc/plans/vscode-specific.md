@@ -301,6 +301,11 @@ JSON -- no TypeScript code.
 
 ## 4. Task Provider (Build/Run/Test)
 
+**Status (2026-10-15):** implemented with a different shape than proposed below. `xtc.build.mode`
+chooses embedded or Gradle per folder; the provider contributes embedded Build/Rebuild or Gradle
+Build/Test/Clean tasks, and `xtc` run tasks follow the mode. Commands, `Cmd`/`Ctrl+F9` and Run
+shortcuts are in the [extension README](../../vscode-extension/README.md#building-and-running).
+
 ### Problem
 
 VS Code has no way to build, run, or test XTC projects. Users must manually
@@ -376,6 +381,11 @@ This mirrors the XDK run mode proposed for IntelliJ in `idea-specific.md`.
 ---
 
 ## 5. Debug Adapter (DAP) Integration
+
+**Status (2026-10-15):** the `xtc` debug type is contributed, but there is no runtime debugger. Launch
+configurations and `F5` run the module without debugging, following `xtc.build.mode`, and the DAP stub
+is not started. Real debugging is R6/R7 in the
+[execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance).
 
 ### Problem
 
