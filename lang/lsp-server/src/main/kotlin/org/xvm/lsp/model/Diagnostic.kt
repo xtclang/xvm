@@ -7,7 +7,17 @@ data class Diagnostic(
     val message: String,
     val code: String? = null,
     val source: String? = null,
+    val tags: Set<Tag> = emptySet(),
 ) {
+    /** Extra meaning editors may render, such as fading [UNNECESSARY] code. */
+    enum class Tag {
+        UNNECESSARY,
+        DEPRECATED,
+        ;
+
+        companion object
+    }
+
     enum class Severity {
         ERROR,
         WARNING,
