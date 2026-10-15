@@ -21,7 +21,9 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.UnregistrationParams
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.xtclang.idea.XtcIntelliJLanguage
+import org.xtclang.idea.run.EmbeddedRunSessions
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -89,7 +91,19 @@ class XtcLanguageClient(
     override fun dispose() {
         settingsStores.forEach { it.removeSettingsListener(settingsListener) }
         compilerWatches.dispose()
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).endAll("The Ecstasy language server stopped")
         super.dispose()
+    }
+
+    /** Output of an embedded run, for the console registered under its run ID. */
+    @JsonNotification("xtc/runOutput")
+    fun runOutput(params: RunOutputParams) {
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).output(params)
+    }
+
+    @JsonNotification("xtc/runExited")
+    fun runExited(params: RunExitedParams) {
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).exited(params)
     }
 
     override fun setServerWrapper(wrapper: LanguageServerWrapper) {
