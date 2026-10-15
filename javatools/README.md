@@ -55,6 +55,7 @@ facts into immutable editor models, applies document-version checks and implemen
 | Source-tree copying | Probe proposed syntax on an independently parented tree without changing the source tree being inspected. | `AstNode.copyTree` and its covariant specializations. |
 | Tolerant repositories and explicit dependency validation | Preserve best-effort repository lookup while letting the adapter validate the specific dependency bytes it accepts. | `DirRepository`, `FileRepository`, `LinkedRepository` and the adapter's `XdkDependency`; no new repository reporting API. |
 | Scoped compiler state and cache reporting | Release operation-owned listeners and temporary state, and replay cached diagnostics to the current attempt. | `Reporting`, `TransientThreadLocal` and `TypeInfo` diagnostic replay. |
+| Running a built module for an IDE | Run a named entry method with exact arguments in a reusable runtime, without the runner's HTTP host, so editors can offer Run without Gradle. | `EmbeddingSupport.runMethod`, `InterpreterControl` and `lib_runner` tasks; the language server's [embedded build and run](../lang/lsp-server/README.md#embedded-build-and-run). |
 
 ### Preserve selected semantic facts
 
