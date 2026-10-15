@@ -1549,7 +1549,7 @@ to the compiler-only PR:
 - [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
   *Partial:* lazy reused worker, replaced after death, closed with the server; no generation handshake.
 - [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
-  *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; no shared playbook cases.
+  *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; shared X280–X284 pass natively.
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
@@ -1591,6 +1591,18 @@ PR contains them. Each commit message records its own validation, problems fixed
 | `1a89eb1a5` | IntelliJ build mode page, project task runner, run configuration modes, process handler, Run lens action | `lang/intellij-plugin/**` | Same as VS Code; needs the server commit |
 | `50fb713a0` | Plan status, playbook section 18a, plan/index notes | `lang/doc/**`, `lang/README.md` | Travels with whichever of the three commits above is extracted; the plan and playbook describe all of them |
 | `590935e77` | `javatools/LSP-COMPILER.md` → `lsp-compiler.md`; documentation links to `AGENTS.md` instead of `CLAUDE.md` | `javatools/`, `docs/errs-error-listeners.md`, `lang/README.md`, `lang/lsp-server/*.md`, `plugin/README.md` | Mirror into #693 and the outside-`lang/` comparison (both still have the old name) at their next synchronization; independent of the feature |
+
+Follow-up commits on 2026-10-15, after the five above:
+
+| Commit | Scope | Extraction target |
+|---|---|---|
+| `b3eea17d0` | VS Code run tasks end when the program has exited (a stop followed by a quick run no longer finds the worker busy); `onDidUpdateExecution` for observing terminals | With `94a1e8c19` |
+| `e658825c1` | `tagDefinitions` and `tags` in the shared catalog; 16 cases tagged `slow` from recorded median timings; both harnesses validate and report tags | Playbook infrastructure; independent of the feature, mirror into #693 with the catalog |
+| `4598957ce` | Shared cases X280–X284 (Run lens, embedded build, arguments/exit code, Stop then next run, failed build) and VS Code adapter switching in X137, with drivers and probes in both editors | With the editor commits; the catalog, manual rows and both drivers must travel together |
+
+Native receipts for these cases: VS Code `run-gZtT72` and IntelliJ `run-15778159105160984029`, each
+with X131, X137, X279 and X280–X284 selected, all passing on the first attempt with zero IDE failures.
+No full-catalog run was made for this batch.
 
 `5a14da284` renamed the new embedding entry point to `runMethod` before commit: an eight-argument
 `run` overload made `LspTest`'s existing all-null call ambiguous. Extracting the runtime PR keeps that
