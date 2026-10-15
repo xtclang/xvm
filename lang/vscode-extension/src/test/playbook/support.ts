@@ -5,10 +5,10 @@ import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
-import { catalog, ScenarioId, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
+import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
 export const manualPath = path.resolve(__dirname, '../../../../doc/manual-test-plan.md');
-export const cases = new Map<string, { title: string; manual: string[] }>();
+export const cases = new Map<string, { title: string; manual: string[]; tags: string[] }>();
 let fixtures: Map<string, string>;
 
 export function client() {
@@ -245,7 +245,7 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
     assert.ok(scenario, `Case ${id} is missing from the shared catalog`);
     const { title, manual } = scenario;
     assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
-    cases.set(id, { title, manual });
+    cases.set(id, { title, manual, tags: scenarioTags(id) });
     test(`${id}: ${title}`, async function () {
         this.timeout(90_000);
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
