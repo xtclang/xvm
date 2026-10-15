@@ -15,8 +15,8 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ValueConstant;
 

@@ -19,10 +19,10 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -306,7 +306,7 @@ public class ArrayAccessExpression
                 TypeConstant typeInterval = pool.ensureRangeType(pool.typeInt64());
                 if (typeRequired.isA(pool.typeMatrix())
                         && exprCol.testFit(ctx, typeInterval, fExhaustive, probe).isFit()
-                    && exprRow.testFit(ctx, typeInterval, fExhaustive, probe).isFit()) {
+                        && exprRow.testFit(ctx, typeInterval, fExhaustive, probe).isFit()) {
                     // REVIEW same issue as array above
                     TypeConstant typeElement = typeRequired.resolveGenericType("Element");
                     return typeElement == null

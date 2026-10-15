@@ -86,11 +86,8 @@ public class LinkedRepository
     public VersionTree<Boolean> getAvailableVersions(String sModule) {
         VersionTree<Boolean> vers = new VersionTree<>();
         for (ModuleRepository repo : repos) {
-            VersionTree<Boolean> available = repo.getAvailableVersions(sModule);
-            if (available != null) {
-                for (Version ver : available) {
-                    vers.put(ver, true);
-                }
+            for (Version ver : repo.getAvailableVersions(sModule)) {
+                vers.put(ver, true);
             }
         }
         return vers;

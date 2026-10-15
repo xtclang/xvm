@@ -1,9 +1,5 @@
 package org.xvm.tool;
 
-import org.jetbrains.annotations.NotNull;
-
-import static java.util.Objects.requireNonNull;
-
 import java.io.File;
 
 import java.util.Arrays;
@@ -17,11 +13,11 @@ import java.util.Objects;
 
 import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.BuildInfo;
-import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -39,6 +35,11 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
@@ -53,9 +54,6 @@ import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.NONE;
 import static org.xvm.util.Severity.WARNING;
 import static org.xvm.util.Severity.worstOf;
-
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * The "launcher" commands:
@@ -132,9 +130,8 @@ public abstract class Launcher<T extends LauncherOptions>
     protected final Console m_console;
 
     /**
-     * Optional ErrorListener that receives ALL errors (tool-level and compilation). When
-     * provided (not null), errors are forwarded for external programmatic access. Console
-     * displays errors, but f_errs provides structured access.
+     * The supplied listener receives diagnostics for external programmatic access. The command
+     * line supplies an explicit discard listener because its Console already displays them.
      */
     protected final ErrorListener f_errs;
 
@@ -594,15 +591,14 @@ public abstract class Launcher<T extends LauncherOptions>
 
     /**
      * Log a compilation error (ErrorInfo from AST nodes).
-     * Displays via Console and forwards to external ErrorListener if provided.
+     * Displays via Console and forwards to the supplied ErrorListener.
      *
      * @param err the error information
      */
     @Override
     public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
-        // Console reporting may throw for FATAL. The host must receive the structured diagnostic
-        // before that abort, including its original source location and code.
+        // Console reporting may throw for FATAL; deliver the original diagnostic first.
         f_errs.log(err);
         log(err.getSeverity(), err.toString());
     }
@@ -705,9 +701,7 @@ public abstract class Launcher<T extends LauncherOptions>
         var repos = new java.util.ArrayList<ModuleRepository>(path.size() + 1);
         repos.add(makeBuildRepo());
         for (File file : path) {
-            repos.add(file.isDirectory()
-                ? new DirRepository(file, true)
-                : new FileRepository(file, true));
+            repos.add(ModuleRepository.of(file, true));
         }
         return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }
@@ -748,10 +742,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return a module repository that will store to the specified destination
      */
     protected ModuleRepository configureResultRepo(File fileDest) {
-        var resolved = resolveFile(fileDest);
-        return resolved.isDirectory()
-                ? new DirRepository(resolved, false)
-                : new FileRepository(resolved, false);
+        return ModuleRepository.of(resolveFile(fileDest), false);
     }
 
     /**
@@ -794,7 +785,7 @@ public abstract class Launcher<T extends LauncherOptions>
         String sVer = null;
         try {
             sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
-        } catch (Exception _) {}
+        } catch (Exception ignore) {}
 
         // Use version from a single source of truth if the module version is not available
         if (sVer == null) {
@@ -1024,7 +1015,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     public static final String MISSING_PKG_NODE = "LAUNCHER-03";
     /**
-     * Failure reading: {0}
+     * Failure reading: {0}; {1}
      */
     public static final String READ_FAILURE     = "LAUNCHER-04";
 

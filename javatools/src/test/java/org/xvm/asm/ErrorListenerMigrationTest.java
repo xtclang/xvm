@@ -17,14 +17,14 @@ import org.xvm.compiler.Source;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static org.xvm.asm.ErrorListener.NOWHERE;
 
 /** Migration examples that compile independently of later listener-ownership changes. */
 class ErrorListenerMigrationTest {

@@ -1,7 +1,5 @@
 package org.xvm.compiler.ast;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +21,8 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * The AnonInnerClass represents the suggested shape for an anonymous inner class.
  */
@@ -35,9 +35,10 @@ public class AnonInnerClass {
      */
     public AnonInnerClass(TypeExpression expr, ErrorListener errs) {
         assert expr != null;
+        requireNonNull(errs, "errs");
 
         m_exprType = expr;
-        f_errs     = requireNonNull(errs, "errs");
+        f_errs     = errs;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

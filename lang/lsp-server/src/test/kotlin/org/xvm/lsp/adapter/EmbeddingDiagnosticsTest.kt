@@ -6,10 +6,8 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
-import org.xvm.asm.FileRepository
 import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
@@ -80,12 +78,7 @@ class EmbeddingDiagnosticsTest {
         val bytes = file.readBytes()
         ByteBuffer.wrap(bytes).putInt(2 * Int.SIZE_BYTES, FileStructure.getToolMinorVersion() - 1)
         Files.write(file.toPath(), bytes)
-        val repository: ModuleRepository =
-            if (singleFile) {
-                FileRepository(file, true)
-            } else {
-                DirRepository(directory.toFile(), true)
-            }
+        val repository = ModuleRepository.of(if (singleFile) file else directory.toFile(), true)
         val support = EmbeddingSupport.instance()
 
         for (text in listOf("module Test {}", "module Test { void broken( { }")) {

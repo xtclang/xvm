@@ -13,9 +13,8 @@ import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.in;
-
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
 import static org.xvm.asm.ErrorListener.silent;
 
 /**

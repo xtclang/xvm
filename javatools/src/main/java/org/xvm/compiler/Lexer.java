@@ -1,7 +1,5 @@
 package org.xvm.compiler;
 
-import static java.util.Objects.requireNonNull;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -21,14 +19,16 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.in;
+
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isAsciiLetter;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedChar;
-
-import static org.xvm.asm.ErrorListener.in;
 
 /**
  * An Ecstasy source code parser supporting both demand-based and stream-based
@@ -47,8 +47,10 @@ public class Lexer
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
-        m_source = source;
-        f_errs   = requireNonNull(errs, "errs");
+        requireNonNull(errs, "errs");
+
+        m_source        = source;
+        f_errs = errs;
 
         eatWhitespace();
     }
@@ -131,6 +133,10 @@ public class Lexer
 
             @Override
             public Token next() {
+        // Valid input must also observe cancellation; no diagnostic may be emitted.
+        if (f_errs.isAbortDesired()) {
+            throw new CompilerException("Tokenization aborted");
+        }
                 if (hasNext()) {
                     return atoken[iNext++];
                 }
@@ -2529,7 +2535,7 @@ public class Lexer
     /**
      * Log an error, with the message parameters as a trailing varargs.
      *
-     * <p>The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
+     * The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
      * parameters can be the tail; taking them as an array in the middle is what forces a call site
      * to build one by hand.
      */
