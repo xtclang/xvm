@@ -358,7 +358,7 @@ The plugin registers these extension points in `plugin.xml`:
 
 | Extension | Class | What to Test |
 |---|---|---|
-| `notificationGroup` | — | Notification group "XTC Language Server" exists |
+| `notificationGroup` | — | Notification group "Ecstasy Language Server" exists |
 | `newProjectWizard.generator` | `XtcNewProjectWizard` | Wizard registered, generates valid project structure |
 | `configurationType` | `XtcRunConfigurationType` | Type registered with ID `XtcRunConfiguration`, factory creates configs |
 | `runConfigurationProducer` | `XtcRunConfigurationProducer` | Produces config from `.x` file context |
