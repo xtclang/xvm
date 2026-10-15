@@ -74,7 +74,7 @@ uses one adapter for its lifetime; switching requires a new process to negotiate
 
 | Adapter | Value | Description |
 |---------|-------|-------------|
-| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
+| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. Also the fallback when Tree-sitter's native library cannot load; it advertises only the features it implements, so selection ranges, signature help, semantic tokens, workspace symbols, code lenses, on-type formatting and linked editing disappear rather than answer empty. |
 | **Tree-sitter** | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
 | **XDK** (default) | `compiler` | Compiler diagnostics, semantic navigation and hierarchy across source graphs and binary dependencies. The full matching XDK library set is bundled. |
 
@@ -171,7 +171,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
-| Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; detached per-module index reused from editor/diagnostic compilation |
+| Workspace symbols | None | Workspace index | Discovered/configured source graph, including unopened modules; detached per-module index reused from editor/diagnostic compilation |
 | Semantic tokens | None | Syntax-based | Resolved names, annotations and bundled-library ownership; declaration/read-only/static/abstract/write and documentation modifiers. Editor lexical scopes retain string/keyword/literal detail |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
 | Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |

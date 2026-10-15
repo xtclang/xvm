@@ -1556,8 +1556,9 @@ to the compiler-only PR:
 
 Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Compiler-only operations must
 continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and lib_runner
-child containers are the foundation; existing IDE shell commands and the DAP stub do not satisfy
-this track. In particular, the stub's verified breakpoint response is not real breakpoint support.
+child containers are the foundation; existing IDE shell commands and the DAP placeholder do not
+satisfy this track. The placeholder reports breakpoints unverified and refuses launch (2026-10-15);
+real breakpoint support needs the runtime bridge.
 
 Current native automation inventory: **128 shared cases with driver assertions**, plus startup.
 The [native demo continuation](#native-intellij-demo-continuation-2026-09-29) records the current

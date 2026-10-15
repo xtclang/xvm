@@ -424,6 +424,8 @@ class XdkLanguageServerTest {
             assertThat(capabilities.documentLinkProvider).isNotNull()
             assertThat(capabilities.codeLensProvider).isNotNull()
             assertThat(capabilities.linkedEditingRangeProvider.left).isTrue()
+            assertThat(capabilities.documentOnTypeFormattingProvider.firstTriggerCharacter).isEqualTo("\n")
+            assertThat(capabilities.documentOnTypeFormattingProvider.moreTriggerCharacter).containsExactly("}", ";", ")")
             assertThat(capabilities.signatureHelpProvider).isNotNull()
             assertThat(capabilities.semanticTokensProvider).isNotNull()
             assertThat(capabilities.callHierarchyProvider.left).isTrue()
