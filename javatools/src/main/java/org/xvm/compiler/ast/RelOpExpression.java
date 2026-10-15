@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -24,10 +24,10 @@ import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_DivRem;
-import org.xvm.asm.op.GP_IRangeI;
+import org.xvm.asm.op.GP_ERangeE;
 import org.xvm.asm.op.GP_ERangeI;
 import org.xvm.asm.op.GP_IRangeE;
-import org.xvm.asm.op.GP_ERangeE;
+import org.xvm.asm.op.GP_IRangeI;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
 import org.xvm.asm.op.GP_Or;

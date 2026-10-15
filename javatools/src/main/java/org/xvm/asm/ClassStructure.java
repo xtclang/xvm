@@ -37,13 +37,13 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
@@ -644,7 +644,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the formal type (e.g. {@code Map<Key, Value>})
+     * @return the formal type (e.g. Map<Key, Value>)
      */
     public TypeConstant getFormalType() {
         TypeConstant typeFormal = m_typeFormal;
@@ -706,7 +706,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the normalized canonical type (e.g. {@code Map<Object, Object>})
+     * @return the normalized canonical type (e.g. Map<Object, Object>)
      */
     public TypeConstant getNormalizedType() {
         TypeConstant typeNormalized = m_typeNormalized;

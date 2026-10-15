@@ -1,7 +1,5 @@
 package org.xvm.asm;
 
-import static java.util.Objects.requireNonNull;
-
 import java.lang.management.ManagementFactory;
 
 import java.text.MessageFormat;
@@ -23,6 +21,8 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.ast.AstNode;
 
 import org.xvm.util.Severity;
+
+import static java.util.Objects.requireNonNull;
 
 import static org.xvm.util.Handy.quotedString;
 
@@ -96,9 +96,7 @@ public interface ErrorListener {
      * @param lPosStart   the position in the source where the error was detected
      * @param lPosEnd     the position in the source at which the error concluded
      *
-     * @deprecated use {@link #log(Severity, String, Site, Object...)}, or the severity-named
-     *             {@link #error}, {@link #warn}, {@link #info} and {@link #fatal}, and pass the
-     *             location as {@link #in in(source, lPosStart, lPosEnd)}
+     * @deprecated use {@link #log(Severity, String, Site, Object...)} with {@link #in}
      */
     @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam, Source source, long lPosStart, long lPosEnd) {
@@ -116,9 +114,7 @@ public interface ErrorListener {
      * @param xs          the XvmStructure that the error is related to; may
      *                    be null
      *
-     * @deprecated use {@link #log(Severity, String, Site, Object...)}, or the severity-named
-     *             {@link #error}, {@link #warn}, {@link #info} and {@link #fatal}, and pass the
-     *             location as {@link #at at(xs)}
+     * @deprecated use {@link #log(Severity, String, Site, Object...)} with {@link #at}
      */
     @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
@@ -756,10 +752,10 @@ public interface ErrorListener {
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
 
     /**
-     * A console sink that remembers an abort request after an ERROR or FATAL report.
+     * A forwarding sink that remembers an abort request after an ERROR or FATAL report.
      *
-     * <p>It prints reports to standard output. Unlike the older implementation, reporting does not
-     * deliberately throw to stop the operation; callers must query {@link #isAbortDesired()} and
+     * <p>Reports go to the supplied listener, or to {@link #STDERR} for standalone callers.
+     * Reporting does not deliberately throw to stop the operation; callers must query {@link #isAbortDesired()} and
      * choose their own failure handling. The abort flag remains set for the life of this instance.
      *
      * <p>This sink does not collect diagnostic codes or override the serious-error query. Use
@@ -767,12 +763,24 @@ public interface ErrorListener {
      */
     class RuntimeErrorListener
             implements ErrorListener {
+        /** Construct a standalone listener that reports to standard error. */
+        public RuntimeErrorListener() {
+            this(STDERR);
+        }
+
+        /**
+         * @param errs  the destination for runtime diagnostics
+         */
+        public RuntimeErrorListener(ErrorListener errs) {
+            f_errs = requireNonNull(errs, "errs");
+        }
+
         @Override
         public void log(ErrorInfo err) {
-            System.out.println(err.getSeverity() + ": " + err);
-            if (err.getSeverity().ordinal() >= Severity.ERROR.ordinal()) {
+            if (err.getSeverity().isAtLeast(Severity.ERROR)) {
                 m_fAbort = true;
             }
+            f_errs.log(err);
         }
 
         /**
@@ -786,7 +794,8 @@ public interface ErrorListener {
             return m_fAbort;
         }
 
-        private volatile boolean m_fAbort;
+        private final ErrorListener f_errs;
+        private volatile boolean    m_fAbort;
 
         @Override
         public String toString() {
@@ -957,9 +966,6 @@ public interface ErrorListener {
                     .append(m_sCode);
 
             if (m_aoParam != null) {
-                // the parameters are part of the identity, so they have to be compared, not
-                // digested: a 32-bit hash collides, and a collision here does not merge two
-                // reports of the same thing, it discards one of two different things
                 sb.append('#')
                   .append(Arrays.toString(m_aoParam));
             }
@@ -1084,8 +1090,14 @@ public interface ErrorListener {
     ErrorListener SILENT_DISCARD = new SilentErrorListener(Silence.DISCARD);
 
     /**
-     * Shared console fallback. Its abort flag is sticky across uses; it is not a fresh per-operation
-     * collector. Embedding hosts should supply their own listener.
+     * Stateless standard-error destination for standalone callers. Hosts should supply their own
+     * listener to receive diagnostics without writing to a process stream.
+     */
+    ErrorListener STDERR = err -> System.err.println(err.getSeverity() + ": " + err);
+
+    /**
+     * Shared standard-error fallback. Its abort flag is sticky across uses; it is not a fresh
+     * per-operation collector. Embedding hosts should supply their own listener.
      */
     ErrorListener RUNTIME = new RuntimeErrorListener();
 

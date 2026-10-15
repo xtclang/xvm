@@ -12,11 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static org.xvm.asm.ErrorListener.in;
-
-import static org.xvm.asm.ErrorListener.collecting;
-
 import static org.xvm.asm.ErrorList.UNLIMITED;
+import static org.xvm.asm.ErrorListener.collecting;
+import static org.xvm.asm.ErrorListener.in;
 
 /**
  * Tests that branching and merging behave the same for a listener supplied by a host as they do

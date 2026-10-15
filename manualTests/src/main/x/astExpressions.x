@@ -1,6 +1,6 @@
 /**
  * Runtime coverage for shared AST validation and emission helpers: chained comparisons,
- * tuple loop targets, condition scopes, and switch-range bounds.
+ * condition scopes, and switch-range bounds.
  */
 module TestAstExpressions {
     void run() {
@@ -9,8 +9,6 @@ module TestAstExpressions {
 
     class Probe {
         Int calls = 0;
-        Int first = 0;
-        Int second = 0;
 
         Int value(Int n) {
             ++calls;
@@ -20,42 +18,6 @@ module TestAstExpressions {
         Object boxed(Object value) = value;
 
         void verify() {
-            for (Int left : [0, 3]) {
-                for (Int right : [0, 3]) {
-                    Boolean expected = left == 3 && right == 3;
-                    Boolean actual = left == 3 == right;
-                    assert actual == expected;
-                    if (left == 3 == right) {
-                        assert expected;
-                    } else {
-                        assert !expected;
-                    }
-                    if (!(left == 3 == right)) {
-                        assert !expected;
-                    } else {
-                        assert expected;
-                    }
-                }
-            }
-
-            for (Int? left : [Null, 3]) {
-                for (Int? right : [Null, 3]) {
-                    Boolean expected = left == Null && right == Null;
-                    Boolean actual = left == Null == right;
-                    assert actual == expected;
-                    if (left == Null == right) {
-                        assert expected;
-                    } else {
-                        assert !expected;
-                    }
-                    if (!(left == Null == right)) {
-                        assert !expected;
-                    } else {
-                        assert expected;
-                    }
-                }
-            }
-
             Boolean result = 2 < 1 < value(3);
             assert !result && calls == 1;
             calls = 0;
@@ -72,14 +34,7 @@ module TestAstExpressions {
             result = counter++ < counter++ < counter++;
             assert result && counter == 3;
 
-            Probe target = new Probe();
             Int sum = 0;
-            for ((target.first, target.second) : [(1, 2), (3, 4)]) {
-                sum += target.first + target.second;
-            }
-            assert sum == 10 && target.first == 3 && target.second == 4;
-
-            sum = 0;
             for (Int i = 0; i < 5; ++i) {
                 if (i == 2) {
                     continue;

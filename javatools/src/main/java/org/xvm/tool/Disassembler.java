@@ -28,8 +28,9 @@ import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 
 import org.xvm.util.Handy;
 
-import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
+
+import static java.time.ZoneOffset.UTC;
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
 import static org.xvm.util.Handy.readFileBytes;
@@ -281,7 +282,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         LocalDateTime time = null;
         try {
             time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
-        } catch (Exception _) {}
+        } catch (Exception ignore) {}
         if (time == null) {
             buf.append("??? ??  ????");
         } else {
@@ -393,7 +394,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         String findString = null;
         try {
             findString = new String(readFileChars(target));
-        } catch (IOException _) {}
+        } catch (IOException ignore) {}
 
         // load the file metadata
         var findName     = target.getName();

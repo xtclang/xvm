@@ -15,12 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.asm.ErrorList.FIRST_ERROR;
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.in;
-
 import static org.xvm.asm.ErrorListener.tee;
-
-import static org.xvm.asm.ErrorList.FIRST_ERROR;
 
 /**
  * Tests the reporting API that takes the message parameters as a trailing varargs.
