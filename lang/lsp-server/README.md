@@ -464,7 +464,10 @@ diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
 
 This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
 declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
-settings. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
+settings. After startup, rescans for file events and workspace-folder changes run on a background
+`xtc-discovery` thread: the notification returns at once, a burst of events costs one or two walks,
+and no lock is held while the walk reads the disk. A walk is adopted only if no edit or newer graph
+changed what it read; otherwise it walks again. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
 It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
 
