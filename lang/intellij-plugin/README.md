@@ -174,7 +174,7 @@ adopted. Publishing requires both checks.
 ```
 
 This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
-Ultimate features and automatic trials are disabled. The 284-case catalog is shared with VS Code;
+Ultimate features and automatic trials are disabled. The 291-case catalog is shared with VS Code;
 see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](TESTING.md).
 
 The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
@@ -511,7 +511,7 @@ cd init/intellij-plugin
 gradle buildPlugin
 ```
 
-This creates: `build/distributions/xtc-intellij-plugin-<version>.zip`
+This creates: `build/distributions/intellij-plugin-<version>.zip`
 
 ### Step 5: Publish (First Time - Manual Upload)
 
@@ -522,7 +522,7 @@ For the **first release**, you must upload manually:
    - **Plugin name**: Ecstasy Language Support
    - **Category**: Languages
    - **License**: Apache 2.0
-   - **Plugin ZIP**: Upload `build/distributions/xtc-intellij-plugin-<version>.zip`
+   - **Plugin ZIP**: Upload `build/distributions/intellij-plugin-<version>.zip`
 3. Click **Upload**
 4. Wait for JetBrains to review (usually 1-2 business days for first submission)
 
