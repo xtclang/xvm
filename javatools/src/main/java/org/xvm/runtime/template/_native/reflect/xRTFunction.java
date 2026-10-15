@@ -11,7 +11,9 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
@@ -380,8 +382,8 @@ public class xRTFunction
          * Instantiate an immutable FunctionHandle for a method.
          */
         protected FunctionHandle(Container container, CallChain chain, int nDepth) {
-            super(INSTANCE.ensureClass(container, chain.getMethod(nDepth).getIdentityConstant().
-                    getSignature().asFunctionType()), chain, nDepth);
+            super(INSTANCE.ensureClass(container, chain.getMethodBody(nDepth).getSignature().
+                    asFunctionType()), chain, nDepth);
 
             m_fMutable = false;
         }
@@ -530,8 +532,13 @@ public class xRTFunction
             return Utils.ensureSize(ahArg, getVarCount());
         }
 
-        // invoke with zero or one return to be placed into the specified register;
+        // invoke with zero or one return to be placed into the specified register
         protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
+            PropertyConstant idField = getField();
+            if (idField != null) {
+                return callFieldAccessor(frame, hTarget, idField, ahVar, iReturn);
+            }
+
             return f_method == null
                 ? f_chain.isNative()
                     ? ahVar.length == 1
@@ -545,8 +552,30 @@ public class xRTFunction
                     : frame.call1(f_method, hTarget, ahVar, iReturn);
         }
 
-        // invoke with one return Tuple value to be placed into the specified register;
+        // invoke with one return Tuple value to be placed into the specified register
         protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
+            PropertyConstant idField = getField();
+            if (idField != null) {
+                boolean            fGet     = getParamCount() == 0;
+                Frame.Continuation stepNext = frameCaller -> fGet
+                        ? frameCaller.assignTuple(iReturn, frameCaller.popStack())
+                        : frameCaller.assignTuple(iReturn);
+                switch (callFieldAccessor(frame, hTarget, idField, ahVar, fGet ? Op.A_STACK : Op.A_IGNORE)) {
+                case Op.R_NEXT:
+                    return stepNext.proceed(frame);
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(stepNext);
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
             return f_method == null
                 ? f_chain.isNative()
                     ? hTarget.getTemplate().invokeNativeT(frame, f_chain.getTop(), hTarget, ahVar, iReturn)
@@ -556,8 +585,13 @@ public class xRTFunction
                     : frame.callT(f_method, hTarget, ahVar, iReturn);
         }
 
-        // invoke with multiple return values;
+        // invoke with multiple return values
         protected int callNImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn) {
+            if (getField() != null) {
+                return frame.raiseException(xException.notImplemented(frame,
+                        "Multi-return invocation of a field accessor"));
+            }
+
             return f_method == null
                 ? f_chain.isNative()
                     ? hTarget.getTemplate().invokeNativeNN(frame, f_chain.getTop(), hTarget, ahVar, aiReturn)
@@ -565,6 +599,31 @@ public class xRTFunction
                 : f_method.isNative()
                     ? hTarget.getTemplate().invokeNativeNN(frame, f_method, hTarget, ahVar, aiReturn)
                     : frame.callN(f_method, hTarget, ahVar, aiReturn);
+        }
+
+        /**
+         * @return the backing field if this handle represents a field accessor; otherwise null
+         */
+        private PropertyConstant getField() {
+            if (f_chain != null) {
+                MethodBody body = f_chain.getMethodBody(f_nDepth);
+                if (body.getImplementation() == MethodBody.Implementation.Field) {
+                    return body.getPropertyConstant();
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Read or write the backing field for the specified property.
+         */
+        private int callFieldAccessor(Frame frame, ObjectHandle hTarget, PropertyConstant idField,
+                                      ObjectHandle[] ahVar, int iReturn) {
+            // a bound field super has no executable method; bypass the accessor
+            TypeComposition clzTarget = hTarget.getComposition();
+            return getParamCount() == 0
+                    ? clzTarget.getFieldValue(frame, hTarget, idField, iReturn)
+                    : clzTarget.setFieldValue(frame, hTarget, idField, ahVar[0]);
         }
 
         /**

@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -44,6 +44,7 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -1581,34 +1582,20 @@ public class BuildContext {
     private SingleSlot loadSuper(CodeBuilder code) {
         // instantiate a function object (see Builder.loadConstant for MethodConstant)
 
-        int              nDepth      = callDepth + 1;
-        MethodBody       bodySuper   = callChain[nDepth];
-        MethodConstant   superId     = bodySuper.getIdentity();
-        IdentityConstant containerId = superId.getNamespace();
-        Component.Format format      = containerId.getComponent().getFormat();
-        String           jitName     = MethodInfo.getJitIdentity(callChain).ensureJitMethodName(typeSystem);
-        ClassDesc        containerCD;
+        int         nDepth   = callDepth + 1;
+        MethodBody  body     = callChain[nDepth];
+        JitCallDesc callDesc = resolveSuperCall();
 
-        if (format == Component.Format.MIXIN) {
-            // we need to generate a synthetic super
-            containerCD = ClassDesc.of(className);
-            jitName += HASH + String.valueOf(nDepth);
-
-            buildSuper(jitName, nDepth);
-        } else {
-            containerCD = builder.getCCDesc(containerId.getType());
-        }
-
-        JitMethodDesc               jmd  = bodySuper.getJitDesc(builder, thisType);
-        DirectMethodHandleDesc.Kind kind = DirectMethodHandleDesc.Kind.SPECIAL;
+        DirectMethodHandleDesc.Kind kind = callDesc.toKind();
 
         DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
-                containerCD, jitName, jmd.standardMD);
-        DirectMethodHandleDesc optMD = isOptimized
-                ? MethodHandleDesc.ofMethod(kind, containerCD, jitName + OPT, jmd.optimizedMD)
+                callDesc.owner(), callDesc.name(), callDesc.methodType(false));
+        DirectMethodHandleDesc optMD = isOptimized && callDesc.jmd().isOptimized
+                ? MethodHandleDesc.ofMethod(kind, callDesc.owner(), callDesc.name() + OPT,
+                        callDesc.methodType(true))
                 : null;
 
-        TypeConstant fnType = bodySuper.getIdentity().getType();
+        TypeConstant fnType = body.getIdentity().getType();
         assert fnType.isMethod();
 
         fnType = pool().bindMethodTarget(fnType);
@@ -1616,12 +1603,13 @@ public class BuildContext {
         MethodTypeDesc bindDesc = md(CD_MethodHandle, CD_JavaObject);
         ClassDesc      cd       = CD_nFunction;
         code.new_(cd)
-            .dup()
-            .aload(code.parameterSlot(0)); // ctx
+            .dup();
+        loadCtx(code);
         loadTypeConstant(code, fnType);
         code.ldc(stdMD)
             .aload(0)
             .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
+
         if (optMD == null) {
             code.aconst_null();
         } else {
@@ -1633,6 +1621,38 @@ public class BuildContext {
             .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                 CD_MethodHandle, CD_MethodHandle, CD_boolean));
         return new SingleSlot(fnType, Specific, cd, "");
+    }
+
+    /**
+     * Obtain the call descriptor to be used by super calls for this method.
+     */
+    public JitCallDesc resolveSuperCall() {
+        int        depth = callDepth + 1;
+        MethodBody body  = callChain[depth];
+
+        if (body.getImplementation() == Implementation.Field) {
+            return builder.ensureFieldAccessor(body);
+        }
+
+        IdentityConstant owner = body.getIdentity().getNamespace();
+        ClassDesc        cd;
+        String           methodName;
+        boolean          isIface;
+        if (owner.getComponent().getFormat() == Format.MIXIN) {
+            // we need to generate a synthetic super
+            cd         = builder.art.CD();
+            isIface    = false;
+            methodName = MethodInfo.getJitIdentity(callChain).ensureJitMethodName(typeSystem) + HASH + depth;
+            buildSuper(methodName, depth);
+        } else {
+            TypeConstant type = isSpecialized
+                    ? owner.getFormalType().resolveGenerics(pool(), thisType)
+                    : owner.getType();
+            cd         = builder.getCCDesc(type);
+            isIface    = type.isJitInterface();
+            methodName = MethodInfo.getJitIdentity(callChain, depth).ensureJitMethodName(typeSystem);
+        }
+        return JitCallDesc.special(cd, methodName, body.getJitDesc(builder, thisType), isIface);
     }
 
     /**

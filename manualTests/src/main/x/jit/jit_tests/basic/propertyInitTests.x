@@ -5,6 +5,8 @@ package propertyInitTests {
 
     void run() {
         testSimple();
+        testPropertySuper();
+        testBoundPropertySuper();
         testConstructor();
         testMethodProperty();
         testMethodStaticProperties();
@@ -36,6 +38,45 @@ package propertyInitTests {
         assert t.x    == 400;
         assert t.nx1  == 500;
         assert t.nx2  == Null;
+    }
+
+    void testPropertySuper() {
+        class Test {
+            Int value {
+                // super accesses this property's field without re-entering the custom accessor
+                Int get() = super() + 10;
+                void set(Int value) {
+                    super(value * 2);
+                }
+            }
+        }
+
+        Test test = new Test();
+        assert test.value == 10;
+        test.value = 7;
+        assert test.value == 24;
+    }
+
+    void testBoundPropertySuper() {
+        // binding super must retain the backing-field body in both accessor call chains
+        class Test {
+            Int value {
+                Int get() {
+                    function Int() read = super;
+                    return read() + 10;
+                }
+
+                void set(Int value) {
+                    function void(Int) write = super;
+                    write(value * 2);
+                }
+            }
+        }
+
+        Test test = new Test();
+        assert test.value == 10;
+        test.value = 7;
+        assert test.value == 24;
     }
 
     void testConstructor() {
