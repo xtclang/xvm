@@ -201,7 +201,7 @@ The configuration below overrides that discovered graph. Set `sourceModules` to 
 restore discovery; `[]` disables it. Unsaved import edges, close and dynamic folder changes now refresh discovered graphs.
 
 With a compiler build, open **Settings → Languages & Frameworks → Language Servers**, select
-**XTC Language Server**, and edit its **Configuration** JSON:
+**Ecstasy Language Server**, and edit its **Configuration** JSON:
 
 ```json
 {

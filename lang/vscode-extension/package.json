@@ -192,7 +192,7 @@
             {
                 "name": "xtc",
                 "owner": "xtc",
-                "source": "xtc",
+                "source": "Ecstasy",
                 "fileLocation": "absolute",
                 "pattern": {
                     "regexp": "^.*?(Error|Warning|Info): (.+\\.x):\\d+ \\[(\\d+):(\\d+)\\.\\.(\\d+):(\\d+)\\] (\\S+): (.*)$",
