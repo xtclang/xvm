@@ -43,6 +43,7 @@ module TestMisc {
         testEnums();
         testCircularInitialization();
         testImplicitlyAbstract();
+        testPotentiallyAmbiguous();
     }
 
     void testInts() {
@@ -961,4 +962,50 @@ module TestMisc {
         }
     }
 
+    void testPotentiallyAmbiguous() {
+        NonVoid nonVoid = new NonVoid();
+        String  text    = nonVoid.f();
+        Int     number  = nonVoid.f();
+        assert text == "Hello", number == 42;
+
+        WithVoid withVoid = new WithVoid();
+        var value = withVoid.f();
+        withVoid.f();
+        assert value == "Hello" && withVoid.voidCalled;
+
+        MultipleWithVoid multi = new MultipleWithVoid();
+        Int value2 = multi.f();
+        multi.f();
+        assert value2 == 42 && multi.voidCalled;
+
+        // A fully exact overload wins over alternatives that widen either argument.
+        ExactArguments exact = new ExactArguments();
+        assert exact.pick("first", "last") == "exact";
+
+        class NonVoid {
+            String f() = "Hello";
+            Int    f() = 42;
+        }
+
+        class WithVoid {
+            Boolean voidCalled = False;
+
+            String f() = "Hello";
+            void   f() {voidCalled = True;}
+        }
+
+        class MultipleWithVoid {
+            Boolean voidCalled = False;
+
+            String f() = "Hello";
+            Int    f() = 42;
+            void   f() {voidCalled = True;}
+        }
+
+        class ExactArguments {
+            String pick(Object first, String last) = "first widened";
+            String pick(String first, Object last) = "last widened";
+            String pick(String first, String last) = "exact";
+        }
+    }
 }

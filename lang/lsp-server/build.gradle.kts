@@ -259,12 +259,13 @@ tasks.withType<Test>().configureEach {
 tasks.test {
     // Separate JVMs isolate compiler globals while each worker reuses its bundled XDK repository.
     // Do not enable JUnit method concurrency: several regressions deliberately alter compiler state.
+    // Default to half the cores, capped because each worker holds its own XDK; -PlspTestForks overrides.
     maxParallelForks =
         providers
             .gradleProperty("lspTestForks")
-            .orElse("2")
+            .map(String::toInt)
+            .orElse(providers.provider { (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 8) })
             .get()
-            .toInt()
     val includeHeavy =
         providers
             .gradleProperty("lspTestHeavy")
