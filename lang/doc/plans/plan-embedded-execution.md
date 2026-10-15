@@ -48,7 +48,7 @@ new *Module source* field. Each commit message records its validation, problems 
 | Current execution limits | Runner invokes `container.invoke("run", ())`; custom injections are rejected; [external console](../../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java) cannot read input | Entry-point arguments, input, output channels, asynchronous completion/stop and bounded shutdown need an explicit host API |
 | Existing repeat-run probe | [LspTest](../../../javatools/src/test/java/org/xvm/runtime/LspTest.java) exercises run, kill, filesystem, exceptions, repeated runs and native pool growth | This is a standalone main-based harness, not evidence supplied by an ordinary green JUnit task; promote meaningful checks into controlled regressions |
 | JIT execution | [JitControl](../../../javatools/src/main/java/org/xvm/api/JitControl.java) is unsupported; embedding selects the interpreter | First delivery targets interpreter execution; do not advertise JIT parity |
-| DAP | [XtcDebugServer](../../dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) logs requests, invents a thread and returns verified breakpoints without runtime installation | A transport stub is not debugging. Stop claiming verified breakpoints until a runtime bridge confirms them |
+| DAP | [XtcDebugServer](../../dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) is a placeholder: breakpoints are reported unverified with the reason, launch and attach fail with it, and there are no threads | A transport stub is not debugging. Breakpoints stay unverified until a runtime bridge confirms them |
 | Interpreter debugger | [Debugger](../../../javatools/src/main/java/org/xvm/runtime/Debugger.java) has frame/PC hooks; [ServiceContext](../../../javatools/src/main/java/org/xvm/runtime/ServiceContext.java) returns the global `DebugConsole.INSTANCE` | A real DAP bridge needs session-scoped debugger ownership and suspension/control APIs; parsing console output is not a suitable integration |
 
 ## Recommended ownership and process model
@@ -218,6 +218,9 @@ this bridge; they cannot be inferred from compiler type hints.
 - [ ] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
   no-debug execution, output, completion, disconnect and terminate to the same session service.
   Advertise only functioning requests. DAP facade shutdown must follow an explicit run ownership policy.
+  The placeholder half is done: synthetic breakpoints and threads are gone, launch and attach fail with
+  the reason, and only the configuration handshake is advertised (`XtcDebugServerTest`). The session
+  service connection is not.
 - [ ] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
   breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping and bounded
   evaluation. Test source revisions, stale handles, resume/stop races and multiple service contexts.
