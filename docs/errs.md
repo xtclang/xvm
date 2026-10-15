@@ -2482,8 +2482,10 @@ The cause was `MethodBody.pool()`, which was
 has never had a pool pushed. It is reached from `isOp()` and from `toString()`, so printing a
 MethodBody threw out of the code meant to describe it, and an assertion failure mentioning one
 could not report itself. Exactly the fault `FileStructure.getErrorListener()` had, from the same
-thread-local. Guarded now, falling back to the pool the body's own identity belongs to, with
-`MethodBodyAmbientPoolTest` pinning it on a thread that has no ambient pool.
+thread-local. The owner fallback first added for it was withdrawn in the I2 review (see
+[the ambient constant pool](#the-ambient-constant-pool-explicit-scopes-retained-after-i2-review)):
+`MethodBody.pool()` still reads the ambient pool, so inspection, including formatting an assertion,
+belongs inside a `ConstantPool.withPool` scope.
 
 **What that probe established about caching:**
 
