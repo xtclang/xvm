@@ -1,5 +1,8 @@
 {
   "schemaVersion": 2,
+  "tagDefinitions": {
+    "slow": "Median of at least 10 s in either editor across the recorded passing playbook runs up to 2026-10-08 (most cases take 1-4 s). A future fast profile may exclude these; full and focused runs still include them."
+  },
   "common": {
     "sourceModules": [
       {
@@ -785,6 +788,9 @@
     },
     "X27": {
       "title": "real file-watcher creation and deletion refresh the module",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Project/Bad.x",
@@ -1243,6 +1249,9 @@
     },
     "X50": {
       "title": "unsaved and saved dependency members invalidate and recover consumers",
+      "tags": [
+        "slow"
+      ],
       "manual": [
         "Named unsaved member uses LSP didOpen/didClose; filesystem half uses the real VS Code watcher"
       ],
@@ -1563,6 +1572,9 @@
     },
     "X65": {
       "title": "property getters setters and default field overrides have distinct implementation sets",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Properties.x",
@@ -1665,6 +1677,9 @@
     },
     "X67": {
       "title": "closed property accessors track unsaved positions and recover after parse failure",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "original": "class Member implements Named<String> { @Override String name.get() = \"member\"; }",
@@ -2713,6 +2728,9 @@
     },
     "X97": {
       "title": "argument fitting through qualifiers and groups before later arguments",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Editing.x",
@@ -3593,6 +3611,9 @@
     },
     "X108": {
       "title": "multiple-return generic and package headers complete in the enclosing scope",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Editing.x",
@@ -4210,6 +4231,9 @@
     },
     "X122": {
       "title": "implement and override source and bundled methods with native Undo and Redo",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Actions.x",
@@ -4713,6 +4737,9 @@
     },
     "X142": {
       "title": "constant property initializer retains semantic navigation and rename",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "X142/FoldedInitializer.x",
@@ -4731,6 +4758,9 @@
     },
     "X143": {
       "title": "partial workspace symbols have bounded batches and no duplicate final items",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "X143/PartialSymbols.x",
@@ -4747,6 +4777,9 @@
     },
     "X144": {
       "title": "installed client rejects stale versioned edits and preserves native Undo",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "GuardedEdit.x",
@@ -4765,6 +4798,9 @@
     },
     "X145": {
       "title": "visible compiler progress, native cancel and disconnect with pending work",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "ProgressWork.x",
@@ -4780,6 +4816,9 @@
     },
     "X146": {
       "title": "dependency edits refresh untouched consumer presentation",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "library": "RefreshLibrary.x",
@@ -4812,6 +4851,9 @@
     },
     "X148": {
       "title": "extract a literal return value with native undo and redo",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Extract.x",
@@ -8484,6 +8526,9 @@
     },
     "X265": {
       "title": "Close a project or remove a workspace folder during compiler import",
+      "tags": [
+        "slow"
+      ],
       "manual": [
         "Start a gated import in a second project/folder and close/remove it. The producer must retire, late output must not restore its inputs, and the original project must remain usable."
       ],
@@ -8662,6 +8707,9 @@
     },
     "X277": {
       "title": "theme lexical detail survives semantic overlays and damaged source repair",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "ThemeFallback.x",
@@ -8742,6 +8790,9 @@
     },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "consumer": "Consumer.x"
