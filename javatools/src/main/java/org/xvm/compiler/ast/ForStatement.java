@@ -40,7 +40,7 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  */
 public class ForStatement
-        extends ConditionalStatement
+        extends LoopStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -239,19 +239,7 @@ public class ForStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        ValidationScope previous = m_labelVars;
-        try {
-            return validateScoped(ctx, errs);
-        } finally {
-            m_labelVars = previous;
-        }
-    }
-
-    /**
-     * Validate with callback state restored by {@link #validateImpl} on every exit.
-     */
-    private Statement validateScoped(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         boolean fValidInit = true;
 
         // the for() statement will represent its own scope
@@ -600,9 +588,8 @@ public class ForStatement
 
     private transient Label m_labelContinue;
 
-    private transient ValidationScope m_labelVars;
-    private transient Register        m_regFirst;
-    private transient Register        m_regCount;
+    private transient Register m_regFirst;
+    private transient Register m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.

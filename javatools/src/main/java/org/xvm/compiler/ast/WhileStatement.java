@@ -40,7 +40,7 @@ import static org.xvm.util.Handy.indentLines;
  * A "while" or "do while" statement.
  */
 public class WhileStatement
-        extends ConditionalStatement
+        extends LoopStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -143,19 +143,7 @@ public class WhileStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        ValidationScope previous = m_labelVars;
-        try {
-            return validateScoped(ctx, errs);
-        } finally {
-            m_labelVars = previous;
-        }
-    }
-
-    /**
-     * Validate with callback state restored by {@link #validateImpl} on every exit.
-     */
-    private Statement validateScoped(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         // there are a set of assumptions coming in:
         // - the loop is actually going to loop, as in "it is able to execute more than once"
         //   -> while(False) obviously does not result in any execution of the body whatsoever (the
@@ -673,10 +661,9 @@ public class WhileStatement
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private transient Label           m_labelContinue;
-    private transient ValidationScope m_labelVars;
-    private transient Register        m_regFirst;
-    private transient Register        m_regCount;
+    private transient Label    m_labelContinue;
+    private transient Register m_regFirst;
+    private transient Register m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.

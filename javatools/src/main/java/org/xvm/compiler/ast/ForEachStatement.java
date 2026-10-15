@@ -51,7 +51,7 @@ import static org.xvm.util.Handy.indentLines;
  * An "Iterable"-based "for" statement.
  */
 public class ForEachStatement
-        extends ConditionalStatement
+        extends LoopStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -254,19 +254,7 @@ public class ForEachStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        ValidationScope previous = m_labelVars;
-        try {
-            return validateScoped(ctx, errs);
-        } finally {
-            m_labelVars = previous;
-        }
-    }
-
-    /**
-     * Validate with callback state restored by {@link #validateImpl} on every exit.
-     */
-    private Statement validateScoped(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
         // original error listener
@@ -1313,7 +1301,6 @@ public class ForEachStatement
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
-    private transient ValidationScope  m_labelVars;
     private transient Register         m_regFirst;
     private transient Register         m_regLast;
     private transient Register         m_regCount;
