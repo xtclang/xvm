@@ -45,6 +45,10 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
         <action id="xtc.resolveCodeAction" class="org.xtclang.idea.lsp.XtcResolveCodeAction"/>
+        <!-- The Run lens's LSP command: builds and runs the module the way the project builds and runs. -->
+        <action id="xtc.runModule" class="org.xtclang.idea.run.XtcRunModuleAction"
+                text="Run Ecstasy Module" description="Build and run the Ecstasy module in this editor"
+                icon="AllIcons.Actions.Execute"/>
         <action id="xtc.toggleServerLog" class="org.xtclang.idea.lsp.XtcServerLogAction"
                 text="Toggle Ecstasy Language Server Log"
                 description="Show the Ecstasy server log or hide the Language Servers tool window">
@@ -68,6 +72,11 @@
                              instance="org.xtclang.idea.lsp.LanguageServiceProjectConfigurable"/>
         <projectConfigurable id="xtc.compiler" parentId="language" displayName="Ecstasy Compiler"
                              instance="org.xtclang.idea.lsp.CompilerProjectConfigurable"/>
+        <!-- Build, Execution, Deployment | Ecstasy: build and run with the embedded compiler or Gradle -->
+        <projectConfigurable id="xtc.build" parentId="build" displayName="Ecstasy"
+                             instance="org.xtclang.idea.run.XtcBuildConfigurable"/>
+        <!-- Build and Rebuild Project in embedded mode; ahead of the IDE's own builder for Ecstasy modules -->
+        <projectTaskRunner implementation="org.xtclang.idea.run.XtcProjectTaskRunner" order="first"/>
         <!-- Notification group for LSP status messages -->
         <notificationGroup id="XTC Language Server"
                            displayType="BALLOON"
