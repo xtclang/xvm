@@ -84,6 +84,13 @@ public class CallChain {
     }
 
     /**
+     * @return the method body at the specified depth
+     */
+    public MethodBody getMethodBody(int nDepth) {
+        return f_aMethods[nDepth];
+    }
+
+    /**
      * @return the top method
      */
     public MethodStructure getTop() {

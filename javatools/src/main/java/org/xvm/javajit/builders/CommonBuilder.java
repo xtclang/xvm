@@ -51,6 +51,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.JitCallDesc;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
@@ -139,13 +140,21 @@ public class CommonBuilder
      */
     protected Map<Constant, Integer> constants = new HashMap<>();
 
-    protected static final String CONST_PROP = "$sc";
-
     /**
      * Methods that were added during the compilation. They are either nested in properties/methods
      * or methods declared on the mixins or annotations that were added to the "impl" class.
      */
     protected final Set<IdentityConstant> extraMethods = new HashSet<>();
+
+    /**
+     * Backing-field entries reached by accessor super calls, separate from the custom accessors.
+     */
+    private final Map<String, MethodBody> fieldSupers = new HashMap<>();
+
+    /**
+     * Static constant field prefix (e.g. "$sc0", "$sc1")
+     */
+    protected static final String CONST_PROP = "$sc";
 
     @Override
     public void build(ClassBuilder classBuilder) {
@@ -158,10 +167,60 @@ public class CommonBuilder
             assembleProperties(classBuilder);
             assembleMethods(classBuilder);
 
+            // emit the backing-field accessors requested while compiling direct or bound super calls
+            for (Map.Entry<String, MethodBody> entry : fieldSupers.entrySet()) {
+                MethodBody   body = entry.getValue();
+                PropertyInfo prop = body.getPropertyConstant().getPropertyInfo(thisType);
+                if (body.getIdentity().getName().equals("get")) {
+                    generateTrivialGetter(classBuilder, prop, entry.getKey());
+                } else {
+                    generateTrivialSetter(classBuilder, prop, entry.getKey());
+                }
+            }
+
             // static initializer must be assembled at the very end, after all potentially used
             // TypeConstants have been collected
             assembleCLInit(classBuilder);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>For example, in "Int get() = super() + 10", super() reads the stored value
+     * without re-entering the custom getter. This "Field" body has no MethodStructure
+     * and therefore no ordinary Java method to call.
+     *
+     * <p>Register a synthetic accessor and return its call descriptor. Generation is
+     * deferred until after the regular methods have been assembled, so repeated requests
+     * share one generated accessor.
+     *
+     * <p>The synthetic name is the property's resolved JIT getter/setter name followed
+     * by "$field", preserving any existing name disambiguation. The trivial accessor
+     * generator then adds "$p" for the optimized form:
+     *
+     *     accessorName + "$field"       // standard
+     *     accessorName + "$field$p"     // optimized
+     *
+     * The distinct name prevents calls from re-entering the custom accessor; it does
+     * not rename the backing field. It also serves as the registry key, so repeated
+     * requests for the same accessor generate only one method.
+     */
+    @Override
+    public JitCallDesc ensureFieldAccessor(MethodBody body) {
+        assert body.getImplementation() == Implementation.Field;
+
+        // an accessor's terminal super has no MethodStructure; generate a distinct field entry
+        // so both direct calls and bound super handles bypass the custom accessor
+        PropertyInfo  prop   = body.getPropertyConstant().getPropertyInfo(thisType);
+        boolean       getter = body.getIdentity().getName().equals("get");
+        String        name   = (getter ? prop.ensureGetterJitMethodName(typeSystem)
+                                       : prop.ensureSetterJitMethodName(typeSystem)) + "$field";
+        JitMethodDesc jmd    =  getter ? prop.getGetterJitDesc(this, thisType)
+                                       : prop.getSetterJitDesc(this, thisType);
+        fieldSupers.putIfAbsent(name, body);
+
+        return JitCallDesc.special(art.CD(), name, jmd, false);
     }
 
     @Override
@@ -1339,8 +1398,11 @@ public class CommonBuilder
     }
 
     protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
-        String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        generateTrivialGetter(classBuilder, prop, prop.ensureGetterJitMethodName(typeSystem));
+    }
+
+    private void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop, String getterName) {
+        String jitFieldName = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc     CD_this = art.CD();
         int           flags   = ClassFile.ACC_PUBLIC;
@@ -1350,7 +1412,7 @@ public class CommonBuilder
         }
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = isOpt ? jitGetterName + OPT : jitGetterName;
+        String         jitName = isOpt ? getterName + OPT : getterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
@@ -1421,7 +1483,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(classBuilder, jitGetterName, jmd);
+            assembleMethodWrapper(classBuilder, getterName, jmd);
         }
     }
 
@@ -1442,14 +1504,17 @@ public class CommonBuilder
     }
 
     protected void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitSetterName = prop.ensureSetterJitMethodName(typeSystem);
-        String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        generateTrivialSetter(classBuilder, prop, prop.ensureSetterJitMethodName(typeSystem));
+    }
+
+    private void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop, String setterName) {
+        String jitFieldName = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
         ClassDesc      CD_this = art.CD();
         JitMethodDesc  jmd     = prop.getSetterJitDesc(this, thisType);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = isOpt ? jitSetterName + OPT : jitSetterName;
+        String         jitName = isOpt ? setterName + OPT : setterName;
         int            flags   = ClassFile.ACC_PUBLIC;
 
         if (jmd.isOptimizedStatic) {
@@ -1566,7 +1631,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(classBuilder, jitSetterName, jmd);
+            assembleMethodWrapper(classBuilder, setterName, jmd);
         }
     }
 

@@ -3,6 +3,7 @@ module TestProps {
 
     void run() {
         testStandardProperty();
+        testBoundPropertySuper();
         testMethodProperty();
         testPropertyProperty();
         testLazyProperty();
@@ -41,6 +42,28 @@ module TestProps {
         }
         Duration time = timer.elapsed;
         console.print($"get/set property latency {((time - timeBase) / (iterations * 10)).nanoseconds} ns");
+    }
+
+    void testBoundPropertySuper() {
+        // a copy of propertyInitTests.testBoundPropertySuper()
+        class Test {
+            Int value {
+                Int get() {
+                    function Int() read = super;
+                    return read() + 10;
+                }
+
+                void set(Int value) {
+                    function void(Int) write = super;
+                    write(value * 2);
+                }
+            }
+        }
+
+        Test test = new Test();
+        assert test.value == 10;
+        test.value = 7;
+        assert test.value == 24;
     }
 
     void testMethodProperty() {
