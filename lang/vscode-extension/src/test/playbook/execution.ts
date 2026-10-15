@@ -132,10 +132,14 @@ export function executionCases(): void {
         await noErrors(next.uri);
         await embedded(async executions => {
             const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: forever.uri.toString(), mode: 'embedded' }, getClient);
-            let execution: vscode.TaskExecution | undefined;
-            await executions.start('run', data.module, async () => { execution = await vscode.tasks.executeTask(task); },
-                update => update.text.includes(data.started) && !finished(update), 'Long-running program starts');
-            execution!.terminate();
+            const started = (update: ExecutionUpdate) => update.text.includes(data.started) && !finished(update);
+            await executions.start('run', data.module, () => vscode.tasks.executeTask(task), started, 'Long-running program starts');
+            // Tasks: Restart Running Task stops the program, waits for its exit, then runs it again
+            await executions.start('run', data.module,
+                () => vscode.commands.executeCommand('workbench.action.tasks.restartTask', `Run ${data.module}`), started, 'Rerun starts a new run');
+            const execution = vscode.tasks.taskExecutions.find(item => item.task.name === `Run ${data.module}`);
+            assert.ok(execution, 'The rerun task is active');
+            execution.terminate();
             await executions.await('run', data.module, finished, 'Stopped program reports its exit');
             // the worker is free again: the Run lens command runs the next program
             const result = await executions.start('run', data.nextModule,
