@@ -46,7 +46,7 @@ internal fun ErrorListener.ErrorInfo.toDiagnostic(
                 message
             },
         code = code,
-        source = "xtc",
+        source = Diagnostic.SOURCE,
     )
 }
 

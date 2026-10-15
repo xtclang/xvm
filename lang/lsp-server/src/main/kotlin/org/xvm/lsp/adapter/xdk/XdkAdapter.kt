@@ -1263,7 +1263,7 @@ class XdkAdapter
          */
         private fun compileNow(request: Request): ModuleAnalysis {
             request.problem?.let {
-                return unavailableProjectModule(request.uri, request.dependencies, "SOURCE-GRAPH", it)
+                return unavailableProjectModule(request.uri, request.dependencies, Diagnostic.Codes.SOURCE_GRAPH, it)
             }
             val order = request.project.buildOrder(request.scope)
             if (order.isEmpty()) {
@@ -1322,7 +1322,7 @@ class XdkAdapter
                                     unavailableProjectModule(
                                         uri,
                                         inputs,
-                                        "SOURCE-UNAVAILABLE",
+                                        Diagnostic.Codes.SOURCE_UNAVAILABLE,
                                         "Cannot read source for ${module.name}: $reason",
                                     )
                                 }
@@ -1331,7 +1331,7 @@ class XdkAdapter
                                     unavailableProjectModule(
                                         uri,
                                         inputs,
-                                        "DEPENDENCY-FAILED",
+                                        Diagnostic.Codes.DEPENDENCY_FAILED,
                                         "Dependencies unavailable: ${missing.joinToString()}",
                                         sources.documentUris,
                                     )
@@ -1398,7 +1398,7 @@ class XdkAdapter
                         Diagnostic.Severity.ERROR,
                         message,
                         code,
-                        SOURCE,
+                        Diagnostic.SOURCE,
                     ),
                 ),
             dependencies = emptySet(),
@@ -1472,7 +1472,7 @@ class XdkAdapter
                 return unavailableProjectModule(
                     uri,
                     inputs,
-                    "PROJECT-MODULE",
+                    Diagnostic.Codes.PROJECT_MODULE,
                     "Expected module $moduleName, found ${artifact.module}",
                     documentUris,
                 )
@@ -2498,7 +2498,6 @@ class XdkAdapter
             )
 
         private companion object {
-            const val SOURCE = "xtc"
             const val SHUTDOWN_SECONDS = 5L
             const val DEBOUNCE_MILLIS = 100L
 
