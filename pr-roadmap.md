@@ -23,6 +23,8 @@ and remaining R1–R8 work are in the
 | `b3eea17d0` | VS Code run tasks wait for the program's exit after Stop | With `94a1e8c19` |
 | `e658825c1` | `slow` tags in the shared playbook catalog | Playbook infrastructure (#693) |
 | `4598957ce` | Shared playbook cases X280–X284 and VS Code adapter switching in X137 | With the editor commits (#693) |
+| `981e61638`, `9e7b63749`, `0f40b48ef` | Playbook: Rerun in X283, debug launches (X285), adapter chooser and shortcut (X286) | With `4598957ce` (#693) |
+| `e6157bb74` | IntelliJ macOS keymap keeps Control+Option+X for the adapter and log shortcuts | Small plugin fix; with the IntelliJ commits or standalone |
 
 The runtime-execution PR would be small (three files) and independent of the compiler foundation
 PRs; it must keep the distinct `runMethod` name, which avoids an overload ambiguity in existing
