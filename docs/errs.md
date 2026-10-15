@@ -1,3 +1,10 @@
+**Embedded build and run (2026-10-15):** both IDEs can build with the language server's compiler and
+run in a persistent execution worker JVM, beside the Gradle path: VS Code `xtc.build.mode`, IntelliJ
+Build, Execution, Deployment › Ecstasy. This is a first delivery of R2–R5 in the
+[execution plan](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15); debugging
+is not included. Commits, extraction targets and validation are in the
+[integration plan](errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
+
 **Build/test artifact retention (2026-10-06):** cleanup reduced this checkout from approximately
 23 GiB to 13 GiB while preserving all Git worktrees and compact test receipts. Gradle editor tests
 now retain five completed payloads, protect pinned/unfinished runs and remove disposable IntelliJ
@@ -245,7 +252,9 @@ keeps the compiler PR focused while defining how compilation artifacts feed reus
 sessions. Both IDEs will use the same build/run contract; a supervised execution worker reuses
 EmbeddingSupport/lib_runner and creates fresh application containers. R1–R8 cover the runtime and
 DAP work. Compiler ASTs/pools stay worker-owned, compile-only paths never start the VM, and source
-revisions remain paired with emitted artifacts for reruns and future breakpoint mapping.
+revisions remain paired with emitted artifacts for reruns and future breakpoint mapping. The
+[first delivery](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15) (2026-10-15)
+implements embedded Build/Run in both IDEs; compile-only paths still never start the runtime.
 
 **L63 member actions:** the compiler adapter implements individual and atomic all-required-member
 stubs at a class name. The latest implementation adds bundled/binary contracts, qualified foreign
@@ -868,6 +877,7 @@ which read like an accessor.
 | `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
 | Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
 | `Compilation.sourceTrees()` / `ModuleInfo.getParsedSources()` | Preserve per-file syntax after a loading/parsing error without presenting it as an assembled or semantically valid module. Structural queries can retain current outlines and ranges. |
+| `runMethod(repository, module, version, method, args, console, rootDir, errs)` | Embedded IDE Run: invokes a named entry method with an exact argument list, using the command-line runner's selection rule (exactly one method of that name, at most one required parameter). The runtime connector no longer starts the runner's HTTP host, and `lib_runner` tasks take the method and arguments. The existing `run(...)` overloads are unchanged; the new entry point has a distinct name so existing all-null calls stay unambiguous. |
 | `analyzeIncomplete(...)` / `PartialAnalysis` | Opt-in probe for an incomplete `receiver.` or call. The original Source overload supports a standalone trailing EOF statement; explicit-cursor Source and ModuleInfo overloads support statement, simple assignment/initializer, single return and final nested-argument contexts, with unchanged text and module overlays. Retains intact syntax, receiver/argument validation and lexical parentage; never returns a compiled module or selects an incomplete call's overload. Normal compilation is unchanged. |
 
 The source-tree API adds `compileModule(ModuleInfo, repository, errs)` and the protected
