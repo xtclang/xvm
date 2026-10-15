@@ -1470,6 +1470,7 @@ class XtcLanguageServer(
             diagnostics.map {
                 it.toLsp(uri).apply {
                     if (!options.diagnosticRelatedInformation) relatedInformation = null
+                    tags = tags?.filter(options.diagnosticTags::contains)?.ifEmpty { null }
                 }
             }
         currentClient.publishDiagnostics(

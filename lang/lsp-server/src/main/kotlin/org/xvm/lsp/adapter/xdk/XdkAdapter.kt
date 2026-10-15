@@ -2122,7 +2122,7 @@ class XdkAdapter
         ): CompletableFuture<List<CodeAction>> =
             if (hasProject(uri)) {
                 projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range), emptyList()) {
-                    it.codeActions(uri, range)
+                    it.codeActions(uri, range, diagnostics)
                 }
             } else {
                 CompletableFuture.completedFuture(

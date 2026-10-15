@@ -796,6 +796,7 @@ class XtcTextDocumentService(
                 params.previousResultId,
                 if (server.supportsRelatedDiagnostics) current else emptySet(),
                 relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
+                tags = server.presentation.pullDiagnosticTags,
             )
         }
 
@@ -821,6 +822,7 @@ class XtcTextDocumentService(
                 params.previousResultIds.orEmpty().associate { it.uri to it.value },
                 openDocuments.mapValues { it.value.version },
                 relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
+                tags = server.presentation.pullDiagnosticTags,
             )
         }
 
@@ -1474,17 +1476,18 @@ class XtcTextDocumentService(
         }
     }
 
-    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> =
-        queryAsync(
+    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> {
+        // a quick fix names the diagnostics it resolves; answer with the client's own diagnostic objects
+        val context = params.context.diagnostics.orEmpty()
+        val originals = context.associateBy { Diagnostic.fromLsp(params.textDocument.uri, it) }
+        return queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
             {
                 adapter.getCodeActionsAsync(
                     params.textDocument.uri,
                     toAdapterRange(params.range),
-                    params.context.diagnostics.orEmpty().map {
-                        Diagnostic.fromLsp(params.textDocument.uri, it)
-                    },
+                    originals.keys.toList(),
                 )
             },
             workspace = true,
@@ -1529,6 +1532,11 @@ class XtcTextDocumentService(
                     CodeAction().apply {
                         title = action.title
                         this.kind = action.kind.toLsp()
+                        diagnostics =
+                            action.diagnostics
+                                .mapNotNull(originals::get)
+                                .distinct()
+                                .ifEmpty { null }
                         isPreferred =
                             action.isPreferred.takeIf { server.presentation.preferredActions }
                         this.edit = proposed
@@ -1537,6 +1545,7 @@ class XtcTextDocumentService(
                 )
             }
         }
+    }
 
     internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
         queryAsync(
