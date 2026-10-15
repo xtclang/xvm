@@ -133,6 +133,27 @@ internal fun ParityScenarios.executionCases() {
             check(!output.lines().any { it.startsWith("Process finished") && "exit code 0" in it }) { "Nothing ran: $output" }
         }
     }
+
+    case("X285") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val module = data.string("module")
+            val runners =
+                JsonParser
+                    .parseString(
+                        with(driver) { withContext(OnDispatcher.EDT) { execution.runners(project, module) } },
+                    ).asJsonObject
+            check(runners["run"].asBoolean) { "Run must be available: $runners" }
+            check(!runners["debug"].asBoolean) { "Without a debugger, Debug must not be offered: $runners" }
+            execution.run(project, module, uri(data.string("file")), "")
+            awaitUi("embedded run finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+            check(
+                execution.exitCode(module) == data.int("exitCode"),
+            ) { "Exit code ${execution.exitCode(module)}: ${execution.output(module)}" }
+        }
+    }
 }
 
 /** Runs [body] with the project in embedded build mode, restoring the previous mode afterwards. */
@@ -171,6 +192,11 @@ interface EmbeddedExecutionProbe {
         project: Project,
         module: String,
     )
+
+    fun runners(
+        project: Project,
+        module: String,
+    ): String
 
     fun rerun(
         project: Project,
