@@ -1541,10 +1541,15 @@ is part of overall professional XTC tooling completeness; these tasks are not si
 to the compiler-only PR:
 
 - [ ] **R1:** controlled repeat-run/runtime API baseline, including native-pool growth.
+  *Partial:* worker regressions for exits, exceptions, arguments, stop/reuse and no HTTP listener.
 - [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
+  *Partial:* per-module build results and registered-structure entry points; clients save first.
 - [ ] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
+  *Partial:* entry selection, exact arguments, output, completion and stop; no console input.
 - [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
+  *Partial:* lazy reused worker, replaced after death, closed with the server; no generation handshake.
 - [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
+  *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; no shared playbook cases.
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
@@ -1561,6 +1566,65 @@ The previously missing 50 case bodies and X20/X81/X82 assertions are now written
 included in the clean 113-case native checkpoint `run-6034631232732848040`. Completion still requires
 explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
 is a percentage of total LSP completeness.
+
+### Embedded build and run R2–R5 (2026-10-15)
+
+Both IDEs now have an embedded build/run mode beside Gradle, like IntelliJ's *Build and run using*
+choice: the language server's compiler builds on its existing serialized compile queue, and a
+persistent execution worker JVM runs the result. Decisions, delivered scope and limits are in the
+[execution plan](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15); usage is in
+the [server](../lang/lsp-server/README.md#embedded-build-and-run),
+[VS Code](../lang/vscode-extension/README.md#building-and-running) and
+[IntelliJ](../lang/intellij-plugin/README.md#running-your-application) guides, with manual checks in
+[playbook section 18a](../lang/doc/manual-test-plan.md#18a-embedded-build-and-run).
+
+#### Commit and extraction map
+
+All five commits are on `lagergren/errs` only, on top of `d0c9270c4` (the #693 sync). They are not
+yet mirrored into draft #693, the review branches or the outside-`lang/` comparison branch, and no
+PR contains them. Each commit message records its own validation, problems fixed and limits.
+
+| Commit | Scope | Paths | Extraction target |
+|---|---|---|---|
+| `5a14da284` | Server protocol, embedded build, execution worker, entry-point Run lens; runtime entry selection | `javatools/src/main/java/org/xvm/api/{EmbeddingSupport,InterpreterControl}.java`, `lib_runner/src/main/x/runner.x`, `javatools/README.md` row; `lang/lsp-server/**` | Split on the directory boundary: the three runtime files form a small runtime-execution PR (R3) outside `lang/`, independent of the compiler foundation PRs; the `lang/lsp-server` part joins the LSP/editor reference (#693) and depends on that runtime PR |
+| `94a1e8c19` | VS Code build mode, Build/Rebuild/Run/Stop, tasks, debug launches without a debugger | `lang/vscode-extension/**` | LSP/editor reference (#693) or the editor review branch; needs the server commit |
+| `1a89eb1a5` | IntelliJ build mode page, project task runner, run configuration modes, process handler, Run lens action | `lang/intellij-plugin/**` | Same as VS Code; needs the server commit |
+| `50fb713a0` | Plan status, playbook section 18a, plan/index notes | `lang/doc/**`, `lang/README.md` | Travels with whichever of the three commits above is extracted; the plan and playbook describe all of them |
+| `590935e77` | `javatools/LSP-COMPILER.md` → `lsp-compiler.md`; documentation links to `AGENTS.md` instead of `CLAUDE.md` | `javatools/`, `docs/errs-error-listeners.md`, `lang/README.md`, `lang/lsp-server/*.md`, `plugin/README.md` | Mirror into #693 and the outside-`lang/` comparison (both still have the old name) at their next synchronization; independent of the feature |
+
+`5a14da284` renamed the new embedding entry point to `runMethod` before commit: an eight-argument
+`run` overload made `LspTest`'s existing all-null call ambiguous. Extracting the runtime PR keeps that
+name. The worker reads module bytes from `build/xtc/embedded`, so no compiler structure crosses the
+process boundary.
+
+#### Validation receipt (2026-10-15)
+
+| Suite | Executed / passed | Existing skips |
+|---|---:|---:|
+| `javatools` | 612 | 42 |
+| `xdk` | 62 | 8 |
+| `lang:dsl` | 50 | 0 |
+| `lang:lsp-server` (incl. 10 new `run.EmbeddedExecutionTest`) | 2,276 | 2 |
+| `lang:intellij-plugin` (incl. 8 new `run.EmbeddedExecutionTest`) | 133 | 0 |
+| VS Code headless suite (`testVscodeExtension`) | 59 | 0 |
+
+Tree-sitter corpus parsing, `spotlessCheck`, `tsc` and ESLint passed. `verifyPlugin` against
+IU-262.10968.63 reports *Compatible*, `verifyPluginInternalApis` passes, and the new IntelliJ code uses
+no internal or deprecated APIs (BuildProgress, BuildViewManager and ProjectTaskRunner are
+experimental, which the verifier policy allows). One combined javatools/xdk/lsp-server invocation lost
+an lsp-server test JVM to SIGKILL (exit 137) with no crash dump; lsp-server alone then passed all 303
+classes. No live IDE was click-tested and no native UI playbook was run for this batch. The VS Code
+suite checks command registration only; run behavior is covered by the server and IntelliJ tests.
+
+```bash
+./gradlew :javatools:test --rerun :xdk:test --rerun :lang:lsp-server:test --rerun \
+  :lang:dsl:test --rerun :lang:tree-sitter:testTreeSitterParse --rerun \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true --continue
+./gradlew :lang:intellij-plugin:test --rerun :lang:intellij-plugin:verifyPlugin \
+  :lang:vscode-extension:testVscodeExtension --rerun \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true --continue
+./gradlew spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
 
 ### IntelliJ parity backlog (L60)
 
