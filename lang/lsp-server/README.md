@@ -450,7 +450,10 @@ Failed dependencies publish their original source diagnostics and block consumer
 `DEPENDENCY-FAILED`; an old successful artifact is not reused. Deleted/unreadable roots report
 `SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
 Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
-overlapping source graphs are rejected. Closing sessions prunes unused cached artifacts.
+overlapping source graphs are rejected (`SOURCE-GRAPH`). Closing sessions prunes unused cached artifacts.
+These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure, and the `xtc`
+diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
+(`org.xvm.lsp.model`); compiler codes such as `COMPILER-43` come from the compiler.
 
 This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
 declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
