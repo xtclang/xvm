@@ -136,12 +136,6 @@ public abstract class Launcher<T extends LauncherOptions>
     protected final ErrorListener m_errors;
 
     /**
-     * Repository reports reach both the host and the console without retaining the launcher.
-     * They describe unavailable candidates, so they do not change the launcher's abort state.
-     */
-    protected final ErrorListener m_repositoryErrors;
-
-    /**
      * The worst severity issue encountered thus far.
      * Tracked in Launcher for control flow decisions (abort/continue).
      */
@@ -163,7 +157,6 @@ public abstract class Launcher<T extends LauncherOptions>
     protected Launcher(T options, Console console, @NotNull ErrorListener errs) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
         m_errors = requireNonNull(errs, "errs");
-        m_repositoryErrors = ErrorListener.tee(m_errors, m_console::err);
         m_options = options;
         moduleCache = new HashMap<>();
     }
@@ -708,7 +701,7 @@ public abstract class Launcher<T extends LauncherOptions>
         var repos = new java.util.ArrayList<ModuleRepository>(path.size() + 1);
         repos.add(makeBuildRepo());
         for (File file : path) {
-            repos.add(ModuleRepository.of(file, true, m_repositoryErrors));
+            repos.add(ModuleRepository.of(file, true));
         }
         return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }
@@ -749,7 +742,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return a module repository that will store to the specified destination
      */
     protected ModuleRepository configureResultRepo(File fileDest) {
-        return ModuleRepository.of(resolveFile(fileDest), false, m_repositoryErrors);
+        return ModuleRepository.of(resolveFile(fileDest), false);
     }
 
     /**

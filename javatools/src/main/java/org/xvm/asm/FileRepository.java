@@ -12,12 +12,6 @@ import org.xvm.asm.FileStructure.FileInfo;
 
 import org.xvm.asm.constants.ModuleConstant;
 
-import static java.util.Objects.requireNonNull;
-
-import static org.xvm.asm.ErrorListener.NOWHERE;
-
-import static org.xvm.tool.Launcher.READ_FAILURE;
-
 import static org.xvm.util.Handy.BINARY_EXTENSION;
 import static org.xvm.util.Handy.hasBinaryExtension;
 import static org.xvm.util.Handy.removeSourceExtension;
@@ -39,23 +33,10 @@ public class FileRepository
      * @param readOnly  true to make the repository "read-only"
      */
     public FileRepository(File file, boolean readOnly) {
-        this(file, readOnly, ErrorListener.STDERR);
-    }
-
-    /**
-     * Construct a repository with a host-supplied diagnostic destination.
-     *
-     * @param file      the file containing the module(s)
-     * @param readOnly  true to make the repository read-only
-     * @param errs      the destination for read warnings; an unusable candidate does not prevent
-     *                  a later repository from supplying the module
-     */
-    public FileRepository(File file, boolean readOnly, ErrorListener errs) {
         assert file != null && !file.isDirectory();
 
         this.file     = moduleFile(file);
         this.readOnly = readOnly;
-        this.errs     = requireNonNull(errs, "errs");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -188,7 +169,6 @@ public class FileRepository
                 cachedVersionsByName = fileStructure.buildFileInfo().modules();
                 cachedFileStructure  = fileStructure;
                 cacheOk              = true;
-                readFailed           = false;
             }
         } catch (IOException e) {
             throw new IOException("Error writing module to file: " + file, e);
@@ -247,39 +227,31 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // Both successful and failed reads use the usual metadata-based burst cache.
-        long now = System.currentTimeMillis();
-        boolean unchanged = timestamp == file.lastModified() && size == file.length();
-        boolean recent = now < lastScan + 60/*ms*/;
-        if (recent || unchanged) {
+        // assume cache is up-to-date if it has been checked recently; assumption is that activity
+        // comes in bursts; also assume cache is up-to-date if nothing appears to have changed
+        if (System.currentTimeMillis() < lastScan + 60/*ms*/
+                || timestamp == file.lastModified() && size == file.length()) {
             return cacheOk;
         }
 
-        boolean retryFailedRead = readFailed;
+        // cache is not up-to-date; clear whatever was cached before
+        timestamp              = file.lastModified();
+        size                   = file.length();
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
         cachedModuleStructures = null;
         cacheOk                = false;
+        lastScan               = System.currentTimeMillis();
 
+        // load the cache if possible
         if (file.exists() && file.isFile() && file.canRead()) {
-            FileInfo info;
-            if (retryFailedRead) {
-                // A successful header alone cannot clear an earlier payload failure.
-                cachedFileStructure = readFileStructure();
-                info = cachedFileStructure == null ? null : cachedFileStructure.buildFileInfo();
-            } else {
-                info = readFileInfo();
-            }
+            // read just the module contents of the FileStructure (not the entire FileStructure)
+            FileInfo info = readFileInfo();
             if (info != null) {
                 cachedVersionsByName = info.modules();
                 cacheOk              = true;
             }
-        } else {
-            readFailed = false;
         }
-        timestamp = file.lastModified();
-        size      = file.length();
-        lastScan  = now;
         return cacheOk;
     }
 
@@ -307,38 +279,37 @@ public class FileRepository
         if (validateCache() && cachedFileStructure == null) {
             if ((cachedFileStructure = readFileStructure()) == null) {
                 cacheOk = false;
-                lastScan = System.currentTimeMillis();
             }
         }
         return cacheOk;
     }
 
     /**
-     * @return the FileInfo freshly read from the file system, or null after reporting an unsuccessful read
+     * @return the FileInfo freshly read from the file system, or `null` on any failure
      */
     private FileInfo readFileInfo() {
         try {
-            FileInfo info = FileStructure.readFileInfo(file);
-            readFailed = false;
-            return info;
+            return FileStructure.readFileInfo(file);
         } catch (Exception e) {
-            readFailed = true;
-            errs.warn(READ_FAILURE, NOWHERE, file, e);
+            if (!reportedFileStructureError) {
+                reportedFileStructureError = true;
+                System.out.println("Error loading FileInfo from file: " + file + "; " + e.getMessage());
+            }
             return null;
         }
     }
 
     /**
-     * @return the FileStructure freshly read from the file system, or null after reporting an unsuccessful read
+     * @return the FileStructure freshly read from the file system, or `null` on any failure
      */
     private FileStructure readFileStructure() {
         try {
-            FileStructure structure = new FileStructure(file);
-            readFailed = false;
-            return structure;
+            return new FileStructure(file);
         } catch (Exception e) {
-            readFailed = true;
-            errs.warn(READ_FAILURE, NOWHERE, file, e);
+            if (!reportedFileInfoError) {
+                reportedFileInfoError = true;
+                System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
+            }
             return null;
         }
     }
@@ -378,17 +349,16 @@ public class FileRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File          file;
-    private final boolean       readOnly;
-    private final ErrorListener errs;
+    private final File    file;
+    private final boolean readOnly;
 
     private long    timestamp;
     private long    size;
     private long    lastScan;
     private boolean cacheOk;
 
-    /** A replacement must pass a complete read after a prior failure, not just a header read. */
-    private boolean readFailed;
+    private boolean reportedFileInfoError;
+    private boolean reportedFileStructureError;
 
     /**
      * Cached file contents: module names and versions thereof.

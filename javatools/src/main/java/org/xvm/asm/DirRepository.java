@@ -20,12 +20,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static java.util.Objects.requireNonNull;
-
-import static org.xvm.asm.ErrorListener.NOWHERE;
-
-import static org.xvm.tool.Launcher.READ_FAILURE;
-
 /**
  * A simple ModuleRepository that manages its contents in a directory.
  */
@@ -56,23 +50,10 @@ public class DirRepository
      * @param fReadOnly  true to make the repository "read-only"
      */
     public DirRepository(File dir, boolean fReadOnly) {
-        this(dir, fReadOnly, ErrorListener.STDERR);
-    }
-
-    /**
-     * Construct a repository with a host-supplied diagnostic destination.
-     *
-     * @param dir        the directory containing module files
-     * @param fReadOnly  true to make the repository read-only
-     * @param errs       the destination for read warnings; an unusable candidate does not prevent
-     *                   a later repository from supplying the module
-     */
-    public DirRepository(File dir, boolean fReadOnly, ErrorListener errs) {
         assert dir != null && dir.isDirectory();
 
-        m_dir  = dir;
-        m_fRO  = fReadOnly;
-        f_errs = requireNonNull(errs, "errs");
+        m_dir = dir;
+        m_fRO = fReadOnly;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -174,8 +155,6 @@ public class DirRepository
     }
 
     private void rebuildCache(File[] files) {
-        // An unexpected failure must not leave a partially rebuilt cache marked current.
-        lastScan = 0;
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
         if (oldModulesByFile.isEmpty()) {
@@ -227,7 +206,7 @@ public class DirRepository
      * @return the module information
      */
     protected ModuleInfo createModuleInfo(File file) {
-        return new ModuleInfo(file, f_errs);
+        return new ModuleInfo(file);
     }
 
     /**
@@ -269,7 +248,7 @@ public class DirRepository
                 String  name      = err ? null : in.readUTF();
 
                 if (modulesByFile.put(file,
-                        new ModuleInfo(file, name, timestamp, size, err, f_errs)) != null) {
+                        new ModuleInfo(file, name, timestamp, size, err)) != null) {
                     return null;
                 }
             }
@@ -362,7 +341,7 @@ public class DirRepository
      * @return true if the cache is still good, or false if it needs to be rebuilt
      */
     private boolean isCacheValid() {
-        // Check metadata at the usual interval; a failed read alone does not invalidate the cache.
+        // only scan once a second (at the most)
         if (System.currentTimeMillis() < lastScan + 1000) {
             return true;
         }
@@ -386,11 +365,6 @@ public class DirRepository
 
     protected static class ModuleInfo {
         public ModuleInfo(File file) {
-            this(file, ErrorListener.STDERR);
-        }
-
-        private ModuleInfo(File file, ErrorListener errs) {
-            f_errs         = errs;
             this.file      = file;
             this.timestamp = file.lastModified();
             this.size      = file.length();
@@ -407,8 +381,7 @@ public class DirRepository
             }
         }
 
-        private ModuleInfo(File file, String name, long timestamp, long size, boolean err, ErrorListener errs) {
-            f_errs         = errs;
+        private ModuleInfo(File file, String name, long timestamp, long size, boolean err) {
             this.file      = file;
             this.name      = name;
             this.versions  = null;
@@ -420,17 +393,16 @@ public class DirRepository
         ModuleStructure tryLoad() {
             try {
                 FileStructure struct = new FileStructure(file);
-                readFailed = false;
                 return struct.getModule();
             } catch (Exception e) {
-                readFailed = true;
-                f_errs.warn(READ_FAILURE, NOWHERE, file, e);
-                return null;
+                System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
             }
+
+            return null;
         }
 
         ModuleStructure ensureModule() {
-            if (err || readFailed) {
+            if (err) {
                 return null;
             }
 
@@ -440,8 +412,6 @@ public class DirRepository
 
             return module;
         }
-
-        private final ErrorListener       f_errs;
 
         public final String               name;
         public final File                 file;
@@ -455,9 +425,6 @@ public class DirRepository
          * reload it as necessary.
          */
         private transient ModuleStructure module;
-
-        /** A failed lazy read remains unavailable until changed metadata replaces this entry. */
-        private boolean readFailed;
     }
 
     // ----- constants -----------------------------------------------------------------------------
@@ -475,9 +442,8 @@ public class DirRepository
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File          m_dir;
-    private final boolean       m_fRO;
-    private final ErrorListener f_errs;
+    private final File    m_dir;
+    private final boolean m_fRO;
 
     private       Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
     private final Map<String, ModuleInfo> modulesByName = new TreeMap<>();

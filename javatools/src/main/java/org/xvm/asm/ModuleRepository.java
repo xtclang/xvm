@@ -13,7 +13,9 @@ import static java.util.Objects.requireNonNull;
  */
 public interface ModuleRepository {
     /**
-     * Create a filesystem repository that reports read warnings to standard error.
+     * Create a filesystem repository. An existing directory selects a directory repository; every
+     * other path selects a file repository. A file need not exist yet, allowing a writable
+     * repository to create it.
      *
      * @param file      a module directory or file
      * @param readOnly  true to make the repository read-only
@@ -21,24 +23,9 @@ public interface ModuleRepository {
      * @return the repository for the given path
      */
     static ModuleRepository of(File file, boolean readOnly) {
-        return of(file, readOnly, ErrorListener.STDERR);
-    }
-
-    /**
-     * Create a filesystem repository with a host-supplied diagnostic destination.
-     * An existing directory selects a directory repository; every other path selects a file
-     * repository. A file need not exist yet, allowing a writable repository to create it.
-     *
-     * @param file      a module directory or file
-     * @param readOnly  true to make the repository read-only
-     * @param errs      the destination for module read warnings
-     *
-     * @return the repository for the given path
-     */
-    static ModuleRepository of(File file, boolean readOnly, ErrorListener errs) {
         return requireNonNull(file, "file").isDirectory()
-                ? new DirRepository(file, readOnly, errs)
-                : new FileRepository(file, readOnly, errs);
+                ? new DirRepository(file, readOnly)
+                : new FileRepository(file, readOnly);
     }
 
     /**

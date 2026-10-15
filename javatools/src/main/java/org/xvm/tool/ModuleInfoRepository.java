@@ -9,13 +9,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.VersionTree;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * A ModuleRepository based on the information in ModuleInfo structures.
@@ -32,15 +29,6 @@ public class ModuleInfoRepository
      * @param readOnly  true to make the repository "read-only"
      */
     public ModuleInfoRepository(Map<String, ModuleInfo> infos, boolean readOnly) {
-        this(infos, readOnly, ErrorListener.STDERR);
-    }
-
-    /**
-     * @param infos     ModuleInfos, keyed by qualified module names
-     * @param readOnly  true to make the repository read-only
-     * @param errs      the destination for module read warnings
-     */
-    public ModuleInfoRepository(Map<String, ModuleInfo> infos, boolean readOnly, ErrorListener errs) {
         assert infos.keySet().stream().allMatch(Objects::nonNull);
         assert infos.values().stream().allMatch(info -> info != null
                 && info.getQualifiedModuleName() != null
@@ -48,7 +36,6 @@ public class ModuleInfoRepository
 
         this.infos    = infos;
         this.readOnly = readOnly;
-        this.errs     = requireNonNull(errs, "errs");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -110,7 +97,7 @@ public class ModuleInfoRepository
                     throw new IllegalStateException("could not create directory: " + dir);
                 }
             }
-            repo = new FileRepository(file, readOnly, errs);
+            repo = new FileRepository(file, readOnly);
             repos.put(name, repo);
         }
         return repo;
@@ -141,7 +128,6 @@ public class ModuleInfoRepository
     // ----- fields --------------------------------------------------------------------------------
 
     private final Map<String, ModuleInfo>     infos;
-    private final boolean                    readOnly;
-    private final ErrorListener              errs;
+    private final boolean                     readOnly;
     private final Map<String, FileRepository> repos = new HashMap<>();
 }
