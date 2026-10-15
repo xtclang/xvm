@@ -59,6 +59,10 @@ import org.xvm.runtime.Utils;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
@@ -66,11 +70,6 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
-
-import static org.xvm.asm.ErrorListener.at;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An XVM Structure that represents a method or a function.

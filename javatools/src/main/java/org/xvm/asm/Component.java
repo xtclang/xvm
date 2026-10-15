@@ -1,9 +1,5 @@
 package org.xvm.asm;
 
-import org.jetbrains.annotations.NotNull;
-
-import static java.util.Objects.requireNonNull;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -28,6 +24,8 @@ import java.util.function.Consumer;
 
 import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -50,7 +48,10 @@ import org.xvm.compiler.Constants;
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
+
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.at;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -3533,7 +3534,7 @@ public abstract class Component
     public static class SimpleCollector
             implements ResolutionCollector {
         public SimpleCollector(@NotNull ErrorListener errs) {
-            f_errs = requireNonNull(errs, "errs");
+            m_errs = requireNonNull(errs, "errs");
         }
 
         @Override
@@ -3550,7 +3551,7 @@ public abstract class Component
 
         @Override
         public ErrorListener getErrorListener() {
-            return f_errs;
+            return m_errs;
         }
 
         /**
@@ -3570,7 +3571,7 @@ public abstract class Component
         /**
          * The error listener.
          */
-        private final ErrorListener f_errs;
+        private final ErrorListener m_errs;
     }
 
     // ----- constants -----------------------------------------------------------------------------

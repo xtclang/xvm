@@ -57,7 +57,7 @@ public class EvalCompiler {
     /**
      * Create the lambda structure and compute the arguments.
      *
-     * <p>If the compilation succeeds, the indexes for arguments could be retrieved via
+     * If the compilation succeeds, the indexes for arguments could be retrieved via
      * {@link #getArgs()}; otherwise there are errors in the {@link #getErrors() error list}.
      *
      * @return the newly created lambda or null if the compilation failed
@@ -318,10 +318,7 @@ public class EvalCompiler {
     private final Source f_source;
 
     /**
-     * The errors from this evaluation. An EvalCompiler is built per evaluation - the debugger
-     * makes one each time - so the list is the instance's, rather than something createLambda
-     * leaves behind. It used to be assigned there, so getErrors() threw if anything asked before
-     * that ran.
+     * Diagnostics owned by this evaluation, available before lambda compilation starts.
      */
     private final ErrorList f_errs = new ErrorList(ErrorList.FIRST_ERROR);
 

@@ -12,6 +12,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,9 +24,6 @@ import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.NONE;
 import static org.xvm.util.Severity.WARNING;
-
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Unit tests for Launcher error handling, logging, and abort mechanisms.

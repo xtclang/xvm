@@ -7,11 +7,11 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.appendChar;
-import static org.xvm.util.Handy.appendString;
-
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.util.Handy.appendChar;
+import static org.xvm.util.Handy.appendString;
 
 /**
  * Representation of a language token.

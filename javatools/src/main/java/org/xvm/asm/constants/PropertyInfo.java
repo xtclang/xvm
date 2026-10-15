@@ -1521,7 +1521,7 @@ public class PropertyInfo
     // ----- constants and fields ------------------------------------------------------------------
 
     /**
-     * Rank comparator for {@code Map.Entry<PropertyConstant, PropertyInfo>} objects.
+     * Rank comparator for Map.Entry<PropertyConstant, PropertyInfo> objects.
      */
     public static final Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
         Comparator.comparingInt(e -> e.getValue().getRank());
