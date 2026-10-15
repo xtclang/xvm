@@ -87,6 +87,7 @@ class PluginManifestTest {
                 "newProjectWizard.generator", // wizard entry created by XtcNewProjectWizard
                 "configurationType", // run-config type created by XtcRunConfigurationType
                 "runConfigurationProducer", // auto-create run configs from .x context
+                "projectTaskRunner", // embedded Build/Rebuild via XtcProjectTaskRunner
                 "iconProvider", // file icons via XtcIconProvider
                 "defaultLiveTemplates", // /liveTemplates/XTC snippets
                 "lang.commenter", // Ctrl+/ via XtcCommenter
