@@ -854,7 +854,7 @@ class XdkProjectOpenActivity : ProjectActivity {
         if (location != null) {
             // Found an XDK, offer to configure it
             NotificationGroupManager.getInstance()
-                .getNotificationGroup("XTC Language Server")
+                .getNotificationGroup("Ecstasy Language Server")
                 .createNotification(
                     "XDK Detected",
                     "Found XDK ${location.version ?: "unknown"} at ${location.homePath}. " +

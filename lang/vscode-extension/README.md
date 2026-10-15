@@ -128,7 +128,7 @@ A progress notification appears during the first download. The JRE is then cache
 
 ### LSP Features
 
-Once the status bar shows `✓ XTC`:
+Once the status bar shows `✓ Ecstasy`:
 
 | Feature              | Trigger                       |
 |----------------------|-------------------------------|
@@ -308,14 +308,14 @@ This extension contributes the following defaults for the `xtc` language:
 
 | Symptom                                                | Action                                                                                                  |
 |--------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| Status bar shows `⚠ XTC` or `✗ XTC`                    | Click to restart; check the **XTC Language Server** output channel for errors.                          |
+| Status bar shows `⚠ Ecstasy` or `✗ Ecstasy`            | Click to restart; check the **Ecstasy Language Server** output channel for errors.                      |
 | "JAR not found" error on activation                    | Rebuild: `./gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true`. |
-| No completions or hover                                | Confirm `✓ XTC` in the status bar; enable `xtc.trace.server: "verbose"` and inspect the output channel. |
+| No completions or hover                                | Confirm `✓ Ecstasy` in the status bar; enable `xtc.trace.server: "verbose"` and inspect the output channel. |
 | Wrong Java version detected                            | Set `xtc.java.home` to a Java 25+ installation directory.                                               |
 | `xtc init` not found when running **Create Project**   | Install the XDK and put `xtc` on your `PATH`.                                                           |
 | `.x` files not highlighted                             | Run **Developer: Reload Window**; verify the file's language mode (bottom-right) is `Ecstasy`.          |
 
-For deeper diagnostics, open **View → Output** and select **XTC Language Server**.
+For deeper diagnostics, open **View → Output** and select **Ecstasy Language Server**.
 
 ## Development
 
