@@ -6,13 +6,10 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileTypes.FileTypes
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.refactoring.rename.RenameHandler
-import com.intellij.refactoring.ui.NameSuggestionsField
-import com.intellij.refactoring.ui.RefactoringDialog
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerItem
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
@@ -22,7 +19,6 @@ import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import java.util.concurrent.CompletableFuture
-import javax.swing.JComponent
 
 // TODO LSP4IJ: UP04 — apply rename edits only after checking captured document versions/epochs.
 // This native handler can go once upstream provides the guarded application used by XtcRenameEdit.
@@ -181,22 +177,12 @@ class XtcRenameHandler : RenameHandler {
         private val editor: Editor,
         private val offset: Int,
         private val prepared: Prepared,
-    ) : RefactoringDialog(file.project, false) {
+    ) : XtcRenameDialog(file.project, prepared.name, editor) {
         private val stamp = editor.document.modificationStamp
-        private val name =
-            NameSuggestionsField(arrayOf(prepared.name), file.project, FileTypes.PLAIN_TEXT, editor)
 
         init {
-            title = "Rename"
-            name.addDataChangedListener { validateButtons() }
-            init()
+            initDialog()
         }
-
-        override fun createCenterPanel(): JComponent = name
-
-        override fun getPreferredFocusedComponent(): JComponent = name.focusableComponent
-
-        override fun hasPreviewButton(): Boolean = false
 
         override fun areButtonsValid(): Boolean = name.enteredName.isNotBlank() && name.enteredName != prepared.name
 

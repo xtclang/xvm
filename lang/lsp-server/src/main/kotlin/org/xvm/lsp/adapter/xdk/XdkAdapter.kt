@@ -321,7 +321,7 @@ class XdkAdapter
             column: Int,
         ): CompletableFuture<List<SymbolMoniker>> =
             synchronized(lifecycle) {
-                if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                if (closed) return closedAdapter()
                 val result = CompletableFuture<List<SymbolMoniker>>()
                 val task =
                     queueTrace.task("library-monikers", uri, result) {
@@ -470,11 +470,7 @@ class XdkAdapter
             updateDocument(uri, content)
             val submission =
                 synchronized(lifecycle) {
-                    if (closed) {
-                        return CompletableFuture.failedFuture(
-                            IllegalStateException("XDK adapter is closed"),
-                        )
-                    }
+                    if (closed) return closedAdapter()
                     overlays[uri] = content
                     val scope = analysisScope(uri)
                     scopes[uri] = scope
@@ -547,29 +543,12 @@ class XdkAdapter
             val uri = key.uri
             val (request, previous) =
                 synchronized(lifecycle) {
-                    if (closed) {
-                        return CompletableFuture.failedFuture(
-                            IllegalStateException("XDK adapter is closed"),
-                        )
-                    }
-                    if (discovery.get().problem != null) return CompletableFuture.completedFuture(null)
-                    val compilation =
-                        requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
+                    if (closed) return closedAdapter()
+                    val compilation = currentCompilation(uri) ?: return CompletableFuture.completedFuture(null)
                     if (uri !in compilation.overlays) return CompletableFuture.completedFuture(null)
                     val request =
                         CursorRequest(compilation, key, position, queueTrace, ::runCursorAnalysis)
-                    request.result.whenComplete { _, _ ->
-                        if (request.result.isCancelled) {
-                            synchronized(lifecycle) {
-                                cursors.remove(key, request)
-                                compiles.remove(request.task)
-                            }
-                        }
-                    }
-                    val previous = cursors.put(key, request)
-                    previous?.let { compiles.remove(it.task) }
-                    compiles.execute(request.task.ready())
-                    request to previous
+                    request to replacePending(cursors, key, request)
                 }
             previous?.result?.cancel(false)
             return request.result
@@ -695,11 +674,7 @@ class XdkAdapter
         ): CompletableFuture<T> {
             val (request, previous) =
                 synchronized(lifecycle) {
-                    if (closed) {
-                        return CompletableFuture.failedFuture(
-                            IllegalStateException("XDK adapter is closed"),
-                        )
-                    }
+                    if (closed) return closedAdapter()
                     if (discovery.get().problem != null || project.scope(key.uri) == null) {
                         return CompletableFuture.completedFuture(unavailable)
                     }
@@ -738,21 +713,44 @@ class XdkAdapter
                                 projectQueries.remove(key, work)
                             }
                         }
-                    request.result.whenComplete { _, _ ->
-                        if (request.result.isCancelled) {
-                            synchronized(lifecycle) {
-                                projectQueries.remove(key, request)
-                                compiles.remove(request.task)
-                            }
-                        }
-                    }
-                    val previous = projectQueries.put(key, request)
-                    previous?.let { compiles.remove(it.task) }
-                    compiles.execute(request.task.ready())
-                    request to previous
+                    request to replacePending(projectQueries, key, request)
                 }
             previous?.result?.cancel(false)
             return request.result
+        }
+
+        /** The future for a request made after [close]. */
+        private fun <T> closedAdapter(): CompletableFuture<T> =
+            CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+
+        /**
+         * The compilation request that a document query reads, or null when discovery failed or the
+         * document has no module analysis. Call while holding [lifecycle].
+         */
+        private fun currentCompilation(uri: String): Request? = if (discovery.get().problem != null) null else requests[analysisScope(uri)]
+
+        /**
+         * Replace the pending query for [key] with [request] and queue its compiler work; cancelling
+         * the request removes it again. Call while holding [lifecycle], and cancel the returned
+         * previous query after releasing it.
+         */
+        private fun <K : Any, R : QueryWork> replacePending(
+            pending: MutableMap<K, R>,
+            key: K,
+            request: R,
+        ): R? {
+            request.result.whenComplete { _, _ ->
+                if (request.result.isCancelled) {
+                    synchronized(lifecycle) {
+                        pending.remove(key, request)
+                        compiles.remove(request.task)
+                    }
+                }
+            }
+            val previous = pending.put(key, request)
+            previous?.let { compiles.remove(it.task) }
+            compiles.execute(request.task.ready())
+            return previous
         }
 
         private fun isStale(request: CursorRequest): Boolean =
@@ -2051,14 +2049,8 @@ class XdkAdapter
             }
             val (request, previous) =
                 synchronized(lifecycle) {
-                    if (closed) {
-                        return CompletableFuture.failedFuture(
-                            IllegalStateException("XDK adapter is closed"),
-                        )
-                    }
-                    if (discovery.get().problem != null) return CompletableFuture.completedFuture(null)
-                    val compilation =
-                        requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
+                    if (closed) return closedAdapter()
+                    val compilation = currentCompilation(uri) ?: return CompletableFuture.completedFuture(null)
                     val module =
                         completed[compilation.scope]?.takeIf { it.succeeded }
                             ?: return CompletableFuture.completedFuture(null)
@@ -2075,18 +2067,7 @@ class XdkAdapter
                             queueTrace,
                             ::runRename,
                         )
-                    request.result.whenComplete { _, _ ->
-                        if (request.result.isCancelled) {
-                            synchronized(lifecycle) {
-                                renames.remove(uri, request)
-                                compiles.remove(request.task)
-                            }
-                        }
-                    }
-                    val previous = renames.put(uri, request)
-                    previous?.let { compiles.remove(it.task) }
-                    compiles.execute(request.task.ready())
-                    request to previous
+                    request to replacePending(renames, uri, request)
                 }
             previous?.result?.cancel(false)
             return request.result

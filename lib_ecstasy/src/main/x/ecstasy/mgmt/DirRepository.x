@@ -29,9 +29,8 @@ service DirRepository
     /**
      * Internal state.
      */
-    private Map<String, FileTemplate> modulesByName = new HashMap();
-    private Map<String, ModuleInfo>   modulesByFile = new HashMap();
-    private Time                     lastScan      = Time.EPOCH;
+    private Map<String, ModuleInfo> modulesByName = new HashMap();
+    private Time                    lastScan      = Time.EPOCH;
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -44,18 +43,18 @@ service DirRepository
     @Override
     conditional ModuleTemplate getModule(String name, Version? version = Null) {
         Boolean fresh = ensureCache();
-        if (FileTemplate   template := modulesByName.get(name),
-            ModuleTemplate module   := template.extractVersion(version)) {
-            return True, module;
+        if (ModuleInfo     info     := modulesByName.get(name),
+            ModuleTemplate template := info.template.extractVersion(version)) {
+            return True, template;
         }
 
         if (!fresh) {
             // refresh the cache before blowing up
             lastScan = Time.EPOCH;
             ensureCache();
-            if (FileTemplate   template := modulesByName.get(name),
-                ModuleTemplate module   := template.extractVersion(version)) {
-                return True, module;
+            if (ModuleInfo     info     := modulesByName.get(name),
+                ModuleTemplate template := info.template.extractVersion(version)) {
+                return True, template;
             }
         }
         return False;
@@ -82,26 +81,29 @@ service DirRepository
             return False;
         }
 
-        Map<String, ModuleInfo>   oldModules = modulesByFile;
-        Map<String, ModuleInfo>   newByFile  = new HashMap();
-        Map<String, FileTemplate> newByName  = new HashMap();
+        Map<String, ModuleInfo> oldModules = modulesByName;
+        Map<String, ModuleInfo> newModules = new HashMap();
 
         for (File file : dir.files().filter(MODULES_ONLY)) {
             ModuleInfo info;
-            ModuleInfo? previous = oldModules.getOrNull(file.name);
-            if (previous != Null && previous.timestamp == file.modified && previous.size == file.size) {
-                info = previous;
-            } else {
+            if (info := oldModules.get(file.name),
+                    info.timestamp == file.modified && info.size == file.size) {
+                continue;
+            }
+
+            // build a new one to cache
+            try {
                 info = new ModuleInfo(file);
+            } catch (Exception e) {
+                @Inject Console console;
+                console.print($|DirRepository: Failed to load a module from "{file}": {e.message}
+                             );
+                continue;
             }
-            newByFile.put(file.name, info);
-            if (FileTemplate template ?= info.template) {
-                newByName.put(template.mainModule.qualifiedName, template);
-            }
+            newModules.put(info.template.mainModule.qualifiedName, info);
         }
 
-        modulesByFile = newByFile;
-        modulesByName = newByName;
+        modulesByName = newModules;
         lastScan      = clock.now;
         return True;
     }
@@ -117,46 +119,30 @@ service DirRepository
             return True;
         }
 
-        Int count = 0;
         for (File file : dir.files().filter(MODULES_ONLY)) {
-            ++count;
-            if (ModuleInfo info := modulesByFile.get(file.name),
+            if (ModuleInfo info := modulesByName.get(file.name),
                     info.timestamp == file.modified && info.size == file.size) {
                 continue;
             }
             return False;
         }
 
-        return count == modulesByFile.size;
-    }
-
-    private static void reportReadFailure(File file, Exception cause) {
-        @Inject Console console;
-        console.print($|DirRepository: Failed to load a module from "{file}": {cause.message}
-                     );
+        return True;
     }
 
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
 
     static const ModuleInfo {
-        File          file;
-        Time          timestamp;
-        Int           size;
-        FileTemplate? template;
+        File         file;
+        Time         timestamp;
+        Int          size;
+        FileTemplate template;
 
         construct(File file) {
+            this.template  = tryLoad(file);
             this.file      = file;
             this.timestamp = file.modified;
             this.size      = file.size;
-
-            // Retain metadata for failed reads too, so later scans do not retry unchanged files.
-            FileTemplate? template = Null;
-            try {
-                template = tryLoad(file);
-            } catch (Exception e) {
-                reportReadFailure(file, e);
-            }
-            this.template = template;
         }
 
         static FileTemplate tryLoad(File xtcFile) {
@@ -165,7 +151,7 @@ service DirRepository
 
                 return linker.loadFileTemplate(xtcFile);
             } catch (Exception e) {
-                throw new IOException($"Failed to read module file: {xtcFile}", e);
+                throw new IOException($"Error: Failed to resolve the module: {xtcFile} ({e.text})");
             }
         }
     }

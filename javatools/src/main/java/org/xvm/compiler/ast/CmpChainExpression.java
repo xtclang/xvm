@@ -208,6 +208,7 @@ public class CmpChainExpression
                     return null;
                 }
                 if (fEquality && fConst && m_constEq == null) {
+                    // for "==", store a constant that every other operand can be compared to
                     m_constEq = expr.toConstant();
                 }
             }
@@ -412,7 +413,13 @@ public class CmpChainExpression
         return true;
     }
 
-    /** Fold only complete constant chains so runtime operand evaluation is never discarded. */
+    /**
+     * Fold a chain only when all sub-expressions are constant. Compare adjacent constants from
+     * left to right, stopping once a comparison proves the result false. A runtime operand
+     * prevents folding even after a false constant prefix, so its evaluation is retained.
+     *
+     * @return the folded Boolean constant, or null if the chain must be evaluated at runtime
+     */
     private Constant foldConstants() {
         if (!expressions.stream().allMatch(Expression::isConstant)) {
             return null;

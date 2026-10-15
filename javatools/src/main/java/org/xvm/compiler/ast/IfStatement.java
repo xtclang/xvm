@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -287,12 +288,8 @@ public class IfStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append("if (")
-          .append(conds.getFirst());
-        for (int i = 1, c = conds.size(); i < c; ++i) {
-            sb.append(", ")
-              .append(conds.get(i));
-        }
-        sb.append(")\n")
+          .append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")))
+          .append(")\n")
           .append(indentLines(stmtThen.toString(), "    "));
 
         if (stmtElse != null) {
