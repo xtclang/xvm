@@ -2,7 +2,9 @@
 
 **Status (2026-10-15):** not implemented. VS Code debug launches currently run the module without a
 debugger, through the same embedded or Gradle Run as the Run button; IntelliJ keeps DAP registration
-disabled. A DAP `launch` should reuse the embedded build and execution-worker sessions
+disabled. The `dap-server` placeholder no longer pretends: breakpoints are reported unverified
+with the reason, launch and attach fail with it, there are no threads, and it advertises only the
+configuration handshake. A DAP `launch` should reuse the embedded build and execution-worker sessions
 (`xtc/build`, `xtc/run`) rather than start its own runtime; see R6/R7 in the
 [execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 
@@ -879,7 +881,7 @@ The DAP server receives these in the `launch` request and uses them to:
 
 ## 11. Implementation Phases
 
-### Phase 0: IDE-Side DAP Wiring - COMPLETE ✅
+### Phase 0: IDE-Side DAP Wiring - built; IntelliJ registration disabled
 
 **Goal**: Wire up the LSP4IJ DAP extension point so IntelliJ can launch and connect to the DAP server.
 
@@ -905,7 +907,8 @@ The DAP server receives these in the `launch` request and uses them to:
    - `plan-ide-integration.md` documents LSP4IJ design choice over IntelliJ built-in LSP.
 
 **What's NOT done yet**: The DAP server itself (`dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt`)
-is still a stub. It needs to be connected to the XTC runtime's `Debugger` interface (Phase 1 below).
+is still a placeholder that refuses every debugging request with its reason; IntelliJ registration
+is disabled again. It needs to be connected to the XTC runtime's `Debugger` interface (Phase 1 below).
 
 ### Phase 1: Minimal Viable Debugger (2-3 weeks)
 
@@ -1005,5 +1008,5 @@ This is significantly reduced from a from-scratch implementation because:
 | `javatools/src/main/java/org/xvm/asm/op/Assert.java` | `assert:debug` hook |
 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java` | Source text, line calculation |
 | `javatools/src/main/java/org/xvm/compiler/EvalCompiler.java` | Runtime expression evaluation |
-| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt` | DAP server stub |
+| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt` | DAP placeholder; refuses with its reason |
 | `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt` | DAP stdio launcher |

@@ -61,7 +61,8 @@ application containers per run. R1–R8 track that separate implementation. Sinc
 editors have an embedded build/run mode beside Gradle: Build, Rebuild, Run lenses, Run shortcuts and
 run configurations build with the server's compiler and run in its execution worker
 ([first delivery](plan-embedded-execution.md#first-delivery-2026-10-15)), covering parts of R1–R5.
-The DAP server remains a transport stub, and VS Code debug launches run without a debugger.
+The DAP server remains a placeholder that refuses debugging requests with its reason, and VS Code
+debug launches run without a debugger.
 Compiler/LSP completion does not imply completion of either execution or debugging. Current compiler
 changes must retain artifact/source revisions and cancellation boundaries suitable for those future
 consumers.

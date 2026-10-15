@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.mock
 
 import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.CompletionItem
@@ -78,11 +79,9 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
  * - Document formatting (trailing whitespace, final newline)
  * - Document links (import statements)
  *
- * Capabilities using interface defaults (not overridden):
- * - Selection ranges: returns empty -- requires AST for structural expand/shrink
- * - Signature help: returns null -- requires AST to extract method parameters
- * - Inlay hints: returns empty -- requires type inference
- * - Semantic tokens: returns null -- requires type inference
+ * It advertises exactly these, plus hover and keyword completion (see [capabilities]). Selection ranges, signature help, semantic
+ * tokens, workspace symbols, code lenses, on-type formatting and linked editing keep the empty interface
+ * defaults, so the server does not offer them while this adapter serves as the Tree-sitter fallback.
  *
  * Limitations (requires compiler adapter for these):
  * - Type inference and semantic types
@@ -95,6 +94,22 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
  */
 class MockAdapter : AbstractAdapter() {
     override val displayName: String = "Mock"
+
+    override val capabilities: Set<AdapterCapability> =
+        setOf(
+            AdapterCapability.HOVER,
+            AdapterCapability.COMPLETION,
+            AdapterCapability.DEFINITION,
+            AdapterCapability.REFERENCES,
+            AdapterCapability.DOCUMENT_SYMBOL,
+            AdapterCapability.DOCUMENT_HIGHLIGHT,
+            AdapterCapability.FOLDING_RANGE,
+            AdapterCapability.RENAME,
+            AdapterCapability.CODE_ACTION,
+            AdapterCapability.DOCUMENT_LINK,
+            AdapterCapability.FORMATTING,
+            AdapterCapability.RANGE_FORMATTING,
+        )
 
     // ConcurrentHashMap is required because compile() is called from the LSP message thread
     // (via didOpen/didChange), while read methods like findSymbolAt() and getCompletions()

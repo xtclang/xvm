@@ -174,7 +174,9 @@ ends with the program's exit code. Embedded runs cannot read console input yet.
 
 There is no Ecstasy debugger yet. `F5` (**Run → Start Debugging**) and `launch.json` configurations
 run the module the same way the Run button does, following `xtc.build.mode`, and say that the
-debugger is not available. Breakpoints are not hit.
+debugger is not available. Breakpoints are not hit. The bundled `dap-server.jar` is a placeholder
+that says the same thing if a session reaches it: breakpoints stay unverified with that reason, and
+launch and attach fail with it.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
 
