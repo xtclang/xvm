@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { adapterChooserCases } from './adapters';
 import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced';
 import { colorCases } from './colors';
 import { compilerImportCases } from './compilerImports';
@@ -92,6 +93,7 @@ suite('XdkAdapter playbook', function () {
     documentationCases();
     referenceLensCases();
     executionCases();
+    adapterChooserCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

@@ -8905,6 +8905,29 @@
         "limitations": []
       }
     },
+    "X286": {
+      "title": "the adapter chooser opens from its shortcut, command and Tools menu, and each choice restarts the server",
+      "manual": [
+        "A physical desktop key press remains manual: VS Code sends the shortcut as renderer key events, and IntelliJ checks the keymap binding before invoking the action."
+      ],
+      "values": {
+        "file": "AdapterChooser.x",
+        "source": "module AdapterChooser {\n    Int value = 1;\n}\n",
+        "actionId": "xtc.selectLanguageAdapter",
+        "menuGroup": "ToolsMenu",
+        "commandTitle": "Ecstasy: Switch Language Adapter",
+        "chooserTitle": "Ecstasy: Switch Language Adapter",
+        "shortcut": "ctrl+alt+x a",
+        "treeSitterLabel": "Tree-sitter",
+        "compilerLabel": "Ecstasy Compiler"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "The shortcut is checked as an active keymap binding and the action is invoked from the editor; no key event is sent."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
