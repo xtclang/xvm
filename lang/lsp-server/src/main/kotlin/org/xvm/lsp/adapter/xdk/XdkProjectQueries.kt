@@ -88,11 +88,11 @@ internal class XdkProjectQueries(
                                     },
                                 code =
                                     if (source == null) {
-                                        "SOURCE-UNAVAILABLE"
+                                        Diagnostic.Codes.SOURCE_UNAVAILABLE
                                     } else {
-                                        "DEPENDENCY-FAILED"
+                                        Diagnostic.Codes.DEPENDENCY_FAILED
                                     },
-                                source = "xtc",
+                                source = Diagnostic.SOURCE,
                             ),
                         ),
                         emptyList(),
@@ -146,8 +146,8 @@ internal class XdkProjectQueries(
                                                 severity = Diagnostic.Severity.ERROR,
                                                 message =
                                                     "Expected module ${module.name}, found ${artifact.module}",
-                                                code = "PROJECT-MODULE",
-                                                source = "xtc",
+                                                code = Diagnostic.Codes.PROJECT_MODULE,
+                                                source = Diagnostic.SOURCE,
                                             ),
                                         )
                                     } else {
