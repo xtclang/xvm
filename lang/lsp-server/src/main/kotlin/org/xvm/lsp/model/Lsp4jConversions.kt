@@ -3,6 +3,7 @@ package org.xvm.lsp.model
 import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.DiagnosticRelatedInformation
 import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.DiagnosticTag
 import org.eclipse.lsp4j.DocumentHighlightKind
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FoldingRangeKind
@@ -86,7 +87,21 @@ fun Diagnostic.Companion.fromLsp(
         message = lspDiagnostic.message?.left ?: "",
         code = lspDiagnostic.code?.left,
         source = lspDiagnostic.source,
+        tags = lspDiagnostic.tags.orEmpty().mapNotNullTo(mutableSetOf()) { Diagnostic.Tag.fromLsp(it) },
     )
+
+fun Diagnostic.Tag.toLsp(): DiagnosticTag =
+    when (this) {
+        Diagnostic.Tag.UNNECESSARY -> DiagnosticTag.Unnecessary
+        Diagnostic.Tag.DEPRECATED -> DiagnosticTag.Deprecated
+    }
+
+fun Diagnostic.Tag.Companion.fromLsp(tag: DiagnosticTag?): Diagnostic.Tag? =
+    when (tag) {
+        DiagnosticTag.Unnecessary -> Diagnostic.Tag.UNNECESSARY
+        DiagnosticTag.Deprecated -> Diagnostic.Tag.DEPRECATED
+        null -> null
+    }
 
 /** Keep foreign-source locations as related information when publishing for another document. */
 fun Diagnostic.toLsp(publicationUri: String = location.uri): org.eclipse.lsp4j.Diagnostic {
@@ -105,6 +120,9 @@ fun Diagnostic.toLsp(publicationUri: String = location.uri): org.eclipse.lsp4j.D
     result.source = source
     if (code != null) {
         result.code = Either.forLeft(code)
+    }
+    if (tags.isNotEmpty()) {
+        result.tags = tags.map { it.toLsp() }
     }
     return result
 }
