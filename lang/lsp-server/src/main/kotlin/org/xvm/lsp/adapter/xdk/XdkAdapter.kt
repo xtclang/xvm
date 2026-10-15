@@ -146,6 +146,9 @@ class XdkAdapter
 
         override val displayName: String = "XDK"
 
+        /** Queries read completed module analyses, which are immutable and replaced whole on each edit. */
+        override val concurrentQueries: Boolean get() = true
+
         override val capabilities: Set<AdapterCapability> =
             setOf(
                 AdapterCapability.COMPLETION,
