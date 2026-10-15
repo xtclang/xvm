@@ -1978,8 +1978,9 @@ module Consumer { package lib import Library; Int run() = lib.value(); }
 | X52 | Add Bridge.x with `module Bridge { package lib import Library; static Int value() = lib.value(); }`; register Bridge depending on Library and change Consumer's edge/import to Bridge. Repeat X46–X47. | Changes propagate Library → Bridge → Consumer. A broken Bridge blocks Consumer; correction restores the chain. |
 
 There is a 100 ms edit debounce; compiler cancellation remains cooperative. Source cycles and
-overlapping roots are rejected during configuration. Blocked consumers currently expose no
-semantic or structural views until their dependencies recover. Hosts must supply accurate edges;
+overlapping roots are rejected during configuration. Blocked consumers keep syntax-only
+views (outline, folding, selection) parsed from their own sources; semantic views return when their
+dependencies recover. Hosts must supply accurate edges;
 the server does not infer a project graph from unresolved imports or build-tool files.
 
 Automated adapter/server coverage of this setup, including uncooperative late compiler results,
