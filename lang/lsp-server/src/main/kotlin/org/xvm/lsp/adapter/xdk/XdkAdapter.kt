@@ -4,8 +4,12 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
+import org.xvm.asm.ModuleStructure
+import org.xvm.asm.MultiMethodStructure
 import org.xvm.compiler.Source
+import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CallHierarchyIncomingCall
@@ -346,6 +350,80 @@ class XdkAdapter
                 compiles.execute(task.ready())
                 result
             }
+
+        /**
+         * Compile [target] (a module name or root URI) and its source dependencies, or every source module
+         * when [target] is null, into the embedded build directory of the owning workspace folder. Shares the
+         * compiler worker with editor analysis, so it never runs concurrently with another compilation.
+         */
+        fun buildAsync(
+            target: String?,
+            rebuild: Boolean,
+        ): CompletableFuture<XdkBuildResult> =
+            synchronized(lifecycle) {
+                if (closed) return closedAdapter()
+                val graph = project
+                val inputs = dependencies
+                val module =
+                    target?.let { name ->
+                        graph.modules[name] ?: graph.modules.values.firstOrNull { it.uri == name || it.uri == graph.scope(name) }
+                    }
+                if (target != null && module == null) {
+                    return CompletableFuture.failedFuture(IllegalArgumentException("Unknown source module: $target"))
+                }
+                val order = module?.let { graph.buildOrder(it.uri) } ?: graph.buildOrder()
+                val folder = buildFolder(module ?: order.firstOrNull())
+                val result = CompletableFuture<XdkBuildResult>()
+                val task =
+                    queueTrace.task("embedded-build", module?.uri ?: folder.toURI().toString(), result) {
+                        try {
+                            if (!result.isDone) {
+                                result.complete(XdkBuild.build(order, inputs, folder, rebuild) { closed || result.isCancelled })
+                            }
+                        } catch (failure: Exception) {
+                            result.completeExceptionally(failure)
+                        } catch (failure: Error) {
+                            result.completeExceptionally(failure)
+                            throw failure
+                        }
+                    }
+                result.whenComplete { _, _ -> if (result.isCancelled) compiles.remove(task) }
+                compiles.execute(task.ready())
+                result
+            }
+
+        /** Source modules whose latest compilation declares a callable entry point. */
+        fun runnableTargets(): List<XdkRunnableTarget> =
+            project.buildOrder().flatMap { module ->
+                entryMethods(module.uri).map { XdkRunnableTarget(module.name, module.uri, it) }
+            }
+
+        /**
+         * Entry methods the runner can call in the module [uri] declares: `run` with at most one required
+         * parameter. Read from the module structure the compiler registered for the document, so a module
+         * that registers but does not yet build still offers to run (and the run reports why it cannot).
+         */
+        private fun entryMethods(uri: String): List<String> {
+            val module = analysis(uri)?.ast?.let(::moduleDeclaration)?.component as? ModuleStructure ?: return emptyList()
+            val run = module.getChild("run") as? MultiMethodStructure
+            return if (run?.methods().orEmpty().any { it.requiredParamCount <= 1 }) listOf("run") else emptyList()
+        }
+
+        private fun moduleDeclaration(node: AstNode): TypeCompositionStatement? =
+            if (node is TypeCompositionStatement && node.category.id == Token.Id.MODULE) {
+                node
+            } else {
+                node.childNodes().firstNotNullOfOrNull(::moduleDeclaration)
+            }
+
+        /** The workspace folder that owns [module]'s embedded build output and is its runs' working directory. */
+        private fun buildFolder(module: XdkSourceModule?): File {
+            val folders = discovery.get().folders
+            return module?.let { owned -> folders.filter { owned.root.toPath().startsWith(it.toPath()) }.maxByOrNull { it.path.length } }
+                ?: folders.firstOrNull()
+                ?: module?.root?.parentFile
+                ?: File(".").absoluteFile
+        }
 
         override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
 
@@ -1615,11 +1693,13 @@ class XdkAdapter
             }
         }
 
+        /** Only modules with a callable entry point get a Run lens. */
         private fun runLenses(uri: String): List<CodeLens> =
             analysis(uri)
                 ?.symbols
                 .orEmpty()
                 .filter { it.kind == SymbolInfo.SymbolKind.MODULE }
+                .filter { entryMethods(uri).isNotEmpty() }
                 .map { symbol ->
                     val at = symbol.location
                     CodeLens(
@@ -2391,6 +2471,7 @@ class XdkAdapter
          * Only current, completed module analyses belong here; a member edit drops all previous views.
          */
         private val completed = ConcurrentHashMap<String, ModuleAnalysis>()
+
         private val overlays = linkedMapOf<String, String>()
         private val scopes = mutableMapOf<String, String>()
         private val requests = ConcurrentHashMap<String, Request>()
