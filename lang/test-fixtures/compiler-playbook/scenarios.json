@@ -4653,7 +4653,7 @@
       }
     },
     "X137": {
-      "title": "transport preference restarts one service and preserves unsaved buffers",
+      "title": "transport and adapter preferences restart one service and preserve unsaved buffers",
       "manual": [
         "Connection options are window/project scoped; remote filesystem execution is not enabled."
       ],
@@ -8782,6 +8782,109 @@
         "anchor": "read(Int",
         "initialTitle": "2 references",
         "changedTitle": "3 references"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X280": {
+      "title": "Run lenses appear only on modules with a callable run method and follow edits",
+      "manual": [],
+      "values": {
+        "file": "LensRunnable.x",
+        "module": "LensRunnable",
+        "source": "module LensRunnable {\n    void run() {}\n}\n",
+        "libraryFile": "LensOnlyLibrary.x",
+        "libraryModule": "LensOnlyLibrary",
+        "librarySource": "module LensOnlyLibrary {\n    Int value() = 1;\n}\n",
+        "uncallable": "module LensOnlyLibrary {\n    Int value() = 1;\n    void run(String first, String second) {}\n}\n",
+        "runnableLibrary": "module LensOnlyLibrary {\n    Int value() = 1;\n    void run() {}\n}\n",
+        "runTitle": "▶ Run LensRunnable",
+        "libraryRunTitle": "▶ Run LensOnlyLibrary"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X281": {
+      "title": "embedded build saves edits, compiles the module graph and skips consumers of a failed dependency",
+      "manual": [
+        "The Build tool window and terminal links to diagnostics are inspected manually; the drivers check the reported lines."
+      ],
+      "values": {
+        "libraryFile": "BuildLibrary.x",
+        "libraryModule": "BuildLibrary",
+        "librarySource": "module BuildLibrary {\n    static Int value() = 7;\n}\n",
+        "appFile": "BuildApp.x",
+        "appModule": "BuildApp",
+        "appSource": "module BuildApp {\n    package lib import BuildLibrary;\n\n    Int run() = lib.value();\n}\n",
+        "brokenLibrary": "module BuildLibrary {\n    static Int value() = \"seven\";\n}\n",
+        "built": [
+          "✓ BuildLibrary",
+          "✓ BuildApp"
+        ],
+        "artifact": "build/xtc/embedded/lib/BuildLibrary.xtc",
+        "failed": "✗ BuildLibrary",
+        "skipped": "- BuildApp (not built: a dependency failed)",
+        "diagnostic": "BuildLibrary.x:2:"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X282": {
+      "title": "embedded run passes exact arguments, streams output and reports the exit code",
+      "manual": [
+        "Embedded runs do not forward console input."
+      ],
+      "values": {
+        "file": "RunEcho.x",
+        "module": "RunEcho",
+        "source": "module RunEcho {\n    Int run(String[] args) {\n        @Inject Console console;\n        console.print($\"args={args.size}:{args[0]}|{args[1]}\");\n        return 3;\n    }\n}\n",
+        "args": [
+          "a b",
+          "ü"
+        ],
+        "output": "args=2:a b|ü",
+        "exitCode": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X283": {
+      "title": "stopping an embedded run ends it and the worker runs the next program",
+      "manual": [
+        "IntelliJ Rerun performs the same stop-then-run sequence from the Run tool window."
+      ],
+      "values": {
+        "file": "RunForever.x",
+        "module": "RunForever",
+        "source": "module RunForever {\n    void run() {\n        @Inject Console console;\n        console.print(\"started\");\n        for (Int count = 0; count >= 0; ++count) {}\n    }\n}\n",
+        "started": "started",
+        "nextFile": "RunNext.x",
+        "nextModule": "RunNext",
+        "nextSource": "module RunNext {\n    Int run() = 5;\n}\n",
+        "nextExitCode": 5
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X284": {
+      "title": "a module that does not build reports its diagnostics and runs nothing",
+      "manual": [],
+      "values": {
+        "file": "RunBroken.x",
+        "module": "RunBroken",
+        "source": "module RunBroken {\n    Int run() = \"five\";\n}\n",
+        "diagnostic": "RunBroken.x:2:",
+        "message": "Build failed; nothing was run."
       },
       "intellij": {
         "coverage": "full",
