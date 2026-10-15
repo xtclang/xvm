@@ -458,6 +458,42 @@ settings. Unsaved import-edge edits, document close and workspace-folder changes
 It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
 
+### Embedded build and run
+
+IDE clients can build and run source modules without Gradle. The editor integrations use this as
+their *embedded* mode ([VS Code](../vscode-extension/README.md#building-and-running),
+[IntelliJ](../intellij-plugin/README.md#running-your-application)); the design and remaining work are in
+the [execution plan](../doc/plans/plan-embedded-execution.md). Only the compiler adapter supports it;
+other adapters fail these requests. `xtc/languageServiceStatus` reports `embeddedExecution: true`.
+
+| Message | Direction | Purpose |
+|---------|-----------|---------|
+| `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
+| `xtc/run` `{module, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
+| `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
+| `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
+| `xtc/runOutput` `{runId, text}` | notification | Program output, in order |
+| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome |
+
+Builds run on the same serialized compile queue as editor analysis, against the files on disk
+(clients save first), and write `build/xtc/embedded/lib` and `build/xtc/embedded/dependencies` in the
+workspace folder that owns the module. Every build compiles the requested modules again; `rebuild`
+also deletes their previous artifacts first. A module whose dependency fails is reported as skipped,
+not compiled against an old artifact.
+
+Clients choose `runId` so they can route output that arrives before the `xtc/run` response.
+`args` reach the method exactly as given, never shell-parsed. The entry method follows the
+command-line runner's rule: exactly one method of that name, with at most one required parameter;
+a `String[]` is passed when the method requires one, or when arguments are given and it accepts a
+parameter. The Run lens appears only on modules whose registered module structure declares such a
+`run` method, so a module that does not build yet can still offer Run and report why it failed.
+
+Programs run in a separate execution worker JVM, started on the first run from the server's own
+classpath and Java runtime, reused across runs, and replaced after it dies; each run gets a fresh
+application container, and the runner's HTTP host is not started. The worker runs one program at a
+time: a second run fails with "Another program is still running" until the first ends. It does not
+forward console input yet. Shutting down the server shuts down the worker and ends active runs.
+
 ## Context-Aware Completion
 
 The tree-sitter adapter classifies the cursor context before returning completions,
@@ -510,6 +546,9 @@ precise supported contexts and exclusions.
 | `XdkAdapter` | Serialized compiler worker, bundled XDK, diagnostics and document lifecycle |
 | `SemanticModel` / builder | Immutable per-analysis semantic facts and queries; no retained compiler objects |
 | `XdkDependency` | Immutable module bytes, revisioned symbol keys and optional detached source locations |
+| `XdkBuild` | Embedded build of a source-module order into `build/xtc/embedded`, with per-module outcomes |
+| `EmbeddedRuns` | `xtc/build`/`xtc/run` service: builds on the compile queue, then runs in the execution worker |
+| `RunWorkerProcess` / `RunWorker` | The execution worker JVM and its JSON-lines control protocol |
 
 ## Building
 

@@ -66,8 +66,8 @@ module runner.xtclang.org {
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
      * @param rootDir     the optional file-system root for the task
-     * @param method      (optional) the name of the method to invoke in the module; `run` by default
-     * @param args        (optional) the argument array to pass to that method; `Null` to pass none
+     * @param method      the name of the method to invoke in the module
+     * @param args        the argument array to pass to that method, or Null to pass none
      *
      * @return the task identifier
      */
@@ -234,13 +234,46 @@ module runner.xtclang.org {
             @Inject Clock clock;
             started = clock.now;
 
-            // a task that cannot start ends here, and is unregistered so its directory can be
-            // deleted; once started, the completion handler below does the same
-            try {
-                Directory taskDir;
-                if (String path ?= rootDir) {
-                    @Inject FileStore storage;
-                    taskDir = storage.dirFor(new Path(path)).ensure();
+            Directory taskDir;
+            if (String path ?= rootDir) {
+                @Inject FileStore storage;
+                taskDir = storage.dirFor(new Path(path)).ensure();
+            } else {
+                taskDir = taskRoot().dirFor(taskDirectoryName(template.name, id)).ensure();
+            }
+
+            BufferedConsole? bufferedConsole = Null;
+            Console          taskConsole;
+            if (Int consoleId ?= this.consoleId) {
+                @Inject(resourceName=$"console_{consoleId}") Console console;
+                taskConsole = console;
+            } else {
+                @Inject Console console;
+                bufferedConsole = new BufferedConsole($"{id}> ", console);
+                taskConsole = &bufferedConsole.maskAs(Console);
+            }
+
+            ResourceProvider injector = new TaskResourceProvider(taskDir, taskConsole);
+
+            container = new Container(template, Lightweight, repository, injector);
+            running   = True;
+
+            // the host decides from the method's signature whether an argument array is passed
+            Tuple callArgs = ();
+            if (String[] argv ?= args) {
+                callArgs = (argv);
+            }
+
+            @Future Tuple<Int, String> completion;
+            @Future Tuple              outcome = container.as(Container).invoke(method, callArgs);
+            &outcome.whenComplete((tuple, exception) -> {
+                Int    result  = 0;
+                String failure = "";
+                if (exception == Null) {
+                    if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
+                        result = tuple[0].as(Int);
+                    }
+                    bufferedConsole?.flush();
                 } else {
                     taskDir = taskRoot().dirFor(taskDirectoryName(template.name, id)).ensure();
                 }

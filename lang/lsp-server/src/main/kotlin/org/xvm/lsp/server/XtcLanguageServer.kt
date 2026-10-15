@@ -69,6 +69,7 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.adapter.xdk.XdkRunnableTarget
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
@@ -123,6 +124,7 @@ class XtcLanguageServer(
     internal val readOnlyDocuments = ReadOnlyDocuments(adapter) { client }
     internal val clientTrace = ClientTrace { client }
     internal val partialResults = PartialResults(client = { client })
+    private val embeddedRuns = EmbeddedRuns(adapter, { client })
 
     override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
 
@@ -1144,6 +1146,7 @@ class XtcLanguageServer(
         if (alreadyClosed) return
         clientReady.cancel(false)
         indexing.cancel(false)
+        embeddedRuns.close()
         formattingState.close()
         resourceFileWatchers.close()
         refresh.close()
@@ -1207,6 +1210,27 @@ class XtcLanguageServer(
                 .orEmpty()
         }
 
+    /** Embedded build: compiles to the workspace's embedded output directory through the compiler queue. */
+    @JsonRequest("xtc/build")
+    fun build(params: BuildParams): CompletableFuture<BuildResponse> = embeddedRuns.build(params)
+
+    /**
+     * Embedded run: builds the module, then runs it in the execution worker JVM. Output and the exit are
+     * reported as `xtc/runOutput` and `xtc/runExited` notifications for the client-chosen run ID.
+     */
+    @JsonRequest("xtc/run")
+    fun run(params: RunParams): CompletableFuture<RunResponse> = embeddedRuns.run(params)
+
+    /** Source modules whose latest compilation declares a callable entry point. */
+    @JsonRequest("xtc/runnableTargets")
+    fun runnableTargets(): CompletableFuture<List<XdkRunnableTarget>> =
+        supplyAsync("xtc/runnableTargets", "entry points") {
+            (adapter as? XdkAdapter)?.runnableTargets().orEmpty()
+        }
+
+    @JsonRequest("xtc/stopRun")
+    fun stopRun(params: StopRunParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.stop(params))
+
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
     @JsonRequest("xtc/rename")
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
@@ -1235,6 +1259,7 @@ class XtcLanguageServer(
         CompletableFuture.completedFuture(
             mapOf(
                 "adapter" to adapter.displayName,
+                "embeddedExecution" to (adapter is XdkAdapter),
                 "version" to version,
                 "pid" to ProcessHandle.current().pid(),
                 "runtime" to System.getProperty("java.runtime.version"),
