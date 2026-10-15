@@ -2,6 +2,29 @@
 
 **Complete implementation reference:** [draft #693](https://github.com/xtclang/xvm/pull/693) contains the distilled compiler-backed LSP and IDE integrations. It is available for testing and later review, and should likely not be merged as is. The bulk of the change is LSP improvements; the assembled product demonstrates why the compiler and embedding mechanisms outside `lang/` are necessary. Existing foundation PRs remain separate.
 
+## Embedded build and run — 2026-10-15
+
+`lagergren/errs` adds an embedded build/run mode to both IDEs beside Gradle (IntelliJ's *Build and
+run using* analogue): the language server's compiler builds on its existing compile queue and a
+persistent execution worker JVM runs the module. This is new work **outside every prepared branch
+and PR**, including draft #693; it is not mirrored anywhere yet. The commits, extraction targets and
+validation receipt are in the
+[integration plan](docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
+and remaining R1–R8 work are in the
+[execution plan](lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15).
+
+| Commit | Content | Proposed home |
+|---|---|---|
+| `5a14da284` | `EmbeddingSupport.runMethod`, `InterpreterControl` without the runner HTTP host, `lib_runner` method/argument tasks; server `xtc/build`/`xtc/run`, worker, entry-point Run lens | Runtime files: a separate runtime-execution PR outside `lang/`; server part: #693 |
+| `94a1e8c19` | VS Code `xtc.build.mode`, Build/Rebuild/Run/Stop, tasks | #693 / editor review |
+| `1a89eb1a5` | IntelliJ Build, Execution, Deployment › Ecstasy, task runner, run modes, Run lens action | #693 / editor review |
+| `50fb713a0` | Plan status, playbook 18a, documentation notes | With the feature commits |
+| `590935e77` | `javatools/lsp-compiler.md` rename; `AGENTS.md` links | Mirror into #693 and the outside-`lang/` comparison |
+
+The runtime-execution PR would be small (three files) and independent of the compiler foundation
+PRs; it must keep the distinct `runMethod` name, which avoids an overload ambiguity in existing
+callers. Mirroring into #693 changes its scope and needs its own decision.
+
 ## Repository review correction — 2026-10-13
 
 [#683](https://github.com/xtclang/xvm/pull/683) now retains repository cache and fallback fixes
@@ -1287,7 +1310,7 @@ Before release acceptance, run the packaged server and both native editor paths.
 
 ## Deferred work
 
-Runtime execution/DAP, notebooks and a public color library remain deferred. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
+Runtime execution/DAP, notebooks and a public color library remain deferred from the prepared branches. A first embedded build/run delivery exists only on `lagergren/errs` ([2026-10-15](#embedded-build-and-run--2026-10-15)); DAP remains unimplemented. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
 
 Unrelated runtime/JIT edits, broad modernization, documentation sweeps and historical review scripts are not implicitly included in the five prepared branches. The reconciliation inventory below preserves their visibility and identifies compiler follow-ups that still need a decision.
 
