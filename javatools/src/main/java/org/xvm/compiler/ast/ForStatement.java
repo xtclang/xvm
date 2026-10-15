@@ -30,7 +30,6 @@ import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -40,8 +39,7 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  */
 public class ForStatement
-        extends ConditionalStatement
-        implements LabelAble {
+        extends LoopStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForStatement(
@@ -63,22 +61,6 @@ public class ForStatement
         return true;
     }
 
-    @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
-        Context ctxDest = ensureValidationContext();
-        Label   label   = getContinueLabel();
-
-        if (ctxOrigin.isReachable()) {
-            // record the jump that landed on this statement by recording its assignment impact
-            if (m_listContinues == null) {
-                m_listContinues = new ArrayList<>();
-            }
-            m_listContinues.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
-        }
-
-        return label;
-    }
-
     /**
      * @return true iff there is a continue label for this statement, which indicates that it has
      *         already been requested at least one time
@@ -90,6 +72,7 @@ public class ForStatement
     /**
      * @return the continue label for this statement
      */
+    @Override
     public Label getContinueLabel() {
         Label label = m_labelContinue;
         if (label == null) {
@@ -202,56 +185,10 @@ public class ForStatement
         return CHILD_FIELDS;
     }
 
-    // ----- LabelAble methods ---------------------------------------------------------------------
-
-    @Override
-    public boolean hasLabelVar(String sName) {
-        return "first".equals(sName) || "count".equals(sName);
-    }
-
-    @Override
-    public Register getLabelVar(Context ctx, String sName) {
-        assert hasLabelVar(sName);
-
-        boolean fFirst = "first".equals(sName);
-
-        Register reg = fFirst ? m_regFirst : m_regCount;
-        if (reg == null) {
-            // this occurs only during validate()
-            assert m_labelVars != null;
-
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
-
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
-            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
-
-            if (fFirst) {
-                m_regFirst = reg;
-            } else {
-                m_regCount = reg;
-            }
-        }
-
-        return reg;
-    }
-
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        ValidationScope previous = m_labelVars;
-        try {
-            return validateScoped(ctx, errs);
-        } finally {
-            m_labelVars = previous;
-        }
-    }
-
-    /**
-     * Validate with callback state restored by {@link #validateImpl} on every exit.
-     */
-    private Statement validateScoped(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         boolean fValidInit = true;
 
         // the for() statement will represent its own scope
@@ -599,15 +536,6 @@ public class ForStatement
     protected StatementBlock  block;
 
     private transient Label m_labelContinue;
-
-    private transient ValidationScope m_labelVars;
-    private transient Register        m_regFirst;
-    private transient Register        m_regCount;
-
-    /**
-     * Generally null, unless there is a "continue" that jumps to this statement.
-     */
-    private transient List<Break> m_listContinues;
 
     /**
      * The short-circuits from inside of the most recent "init" or "update".

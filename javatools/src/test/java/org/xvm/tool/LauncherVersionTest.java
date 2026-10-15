@@ -7,11 +7,11 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.xvm.asm.BuildInfo;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import static org.xvm.asm.ErrorListener.Silence.DISCARD;
 import static org.xvm.asm.ErrorListener.silent;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test for launcher version display functionality.
