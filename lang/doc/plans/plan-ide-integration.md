@@ -570,11 +570,11 @@ An IntelliJ IDEA plugin providing XTC support:
 
 ### 4. VS Code Extension (`lang/vscode-extension/`)
 
-A VS Code extension stub with:
-- Extension manifest (`package.json`)
-- Language configuration
-- TextMate grammar inclusion
-- LSP client setup (scaffolded)
+A complete VS Code client (see its [README](../../vscode-extension/README.md)):
+- Extension manifest (`package.json`), language configuration and TextMate grammar
+- LSP client with adapter switching, status bar, output channels and settings
+- Embedded and Gradle build/run, tasks and project scaffolding
+- No debugger yet; debug launches run without one
 
 ### 5. Tree-sitter Integration ✅ COMPLETE
 
@@ -602,7 +602,7 @@ Full tree-sitter support for fast, incremental parsing:
 ### Short-term (Complete LSP Features)
 
 1. ~~**Wire up TreeSitterAdapter in LSP server**~~ ✅ COMPLETE
-   - TreeSitterAdapter is now the default adapter
+   - TreeSitterAdapter was the default adapter until compiler mode replaced it on 2026-10-06
    - Out-of-process LSP server runs with JBR 25 (FFM API for tree-sitter)
 
 2. ~~**Implement semantic tokens (Phase 1)**~~ ✅ COMPLETE
