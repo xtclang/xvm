@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **290 scenarios**: X1–X285, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **291 scenarios**: X1–X286, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1413,7 +1413,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X285 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X286 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1561,7 +1561,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 290 scenarios: X1–X285, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 291 scenarios: X1–X286, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3841,6 +3841,12 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 | X283 | Run RunForever; after it prints `started`, Rerun it (IntelliJ **Rerun**, VS Code **Tasks: Restart Running Task**); after the new run prints `started`, Stop it. Then run RunNext from its Run lens. | Rerun stops the first run and starts a new one that prints `started` again. The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
 | X284 | Run RunBroken, whose `run` returns a String as an Int. | The run prints the `RunBroken.x:2:` diagnostic and "Build failed; nothing was run.", runs nothing and ends with exit code 1. |
 | X285 | VS Code: start debugging DebugRun (`F5` or a `launch.json` entry). IntelliJ: open DebugRun's Ecstasy Application configuration. | VS Code starts no debug session, says debugging is not available, and runs the module to exit code 4. IntelliJ offers Run but no Debug runner for the configuration, so it never pretends to debug. |
+
+### Adapter chooser (X286)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X286 | In an Ecstasy editor press `Ctrl+Alt+X`, then `A`, and choose **Tree-sitter**. Then open **Ecstasy: Switch Language Adapter** (VS Code Command Palette; IntelliJ **Tools** menu) and choose **Ecstasy Compiler**. | Each shortcut opens the same chooser; each choice restarts the server once (a new process) into the chosen adapter. VS Code presses the chord as renderer key events. IntelliJ checks the keymap binding and the Tools menu entry, then invokes the action from the editor and answers its popup. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
