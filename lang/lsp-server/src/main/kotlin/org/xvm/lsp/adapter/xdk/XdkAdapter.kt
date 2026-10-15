@@ -6,6 +6,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.ModuleStructure
 import org.xvm.asm.MultiMethodStructure
+import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
@@ -1367,6 +1368,7 @@ class XdkAdapter
                                         Diagnostic.Codes.DEPENDENCY_FAILED,
                                         "Dependencies unavailable: ${missing.joinToString()}",
                                         sources.documentUris,
+                                        structure = sources,
                                     )
                                 }
 
@@ -1416,30 +1418,44 @@ class XdkAdapter
             )
         }
 
+        /**
+         * A module that cannot be compiled reports only why. With readable [structure] it keeps syntax-only
+         * views, outline, folding and selection, from parsing each source alone, which needs no dependency;
+         * semantic views stay absent rather than guess at a module that did not compile.
+         */
         private fun unavailableProjectModule(
             uri: String,
             inputs: XdkDependencies,
             code: String,
             message: String,
             documents: Set<String> = setOf(uri),
-        ) = ModuleAnalysis(
-            documents = emptyMap(),
-            diagnostics =
-                listOf(
-                    Diagnostic(
-                        Location(uri, 0, 0, 0, 0),
-                        Diagnostic.Severity.ERROR,
-                        message,
-                        code,
-                        Diagnostic.SOURCE,
-                    ),
-                ),
-            dependencies = emptySet(),
-            succeeded = false,
-            dependencySources = emptyMap(),
-            inputs = inputs,
-            documentUris = documents,
-        )
+            structure: XdkSources? = null,
+        ): ModuleAnalysis {
+            val diagnostics = listOf(Diagnostic(Location(uri, 0, 0, 0, 0), Diagnostic.Severity.ERROR, message, code, Diagnostic.SOURCE))
+            return ModuleAnalysis(
+                documents = structure?.let { structuralViews(it, diagnostics) }.orEmpty(),
+                diagnostics = diagnostics,
+                dependencies = emptySet(),
+                succeeded = false,
+                dependencySources = emptyMap(),
+                inputs = inputs,
+                documentUris = documents,
+            )
+        }
+
+        /** Parse errors are not reported: the module's own diagnostic already says why it was not compiled. */
+        private fun structuralViews(
+            sources: XdkSources,
+            diagnostics: List<Diagnostic>,
+        ): Map<String, Analysis> =
+            sources.inputs.text.entries.associate { (file, text) ->
+                val uri = sources.uri(file)
+                val ast =
+                    ExecutionTrace.api("Parser.parseSource(structure)", uri) {
+                        runCatching { Parser(Source(text, file.path), ErrorList(MAX_STRUCTURE_ERRORS)).parseSource() }.getOrNull()
+                    }
+                uri to Analysis(diagnostics.filter { it.location.uri == uri }, XdkSymbols.of(uri, ast), ast)
+            }
 
         /** Compile and copy all source views on the single worker. */
         private fun compileOne(
@@ -2532,6 +2548,9 @@ class XdkAdapter
 
         private companion object {
             const val SHUTDOWN_SECONDS = 5L
+
+            /** Enough to keep parsing past ordinary mistakes; structural views do not report them. */
+            const val MAX_STRUCTURE_ERRORS = 100
             const val DEBOUNCE_MILLIS = 100L
 
             /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
