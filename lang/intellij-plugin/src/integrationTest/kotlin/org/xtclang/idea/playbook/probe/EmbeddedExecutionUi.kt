@@ -16,6 +16,8 @@ import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.runners.ExecutionUtil
+import com.intellij.execution.ui.RunContentManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -151,6 +153,20 @@ object EmbeddedExecutionUi {
     /** The run's exit code, or `Int.MIN_VALUE` while it is unknown or still running. */
     @JvmStatic
     fun exitCode(module: String): Int = runs[module]?.exitCode ?: Int.MIN_VALUE
+
+    /** Presses Rerun for the module's run, as the Run tool window does; the new run replaces its capture. */
+    @JvmStatic
+    fun rerun(
+        project: Project,
+        module: String,
+    ) {
+        val handler = requireNotNull(runs[module]?.handler) { "No run of $module has started" }
+        ApplicationManager.getApplication().invokeAndWait {
+            val descriptor = RunContentManager.getInstance(project).allDescriptors.single { it.processHandler === handler }
+            runs.remove(module)
+            ExecutionUtil.restart(descriptor)
+        }
+    }
 
     /** Presses Stop for the module's run. */
     @JvmStatic

@@ -93,6 +93,9 @@ internal fun ParityScenarios.executionCases() {
             val module = data.string("module")
             execution.run(project, module, uri(data.string("file")), "")
             awaitUi("long-running program starts", 60.seconds) { data.string("started") in execution.output(module) }
+            // Rerun from the Run tool window stops the program and starts a new run
+            execution.rerun(project, module)
+            awaitUi("rerun starts a new run", 60.seconds) { data.string("started") in execution.output(module) }
             execution.stop(module)
             awaitUi("stopped program reports its exit", 30.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
 
@@ -165,6 +168,11 @@ interface EmbeddedExecutionProbe {
     )
 
     fun expect(
+        project: Project,
+        module: String,
+    )
+
+    fun rerun(
         project: Project,
         module: String,
     )
