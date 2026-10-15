@@ -12,13 +12,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
@@ -47,7 +51,9 @@ import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
 class InterpreterControl
         implements EmbeddingSupport.Control {
     /**
-     * Create and start the shared interpreter connector that hosts the runner module.
+     * Create and start the shared interpreter connector that hosts the runner module. Tasks are
+     * registered and started directly, so the runner's own run() method, which starts its HTTP
+     * endpoint, is not invoked.
      */
     static Connector createConnector(ModuleRepository repository) {
         InterpreterConnector connector = new InterpreterConnector(repository);
@@ -59,14 +65,12 @@ class InterpreterControl
     /**
      * Create and start a control for the specified module.
      *
-     * @param entry       the entry method to invoke and its arguments
-     * @param consoleIn   the console's input, or {@link EmbeddingSupport.ConsoleInput#NONE};
-     *                    used only with a console
+     * @param methodName  the method to invoke
+     * @param args        the argument array to pass to the method, or null to pass none
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
-                                           ModuleRepository repository,
-                                           EmbeddingSupport.EntryPoint entry, PrintWriter console,
-                                           EmbeddingSupport.ConsoleInput consoleIn, File rootDir,
+                                           ModuleRepository repository, String methodName,
+                                           String[] args, PrintWriter console, File rootDir,
                                            ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
@@ -76,23 +80,9 @@ class InterpreterControl
         Long    consoleId = null;
 
         try {
-            FileStructure   file = prepareModule(interpreter, module, repository);
-            MainContainer   main = interpreter.getMainContainer();
-            MethodStructure method;
-            try {
-                method = EmbeddingSupport.entryMethod(file.getModule(), entry);
-            } catch (IllegalArgumentException e) {
-                // the method is why the run does not start, as the command-line runner reports it;
-                // its container was never the problem
-                if (errs != null) {
-                    errs.log(ERROR, ERR_ENTRY_METHOD, new Object[] {e.getMessage()}, module);
-                }
-                return null;
-            }
-            if (errs != null && !entry.args().isEmpty() && method.getParamCount() == 0) {
-                // the arguments are dropped, with the command-line runner's warning
-                errs.log(WARNING, WARN_ARGUMENTS_IGNORED, new Object[] {entry.name()}, module);
-            }
+            FileStructure file     = prepareModule(interpreter, module, repository);
+            MainContainer main     = interpreter.getMainContainer();
+            String[]      callArgs = entryArguments(file.getModule(), methodName, args);
 
             if (console != null) {
                 consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,
@@ -107,10 +97,10 @@ class InterpreterControl
             ObjectHandle hRootDir    = rootDir == null
                     ? xNullable.NULL
                     : xString.makeHandle(rootDir.getAbsolutePath());
-            ObjectHandle hMethod     = xString.makeHandle(entry.name());
-            ObjectHandle hArgs       = EmbeddingSupport.passesArguments(method, entry)
-                    ? xString.makeArrayHandle(entry.args().toArray(String[]::new))
-                    : xNullable.NULL;
+            ObjectHandle hMethod     = xString.makeHandle(methodName);
+            ObjectHandle hArgs       = callArgs == null
+                    ? xNullable.NULL
+                    : xString.makeArrayHandle(callArgs);
 
             ObjectHandle hTaskId = postRequest(
                     interpreter, "registerTask",
@@ -142,6 +132,51 @@ class InterpreterControl
             unregisterConsole(interpreter, consoleId);
             throw e;
         }
+    }
+
+    /**
+     * Select the module's entry method and decide what it is passed, following the command-line
+     * runner: an argument array is passed when the method requires one, or when arguments are
+     * supplied and the method accepts a parameter.
+     *
+     * @param module      the module to run
+     * @param methodName  the name of the entry method
+     * @param args        the supplied arguments, or null for none
+     *
+     * @return the argument array to pass, or null to pass none
+     *
+     * @throws IllegalArgumentException if the method is missing, ambiguous, or cannot accept
+     *         the arguments
+     */
+    static String[] entryArguments(ModuleStructure module, String methodName, String[] args) {
+        String[]  supplied = args == null ? new String[0] : args;
+        Component child    = module.getChild(methodName);
+        if (!(child instanceof MultiMethodStructure methods) || methods.methods().size() != 1) {
+            throw new IllegalArgumentException((child instanceof MultiMethodStructure ? "Ambiguous" : "Missing")
+                    + " method \"" + methodName + "\" in module " + module.getName());
+        }
+
+        MethodStructure method        = methods.methods().iterator().next();
+        int             requiredCount = method.getRequiredParamCount();
+        if (requiredCount > 1) {
+            throw new IllegalArgumentException("Unsupported arguments for method \"" + methodName
+                    + "\": " + method.getIdentityConstant().getSignature().getValueString());
+        }
+
+        boolean passArgs = requiredCount == 1 || supplied.length > 0 && method.getParamCount() > 0;
+        if (!passArgs) {
+            return null;
+        }
+
+        ConstantPool pool = module.getConstantPool();
+        try (var _ = ConstantPool.withPool(pool)) {
+            TypeConstant typeArg = method.getParam(0).getType();
+            if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
+                throw new IllegalArgumentException("Unsupported argument type "
+                        + typeArg.getValueString() + " for method \"" + methodName + "\"");
+            }
+        }
+        return supplied;
     }
 
     private static FileStructure prepareModule(InterpreterConnector connector, ModuleStructure module,
