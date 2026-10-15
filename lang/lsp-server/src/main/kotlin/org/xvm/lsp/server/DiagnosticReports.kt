@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import org.eclipse.lsp4j.DiagnosticTag
 import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.FullDocumentDiagnosticReport
 import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
@@ -63,6 +64,7 @@ internal class DiagnosticReports {
         previous: String?,
         related: Set<String>,
         relatedInformation: Boolean,
+        tags: Set<DiagnosticTag> = emptySet(),
     ): DocumentDiagnosticReport {
         recordIfAbsent(uri)
         val entry = entries.getValue(identity(uri))
@@ -73,7 +75,7 @@ internal class DiagnosticReports {
                     Either.forLeft<FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport>(
                         FullDocumentDiagnosticReport(
                             entries.getValue(identity(other)).diagnostics.map {
-                                it.present(other, relatedInformation)
+                                it.present(other, relatedInformation, tags)
                             },
                         ).apply {
                             resultId = entries.getValue(identity(other)).id
@@ -89,7 +91,7 @@ internal class DiagnosticReports {
         } else {
             DocumentDiagnosticReport(
                 RelatedFullDocumentDiagnosticReport(
-                    entry.diagnostics.map { it.present(uri, relatedInformation) },
+                    entry.diagnostics.map { it.present(uri, relatedInformation, tags) },
                 ).apply {
                     resultId = entry.id
                     relatedDocuments = others
@@ -103,6 +105,7 @@ internal class DiagnosticReports {
         previous: Map<String, String>,
         versions: Map<String, Int>,
         relatedInformation: Boolean,
+        tags: Set<DiagnosticTag> = emptySet(),
     ): WorkspaceDiagnosticReport {
         // A removed root/file must explicitly clear the client's previous report. Do not retain
         // tombstones indefinitely: an unknown old ID simply receives another empty full report.
@@ -127,7 +130,7 @@ internal class DiagnosticReports {
                     } else {
                         WorkspaceDocumentDiagnosticReport(
                             WorkspaceFullDocumentDiagnosticReport(
-                                entry.diagnostics.map { it.present(uri, relatedInformation) },
+                                entry.diagnostics.map { it.present(uri, relatedInformation, tags) },
                                 uri,
                                 documentVersions[identity(uri)],
                             ).apply { resultId = entry.id },
@@ -154,9 +157,13 @@ internal class DiagnosticReports {
     private fun Diagnostic.present(
         uri: String,
         relatedInformation: Boolean,
+        tags: Set<DiagnosticTag>,
     ) = (if (location.uri == identity(uri)) copy(location = location.copy(uri = uri)) else this)
         .toLsp(uri)
-        .apply { if (!relatedInformation) this.relatedInformation = null }
+        .apply {
+            if (!relatedInformation) this.relatedInformation = null
+            this.tags = this.tags?.filter(tags::contains)?.ifEmpty { null }
+        }
 
     private fun identity(uri: String): String =
         runCatching {

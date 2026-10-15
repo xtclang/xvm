@@ -247,6 +247,15 @@ sessions. Immutable Kotlin snapshots supply semantic queries; structural queries
 ASTs. Member edits invalidate all sibling views, and filesystem notifications refresh disk inputs.
 Closing an overlay restores the disk version while another document keeps the module session open.
 
+Quick fixes name the diagnostics they resolve (`CodeAction.diagnostics`): those of the request that
+overlap the code a fix repairs, returned as the client's own objects, so editors offer the fix on the
+problem itself (the Problems view, the error hover, IntelliJ's error tooltip). Code the compiler proves
+can never run carries the `Unnecessary` tag, which editors may render faded: an operand a constant
+short-circuits away (`COMPILER-208`) and a `catch` an earlier clause already catches (`COMPILER-118`).
+Similar messages reported on wider or unplaced code are not tagged. Tags are sent only on response
+paths whose client declares tag support. Nothing is tagged `Deprecated`: the compiler has no
+deprecation contract.
+
 Type hierarchy follows direct declared `extends` and `implements` edges and retains generic parent
 arguments. It requires successful compilation and source locations in the current module. Type-definition
 uses copied type identities, including flow narrowing, generic parameters and union targets.
