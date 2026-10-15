@@ -51,8 +51,7 @@ import static org.xvm.util.Handy.indentLines;
  * An "Iterable"-based "for" statement.
  */
 public class ForEachStatement
-        extends LoopStatement
-        implements LabelAble {
+        extends LoopStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
@@ -96,6 +95,7 @@ public class ForEachStatement
     /**
      * @return the "continue" label for this statement
      */
+    @Override
     public Label getContinueLabel() {
         Label label = m_labelContinue;
         if (label == null) {
@@ -1301,20 +1301,13 @@ public class ForEachStatement
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
-    private transient Register         m_regFirst;
     private transient Register         m_regLast;
-    private transient Register         m_regCount;
     private transient Register         m_regEntry;
     private transient Register         m_regKeyType;
     private transient Register         m_regValType;
     private transient boolean          m_fTupleLValue;
     private transient MethodConstant[] m_aidConvKey;
     private transient TypeConstant[]   m_atypeConv;
-
-    /**
-     * Generally null, unless there is a "continue" that jumps to this statement.
-     */
-    private transient List<Break> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
 }

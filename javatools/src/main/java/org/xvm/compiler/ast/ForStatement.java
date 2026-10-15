@@ -30,7 +30,6 @@ import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -40,8 +39,7 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  */
 public class ForStatement
-        extends LoopStatement
-        implements LabelAble {
+        extends LoopStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForStatement(
@@ -63,22 +61,6 @@ public class ForStatement
         return true;
     }
 
-    @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
-        Context ctxDest = ensureValidationContext();
-        Label   label   = getContinueLabel();
-
-        if (ctxOrigin.isReachable()) {
-            // record the jump that landed on this statement by recording its assignment impact
-            if (m_listContinues == null) {
-                m_listContinues = new ArrayList<>();
-            }
-            m_listContinues.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
-        }
-
-        return label;
-    }
-
     /**
      * @return true iff there is a continue label for this statement, which indicates that it has
      *         already been requested at least one time
@@ -90,6 +72,7 @@ public class ForStatement
     /**
      * @return the continue label for this statement
      */
+    @Override
     public Label getContinueLabel() {
         Label label = m_labelContinue;
         if (label == null) {
@@ -200,40 +183,6 @@ public class ForStatement
     @Override
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
-    }
-
-    // ----- LabelAble methods ---------------------------------------------------------------------
-
-    @Override
-    public boolean hasLabelVar(String sName) {
-        return "first".equals(sName) || "count".equals(sName);
-    }
-
-    @Override
-    public Register getLabelVar(Context ctx, String sName) {
-        assert hasLabelVar(sName);
-
-        boolean fFirst = "first".equals(sName);
-
-        Register reg = fFirst ? m_regFirst : m_regCount;
-        if (reg == null) {
-            // this occurs only during validate()
-            assert m_labelVars != null;
-
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
-
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
-            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
-
-            if (fFirst) {
-                m_regFirst = reg;
-            } else {
-                m_regCount = reg;
-            }
-        }
-
-        return reg;
     }
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -587,14 +536,6 @@ public class ForStatement
     protected StatementBlock  block;
 
     private transient Label m_labelContinue;
-
-    private transient Register m_regFirst;
-    private transient Register m_regCount;
-
-    /**
-     * Generally null, unless there is a "continue" that jumps to this statement.
-     */
-    private transient List<Break> m_listContinues;
 
     /**
      * The short-circuits from inside of the most recent "init" or "update".
