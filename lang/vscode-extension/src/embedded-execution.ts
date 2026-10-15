@@ -53,6 +53,19 @@ interface RunSession {
 
 const sessions = new Map<string, RunSession>();
 
+/** A build or run as its terminal shows it: everything written so far, and the exit code once finished. */
+export interface ExecutionUpdate {
+    kind: 'build' | 'run';
+    label: string;
+    text: string;
+    exitCode?: number;
+}
+
+const updates = new vscode.EventEmitter<ExecutionUpdate>();
+
+/** Fires when an embedded build or run writes output and when it finishes. */
+export const onDidUpdateExecution = updates.event;
+
 /**
  * Routes run notifications to their sessions. JSON-RPC keeps one handler per method, so this is registered
  * once per client rather than per run.
@@ -120,8 +133,10 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
     readonly onDidWrite = this.writer.event;
     readonly onDidClose = this.closer.event;
     private finished = false;
+    private text = '';
 
-    constructor(protected readonly client: () => LanguageClient | undefined) {}
+    constructor(protected readonly client: () => LanguageClient | undefined,
+                private readonly kind: ExecutionUpdate['kind'], private readonly label: string) {}
 
     abstract open(): void;
 
@@ -130,7 +145,9 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
     }
 
     protected write(text: string): void {
+        this.text += text;
         this.writer.fire(terminalText(text));
+        updates.fire({ kind: this.kind, label: this.label, text: this.text });
     }
 
     protected line(text: string): void {
@@ -141,6 +158,7 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
         if (!this.finished) {
             this.finished = true;
             this.closer.fire(code);
+            updates.fire({ kind: this.kind, label: this.label, text: this.text, exitCode: code });
         }
     }
 
@@ -162,7 +180,7 @@ class BuildTerminal extends ExecutionTerminal {
 
     constructor(client: () => LanguageClient | undefined, private readonly module: string | undefined,
                 private readonly rebuild: boolean) {
-        super(client);
+        super(client, 'build', module ?? 'all Ecstasy modules');
     }
 
     open(): void {
@@ -202,25 +220,38 @@ export interface RunTarget {
     workingDirectory?: string;
 }
 
+/** How long a stopped run may take to report its exit before the task ends anyway. */
+const STOP_TIMEOUT_MS = 10_000;
+
 class RunTerminal extends ExecutionTerminal implements RunSession {
     private readonly runId = randomUUID();
     private running = false;
 
     constructor(client: () => LanguageClient | undefined, private readonly target: RunTarget) {
-        super(client);
+        super(client, 'run', target.label);
     }
 
     open(): void {
         void this.run();
     }
 
-    /** Closing or stopping the task stops the program; the server still reports its exit. */
+    /**
+     * Closing or stopping the task stops the program. The task ends when the server reports the exit, so a
+     * run started right afterwards does not find the worker still busy with this one.
+     */
     override close(): void {
-        if (this.running) {
-            void this.client()?.sendRequest('xtc/stopRun', { runId: this.runId }).catch(() => undefined);
+        if (!this.running) {
+            sessions.delete(this.runId);
+            super.close();
+            return;
         }
-        sessions.delete(this.runId);
-        super.close();
+        const client = this.client();
+        void client?.sendRequest<boolean>('xtc/stopRun', { runId: this.runId })
+            .then(active => {
+                if (!active) this.exited(undefined, 'Stopped.');
+            }, () => this.exited(undefined, 'Stopped.'));
+        if (!client) this.exited(undefined, 'Stopped.');
+        setTimeout(() => this.exited(undefined, 'The program did not report its exit after Stop.'), STOP_TIMEOUT_MS);
     }
 
     output(text: string): void {
@@ -228,6 +259,7 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
     }
 
     exited(exitCode: number | undefined, error: string | undefined): void {
+        if (!sessions.has(this.runId) && !this.running) return;
         this.running = false;
         sessions.delete(this.runId);
         if (error) {
