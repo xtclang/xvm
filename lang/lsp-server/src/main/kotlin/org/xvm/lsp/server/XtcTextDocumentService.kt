@@ -227,11 +227,16 @@ class XtcTextDocumentService(
             uri.orEmpty(),
             request = {
                 server.supplyAsync(method, logParams, logResult) {
-                    synchronized(lifecycle) {
-                        if (closed || (uri != null && openDocuments[uri] !== document)) {
-                            throw contentModified()
-                        }
+                    fun current() = !closed && (uri == null || openDocuments[uri] === document)
+                    if (adapter.concurrentQueries) {
+                        // queryAsync rechecks currency before publishing, so the lock guards only this check
+                        synchronized(lifecycle) { if (!current()) throw contentModified() }
                         block()
+                    } else {
+                        synchronized(lifecycle) {
+                            if (!current()) throw contentModified()
+                            block()
+                        }
                     }
                 }
             },
