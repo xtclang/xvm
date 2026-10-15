@@ -83,6 +83,13 @@ markers remain work; workspace-wide references and external hierarchy are not im
 
 ## 1. Run Configuration: XDK Direct Mode
 
+**Status (2026-10-15):** the run configuration's *Use Gradle* checkbox is now a *Run with* choice:
+Project default, Embedded compiler, Gradle or `xtc` command line. Embedded mode builds and runs with
+the language server's compiler and bundled XDK, which covers the no-Gradle and standalone-module case
+without an XDK locator; the project default is set under Build, Execution, Deployment › Ecstasy. See
+the [execution plan](plan-embedded-execution.md#first-delivery-2026-10-15). The XDK Direct mode below
+(an external `javatools.jar`) and `XdkLocatorService` are not implemented.
+
 ### Problem
 
 Today the only practical run mode is Gradle (`./gradlew runXtc --module=...`).
