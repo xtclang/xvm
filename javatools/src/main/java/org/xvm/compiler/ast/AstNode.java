@@ -1177,9 +1177,10 @@ public abstract class AstNode
         // - an invalid argument name error should always be reported
         // - a wrong arity error should be reported only if there are no other errors
         // - a type mismatch error should be reported only if there are no other type mismatch errors
-        int cNameErrs  = 0;
-        int cArityErrs = 0;
-        int cTypeErrs  = 0;
+        int     cNameErrs   = 0;
+        int     cArityErrs  = 0;
+        int     cTypeErrs   = 0;
+        boolean fFoundExact = false;
 
         NextMethod: for (MethodConstant idMethod : setMethods) {
             MethodInfo        infoMethod = infoTarget.getMethodById(idMethod);
@@ -1279,8 +1280,8 @@ public abstract class AstNode
                         ? exprArg.getType()
                         : exprArg.getImplicitType(ctx);
                 if (typeExpr != null && typeExpr.isA(typeParam)) {
-                    fit    = TypeFit.Fit;
-                    fExact = typeExpr.equals(typeParam);
+                    fit = TypeFit.Fit;
+                    fExact &= typeExpr.equals(typeParam);
                 } else {
                     // if *all* tests fail, report the errors from the first unsuccessful attempt
                     fit    = exprArg.testFit(ctx, typeParam, true, errsTemp);
@@ -1362,9 +1363,15 @@ public abstract class AstNode
             }
 
             if (fExact) {
-                setConvert.clear();
-                setIs.clear();
-                mapMethods.clear();
+                if (!fFoundExact) {
+                    setConvert.clear();
+                    setIs.clear();
+                    mapMethods.clear();
+                    fFoundExact = true;
+                }
+            } else if (fFoundExact) {
+                // discard any non-exact
+                continue; // NextMethod
             }
 
             if (fit.isConverting()) {
@@ -1374,10 +1381,6 @@ public abstract class AstNode
             }
             mapMethods.put(idMethod, method);
             matching.accept(sigMethod, listArgs);
-
-            if (fExact) {
-                return;
-            }
         }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic
@@ -1510,13 +1513,17 @@ public abstract class AstNode
             Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs) {
         assert !setMethods.isEmpty();
 
-        MethodConstant idBest = null;
-        for (MethodConstant idMethod : setMethods) {
-            if (idBest == null) {
-                idBest = idMethod;
-            } else {
-                // don't take the type parameters into the consideration
-                SignatureConstant sigOld = truncateSignature(idBest,   mapMethods.get(idBest));
+        // an ambiguous pair may still have a better match among the remaining candidates, so we
+        // need to do n*(n-1)/2 comparisons
+        NextMethod: for (MethodConstant idBest : setMethods) {
+            // don't take the type parameters into the consideration
+            SignatureConstant sigOld = truncateSignature(idBest, mapMethods.get(idBest));
+
+            for (MethodConstant idMethod : setMethods) {
+                if (idMethod.equals(idBest)) {
+                    continue;
+                }
+
                 SignatureConstant sigNew = truncateSignature(idMethod, mapMethods.get(idMethod));
 
                 int     cParamsOld = sigOld.getParamCount();
@@ -1555,23 +1562,20 @@ public abstract class AstNode
                     fOldBetter = !fNewBetter;
                 }
 
-                if (fOldBetter || fNewBetter) {
-                    // if both are substitutable to each other, we can take any
-                    // (though we could also get the target's info, find the corresponding
-                    //  TypeInfo and choose a more accommodating MethodInfo)
-                    if (fNewBetter) {
-                        idBest = idMethod;
-                    }
-                } else {
-                    // note: theoretically there could still be one better than either of these two,
-                    // but for now, just assume it's an error at this point
-                    log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-                            idBest.getSignature().removeAutoNarrowing().getValueString());
-                    return null;
+                if (!fOldBetter) {
+                    continue NextMethod;
                 }
             }
+
+            // if both are substitutable to each other, we can take any (though we could also get
+            // the target's info, find the corresponding TypeInfo and choose a more accommodating
+            // MethodInfo)
+            return idBest;
         }
-        return idBest;
+
+        log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
+                setMethods.iterator().next().getSignature().removeAutoNarrowing().getValueString());
+        return null;
     }
 
     private SignatureConstant truncateSignature(MethodConstant idMethod, MethodStructure method) {

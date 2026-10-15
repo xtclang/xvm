@@ -224,4 +224,30 @@ module TestCompilerErrors {
             }
         }
     }
+
+    package testAmbiguousCall {
+        class Test {
+            void test() {
+                var o = f(); // expect-error: COMPILER-63 (ambiguous return type)
+            }
+            void test2() {
+                f();         // expect-error: COMPILER-63 (ambiguous return type)
+            }
+
+            String f() = "Hello";
+            Int    f() = 42;
+        }
+    }
+
+    package testExactMatchAcrossArguments {
+        class Test {
+            void test() {
+                // A later exact argument must not hide an earlier widening.
+                String value = pick("first", "last"); // expect-error: COMPILER-63 (ambiguous argument match)
+            }
+
+            String pick(Object first, String last) = "first widened";
+            String pick(String first, Object last) = "last widened";
+        }
+    }
 }
