@@ -109,12 +109,12 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         outputChannel,
         statusBar,
-        vscode.tasks.registerTaskProvider(XtcTaskProvider.type, new XtcTaskProvider()),
+        vscode.tasks.registerTaskProvider(XtcTaskProvider.type, new XtcTaskProvider(getClient)),
         vscode.debug.registerDebugAdapterDescriptorFactory('xtc', new XtcDebugAdapterDescriptorFactory(context)),
-        vscode.debug.registerDebugConfigurationProvider('xtc', new XtcDebugConfigurationProvider())
+        vscode.debug.registerDebugConfigurationProvider('xtc', new XtcDebugConfigurationProvider(getClient))
     );
 
-    registerCommands(context, outputChannel);
+    registerCommands(context, outputChannel, getClient);
     registerCompilerPaths(context);
 
     // Setup LSP server

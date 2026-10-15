@@ -16,8 +16,8 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 - **Syntax highlighting** for `.x` files via a TextMate grammar generated from the shared language DSL
 - **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Resolved annotation uses are decorators; bundled ownership adds `defaultLibrary`. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Fine string/escape/keyword/literal scopes remain with the editor grammar. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
-- **Debug Adapter Protocol (DAP)** — launch and step-debug Ecstasy modules with breakpoints, variables, and call stack inspection
-- **Tasks** — auto-discovered Gradle Build / Test / Clean / Run tasks for any workspace that contains a `build.gradle.kts`
+- **Build and run** — build and run modules with the language server's embedded compiler, or with Gradle, per folder ([details](#building-and-running)); Run lens, editor Run button, `Cmd+F9`/`Ctrl+F9` build and Run shortcuts
+- **Tasks** — embedded Build / Rebuild tasks, or Gradle Build / Test / Clean tasks for a workspace that contains a `build.gradle.kts`
 - **Project scaffolding** — `Ecstasy: Create New Project` command to bootstrap a new Ecstasy application, library, or service
 - **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
 - **Automatic Java discovery** — finds or downloads a suitable Java 25+ JRE; no manual setup needed
@@ -139,12 +139,44 @@ Once the status bar shows `✓ XTC`:
 | **Outline**          | **View → Outline**            |
 | **Inlay Hints**      | Shown automatically           |
 
+### Building and running
+
+`xtc.build.mode` chooses how a workspace folder builds and runs, like IntelliJ's
+*Build and run using* setting:
+
+| Mode | Build / Rebuild | Run |
+|------|-----------------|-----|
+| `auto` (default) | Gradle when the folder has `build.gradle(.kts)` or `settings.gradle(.kts)`, embedded otherwise | Same choice |
+| `embedded` | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/` | The server builds the module, then runs it in its execution worker JVM |
+| `gradle` | `./gradlew build` (Rebuild: `clean build`) | `./gradlew runXtc` |
+
+| Action | How |
+|--------|-----|
+| Build | **Ecstasy: Build**, `Cmd+F9` / `Ctrl+F9` in an Ecstasy editor, or **Terminal → Run Build Task…** |
+| Rebuild | **Ecstasy: Rebuild** |
+| Run the module | The **▶ Run** lens above the `module` declaration, the editor title Run button, `Ctrl+Shift+R` (macOS) / `Ctrl+Shift+F10`, **Ecstasy: Run Module**, an `xtc` task, or `F5` |
+| Stop | Close the run's terminal, or terminate its task |
+
+Embedded builds and runs first save all open files, so the build matches the sources on disk.
+Build output lists each module (built, failed, or skipped because a dependency failed) and each
+diagnostic as `file:line:column`, which the terminal links to the source. Open files show the same
+errors as editor diagnostics. Embedded mode needs the compiler language service; the Tree-sitter
+adapter cannot build.
+
+The Run lens appears only on modules that declare a `run` method the runner can call: exactly one
+method of that name, with at most one required parameter. Arguments reach the method as a
+`String[]` when it requires one, or when arguments are given and it accepts a parameter. Each run
+gets a fresh application container in one worker JVM that is reused across runs and restarted if it
+dies; programs never run inside the language server. Output streams into a dedicated terminal and
+ends with the program's exit code. Embedded runs cannot read console input yet.
+
 ### Debugging
 
-1. Open a `.x` file containing an Ecstasy module.
-2. Press `F5` (or **Run → Start Debugging**) — the module name is auto-detected.
+There is no Ecstasy debugger yet. `F5` (**Run → Start Debugging**) and `launch.json` configurations
+run the module the same way the Run button does, following `xtc.build.mode`, and say that the
+debugger is not available. Breakpoints are not hit.
 
-To customise the launch, add a configuration to `.vscode/launch.json`:
+A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
 
 ```jsonc
 {
@@ -153,20 +185,20 @@ To customise the launch, add a configuration to `.vscode/launch.json`:
     "name": "Debug MyApp",
     "module": "MyApp",
     "method": "run",          // optional, defaults to "run"
-    "args": "arg1,arg2",      // optional, comma-separated
-    "cwd": "${workspaceFolder}"
+    "args": "arg1,arg2",      // optional: comma-separated, or an array passed exactly as given
+    "cwd": "${workspaceFolder}"  // not used yet; runs use the folder that owns the module
 }
 ```
 
 ### Tasks
 
-For any workspace folder containing a `build.gradle.kts`, the following tasks appear under **Terminal → Run Task…**:
+Each workspace folder contributes tasks under **Terminal → Run Task…**, following its
+[build mode](#building-and-running):
 
-| Task     | Command            |
-|----------|--------------------|
-| Build    | `./gradlew build`  |
-| Test     | `./gradlew test`   |
-| Clean    | `./gradlew clean`  |
+| Mode | Tasks |
+|------|-------|
+| Embedded | **Build** and **Rebuild**, run by the language server's compiler |
+| Gradle (folder has `build.gradle.kts`) | **Build** (`./gradlew build`), **Test** (`./gradlew test`), **Clean** (`./gradlew clean`) |
 
 Custom run tasks can be added to `.vscode/tasks.json`:
 
@@ -176,8 +208,11 @@ Custom run tasks can be added to `.vscode/tasks.json`:
     "label": "Run MyApp",
     "moduleName": "MyApp",
     "methodName": "run",        // optional
-    "moduleArguments": "a,b",   // optional, comma-separated
-    "useGradle": true,          // true: ./gradlew runXtc; false: xtc run
+    "args": ["a b", "ü"],       // optional, passed exactly as given (embedded runs)
+    "moduleArguments": "a,b",   // optional, comma-separated; used when "args" is absent
+    "moduleUri": "file:///…/MyApp.x", // optional: a source of the module, for embedded runs
+    "mode": "embedded",         // optional: "embedded" or "gradle"; defaults to xtc.build.mode
+    "useGradle": true,          // legacy: true runs ./gradlew runXtc, false runs xtc run
     "quietMode": true           // adds -q to the Gradle invocation
 }
 ```
@@ -189,7 +224,9 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecsta
 | Command                                  | Description                                            |
 |------------------------------------------|--------------------------------------------------------|
 | `Ecstasy: Create New Project`            | Scaffold a new Ecstasy project (`xtc init`)            |
-| `Ecstasy: Run Module`                    | Run a named Ecstasy module via Gradle                  |
+| `Ecstasy: Run Module`                    | Build and run the editor's module, per `xtc.build.mode` |
+| `Ecstasy: Build`                         | Build the folder's modules, per `xtc.build.mode`        |
+| `Ecstasy: Rebuild`                       | Rebuild the folder's modules from scratch               |
 | `Ecstasy: Restart Language Server`       | Stop and restart the LSP server                        |
 | `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
 
@@ -223,6 +260,7 @@ All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 | Setting                                | Type      | Default | Description                                                                                              |
 |----------------------------------------|-----------|---------|----------------------------------------------------------------------------------------------------------|
 | `xtc.java.home`                        | string    | `""`    | Java 25+ install path. Overrides automatic discovery.                                                    |
+| `xtc.build.mode`                       | enum      | `"auto"`| How Build, Run and Rebuild work: `auto`, `embedded` or `gradle`. See [Building and running](#building-and-running). |
 | `xtc.trace.server`                     | enum      | `"off"` | LSP wire tracing: `off`, `messages`, `verbose`.                                                          |
 | `xtc.inlayHints.enabled`               | boolean   | `true`  | Show inlay hints from the language server.                                                               |
 | `xtc.sourceRoots`                      | string[]  | `[]`    | Extra absolute directories indexed by the language server (e.g. XDK standard-library sources).           |
