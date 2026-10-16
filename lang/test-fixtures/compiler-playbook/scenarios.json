@@ -8837,9 +8837,7 @@
     },
     "X282": {
       "title": "embedded run passes exact arguments, streams output and reports the exit code",
-      "manual": [
-        "Embedded runs do not forward console input."
-      ],
+      "manual": [],
       "values": {
         "file": "RunEcho.x",
         "module": "RunEcho",
@@ -8925,6 +8923,28 @@
         "coverage": "partial",
         "limitations": [
           "The shortcut is checked as an active keymap binding and the action is invoked from the editor; no key event is sent."
+        ]
+      }
+    },
+    "X287": {
+      "title": "an embedded run reads console input typed into its terminal or Run console, then the end of input",
+      "manual": [
+        "Backspace and line editing in the VS Code terminal, and typing into the IntelliJ Run console editor, are checked manually; readLine's suppressEcho is not honored because the client echoes."
+      ],
+      "values": {
+        "file": "RunAsk.x",
+        "module": "RunAsk",
+        "source": "module RunAsk {\n    void run() {\n        @Inject Console console;\n        String name = console.readLine(\"Name? \");\n        console.print($\"Hello, {name}!\");\n        String next = console.readLine();\n        console.print($\"next=[{next}]\");\n    }\n}\n",
+        "prompt": "Name? ",
+        "input": "Grace Hopper \u2713",
+        "greeting": "Hello, Grace Hopper \u2713!",
+        "ended": "next=[]",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Input is written to the run's process input, the stream the Run console writes typed lines to, and closed as Send EOF does; no key press in the console editor is simulated."
         ]
       }
     },
