@@ -48,6 +48,13 @@ export async function selectBuildMode(requested?: unknown, folder?: vscode.Uri):
     await settings.update('build.mode', selected, scope);
 }
 
+/** What the build mode status bar item shows, or undefined while it is hidden; for the playbook. */
+let shown: string | undefined;
+
+export function buildModeStatus(): string | undefined {
+    return shown;
+}
+
 /** The status bar text for a folder's effective build mode. */
 export function buildModeStatusText(mode: BuildMode): string {
     return mode === 'gradle' ? '$(tools) Gradle build' : '$(tools) Embedded build';
@@ -65,10 +72,12 @@ export function createBuildModeStatus(): vscode.Disposable {
         const folder = activeFolder();
         if (!folder || !hasGradleBuild(folder)) {
             item.hide();
+            shown = undefined;
             return;
         }
         const mode = buildMode(folder);
         item.text = buildModeStatusText(mode);
+        shown = item.text;
         item.tooltip = mode === 'gradle'
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build. Click to choose the embedded compiler.`
             : `Ecstasy builds and runs ${folder.name} with the embedded compiler; its Gradle build's settings do not apply. Click to choose Gradle.`;
@@ -77,6 +86,7 @@ export function createBuildModeStatus(): vscode.Disposable {
     update();
     return vscode.Disposable.from(
         item,
+        { dispose: () => { shown = undefined; } },
         vscode.window.onDidChangeActiveTextEditor(update),
         vscode.workspace.onDidChangeWorkspaceFolders(update),
         vscode.workspace.onDidChangeConfiguration(event => {
