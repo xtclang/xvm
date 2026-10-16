@@ -8,7 +8,7 @@ import com.intellij.driver.sdk.singleProject
 import java.nio.file.Files
 import kotlin.time.Duration.Companion.seconds
 
-/** Embedded build and run through Build Project, Ecstasy run configurations, Stop and the Run lens. */
+/** Embedded build and run through Build Project, Ecstasy run configurations, Stop, console input and the Run lens. */
 internal fun ParityScenarios.executionCases() {
     case("X280") { data ->
         write(data.string("libraryFile"), data.string("librarySource"))
@@ -156,6 +156,27 @@ internal fun ParityScenarios.executionCases() {
     }
 }
 
+/** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */
+internal fun ParityScenarios.executionInputCases() {
+    case("X287") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val module = data.string("module")
+            execution.run(project, module, uri(data.string("file")), "")
+            awaitUi("program prompts for input", 60.seconds) { data.string("prompt") in execution.output(module) }
+            execution.input(module, data.string("input") + "\n")
+            awaitUi("program reads the typed line", 30.seconds) { data.string("greeting") in execution.output(module) }
+            execution.endInput(module)
+            awaitUi("program ends after the end of input", 30.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+            val output = execution.output(module)
+            check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+            check(data.string("ended") in output) { output }
+        }
+    }
+}
+
 /** Runs [body] with the project in embedded build mode, restoring the previous mode afterwards. */
 private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> Unit) {
     val project = with(driver) { singleProject() }
@@ -206,6 +227,13 @@ interface EmbeddedExecutionProbe {
     fun output(module: String): String
 
     fun exitCode(module: String): Int
+
+    fun input(
+        module: String,
+        text: String,
+    )
+
+    fun endInput(module: String)
 
     fun stop(module: String)
 }
