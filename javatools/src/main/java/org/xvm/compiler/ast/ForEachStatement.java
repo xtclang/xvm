@@ -20,11 +20,11 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RangeConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -42,14 +42,16 @@ import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.indentLines;
 
 /**
  * An "Iterable"-based "for" statement.
  */
 public class ForEachStatement
-        extends ConditionalStatement
-        implements LabelAble {
+        extends LoopStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
@@ -72,19 +74,13 @@ public class ForEachStatement
     public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
         Context ctxDest = ensureValidationContext();
 
-        // generate a delta of assignment information for the jump
-        Map<String, Assignment> mapAsn = new HashMap<>();
-        Map<String, Argument>   mapArg = new HashMap<>();
-
-        ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listContinues == null) {
             m_listContinues = new ArrayList<>();
         }
 
         Label label = getContinueLabel();
-        m_listContinues.add(new Break(this, mapAsn, mapArg, label));
+        m_listContinues.add(prepareJump(this, ctxOrigin, ctxDest, label));
         return label;
     }
 
@@ -99,6 +95,7 @@ public class ForEachStatement
     /**
      * @return the "continue" label for this statement
      */
+    @Override
     public Label getContinueLabel() {
         Label label = m_labelContinue;
         if (label == null) {
@@ -221,7 +218,7 @@ public class ForEachStatement
 
         if (reg == null) {
             // this occurs only during validate()
-            assert m_ctxLabelVars != null;
+            assert m_labelVars != null;
 
             String       sLabel = ((LabeledStatement) getParent()).getName();
             Token        tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
@@ -237,7 +234,7 @@ public class ForEachStatement
             };
 
             reg = ctx.createRegister(type, getLabelName() + '.' + sName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
 
             switch (sName) {
             case "first": m_regFirst   = reg; break;
@@ -257,7 +254,7 @@ public class ForEachStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
         // original error listener
@@ -295,8 +292,7 @@ public class ForEachStatement
             ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
-            m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
+            m_labelVars = new ValidationScope(ctx, errs);
 
             // ultimately, the condition has to be re-written, because it is inevitably shorthand for
             // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -357,6 +353,8 @@ public class ForEachStatement
                 ctx = ctx.enterInferring(typeLVal);
             }
 
+            ErrorListener probe = silent(PROBE);
+
             TypeConstant[] atypeLVals = null;
             for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i) {
                 plan     = Plan.valueOf(i);
@@ -368,7 +366,7 @@ public class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                 };
 
-                if (exprRVal.testFit(ctx, typeRVal, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRVal, false, probe).isFit()) {
                     atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
@@ -396,7 +394,7 @@ public class ForEachStatement
                     typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
                 }
 
-                if (exprRVal.testFit(ctx, typeRValExact, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRValExact, false, probe).isFit()) {
                     typeRVal = typeRValExact;
                 } else {
                     // the specific container type didn't fit; proceed with the basic type,
@@ -415,7 +413,6 @@ public class ForEachStatement
                     // update "var"/"val" type declarations on the LValues with their actual types
                     TypeConstant[] atypeRVals;
                     switch (plan) {
-                    default:
                     case ITERATOR:
                     case RANGE:
                     case LIST:
@@ -455,6 +452,8 @@ public class ForEachStatement
                             }
                         }
                         break;
+                    default:
+                        throw new IllegalStateException("plan=" + plan);
                     }
 
                     if (fValid) {
@@ -553,11 +552,10 @@ public class ForEachStatement
             ctx = ctx.exit();
 
             // leaving the scope of the for() statement
-            ctx = ctx.exit();
+            ctx.exit();
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
+            m_labelVars = null;
 
             errs.merge();
             return fValid ? this : null;
@@ -603,7 +601,6 @@ public class ForEachStatement
             case LIST     -> emitList(ctx, fCompletes, code, errs);
             case MAP      -> emitMap(ctx, fCompletes, code, errs);
             case ITERABLE -> emitIterable(ctx, fCompletes, code, errs);
-            default       -> throw new IllegalStateException();
         };
 
         code.add(new Exit());
@@ -683,22 +680,7 @@ public class ForEachStatement
             lvalVal.assign(argVal, code, errs);
         }
 
-        // we explicitly do NOT check the block completion, since our completion is not dependent on
-        // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
-
-        if (hasContinueLabel()) {
-            code.add(getContinueLabel());
-        }
-        if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
-        }
-        if (m_regCount != null) {
-            code.add(new IP_Inc(m_regCount));
-        }
-        code.add(new LoopEnd());
-
-        return fReachable;
+        return emitIteratorEnd(ctx, fReachable, code, errs);
     }
 
     /**
@@ -814,7 +796,7 @@ public class ForEachStatement
 
         TypeInfo         infoRange = pool.ensureRangeType(typeSeq).ensureTypeInfo(errs);
         MethodConstant   idLimits  = findWellKnownMethod(infoRange, "effectiveLimits", errs);
-        PropertyConstant idDescend = findWellKnownProperty(infoRange, "descending", errs);
+        PropertyConstant idDescend = findDescendingProperty(infoRange, errs);
 
         if (idLimits == null || idDescend == null) {
             return false;
@@ -982,6 +964,7 @@ public class ForEachStatement
         }
 
         if (m_fTupleLValue) {
+            assert alvalVal != null;
             for (int i = 0, c = alvalVal.length; i < c; i++) {
                 Assignable  lval  = alvalVal[i];
                 IntConstant index = pool.ensureIntConstant(i);
@@ -996,6 +979,7 @@ public class ForEachStatement
             }
         } else {
             if (fTempVal) {
+                assert lvalVal != null;
                 lvalVal.assign(argVal, code, errs);
             }
         }
@@ -1188,22 +1172,23 @@ public class ForEachStatement
             }
         }
 
-        // we explicitly do NOT check the block completion, since our completion is not dependent on
-        // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        return emitIteratorEnd(ctx, fReachable, code, errs);
+    }
 
+    /** Emit the shared iterator/map loop tail; the body may run zero times. */
+    private boolean emitIteratorEnd(Context ctx, boolean reachable, Code code, ErrorListener errs) {
+        block.completes(ctx, reachable, code, errs);
         if (hasContinueLabel()) {
             code.add(getContinueLabel());
         }
         if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
+            code.add(new Move(pool().valFalse(), m_regFirst));
         }
         if (m_regCount != null) {
             code.add(new IP_Inc(m_regCount));
         }
         code.add(new LoopEnd());
-
-        return fReachable;
+        return reachable;
     }
 
     /**
@@ -1254,12 +1239,12 @@ public class ForEachStatement
     /**
      * Trivial helper.
      */
-    private PropertyConstant findWellKnownProperty(TypeInfo info, String sPropName, ErrorListener errs) {
-        PropertyInfo prop = info.findProperty(sPropName);
+    private PropertyConstant findDescendingProperty(TypeInfo info, ErrorListener errs) {
+        PropertyInfo prop = info.findProperty("descending");
 
         if (prop == null) {
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
-                    sPropName + ".get()", info.getType().getValueString());
+                    "descending.get()", info.getType().getValueString());
             return null;
         }
         return prop.getIdentity();
@@ -1316,22 +1301,13 @@ public class ForEachStatement
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
-    private transient Context          m_ctxLabelVars;
-    private transient ErrorListener    m_errsLabelVars;
-    private transient Register         m_regFirst;
     private transient Register         m_regLast;
-    private transient Register         m_regCount;
     private transient Register         m_regEntry;
     private transient Register         m_regKeyType;
     private transient Register         m_regValType;
     private transient boolean          m_fTupleLValue;
     private transient MethodConstant[] m_aidConvKey;
     private transient TypeConstant[]   m_atypeConv;
-
-    /**
-     * Generally null, unless there is a "continue" that jumps to this statement.
-     */
-    private transient List<Break> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
 }

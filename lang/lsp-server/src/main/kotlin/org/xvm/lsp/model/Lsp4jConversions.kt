@@ -1,7 +1,9 @@
 package org.xvm.lsp.model
 
 import org.eclipse.lsp4j.CodeActionKind
+import org.eclipse.lsp4j.DiagnosticRelatedInformation
 import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.DiagnosticTag
 import org.eclipse.lsp4j.DocumentHighlightKind
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FoldingRangeKind
@@ -85,17 +87,42 @@ fun Diagnostic.Companion.fromLsp(
         message = lspDiagnostic.message?.left ?: "",
         code = lspDiagnostic.code?.left,
         source = lspDiagnostic.source,
+        tags = lspDiagnostic.tags.orEmpty().mapNotNullTo(mutableSetOf()) { Diagnostic.Tag.fromLsp(it) },
     )
 
-/** Convert this Diagnostic to an LSP4J Diagnostic. */
-fun Diagnostic.toLsp(): org.eclipse.lsp4j.Diagnostic {
+fun Diagnostic.Tag.toLsp(): DiagnosticTag =
+    when (this) {
+        Diagnostic.Tag.UNNECESSARY -> DiagnosticTag.Unnecessary
+        Diagnostic.Tag.DEPRECATED -> DiagnosticTag.Deprecated
+    }
+
+fun Diagnostic.Tag.Companion.fromLsp(tag: DiagnosticTag?): Diagnostic.Tag? =
+    when (tag) {
+        DiagnosticTag.Unnecessary -> Diagnostic.Tag.UNNECESSARY
+        DiagnosticTag.Deprecated -> Diagnostic.Tag.DEPRECATED
+        null -> null
+    }
+
+/** Keep foreign-source locations as related information when publishing for another document. */
+fun Diagnostic.toLsp(publicationUri: String = location.uri): org.eclipse.lsp4j.Diagnostic {
     val result = org.eclipse.lsp4j.Diagnostic()
-    result.range = location.toRange()
+    if (location.uri == publicationUri) {
+        result.range = location.toRange()
+    } else {
+        result.range = Range(Position(0, 0), Position(0, 0))
+        result.relatedInformation = listOf(DiagnosticRelatedInformation(location.toLsp(), message))
+    }
     result.severity = severity.toLsp()
-    result.message = Either.forLeft(message)
+    result.message =
+        Either.forLeft(
+            if (location.uri == publicationUri) message else "In ${location.uri}: $message",
+        )
     result.source = source
     if (code != null) {
         result.code = Either.forLeft(code)
+    }
+    if (tags.isNotEmpty()) {
+        result.tags = tags.map { it.toLsp() }
     }
     return result
 }

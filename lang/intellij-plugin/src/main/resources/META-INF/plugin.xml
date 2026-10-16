@@ -31,9 +31,57 @@
     <!-- LSP4IJ provides LSP support for Community Edition -->
     <depends>com.redhat.devtools.lsp4ij</depends>
 
+    <actions>
+        <action id="xtc.selectLanguageAdapter" class="org.xtclang.idea.lsp.SelectLanguageAdapterAction"
+                text="Switch Ecstasy Language Adapter"
+                description="Choose Compiler or Tree-sitter and restart the language server with open buffers preserved">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="A"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="A"/>
+            <!-- The default macOS keymap would otherwise derive Command from $default's ctrl. -->
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl alt X" second-keystroke="A"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="xtc.showReferences" class="com.redhat.devtools.lsp4ij.commands.editor.ShowReferencesAction"/>
+        <action id="xtc.exportServerLogs" class="org.xtclang.idea.lsp.ExportServerLogsAction"
+                text="Export Ecstasy Server Logs" description="Save recent server logs, timing traces and status as a ZIP">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="xtc.resolveCodeAction" class="org.xtclang.idea.lsp.XtcResolveCodeAction"/>
+        <!-- The Run lens's LSP command: builds and runs the module the way the project builds and runs. -->
+        <action id="xtc.runModule" class="org.xtclang.idea.run.XtcRunModuleAction"
+                text="Run Ecstasy Module" description="Build and run the Ecstasy module in this editor"
+                icon="AllIcons.Actions.Execute"/>
+        <action id="xtc.toggleServerLog" class="org.xtclang.idea.lsp.XtcServerLogAction"
+                text="Toggle Ecstasy Language Server Log"
+                description="Show the Ecstasy server log or hide the Language Servers tool window">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="L"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="L"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl alt X" second-keystroke="L"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+
     <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="org.xtclang.idea.lsp.ServerControlStartup"/>
+        <postStartupActivity implementation="org.xtclang.idea.lsp.CompilerBuildUpdates"/>
+        <externalSystemTaskNotificationListener implementation="org.xtclang.idea.lsp.CompilerGradleSync"/>
+        <applicationConfigurable id="xtc.service.defaults" parentId="language"
+                                 displayName="Ecstasy Language Service Defaults"
+                                 instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
+        <applicationConfigurable id="xtc.runtime" parentId="language" displayName="Ecstasy Server Runtime and Logs"
+                                 instance="org.xtclang.idea.lsp.ServerRuntimeConfigurable"/>
+        <projectConfigurable id="xtc.service" parentId="language"
+                             displayName="Ecstasy Language Service"
+                             instance="org.xtclang.idea.lsp.LanguageServiceProjectConfigurable"/>
+        <projectConfigurable id="xtc.compiler" parentId="language" displayName="Ecstasy Compiler"
+                             instance="org.xtclang.idea.lsp.CompilerProjectConfigurable"/>
+        <!-- Build, Execution, Deployment | Ecstasy: build and run with the embedded compiler or Gradle -->
+        <projectConfigurable id="xtc.build" parentId="build" displayName="Ecstasy"
+                             instance="org.xtclang.idea.run.XtcBuildConfigurable"/>
+        <!-- Build and Rebuild Project in embedded mode; ahead of the IDE's own builder for Ecstasy modules -->
+        <projectTaskRunner implementation="org.xtclang.idea.run.XtcProjectTaskRunner" order="first"/>
         <!-- Notification group for LSP status messages -->
-        <notificationGroup id="XTC Language Server"
+        <notificationGroup id="Ecstasy Language Server"
                            displayType="BALLOON"
                            isLogByDefault="true"/>
 
@@ -43,6 +91,12 @@
                   fieldName="INSTANCE"
                   language="Ecstasy"
                   extensions="x"/>
+        <!-- Owning the file type bypasses TextMate's file-type registration. Reuse both its
+             grammar-backed lexer and its scope-aware editor token storage for Ecstasy. -->
+        <lang.syntaxHighlighterFactory language="Ecstasy"
+            implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateSyntaxHighlighterFactory"/>
+        <editorHighlighterProvider filetype="Ecstasy"
+            implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"/>
 
         <!-- Project Generator for New Project wizard (IntelliJ IDEA) -->
         <newProjectWizard.generator
@@ -58,6 +112,7 @@
 
         <!-- IconProvider for .x PSI files in contexts that do not ask the file type directly. -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
+        <editorTabTitleProvider implementation="org.xtclang.idea.XtcEditorTabTitleProvider"/>
 
         <!-- Live templates: code snippets triggered by abbreviation + Tab (e.g. cls, fori, sout) -->
         <defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>
@@ -66,7 +121,25 @@
         <lang.commenter language="Ecstasy"
                         implementationClass="org.xtclang.idea.XtcCommenter"/>
 
+        <!-- Check the request's document snapshot before applying a compiler rename. -->
+        <renameHandler implementation="org.xtclang.idea.lsp.XtcRenameHandler"/>
+        <renameHandler implementation="org.xtclang.idea.lsp.XtcFileRenameHandler"/>
+        <refactoring.moveHandler implementation="org.xtclang.idea.lsp.XtcFileMoveHandler" order="first"/>
+
+        <!-- Preserve candidate signatures when the compiler cannot select an active argument. -->
+        <codeInsight.parameterInfo language="Ecstasy"
+                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+        <codeInsight.parameterInfo language="TEXT"
+                                   order="before LSPParameterInfoHandlerForTEXT"
+                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+        <codeInsight.parameterInfo language="textmate"
+                                   order="before LSPParameterInfoHandlerForTextMate"
+                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+
         <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
+        <formattingService id="XtcFormattingService"
+                           order="before LSPFormattingOnlyService, before LSPFormattingAndRangeBothService"
+                           implementation="org.xtclang.idea.lsp.XtcFormattingService"/>
         <langCodeStyleSettingsProvider
             implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>
 
@@ -79,7 +152,7 @@
         <!-- TODO: Re-enable DAP registration when the feature is implemented and stable enough
              to ship without Plugin Verifier experimental API findings.
         <debugAdapterServer id="xtcDebugAdapter"
-                            name="XTC Debug Adapter"
+                            name="Ecstasy Debug Adapter"
                             factoryClass="org.xtclang.idea.dap.XtcDebugAdapterFactory"/>
         -->
     </extensions>
@@ -87,10 +160,10 @@
     <!-- LSP4IJ Language Server registration -->
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
         <server id="xtcLanguageServer"
-                name="XTC Language Server"
+                name="Ecstasy Language Server"
                 factoryClass="org.xtclang.idea.lsp.XtcLanguageServerFactory">
             <description><![CDATA[
-                Provides language features for XTC (Ecstasy) files via LSP.
+                Provides language features for Ecstasy files via LSP.
                 Requires XDK_HOME to be set or the LSP server JAR to be bundled.
             ]]></description>
         </server>

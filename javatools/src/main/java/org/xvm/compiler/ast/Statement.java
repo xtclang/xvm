@@ -5,12 +5,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
 /**
@@ -19,6 +21,11 @@ import org.xvm.asm.op.Label;
 public abstract class Statement
         extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public Statement copyTree() {
+        return (Statement) super.copyTree();
+    }
 
     @Override
     protected boolean usesSuper() {
@@ -62,16 +69,66 @@ public abstract class Statement
         Label   label   = getEndLabel();
 
         if (ctxOrigin.isReachable()) {
-            // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            addBreak(new Break(nodeOrigin, mapAsn, mapArg, label));
+            addBreak(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
         }
 
         return label;
+    }
+
+    /** Capture the assignment and narrowing changes carried by a control-flow jump. */
+    protected static Break prepareJump(AstNode origin, Context from, Context to, Label label) {
+        Map<String, Assignment> assignments = new HashMap<>();
+        Map<String, Argument>   arguments   = new HashMap<>();
+        from.prepareJump(to, assignments, arguments);
+        return new Break(origin, assignments, arguments, label);
+    }
+
+    /** Merge live incoming jumps and restore reachability if at least one reaches this point. */
+    protected static void mergeJumps(Context ctx, List<Break> jumps) {
+        boolean reaches = false;
+        for (Break jump : jumps) {
+            if (!jump.node().isDiscarded()) {
+                ctx.merge(jump.mapAssign(), jump.mapNarrow());
+                reaches = true;
+            }
+        }
+        if (reaches) {
+            ctx.setReachable(true);
+        }
+    }
+
+    /** Validate a Boolean expression or conditional assignment, including its negated context. */
+    protected AstNode validateCondition(Context ctx, AstNode condition, ErrorListener errs) {
+        if (condition instanceof AssignmentStatement assignment) {
+            if (assignment.isNegated()) {
+                Context negated = ctx.enterNot();
+                AstNode validated = assignment.validate(negated, errs);
+                negated.exit();
+                return validated;
+            }
+            return assignment.validate(ctx, errs);
+        }
+        return ((Expression) condition).validate(ctx, pool().typeBoolean(), errs);
+    }
+
+    /** Emit one condition's false exit, preserving conditional assignments and negation labels. */
+    protected static boolean emitCondition(Context ctx, AstNode condition, boolean reachable,
+                                           Code code, Label exit, ErrorListener errs) {
+        if (condition instanceof AssignmentStatement assignment) {
+            boolean negated = assignment.isNegated();
+            Label   failed  = negated ? new Label("negated") : exit;
+            assignment.setConditionFalseLabel(failed);
+            boolean completes = assignment.completes(ctx, reachable, code, errs);
+            assert assignment.isConditionFalseLabelTaken();
+            if (negated) {
+                code.add(new Jump(exit));
+                code.add(failed);
+            }
+            return completes;
+        }
+        Expression expression = (Expression) condition;
+        expression.generateConditionalJump(ctx, code, exit, false, errs);
+        return expression.isCompletable();
     }
 
     protected void addBreak(Break breakInfo) {
@@ -124,15 +181,25 @@ public abstract class Statement
      * @return the resulting statement (typically this) or null if the compilation cannot proceed
      */
     protected final Statement validate(Context ctx, ErrorListener errs) {
+        return validate(ctx, errs, () -> validateImpl(ctx, errs));
+    }
+
+    /** Preserve the statement validation scope while supplying an explicit value-context hint. */
+    protected final Statement validate(Context ctx, ErrorListener errs, Supplier<Statement> validation) {
         if (errs.isAbortDesired()) {
             return null;
         }
 
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
+        Context   ctxPrevious = m_ctx;
+        Statement stmt;
         m_ctx = ctx;
-        Statement stmt = validateImpl(ctx, errs);
-        m_ctx = null;
+        try {
+            stmt = validation.get();
+        } finally {
+            m_ctx = ctxPrevious;
+        }
 
         if (m_listBreaks != null) {
             for (Iterator<Break> iter = m_listBreaks.iterator(); iter.hasNext(); ) {

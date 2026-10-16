@@ -16,8 +16,8 @@ import kotlin.time.measureTimedValue
 /**
  * Unit tests for AST-aware document formatting (`textDocument/formatting`) in [TreeSitterAdapter].
  *
- * Each test provides an XTC source with incorrect indentation and asserts the formatter
- * produces the correctly indented version.
+ * Each test provides an XTC source with incorrect indentation and asserts the formatter produces
+ * the correctly indented version.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -27,7 +27,8 @@ class DocumentFormattingTest {
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
-    private val ts: TreeSitterAdapter get() = adapter!!
+    private val ts: TreeSitterAdapter
+        get() = adapter!!
 
     private fun freshUri(): String = "file:///docfmt${uriCounter.incrementAndGet()}.x"
 
@@ -56,9 +57,7 @@ class DocumentFormattingTest {
     // Test helpers
     // ========================================================================
 
-    /**
-     * Compile [input], format the whole document, apply edits, and return the result.
-     */
+    /** Compile [input], format the whole document, apply edits, and return the result. */
     private fun formatWhole(input: String): String {
         val uri = freshUri()
         ts.compile(uri, input)
@@ -85,9 +84,7 @@ class DocumentFormattingTest {
         return applyEdits(input, edits)
     }
 
-    /**
-     * Compile [input], format, assert that no edits are returned.
-     */
+    /** Compile [input], format, assert that no edits are returned. */
     private fun assertNoEdits(input: String) {
         val uri = freshUri()
         ts.compile(uri, input)
@@ -96,9 +93,9 @@ class DocumentFormattingTest {
     }
 
     /**
-     * Compile [input], format, and assert the result equals [expected].
-     * Automatically appends `\n` to [expected] if it doesn't already end with one,
-     * since the formatter always ensures a final newline.
+     * Compile [input], format, and assert the result equals [expected]. Automatically appends `\n`
+     * to [expected] if it doesn't already end with one, since the formatter always ensures a final
+     * newline.
      */
     private fun assertFormatsTo(
         input: String,
@@ -110,8 +107,8 @@ class DocumentFormattingTest {
     }
 
     /**
-     * Apply text edits to source. Edits are applied in reverse order (bottom-to-top,
-     * right-to-left) to preserve positions of earlier edits.
+     * Apply text edits to source. Edits are applied in reverse order (bottom-to-top, right-to-left)
+     * to preserve positions of earlier edits.
      */
     private fun applyEdits(
         source: String,
@@ -136,7 +133,8 @@ class DocumentFormattingTest {
             if (startLine == endLine) {
                 // Single-line edit: replace within the line
                 val line = lines[startLine]
-                lines[startLine] = line.substring(0, startCol) + edit.newText + line.substring(endCol)
+                lines[startLine] =
+                    line.substring(0, startCol) + edit.newText + line.substring(endCol)
             } else {
                 // Multi-line edit: splice lines
                 val prefix = lines[startLine].substring(0, startCol)

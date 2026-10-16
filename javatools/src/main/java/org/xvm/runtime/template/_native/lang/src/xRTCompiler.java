@@ -16,7 +16,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -226,7 +225,7 @@ public class xRTCompiler
     private int completeWithError(Frame frame, CompilerAdapter compiler, String
                                   sMissing, int[] aiReturn) {
         // org.xvm.compiler.Compiler.MODULE_MISSING
-        compiler.logError(Severity.FATAL, "MODULE_MISSING", new Object[] {sMissing});
+        compiler.logError(Severity.FATAL, "MODULE_MISSING", sMissing);
         return completeCompilation(frame, compiler, null, aiReturn);
     }
 
@@ -355,8 +354,8 @@ public class xRTCompiler
             return m_repoResults;
         }
 
-        protected void logError(Severity severity, String sCode, Object[] aoParam) {
-            m_errorList.log(severity, sCode, aoParam, null);
+        protected void logError(Severity severity, String sCode, Object... aoParam) {
+            m_errorList.log(severity, sCode, ErrorListener.NOWHERE, aoParam);
         }
 
         /**

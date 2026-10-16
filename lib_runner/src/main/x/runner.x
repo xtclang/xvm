@@ -66,12 +66,15 @@ module runner.xtclang.org {
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
      * @param rootDir     the optional file-system root for the task
+     * @param method      the name of the method to invoke in the module
+     * @param args        the argument array to pass to that method, or Null to pass none
      *
      * @return the task identifier
      */
     Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                     String? rootDir = Null) =
-            TaskRegistry.registerTask(template, repository, consoleId, rootDir=rootDir);
+                     String? rootDir = Null, String method = "run", String[]? args = Null) =
+            TaskRegistry.registerTask(template, repository, consoleId, rootDir=rootDir,
+                                      method=method, args=args);
 
     /**
      * Start the identified task.
@@ -109,9 +112,11 @@ module runner.xtclang.org {
          * Implementation of the `registerTask` API.
          */
         Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                         Boolean retainStore = True, String? rootDir = Null) {
+                         Boolean retainStore = True, String? rootDir = Null, String method = "run",
+                         String[]? args = Null) {
             Int  id   = nextTaskId++;
-            Task task = new Task(id, template, repository, consoleId, retainStore, rootDir);
+            Task task = new Task(id, template, repository, consoleId, retainStore, rootDir, method,
+                                 args);
             tasks[id] = task;
             return id;
         }
@@ -204,7 +209,7 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                 Boolean retainStore, String? rootDir) {
+                 Boolean retainStore, String? rootDir, String method, String[]? args) {
         private Container? container;
 
         private Time? started;
@@ -253,8 +258,14 @@ module runner.xtclang.org {
             container = new Container(template, Lightweight, repository, injector);
             running   = True;
 
+            // the host decides from the method's signature whether an argument array is passed
+            Tuple callArgs = ();
+            if (String[] argv ?= args) {
+                callArgs = (argv);
+            }
+
             @Future Tuple<Int, String> completion;
-            @Future Tuple              outcome = container.as(Container).invoke("run", ());
+            @Future Tuple              outcome = container.as(Container).invoke(method, callArgs);
             &outcome.whenComplete((tuple, exception) -> {
                 Int    result  = 0;
                 String failure = "";

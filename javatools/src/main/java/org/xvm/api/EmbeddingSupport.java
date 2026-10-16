@@ -1,24 +1,70 @@
 package org.xvm.api;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static java.util.Objects.requireNonNull;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.time.Instant;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import java.util.function.Function;
+
+import java.util.stream.Stream;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
 
+import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.InvocationExpression;
+import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.PropertyDeclarationStatement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InitializerBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.PartialSyntax;
+
+import org.xvm.tool.Console;
+import org.xvm.tool.Launcher.LauncherException;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.ModuleInfo;
+import org.xvm.tool.ModuleInfo.Node;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -29,7 +75,8 @@ import static org.xvm.util.Severity.ERROR;
  * Ecstasy classes. Without configuration, EmbeddingSupport will attempt to locate the core Ecstasy
  * classes using the "XDK_HOME" OS property.
  *
- * <p>The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
+ * <p>Hosts must serialize compilations that share this instance's configured repository. Configuration
+ * must complete before compilation or execution begins.
  *
  * <p>EmbeddingSupport is a singleton because running a module requires the interpreter, and the
  * interpreter keeps JVM-wide state. When the Connector creates its NativeContainer, the container
@@ -67,10 +114,87 @@ public class EmbeddingSupport {
 
     private static final Object LOCK = new Object();
 
+    private static final Console SILENT_CONSOLE = new Console() {
+        @Override
+        public String out(Object value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public String err(Object value) {
+            return String.valueOf(value);
+        }
+    };
+
     private volatile boolean configured;
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
     private Connector        connector;
+
+    /**
+     * Build a read-only repository over whichever of the given directories exist.
+     *
+     * @param dirs  the directories, in search order
+     *
+     * @return the repository, or null if none of the directories exist
+     */
+    private static ModuleRepository repoOver(File... dirs) {
+        var list = Arrays.stream(dirs)
+                .filter(File::isDirectory)
+                .<ModuleRepository>map(dir -> new DirRepository(dir, true))
+                .toList();
+        return switch (list.size()) {
+            case 0  -> null;
+            case 1  -> list.getFirst();
+            default -> new LinkedRepository(list.toArray(ModuleRepository.NO_REPOS));
+        };
+    }
+
+    /**
+     * A snapshot of what the compiler is holding on to.
+     *
+     * <p>An embedding host that keeps a compiler alive across many compilations - a language server
+     * is the obvious one - needs some way to see whether it is accumulating. These are the cheap
+     * numbers: taking them costs a field read and a repository listing, so a host can log one per
+     * compilation without measuring itself instead of the compiler.
+     *
+     * @param modules        how many modules the configured repository offers
+     * @param constants      how many constants are interned in the current pool
+     * @param invalidations  how many times cached type information has been invalidated
+     * @param heapBytes      used heap, which is the JVM's figure and not the compiler's alone
+     */
+    public record Footprint(int modules, int constants, int invalidations, long heapBytes) {
+        @Override
+        public String toString() {
+            return "modules=" + modules + ", constants=" + constants
+                    + ", invalidations=" + invalidations
+                    + ", heap=" + (heapBytes / (1024 * 1024)) + "MB";
+        }
+    }
+
+    /**
+     * Take a {@link Footprint} without selecting a compilation's pool. This does not initialize
+     * the runtime; pool counts are zero. Use {@link #footprint(Compilation)} for compiler counts.
+     *
+     * @return the snapshot; the counts are zero where nothing has been configured or built yet
+     */
+    public Footprint footprint() {
+        return footprint(null);
+    }
+
+    /**
+     * Take a passive snapshot of a compilation's pool and the configured repository.
+     *
+     * @param compilation  the compilation to measure, or null for repository and heap counts only
+     *
+     * @return the snapshot; pool counts are zero if no file structure was built
+     */
+    public Footprint footprint(Compilation compilation) {
+        var pool = compilation == null ? null : compilation.pool();
+        var runtime = Runtime.getRuntime();
+        return new Footprint(cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(), pool == null ? 0 : pool.size(),
+                pool == null ? 0 : pool.getInvalidationCount(), runtime.totalMemory() - runtime.freeMemory());
+    }
 
     /**
      * @return true if configured
@@ -81,9 +205,15 @@ public class EmbeddingSupport {
             // attempt to auto-configure
             String home = System.getenv("XDK_HOME");
             if (home != null) {
-                File dir = new File(new File(home), "lib");
-                if (dir.isDirectory()) {
-                    configure(new DirRepository(dir, true), null);
+                // an XDK keeps its libraries in lib/ and the two modules the compiler bootstraps
+                // against - the turtle, mack.xtclang.org, and the native bridge - in javatools/.
+                // Configuring only lib/ produced a repository that could never compile anything:
+                // every compile failed in prelinkSystemLibraries with "Unable to load module:
+                // mack.xtclang.org", reported as an internal error with no location
+                var dirHome = new File(home);
+                var repo = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
+                if (repo != null) {
+                    configure(repo, null);
                 }
             }
 
@@ -126,13 +256,16 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Provide configuration necessary for the underlying Ecstasy tools and libraries. Must be
-     * called exactly one time before any other method.
+     * Provide configuration for the underlying Ecstasy tools and libraries before compiling or
+     * running a module. Repeating the same configuration is allowed; a conflicting configuration
+     * is rejected. Passive configuration and footprint queries do not require initialization.
      *
      * @param coreRepo        the ModuleRepository to load the core libraries from
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources in lieu of the default injector
      *                        for this implementation
+     *
+     * @return this configured host support instance
      */
     public EmbeddingSupport configure(ModuleRepository coreRepo, String customInjector) {
         synchronized (LOCK) {
@@ -172,12 +305,31 @@ public class EmbeddingSupport {
     }
 
     /**
-     * @return the ConstantPool of the core Ecstasy libraries used by the runtime Connector instance
-     *         that is instantiated by EmbeddingSupport
+     * Obtain the constant pool of the runtime, starting one if it is not running yet.
+     *
+     * <p>This is not the pool a compilation used - that belongs to the {@link Compilation} it
+     * produced. Asking for this one boots an interpreter: a connector builds a NativeContainer,
+     * which loads a native template for every core module, so it needs the whole library and not
+     * just the part the compiler bootstraps against. The old name said "get" and read like an
+     * accessor.
+     *
+     * @return the runtime's constant pool
      */
-    public ConstantPool getConstantPool() {
+    public ConstantPool ensureRuntimePool() {
         verifyConfigured();
         return ensureConnector().getConstantPool();
+    }
+
+    /**
+     * Obtain the runtime's constant pool, starting the runtime if necessary.
+     *
+     * @return the runtime's constant pool
+     * @deprecated use {@link #ensureRuntimePool()} to make runtime initialization explicit;
+     *             use {@link Compilation#pool()} for a compilation's pool
+     */
+    @Deprecated
+    public ConstantPool getConstantPool() {
+        return ensureRuntimePool();
     }
 
     // ----- compiler support ----------------------------------------------------------------------
@@ -187,33 +339,768 @@ public class EmbeddingSupport {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      *
      * @see ModuleCompiler#compile(String, ModuleRepository, ErrorListener)
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
-        verifyConfigured();
-        return new ModuleCompiler(cfgRepo).compile(source, input, errs);
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        return compile(new Source(source), input, errs);
     }
 
     /**
-     * Compile a module that is in a file, against the configured core repository.
+     * Compile a module held in memory, as a named document.
      *
-     * @param file    the module source file
+     * <p>A diagnostic's identity includes the name of the source it came from, so a host holding
+     * several documents that are not on disk - an editor's unsaved buffers - has to be able to
+     * tell them apart. Without a name, two documents with a problem at the same offset produce
+     * the same identity and a listener that deduplicates discards the second. The name belongs to
+     * the document rather than to the act of compiling it, which is why this takes a
+     * {@link Source}: {@code new Source(text, uri)} says it once, where a second String parameter
+     * would sit next to the first and be silently swappable with it.
+     *
+     * @param source  the source to compile, carrying whatever name it was created with
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the resulting ModuleStructure, or null if a compiler error occurred
+     */
+    public ModuleStructure compile(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        return compileModule(source, input, errs).module();
+    }
+
+    /**
+     * The outcome of compiling a source or module source tree.
+     *
+     * <p>A failed compilation used to answer with nothing but null, which threw away everything the
+     * attempt had built. That is most of what a host wants when it fails: the structures a
+     * verification error was raised against still exist, and the pool they were interned in is
+     * the only way to reach them - to ask a type what building its TypeInfo had to say, for
+     * instance.
+     *
+     * <p>Recovered source trees have not entered compiler passes. Traverse their children using
+     * each root's Source; child parent pointers may not yet be installed. Binding maps are
+     * immutable identity snapshots: keys and values compare by reference, not structural equality.
+     *
+     * @param module       the compiled module, or null if the compilation did not get that far
+     * @param file         the file structure that was built, or null if it did not get that far
+     * @param ast          the assembled source tree, or null if loading/parsing failed; linked
+     *                     member trees retain their original Sources and positions
+     * @param sourceTrees  available per-source syntax, including recovered trees on parse failure;
+     *                     these are structural facts, not a promise of semantic validity
+     * @param callBindings  immutable call facts keyed by surviving invocation identity; compiler
+     *                     objects remain worker-owned and must be copied before concurrent use
+     * @param functionBindings  validated function signatures with no selected runtime method;
+     *                          ownership is the same as for callBindings
+     * @param constructorBindings validated constructor and argument provenance; the same ownership
+     *                            rules apply, with no additional state on the construction AST
+     * @param initializerBindings successful constant-initializer facts anchored to surviving source
+     *                            properties; no speculative clone nodes or contexts are retained
+     */
+    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                              List<StatementBlock> sourceTrees,
+                              Map<InvocationExpression, InvocationBinding> callBindings,
+                              Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
+                              Map<NewExpression, InvocationBinding> constructorBindings,
+                              Map<PropertyDeclarationStatement, InitializerBinding> initializerBindings) {
+        public Compilation {
+            sourceTrees         = List.copyOf(sourceTrees);
+            callBindings        = identitySnapshot(callBindings);
+            functionBindings    = identitySnapshot(functionBindings);
+            constructorBindings = identitySnapshot(constructorBindings);
+            initializerBindings = identitySnapshot(initializerBindings);
+        }
+
+        /**
+         * Retain hosts that supply constructor bindings without folded initializer facts.
+         *
+         * @param module               the compiled module, or null when compilation did not succeed
+         * @param file                 the file structure produced by the attempt, or null if none was built
+         * @param ast                  the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees          the available per-source syntax trees, including recovered trees
+         * @param callBindings         validated method-call facts keyed by invocation identity
+         * @param functionBindings     validated function-call facts keyed by invocation identity
+         * @param constructorBindings  validated constructor-call facts keyed by construction identity
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings,
+                           Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
+                           Map<NewExpression, InvocationBinding> constructorBindings) {
+            this(module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings, Map.of());
+        }
+
+        /**
+         * Retain hosts that supply method and function bindings.
+         *
+         * @param module            the compiled module, or null when compilation did not succeed
+         * @param file              the file structure produced by the attempt, or null if none was built
+         * @param ast               the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees       the available per-source syntax trees, including recovered trees
+         * @param callBindings      validated method-call facts keyed by invocation identity
+         * @param functionBindings  validated function-call facts keyed by invocation identity
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings,
+                           Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
+            this(module, file, ast, sourceTrees, callBindings, functionBindings, Map.of());
+        }
+
+        /**
+         * Retain hosts that supply only statically selected method calls.
+         *
+         * @param module        the compiled module, or null when compilation did not succeed
+         * @param file          the file structure produced by the attempt, or null if none was built
+         * @param ast           the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees   the available per-source syntax trees, including recovered trees
+         * @param callBindings  validated method-call facts keyed by invocation identity
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings) {
+            this(module, file, ast, sourceTrees, callBindings, Map.of());
+        }
+
+        /**
+         * Retain the construction API for hosts supplying structural source trees.
+         *
+         * @param module       the compiled module, or null when compilation did not succeed
+         * @param file         the file structure produced by the attempt, or null if none was built
+         * @param ast          the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees  the available per-source syntax trees, including recovered trees
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast, List<StatementBlock> sourceTrees) {
+            this(module, file, ast, sourceTrees, Map.of());
+        }
+
+        /**
+         * Retain the original construction API for hosts supplying one assembled tree.
+         *
+         * @param module  the compiled module, or null when compilation did not succeed
+         * @param file    the file structure produced by the attempt, or null if none was built
+         * @param ast     the assembled source root, or null if loading or parsing failed
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
+            this(module, file, ast, ast == null ? List.of() : List.of(ast));
+        }
+
+        /**
+         * Represent file structures without a successful module or retained source tree.
+         *
+         * @param file  the file structure produced so far
+         *
+         * @return a partial compilation
+         */
+        public static Compilation forFile(FileStructure file) {
+            return new Compilation(null, requireNonNull(file, "file"), null);
+        }
+
+        /**
+         * @return true iff a module came out of it
+         */
+        public boolean succeeded() {
+            return module != null;
+        }
+
+        /**
+         * @return the pool this compilation interned into, or null if there was no compilation
+         */
+        public ConstantPool pool() {
+            return file == null ? null : file.getConstantPool();
+        }
+
+        /**
+         * Walk the assembled source after successful loading/parsing.
+         *
+         * <p>A host that wants to say where something is has to come through here: a
+         * {@link org.xvm.asm.Component} knows its name, its kind and its children, and nothing
+         * about the text it was written in. Only the AST carries positions.
+         *
+         * @return the assembled source root, or null after loading/parsing errors; use
+         *         {@link #sourceTrees()} for available structural syntax in that case
+         */
+        public StatementBlock parsed() {
+            return ast;
+        }
+    }
+
+    /**
+     * Compile a module held in memory, and answer with everything the attempt produced.
+     *
+     * @param source  the source to compile, carrying whatever name it was created with
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the outcome; never null, though its parts may be
+     */
+    public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return compileModule(listener -> ParsedSources.parse(source, listener), input, errs);
+    }
+
+    /**
+     * Compile a module's source tree using the same discovery, resource association and parse-tree
+     * assembly as the CLI. The returned AST includes the member files with their original Sources.
+     * Hosts may subclass {@link ModuleInfo} and override its protected {@code readSource(File)}
+     * and {@code sourceEntries(File)} hooks to supply a consistent snapshot of unsaved text and
+     * source membership. The default provider discovers and reads files from disk.
+     *
+     * @param sources  a fresh ModuleInfo for this attempt; do not reuse a previously parsed tree
+     * @param input    the optional repository of compiled dependencies
+     * @param errs     the listener for this compilation
+     *
+     * @return the outcome, including the linked AST when source loading succeeded
+     */
+    public Compilation compileModule(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        return compileModule(listener -> ParsedSources.parse(sources, listener), input, errs);
+    }
+
+    /**
+     * A successfully resolved declaration graph, before expression validation and code generation.
+     * It contains no executable artifact. The calling worker exclusively owns these structures and
+     * may inspect TypeInfo with its listener; ordinary compilation still validates every body.
+     *
+     * @param file         the file structure containing the resolved declarations
+     * @param ast          the assembled source tree
+     * @param sourceTrees  the available per-source trees, retained in source order
+     */
+    public record DeclarationAnalysis(FileStructure file, StatementBlock ast, List<StatementBlock> sourceTrees) {
+        public DeclarationAnalysis {
+            requireNonNull(file, "file");
+            requireNonNull(ast, "ast");
+            sourceTrees = List.copyOf(sourceTrees);
+        }
+
+        /**
+         * Obtain the pool that owns these resolved declarations.
+         *
+         * @return the constant pool owned by this declaration analysis
+         */
+        public ConstantPool pool() {
+            return file.getConstantPool();
+        }
+    }
+
+    /**
+     * Resolve one source's declarations in a fresh attempt. Body errors are outside this operation's
+     * scope; syntax, linkage, declaration errors and cancellation prevent a result.
+     *
+     * @param source  the source to parse
+     * @param input   optional compiled dependencies
+     * @param errs    the host listener
+     * @return resolved declarations, never a compiled module
+     */
+    public Optional<DeclarationAnalysis> analyzeDeclarations(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return analyzeDeclarations(listener -> ParsedSources.parse(source, listener), input, errs);
+    }
+
+    /**
+     * Resolve a module tree's declarations using the same source/resource overlay contract as
+     * {@link #compileModule(ModuleInfo, ModuleRepository, ErrorListener)}. Use a fresh ModuleInfo.
+     *
+     * @param sources  the module's source tree
+     * @param input    optional compiled dependencies
+     * @param errs     the host listener
+     * @return resolved declarations, empty after any declaration failure or cancellation
+     */
+    public Optional<DeclarationAnalysis> analyzeDeclarations(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        return analyzeDeclarations(listener -> ParsedSources.parse(sources, listener), input, errs);
+    }
+
+    private Optional<DeclarationAnalysis> analyzeDeclarations(Function<ErrorListener, ParsedSources> parse,
+                                                            ModuleRepository input, ErrorListener errs) {
+        var attempt = runCompiler(parse, input, errs, CursorBinding.Collector.NONE, CompilationGoal.DECLARATIONS);
+        var compiler = attempt.compiler();
+        return attempt.succeeded()
+                ? Optional.of(new DeclarationAnalysis(compiler.file, compiler.ast, compiler.sourceTrees))
+                : Optional.empty();
+    }
+
+    /**
+     * Facts retained by an explicit incomplete-source analysis, never a compiled module.
+     *
+     * <p>The available source syntax and sites may be unvalidated. A child expression supplies a
+     * semantic fact only if validation succeeded (isValidated and a fitting TypeFit) and its
+     * resolved target/type is available. Failed validation can leave placeholder types. An absent
+     * pool means semantic analysis did not start. Cursor bindings copy visible scope and candidate
+     * signatures/mappings fitted to written arguments; they never select the incomplete operation
+     * or invent a missing argument/result. Consumers must copy facts while exclusively
+     * owning the attempt, as with Compilation; ASTs and pools are not concurrent query objects.
+     * Binding maps preserve reference identity for both keys and values and reject null entries.
+     *
+     * @param sourceTrees       available source syntax, including unvalidated recovered trees
+     * @param sites             incomplete source sites retained by this attempt
+     * @param pool              the attempt's constant pool, or null if semantic analysis did not start
+     * @param callBindings      validated method calls keyed by source invocation identity
+     * @param cursorBindings    visible scope and candidate facts keyed by incomplete site identity
+     * @param functionBindings  validated function signatures keyed by source invocation identity
+     */
+    public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                                  @Nullable ConstantPool pool,
+                                  Map<InvocationExpression, InvocationBinding> callBindings,
+                                  Map<IncompleteStatement, CursorBinding> cursorBindings,
+                                  Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
+        public PartialAnalysis {
+            sourceTrees      = List.copyOf(sourceTrees);
+            sites            = List.copyOf(sites);
+            cursorBindings   = identitySnapshot(cursorBindings);
+            callBindings     = identitySnapshot(callBindings);
+            functionBindings = identitySnapshot(functionBindings);
+        }
+
+        /**
+         * Create partial facts with cursor and selected-method bindings.
+         *
+         * @param sourceTrees     the available per-source syntax trees, including recovered trees
+         * @param sites           the retained incomplete source sites
+         * @param pool            the attempt's pool, or null if semantic analysis did not start
+         * @param callBindings    validated method-call facts keyed by invocation identity
+         * @param cursorBindings  visible scope and candidate facts keyed by incomplete-site identity
+         */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                               @Nullable ConstantPool pool,
+                               Map<InvocationExpression, InvocationBinding> callBindings,
+                               Map<IncompleteStatement, CursorBinding> cursorBindings) {
+            this(sourceTrees, sites, pool, callBindings, cursorBindings, Map.of());
+        }
+
+        /**
+         * Create partial facts with call and receiver information only.
+         *
+         * @param sourceTrees   the available per-source syntax trees, including recovered trees
+         * @param sites         the retained incomplete source sites
+         * @param pool          the attempt's pool, or null if semantic analysis did not start
+         * @param callBindings  validated method-call facts keyed by invocation identity
+         */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                               @Nullable ConstantPool pool, Map<InvocationExpression, InvocationBinding> callBindings) {
+            this(sourceTrees, sites, pool, callBindings, Map.of());
+        }
+
+        /**
+         * Create partial facts with syntax and receiver information only.
+         *
+         * @param sourceTrees  the available per-source syntax trees, including recovered trees
+         * @param sites        the retained incomplete source sites
+         * @param pool         the attempt's pool, or null if semantic analysis did not start
+         */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites, @Nullable ConstantPool pool) {
+            this(sourceTrees, sites, pool, Map.of());
+        }
+    }
+
+    /**
+     * Analyze the intact prefix of one trailing incomplete expression statement in a single
+     * source module. Supports a member-access dot or unfinished call at EOF, with complete
+     * preceding declarations/statements and arguments. Other syntax errors prevent semantic
+     * analysis; returns, assignments, incomplete nested arguments and module member files are
+     * outside this bounded contract. Complete input has no incomplete site and is not compiled.
+     *
+     * <p>Parsing reports immediately to the host and respects its budget/cancellation. Only the
+     * recognized EOF boundary may enter compiler passes. The incomplete statement validates its
+     * intact children in the real method context, then fails validation before method emission.
+     * Its repeated EOF diagnostic stops the compiler internally without being delivered twice
+     * to the host. Other diagnostics and unexpected failures remain visible.
+     *
+     * @param source  a fresh named source for this attempt
+     * @param input   the optional repository of compiled dependencies
+     * @param errs    the host's diagnostic listener
+     *
+     * @return partial facts with no success/module artifact contract
+     */
+    public PartialAnalysis analyzeIncomplete(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return analyzeIncomplete(listener -> {
+            var tree = Parser.forPartialAnalysis(source, listener).parseSource();
+            return new ParsedSources(tree, List.of(tree));
+        }, Parser.UNEXPECTED_EOF, input, errs);
+    }
+
+    /**
+     * Analyze an incomplete member access or call at an explicit source position, including before
+     * existing closing braces or a semicolon. Source text is unchanged and later declarations retain
+     * their positions. The cursor must come from {@link Source#getPosition()} for this exact text.
+     *
+     * <p>Expression queries support standalone statements, assignment and initializer values, single
+     * return values, and nested call arguments, including named arguments and existing closing
+     * parentheses. Member tokens retain their completion prefix. A cursor before a call's closing
+     * parenthesis inspects its receiver and written arguments even when the selected syntax is
+     * complete. The selected member or call itself is not validated. Bare-name prefixes and empty
+     * statement boundaries expose visible scope; a named argument awaiting its value retains its
+     * label. Candidate signatures infer types from written arguments. Compound and conditional
+     * values, and arguments following the cursor, retain their real contexts.
+     *
+     * <p>Recovery retains missing call/group/tuple parentheses and index/list/map brackets at
+     * statement or outer-delimiter boundaries. Declaration values can retain missing terminators,
+     * parameter defaults can retain a missing closing parenthesis before a body, and a cursor at
+     * EOF can retain missing block braces. Recovery does not invent operands, declaration names or
+     * types, or literal contents, and does not repair unrelated errors.
+     *
+     * <p>Construction queries reuse normal receiver/type preparation, including virtual, inner and
+     * annotated types, required-type and argument-derived class inference, and parenthesized array
+     * initializers. Anonymous construction prepares the retained declaration and fits its own or
+     * superclass constructors without emitting forwarding constructors or running capture analysis.
+     * Single-dimensional array brackets fit the fixed-size constructor's size parameter, including
+     * an empty/final-name slot and a missing closing bracket. A following supplier is parsed for
+     * recovery but is outside this prefix proof. Multidimensional construction remains unsupported.
+     *
+     * <p>Declaration queries resolve member, return and method-parameter type prefixes through the
+     * enclosing compiler scope. Flat qualified names resolve their qualifier and visible nested
+     * types, replacing only the final written identifier. Unqualified empty parameter slots are
+     * supported. An unfinished header retains its written name and range but registers no method,
+     * property component or parameters. Written leaf names inside parameterized and compound types
+     * participate, including bounded missing angle/group closers; these are visible-type suggestions,
+     * not proof of generic constraints. Empty type/qualified slots, selected qualifier tokens,
+     * parameterized qualifiers, generic base names and function/sequence types are supported.
+     *
+     * <p>Generic-method, multiple-return and type-composition headers query their enclosing scope.
+     * Unregistered formals hide outer names without acquiring invented identities. A root module
+     * header registers only its written namespace/core import; its incomplete body and compositions
+     * cannot emit or contribute facts. Other syntax errors prevent semantic analysis, and cursors
+     * outside supported boundaries yield no site. Partial facts never promise executable output.
+     *
+     * @param source  a fresh named source whose text remains unchanged during this attempt
+     * @param cursor  the encoded source position at which to inspect incomplete syntax
+     * @param input   compiled dependencies, or null to use only the configured core repository
+     * @param errs    the host's diagnostic listener and abort policy
+     *
+     * @return retained source trees and available cursor/binding facts, without an executable module
+     */
+    public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return analyzeIncomplete(listener -> {
+            var tree = Parser.forPartialAnalysis(source, cursor, listener).parseSource();
+            return new ParsedSources(tree, List.of(tree));
+        }, Parser.INCOMPLETE_EXPRESSION, input, errs);
+    }
+
+    /**
+     * Analyze an explicit cursor in one file of a module snapshot. Uses the same source loading,
+     * overlay and resource contract as {@link #compileModule(ModuleInfo, ModuleRepository, ErrorListener)}.
+     * The cursor refers to the selected file's snapshot, which may contain unsaved text. Neither
+     * this ModuleInfo nor its parsed trees may be reused for another attempt or normal compilation.
+     * Only the recognized cursor diagnostic is deferred during assembly; other source errors abort it.
+     *
+     * @param sources     a fresh module source snapshot for this attempt
+     * @param sourceFile  the file in that snapshot containing the cursor
+     * @param cursor      the selected position in the owning Source snapshot
+     * @param input       the optional repository of compiled dependencies
+     * @param errs        the diagnostic listener and abort policy for this operation
+     *
+     * @return retained syntax and any facts proved at the cursor; never a compiled module
+     */
+    public PartialAnalysis analyzeIncomplete(ModuleInfo sources, File sourceFile, long cursor,
+                                            ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        var name = resolveFile(requireNonNull(sourceFile, "sourceFile")).getPath();
+        return analyzeIncomplete(listener -> {
+            var assembly = ErrorListener.cancellable(ErrorListener.collecting(listener::log), listener::isAbortDesired);
+            var root = sources.getSourceTree(assembly, (source, nodeErrors) -> {
+                if (!name.equals(source.getFileName())) {
+                    return new Parser(source, nodeErrors).parseSource();
+                }
+                ErrorListener partial = ErrorListener.cancellable(ErrorListener.collecting(error -> {
+                    if (error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)) {
+                        listener.log(error);
+                    } else {
+                        nodeErrors.log(error);
+                    }
+                }), listener::isAbortDesired);
+                return Parser.forPartialAnalysis(source, cursor, partial).parseSource();
+            });
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(), sources.getParsedSources());
+        }, Parser.INCOMPLETE_EXPRESSION, input, errs);
+    }
+
+    private PartialAnalysis analyzeIncomplete(Function<ErrorListener, ParsedSources> parse, String boundaryCode,
+                                             ModuleRepository input, ErrorListener errs) {
+        verifyConfigured();
+        requireNonNull(errs, "errs");
+        Set<String> delivered = new HashSet<>();
+        var host = ErrorListener.cancellable(ErrorListener.collecting(error -> {
+            if (delivered.add(error.genUID())) {
+                errs.log(error);
+            }
+        }), errs::isAbortDesired);
+        var syntaxErrors = new ErrorList(ErrorList.UNLIMITED);
+        ParsedSources parsed;
+        try {
+            if (host.isAbortDesired()) {
+                return new PartialAnalysis(List.of(), List.of(), null);
+            }
+            parsed = parse.apply(ErrorListener.tee(syntaxErrors, host));
+        } catch (CompilerException e) {
+            return new PartialAnalysis(List.of(), List.of(), null);
+        } catch (RuntimeException | AssertionError e) {
+            host.error(ERR_INTERNAL, NOWHERE, e, "Incomplete-source parsing failed");
+            return new PartialAnalysis(List.of(), List.of(), null);
+        }
+
+        if (parsed.root() == null) {
+            return new PartialAnalysis(parsed.sources(), List.of(), null);
+        }
+        var sites = incompleteSites(parsed.root()).distinct().toList();
+        if (sites.size() != 1 || syntaxErrors.getErrors().stream().anyMatch(error ->
+                error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(boundaryCode))) {
+            return new PartialAnalysis(parsed.sources(), List.of(), null);
+        }
+
+        var cursors = new CursorBinding.Collector();
+        var attempt = compileModule(listener -> parsed, input, host, cursors);
+        // Anonymous construction can replace its deferred body with an owned class/validation
+        // clone. Publish only surviving syntax, never the pre-validation cursor identity.
+        // Primary-constructor defaults can expose the same surviving node through both the
+        // written parameter and generated property getter. Publish each identity only once.
+        var surviving = incompleteSites(parsed.root()).distinct().toList();
+        return new PartialAnalysis(parsed.sources(), surviving, attempt.pool(),
+                attempt.callBindings(), cursors.finish(parsed.sources()), attempt.functionBindings());
+    }
+
+    /** Parsed children exist before parent links; expose the innermost unfinished operations. */
+    private static Stream<IncompleteStatement> incompleteSites(AstNode node) {
+        var nested = PartialSyntax.children(node).flatMap(EmbeddingSupport::incompleteSites);
+        if (node instanceof IncompleteStatement site) {
+            var descendants = nested.toList();
+            return descendants.isEmpty() ? Stream.of(site) : descendants.stream();
+        }
+        return nested;
+    }
+
+    /** Preserve node identity, reject null entries and detach from the collector. */
+    private static <K, V> Map<K, V> identitySnapshot(Map<K, V> source) {
+        var copy = new IdentityHashMap<K, V>();
+        source.forEach((key, value) -> copy.put(requireNonNull(key), requireNonNull(value)));
+        return Collections.unmodifiableMap(copy);
+    }
+
+    /** Available source trees, with an assembled root only when parsing and loading succeeded. */
+    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {
+        /** Keep recovered syntax for diagnostics even when errors prevent compiling the root. */
+        static ParsedSources parse(Source source, ErrorListener errs) {
+            var tree = new Parser(source, errs).parseSource();
+            return new ParsedSources(errs.hasSeriousErrors() ? null : tree, List.of(tree));
+        }
+
+        /** Assemble the module before reading the per-source trees populated during parsing. */
+        static ParsedSources parse(ModuleInfo sources, ErrorListener errs) {
+            var root = sources.getSourceTree(errs);
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(), sources.getParsedSources());
+        }
+    }
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse, ModuleRepository input, ErrorListener errs) {
+        return compileModule(parse, input, errs, CursorBinding.Collector.NONE);
+    }
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
+                                     ModuleRepository input, ErrorListener errs, CursorBinding.Collector cursors) {
+        return runCompiler(parse, input, errs, cursors, CompilationGoal.MODULE).compiler().result();
+    }
+
+    /** Selects declaration resolution alone or the full validation and emission pipeline. */
+    private enum CompilationGoal { DECLARATIONS, MODULE }
+
+    /** Keeps partial compiler state alongside whether the requested goal completed successfully. */
+    private record CompilerAttempt(EmbeddingCompiler compiler, boolean succeeded) {}
+
+    private CompilerAttempt runCompiler(Function<ErrorListener, ParsedSources> parse,
+                                       ModuleRepository input, ErrorListener errs,
+                                       CursorBinding.Collector cursors, CompilationGoal goal) {
+        verifyConfigured();
+        requireNonNull(errs, "errs");
+        var compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs, cursors, goal);
+        try {
+            return new CompilerAttempt(compiler, !errs.isAbortDesired() && compiler.process() == 0
+                    && !errs.hasSeriousErrors() && !errs.isAbortDesired());
+        } catch (LauncherException e) {
+            // Expected aborts already have diagnostics or a cancellation request.
+            if (!errs.hasSeriousErrors() && !errs.isAbortDesired()) {
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+            }
+        } catch (RuntimeException | AssertionError e) {
+            // An earlier source error must not hide an unexpected compiler failure.
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+        }
+        return new CompilerAttempt(compiler, false);
+    }
+
+    /**
+     * Compile a module that is in a file or directory, against the configured core repository.
+     *
+     * @param file    the location of the module source code on disk, either the module source file
+     *                or the directory containing a single .x file and nested contents thereof
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
      *
      * @see ModuleCompiler#compile(File, ModuleRepository, ModuleRepository, ErrorListener)
      */
-    public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+    public boolean compile(File file, ModuleRepository input, ModuleRepository output, @NotNull ErrorListener errs) {
         verifyConfigured();
-        return new ModuleCompiler(cfgRepo).compile(file, input, output, errs);
+        requireNonNull(errs, "errs");
+        ModuleStructure module;
+        try {
+            module = compileModule(new ModuleInfo(file, false), input, errs).module();
+        } catch (IllegalArgumentException e) {
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to locate module " + file);
+            return false;
+        }
+        return ModuleCompiler.storeCompiled(module, output, errs);
+    }
+
+    /**
+     * Adapter that supplies the source and repositories to the standard compiler pipeline and
+     * captures its single compiled module instead of writing it to disk.
+     */
+    private static class EmbeddingCompiler
+            extends org.xvm.tool.Compiler {
+        private final Function<ErrorListener, ParsedSources> parse;
+        private final InvocationBinding.Collector bindings = new InvocationBinding.Collector();
+        private final CursorBinding.Collector cursors;
+        private final CompilationGoal goal;
+
+        private final ModuleRepository     inRepo;
+        private final ModuleRepository     coreRepo;
+        private       ModuleStructure      module;
+        private       FileStructure        file;
+        private       StatementBlock       ast;
+        private       List<StatementBlock> sourceTrees = List.of();
+
+        /**
+         * Everything this attempt produced.
+         *
+         * <p>Each part is present when the attempt got that far and null when it did not, which the
+         * fields already say: the module is only ever assigned on success, and the file structure
+         * and the AST only once they exist. So there is nothing for the caller to decide, and no
+         * success flag to pass in and get wrong.
+         *
+         * @return the outcome; never null, though its parts may be
+         */
+        Compilation result() {
+            var facts = bindings.finishFacts(ast == null ? List.of() : List.of(ast));
+            return new Compilation(module, file, ast, sourceTrees, facts.methods(), facts.functions(),
+                    facts.constructors(), facts.initializers());
+        }
+
+        /**
+         * @return the file structure this compilation built, which exists whether or not the
+         *         compilation went on to succeed
+         */
+        FileStructure getFileStructure() {
+            return file;
+        }
+
+        @Override
+        public boolean isAbortDesired() {
+            // Cancellation must also stop between phases; stopping only an individual compiler
+            // loop would let the following phase run against an unfinished predecessor.
+            return super.isAbortDesired() || m_errors.isAbortDesired();
+        }
+
+        protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
+                                    ModuleRepository input, ModuleRepository core, ErrorListener errs,
+                                    CursorBinding.Collector cursors, CompilationGoal goal) {
+            super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
+
+            this.parse    = parse;
+            this.cursors  = cursors;
+            this.goal     = goal;
+            this.inRepo   = input;
+            this.coreRepo = core;
+        }
+
+        @Override
+        protected int process() {
+            var repoLib = ensureLibraryRepo();
+            checkErrors("repository setup");
+
+            prelinkSystemLibraries(repoLib);
+            checkErrors("system library linking");
+
+            StatementBlock block;
+            try {
+                // The launcher stops the next compilation stage on any error. Parsing can still
+                // recover within its own stage, subject to the host's budget and cancellation.
+                var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), m_errors::isAbortDesired);
+                var parsed = parse.apply(errs);
+                block = this.ast = parsed.root();
+                this.sourceTrees = parsed.sources();
+            } catch (CompilerException e) {
+                return 1;
+            }
+            if (checkErrors("source parsing") != 0) {
+                return 1;
+            }
+
+            if (block == null) {
+                error(ERR_MODULE_SOURCE, NOWHERE);
+                return 1;
+            }
+
+            if (block.getStatements().isEmpty()) {
+                block.log(this, ERROR, ERR_MODULE_SOURCE);
+                return checkErrors("source parsing");
+            }
+            var stmt = block.getStatements().getLast();
+            if (!(stmt instanceof TypeCompositionStatement stmtModule) || stmtModule.getCategory().getId() != Id.MODULE) {
+                stmt.log(this, ERROR, ERR_MODULE_SOURCE);
+                return checkErrors("source parsing");
+            }
+
+            var compiler = new Compiler(stmtModule, this, bindings, cursors);
+            var struct = compiler.generateInitialFileStructure();
+            this.file = struct;
+            if (struct == null || checkErrors("module creation") != 0) {
+                return 1;
+            }
+
+            try {
+                repoLib.storeModule(struct.getModule());
+            } catch (IOException e) {
+                log(ERROR, e, "I/O exception storing module: {}", struct.getModule().getName());
+                return 1;
+            }
+
+            if (goal == CompilationGoal.DECLARATIONS) {
+                resolveDeclarations(List.of(compiler), repoLib);
+                return hasSeriousErrors() || isAbortDesired() ? 1 : 0;
+            }
+
+            int result = super.compile(List.of(compiler), repoLib);
+            if (result == 0 && !isAbortDesired()) {
+                this.module = struct.getModule();
+            }
+            return result;
+        }
+
+        @Override
+        protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        @Override
+        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
+            var build = new BuildRepository();
+            return inRepo == null || inRepo == coreRepo
+                    ? new LinkedRepository(true, build, coreRepo)
+                    : new LinkedRepository(true, build, inRepo, coreRepo);
+        }
+
+        @Override
+        protected int emitModules(List<Node> allNodes, ModuleRepository ignore) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        /**
+         * @return the result of the compilation
+         */
+        protected ModuleStructure getModule() {
+            return module;
+        }
     }
 
     /**
@@ -260,7 +1147,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the provided module.
      *
-     * A limited set of injections are made available to the module, including the console, clock,
+     * <p>A limited set of injections are made available to the module, including the console, clock,
      * and other "safe" injectable types. The FileSystem is provided as detailed by the "rootDir"
      * parameter.
      *
@@ -271,7 +1158,7 @@ public class EmbeddingSupport {
      *                    task-specific directory under "./.runner" that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     * @param errs        a means for the container to report uncaught exceptions and
      *                    other errors
      *
      * @return a Control object for the running module
@@ -289,7 +1176,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the specified module.
      *
-     * The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
+     * <p>The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
      * will be loaded into its own container, and provided with the full set of injectable resources
      * that Ecstasy supports, also including any provided String injections; in turn, that
      * implementation provides the injections that will be available to the specified module within
@@ -307,7 +1194,7 @@ public class EmbeddingSupport {
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
      *                        ignored
-     * @param errs            (optional) a means for the container to report uncaught exceptions and
+     * @param errs            a means for the container to report uncaught exceptions and
      *                        other errors
      *
      * @return a Control object for the running module, or null if it could not be started, in
@@ -321,41 +1208,90 @@ public class EmbeddingSupport {
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
-            ErrorListener             errs) {
-        verifyConfigured();
+            @NotNull ErrorListener    errs) {
+        return start(input, moduleName, version, "run", null, console, null, rootDir, injections,
+                customInjector, errs);
+    }
 
-        ModuleRepository repository = new LinkedRepository(input, cfgRepo);
-        ModuleStructure module = version == null
+    /**
+     * Create a runtime container and invoke the specified entry method of a module.
+     *
+     * <p>The method is selected the way the command-line runner selects it: exactly one method of
+     * that name must exist on the module, and an argument array is passed when the method requires
+     * one, or when arguments are supplied and the method accepts a parameter.
+     *
+     * @param input       the ModuleRepository providing any necessary modules
+     * @param moduleName  the module name to execute; must be loadable from "input"
+     * @param version     (optional) the version of the module to load
+     * @param methodName  the entry method to invoke, conventionally "run"
+     * @param args        the arguments for the entry method; never shell-parsed
+     * @param console     (optional) the PrintWriter for the executing application
+     * @param consoleIn   (optional) the input for the application's console: each
+     *                    {@code Console.readLine()} reads one line from it, and its end reads as an
+     *                    empty line. Used only with a console; without it, {@code readLine} is
+     *                    unsupported
+     * @param rootDir     (optional) the root directory for the application's file system, as
+     *                    described for {@link #run(ModuleStructure, PrintWriter, File, Map, ErrorListener)}
+     * @param errs        a means for the container to report uncaught exceptions and other errors
+     *
+     * @return a Control object for the running module, or null if it could not be started, in
+     *         which case the reason is reported to "errs"
+     */
+    public Control runMethod(
+            ModuleRepository       input,
+            String                 moduleName,
+            Version                version,
+            String                 methodName,
+            List<String>           args,
+            PrintWriter            console,
+            BufferedReader         consoleIn,
+            File                   rootDir,
+            @NotNull ErrorListener errs) {
+        return start(input, moduleName, version, requireNonNull(methodName, "methodName"),
+                requireNonNull(args, "args").toArray(String[]::new), console, consoleIn, rootDir,
+                null, null, errs);
+    }
+
+    private Control start(
+            ModuleRepository          input,
+            String                    moduleName,
+            Version                   version,
+            String                    methodName,
+            String[]                  args,
+            PrintWriter               console,
+            BufferedReader            consoleIn,
+            File                      rootDir,
+            Map<String, List<String>> injections,
+            String                    customInjector,
+            @NotNull ErrorListener    errs) {
+        verifyConfigured();
+        requireNonNull(errs, "errs");
+
+        var repository = new LinkedRepository(input, cfgRepo);
+        var module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            if (errs != null) {
-                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        new Object[] {moduleName, version}, null);
-            }
+            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER, NOWHERE, moduleName, version);
             return null;
         }
 
-        if (injections != null && !injections.isEmpty()
-                || customInjector != null || cfgInjector != null) {
-            throw new UnsupportedOperationException(
-                    "Custom injectors are not implemented yet");
+        if (injections != null && !injections.isEmpty() || customInjector != null || cfgInjector != null) {
+            throw new UnsupportedOperationException("Custom injectors are not implemented yet");
         }
 
         try {
-            Connector connector = ensureConnector();
+            var connector = ensureConnector();
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
-                    : InterpreterControl.create(connector, module, repository, console, rootDir, errs);
+                    : InterpreterControl.create(connector, module, repository, methodName, args,
+                            console, consoleIn, rootDir, errs);
         } catch (RuntimeException | AssertionError e) {
             // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            if (errs != null) {
-                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                        new Object[] {e, "Unable to start " + moduleName}, module);
-            }
+            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e, "Unable to start " + moduleName);
             return null;
         }
     }
@@ -386,4 +1322,8 @@ public class EmbeddingSupport {
      * "%2" - additional description (may be null)
      */
     public static final String ERR_INTERNAL             = "EMB-5";
+    /**
+     * The source does not contain a module declaration.
+     */
+    public static final String ERR_MODULE_SOURCE        = "EMB-6";
 }
