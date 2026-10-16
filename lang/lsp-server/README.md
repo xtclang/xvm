@@ -542,11 +542,15 @@ a `String[]` is passed when the method requires one, or when arguments are given
 parameter. The Run lens appears only on modules whose registered module structure declares such a
 `run` method, so a module that does not build yet can still offer Run and report why it failed.
 
-Programs run in a separate execution worker JVM, started on the first run from the server's own
-classpath and Java runtime, reused across runs, and replaced after it dies; each run gets a fresh
-application container, and the runner's HTTP host is not started. The worker runs one program at a
-time: a second run fails with "Another program is still running" until the first ends. Shutting down
-the server shuts down the worker and ends active runs.
+Programs run in separate execution worker JVMs, started from the server's own classpath and Java
+runtime; each run gets a fresh application container, and the runner's HTTP host is not started.
+Each running program has a worker of its own, so up to four programs run at once; a fifth run
+fails with a message saying four are already running. A worker is reused for later runs: one idle
+worker is kept and exits after 10 minutes idle, any other exits when its run ends. The server
+supervises the workers: one that does not report ready within 60 seconds is ended and its run
+fails with that reason; a program still running 10 seconds after Stop has its worker ended, and the
+run reports why; a worker that dies ends its run with an error, and the next run gets a new worker.
+Shutting down the server shuts down every worker and ends active runs.
 
 `Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
 still building is held and delivered when the program starts. After `end`, or when the run is stopped,

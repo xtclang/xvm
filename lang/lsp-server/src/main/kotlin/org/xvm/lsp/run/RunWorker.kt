@@ -64,7 +64,10 @@ object RunWorker {
         exitProcess(0)
     }
 
-    /** One run at a time: each is a fresh application container in the shared runtime. */
+    /**
+     * One run at a time, each a fresh application container in the shared runtime; the server starts a
+     * worker for each program it runs, so a second run here is refused only if a client bypasses it.
+     */
     private class Runs(
         private val channel: RunWorkerChannel,
     ) {
