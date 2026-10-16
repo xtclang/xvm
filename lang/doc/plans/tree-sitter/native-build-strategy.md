@@ -311,6 +311,9 @@ val copyNativeLibToResources by tasks.registering(Copy::class) {
 
 ### Phase 1: Conditional Tree-sitter
 
+**Status (2026-10-16): obsolete.** The compiler is the default adapter since 2026-10-06, and all
+adapters ship in one JAR with runtime selection; see [conditional-build.md](./conditional-build.md).
+
 1. [ ] Make `lsp.adapter=mock` the default (not done - treesitter is default)
 2. [ ] Add `onlyIf { lspAdapter == "treesitter" }` to native lib tasks (not done)
 3. [ ] Skip tree-sitter dependency when using mock adapter (not done)

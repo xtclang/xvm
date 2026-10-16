@@ -141,6 +141,10 @@ and its harness correction: one uninterrupted full run remains pending, as do ge
 VFS waits. Eight endpoint/launcher regressions and all 98 plugin tests pass; the startup class-loader
 regression introduced during this repair is fixed and preserved in the
 [repair receipt](errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05).
+Later: IntelliJ completes the then-current catalog in one uninterrupted process, with 277 cases in
+`run-11949889098742489342` ([record](errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06))
+and 284 in `run-4144503954102473659` ([record](errs-integration-plan.md#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)).
+A fresh full run of the current 291-case catalog is still pending.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -199,6 +203,10 @@ chained member completion and narrowed JSON-object type navigation also pass rea
 See [PLAT1–PLAT3](errs-integration-plan.md#platform-demo-blockers-2026-09-29) for commits, focused
 regressions and the combined validation receipt. Evaluated build-model import, richer paths/origins
 controls and new native acceptance remain tracked follow-ups.
+Later: the [PLAT2c batch](errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29)
+adds the evaluated Gradle model, origin-aware path views in both hosts (X129) and native X124/X125
+acceptance; [workspace synchronization](errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05)
+adds nested-build aggregation and refresh after native Gradle sync.
 
 **L64 validation:** the first combined run exposed the required literal record-pattern
 update, old exact-completion expectations and optional TypeScript metadata. New regressions exposed
@@ -226,6 +234,7 @@ AST5 now shares read-only cursor/argument syntax queries through `partial.Partia
 trial parenting and semantic validation in the root package. AST1 and AST3 now consolidate cursor
 scope collection and anonymous-property projection in their existing package-private helper
 methods. AST2 and AST4 remain conditional investigations, not completed reductions.
+Later: both are complete; see the [broader inventory](errs.md#broader-ast-placement-inventory).
 Real dispatch fixtures cover Explicit/Default, Delegating and Union; the generated/native/conditional
 route inventory remains incomplete.
 
@@ -753,6 +762,7 @@ to their declaration source spans, including warnings emitted for closed member 
 identity/source associations; do not infer locations from diagnostic message strings or invent
 locations for binary-only structures. Preserve the whole-document fallback when no association is
 available, and add controls for the warning's true owner and unrelated file groups.
+Later: implemented; see the [post-L18 findings](#post-l18-diagnostic-and-emission-findings-2026-09-24).
 
 ## Property/accessor inspection follow-up, 2026-09-24
 
@@ -1599,6 +1609,9 @@ the generated fixture path so opening cannot block on the trust dialog. See the
 Physical VS Code Cancel selection remains unverified; a completed uncanceled request is recorded as a
 failed attempt, not a passing cancellation check. Shared-process VS Code windows and cross-platform
 release coverage remain separate gates.
+Later: VS Code `run-VeotM0` activates the visible Cancel control and `project-lifecycle/run-Sh7ro5`
+passes shared-process windows; see the [L81 closure](errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
+Cross-platform release coverage remains open.
 
 L82's extended platform run completed 2,400 successful edit/cancel/query cycles across two compiler
 processes, including expected EOF retirement. The third planned session was deliberately interrupted;
@@ -1607,6 +1620,10 @@ about 83 MiB at cycle 100 to 98 MiB at cycle 1,200. Investigate that repeated gr
 bounded retained memory; no plateau or particular leaking owner has been established. The
 [bounded workload receipt](errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01)
 records timings, sampled RSS and deferred combined/full-editor gates.
+Later: after the compiler-worker heap-growth fix, three 1,200-cycle (October 6) and three
+1,800-cycle (October 8) sessions keep live-heap growth below 150 KB; see the
+[October 8 workload](errs-integration-plan.md#released-dependency-extended-workload).
+Multi-hour and supported-platform evidence remain open.
 
 Functionality continuation: import-producing completion reuses whole-graph repair proof, with
 plain-text atomic additional edits and cancellation across both stages. No AST state or embedding
