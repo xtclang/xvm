@@ -4,11 +4,15 @@ import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
+import com.intellij.openapi.vfs.encoding.EncodingManager
+import org.xtclang.idea.lsp.RunInputParams
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.RunResponse
 import org.xtclang.idea.lsp.StopRunParams
 import org.xtclang.idea.lsp.XtcLanguageServer
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
+import java.nio.charset.Charset
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -18,13 +22,16 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * An embedded run as a process: the language server builds the module and runs it in its execution worker,
  * and output and the exit arrive as notifications for the run ID chosen here. Stop asks the server to stop
- * the run, which still reports the exit; a stop during the build stops the run as soon as it starts.
+ * the run, which still reports the exit; a stop during the build stops the run as soon as it starts. Lines
+ * typed into the console go to the program, including during the build; Send EOF ends its input.
  */
 internal class EmbeddedRunProcessHandler(
     private val sessions: EmbeddedRunSessions,
     private val server: () -> CompletableFuture<XtcLanguageServer>,
     request: RunParams,
     private val label: String,
+    /** The console writes typed input in its configured encoding. */
+    private val consoleCharset: () -> Charset = { EncodingManager.getInstance().defaultConsoleEncoding },
 ) : ProcessHandler(),
     EmbeddedRunSessions.Session {
     private val runId = UUID.randomUUID().toString()
@@ -33,6 +40,12 @@ internal class EmbeddedRunProcessHandler(
     private val started = AtomicBoolean()
     private val stopping = AtomicBoolean()
     private val finished = AtomicBoolean()
+
+    /** Completes once the run request is sent, so no input can reach the server before its run. */
+    private val runRequested = CompletableFuture<XtcLanguageServer>()
+    private val inputLock = Any()
+    private var inputs: CompletableFuture<*> = runRequested
+    private val input by lazy { RunConsoleInput(consoleCharset(), ::sendInput) }
 
     init {
         addProcessListener(
@@ -50,7 +63,11 @@ internal class EmbeddedRunProcessHandler(
             .thenCompose { connected ->
                 connection.set(connected)
                 // stopped while connecting: never start the run
-                if (finished.get()) CompletableFuture.completedFuture(NOT_STARTED) else connected.run(request)
+                if (finished.get()) {
+                    CompletableFuture.completedFuture(NOT_STARTED)
+                } else {
+                    connected.run(request).also { runRequested.complete(connected) }
+                }
             }.whenComplete { response: RunResponse?, failure ->
                 when {
                     failure != null ->
@@ -118,11 +135,55 @@ internal class EmbeddedRunProcessHandler(
 
     override fun detachIsDefault() = false
 
-    override fun getProcessInput(): OutputStream? = null
+    override fun getProcessInput(): OutputStream = input
+
+    /** Sends in order, after the run request; a run that is already over just answers false. */
+    private fun sendInput(
+        text: String?,
+        end: Boolean,
+    ) {
+        synchronized(inputLock) {
+            inputs =
+                inputs
+                    .handle { _, _ -> null }
+                    .thenCompose { runRequested }
+                    .thenCompose { server -> server.runInput(RunInputParams(runId, text, end)) }
+        }
+    }
 
     private fun system(text: String) = notifyTextAvailable(text, ProcessOutputTypes.SYSTEM)
 
     private companion object {
         val NOT_STARTED = RunResponse()
+    }
+}
+
+/**
+ * The run console's input. IntelliJ writes each line the user enters, line end included, and closes the
+ * stream for Send EOF. Complete lines are forwarded as they arrive; the end of input follows any rest.
+ */
+internal class RunConsoleInput(
+    private val charset: Charset,
+    private val send: (text: String?, end: Boolean) -> Unit,
+) : OutputStream() {
+    private val pending = ByteArrayOutputStream()
+    private var closed = false
+
+    @Synchronized
+    override fun write(byte: Int) {
+        if (closed) return
+        pending.write(byte)
+        if (byte == '\n'.code) {
+            send(pending.toString(charset), false)
+            pending.reset()
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        if (closed) return
+        closed = true
+        send(pending.takeIf { it.size() > 0 }?.toString(charset), true)
+        pending.reset()
     }
 }
