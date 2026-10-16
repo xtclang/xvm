@@ -14,6 +14,7 @@ const EXPECTED_COMMANDS = [
     'xtc.runModule',
     'xtc.build',
     'xtc.rebuild',
+    'xtc.selectBuildMode',
     'xtc.restartServer',
     'xtc.selectLanguageAdapter',
     'xtc.showServerOutput',
