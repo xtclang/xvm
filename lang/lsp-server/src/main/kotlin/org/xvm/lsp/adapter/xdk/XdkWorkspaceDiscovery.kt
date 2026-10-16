@@ -78,29 +78,12 @@ internal object XdkWorkspaceDiscovery {
             overlays: Map<String, String>,
             cancelled: () -> Boolean,
         ): Catalog {
-            val buffers =
-                overlays
-                    .mapNotNull { (uri, text) -> XdkSources.file(uri)?.let { it to text } }
-                    .toMap()
+            val buffers = buffers(overlays)
             val sources =
                 folders
                     .flatMap { folder ->
                         checkCurrent(cancelled)
-                        if (!folder.isDirectory) {
-                            emptyList()
-                        } else {
-                            folder
-                                .walkTopDown()
-                                .onEnter {
-                                    checkCurrent(cancelled)
-                                    it.name !in excluded && !Files.isSymbolicLink(it.toPath())
-                                }.filter {
-                                    it.isFile &&
-                                        it.extension == "x" &&
-                                        !Files.isSymbolicLink(it.toPath())
-                                }.map(File::getCanonicalFile)
-                                .toList()
-                        }
+                        if (!folder.isDirectory) emptyList() else walk(folder, cancelled)
                     }.toSet() + buffers.keys.filter { includes(folders, it) }
             return Catalog(
                 sources.associateWith { file ->
@@ -109,7 +92,73 @@ internal object XdkWorkspaceDiscovery {
                 },
             )
         }
+
+        /**
+         * This catalog after file events at [paths], reading only what they name: a source file is read again,
+         * a folder is walked, and a path that is gone takes its sources with it. The result is what [rescan]
+         * would find, without walking the workspace; open buffers keep their headers.
+         */
+        fun withEvents(
+            folders: List<File>,
+            paths: Collection<File>,
+            overlays: Map<String, String>,
+            cancelled: () -> Boolean,
+        ): Catalog {
+            val buffers = buffers(overlays)
+            val sources = files.toMutableMap()
+            for (path in paths) {
+                checkCurrent(cancelled)
+                sources.keys.removeIf { (it == path || it.toPath().startsWith(path.toPath())) && it !in buffers }
+                val found =
+                    when {
+                        !reachable(folders, path) -> emptyList()
+                        Files.isDirectory(path.toPath()) -> walk(path, cancelled)
+                        path.isFile && path.extension == "x" && !Files.isSymbolicLink(path.toPath()) -> listOf(path)
+                        else -> emptyList()
+                    }
+                found.forEach { file ->
+                    checkCurrent(cancelled)
+                    sources[file] = header(file, buffers[file] ?: file.readText(), files[file], cancelled)
+                }
+            }
+            return Catalog(sources)
+        }
     }
+
+    private fun buffers(overlays: Map<String, String>): Map<File, String> =
+        overlays
+            .mapNotNull { (uri, text) -> XdkSources.file(uri)?.let { it to text } }
+            .toMap()
+
+    /** The source files under [directory] that a workspace walk finds. */
+    private fun walk(
+        directory: File,
+        cancelled: () -> Boolean,
+    ): List<File> =
+        directory
+            .walkTopDown()
+            .onEnter {
+                checkCurrent(cancelled)
+                it.name !in excluded && !Files.isSymbolicLink(it.toPath())
+            }.filter {
+                it.isFile &&
+                    it.extension == "x" &&
+                    !Files.isSymbolicLink(it.toPath())
+            }.map(File::getCanonicalFile)
+            .toList()
+
+    /** Whether a walk of [folders] enters every directory above [path], and so would find what is there. */
+    private fun reachable(
+        folders: List<File>,
+        path: File,
+    ): Boolean =
+        folders.any { folder ->
+            folder.isDirectory &&
+                path.toPath().startsWith(folder.toPath()) &&
+                generateSequence(path.parentFile) { it.parentFile }
+                    .takeWhile { it.toPath().startsWith(folder.toPath()) }
+                    .all { it.name !in excluded && !Files.isSymbolicLink(it.toPath()) }
+        }
 
     fun includes(
         folders: List<File>,
