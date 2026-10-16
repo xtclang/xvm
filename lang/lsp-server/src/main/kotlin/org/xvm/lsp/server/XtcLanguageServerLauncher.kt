@@ -131,6 +131,19 @@ private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBacke
         AdapterBackend.MOCK -> MockAdapter() to AdapterBackend.MOCK
     }
 
+/** The Mock adapter answers when Tree-sitter could not start; the user is told, not only the log. */
+internal fun fallbackWarning(
+    requested: AdapterBackend,
+    backend: AdapterBackend,
+): String? =
+    if (requested == AdapterBackend.TREE_SITTER && backend == AdapterBackend.MOCK) {
+        "The Tree-sitter adapter could not start, so the Ecstasy language server is using the Mock adapter, " +
+            "which offers only basic pattern-based features. Switch to the Ecstasy Compiler adapter, or see the " +
+            "language server log for the cause."
+    } else {
+        null
+    }
+
 fun main(
     @Suppress("UNUSED_PARAMETER") args: Array<String>,
 ) {
@@ -178,7 +191,7 @@ fun main(
     }
 
     // Create the server
-    val server = XtcLanguageServer(adapter, ::exitProcess)
+    val server = XtcLanguageServer(adapter, ::exitProcess, fallbackWarning(requested, backend))
 
     // Launch with stdio
     try {
