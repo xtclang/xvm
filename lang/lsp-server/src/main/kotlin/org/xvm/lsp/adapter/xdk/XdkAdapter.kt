@@ -581,24 +581,40 @@ class XdkAdapter
                         .mapNotNull { (uri, text) -> XdkSources.file(uri)?.let { it to text } }
                         .toMap()
                 val changed =
-                    inputScopes(uri).filter { scope ->
-                        val module = project.modules.values.firstOrNull { it.uri == scope }
-                        val inputs = sourceInputs(scope)
-                        val root = module?.root ?: XdkSources.file(scope)
-                        file == null ||
-                            root == null ||
-                            inputs == null ||
-                            requests[scope]?.result?.isDone == false ||
-                            // A failed current analysis still owns its captured source inputs.
-                            // Only fallback builds can predate a failure (e.g. a missing dependency);
-                            // matching that old build must not suppress recovery after recreation.
-                            (
-                                completed[scope]?.sourceInputs == null &&
-                                    project.affected(scope).any { completed[it]?.succeeded == false }
-                            ) ||
-                            !XdkFileChanges.unchanged(file, root, inputs, openSources)
-                    }
+                    inputScopes(uri)
+                        // a running analysis has not published its captured inputs yet; see analysesInFlight
+                        .filterNot { requests[it]?.result?.isDone == false }
+                        .filter { scope ->
+                            val module = project.modules.values.firstOrNull { it.uri == scope }
+                            val inputs = sourceInputs(scope)
+                            val root = module?.root ?: XdkSources.file(scope)
+                            file == null ||
+                                root == null ||
+                                inputs == null ||
+                                // A failed current analysis still owns its captured source inputs.
+                                // Only fallback builds can predate a failure (e.g. a missing dependency);
+                                // matching that old build must not suppress recovery after recreation.
+                                (
+                                    completed[scope]?.sourceInputs == null &&
+                                        project.affected(scope).any { completed[it]?.succeeded == false }
+                                ) ||
+                                !XdkFileChanges.unchanged(file, root, inputs, openSources)
+                        }
                 project.orderedScopes(changed.flatMapTo(linkedSetOf(), project::affected))
+            }
+
+        /**
+         * The running analyses among the scopes a file event at [uri] may affect, or null. Each captured its
+         * inputs when it started, so the event is checked against them once they finish: an event the capture
+         * already includes, such as the watcher reporting a file that was opened as it was created, then
+         * cancels nothing.
+         */
+        internal fun analysesInFlight(uri: String): CompletableFuture<Void>? =
+            synchronized(lifecycle) {
+                inputScopes(uri)
+                    .mapNotNull { scope -> requests[scope]?.result?.takeUnless { it.isDone } }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { CompletableFuture.allOf(*it.toTypedArray()) }
             }
 
         private fun sourceInputs(scope: String): XdkSources.Inputs? =
