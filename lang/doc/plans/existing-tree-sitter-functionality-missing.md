@@ -63,6 +63,9 @@ The tree-sitter adapter now provides:
 
 - Background indexing and workspace symbol search are implemented.
 - Incremental re-indexing is still conservative and not yet fully minimal.
+  **Status (2026-10-16):** re-indexing is per file — edits call `WorkspaceIndexer.reindexFile`,
+  watched-file events call `refreshFile` for that URI only, with no workspace re-scan. Each changed
+  file is still reparsed in full.
 
 ## What this PR added beyond the older tree-sitter plan
 
@@ -79,7 +82,9 @@ This branch did more than just "finish the 9 tree-sitter features". It also adde
 ## Remaining work worth tracking separately
 
 - Compiler-backed semantic completions, navigation, rename, and quick fixes.
+  **Status (2026-10-16):** shipped, bounded, in `XdkAdapter`, the default adapter since 2026-10-06;
+  see the [capability matrix](plan-ide-integration.md#adapter-capability-matrix).
 - Fully qualified import resolution in document links / code actions.
 - Cleaner cross-editor formatting config propagation.
-- More incremental workspace re-indexing.
+- More incremental workspace re-indexing. (Per-file re-indexing is in place; see Workspace indexing above.)
 - Better automated coverage for IntelliJ-side editor behavior beyond pure LSP tests.

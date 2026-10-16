@@ -1,7 +1,7 @@
 # IntelliJ IDEA-Specific Enhancements Plan
 
 > **Created**: 2026-04-03
-> **Status**: Planning
+> **Status**: Partly implemented; see the dated status notes below (2026-10-16)
 > **Scope**: Features that require IntelliJ plugin code (not just LSP server changes)
 
 > **Compiler review, 2026-09-23:** This April plan retains proposed native IDE work. XdkAdapter now
@@ -440,6 +440,13 @@ The server now implements static selected-call hierarchy and direct declared sou
 within a module. Verify how the installed LSP4IJ version exposes these requests; native IDE window
 integration is a separate concern. Workspace-wide and external hierarchy remain open.
 
+**Status (2026-10-16):** workspace-wide hierarchy is done. With a project, `XdkAdapter` answers type
+and call hierarchy through `XdkWorkspaceNavigation` across the complete source graph, including
+unopened consumers ([capability matrix](plan-ide-integration.md#adapter-capability-matrix)). LSP4IJ
+exposes them through the native Type/Call Hierarchy actions (`LSPTypeHierarchyBrowser`,
+`LSPCallHierarchyBrowser`), which IntelliJ playbook cases X22/X39 drive. Hierarchy into binary-only
+dependencies is not claimed.
+
 ### 6c. Postfix Completion
 
 IDEA-specific feature where typing `.if` after an expression wraps it:
@@ -588,6 +595,11 @@ implementation-body links can use those indices. Binary symbol tables alone do n
 locations. Explicit source roots/edges now drive automatic dependency builds through
 `replaceCompilerSourceModules(...)`. Editor project discovery and module-path configuration still
 need an integration; a persistent cross-module reference index is separate work.
+
+**Status (2026-10-16):** editor integration is done. Compiler mode discovers source modules and
+import edges under workspace folders at startup and on watched-file changes. **Settings → Ecstasy
+Compiler** edits source modules, ordered libraries with attached sources, and Gradle build import.
+A persistent cross-module reference index remains open.
 
 #### Priority: **High** (resolution) → **Medium** (recompilation) → **Medium** (navigation)
 

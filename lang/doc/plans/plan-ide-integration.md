@@ -619,7 +619,7 @@ Full tree-sitter support for fast, incremental parsing:
 
 3. **Complete VS Code extension**
    - Finish LSP client integration
-   - Add commands (new project, run, build) — run, build and rebuild exist in embedded and Gradle modes
+   - ~~Add commands (new project, run, build)~~ — `xtc.createProject`, `xtc.runModule`, `xtc.build` and `xtc.rebuild` exist; run, build and rebuild work in embedded and Gradle modes
    - Package and test
 
 4. **Polish IntelliJ plugin**
@@ -689,7 +689,7 @@ Full tree-sitter support for fast, incremental parsing:
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
    - XdkAdapter generates individual/all-required inherited methods from source and read-only XDK/binary contracts at a class name, with compiler-selected generic/conditional, qualified and compound signatures, atomic imports and safe defaults; whole-graph proof permits the intended call/descendant changes and preserves other bindings; generated bodies use `TODO()`. Both actions use `refactor.rewrite`, so they appear as class intentions without requiring a diagnostic at that location
    - Unvalidated computed/named defaults, unsupported constant kinds and annotated/unrenderable type spellings remain withheld; missing implementations use fresh declaration analysis, never failed-compilation TypeInfo. The current batch validation is recorded separately from previous X122 receipts
-   - Broader semantic fixes, compiler doc generation and the remaining extraction/inline/safe-delete scope remain unimplemented (L63)
+   - Broader semantic fixes and the remaining extraction/inline/safe-delete scope remain unimplemented (L63). Compiler doc generation is implemented: `XdkDocumentation` offers **Generate documentation comment** on written declaration headers (`XdkDocumentationTest`)
 
 9. **Debugging (DAP)**
    - Debug Adapter Protocol integration
