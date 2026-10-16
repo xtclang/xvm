@@ -24,6 +24,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.vfs.encoding.EncodingManager
 import com.intellij.task.ProjectTaskManager
 import org.jetbrains.concurrency.Promise
 import org.xtclang.idea.run.XtcBuildMode
@@ -187,6 +188,25 @@ object EmbeddedExecutionUi {
             runs.remove(module)
             ExecutionUtil.restart(descriptor)
         }
+    }
+
+    /** Sends text to the module's run through its process input, the stream the Run console writes typed lines to. */
+    @JvmStatic
+    fun input(
+        module: String,
+        text: String,
+    ) {
+        val handler = requireNotNull(runs[module]?.handler) { "No run of $module has started" }
+        val input = requireNotNull(handler.processInput) { "The run of $module accepts no input" }
+        input.write(text.toByteArray(EncodingManager.getInstance().defaultConsoleEncoding))
+        input.flush()
+    }
+
+    /** Ends the module's console input, as the Run console's Send EOF does. */
+    @JvmStatic
+    fun endInput(module: String) {
+        val handler = requireNotNull(runs[module]?.handler) { "No run of $module has started" }
+        requireNotNull(handler.processInput) { "The run of $module accepts no input" }.close()
     }
 
     /** Presses Stop for the module's run. */
