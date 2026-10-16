@@ -15,7 +15,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 |----------|----------|
 | Default mode | Embedded, also with a Gradle build, whose own settings embedded builds and runs say do not apply (2026-10-16; previously automatic, which remains selectable) |
 | Unsaved buffers | Clients save all files first; the server builds the text it holds at the request, saved or not (R2, 2026-10-16) |
-| Run host | One persistent execution worker JVM per language server, one program at a time |
+| Run host | Execution worker JVMs started by the language server, one per running program and up to four at once; one idle worker is kept for the next run (2026-10-16; previously one worker running one program at a time) |
 | Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled |
 | Compiler queue | Builds reuse the server's serialized compile queue, not a second compiler |
 
@@ -29,8 +29,8 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | VS Code | `xtc.build.mode`; Build/Rebuild (`Cmd`/`Ctrl+F9`), Run lens, editor title Run, `Ctrl+Shift+R`/`Ctrl+Shift+F10`, tasks and `F5` follow it; runs stream into a task terminal and closing it stops the run ([README](../../vscode-extension/README.md#building-and-running)) |
 | IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../intellij-plugin/README.md#running-your-application)) |
 
-Known limits: one program at a time per server (a second run reports "Another
-program is still running"); IntelliJ Build Module builds
+Known limits: up to four programs at a time per server (a fifth run reports that four programs
+are already running); IntelliJ Build Module builds
 every module; `.x` files have no IntelliJ gutter Run icon because there is no PSI parser; older
 IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
 new *Module source* field. Each commit message records its validation, problems fixed and limits.
@@ -215,8 +215,13 @@ this bridge; they cannot be inferred from compiler type hints.
   Verify worker death during a run, restart after crash, parent death, IDE close, XDK change and
   no leaked task/console/process. Bound retained artifacts and native-pool growth independently.
   *Partial (2026-10-15):* a lazily started worker over private JSON-lines stdio, reused across runs,
-  replaced after death and shut down with the server; it exits when the server's pipe closes. The
-  generation handshake, deadlines, backpressure, memory measurement and idle recycling remain.
+  replaced after death and shut down with the server; it exits when the server's pipe closes.
+  *2026-10-16:* one worker per running program, up to four at once, so programs run side by side;
+  startup and stop deadlines (a worker not ready within 60 s, or a program still running 10 s after
+  Stop, is ended and its run says why, without touching other runs); one idle worker is kept for the
+  next run and exits after 10 minutes idle, any other when its run ends (`RunWorkerSupervisionTest`
+  with a stand-in worker, and two real programs at once in `EmbeddedExecutionTest`). A configuration
+  or generation handshake, bounded output and backpressure, and memory measurement remain.
 - [ ] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.
