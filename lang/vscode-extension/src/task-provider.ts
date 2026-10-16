@@ -31,12 +31,20 @@ export class XtcTaskProvider implements vscode.TaskProvider {
         const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 
         for (const folder of vscode.workspace.workspaceFolders ?? []) {
+            const gradle = fs.existsSync(path.join(folder.uri.fsPath, 'build.gradle.kts'));
             if (buildMode(folder) === 'embedded') {
                 tasks.push(
                     createEmbeddedBuildTask(this.client, folder, false),
                     createEmbeddedBuildTask(this.client, folder, true)
                 );
-            } else if (fs.existsSync(path.join(folder.uri.fsPath, 'build.gradle.kts'))) {
+                // embedded mode has no tests or clean of its own, so a Gradle build keeps offering them
+                if (gradle) {
+                    tasks.push(
+                        this.createLifecycleTask('Test', `${gradlew} test`, folder, vscode.TaskGroup.Test),
+                        this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
+                    );
+                }
+            } else if (gradle) {
                 tasks.push(
                     this.createLifecycleTask('Build', `${gradlew} build`, folder, vscode.TaskGroup.Build),
                     this.createLifecycleTask('Test', `${gradlew} test`, folder, vscode.TaskGroup.Test),
@@ -76,6 +84,12 @@ export class XtcTaskProvider implements vscode.TaskProvider {
     }
 }
 
+/** The folder that owns the definition's module, or the first folder. */
+function runFolder(definition: XtcTaskDefinition): vscode.WorkspaceFolder | undefined {
+    const uri = definition.moduleUri ? vscode.Uri.parse(definition.moduleUri) : undefined;
+    return uri ? vscode.workspace.getWorkspaceFolder(uri) : vscode.workspace.workspaceFolders?.[0];
+}
+
 /** How a run definition executes: an explicit mode, the legacy switch, or the folder's build mode. */
 function runMode(definition: XtcTaskDefinition): BuildMode | 'cli' {
     if (definition.mode) {
@@ -84,9 +98,7 @@ function runMode(definition: XtcTaskDefinition): BuildMode | 'cli' {
     if (definition.useGradle !== undefined) {
         return definition.useGradle ? 'gradle' : 'cli';
     }
-    const uri = definition.moduleUri ? vscode.Uri.parse(definition.moduleUri) : undefined;
-    const folder = uri ? vscode.workspace.getWorkspaceFolder(uri) : vscode.workspace.workspaceFolders?.[0];
-    return buildMode(folder);
+    return buildMode(runFolder(definition));
 }
 
 export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAccess): vscode.Task {
@@ -97,6 +109,7 @@ export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAc
             label: definition.moduleName,
             method: definition.methodName,
             args: definition.args ?? splitModuleArguments(definition.moduleArguments),
+            folder: runFolder(definition),
         });
     }
 
