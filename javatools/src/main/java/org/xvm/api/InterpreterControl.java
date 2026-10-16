@@ -1,5 +1,6 @@
 package org.xvm.api;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -69,10 +70,12 @@ class InterpreterControl
      *
      * @param methodName  the method to invoke
      * @param args        the argument array to pass to the method, or null to pass none
+     * @param consoleIn   (optional) the console's input; used only with a console
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
                                            ModuleRepository repository, String methodName,
-                                           String[] args, PrintWriter console, File rootDir,
+                                           String[] args, PrintWriter console,
+                                           BufferedReader consoleIn, File rootDir,
                                            ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
@@ -87,8 +90,7 @@ class InterpreterControl
             String[]      callArgs = entryArguments(file.getModule(), methodName, args);
 
             if (console != null) {
-                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,
-                        consoleIn::readLine);
+                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console, consoleIn);
             }
 
             ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());

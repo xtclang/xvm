@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -1286,7 +1287,7 @@ public class EmbeddingSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             @NotNull ErrorListener    errs) {
-        return start(input, moduleName, version, "run", null, console, rootDir, injections,
+        return start(input, moduleName, version, "run", null, console, null, rootDir, injections,
                 customInjector, errs);
     }
 
@@ -1303,6 +1304,10 @@ public class EmbeddingSupport {
      * @param methodName  the entry method to invoke, conventionally "run"
      * @param args        the arguments for the entry method; never shell-parsed
      * @param console     (optional) the PrintWriter for the executing application
+     * @param consoleIn   (optional) the input for the application's console: each
+     *                    {@code Console.readLine()} reads one line from it, and its end reads as an
+     *                    empty line. Used only with a console; without it, {@code readLine} is
+     *                    unsupported
      * @param rootDir     (optional) the root directory for the application's file system, as
      *                    described for {@link #run(ModuleStructure, PrintWriter, File, Map, ErrorListener)}
      * @param errs        a means for the container to report uncaught exceptions and other errors
@@ -1317,10 +1322,12 @@ public class EmbeddingSupport {
             String                 methodName,
             List<String>           args,
             PrintWriter            console,
+            BufferedReader         consoleIn,
             File                   rootDir,
             @NotNull ErrorListener errs) {
         return start(input, moduleName, version, requireNonNull(methodName, "methodName"),
-                requireNonNull(args, "args").toArray(String[]::new), console, rootDir, null, null, errs);
+                requireNonNull(args, "args").toArray(String[]::new), console, consoleIn, rootDir,
+                null, null, errs);
     }
 
     private Control start(
@@ -1330,6 +1337,7 @@ public class EmbeddingSupport {
             String                    methodName,
             String[]                  args,
             PrintWriter               console,
+            BufferedReader            consoleIn,
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
@@ -1355,7 +1363,7 @@ public class EmbeddingSupport {
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
                     : InterpreterControl.create(connector, module, repository, methodName, args,
-                            console, rootDir, errs);
+                            console, consoleIn, rootDir, errs);
         } catch (RuntimeException | AssertionError e) {
             // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
             // assertion in the structure code past this report and out to the host. Errors are

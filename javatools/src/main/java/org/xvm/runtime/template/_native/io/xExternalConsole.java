@@ -1,5 +1,6 @@
 package org.xvm.runtime.template._native.io;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -28,8 +29,8 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 /**
- * The injectable "Console" that prints to the specified PrintWriter and reads lines from the host's
- * {@link Input}.
+ * The injectable "Console" that prints to the specified PrintWriter and, when the host supplies one,
+ * reads lines from the specified BufferedReader.
  */
 public class xExternalConsole
         extends xTerminalConsole {
@@ -66,13 +67,12 @@ public class xExternalConsole
      * Register an external console as a named native resource.
      *
      * @param out  the output for the console
-     * @param in   the input for {@code readLine}; its end reads as an empty line, and a host without
-     *             input throws UnsupportedOperationException. A read still waiting when the
-     *             application ends returns once the host ends this input
+     * @param in   (optional) the input for {@code readLine}; its end reads as an empty line. Without
+     *             it, {@code readLine} is unsupported
      *
      * @return the ID contained in the registered resource name
      */
-    public static long register(NativeContainer container, PrintWriter out, Input in) {
+    public static long register(NativeContainer container, PrintWriter out, BufferedReader in) {
         long id = CONSOLE_ID.incrementAndGet();
         container.addResourceSupplier(
                 new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()),
@@ -103,7 +103,7 @@ public class xExternalConsole
     /**
      * Injection support.
      */
-    public ObjectHandle ensureConsole(Frame frame, PrintWriter out, Input in) {
+    public ObjectHandle ensureConsole(Frame frame, PrintWriter out, BufferedReader in) {
         ServiceContext   ctx = f_container.createServiceContext("Console");
         ClassComposition clz = getCanonicalClass();
 
@@ -171,46 +171,40 @@ public class xExternalConsole
     }
 
     /**
-     * Read a line from the host's input, passing "suppressEcho" to the host, which shows the input.
-     * The read waits on an IO thread, so a program waiting for input does not hold a service worker.
+     * Read a line from the host's input. The host owns echo, so "suppressEcho" is not honored.
      */
     private int invokeReadLine(Frame frame, ConsoleHandle hConsole, ObjectHandle[] ahArg,
                                int iReturn) {
-        Input   in            = hConsole.f_in;
-        String  sPrompt       = ahArg[0] instanceof StringHandle hString ? hString.getStringValue() : "";
-        boolean fSuppressEcho = ahArg[1] == xBoolean.TRUE;
+        BufferedReader in = hConsole.f_in;
+        if (in == null) {
+            return frame.raiseException(xException.unsupported(frame));
+        }
+
+        String sPrompt = ahArg[0] instanceof StringHandle hString ? hString.getStringValue() : "";
         if (!sPrompt.isEmpty()) {
             hConsole.f_out.print(sPrompt);
             hConsole.f_out.flush();
         }
 
-        CompletableFuture<String> cfLine =
-                frame.f_context.f_container.scheduleIO(() -> in.readLine(fSuppressEcho));
-        Frame.Continuation continuation = frameCaller -> {
-            try {
-                String sLine = cfLine.get();
-                return frameCaller.assignValue(iReturn, sLine == null
-                        ? xString.EMPTY_STRING
-                        : xString.makeHandle(sLine));
-            } catch (Throwable e) {
-                Throwable cause = e instanceof ExecutionException ? e.getCause() : e;
-                return frameCaller.raiseException(cause instanceof UnsupportedOperationException
-                        ? xException.unsupported(frameCaller)
-                        : xException.obscureIoException(frameCaller, cause.getMessage()));
-            }
-        };
-        return frame.waitForIO(cfLine, continuation);
+        try {
+            String sLine = in.readLine();
+            return frame.assignValue(iReturn, sLine == null
+                    ? xString.EMPTY_STRING
+                    : xString.makeHandle(sLine));
+        } catch (IOException e) {
+            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
+        }
     }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     protected static class ConsoleHandle
             extends ServiceHandle {
-        protected final PrintWriter f_out;
-        protected final Input       f_in;
+        protected final PrintWriter    f_out;
+        protected final BufferedReader f_in;
 
         protected ConsoleHandle(TypeComposition clazz, ServiceContext context, PrintWriter out,
-                                Input in) {
+                                BufferedReader in) {
             super(clazz, context);
 
             f_out = out;
