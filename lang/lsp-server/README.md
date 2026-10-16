@@ -74,7 +74,7 @@ uses one adapter for its lifetime; switching requires a new process to negotiate
 
 | Adapter | Value | Description |
 |---------|-------|-------------|
-| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. Also the fallback when Tree-sitter's native library cannot load; it advertises only the features it implements, so selection ranges, signature help, semantic tokens, workspace symbols, code lenses, on-type formatting and linked editing disappear rather than answer empty. |
+| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. Also the fallback when Tree-sitter's native library cannot load, which the server then tells the user in a warning; it advertises only the features it implements, so selection ranges, signature help, semantic tokens, workspace symbols, code lenses, on-type formatting and linked editing disappear rather than answer empty. |
 | **Tree-sitter** | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
 | **XDK** (default) | `compiler` | Compiler diagnostics, semantic navigation and hierarchy across source graphs and binary dependencies. The full matching XDK library set is bundled. |
 
