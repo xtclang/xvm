@@ -29,7 +29,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | VS Code | `xtc.build.mode`; Build/Rebuild (`Cmd`/`Ctrl+F9`), Run lens, editor title Run, `Ctrl+Shift+R`/`Ctrl+Shift+F10`, tasks and `F5` follow it; runs stream into a task terminal and closing it stops the run ([README](../../vscode-extension/README.md#building-and-running)) |
 | IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../intellij-plugin/README.md#running-your-application)) |
 
-Known limits: no console input; one program at a time per server (a second run reports "Another
+Known limits: one program at a time per server (a second run reports "Another
 program is still running"); every build recompiles the requested modules; IntelliJ Build Module builds
 every module; `.x` files have no IntelliJ gutter Run icon because there is no PSI parser; older
 IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
@@ -45,7 +45,7 @@ new *Module source* field. Each commit message records its validation, problems 
 | Embedding execution | [EmbeddingSupport](../../../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) caches a connector and returns a `Control` per run | Reusable VM hosting is already the intended foundation; configuration is singleton and cannot be changed after startup |
 | Interpreter control | [InterpreterControl](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) loads the runner once, copies an artifact into its native container and invokes task registration/start | Compiler ASTs need not be retained for execution; startup currently also invokes runner `run`, starting its HTTP service |
 | Runner | [runner.x](../../../lib_runner/src/main/x/runner.x) maintains task IDs and creates a fresh lightweight child container per task | Reuse the runtime/runner, while giving each normal rerun fresh application state. The Java embedding path should call task methods directly without starting HTTP |
-| Current execution limits | Runner invokes `container.invoke("run", ())`; custom injections are rejected; [external console](../../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java) cannot read input | Entry-point arguments, input, output channels, asynchronous completion/stop and bounded shutdown need an explicit host API |
+| Current execution limits | Runner invokes `container.invoke("run", ())`; custom injections are rejected; the [external console](../../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java) reads host-supplied input since 2026-10-16 | Entry-point arguments, input, output channels, asynchronous completion/stop and bounded shutdown need an explicit host API |
 | Existing repeat-run probe | [LspTest](../../../javatools/src/test/java/org/xvm/runtime/LspTest.java) exercises run, kill, filesystem, exceptions, repeated runs and native pool growth | This is a standalone main-based harness, not evidence supplied by an ordinary green JUnit task; promote meaningful checks into controlled regressions |
 | JIT execution | [JitControl](../../../javatools/src/main/java/org/xvm/api/JitControl.java) is unsupported; embedding selects the interpreter | First delivery targets interpreter execution; do not advertise JIT parity |
 | DAP | [XtcDebugServer](../../dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) is a placeholder: breakpoints are reported unverified with the reason, launch and attach fail with it, and there are no threads | A transport stub is not debugging. Breakpoints stay unverified until a runtime bridge confirms them |
@@ -197,7 +197,12 @@ this bridge; they cannot be inferred from compiler type hints.
   directories and dispose only session-owned temporary resources. Structured exception/exit events
   replace textual parsing. No per-run CLI or new VM.
   *Partial (2026-10-15):* entry selection, exact arguments, completion, stop and ordered output work
-  through lib_runner tasks in one runtime, with structured exit events. Console input remains.
+  through lib_runner tasks in one runtime, with structured exit events.
+  *Console input (2026-10-16):* `Console.readLine()` reads lines both clients send with
+  `xtc/runInput`; input typed during the build is held until the program starts, and the end of
+  input or a stop gives a waiting `readLine` an empty line (X287). Every part listed above now
+  works. The box stays open until the runtime part has a `javatools` test of its own for extraction;
+  JIT runs remain unsupported.
 - [ ] **R4 — Persistent worker supervision.** Add configuration/generation handshake, private IPC,
   startup/stop deadlines, bounded output/backpressure, memory measurement and safe idle recycling.
   Verify worker death during a run, restart after crash, parent death, IDE close, XDK change and
