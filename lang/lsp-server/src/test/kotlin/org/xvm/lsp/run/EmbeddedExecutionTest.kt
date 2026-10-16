@@ -1,6 +1,8 @@
 package org.xvm.lsp.run
 
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.entry
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -14,6 +16,7 @@ import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkBuild
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.server.EmbeddedRuns
 import org.xvm.lsp.server.RunExitedParams
@@ -308,6 +311,96 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a build compiles the editor's unsaved text, not the file on disk`() {
+        CompilerTestSupport.configure()
+        val app = source("App.x", "module App { Int run() = 1; }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", app)))
+            adapter.compile(app, "module App { Int run() = 7; }")
+            val build = adapter.buildAsync("App", rebuild = false).get(60, SECONDS)
+
+            assertThat(build.succeeded).describedAs(build.diagnostics.toString()).isTrue()
+            assertThat(run("App", modulePath = build.modulePath).code).isEqualTo(7)
+        }
+    }
+
+    @Test
+    fun `unchanged modules are reused, an editor analysis counts, and rebuild compiles everything`() {
+        CompilerTestSupport.configure()
+        val library = source("Library.x", "module Library { static Int value() = 7; }")
+        val app = source("App.x", "module App { package lib import Library; Int run() = lib.value(); }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app, setOf("Library"))),
+            )
+
+            fun reused(rebuild: Boolean = false) =
+                adapter
+                    .buildAsync("App", rebuild)
+                    .get(60, SECONDS)
+                    .also {
+                        assertThat(it.succeeded).describedAs(it.diagnostics.toString()).isTrue()
+                    }.modules
+                    .associate { it.name to it.reused }
+
+            assertThat(reused()).containsExactly(entry("Library", false), entry("App", false))
+            assertThat(reused()).containsExactly(entry("Library", true), entry("App", true))
+            // the editor's analysis of the changed library already compiled it; its consumer compiles again
+            adapter.compile(library, "module Library { static Int value() = 8; }")
+            assertThat(reused()).containsExactly(entry("Library", true), entry("App", false))
+            assertThat(reused(rebuild = true)).containsExactly(entry("Library", false), entry("App", false))
+        }
+    }
+
+    @Test
+    fun `the manifest records each module's compiled sources and dependency revisions`() {
+        CompilerTestSupport.configure()
+        val libraryText = "module Library { static Int value() = 7; }"
+        val library = source("Library.x", libraryText)
+        val app = source("App.x", "module App { package lib import Library; Int run() = lib.value(); }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app, setOf("Library"))),
+            )
+            val build = adapter.buildAsync("App", rebuild = false).get(60, SECONDS)
+            val revisions = build.modules.associate { it.name to it.revision }
+            val manifest =
+                JsonParser
+                    .parseString(directory.resolve("build/xtc/embedded/manifest.json").toFile().readText())
+                    .asJsonObject["modules"]
+                    .asJsonArray
+                    .associateBy { it.asJsonObject["name"].asString }
+                    .mapValues { it.value.asJsonObject }
+
+            assertThat(manifest.keys).containsExactly("Library", "App")
+            assertThat(manifest.getValue("Library")["sources"].asJsonObject[library].asString)
+                .isEqualTo(XdkBuild.sha256(libraryText))
+            assertThat(manifest.getValue("Library")["revision"].asString).isEqualTo(revisions["Library"])
+            assertThat(manifest.getValue("App")["dependencies"].asJsonObject["Library"].asString).isEqualTo(revisions["Library"])
+        }
+    }
+
+    @Test
+    fun `a module that no longer compiles leaves no earlier artifact to run`() {
+        CompilerTestSupport.configure()
+        val app = source("App.x", "module App { Int run() = 1; }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", app)))
+            val artifact = directory.resolve("build/xtc/embedded/lib/App.xtc").toFile()
+            assertThat(adapter.buildAsync("App", rebuild = false).get(60, SECONDS).succeeded).isTrue()
+            assertThat(artifact).isFile()
+
+            adapter.compile(app, "module App { Int run() = \"text\"; }")
+            assertThat(adapter.buildAsync("App", rebuild = false).get(60, SECONDS).succeeded).isFalse()
+            assertThat(artifact).doesNotExist()
+        }
+    }
+
+    @Test
     fun `only modules with a callable run method are runnable targets with a Run lens`() {
         CompilerTestSupport.configure()
         val libraryText = "module Library { static Int value() = 7; }"
@@ -338,11 +431,12 @@ class EmbeddedExecutionTest {
         module: String,
         method: String = "run",
         args: List<String> = emptyList(),
+        modulePath: List<String> = listOf(lib.path),
     ): Outcome {
         val output = StringBuffer()
         val exited = CompletableFuture<Pair<Long?, String?>>()
         worker.start(
-            RunWorkerProcess.Request(listOf(lib.path), module, method, args, directory.toString()),
+            RunWorkerProcess.Request(modulePath, module, method, args, directory.toString()),
             object : RunWorkerProcess.Listener {
                 override fun output(text: String) {
                     output.append(text)

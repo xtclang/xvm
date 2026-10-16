@@ -14,7 +14,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | Question | Decision |
 |----------|----------|
 | Default mode | Automatic: embedded without a Gradle build, Gradle with one |
-| Unsaved buffers | Save all files, then build from disk. Unsaved-buffer builds remain R2 work |
+| Unsaved buffers | Clients save all files first; the server builds the text it holds at the request, saved or not (R2, 2026-10-16) |
 | Run host | One persistent execution worker JVM per language server, one program at a time |
 | Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled |
 | Compiler queue | Builds reuse the server's serialized compile queue, not a second compiler |
@@ -30,7 +30,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../intellij-plugin/README.md#running-your-application)) |
 
 Known limits: one program at a time per server (a second run reports "Another
-program is still running"); every build recompiles the requested modules; IntelliJ Build Module builds
+program is still running"); IntelliJ Build Module builds
 every module; `.x` files have no IntelliJ gutter Run icon because there is no PSI parser; older
 IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
 new *Module source* field. The commits and validation are recorded in the
@@ -191,8 +191,15 @@ this bridge; they cannot be inferred from compiler type hints.
   target discovery. These passive compiler APIs can be extracted before runtime UI integration.
   *Partial (2026-10-15):* builds report per-module outcomes and diagnostics and skip consumers of
   failed dependencies; runnable targets come from registered module structures without running
-  code. Clients save before building; unsaved-buffer builds, build revisions/manifests and stale
-  target rejection remain.
+  code.
+  *Snapshots and reuse (2026-10-16):* a build compiles the text captured at the request, through
+  editor analysis's module-closure compile; modules whose sources and dependency revisions are
+  unchanged reuse the earlier artifact (`reused`), including one the editor analysis compiled; every
+  artifact has a SHA-256 revision; `manifest.json` records compiled source hashes and dependency
+  revisions; a failed module's old artifact is removed. A run of a module that no longer declares the
+  entry method is refused by the runner's entry check before user code runs. Still open: arguments
+  and defaults proven against the entry method before the build, renamed-root handling beyond the
+  current graph, and dedicated stale-target tests.
 - [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
