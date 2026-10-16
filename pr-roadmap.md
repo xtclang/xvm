@@ -1,13 +1,13 @@
 # Compiler foundations and LSP PR roadmap
 
-**Complete implementation reference:** [draft #693](https://github.com/xtclang/xvm/pull/693) contains the distilled compiler-backed LSP and IDE integrations. It is available for testing and later review, and should likely not be merged as is. The bulk of the change is LSP improvements; the assembled product demonstrates why the compiler and embedding mechanisms outside `lang/` are necessary. Existing foundation PRs remain separate.
+**Complete implementation reference:** [#693](https://github.com/xtclang/xvm/pull/693) (open, no longer a draft) contains the distilled compiler-backed LSP and IDE integrations. It is available for testing and later review, and should likely not be merged as is. The bulk of the change is LSP improvements; the assembled product demonstrates why the compiler and embedding mechanisms outside `lang/` are necessary. Existing foundation PRs remain separate.
 
 ## Embedded build and run — 2026-10-15
 
 `lagergren/errs` adds an embedded build/run mode to both IDEs beside Gradle (IntelliJ's *Build and
 run using* analogue): the language server's compiler builds on its existing compile queue and a
 persistent execution worker JVM runs the module. This is new work **outside every prepared branch
-and PR**, including draft #693; it is not mirrored anywhere yet. The commits, extraction targets and
+and PR**, including #693; it is not mirrored anywhere yet. The commits, extraction targets and
 validation receipt are in the
 [integration plan](docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
 and remaining R1–R8 work are in the
@@ -39,8 +39,8 @@ and Ecstasy; their original constructor APIs and tolerant read behavior remain. 
 LSP already reads and validates explicit dependency artifacts into immutable snapshots, so it does
 not need those callbacks and must not infer a missing import from an unrelated failed scan candidate.
 Older descriptions below that mention retained I/O causes or a reporting prerequisite are superseded
-by this correction. #685 has already merged independently; #683 is a cache-correctness fix, not an
-embedding API prerequisite.
+by this correction. #685 was closed unmerged on 2026-10-12 in favor of #693; #683 is a
+cache-correctness fix, not an embedding API prerequisite.
 
 ## Readability and partial-package synchronization — 2026-10-12
 
@@ -243,6 +243,8 @@ These are the five extracted review units; the Gradle exporter and Boolean corre
 
 **Compiler merge sequence:** #683 → #685; #685 + #687 → semantic facts → partial analysis → LSP/editor product.
 
+**GitHub state, 2026-10-16:** #686, #687, #688 and #689 are merged; #683 and #685 were closed unmerged. The prerequisites above describe the 2026-10-09 stack; #683 is not an embedding prerequisite (see the [repository review correction](#repository-review-correction--2026-10-13)).
+
 **Independent work:** #686, #687, the Gradle exporter and the Boolean correction can progress against master without waiting for the embedding stack. The product waits for the applicable foundations above. The Boolean correction is part of its prepared compiler baseline, not an API prerequisite.
 
 **Next compiler PR to submit, when authorized:** compilation-owned syntax and semantic facts. The two independent branches have already been submitted as #688 and #689. Later stacked comparisons can be reviewed now; their final bases must be reconciled against the actual merged prerequisites before landing. No submission is authorized by this document itself.
@@ -250,6 +252,8 @@ These are the five extracted review units; the Gradle exporter and Boolean corre
 ## Existing open PRs
 
 GitHub state checked while preparing the comparison: all six are open and target `master`. These PRs already exist; the two comparison branches above are not PR submissions.
+
+Later (GitHub, 2026-10-16): #686, #687 (`df291544a`, four files), #688 and #689 are merged. #685 was closed unmerged on 2026-10-12 in favor of [#693](https://github.com/xtclang/xvm/pull/693); #683 was closed unmerged on 2026-10-15. The table records the 2026-10-09 revisions.
 
 | Existing PR | Purpose | Prerequisites and current revision |
 | --- | --- | --- |
@@ -1475,6 +1479,9 @@ These details explain already-open PRs and their recorded tests. They are not an
 <details>
 <summary>#683: tolerant platform lookup and host diagnostics</summary>
 
+Superseded: per the [repository review correction](#repository-review-correction--2026-10-13),
+#683 no longer adds the read-failure reporting API described below; it was later closed unmerged.
+
 Gene correctly identified a regression in the first version: throwing on an incompatible
 `.xtc` candidate prevented scanning a mixed-version directory or trying a later repository.
 The revised PR at `902460194` instead preserves two separate responsibilities:
@@ -1535,6 +1542,11 @@ updated submission plan.
 `errs/compiler-type-correctness-20261009`. It is independent of #683/#685. The changes that only
 supported the removed metadata implementation were withdrawn during review; #692 handles its
 removal separately.
+
+Later: #687 merged on 2026-10-13 as `df291544a` with **four files**: the two Java files below
+plus regressions in `manualTests/src/main/x/lambda.x` and
+`xdk/src/test/resources/compiler-errors/errors.x`, not `CompilerFunctionTypingTest.kt`. The
+"six files" in the existing-PR table is its 2026-10-09 revision.
 
 | File | Current change |
 | --- | --- |

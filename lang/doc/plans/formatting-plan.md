@@ -853,6 +853,11 @@ Test with the full LSP server running against a real XTC file:
 
 #### 6.3 Manual Testing in IntelliJ / VS Code
 
+**Status (2026-10-16):** superseded by the maintained
+[manual test plan §13a](../manual-test-plan.md#13a-on-type-formatting-auto-indent) and by
+`OnTypeFormattingTest`; run those instead. Two rows below have no §13a counterpart: Enter after
+`case X:` and Enter after a `//` comment.
+
 Follow this checklist in both editors:
 
 - [ ] Type `{` then Enter inside a class -- new line indented +4
@@ -948,11 +953,11 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 *Smart on-type formatting behaviors that improve the editing experience:*
 
 1. ~~Add `/**` doc comment continuation (insert ` * ` prefix on Enter inside doc/block comments)~~
-2. Handle `onTypeFormatting` for `)` — outdent closing paren to match opening `(` in multi-line parameter lists, argument lists, and condition expressions
+2. ~~Handle `onTypeFormatting` for `)` — outdent closing paren to match opening `(` in multi-line parameter lists, argument lists, and condition expressions~~ (tree-sitter `AdapterFormatter.handleCloseDelimiter`, `OnTypeFormattingTest` "Closing paren"; the server advertises `)` for every adapter, where compiler mode re-indents the current line lexically)
 3. Outdent `case` keyword — when typing `case` inside a `switch` block, auto-outdent to the `switch` indent level (same treatment as `}` gets for brace outdent)
 4. Smart Enter after `}` between members — when pressing Enter after a `}` that closes a method/class inside a class body, insert an extra blank line to match `lib_ecstasy/` convention of blank lines between members
-5. Auto-indent after `->` in lambdas — when pressing Enter after `->`, indent to the lambda/case expression body level
-6. Auto-close `/**` doc comment skeleton — when typing `/**` + Enter, insert a ` * ` continuation line and a ` */` closing line, positioning the cursor on the middle line
+5. ~~Auto-indent after `->` in lambdas — when pressing Enter after `->`, indent to the lambda/case expression body level~~ (tree-sitter; `OnTypeFormattingTest` "Arrow (->)")
+6. ~~Auto-close `/**` doc comment skeleton — when typing `/**` + Enter, insert a ` * ` continuation line and a ` */` closing line, positioning the cursor on the middle line~~ (tree-sitter; `OnTypeFormattingTest` "Doc comment skeleton")
 7. Implement `handleSemicolon()` for post-continuation correction — correct indent when a multi-line statement ends with `;`
 8. Cache line offsets for large files — avoid repeated `source.split("\n")` allocations for files > 10K lines
 9. `xtc-format.toml init` command — generate config file from current IntelliJ Code Style settings or XTC defaults

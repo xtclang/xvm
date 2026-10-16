@@ -370,4 +370,5 @@ All versions are defined in `/gradle/libs.versions.toml`.
 
 ## TODOs
 
-- [ ] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).
+- [x] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).
+  Done (2026-10-16): VS Code's display name, command titles/categories, settings groups and debugger label say Ecstasy, as do IntelliJ's language, wizard and run-configuration names; `xtc` remains in identifiers.
