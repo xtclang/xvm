@@ -36,6 +36,10 @@ interface XtcLanguageServer : LanguageServer {
     @JsonRequest("xtc/stopRun")
     fun stopRun(params: StopRunParams): CompletableFuture<Boolean>
 
+    /** Console input for a run, or its end. False when no such run is building or running. */
+    @JsonRequest("xtc/runInput")
+    fun runInput(params: RunInputParams): CompletableFuture<Boolean>
+
     @JsonRequest("xtc/runnableTargets")
     fun runnableTargets(): CompletableFuture<List<RunnableTarget>>
 }
@@ -109,6 +113,13 @@ data class RunResponse(
 
 data class StopRunParams(
     val runId: String,
+)
+
+/** Console input for a run, with its line ends, or [end] for the end of input. */
+data class RunInputParams(
+    val runId: String,
+    val text: String? = null,
+    val end: Boolean? = null,
 )
 
 data class RunOutputParams(
