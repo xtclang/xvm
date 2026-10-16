@@ -144,7 +144,7 @@ regression introduced during this repair is fixed and preserved in the
 Later: IntelliJ completes the then-current catalog in one uninterrupted process, with 277 cases in
 `run-11949889098742489342` ([record](errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06))
 and 284 in `run-4144503954102473659` ([record](errs-integration-plan.md#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)).
-A fresh full run of the current 291-case catalog is still pending.
+A fresh full run of the current 292-case catalog is still pending.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
