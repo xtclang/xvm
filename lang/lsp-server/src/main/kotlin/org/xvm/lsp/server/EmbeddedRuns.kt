@@ -13,6 +13,7 @@ import java.io.Closeable
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** `xtc/build` parameters: a module name or root URI, or every source module when [module] is absent. */
 data class BuildParams(
@@ -51,6 +52,16 @@ data class StopRunParams(
     val runId: String? = null,
 )
 
+/**
+ * `xtc/runInput` parameters: [text] for the program's console, sent as typed, with line ends; [end] ends
+ * the input, after which a program waiting for a line gets an empty one.
+ */
+data class RunInputParams(
+    val runId: String? = null,
+    val text: String? = null,
+    val end: Boolean? = null,
+)
+
 data class RunOutputParams(
     val runId: String,
     val text: String,
@@ -84,6 +95,15 @@ internal class EmbeddedRuns(
 ) : Closeable {
     private val workerIds = ConcurrentHashMap<String, Long>()
 
+    /** Input typed while a run is still building, forwarded in order when the program starts. */
+    private val waiting = HashMap<String, WaitingInput>()
+    private val inputLock = Any()
+
+    private class WaitingInput {
+        val text = StringBuilder()
+        var ended = false
+    }
+
     fun build(params: BuildParams): CompletableFuture<BuildResponse> =
         compiler()?.buildAsync(params.module, params.rebuild == true)?.thenApply(::response) ?: unsupported()
 
@@ -91,34 +111,70 @@ internal class EmbeddedRuns(
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
         val compiler = compiler() ?: return unsupported()
         val runId = params.runId ?: UUID.randomUUID().toString()
-        return compiler.buildAsync(module, false).thenApply { result ->
-            val build = response(result)
-            val target = result.modules.lastOrNull()
-            if (!result.succeeded || target == null) return@thenApply RunResponse(null, build)
-            workerIds[runId] =
-                worker.start(
-                    RunWorkerProcess.Request(
-                        result.modulePath,
-                        target.name,
-                        params.method ?: "run",
-                        params.args.orEmpty(),
-                        params.workingDirectory ?: result.workingDirectory,
-                    ),
-                    object : RunWorkerProcess.Listener {
-                        override fun output(text: String) {
-                            (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
-                        }
+        synchronized(inputLock) { waiting[runId] = WaitingInput() }
+        return compiler
+            .buildAsync(module, false)
+            .thenApply { result ->
+                val build = response(result)
+                val target = result.modules.lastOrNull()
+                if (!result.succeeded || target == null) {
+                    synchronized(inputLock) { waiting.remove(runId) }
+                    return@thenApply RunResponse(null, build)
+                }
+                // a run can end before start returns, e.g. while another program still runs
+                val ended = AtomicBoolean()
+                val id =
+                    worker.start(
+                        RunWorkerProcess.Request(
+                            result.modulePath,
+                            target.name,
+                            params.method ?: "run",
+                            params.args.orEmpty(),
+                            params.workingDirectory ?: result.workingDirectory,
+                        ),
+                        object : RunWorkerProcess.Listener {
+                            override fun output(text: String) {
+                                (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
+                            }
 
-                        override fun exited(
-                            code: Long?,
-                            error: String?,
-                        ) {
-                            workerIds.remove(runId)
-                            (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
-                        }
-                    },
-                )
-            RunResponse(runId, build)
+                            override fun exited(
+                                code: Long?,
+                                error: String?,
+                            ) {
+                                synchronized(inputLock) {
+                                    ended.set(true)
+                                    waiting.remove(runId)
+                                    workerIds.remove(runId)
+                                }
+                                (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
+                            }
+                        },
+                    )
+                synchronized(inputLock) {
+                    if (!ended.get()) workerIds[runId] = id
+                    waiting.remove(runId)?.takeUnless { ended.get() }?.let { typed ->
+                        if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
+                        if (typed.ended) worker.endInput(id)
+                    }
+                }
+                RunResponse(runId, build)
+            }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
+    }
+
+    /** Forwards console input to the run, or holds it while the run is still building. */
+    fun input(params: RunInputParams): Boolean {
+        val runId = params.runId ?: return false
+        synchronized(inputLock) {
+            val id = workerIds[runId]
+            if (id != null) {
+                params.text?.takeIf { it.isNotEmpty() }?.let { worker.input(id, it) }
+                if (params.end == true) worker.endInput(id)
+                return true
+            }
+            val typed = waiting[runId] ?: return false
+            params.text?.let(typed.text::append)
+            if (params.end == true) typed.ended = true
+            return true
         }
     }
 

@@ -17,8 +17,11 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.PrintStream
 import java.io.PrintWriter
+import java.io.Reader
 import java.io.Writer
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 
 /**
@@ -27,7 +30,8 @@ import kotlin.system.exitProcess
  * the process streams directly, travels as events and so can never corrupt the protocol. Stdin closing,
  * which is also what happens when the language server exits or dies, stops any run and ends the worker.
  *
- * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`), `stop` (`id`), `shutdown`.
+ * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`), `input` (`id`, `text`),
+ * `endInput` (`id`), `stop` (`id`), `shutdown`.
  * Events: `ready` (`pid`), `started` (`id`), `output` (`id`, `text`), `exit` (`id`, `code`, `error`), `log`
  * (`text`).
  */
@@ -47,6 +51,8 @@ object RunWorker {
                 val command = JsonParser.parseString(line).asJsonObject
                 when (command["command"]?.asString) {
                     "run" -> runs.start(command)
+                    "input" -> runs.input(command["id"].asLong, command["text"].asString)
+                    "endInput" -> runs.endInput(command["id"].asLong)
                     "stop" -> runs.stop(command["id"].asLong)
                     "shutdown" -> break
                     else -> channel.log("Unknown worker command: $line")
@@ -63,6 +69,7 @@ object RunWorker {
         private val channel: RunWorkerChannel,
     ) {
         private val active = ConcurrentHashMap<Long, EmbeddingSupport.Control>()
+        private val inputs = ConcurrentHashMap<Long, ConsoleInput>()
 
         @Volatile
         private var latest: Long? = null
@@ -77,6 +84,9 @@ object RunWorker {
             }
             val errors = ErrorList(100)
             val console = PrintWriter(OutputEvents(channel, id), true)
+            // registered before the run starts: commands are read in order, so input for this run
+            // can only arrive after this
+            val input = ConsoleInput().also { inputs[id] = it }
             val control =
                 try {
                     val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
@@ -87,14 +97,17 @@ object RunWorker {
                         command.string("method") ?: "run",
                         command.strings("args"),
                         console,
+                        BufferedReader(input),
                         command.string("rootDir")?.let(::File),
                         errors,
                     )
                 } catch (failure: Exception) {
+                    inputs.remove(id)
                     channel.exit(id, null, failure.toString())
                     return
                 }
             if (control == null) {
+                inputs.remove(id)
                 channel.exit(id, null, errors.failure() ?: "The module could not be started")
                 return
             }
@@ -112,18 +125,33 @@ object RunWorker {
                         control.close()
                     } finally {
                         console.flush()
+                        inputs.remove(id)?.end()
                         active.remove(id)
                         channel.exit(id, control.result(), errors.failure())
                     }
                 }
         }
 
+        fun input(
+            id: Long,
+            text: String,
+        ) {
+            inputs[id]?.offer(text)
+        }
+
+        fun endInput(id: Long) {
+            inputs[id]?.end()
+        }
+
         fun stop(id: Long) {
+            // a program waiting for a line gets the end of input, so nothing stays blocked on it
+            inputs[id]?.end()
             // closing kills the task and waits for it, so keep the command reader responsive
             active[id]?.let { control -> Thread.ofVirtual().start { control.close() } }
         }
 
         fun stopAll() {
+            inputs.values.forEach(ConsoleInput::end)
             active.values.forEach { runCatching { it.close() } }
         }
 
@@ -132,6 +160,52 @@ object RunWorker {
                 .filter { it.severity.isAtLeast(Severity.ERROR) }
                 .joinToString("\n") { it.message }
                 .ifEmpty { null }
+    }
+
+    /**
+     * Console input for one run: text the client sends, in order, until the client ends it or the run
+     * stops. A read waits for text; after the end, it returns end of input.
+     */
+    private class ConsoleInput : Reader() {
+        private val lock = ReentrantLock()
+        private val available = lock.newCondition()
+        private val pending = StringBuilder()
+        private var ended = false
+
+        fun offer(text: String) =
+            lock.withLock {
+                if (!ended) {
+                    pending.append(text)
+                    available.signalAll()
+                }
+            }
+
+        fun end() =
+            lock.withLock {
+                ended = true
+                available.signalAll()
+            }
+
+        override fun read(
+            buffer: CharArray,
+            offset: Int,
+            length: Int,
+        ): Int =
+            lock.withLock {
+                try {
+                    while (pending.isEmpty() && !ended) available.await()
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return -1
+                }
+                if (pending.isEmpty()) return -1
+                val count = minOf(length, pending.length)
+                pending.getChars(0, count, buffer, offset)
+                pending.delete(0, count)
+                count
+            }
+
+        override fun close() = end()
     }
 
     /** Program console output for one run. */
