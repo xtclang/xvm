@@ -1,6 +1,12 @@
-j# Conditional Tree-sitter Build
+# Conditional Tree-sitter Build
 
 **Status**: PENDING (MEDIUM PRIORITY)
+
+**Status (2026-10-16): obsolete.** The premise no longer holds. Since 2026-10-06 the default adapter is
+`compiler`, not tree-sitter or mock (`lang/lsp-server/build.gradle.kts`). The server JAR bundles the
+tree-sitter native libraries and XDK modules unconditionally, so every adapter ships in one build and is
+selected at startup with `-Dxtc.lsp.adapter` or the IDE **Switch Language Adapter** command. Skipping the
+native library per build would break that switch.
 
 **Goal**: Skip tree-sitter native library build when using mock adapter, reducing build time.
 
