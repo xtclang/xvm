@@ -12307,7 +12307,7 @@ the real platform sources and the compiler/adapter boundary. All checkpoints sta
   X136, X138/X139, X146, X162, X181–X185 and X259. `run-13248317061307858623` passes edits and
   close/reopen during startup; `run-10384868562973039188` passes independent project lifetime. All
   three have zero IDE errors. Exact plugin hashes and commands are in the upstream register
-  and [IntelliJ testing guide](../lang/intellij-plugin/TESTING.md).
+  and [IntelliJ testing guide](../lang/intellij-plugin/testing.md).
 - These native runs retain production bridges. They establish combined compatibility, not that
   any individual bridge is redundant. Keep every bridge on the released default. Before
   removing one, bypass only that bridge against its upstream fix and repeat its relevant
