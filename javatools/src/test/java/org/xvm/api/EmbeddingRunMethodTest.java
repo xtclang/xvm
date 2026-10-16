@@ -1,0 +1,216 @@
+package org.xvm.api;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import java.time.Duration;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import org.xvm.api.EmbeddingSupport.Control;
+
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+/**
+ * Runs modules through {@link EmbeddingSupport#runMethod}: how the entry method is selected and
+ * what it is passed, exact arguments, and console input. Needs the installed XDK
+ * ({@code ./gradlew xdk:installDist}); without it the tests are skipped.
+ */
+public class EmbeddingRunMethodTest {
+    private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
+
+    @TempDir
+    static Path dirOut;
+
+    @TempDir
+    Path rootDir;
+
+    private static List<File> xdkDirs;
+    private static EmbeddingSupport support;
+
+    @BeforeAll
+    static void configure() {
+        Path xdk = installedXdk();
+        assumeTrue(xdk != null, "the installed XDK is needed; run ./gradlew xdk:installDist");
+        xdkDirs = List.of(xdk.resolve("lib").toFile(), xdk.resolve("javatools").toFile());
+        support = new EmbeddingSupport().configure(repo(), null);
+    }
+
+    @Test
+    public void entryMethodSelectionFollowsTheCommandLineRunner() {
+        ModuleStructure module = compile("""
+                module Selection {
+                    void run() {}
+                    void greet(String[] args) {}
+                    void optional(String[] args = []) {}
+                    void two(String first, String second) {}
+                    void typed(Int count) {}
+                    void overloaded() {}
+                    void overloaded(String[] args) {}
+                }
+                """);
+        String[] none = new String[0];
+        String[] some = {"a", "b c"};
+
+        assertNull(InterpreterControl.entryArguments(module, "run", none));
+        assertNull(InterpreterControl.entryArguments(module, "run", some));
+        assertArrayEquals(none, InterpreterControl.entryArguments(module, "greet", null));
+        assertArrayEquals(some, InterpreterControl.entryArguments(module, "greet", some));
+        assertNull(InterpreterControl.entryArguments(module, "optional", none));
+        assertArrayEquals(some, InterpreterControl.entryArguments(module, "optional", some));
+
+        assertRejected(module, "two", "Unsupported arguments");
+        assertRejected(module, "typed", "Unsupported argument type");
+        assertRejected(module, "overloaded", "Ambiguous method");
+        assertRejected(module, "absent", "Missing method");
+    }
+
+    @Test
+    public void argumentsArriveExactlyAsGiven() throws IOException {
+        compileAndStore("""
+                module Arguments {
+                    void greet(String[] args) {
+                        @Inject Console console;
+                        for (String arg : args) {
+                            console.print($"arg=[{arg}]");
+                        }
+                    }
+                }
+                """);
+        String output = run("Arguments", "greet", List.of("one", "two words", "ünï ✓ 𝄞"), null);
+
+        assertTrue(output.contains("arg=[one]"), output);
+        assertTrue(output.contains("arg=[two words]"), output);
+        assertTrue(output.contains("arg=[ünï ✓ 𝄞]"), output);
+    }
+
+    @Test
+    public void consoleInputIsReadLineByLineAndEndsWithAnEmptyLine() throws IOException {
+        compileAndStore(readerModule("Reader"));
+        String output = run("Reader", "run", List.of(),
+                new BufferedReader(new StringReader("Ada Lovelace\n")));
+
+        assertTrue(output.contains("name? "), output);
+        assertTrue(output.contains("hello [Ada Lovelace]"), output);
+        assertTrue(output.contains("rest []"), output);
+    }
+
+    @Test
+    public void withoutConsoleInputReadLineIsUnsupported() throws IOException {
+        compileAndStore(readerModule("Unread"));
+        String output = run("Unread", "run", List.of(), null);
+
+        assertFalse(output.contains("hello ["), output);
+    }
+
+    @Test
+    public void aMissingEntryMethodIsReportedAndNothingRuns() throws IOException {
+        compileAndStore("""
+                module Missing {
+                    void run() {}
+                }
+                """);
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.runMethod(input(), "Missing", null, "absent", List.of(),
+                new PrintWriter(new StringWriter(), true), null, rootDir.toFile(), errs);
+
+        assertNull(control);
+        assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
+    }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    private String run(String moduleName, String methodName, List<String> args,
+                       BufferedReader consoleIn) {
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.runMethod(input(), moduleName, null, methodName, args,
+                new PrintWriter(output, true), consoleIn, rootDir.toFile(), errs);
+        assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+        return output.toString();
+    }
+
+    private static String readerModule(String moduleName) {
+        return """
+                module %s {
+                    void run() {
+                        @Inject Console console;
+                        String name = console.readLine("name? ");
+                        console.print($"hello [{name}]");
+                        String rest = console.readLine();
+                        console.print($"rest [{rest}]");
+                    }
+                }
+                """.formatted(moduleName);
+    }
+
+    private static void assertRejected(ModuleStructure module, String methodName, String reason) {
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> InterpreterControl.entryArguments(module, methodName, new String[0]));
+        assertTrue(failure.getMessage().contains(reason), failure.getMessage());
+    }
+
+    private static ModuleStructure compile(String source) {
+        ErrorList       errs   = new ErrorList(25);
+        ModuleStructure module = support.compile(source, repo(), errs);
+        assertNotNull(module, () -> "compile failed: " + errs.getErrors());
+        assertFalse(errs.hasSeriousErrors(), () -> "compile failed: " + errs.getErrors());
+        return module;
+    }
+
+    private static void compileAndStore(String source) throws IOException {
+        new DirRepository(dirOut.toFile(), false).storeModule(compile(source));
+    }
+
+    /** The compiled test modules, ahead of the XDK. */
+    private static ModuleRepository input() {
+        return new LinkedRepository(new DirRepository(dirOut.toFile(), true), repo());
+    }
+
+    private static ModuleRepository repo() {
+        List<ModuleRepository> repos = new ArrayList<>();
+        for (File dir : xdkDirs) {
+            repos.add(new DirRepository(dir, true));
+        }
+        return new LinkedRepository(repos.toArray(ModuleRepository.NO_REPOS));
+    }
+
+    /** The installed XDK of this checkout, found from the test's working directory, or null. */
+    private static Path installedXdk() {
+        for (Path dir = Path.of("").toAbsolutePath(); dir != null; dir = dir.getParent()) {
+            Path xdk = dir.resolve("xdk/build/install/xdk");
+            if (Files.isDirectory(xdk.resolve("lib")) && Files.isDirectory(xdk.resolve("javatools"))) {
+                return xdk;
+            }
+        }
+        return null;
+    }
+}
