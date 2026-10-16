@@ -93,6 +93,69 @@ class XdkRenameServerTest {
         }
     }
 
+    @Test
+    fun `a file rename sent after a file event waits for that event's rescan instead of being retired by it`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val root =
+            directory.resolve("App.x").toFile().apply {
+                writeText("module App { Box make() = new Box(); }")
+            }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        val hold = AtomicBoolean()
+        val rescanning = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val server =
+            XtcLanguageServer(XdkAdapter(), rescans = { rescan ->
+                if (hold.get()) {
+                    rescanning.countDown()
+                    check(release.await(20, SECONDS))
+                }
+                rescan()
+            })
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server
+                .initialize(
+                    parameters().apply {
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations =
+                            FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    },
+                ).get(20, SECONDS)
+            val uri = root.toURI().toString()
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, root.readText())))
+            server.textDocumentService
+                .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                .get(30, SECONDS)
+            server.discoveryIdle().get(20, SECONDS)
+
+            // as when IntelliJ undoes a rename: a watcher event, then at once willRenameFiles
+            hold.set(true)
+            server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(listOf(FileEvent(member.toURI().toString(), FileChangeType.Created))),
+            )
+            assertThat(rescanning.await(20, SECONDS)).isTrue()
+            val rename =
+                server.willRenameFiles(
+                    RenameFilesParams(
+                        listOf(FileRename(member.toURI().toString(), directory.resolve("App/Crate.x").toUri().toString())),
+                    ),
+                )
+            assertThat(rename).describedAs("The rename waits while the earlier event's rescan runs").isNotDone()
+            release.countDown()
+            assertThat(rename.get(30, SECONDS)?.documentChanges).isNotEmpty()
+        } finally {
+            release.countDown()
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
     @ParameterizedTest
     @CsvSource("false,false", "false,true", "true,false", "true,true")
     fun `late watched creation preserves a rename proof only while its inputs are unchanged`(
