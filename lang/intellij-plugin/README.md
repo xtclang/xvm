@@ -93,9 +93,15 @@ builds and runs, like IntelliJ's own setting for Gradle projects. It is stored w
 
 | Choice | Build / Rebuild Project | Ecstasy run configurations set to *Project default* |
 |--------|-------------------------|------------------------------------------------------|
-| Automatic (default) | Gradle when the project root has a Gradle build, embedded otherwise | Same choice |
-| Embedded compiler | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/`; results and linked diagnostics appear in the **Build** tool window | The server builds the module, then runs it in its execution worker JVM |
+| Embedded compiler (default) | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/`; results and linked diagnostics appear in the **Build** tool window | The server builds the module, then runs it in its execution worker JVM |
+| Automatic | Gradle when the project root has a Gradle build, embedded otherwise | Same choice |
 | Gradle | Left to Gradle or the IDE's builder | `./gradlew runXtc` |
+
+The embedded compiler is the default also in a project with a Gradle build. It builds with the
+language server's compiler and bundled XDK, so the Gradle build's own settings, such as `runXtc`
+arguments, JVM options or its XDK version, do not apply; embedded builds and runs in such a project
+say so in the Build tool window and Run console. Choose **Gradle** to use Gradle. Modules without
+Ecstasy sources keep building with Gradle or the IDE's builder.
 
 Ways to run a module:
 
