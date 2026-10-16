@@ -1553,14 +1553,19 @@ to the compiler-only PR:
 - [ ] **R1:** controlled repeat-run/runtime API baseline, including native-pool growth.
   *Partial:* worker regressions for exits, exceptions, arguments, stop/reuse and no HTTP listener.
 - [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
-  *Partial:* per-module build results and registered-structure entry points; clients save first.
+  *Partial:* per-module build results and registered-structure entry points. Since `7886b4c1d` a
+  build compiles the snapshot captured at the request through the analysis closure compile, reuses
+  unchanged modules, records revisions and a manifest, and removes failed artifacts; clients still
+  save first.
 - [ ] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
-  *Partial:* entry selection, exact arguments, output, completion and stop; no console input.
+  *Partial:* entry selection, exact arguments, output, completion and stop; console input since
+  `82b6ba570` (X287). Open until the runtime part has its own javatools test.
 - [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
   *Partial:* lazy reused worker, replaced after death, closed with the server; no generation handshake.
 - [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
-  *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; shared X280–X284 pass natively.
+  *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; shared X280–X285 and X287 pass natively.
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
+  *Partial:* the placeholder reports breakpoints unverified and refuses launch (`eba208bb3`); no session service.
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
 
@@ -1688,6 +1693,29 @@ Final receipt on the `eba208bb3` code (`c12797b9f` changes only docs): `:lang:ls
 2 existing skips; `:lang:dap-server:test` 3 tests, 0 failures; `spotlessCheck` passes.
 
 Release evidence for this batch (a full-catalog run in both editors and soak) is deferred.
+
+### Console input, embedded build snapshots and stale-document follow-up (2026-10-16)
+
+Seven commits on `lagergren/errs` after `c308bd7c9`, local to this branch like the batches above:
+not mirrored into #693 (deliberately waiting) or any review branch, and in no PR. Each commit
+message records its validation, problems fixed and limits.
+
+| Commit | Content | Extraction target |
+|---|---|---|
+| `b1b4ea05a` | Tracked items that later work had already finished: ticked or annotated with their closing section in this plan, `errs.md`, `errs-audit.md`, the playbook, plans and guides; PR states from GitHub (#685 and #683 closed unmerged; #686–#689 merged; #687 four files; #693 no longer a draft); the upstream register's split table | Documentation; travels with whichever documents are mirrored |
+| `d69cbabd8` | The server warns the user when Tree-sitter falls back to the Mock adapter | #693 server |
+| `82b6ba570` | Console input for embedded runs: `xExternalConsole` reads a host reader, `EmbeddingSupport.runMethod` takes `consoleIn` (javatools); `xtc/runInput`, input held during the build, worker input commands, stop ends input (lsp-server) | Split on the directory boundary like `5a14da284`: the three javatools files join the proposed runtime-execution PR, which then needs a javatools test of its own; the lsp-server part joins #693 with `5a14da284`'s server part |
+| `36cb0005f` | VS Code run terminals edit and send console input (Enter, Backspace, Ctrl+D, Ctrl+C) | With `94a1e8c19` |
+| `589dfbe92` | IntelliJ Run console input and Send EOF for embedded runs | With `1a89eb1a5` |
+| `1a98a03d8` | Shared case X287 in both drivers; harnesses expect X1–X287; catalog and documentation counts are 292 | With `4598957ce`; the catalog, manual rows and both drivers travel together |
+| `7886b4c1d` | Embedded builds compile the captured editor snapshot through the analysis closure compile, reuse unchanged modules (`reused`, `revision`), write `manifest.json` and remove failed artifacts; no embedding-API change | #693 server, with `5a14da284`'s server part |
+
+Receipts: `:lang:lsp-server:test` 2,302 tests, 0 failures, 2 existing skips at `7886b4c1d`;
+VS Code headless suite 65 passing and IntelliJ `run.EmbeddedExecutionTest` 10 tests at `589dfbe92`;
+native VS Code `run-8jDNJv` (X282, X287 passed) and IntelliJ FEATURES-mode
+`run-17475501379430993567` (START and X282 passed, X287 partial as declared, no IDE failures).
+`spotlessCheck`, `tsc --noEmit` and ESLint pass. The full catalog and combined suites follow as
+their own checkpoint.
 
 ### IntelliJ parity backlog (L60)
 
