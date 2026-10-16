@@ -1244,7 +1244,8 @@ and VS Code render them automatically from the LSP server response — no plugin
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
 **Mode:** VS Code `xtc.build.mode`; IntelliJ Settings › Build, Execution, Deployment › Ecstasy
 
-Use a folder **without** a Gradle build (automatic mode picks embedded), or set the mode to embedded.
+Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying the
+Gradle build's own settings do not apply.
 Fixture: `Hello.x` containing
 
 ```ecstasy
@@ -1270,6 +1271,7 @@ module Hello {
 | 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs (the run is automated in X285) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
+| 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
 
 Known limits: one program at a time per server (a second concurrent run reports "Another program is
 still running"); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
