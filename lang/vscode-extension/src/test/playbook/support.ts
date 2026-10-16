@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
@@ -98,6 +99,8 @@ export function diagnosticCode(item: vscode.Diagnostic): string {
 
 export async function nextProblem(document: vscode.TextDocument, values: vscode.Diagnostic[]): Promise<void> {
     await vscode.commands.executeCommand('workbench.actions.view.problems');
+    // marker navigation is a native editor action: like Undo, it acts only in a focused window and editor
+    await focusTestEditor(document);
     const editor = await vscode.window.showTextDocument(document, { preview: false });
     editor.selection = new vscode.Selection(0, 0, 0, 0);
     await vscode.commands.executeCommand('editor.action.marker.nextInFiles');
