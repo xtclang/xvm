@@ -322,12 +322,16 @@ inheritance between differently named children.
    Standard and optimized variants follow the corresponding Java signatures and names, such as
    super$C0$foo$p; the full method descriptor distinguishes overloads.
 
-   A "detached body" is a static method, e.g. s$foo(D_iC0 receiver, Ctx ctx), that contains
-   the actual Ecstasy code for a virtual child instance method foo(), with its receiver passed
-   explicitly. For a non-hard-left implementation, that receiver is always declared as the child
-   interface. A valid Ecstasy receiver need not belong to the corresponding Java implementation
-   class: D_C1 implements D_iC0 but does not extend D_C0. Therefore D.C0.foo() must run through
-   D_iC0.s$foo(D_iC0 receiver, Ctx, ...), without requiring the receiver to be a Java D_C0.
+   A "detached body" is a static method on the child's implementation class, e.g.
+   D_C0.s$foo(D_iC0 receiver, Ctx ctx), that contains the actual Ecstasy code for a virtual child
+   instance method foo(), with its receiver passed explicitly. The static method's owner and its
+   receiver type are separate: the Impl shape owns every detached body; the Pure shape declares
+   the instance method contract but does not contain its detached body.
+
+   For a non-hard-left implementation, the receiver is always declared as the child interface.
+   A valid Ecstasy receiver need not belong to the corresponding Java implementation class:
+   D_C1 implements D_iC0 but does not extend D_C0. Therefore D.C0.foo() runs through
+   D_C0.s$foo(D_iC0 receiver, Ctx, ...), without requiring the receiver to be a Java D_C0.
 
    Hard-left implementations do not have this receiver mismatch: the Java inheritance hierarchy
    guarantees that their concrete receiver types remain valid in derived parent compositions.
@@ -342,7 +346,7 @@ inheritance between differently named children.
    and D.C1 both declare foo(), ordinary foo() and super$C0$foo select D.C0.foo() on a D_C0
    receiver. On a D_C1 receiver, however, ordinary foo() selects D.C1.foo(), even when called
    through a D_iC0 interface reference, while super$C0$foo selects D.C0.foo(). The latter dispatches
-   to D_C1.super$C0$foo, which calls D_iC0.s$foo; Java cannot dispatch directly to D_C0.foo()
+   to D_C1.super$C0$foo, which calls D_C0.s$foo; Java cannot dispatch directly to D_C0.foo()
    because D_C1 does not extend D_C0. Thus, a super-router method selects a particular child
    family within the chain, not the head of the complete chain, and cannot generally replace the
    ordinary virtual entrance.
@@ -366,7 +370,7 @@ inheritance between differently named children.
        // on D_C1
        @Override
        void super$C0$foo(B_iC0 thi$, Ctx ctx) {
-           D_iC0.s$foo((D_iC0) thi$, ctx);
+           D_C0.s$foo((D_iC0) thi$, ctx);
        }
 
    A super() call in the hard-left B.C1.foo() body becomes:
@@ -394,15 +398,15 @@ inheritance between differently named children.
 
        B_C0.s$foo(B_C0 thi$, Ctx ctx)           // concrete hard-left body
        B_C1.s$foo(B_C1 thi$, Ctx ctx)           // concrete hard-left body
-       D_iC0.s$foo(D_iC0 thi$, Ctx ctx)         // interface-compatible derived-child body
-       D_iC1.s$foo(D_iC1 thi$, Ctx ctx)         // interface-compatible derived-child body
+       D_C0.s$foo(D_iC0 thi$, Ctx ctx)          // interface-compatible derived-child body
+       D_C1.s$foo(D_iC1 thi$, Ctx ctx)          // interface-compatible derived-child body
 
    The Ecstasy method remains virtual; detached bodies are exact implementation call targets,
    not a change to its language-level calling convention. Ordinary virtual calls select the head
    of the composition chain. Fixed super calls select a particular body without restarting that
    dispatch.
 
-   For example, super() inside D_iC0.s$foo calls B_C0.s$foo((B_C0) thi$, ctx) directly. It must
+   For example, super() inside D_C0.s$foo calls B_C0.s$foo((B_C0) thi$, ctx) directly. It must
    not call super$C0$foo again, which on a D_C1 object would re-enter D.C0.foo().
 
 6. The following diagrams assume that B.C0, B.C1, D.C0, and D.C1 all declare foo(), and each
@@ -429,7 +433,7 @@ inheritance between differently named children.
            |
            | invokestatic; pass r as D_iC1
            v
-       D_iC1.s$foo(D_iC1 r, Ctx ctx)                  [Ecstasy D.C1.foo() code]
+       D_C1.s$foo(D_iC1 r, Ctx ctx)                   [Ecstasy D.C1.foo() code]
 
    super() calls: continue from that implementation without restarting ordinary foo() dispatch
 
@@ -442,7 +446,7 @@ inheritance between differently named children.
 
    Generated Java call path:
 
-       D_iC1.s$foo(D_iC1 r, Ctx ctx)                  [Ecstasy D.C1.foo() code]
+       D_C1.s$foo(D_iC1 r, Ctx ctx)                   [Ecstasy D.C1.foo() code]
            |
            | super(): fixed invokestatic; cast r to B_C1
            v
@@ -455,7 +459,7 @@ inheritance between differently named children.
            |
            | invokestatic; cast r to D_iC0
            v
-       D_iC0.s$foo(D_iC0 r, Ctx ctx)                  [Ecstasy D.C0.foo() code]
+       D_C0.s$foo(D_iC0 r, Ctx ctx)                   [Ecstasy D.C0.foo() code]
            |
            | super(): fixed invokestatic; cast r to B_C0
            v
@@ -482,6 +486,11 @@ inheritance between differently named children.
    receiver argument, preserving composition-specific dispatch. Binding super in a derived-child
    body binds its fixed predecessor body entry. Neither case binds the ordinary virtual method at
    the head of the chain.
+
+   Nested instance methods and capturing lambdas use the enclosing detached body's receiver type
+   and are emitted as static methods on the same implementation class. Ordinary bound methods
+   still use the callable contract, so binding a D.C0 method on a D_C1 object does not require a
+   D_C0 receiver.
 
 8. Storage follows the effective composition, not merely the chosen Java superclass. If D.C0
    introduces a backing field, a D_C1 implementation needs that storage even though it does not
