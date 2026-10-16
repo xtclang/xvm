@@ -37,7 +37,7 @@ export function buildMode(folder: vscode.WorkspaceFolder | undefined): BuildMode
 export const GRADLE_NOT_USED =
     'This folder has a Gradle build, but embedded mode builds and runs with the language server\'s compiler and XDK; ' +
     'Gradle settings such as runXtc arguments, JVM options and the build\'s XDK version do not apply. ' +
-    'Set xtc.build.mode to "gradle" to use Gradle.';
+    'Choose Gradle with "Ecstasy: Select Build Mode" or the build mode in the status bar to use Gradle.';
 
 interface LspDiagnostic {
     range: { start: { line: number; character: number } };
