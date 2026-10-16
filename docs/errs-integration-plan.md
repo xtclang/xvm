@@ -1760,12 +1760,14 @@ X116 alone four times (`run-3686517296557097530`, `run-1261300602559197413`,
 failures).
 
 A race in `DocumentLockTest` ("adapters without concurrent queries keep updates serialized with
-the query") fails about one run in twenty alone and more often in the full suite, with or without
+the query") failed about one run in twenty alone and more often in the full suite, with or without
 these commits: after the hover is released, its publication and the waiting `didChange` race for
-the document lock, and the test assumes `didChange` wins.
+the document lock, and the test assumed `didChange` wins.
 
-- [ ] Make `DocumentLockTest`'s serialization case deterministic (wait until `didChange` is
-  blocked on the lock before releasing the hover).
+- [x] Make `DocumentLockTest`'s serialization case deterministic. The test waits until
+  `didChange` is blocked on the lock, then accepts either order after the release but checks the
+  invariant: a hover that succeeds was answered before the update was applied, otherwise it fails
+  with `ContentModified`. 0 failures in 30 runs alone; the full suite then had none.
 
 ### IntelliJ parity backlog (L60)
 
