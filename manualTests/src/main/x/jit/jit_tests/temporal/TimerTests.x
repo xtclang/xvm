@@ -6,6 +6,7 @@ class TimerTests {
     void run() {
         testResolution();
         testElapsed();
+        testSchedule();
     }
 
     void testResolution() {
@@ -39,5 +40,22 @@ class TimerTests {
         timer.stop();
         timer.reset();
         assert timer.elapsed == Duration.None;
+    }
+
+    void testSchedule() {
+        @Inject Timer timer;
+
+        Task task = new Task();
+        Timer.Cancellable cancel = timer.schedule(Duration.ofMillis(100), () -> task.run());
+        cancel();
+        // TODO add real tests for timer alarm invocation when the NanosTimer supports it
+    }
+
+    class Task {
+        Boolean executed = False;
+
+        void run() {
+            executed = True;
+        }
     }
 }
