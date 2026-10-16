@@ -8948,6 +8948,53 @@
         ]
       }
     },
+    "X288": {
+      "title": "Build and Run follow the build mode beside a Gradle build: embedded by default, Gradle once chosen, embedded again after switching back",
+      "manual": [
+        "Choosing the mode in the VS Code quick pick or status bar, or in IntelliJ's Build and run using box, is checked manually (18a.14); a real Gradle build is not run."
+      ],
+      "values": {
+        "file": "BuildModes.x",
+        "module": "BuildModes",
+        "source": "module BuildModes {\n    void run() {\n        @Inject Console console;\n        console.print(\"built and run embedded\");\n    }\n}\n",
+        "gradleFile": "settings.gradle.kts",
+        "gradleSource": "rootProject.name = \"playbook\"\n",
+        "wrapper": "gradlew",
+        "wrapperSource": "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/gradle-invocations.txt\"\necho \"stub Gradle: $*\"\n",
+        "windowsWrapper": "gradlew.bat",
+        "windowsWrapperSource": "@echo off\r\necho %*>> \"%~dp0gradle-invocations.txt\"\r\necho stub Gradle: %*\r\n",
+        "invocations": "gradle-invocations.txt",
+        "notice": "Gradle settings such as runXtc arguments, JVM options and the build's XDK version do not apply",
+        "output": "built and run embedded",
+        "gradleBuild": "build",
+        "gradleRun": "runXtc --module=BuildModes",
+        "statusEmbedded": "$(tools) Embedded build",
+        "statusGradle": "$(tools) Gradle build"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "The mode is set through the project's build settings, which the Settings page's Build and run using box stores; the box is not clicked. In Gradle mode Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper."
+        ]
+      }
+    },
+    "X289": {
+      "title": "a module run again runs its current source: unchanged it runs as before, edited and unsaved it runs the edit",
+      "manual": [],
+      "values": {
+        "file": "RunAgain.x",
+        "module": "RunAgain",
+        "source": "module RunAgain {\n    void run() {\n        @Inject Console console;\n        console.print(\"first version\");\n    }\n}\n",
+        "edited": "module RunAgain {\n    void run() {\n        @Inject Console console;\n        console.print(\"second version\");\n    }\n}\n",
+        "first": "first version",
+        "second": "second version",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
