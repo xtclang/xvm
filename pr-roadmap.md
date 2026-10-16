@@ -26,6 +26,7 @@ and remaining R1–R8 work are in the
 | `981e61638`, `9e7b63749`, `0f40b48ef` | Playbook: Rerun in X283, debug launches (X285), adapter chooser and shortcut (X286) | With `4598957ce` (#693) |
 | `e6157bb74` | IntelliJ macOS keymap keeps Control+Option+X for the adapter and log shortcuts | Small plugin fix; with the IntelliJ commits or standalone |
 | `a5f590c84`…`c12797b9f` | Language-server hardening: named diagnostic codes, queries off the document lock, Ecstasy labels, out-of-sync documents, rescans off the reader thread, quick-fix diagnostics and tags, syntax views for blocked modules, honest DAP placeholder and Mock capabilities, stale docs | #693 server and editors; see the [hardening map](docs/errs-integration-plan.md#language-server-hardening-2026-10-15) |
+| `b1b4ea05a`…`7886b4c1d` | Stale tracked items closed out; Mock-fallback warning; console input for embedded runs (runtime, server, both editors, X287); embedded builds from the editor snapshot with module reuse and a manifest | javatools part of `82b6ba570`: the runtime-execution PR; the rest: #693 server and editors; see the [2026-10-16 map](docs/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
 
 The runtime-execution PR would be small (three files) and independent of the compiler foundation
 PRs; it must keep the distinct `runMethod` name, which avoids an overload ambiguity in existing
