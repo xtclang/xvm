@@ -3203,8 +3203,7 @@ run completed two 1,200-cycle sessions with preserved source hashes and compiler
 deliberately stopped before the third session ran; post-GC heap rose about 15 MiB per completed
 session. After the compiler-worker heap-growth fix, three 1,200-cycle (October 6) and three
 1,800-cycle (October 8) sessions keep live-heap growth below 150 KB, and the October 8 run passes
-all provisional local targets; see the
-[October 8 workload](../../docs/errs-integration-plan.md#released-dependency-extended-workload).
+all provisional local targets.
 Multi-hour interactive and supported-platform evidence remain open.
 The final IntelliJ lifetime rerun `run-11163643850362008619` passes with zero IDE errors and checks
 the reopened document before any edit is replayed; startup plus the lifecycle case take 38.3 seconds.
