@@ -115,6 +115,8 @@ class XtcLanguageServer(
     private val onExit: (Int) -> Unit = {},
     /** Shown to the user once the handshake completes, e.g. that the requested adapter could not start. */
     private val startupWarning: String? = null,
+    /** Runs each workspace rescan; tests use it to hold one open. */
+    private val rescans: (rescan: () -> Unit) -> Unit = { it() },
 ) : LanguageServer,
     LanguageClientAware,
     AutoCloseable {
@@ -129,7 +131,7 @@ class XtcLanguageServer(
     private val embeddedRuns = EmbeddedRuns(adapter, { client })
 
     /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
-    private val discoveryRefresh = CoalescingTask("xtc-discovery", ::rediscover)
+    private val discoveryRefresh = CoalescingTask("xtc-discovery") { rescans(::rediscover) }
 
     override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
 
@@ -1402,7 +1404,10 @@ class XtcLanguageServer(
         if (adapter is XdkAdapter) discoveryRefresh.request()
     }
 
-    /** Completes once every requested rediscovery has finished, for tests that need the new graph. */
+    /**
+     * Completes once every rediscovery requested so far has finished. Workspace-wide requests wait for it, so
+     * they see the file events received before them; tests use it when they need the new graph.
+     */
     internal fun discoveryIdle(): CompletableFuture<Void> = discoveryRefresh.idle()
 
     /**
