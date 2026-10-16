@@ -18,6 +18,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.WeakCallback;
 
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xService;
@@ -51,7 +52,9 @@ public class xNanosTimer
     public void initNative() {
         s_clzDuration = f_container.getTemplate("temporal.Duration").getCanonicalClass();
 
-        markNativeProperty("elapsed");
+        markNativeProperty("startTime");
+        markNativeProperty("previousElapsed");
+        markNativeProperty("nanoTime");
 
         markNativeMethod("start"   , VOID, null);
         markNativeMethod("stop"    , VOID, null);
@@ -70,8 +73,14 @@ public class xNanosTimer
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         TimerHandle hTimer = (TimerHandle) hTarget;
         switch (sPropName) {
-        case "elapsed":
-            return frame.assignValue(iReturn, hTimer.elapsedDuration(frame));
+        case "startTime":
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(hTimer.startTime()));
+        case "previousElapsed":
+            long prev = hTimer.previousElapsed();
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(prev));
+        case "nanoTime":
+            long nanos = frame.f_context.f_container.nanoTime();
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(nanos));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -181,17 +190,17 @@ public class xNanosTimer
         }
 
         /**
-         * @return the elapsed time, in nanoseconds
+         * @return the timer start time in nanoseconds
          */
-        public synchronized long elapsed(Frame frame) {
-            long cNanosTotal = f_acNanos[PREV];
-            if (f_acNanos[START] != 0) {
-                long cAdd = frame.f_context.f_container.nanoTime() - f_acNanos[START];
-                if (cAdd > 0) {
-                    cNanosTotal += cAdd;
-                }
-            }
-            return cNanosTotal;
+        public synchronized long startTime() {
+            return f_acNanos[START];
+        }
+
+        /**
+         * @return the previously elapsed runtime of the time in nanoseconds
+         */
+        public synchronized long previousElapsed() {
+            return f_acNanos[PREV];
         }
 
         /**
@@ -228,24 +237,6 @@ public class xNanosTimer
                     alarm.reset();
                 }
             }
-        }
-
-        /**
-         * @return the elapsed time, as an Ecstasy Duration object
-         */
-        public GenericHandle elapsedDuration(Frame frame) {
-            GenericHandle hDuration = new GenericHandle(s_clzDuration);
-            LongLong      llPicos   = new LongLong(elapsed(frame)).mulChecked(PICOS_PER_NANO_LL);
-
-            if (llPicos == LongLong.OVERFLOW) {
-                // unimaginable scenario - replace with a practical infinity
-                llPicos = new LongLong(Long.MAX_VALUE);
-            }
-
-            hDuration.setField(null, "picoseconds", xInt128.INSTANCE.makeHandle(llPicos));
-            hDuration.makeImmutable();
-
-            return hDuration;
         }
 
         /**
