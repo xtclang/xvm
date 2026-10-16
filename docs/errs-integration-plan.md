@@ -1696,7 +1696,7 @@ Release evidence for this batch (a full-catalog run in both editors and soak) is
 
 ### Console input, embedded build snapshots and stale-document follow-up (2026-10-16)
 
-Seven commits on `lagergren/errs` after `c308bd7c9`, local to this branch like the batches above:
+Commits on `lagergren/errs` after `c308bd7c9`, local to this branch like the batches above:
 not mirrored into #693 (deliberately waiting) or any review branch, and in no PR. Each commit
 message records its validation, problems fixed and limits.
 
@@ -1709,6 +1709,13 @@ message records its validation, problems fixed and limits.
 | `589dfbe92` | IntelliJ Run console input and Send EOF for embedded runs | With `1a89eb1a5` |
 | `1a98a03d8` | Shared case X287 in both drivers; harnesses expect X1–X287; catalog and documentation counts are 292 | With `4598957ce`; the catalog, manual rows and both drivers travel together |
 | `7886b4c1d` | Embedded builds compile the captured editor snapshot through the analysis closure compile, reuse unchanged modules (`reused`, `revision`), write `manifest.json` and remove failed artifacts; no embedding-API change | #693 server, with `5a14da284`'s server part |
+| `3046c5746` | VS Code playbook: Go to Next Problem focuses the editor first (X2 lost focus in the full run) | Playbook infrastructure, with `4598957ce` |
+| `a975e9682` | VS Code: embedded compile and run is the default build mode, also with a Gradle project; a notice says so; Test and Clean stay Gradle | With `94a1e8c19` |
+| `2c48a551c` | IntelliJ: the same default | With `1a89eb1a5` |
+| `5a946575a` | Default-mode documentation; manual row 18a.13 | With the feature commits |
+| `78032ae04`, `f1d323bbc`, `174518d03` | Two attempted file-event ordering fixes and their revert (net zero; see below) | Nothing to extract |
+| `b7cb7df88` | A file event for a module whose analysis is running is judged against the sources it reads (X273, X274) | #693 server, with `3f9c1ee43` |
+| `74606334e` | File events are applied to the module graph before the next message is read; the background walk only catches missed events; workspace-wide requests wait for added folders (X116) | #693 server, with `3f9c1ee43` |
 
 Receipts: `:lang:lsp-server:test` 2,302 tests, 0 failures, 2 existing skips at `7886b4c1d`;
 VS Code headless suite 65 passing and IntelliJ `run.EmbeddedExecutionTest` 10 tests at `589dfbe92`;
@@ -1716,6 +1723,49 @@ native VS Code `run-8jDNJv` (X282, X287 passed) and IntelliJ FEATURES-mode
 `run-17475501379430993567` (START and X282 passed, X287 partial as declared, no IDE failures).
 `spotlessCheck`, `tsc --noEmit` and ESLint pass. The full catalog and combined suites follow as
 their own checkpoint.
+
+**File-event ordering after `3f9c1ee43`.** The full catalogs on 2026-10-16 found two regressions
+of the rescan move (hardening item 3): IntelliJ X116 logged "Document changed during analysis"
+from `willRenameFiles` (once, in `run-12737725005542517563`), and VS Code X274 failed every time
+(`run-JDhNzw`, `run-Itkzy4`, `run-5qyhkJ`; it passed on 2026-10-07). Two causes:
+
+- A file event for a module whose analysis was still running always counted as a change, so the
+  server recompiled and retired the requests waiting on its documents. LSP has no color refresh,
+  so a retired `documentColor` left no swatches. The watcher reports a new folder about 440 ms
+  after the harness opens a file in it, during the first compile (about 640 ms). This is the
+  cause of X273's failures since 2026-10-07; before `3f9c1ee43` the synchronous walk ran first
+  and usually outlasted the compile, which hid it in X274. Fixed in `b7cb7df88`.
+- The rescan move also broke ordering: an event only queued a walk, so a request sent next ran on
+  the old graph and was retired when the walk landed (X116), or, if it finished first, answered
+  from the old graph without saying so. Fixed in `74606334e`, which keeps the whole-workspace walk
+  off the reader thread.
+
+The first attempts were reverted in `174518d03`: making every workspace-wide request wait for
+every pending walk (`78032ae04`) froze IntelliJ, because LSP4IJ waits for `willRenameFiles` on the
+UI thread and walks restart when an edit lands; re-running the check when the analysis finished
+(`f1d323bbc`) timed out X49 and CFG1, most likely because the re-run could re-arm itself.
+
+Receipts at `74606334e`: `:lang:lsp-server:test` 2,308 tests, 2 existing skips, failures only in
+the `DocumentLockTest` race below (0 failures at 15:30 on the code before the event retry); IntelliJ
+unit tests 137, VS Code headless suite 66 passing; `spotlessCheck` passes. Native VS Code: the
+discovery, file-event, rename and configuration cases X49, X99, X100, X109–X121, X124, X128, X129,
+X134, X216 and CFG1–CFG3 (`run-N4b3Nu`, 24 of 24); X273–X275 three times (`run-UrUvTY`,
+`run-6tbinu`, `run-fC5i6F`, all passed; X273 for the first time since 2026-10-07); the whole
+catalog in two parts, X1–X218 (`run-rnY8Rq`, 216 passed, X130 and X218 failing as known host
+defects) and X219–X287, CFG1–CFG3, 7a.8, 7a.9 (`run-0CzAv5`, 74 of 74). Native IntelliJ 2026.2.3
+FEATURES mode: the same selection plus X273–X275 (`run-16352506642804812731`, START and 27 of 27),
+X116 alone four times (`run-3686517296557097530`, `run-1261300602559197413`,
+`run-18112678909563652004`, `run-12600836185891137242`) and the whole catalog
+(`run-17609387147133023785`, 289 passed, X254, X257, X286 and X287 partial as declared, no IDE
+failures).
+
+A race in `DocumentLockTest` ("adapters without concurrent queries keep updates serialized with
+the query") fails about one run in twenty alone and more often in the full suite, with or without
+these commits: after the hover is released, its publication and the waiting `didChange` race for
+the document lock, and the test assumes `didChange` wins.
+
+- [ ] Make `DocumentLockTest`'s serialization case deterministic (wait until `didChange` is
+  blocked on the lock before releasing the hover).
 
 ### IntelliJ parity backlog (L60)
 
@@ -13200,6 +13250,11 @@ X276/X277 and documentation/reference CodeLens X278/X279 pass in both hosts.
 - [ ] Diagnose X273's initial invalidation and native color-provider refresh/retry ownership;
   retain fresh-launch and long-session coverage before considering this optional prototype stable.
   Do not enable it by default or treat it as a public Ecstasy color library.
+  2026-10-16: the initial invalidation is diagnosed and fixed in `b7cb7df88` (the watcher's
+  report of the new folder recompiled the module during its first compile; see
+  [file-event ordering](#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16)).
+  Refresh/retry ownership stays open: LSP has no color refresh, so any genuine recompile while a
+  color request waits still leaves the editor without swatches until the next edit.
 - [ ] Carry UP16/UP23, UP25/UP26, UP24 and UP12 connection retention into their existing removal
   gates. Passing the local UP12 save experiment does not permit removing the whole formatting bridge.
 
