@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
+import { ConsoleLineEditor } from './console-input';
+
 /**
  * Embedded build and run: the language server's compiler builds into the workspace's embedded output
  * directory, and its execution worker runs the result. This is the counterpart of building and running
@@ -154,6 +156,11 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
         this.write(`${text}\n`);
     }
 
+    /** Shows what the user types; it is terminal display, not program output. */
+    protected echo(text: string): void {
+        this.writer.fire(text);
+    }
+
     protected finish(code: number): void {
         if (!this.finished) {
             this.finished = true;
@@ -225,7 +232,9 @@ const STOP_TIMEOUT_MS = 10_000;
 
 class RunTerminal extends ExecutionTerminal implements RunSession {
     private readonly runId = randomUUID();
+    private readonly input = new ConsoleLineEditor();
     private running = false;
+    private inputEnded = false;
 
     constructor(client: () => LanguageClient | undefined, private readonly target: RunTarget) {
         super(client, 'run', target.label);
@@ -252,6 +261,29 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
             }, () => this.exited(undefined, 'Stopped.'));
         if (!client) this.exited(undefined, 'Stopped.');
         setTimeout(() => this.exited(undefined, 'The program did not report its exit after Stop.'), STOP_TIMEOUT_MS);
+    }
+
+    /**
+     * Typed lines go to the program's console, including while the module still builds (the server holds
+     * them until it starts). Ctrl+D on an empty line ends the input; Ctrl+C stops the program.
+     */
+    handleInput(data: string): void {
+        if (!this.running || this.inputEnded) {
+            return;
+        }
+        const step = this.input.feed(data);
+        if (step.interrupt) {
+            this.echo('^C\r\n');
+            this.close();
+            return;
+        }
+        this.echo(step.echo);
+        const text = step.lines.join('');
+        this.inputEnded = step.end;
+        if (text || step.end) {
+            void this.client()?.sendRequest<boolean>('xtc/runInput', { runId: this.runId, text, end: step.end })
+                .then(undefined, () => undefined);
+        }
     }
 
     output(text: string): void {

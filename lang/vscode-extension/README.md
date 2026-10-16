@@ -168,7 +168,9 @@ method of that name, with at most one required parameter. Arguments reach the me
 `String[]` when it requires one, or when arguments are given and it accepts a parameter. Each run
 gets a fresh application container in one worker JVM that is reused across runs and restarted if it
 dies; programs never run inside the language server. Output streams into a dedicated terminal and
-ends with the program's exit code. Embedded runs cannot read console input yet.
+ends with the program's exit code. A program that reads console input reads what you type into
+that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty line ends the input and
+`Ctrl+C` stops the program. Lines typed while the module still builds reach it when it starts.
 
 ### Debugging
 
