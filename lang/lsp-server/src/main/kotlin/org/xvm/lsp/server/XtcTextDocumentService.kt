@@ -721,8 +721,11 @@ class XtcTextDocumentService(
             // deleted. Recompiling identical overlays here cancels otherwise current queries.
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
+            val compiler = adapter as? XdkAdapter
+            // judged against what a running analysis captured once it finishes, not by cancelling it now
+            compiler?.analysesInFlight(uri)?.whenCompleteAsync { _, _ -> refreshForFile(uri) }
             val affected =
-                (adapter as? XdkAdapter)?.changedFileScopes(uri)
+                compiler?.changedFileScopes(uri)
                     ?: adapter.affectedAnalysisScopes(uri)
             if (affected.isEmpty()) return
             diagnosticRevision++
