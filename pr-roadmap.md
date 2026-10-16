@@ -28,10 +28,14 @@ and remaining R1–R8 work are in the
 | `a5f590c84`…`c12797b9f` | Language-server hardening: named diagnostic codes, queries off the document lock, Ecstasy labels, out-of-sync documents, rescans off the reader thread, quick-fix diagnostics and tags, syntax views for blocked modules, honest DAP placeholder and Mock capabilities, stale docs | #693 server and editors; see the [hardening map](docs/errs-integration-plan.md#language-server-hardening-2026-10-15) |
 | `b1b4ea05a`…`7886b4c1d` | Stale tracked items closed out; Mock-fallback warning; console input for embedded runs (runtime, server, both editors, X287); embedded builds from the editor snapshot with module reuse and a manifest | javatools part of `82b6ba570`: the runtime-execution PR; the rest: #693 server and editors; see the [2026-10-16 map](docs/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
 | `3046c5746`…`74606334e` | Playbook focus fix; embedded as the default build mode in both editors; file events judged against a running analysis and applied before the next message (X273, X274, X116), after two reverted attempts | #693 server and editors; see the [2026-10-16 map](docs/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
+| `e4f357f49`, `843bc1247` | VS Code build mode command and status bar; the runtime test | #693 (mirrored); the test also in the runtime pull request |
 
-The runtime-execution PR would be small (three files) and independent of the compiler foundation
-PRs; it must keep the distinct `runMethod` name, which avoids an overload ambiguity in existing
-callers. Mirroring into #693 changes its scope and needs its own decision.
+**2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is on `lagergren/embedded-run-runtime` for its own pull request; see the [sync record](docs/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
+
+The runtime-execution PR, on `lagergren/embedded-run-runtime`, is small (four runtime files and its
+test) and independent of the compiler foundation PRs; it keeps the distinct `runMethod` name, which
+avoids an overload ambiguity in existing callers. #693 carries the same changes since the
+2026-10-16 synchronization, so it rebases cleanly once the runtime PR lands.
 
 ## Repository review correction — 2026-10-13
 
