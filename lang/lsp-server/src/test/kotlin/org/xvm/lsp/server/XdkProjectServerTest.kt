@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
+import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -35,7 +36,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Exercises dependency/resource edits through server notifications and open-buffer overlays. Failed or
@@ -339,6 +342,60 @@ class XdkProjectServerTest {
             )
             session.expect(consumer, mark, 9, true)
             assertThat(external.isFile).isTrue()
+        }
+    }
+
+    @Test
+    fun `a workspace-wide request sent after a folder is added waits for that folder's walk`() {
+        CompilerTestSupport.configure()
+        val first =
+            directory
+                .toRealPath()
+                .resolve("first")
+                .toFile()
+                .also { it.mkdirs() }
+        first.resolve("App.x").writeText("module App {}")
+        val second =
+            directory
+                .toRealPath()
+                .resolve("second")
+                .toFile()
+                .also { it.mkdirs() }
+        second.resolve("External.x").writeText("module External { static Int externalValue() = 1; }")
+        val hold = AtomicBoolean()
+        val walking = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        XtcLanguageServer(XdkAdapter(), rescans = { rescan ->
+            if (hold.get()) {
+                walking.countDown()
+                check(release.await(20, SECONDS))
+            }
+            rescan()
+        }).use { server ->
+            try {
+                server.connect(mock(LanguageClient::class.java))
+                server
+                    .initialize(
+                        editorInitializeParams().apply {
+                            workspaceFolders = listOf(WorkspaceFolder(first.toURI().toString(), "first"))
+                        },
+                    ).get(30, SECONDS)
+                hold.set(true)
+                server.workspaceService.didChangeWorkspaceFolders(
+                    DidChangeWorkspaceFoldersParams(
+                        WorkspaceFoldersChangeEvent(listOf(WorkspaceFolder(second.toURI().toString(), "second")), emptyList()),
+                    ),
+                )
+                assertThat(walking.await(20, SECONDS)).isTrue()
+                val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("externalValue"))
+                assertThat(symbols).describedAs("The request waits while the added folder is walked").isNotDone()
+                release.countDown()
+                val found = symbols.get(30, SECONDS)
+                assertThat(if (found.isLeft) found.left.map { it.name } else found.right.map { it.name })
+                    .contains("externalValue")
+            } finally {
+                release.countDown()
+            }
         }
     }
 
