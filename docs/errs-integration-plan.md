@@ -1863,6 +1863,27 @@ existing skips (the new class 5 tests, none skipped), xdk 62 (8 skips), `spotles
 - [ ] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingRunMethodTest` then
   come from master.
 
+**Build mode cases and supervised workers (later on 2026-10-16).** Two more commits, each replayed onto
+#693 the same way (local on #693's branch until pushed):
+
+| Commit | Content | On #693 |
+|---|---|---|
+| `27dffe40b` | Shared cases X288 (Build and Run follow the build mode beside a Gradle build, with a stub Gradle wrapper that records its arguments; IntelliJ partial) and X289 (a module run again runs its current source, including an unsaved edit); the catalog has 294 cases | `05a59b4af` |
+| `b92f689a0` | R4: one execution worker per running program, up to four at once; startup (60 s) and stop (10 s) deadlines end a stuck worker and say why; one idle worker kept for 10 minutes; `RunWorkerSupervisionTest` with a stand-in worker | `c975116b4` |
+
+Receipts on this branch at `b92f689a0`: `:lang:lsp-server:test` 2,315 tests in 310 classes, 0
+failures, 2 existing skips; IntelliJ unit tests 137; VS Code headless suite 68; `spotlessCheck`.
+Native VS Code, the whole 294-case catalog: X1–X218 `run-vEU5Jl` (216 passed, X130 and X218 failing
+as known) and X219–X289, CFG1–CFG3, 7a.8, 7a.9 `run-GZhGTd` (76 of 76). Native IntelliJ: the full run
+`run-9546831481254938590` passed its first 125 cases and stopped at X222 when the desktop was in use
+during the run; X222 then passed alone, with X280–X289 (`run-8190760150301043291`; X286–X288 partial
+as declared, no IDE failures). The cases after X222 were not rerun: the changes since their last
+full IntelliJ pass (`run-17609387147133023785`) touch only embedded execution, the VS Code build mode
+and the new cases. On #693 at `c975116b4`: `:lang:lsp-server:test` 2,315 tests, 0 failures; X280–X289
+VS Code `run-Xy5uJy` (10 of 10) and IntelliJ `run-9277276310618929550` (passed or partial as
+declared, no IDE failures); X288 and X289 also at `05a59b4af` (`run-Cg5ppi`,
+`run-8708972922734768033`).
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
