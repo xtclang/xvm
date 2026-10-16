@@ -225,5 +225,10 @@ These are **separate features** that build on the document formatter but are out
 5. **Trailing comma enforcement** — Add/remove trailing commas in multi-line lists. Minor style preference.
 
 6. **Format on save** — Automatically format when saving. Requires editor-side configuration (IntelliJ: "Reformat code" in Actions on Save; VS Code: `editor.formatOnSave`). The LSP server doesn't need changes for this — the editor calls `textDocument/formatting` on save.
+   **Status (2026-10-16):** implemented. The server also offers `willSaveWaitUntil` formatting, negotiated
+   through `initializationOptions.xtcDocumentSync.formatOnSave` (default off). VS Code exposes it as
+   `xtc.languageService.saveFormatting` (default `editor`: native `editor.formatOnSave` owns saves).
+   IntelliJ keeps server save edits disabled (UP02: LSP4IJ does not dispatch `willSaveWaitUntil`) and
+   uses native Actions on Save.
 
 7. **Multi-line parameter alignment** — Align continuation lines in parameter/argument lists with the opening paren column. Requires tracking paren positions rather than pure depth counting.
