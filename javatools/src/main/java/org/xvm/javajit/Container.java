@@ -131,6 +131,22 @@ public class Container
         return !isCore() && !isMain();
     }
 
+    /**
+     * @return true iff the Container is currently frozen
+     */
+    public boolean isFrozen() {
+        // TODO implement this for real
+        return false;
+    }
+
+    /**
+     * @return the current container timestamp in nanoseconds
+     */
+    public long nanoTime() {
+        // TODO implement this for real
+        return System.nanoTime();
+    }
+
     // TODO create child container
     // TODO control surface area
     // TODO stats surface area
