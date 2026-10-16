@@ -253,7 +253,7 @@ XML, the native report and packaged-class hashes are copied under
 
 XVM checkpoint `6ece0efab` adds the explicit `-Plsp4ijPlugin=/absolute/built/plugin/directory`
 override, using Gradle `localPlugin` and Starter's local installation. The Marketplace pin stays
-0.21.0. See the [command and input contract](../lang/intellij-plugin/TESTING.md#lsp4ij-in-tests).
+0.21.0. See the [command and input contract](../lang/intellij-plugin/testing.md#lsp4ij-in-tests).
 Compilation and configuration-cache reuse pass. ZIP metadata extraction in the Gradle plugin
 invalidated the cache with deleted temporary paths, so the override consumes upstream's existing
 `prepareSandbox` directory instead; no custom binary extraction task is added.
