@@ -146,8 +146,8 @@ Once the status bar shows `✓ Ecstasy`:
 
 | Mode | Build / Rebuild | Run |
 |------|-----------------|-----|
-| `auto` (default) | Gradle when the folder has `build.gradle(.kts)` or `settings.gradle(.kts)`, embedded otherwise | Same choice |
-| `embedded` | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/` | The server builds the module, then runs it in its execution worker JVM |
+| `embedded` (default) | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/` | The server builds the module, then runs it in its execution worker JVM |
+| `auto` | Gradle when the folder has `build.gradle(.kts)` or `settings.gradle(.kts)`, embedded otherwise | Same choice |
 | `gradle` | `./gradlew build` (Rebuild: `clean build`) | `./gradlew runXtc` |
 
 | Action | How |
@@ -156,6 +156,12 @@ Once the status bar shows `✓ Ecstasy`:
 | Rebuild | **Ecstasy: Rebuild** |
 | Run the module | The **▶ Run** lens above the `module` declaration, the editor title Run button, `Ctrl+Shift+R` (macOS) / `Ctrl+Shift+F10`, **Ecstasy: Run Module**, an `xtc` task, or `F5` |
 | Stop | Close the run's terminal, or terminate its task |
+
+Embedded is the default also in a folder with a Gradle build. It builds with the language server's
+compiler and bundled XDK, so the Gradle build's own settings, such as `runXtc` arguments, JVM options
+or its XDK version, do not apply; embedded builds and runs in such a folder say so in their terminal.
+Set `xtc.build.mode` to `gradle` to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
+available in embedded mode, since it has no counterpart for them.
 
 Embedded builds and runs first save all open files, so the build matches the sources on disk.
 Build output lists each module (built, failed, or skipped because a dependency failed) and each
@@ -264,7 +270,7 @@ All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 | Setting                                | Type      | Default | Description                                                                                              |
 |----------------------------------------|-----------|---------|----------------------------------------------------------------------------------------------------------|
 | `xtc.java.home`                        | string    | `""`    | Java 25+ install path. Overrides automatic discovery.                                                    |
-| `xtc.build.mode`                       | enum      | `"auto"`| How Build, Run and Rebuild work: `auto`, `embedded` or `gradle`. See [Building and running](#building-and-running). |
+| `xtc.build.mode`                       | enum      | `"embedded"`| How Build, Run and Rebuild work: `embedded`, `auto` or `gradle`. See [Building and running](#building-and-running). |
 | `xtc.trace.server`                     | enum      | `"off"` | LSP wire tracing: `off`, `messages`, `verbose`.                                                          |
 | `xtc.inlayHints.enabled`               | boolean   | `true`  | Show inlay hints from the language server.                                                               |
 | `xtc.sourceRoots`                      | string[]  | `[]`    | Extra absolute directories indexed by the language server (e.g. XDK standard-library sources).           |
