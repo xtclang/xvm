@@ -100,6 +100,54 @@ class XdkWorkspaceDiscoveryTest {
         }
     }
 
+    @Test
+    fun `file events bring discovery to what a full walk finds, reading only the paths they name`() {
+        source("Base.x", "module Base { class Box {} }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+
+            fun graph() = adapter.sourceModuleInputs().map { Triple(it.name, it.uri, it.dependencies) }.toSet()
+
+            /** Applies the events, then checks that a walk of the whole workspace finds nothing more. */
+            fun applied(vararg uris: String): Map<String, Set<String>> {
+                assertThat(adapter.applyFileEvents(uris.toList())).describedAs("installed").isNotNull()
+                val incremental = graph()
+                adapter.refreshDiscoveredSources()
+                assertThat(graph()).describedAs("a full walk after %s", uris.toList()).isEqualTo(incremental)
+                return incremental.associate { (name, _, dependencies) -> name to dependencies }
+            }
+            val app = source("App.x", "module App {}")
+            assertThat(applied(app)).isEqualTo(mapOf("App" to emptySet<String>(), "Base" to emptySet()))
+
+            // a watcher may report only the folder that holds a new file
+            val members = source("App/lib.x", "package lib import Base;").substringBeforeLast("/lib.x")
+            assertThat(applied(members)).containsEntry("App", setOf("Base"))
+            directory.resolve("App/lib.x").toFile().delete()
+            assertThat(applied("$members/lib.x")).containsEntry("App", emptySet<String>())
+
+            // a new folder with a module and its members, then the folder moved and deleted
+            source("Nested/Tool.x", "module Tool {}")
+            source("Nested/Tool/base.x", "package base import Base;")
+            val nested = directory.resolve("Nested").toFile()
+            assertThat(applied(nested.toURI().toString())).containsEntry("Tool", setOf("Base"))
+            val moved = directory.resolve("Moved").toFile()
+            assertThat(nested.renameTo(moved)).isTrue()
+            assertThat(applied(nested.toURI().toString(), moved.toURI().toString())).containsEntry("Tool", setOf("Base"))
+            assertThat(graph().single { it.first == "Tool" }.second).startsWith(moved.canonicalFile.toURI().toString())
+            moved.deleteRecursively()
+            assertThat(applied(moved.toURI().toString())).doesNotContainKey("Tool")
+
+            // generated sources stay out, as in a full walk
+            val generated = source("build/Generated.x", "module Generated {}")
+            assertThat(applied(generated, generated.substringBeforeLast("/Generated.x"))).doesNotContainKey("Generated")
+
+            // an open buffer outlives its file
+            adapter.updateDocument(app, "module App {}")
+            directory.resolve("App.x").toFile().delete()
+            assertThat(applied(app)).containsKey("App")
+        }
+    }
+
     private fun source(
         name: String,
         text: String,
