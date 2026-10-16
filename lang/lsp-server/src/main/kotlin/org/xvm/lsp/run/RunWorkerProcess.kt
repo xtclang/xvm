@@ -76,14 +76,31 @@ internal class RunWorkerProcess(
         return id
     }
 
+    /** Sends console input to the run; the program reads it line by line. */
+    fun input(
+        id: Long,
+        text: String,
+    ) = command("input", id) { addProperty("text", text) }
+
+    /** Ends the run's console input; a program waiting for a line gets an empty one. */
+    fun endInput(id: Long) = command("endInput", id)
+
     /** Stops the run; its listener still receives the final exit. */
-    fun stop(id: Long) {
+    fun stop(id: Long) = command("stop", id)
+
+    /** Sends a command for one run, when the worker is alive. */
+    private fun command(
+        name: String,
+        id: Long,
+        fill: JsonObject.() -> Unit = {},
+    ) {
         synchronized(lock) {
             if (process?.isAlive == true) {
                 send(
                     JsonObject().apply {
-                        addProperty("command", "stop")
+                        addProperty("command", name)
                         addProperty("id", id)
+                        fill()
                     },
                 )
             }
