@@ -40,7 +40,9 @@ class ParityWorkspace(
                 Files.readString(Path.of(System.getProperty("xtc.playbook.scenarios"))),
             ).asJsonObject["common"]
             .asJsonObject
-    private val projectRoot = with(driver) { Path.of(singleProject().getBasePath()) }
+
+    /** The project directory; most cases write only under [directory]. */
+    val projectRoot: Path = with(driver) { Path.of(singleProject().getBasePath()) }
     val directory: Path = projectRoot.resolve("parity/$id")
 
     /** Couples a fixture's path and text with its playbook workspace identity. */

@@ -224,9 +224,12 @@ this bridge; they cannot be inferred from compiler type hints.
   *Partial (2026-10-15):* both IDEs route lens, context, shortcut, task/configuration and Build actions
   through the shared requests, with Stop and Rerun, using Community and LSP4IJ APIs only. IntelliJ
   unit tests cover mode resolution, configuration migration and the run lifecycle; the VS Code
-  headless suite checks only command registration. Shared native playbook cases X280–X285 cover
-  Run lenses, builds, arguments/exit codes, Stop, Rerun, failed builds and debug launches in both
-  editors; Gradle mode and repeated-run soak are not yet driven by shared cases.
+  headless suite checks command registration and the build mode command. Shared native playbook
+  cases X280–X285 cover Run lenses, builds, arguments/exit codes, Stop, Rerun, failed builds and
+  debug launches in both editors; X288 switches between the embedded and Gradle modes beside a
+  Gradle build (with a stub wrapper, so no Gradle build runs) and X289 runs a module again,
+  unchanged and after an unsaved edit. A real Gradle build and repeated-run soak are not driven by
+  shared cases.
 - [ ] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
   no-debug execution, output, completion, disconnect and terminate to the same session service.
   Advertise only functioning requests. DAP facade shutdown must follow an explicit run ownership policy.
