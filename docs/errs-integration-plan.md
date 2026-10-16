@@ -1596,9 +1596,10 @@ the [server](../lang/lsp-server/README.md#embedded-build-and-run),
 
 #### Commit and extraction map
 
-All five commits are on `lagergren/errs` only, on top of `d0c9270c4` (the #693 sync). They are not
-yet mirrored into #693, the review branches or the outside-`lang/` comparison branch, and no
-PR contains them. Each commit message records its own validation, problems fixed and limits.
+All five commits are on `lagergren/errs`, on top of `d0c9270c4` (the #693 sync). They were
+mirrored into #693 on 2026-10-16 ([#693 synchronization](#693-synchronization-and-the-runtime-pull-request-2026-10-16)), and the runtime part is on
+`lagergren/embedded-run-runtime`; the review branches and the outside-`lang/` comparison branch do
+not have them. Each commit message records its own validation, problems fixed and limits.
 
 | Commit | Scope | Paths | Extraction target |
 |---|---|---|---|
@@ -1664,8 +1665,8 @@ suite checks command registration only; run behavior is covered by the server an
 ### Language-server hardening (2026-10-15)
 
 Nine commits on `lagergren/errs` after `457fcb570` close seven problems in the language server and
-its editor-facing contract. Like the embedded run work they are local to this branch: not mirrored
-into #693 or any review branch, and in no PR. All paths are under `lang/`, apart from this
+its editor-facing contract. Like the embedded run work they were mirrored into #693 on 2026-10-16
+([#693 synchronization](#693-synchronization-and-the-runtime-pull-request-2026-10-16)); no review branch has them. All paths are under `lang/`, apart from this
 document and `docs/errs.md`. Each commit message records its own validation, problems fixed and
 limits; the behavior is documented in the [server README](../lang/lsp-server/README.md) and the
 [playbook](../lang/doc/manual-test-plan.md).
@@ -1696,9 +1697,9 @@ Release evidence for this batch (a full-catalog run in both editors and soak) is
 
 ### Console input, embedded build snapshots and stale-document follow-up (2026-10-16)
 
-Commits on `lagergren/errs` after `c308bd7c9`, local to this branch like the batches above:
-not mirrored into #693 (deliberately waiting) or any review branch, and in no PR. Each commit
-message records its validation, problems fixed and limits.
+Commits on `lagergren/errs` after `c308bd7c9`. Like the batches above they were mirrored into #693
+on 2026-10-16 ([#693 synchronization](#693-synchronization-and-the-runtime-pull-request-2026-10-16)); no review branch has them. Each commit message records its
+validation, problems fixed and limits.
 
 | Commit | Content | Extraction target |
 |---|---|---|
@@ -1716,6 +1717,8 @@ message records its validation, problems fixed and limits.
 | `78032ae04`, `f1d323bbc`, `174518d03` | Two attempted file-event ordering fixes and their revert (net zero; see below) | Nothing to extract |
 | `b7cb7df88` | A file event for a module whose analysis is running is judged against the sources it reads (X273, X274) | #693 server, with `3f9c1ee43` |
 | `74606334e` | File events are applied to the module graph before the next message is read; the background walk only catches missed events; workspace-wide requests wait for added folders (X116) | #693 server, with `3f9c1ee43` |
+| `e4f357f49` | VS Code: **Ecstasy: Select Build Mode** and a status bar item showing the mode in folders with a Gradle build; manual row 18a.14 | With `94a1e8c19`; in #693 as `4abcfbb4f` |
+| `843bc1247` | `EmbeddingRunMethodTest` (javatools) for `runMethod` and console input | The runtime pull request (`90334a1c7`); in #693 as `d3800ebe2` |
 
 Receipts: `:lang:lsp-server:test` 2,302 tests, 0 failures, 2 existing skips at `7886b4c1d`;
 VS Code headless suite 65 passing and IntelliJ `run.EmbeddedExecutionTest` 10 tests at `589dfbe92`;
@@ -1768,6 +1771,96 @@ the document lock, and the test assumed `didChange` wins.
   `didChange` is blocked on the lock, then accepts either order after the release but checks the
   invariant: a hover that succeeds was answered before the update was applied, otherwise it fails
   with `ContentModified`. 0 failures in 30 runs alone; the full suite then had none.
+
+### #693 synchronization and the runtime pull request (2026-10-16)
+
+The commits from `5a14da284` to `e4f357f49` were replayed onto #693's branch
+`errs/full-testable-lsp-20261009`, which moved from `a37d5dddc` to `4abcfbb4f` as a fast-forward
+(41 commits). Each #693 commit keeps the original message and author and ends with
+`(cherry picked from commit …)`, so either branch's history finds the other.
+
+How the replay was done:
+- Left out: the tracking-only commits (`600c8a143`, `4f61b98de`, `da18f1dd6`, `c9da8dead`), and
+  `docs/errs*.md` and `pr-roadmap.md` in every other commit, since #693 does not carry them; also
+  `78032ae04`, `f1d323bbc` and their revert `174518d03`, which add up to nothing.
+- #693 keeps master's planning documents in `lang/doc/plans`, as it always has. It gains only
+  `plan-embedded-execution.md`, which its guides link to, without that plan's link to this
+  document, and the plan's row in the plans index (`fad93fcaf`). Status notes for the other plans
+  are not copied (`fad93fcaf`, `23f9e9441`).
+- `XtcDebugServer.kt` is taken whole from this branch in `720ebc5c4`; the copies differed only in
+  comment wrapping and one ktlint suppression.
+- `c308bd7c9`'s renames were made with `git mv` (`cdfde0056`).
+- #693 only: `ef547961d` drops the playbook's link to this document, which `b1b4ea05a` added, and
+  `d3800ebe2` adds the runtime pull request's test (`843bc1247` here).
+
+After the replay, `lang/` on #693 matches this branch apart from the plan documents and the
+formatting-only `XtcDebugServerLauncher.kt` difference that was already there.
+
+| #693 | `lagergren/errs` | Subject |
+|---|---|---|
+| `0d1bd5caf` | `5a14da284` | Add embedded build and run to the language server |
+| `b210653ae` | `94a1e8c19` | Build and run with the embedded compiler in VS Code |
+| `f5dbec314` | `1a89eb1a5` | Build and run with the embedded compiler in IntelliJ |
+| `fad93fcaf` | `50fb713a0` | Document embedded build and run across the language tooling |
+| `2c1217c3e` | `590935e77` | Rename javatools/LSP-COMPILER.md and link AGENTS.md |
+| `9c6b741d6` | `b3eea17d0` | End VS Code run tasks when the program has exited |
+| `e5fdcca8c` | `e658825c1` | Tag slow shared playbook cases |
+| `b1102895e` | `4598957ce` | Add shared playbook cases for embedded build, run and adapter switching |
+| `765c57546` | `ecdcae07c` | Track the playbook and stop-fix commits for extraction |
+| `6893fdbe7` | `981e61638` | Rerun embedded runs in the shared playbook |
+| `b6637b6a1` | `9e7b63749` | Cover debug launches in the shared playbook |
+| `15796dba5` | `e6157bb74` | Keep Control+Option+X shortcuts on the default macOS keymap |
+| `b69713c34` | `0f40b48ef` | Cover the adapter chooser, its shortcut and menu in the shared playbook |
+| `9dfd73e48` | `457fcb570` | Track the Rerun, debug-launch, keymap and adapter-chooser commits |
+| `f97be9ea9` | `a5f590c84` | Name the language server's own diagnostic codes |
+| `7a7e9a945` | `641eb3663` | Stop compiler queries from blocking document updates |
+| `6e03adc83` | `f00b0fd7f` | Show Ecstasy, not xtc, in user-facing labels |
+| `31f866ca8` | `367ab83ab` | Report documents that fall out of sync instead of serving stale text |
+| `18fd1674e` | `3f9c1ee43` | Rescan the workspace off the JSON-RPC reader thread |
+| `a0d733c27` | `69767f0b6` | Link quick fixes to their diagnostics and tag unreachable code |
+| `200778ac6` | `c103d16d3` | Keep syntax views for modules blocked by a failed dependency |
+| `720ebc5c4` | `eba208bb3` | Stop advertising debugging and mock features that do not work |
+| `50b17b2ed` | `c12797b9f` | Correct documentation that no longer matches the code |
+| `cdfde0056` | `c308bd7c9` | Rename TESTING.md and DOCUMENTATION.md to lowercase |
+| `23f9e9441` | `b1b4ea05a` | Close out tracked items that later work already finished |
+| `bc419ff34` | `d69cbabd8` | Warn the user when Tree-sitter falls back to the Mock adapter |
+| `7f08ceec3` | `82b6ba570` | Let embedded runs read console input |
+| `982182de3` | `36cb0005f` | Type console input into VS Code embedded run terminals |
+| `520e5e5be` | `589dfbe92` | Send IntelliJ Run console input to embedded runs |
+| `27409d1b4` | `1a98a03d8` | Cover embedded run console input in both editors (X287) |
+| `4873dedab` | `7886b4c1d` | Build the editor's snapshot and reuse unchanged modules in embedded builds |
+| `e0d92379f` | `3046c5746` | Focus the editor before Go to Next Problem in the VS Code playbook |
+| `ba4ce29c6` | `a975e9682` | Make embedded the default build mode in VS Code, also with Gradle |
+| `77acb2451` | `2c48a551c` | Make the embedded compiler the default build mode in IntelliJ, also with Gradle |
+| `9fa4dd9aa` | `5a946575a` | Document embedded as the default build mode |
+| `a920d4b20` | `b7cb7df88` | Judge a file event against the sources a running analysis reads |
+| `a077ef83a` | `74606334e` | Apply file events to the module graph before reading the next message |
+| `35ff92fdc` | `a0c17c990` | Make DocumentLockTest's serialization case deterministic |
+| `ef547961d` | none (#693 only) | Drop the playbook's link to a document this branch does not carry |
+| `d3800ebe2` | none (#693 only) | Test running a named entry method with arguments and console input |
+| `4abcfbb4f` | `e4f357f49` | Choose the VS Code build mode from a command and the status bar |
+
+Receipts on #693 at `d3800ebe2`: javatools 576 tests (42 existing skips), xdk 62 (8), lsp-server
+2,308 (2), dap-server 3, dsl 50, IntelliJ unit tests 137 and the VS Code headless suite 66, all
+without failures; the tree-sitter corpus parse, `verifyPlugin` (Compatible, with the same 2
+deprecated and 97 internal LSP4IJ API usages as this branch) and `spotlessCheck` pass. Native VS
+Code: X1–X218 `run-4Dexy0` (217 passed, X218 failing as known) and X219–X287, CFG1–CFG3, 7a.8,
+7a.9 `run-toWdGi` (74 of 74). Native IntelliJ FEATURES mode: `run-11848242716151387338` (289
+passed, X254, X257, X286 and X287 partial as declared, no IDE failures). At `4abcfbb4f`, with the
+build mode toggle: VS Code headless 68 passing, and X137 with X280–X287 `run-amwDhI`, 9 of 9.
+
+**Runtime pull request.** The runtime part of `5a14da284` and `82b6ba570` is on
+`lagergren/embedded-run-runtime`, three commits on master `bad3add9d`: `9a38204ee` (`runMethod`,
+entry method selection, no runner HTTP host, `lib_runner` tasks), `b99159a4c` (console input) and
+`90334a1c7` (`EmbeddingRunMethodTest`). On master the error listener stays optional, where this
+branch and #693 make it `@NotNull`, and `javatools/README.md` is unchanged, because the table its
+new row belongs to exists only here and on #693. Receipts: javatools 437 tests, 0 failures, 42
+existing skips (the new class 5 tests, none skipped), xdk 62 (8 skips), `spotlessCheck`; with
+`runMethod` changed to drop the console input, the console test fails. The branch is pushed.
+
+- [ ] Open the runtime pull request from `lagergren/embedded-run-runtime` against master.
+- [ ] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingRunMethodTest` then
+  come from master.
 
 ### IntelliJ parity backlog (L60)
 
