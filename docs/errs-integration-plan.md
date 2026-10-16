@@ -804,10 +804,12 @@ on a failure, before IDE cleanup, with verbose tracing in the disposable project
   retain their own result-ID policy. Seven new transport tests and eight existing startup-message
   tests pass, and the native X105/X122/X123 recheck passes. Native menus, quick-fix kinds and
   cancellation of obsolete edits remain intact.
-- [ ] **Demo notification cleanup:** CFG2 intentionally rejects a cyclic graph and verifies the
+- [x] **Demo notification cleanup:** CFG2 intentionally rejects a cyclic graph and verifies the
   previous valid configuration still works. After asserting rejection, dismiss only that expected
   test notification so it does not linger over subsequent cases. Keep ordinary user configuration
   errors visible; do not globally suppress server errors in the harness.
+  Done later in `581e09197`: CFG2 expires only its cyclic-graph notification after asserting
+  rejection; see the [L69–L71 / PLAT2c batch](#next-implementation-batch-l69l71--plat2c-2026-09-29).
 - [ ] **Popup inspection race:** handle a popup disappearing between its presence check and row
   read, while retaining the document-change guard and never replaying an accepted edit.
 
@@ -1079,19 +1081,27 @@ Implementation sequence and acceptance:
 - [x] **PLAT2b (current bug-fix batch):** editable IntelliJ project paths and equivalent VS Code
   configuration schema; retain custom roots through Apply/Reset and module rename/Undo. Add shared
   manual steps and focused settings/protocol tests.
-- [ ] **PLAT2c / L67 (follow-up):** evaluated Gradle/XTC project-model bridge and origin-aware
+- [x] **PLAT2c / L67 (follow-up):** evaluated Gradle/XTC project-model bridge and origin-aware
   effective configuration UI in both hosts, including the VS Code command. Reuse an existing
   imported IDE model where complete; determine the portable XTC/Gradle model contract for VS Code.
   Test custom and generated resource roots, no-build-file projects, reimport and explicit overrides.
   Manual paths are an interim supported route, not evidence this bridge already exists.
+  Done later: `18f5cb8a2` adds the exported model, both host path views/commands and X129 (see the
+  [L69–L71 / PLAT2c batch](#next-implementation-batch-l69l71--plat2c-2026-09-29)); `9ff95c9d0` and
+  `e8bdb540a` add Gradle-sync refresh and composite aggregation with X263–X265 (see the
+  [synchronization batch](#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05)).
 - [x] **PLAT2d (acceptance):** run the full platform main graph with conventional resources, plus
   a fixture whose build config selects a different directory. Verify missing/generated roots and
   resource-only changes without recompiling unrelated consumers or returning stale diagnostics.
-- [ ] **PLAT2e (native acceptance follow-up):** add shared scenarios for the resource-root column
+- [x] **PLAT2e (native acceptance follow-up):** add shared scenarios for the resource-root column
   and externally watched roots in both drivers, including Apply/Reset, resource repair and
   rename/Undo preservation. Add the precise PLAT3 call-prefix/hover/narrowed-type variants. The
   current backend/settings/protocol regressions and manual instructions do not count as native
   editor evidence.
+  Done later: X118 (resource roots through rename/Undo), X124/X134 (Apply/Reset, repair and watched
+  external roots) and X125 (PLAT3 variants) pass in both drivers; see the
+  [L69–L71 / PLAT2c batch](#next-implementation-batch-l69l71--plat2c-2026-09-29) and the
+  [watcher receipts](#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
 
 **Checked alternatives for the demo:** auth+githubCLI workspace diagnostics have no errors;
 `OAuthProvider` has five source subtypes and property implementations; `sendRequest` has six
@@ -1582,7 +1592,7 @@ the [server](../lang/lsp-server/README.md#embedded-build-and-run),
 #### Commit and extraction map
 
 All five commits are on `lagergren/errs` only, on top of `d0c9270c4` (the #693 sync). They are not
-yet mirrored into draft #693, the review branches or the outside-`lang/` comparison branch, and no
+yet mirrored into #693, the review branches or the outside-`lang/` comparison branch, and no
 PR contains them. Each commit message records its own validation, problems fixed and limits.
 
 | Commit | Scope | Paths | Extraction target |
@@ -2916,9 +2926,14 @@ Remaining functional work after these bounded implementations:
 - [x] Attach matching bundled XDK source ranges (L49); host binaries retain the explicit source-index API.
 - [x] Prove instance-property/accessor-family rename, file-moving type rename, import-alias rename
   and unresolved-name auto-import (L50, bounded as recorded above).
-- [ ] Extend the remaining cursor/header forms and inferred displays only from concrete compiler facts.
-- [ ] Complete the separate native IntelliJ parity checkpoint; implemented shared scenarios do not
+- [x] Extend the remaining cursor/header forms and inferred displays only from concrete compiler facts.
+  Superseded by the closed L57–L59 items and the bounded L64 closure; see the
+  [hardening order](#immediate-hardening-order) and the [L64 closure table](#l64-closure-audit-and-acceptance-gate).
+- [x] Complete the separate native IntelliJ parity checkpoint; implemented shared scenarios do not
   establish a native pass, and 57 catalog cases remain unimplemented in that driver.
+  Done later: L60's complete 113-case run, then uninterrupted 150-, 277- and 284-case IntelliJ runs;
+  see the [L60 backlog](#intellij-parity-backlog-l60) and the
+  [L82 completion gate](#protocol-correctness-and-the-completion-gate).
 
 ### C26/L46 editing features
 
@@ -8586,13 +8601,21 @@ three-session run as passing. Completed session records preserve their independe
 | Normal shutdown | 83.1 MiB | 97.7 MiB | 1.06 GiB |
 | Transport EOF | 83.1 MiB | 97.8 MiB | 1.28 GiB |
 
-- [ ] Identify the retained heap growth: capture comparable post-GC histograms/heap dominators at
+- [x] Identify the retained heap growth: capture comparable post-GC histograms/heap dominators at
   bounded early/late checkpoints and distinguish live caches, instrumentation retention and obsolete
   compiler state. Growth repeats in both processes; this is not yet a plateau or a proven leak.
-- [ ] Re-run the combined compiler/LSP/stdio/plugin gate and current full editor catalogs in a
+  Done later: live histograms identify retained empty `TransientThreadLocal` keys, fixed in
+  `f338cbfe9`; see the [October 5 retention checkpoint](#l82-combined-regression-and-retention-checkpoint-2026-10-05).
+  The October 8 [1,800-cycle sessions](#released-dependency-extended-workload) keep live growth below 150 KB.
+- [x] Re-run the combined compiler/LSP/stdio/plugin gate and current full editor catalogs in a
   separate time-bounded checkpoint. The present checkpoint retains the 15 focused semantic/trace
   regression results and native lifetime receipts; it does not claim a new full-suite pass.
+  Done later: the October 5 combined gate (2,991 passed, 44 existing skips) and full 264-case
+  VS Code and IntelliJ catalogs; see the [retention checkpoint](#l82-combined-regression-and-retention-checkpoint-2026-10-05)
+  and the [IntelliJ refresh receipt](#l82-intellij-refresh-and-vfs-repair-2026-10-05).
 - [ ] Retain VS Code visible Cancel, UP16/UP17 repairs and supported-platform acceptance as open.
+  Visible Cancel is done later; see the [L81 closure](#l81-native-acceptance-closure-2026-10-05).
+  UP16/UP17 repairs and supported-platform acceptance remain open under L82.
 
 Native trust/real-backup validation is commit `9553844fd`, following driver implementation
 `7364e0af8`. The final IntelliJ assertion opens and checks the reopened document without replaying
@@ -9031,8 +9054,14 @@ L64/L65's bounded implementation and shared acceptance scope is complete. Remain
   whenever it reproduces.
 - [ ] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
   Two selected passes do not establish that the intermittent host/harness behavior is fixed.
-- [ ] Obtain one uninterrupted full IntelliJ receipt after that stability work. The combined
+  Not recurred: X105 passes in the later uninterrupted 277- and 284-case IntelliJ runs, but this
+  timeout was never reproduced or diagnosed. Later X185 intention-popup failures are tracked under UP07.
+- [x] Obtain one uninterrupted full IntelliJ receipt after that stability work. The combined
   receipts above already cover every case, but do not establish a single clean run.
+  Done later: `run-11949889098742489342` (277 cases) and `run-4144503954102473659` (284 cases)
+  each complete in one process, with only X254/X257 partial for UP25/UP26; see the
+  [L82 completion gate](#protocol-correctness-and-the-completion-gate) and the
+  [284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07).
 
 The current shared catalog still has 159 cases; its SHA-256 is
 `76d95695cf5a515d9122cd7b38f0fb4da4a7704560ef2fec99c311fde0878b0a`.
@@ -9066,6 +9095,9 @@ remain separate from functionality implementation.
   X181–X184 and the current batch acceptance below record the boundary.
 - [ ] L63 remaining transformations: wider expression/statement extraction, mutable captures, broader
   inline, global safe delete and missing declarations; each needs its own semantic proof.
+  Bounded extraction, inline, configured-graph safe delete and missing declarations are implemented
+  later; see the [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04). Mutable captures
+  are a deliberate refusal there: moved out of L63 scope and still unimplemented.
 - [x] L66 resolved module/type import source links and explicit lexical alias linked editing.
 - [x] L66 damaged structure, wildcard links, conditional-source refusal, lexical lambda/same-name
   aliases and bounded formatter rules; October 5 closure and acceptance below.
@@ -9230,8 +9262,10 @@ Remaining implementation work in L62:
 - [x] Extend relocation through captured empty package directories and preserve comments/whitespace
   in qualified names. Compiler replay confirms every destination identity, including unused types.
   X173–X176 pass selected acceptance in both editors; see the October 4 receipt below.
-- [ ] Design final ownership for cross-module type moves and overlapping parent/child/companion
+- [x] Design final ownership for cross-module type moves and overlapping parent/child/companion
   operations. Uncaptured or nonexistent destination directories remain refused.
+  Done later in the [L62 ownership closure](#l62-ownership-and-relocation-closure-batch-2026-10-04)
+  (X216–X220); VS Code overlapping-move Undo remains the UP23 host exception.
 - [x] Implement explicit graph relocation through `xtc/renameFiles`, with source/resource roots,
   version checks and persisted editor Undo/Redo (X162/X163). Selected acceptance is recorded below.
   Standard `willRenameFiles` still refuses a host configuration change.
@@ -9245,6 +9279,10 @@ Remaining implementation work in L62:
 - [ ] Characterize unsupported annotation constant kinds, dependent/dynamic type shapes and
   annotations around whole relational types before extending their proof. Wider escaped-value and
   generated accessor/constructor transformations remain separate audits.
+  Annotation constant kinds are characterized later in the
+  [L62 ownership closure](#l62-ownership-and-relocation-closure-batch-2026-10-04). Dependent/dynamic
+  type shapes and annotations around whole relational types are not; they remain refusals outside
+  L62's closed compiler scope.
 
 Omitted consumers are an explicit project configuration boundary, not a feature that can be
 completed by guessing other repositories. Binary contracts remain read-only by design. The audit
@@ -9979,10 +10017,16 @@ Remaining L63 work stays explicit:
 - [x] Add named enclosing-class static qualifiers; see the class-qualified continuation below.
 - [x] Add bounded same-module cross-owner creation, including writable companions; see the destination continuation below.
 - [x] Extend cross-owner local/initializer evidence and bounded cross-module source destinations; see the continuations below.
-- [ ] Prove generic/conditional signatures and named/computed arguments; preserve current refusals
-  until scope, types and proposed-graph bindings are proven.
-- [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
-- [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
+- [x] Prove generic/conditional signatures and named/computed arguments; preserve current refusals
+  until scope, types and proposed-graph bindings are proven. Done later within the
+  [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04) bounds; inverse actual-to-formal
+  substitution remains a refusal.
+- [x] Add missing type/property declarations with equivalent ownership and compiler proof.
+  Done later within the [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04) bounds:
+  bare zero-argument classes and same-owner instance getters only.
+- [x] Broader statement extraction/inline and global safe delete remain separate refactorings.
+  Done later as separate bounded actions; the [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04)
+  lists their deliberate refusals.
 
 No Java AST field/API, clone burden or embedding entry point was added by this batch.
 
@@ -10249,8 +10293,13 @@ Remaining L63 tasks:
   (destination-import continuation below; final acceptance recorded there).
 - [ ] Prove generic destinations/substitution, computed/chained receivers, runtime Class/Type
   values, explicit generic/singleton qualifiers, named/computed arguments and conditional signatures.
-- [ ] Add missing types/properties, broader extraction/inline and global safe delete as independent
-  compiler-proven transformations.
+  Generic destinations, computed/chained and singleton receivers, named/computed arguments and
+  conditional signatures are implemented later; see the [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04).
+  Inverse substitution, runtime Class/Type values without an exact source owner and explicit generic
+  qualifiers are not: moved out of L63 scope and still unimplemented.
+- [x] Add missing types/properties, broader extraction/inline and global safe delete as independent
+  compiler-proven transformations. Done later within the
+  [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04) bounds; its refusals remain recorded there.
 
 
 The combined backend gate passes **256 tests**, zero failures/errors/skips: 21 new cross-owner
@@ -11877,9 +11926,15 @@ Next settings work remains explicit:
 
 - [x] Validated machine-local JVM/runtime controls in both clients, with clear restart ownership (X269; validation receipt below).
 - [x] Bounded live-server log/trace/status export and retention controls (X270; validation receipt below).
-- [ ] Offline/support-bundle expansion and direct settings/log links from failures.
+- [x] Offline/support-bundle expansion and direct settings/log links from failures. Done later:
+  project-owned offline export and VS Code Open Settings/Show Logs/Export Logs failure actions;
+  IntelliJ keeps LSP4IJ's Show Logs notification. See the [support export](#ui5ui6-support-export-implementation).
 - [ ] Complete option/origin inventory and fresh-project persistence, multi-root, restricted/remote
   and adapter-parity acceptance. Keep unsupported environments explicit.
+  Done later except remote hosts: the [setting contract](#ui1ui4-current-setting-contract),
+  full-exit persistence, multi-root precedence/rejection and both-adapter persistence pass in the
+  [UI1–UI7 batch](#ui1ui7-completion-batch-2026-10-06); untrusted/virtual workspaces are declared
+  unsupported. Remote-host acceptance moves to L82 and remains open.
 
 
 ## Machine-local JVM settings and log support (UI5/UI6, 2026-10-06)

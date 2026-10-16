@@ -166,7 +166,7 @@ Uses jtreesitter's Foreign Function API:
 - [x] Completion shows keywords and locals
 - [x] Integration tests verify all features against real `.x` files (`LspIntegrationTest`)
 
-### Cross-File Support (Phase 5) - PARTIAL
+### Cross-File Support (Phase 5) - COMPLETE
 
 - [x] `WorkspaceIndex` for cross-file symbol tracking (fuzzy search: exact, prefix, CamelCase, subsequence)
 - [x] Cross-file go-to-definition (via workspace index)
@@ -174,7 +174,9 @@ Uses jtreesitter's Foreign Function API:
 - [x] Background indexing via `WorkspaceIndexer` (dedicated parser/queryEngine, thread-safe)
 - [x] Import document links with best-effort target URIs via workspace index
 - [x] Auto-import code actions backed by workspace index
-- [ ] Incremental re-indexing on file change (currently re-scans on `didChangeWatchedFiles`)
+- [x] Incremental re-indexing on file change — per file (2026-10-16 check): `compile()` calls
+  `WorkspaceIndexer.reindexFile` and `didChangeWatchedFile` calls `refreshFile` for the changed URI
+  only; each changed file is still reparsed in full
 
 ### Post-plan polish implemented after the original completion
 
@@ -450,6 +452,9 @@ code actions remain open. This historical list is not the compiler's current bac
    - See "Task: Native Library Staleness Verification" below
 
 6. **Conditional Tree-sitter Dependency** (MEDIUM PRIORITY)
+   - **Status (2026-10-16): obsolete.** The compiler is the default adapter since 2026-10-06; the server
+     JAR bundles native libraries and XDK modules for every adapter, and `-Dxtc.lsp.adapter` or the IDE
+     adapter switch selects one at startup
    - When `lsp.adapter=mock`, skip all tree-sitter build tasks
    - Native library should not be built/bundled for mock adapter
    - Reduces build time for non-tree-sitter development
@@ -481,6 +486,9 @@ code actions remain open. This historical list is not the compiler's current bac
 ## Task: Conditional Tree-sitter Build
 
 **Status**: PENDING (MEDIUM PRIORITY)
+
+**Status (2026-10-16):** obsolete; see item 6 above and
+[tree-sitter/conditional-build.md](./tree-sitter/conditional-build.md).
 
 **Goal**: Skip native library bundling when `lsp.adapter=mock` to reduce build time.
 

@@ -1,7 +1,7 @@
 # VS Code Extension Enhancement Plan
 
 > **Created**: 2026-04-03
-> **Status**: Planning
+> **Status**: Implemented except runtime debugging and Marketplace publishing (2026-10-16)
 > **Scope**: Making the VS Code extension feel mature and production-ready
 
 > **Status review, 2026-09-23:** The baseline, counts and proposed changes below describe the April
@@ -11,6 +11,12 @@
 > Use the [current capability matrix](plan-ide-integration.md#adapter-capability-matrix),
 > [extension README](../../vscode-extension/README.md) and
 > [manual playbook](../manual-test-plan.md#vs-code-extension-playbook) for current behavior and checks.
+
+> **Status, 2026-10-16:** Sections 1–4 and 6 are implemented: semantic tokens, `xtc.*` settings with
+> the `workspace/configuration` bridge (`xtc.formatting`, `xtc.compiler`, `xtc.codeLens`), snippets, the
+> `xtc` task provider and an adapter status-bar item. Editor project configuration also ships:
+> source-module discovery, `xtc.compiler.libraries` and **Ecstasy: Configure Libraries and Sources**.
+> Open: runtime debugging (§5) and Marketplace publishing (§7; no publish step in CI).
 
 ## Guiding Principle
 
@@ -36,17 +42,19 @@ The original plan counted 136 lines in `extension.ts` and proposed keeping it un
 - Language configuration (brackets, comments, indentation rules)
 
 ### What's missing
-- Semantic tokens not enabled (commented out in extension.ts)
-- No VS Code settings exposed
-- No task provider (build/run/test)
-- No debug adapter (DAP) integration
-- No snippets
-- No workspace/configuration bridge (IntelliJ has this, VS Code doesn't)
-- Not published to VS Code Marketplace
+- Semantic tokens not enabled (commented out in extension.ts) — done
+- No VS Code settings exposed — done
+- No task provider (build/run/test) — done
+- No debug adapter (DAP) integration — debug type contributed; no runtime debugger (§5)
+- No snippets — done
+- No workspace/configuration bridge (IntelliJ has this, VS Code doesn't) — done
+- Not published to VS Code Marketplace — still open
 
 ---
 
 ## 1. Enable Semantic Tokens
+
+**Status (2026-10-16):** done. The client no longer disables them; VS Code layers server tokens over TextMate.
 
 ### Problem
 
@@ -88,6 +96,9 @@ VS Code's standard semantic token types. The standard types are: `namespace`,
 ---
 
 ## 2. Bridge workspace/configuration to VS Code Settings
+
+**Status (2026-10-16):** done. `package.json` contributes the `xtc.formatting.*` settings among four
+**Ecstasy** groups, and `lsp-client.ts` middleware answers `workspace/configuration`.
 
 ### Problem
 
@@ -473,6 +484,9 @@ context.subscriptions.push(
 ---
 
 ## 6. Status Bar Item
+
+**Status (2026-10-16):** done in `status-bar.ts`: `Ecstasy · Compiler`/`Tree-sitter` when ready; click
+switches the adapter or, after a failure, restarts the server.
 
 ### Problem
 

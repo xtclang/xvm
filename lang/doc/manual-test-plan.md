@@ -8,7 +8,7 @@ Scenario definitions, source fixtures and native assertions are retained below.
 ## Try the complete implementation
 
 Use this guide from the same checkout as the plugin you build. For the complete reference in
-[draft #693](https://github.com/xtclang/xvm/pull/693), check out
+[#693](https://github.com/xtclang/xvm/pull/693), check out
 `errs/full-testable-lsp-20261009`. All commands below run from the repository root.
 Use JDK 25 or newer to start Gradle. The build prepares the bundled server/compiler and editor
 dependencies; the first run may download the IDE, Node and native parser tools.
@@ -916,8 +916,8 @@ If settings don't update immediately, restart the server as a workaround.
 ### 14. Signature Help
 
 **LSP Method:** `textDocument/signatureHelp`
-**Status:** ✅ Done (tree-sitter only, same-file)
-**Works with:** Tree-sitter adapter
+**Status:** ✅ Done (Tree-sitter same-file; compiler for its supported cursor contexts)
+**Works with:** Tree-sitter and compiler adapters (compiler cases: [selected signatures](#c-selected-signatures-and-incomplete-call-candidates))
 
 **How to trigger:**
 - *IntelliJ:* Type `(` after a method name, or press Ctrl+P inside argument list
@@ -934,8 +934,8 @@ If settings don't update immediately, restart the server as a workaround.
 ### 15. Document Links
 
 **LSP Method:** `textDocument/documentLink`
-**Status:** ✅ Done (URLs in comments and string literals)
-**Works with:** Tree-sitter adapter
+**Status:** ✅ Done (URLs in comments and string literals; compiler mode also links resolved import sources)
+**Works with:** Tree-sitter and compiler adapters
 
 **How to trigger:**
 - *IntelliJ:* URLs appear as clickable links inside comments and string literals (Ctrl+Click)
@@ -2915,6 +2915,8 @@ acceptance, not a full-catalog rerun. The [acceptance reports](#acceptance-repor
 keeps initial failures, fixture/driver corrections and the unreproduced first native text mismatch.
 Generic native applyEdit version checking is covered by X144 below. P1/P2 have X145's native
 progress-model coverage; physical Cancel-button selection and the broader P3/P4 checks remain manual.
+Later: both drivers activate the visible Cancel control; see
+[progress checks](#progress-cancellation-and-client-compatibility).
 
 X139 verifies closed-tab formatting; cleanup discards dirty fixtures only after their scenario
 finishes. X143 uses a scoped wire listener so console rollover cannot hide partial-result batches.
@@ -2943,6 +2945,8 @@ and workspace and restoring settings through the editor API. Its new shared stat
 `Ecstasy playbook` with the same counter. X144/X145 pass in `run-aBMhCu` after sharing the reporter;
 this selected run does not replace the full catalog's X130 failure. Hover the counter for the full
 test title. Physical Cancel-button selection and the broader P3/P4 checks remain manual.
+Later: both drivers activate the visible Cancel control; see
+[progress checks](#progress-cancellation-and-client-compatibility).
 
 ### Selected reliability receipt (2026-10-01)
 
@@ -2958,6 +2962,9 @@ P3's dependency/inlay refresh and P4's controlled stale-report checks now have a
 provider visual checks, physical Cancel-button selection and multiple-window interactions remain
 manual. X130's selected pass and extension-free probe's `not-reproduced` result do not close its
 earlier intermittent full-run Explorer failure.
+Later: visible Cancel and two-window project lifetimes are automated; see
+[progress checks](#progress-cancellation-and-client-compatibility) and
+[native project lifetime checks](#native-project-lifetime-checks).
 
 For a realistic compiler workload, use `lang/scripts/compiler-workload.py` with the recipe in the
 [acceptance reports](#acceptance-reports).
@@ -3010,8 +3017,9 @@ identity when related information is suppressed. The tests include supported and
 
 For the next normal editor acceptance run, retain the existing signature-help cases, X123 diagnostics
 and X131 resolve checks in both drivers. These exercise the installed clients' negotiated behavior;
-they cannot substitute for the reduced-client protocol tests. Manual progress and cancellation checks and the X130 host
-failure remain open. Exact test receipts are in the
+they cannot substitute for the reduced-client protocol tests. Both drivers now activate the visible
+Cancel control without desktop pointer movement (see below); a physical pointer click, broader
+provider visual checks and the X130 host failure remain open. Exact test receipts are in the
 [acceptance reports](#acceptance-reports).
 
 ### Progress, cancellation and client compatibility
@@ -3187,12 +3195,14 @@ VS Code shared-process lifecycle passes in `project-lifecycle/run-Sh7ro5`. The f
 workspace. That failure is retained. The older Cancel attempt `run-6JOJx7` failed to select the right
 window before work finished; `run-VeotM0` now passes using the isolated renderer.
 
-Keep longer workload sessions bounded and announce their expected duration. The latest platform run
-completed two 1,200-cycle sessions with preserved source hashes and compiler retirement, then was
-deliberately stopped before the third session ran. Post-GC heap rose about 15 MiB per completed session;
-its ownership remains an investigation, not completed memory acceptance. See the
-[acceptance reports](#acceptance-reports).
-Combined suites and the full native catalogs are deferred to a separate checkpoint.
+Keep longer workload sessions bounded and announce their expected duration. The October 1 platform
+run completed two 1,200-cycle sessions with preserved source hashes and compiler retirement, then was
+deliberately stopped before the third session ran; post-GC heap rose about 15 MiB per completed
+session. After the compiler-worker heap-growth fix, three 1,200-cycle (October 6) and three
+1,800-cycle (October 8) sessions keep live-heap growth below 150 KB, and the October 8 run passes
+all provisional local targets; see the
+[October 8 workload](../../docs/errs-integration-plan.md#released-dependency-extended-workload).
+Multi-hour interactive and supported-platform evidence remain open.
 The final IntelliJ lifetime rerun `run-11163643850362008619` passes with zero IDE errors and checks
 the reopened document before any edit is replayed; startup plus the lifecycle case take 38.3 seconds.
 
