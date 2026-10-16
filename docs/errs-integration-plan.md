@@ -1856,9 +1856,10 @@ entry method selection, no runner HTTP host, `lib_runner` tasks), `b99159a4c` (c
 branch and #693 make it `@NotNull`, and `javatools/README.md` is unchanged, because the table its
 new row belongs to exists only here and on #693. Receipts: javatools 437 tests, 0 failures, 42
 existing skips (the new class 5 tests, none skipped), xdk 62 (8 skips), `spotlessCheck`; with
-`runMethod` changed to drop the console input, the console test fails. The branch is pushed.
+`runMethod` changed to drop the console input, the console test fails. The pull request is
+[#703](https://github.com/xtclang/xvm/pull/703).
 
-- [ ] Open the runtime pull request from `lagergren/embedded-run-runtime` against master.
+- [x] Open the runtime pull request from `lagergren/embedded-run-runtime` against master: #703.
 - [ ] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingRunMethodTest` then
   come from master.
 
