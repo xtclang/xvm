@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **291 scenarios**: X1–X286, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **292 scenarios**: X1–X287, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 291 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 292 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1269,10 +1269,11 @@ module Hello {
 | 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before |
 | 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs (the run is automated in X285) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
+| 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
 
-Known limits: no console input; one program at a time per server (a second concurrent run reports
-"Another program is still running"); IntelliJ *Build Module* builds every Ecstasy module; no IntelliJ
-gutter Run icon.
+Known limits: one program at a time per server (a second concurrent run reports "Another program is
+still running"); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
+*Build Module* builds every Ecstasy module; no IntelliJ gutter Run icon.
 
 ---
 
@@ -1413,7 +1414,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X286 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X287 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1561,7 +1562,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 291 scenarios: X1–X286, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 292 scenarios: X1–X287, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1575,7 +1576,7 @@ focused runs still include them. A future fast profile could exclude them for qu
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 291 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 292 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3858,6 +3859,15 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 | ID | Actions | Expected result |
 |---|---|---|
 | X286 | In an Ecstasy editor press `Ctrl+Alt+X`, then `A`, and choose **Tree-sitter**. Then open **Ecstasy: Switch Language Adapter** (VS Code Command Palette; IntelliJ **Tools** menu) and choose **Ecstasy Compiler**. | Each shortcut opens the same chooser; each choice restarts the server once (a new process) into the chosen adapter. VS Code presses the chord as renderer key events. IntelliJ checks the keymap binding and the Tools menu entry, then invokes the action from the editor and answers its popup. |
+
+### Embedded run console input (X287)
+
+Like X280–X285, this case switches to the embedded build mode for its duration. Manual steps are
+row 18a.12 in [section 18a](#18a-embedded-build-and-run).
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X287 | Run RunAsk. When it prints `Name? `, type `Grace Hopper ✓` and Enter (VS Code: in the run's terminal; IntelliJ: in the Run console), then end the input (VS Code `Ctrl+D` on the empty line; IntelliJ **Send EOF**). | The program prints `Hello, Grace Hopper ✓!`, its second `readLine` gets an empty line and prints `next=[]`, and it exits with code 0. The IntelliJ driver writes to the run's process input, the stream the console uses, rather than pressing keys in the console. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

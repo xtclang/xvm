@@ -37,6 +37,7 @@ class ParityScenarios(
         referenceLensCases()
         executionCases()
         adapterChooserCases()
+        executionInputCases()
     }
 
     internal fun case(
