@@ -105,6 +105,10 @@
                 "title": "Ecstasy: Rebuild"
             },
             {
+                "command": "xtc.selectBuildMode",
+                "title": "Ecstasy: Select Build Mode"
+            },
+            {
                 "command": "xtc.restartServer",
                 "title": "Ecstasy: Restart Language Server"
             },
@@ -398,7 +402,7 @@
                         ],
                         "default": "embedded",
                         "scope": "resource",
-                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode, the default, needs the compiler language service; in a folder with a Gradle build it does not apply the build's own settings."
+                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode, the default, needs the compiler language service; in a folder with a Gradle build it does not apply the build's own settings. Also available through Ecstasy: Select Build Mode and, in a folder with a Gradle build, the status bar."
                     },
                     "xtc.trace.server": {
                         "type": "string",

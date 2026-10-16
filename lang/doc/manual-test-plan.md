@@ -1242,7 +1242,8 @@ and VS Code render them automatically from the LSP server response — no plugin
 
 **Requests:** `xtc/build`, `xtc/run`, `xtc/stopRun`; notifications `xtc/runOutput`, `xtc/runExited`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
-**Mode:** VS Code `xtc.build.mode`; IntelliJ Settings › Build, Execution, Deployment › Ecstasy
+**Mode:** VS Code `xtc.build.mode`, **Ecstasy: Select Build Mode** or the status bar's build mode (shown in a folder
+with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy
 
 Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying the
 Gradle build's own settings do not apply.
@@ -1272,6 +1273,7 @@ module Hello {
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
 | 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
+| 18a.14 | Switching modes (VS Code) | In that folder, click **Embedded build** in the status bar and choose **Gradle**; Build; then choose **Ecstasy compiler (embedded)** with **Ecstasy: Select Build Mode** and Build again | The status bar shows **Gradle build**, and Build runs `./gradlew build`; after switching back it shows **Embedded build** and builds with the embedded compiler. The choice is stored in the folder's `xtc.build.mode`. A folder without a Gradle build shows no build mode in the status bar |
 
 Known limits: one program at a time per server (a second concurrent run reports "Another program is
 still running"); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
