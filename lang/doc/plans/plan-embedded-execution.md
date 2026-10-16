@@ -13,7 +13,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 
 | Question | Decision |
 |----------|----------|
-| Default mode | Automatic: embedded without a Gradle build, Gradle with one |
+| Default mode | Embedded, also with a Gradle build, whose own settings embedded builds and runs say do not apply (2026-10-16; previously automatic, which remains selectable) |
 | Unsaved buffers | Clients save all files first; the server builds the text it holds at the request, saved or not (R2, 2026-10-16) |
 | Run host | One persistent execution worker JVM per language server, one program at a time |
 | Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled |
