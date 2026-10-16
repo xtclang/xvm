@@ -22,6 +22,7 @@ import org.jetbrains.concurrency.Promise
 import org.xtclang.idea.XtcFileType
 import org.xtclang.idea.lsp.BuildParams
 import org.xtclang.idea.lsp.BuildResponse
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 
@@ -75,6 +76,7 @@ internal class EmbeddedBuild(
                 },
             )
         progress.output("${if (rebuild) "Rebuilding" else "Building"} with the embedded compiler...\n", ProcessOutputType.STDOUT)
+        XtcBuildSettings.gradleNotUsed(project.basePath?.let(Path::of))?.let { progress.output("$it\n", ProcessOutputType.STDOUT) }
         return EmbeddedExecution
             .server(project)
             .thenCompose { it.build(BuildParams(rebuild = rebuild)) }
