@@ -228,13 +228,7 @@ class XdkAdapter
                     // a superseded walk stops by aborting tokenization; the caller scans again
                     if (superseded()) return DiscoveryScan { null } else throw failure
                 }
-            return DiscoveryScan {
-                val current =
-                    synchronized(lifecycle) {
-                        !closed && project === previous && overlays == buffers && discovery.get() === settings
-                    }
-                if (current) installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers } else null
-            }
+            return DiscoveryScan { installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers } }
         }
 
         /**
@@ -270,32 +264,65 @@ class XdkAdapter
                 settings.catalog.withSource(file, content) { closed || discovery.get() !== settings }
             return installDiscoveredCatalog(catalog, settings, previous) {
                 if (closing) uri !in overlays else overlays[uri] == content
-            }
+            }.orEmpty()
         }
 
+        /**
+         * Applies file events to the discovered sources, reading only the files and folders they name, and returns
+         * the retired scopes. The server calls this before reading its next message, so a request sent after the
+         * events sees them and no later walk retires it; [scanDiscoveredSources] then only catches events the watcher
+         * missed. Null when concurrent discovery changes, such as a background walk installing, kept the update from
+         * being installed each time it was tried.
+         */
+        fun applyFileEvents(uris: Collection<String>): Set<String>? {
+            val paths = uris.mapNotNull(XdkSources::file).distinct()
+            repeat(MAX_EVENT_ATTEMPTS) {
+                val settings = discovery.get()
+                if (settings.explicit || paths.isEmpty()) return emptySet()
+                val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
+                val superseded = { closed || discovery.get() !== settings }
+                val catalog =
+                    try {
+                        settings.catalog.withEvents(settings.folders, paths, buffers, superseded)
+                    } catch (failure: RuntimeException) {
+                        // a superseded read stops by aborting tokenization; read again from the newer catalog
+                        if (superseded()) null else throw failure
+                    }
+                catalog?.let { installDiscoveredCatalog(it, settings, previous) { overlays == buffers } }?.let { return it }
+            }
+            return null
+        }
+
+        /** Null when an edit, a closed adapter or a newer graph or catalog kept [catalog] from being installed. */
         private fun installDiscoveredCatalog(
             catalog: XdkWorkspaceDiscovery.Catalog,
             settings: Discovery,
             previous: XdkProject,
             current: () -> Boolean,
-        ): Set<String> {
+        ): Set<String>? {
+            if (synchronized(lifecycle) { closed }) return null
             val candidate = runCatching { XdkProject(catalog.modules(previous.modules.values)) }
             val failure = candidate.exceptionOrNull()
             if (failure != null && failure !is IllegalArgumentException) throw failure
             val problem = failure?.message
-            return installSourceModules(
-                (candidate.getOrNull() ?: previous).modules.values.toList(),
-                explicit = false,
-                force = settings.problem != problem,
-            ) {
-                !closed &&
-                    project === previous &&
-                    current() &&
-                    discovery.compareAndSet(
-                        settings,
-                        settings.copy(catalog = catalog, problem = problem),
-                    )
-            }
+            var installed = false
+            val retired =
+                installSourceModules(
+                    (candidate.getOrNull() ?: previous).modules.values.toList(),
+                    explicit = false,
+                    force = settings.problem != problem,
+                ) {
+                    (
+                        !closed &&
+                            project === previous &&
+                            current() &&
+                            discovery.compareAndSet(
+                                settings,
+                                settings.copy(catalog = catalog, problem = problem),
+                            )
+                    ).also { installed = it }
+                }
+            return retired.takeIf { installed }
         }
 
         fun changeWorkspaceFolders(
@@ -2710,6 +2737,9 @@ class XdkAdapter
             /** Enough to keep parsing past ordinary mistakes; structural views do not report them. */
             const val MAX_STRUCTURE_ERRORS = 100
             const val DEBOUNCE_MILLIS = 100L
+
+            /** A file event's update is read again when a background walk installs first; it rarely needs a second try. */
+            const val MAX_EVENT_ATTEMPTS = 3
 
             /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
             fun cursorPosition(
