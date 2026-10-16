@@ -3,6 +3,7 @@ package org.xvm.lsp.run
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.entry
+import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -27,6 +28,7 @@ import org.xvm.lsp.server.XtcLanguageClient
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -155,6 +157,36 @@ class EmbeddedExecutionTest {
         started.get(60, SECONDS)
         worker.stop(id)
         exited.get(30, SECONDS)
+
+        assertThat(run("Exit").code).isEqualTo(42)
+    }
+
+    @Test
+    fun `two programs run at the same time, each in its own worker`() {
+        val outputs = List(2) { StringBuffer() }
+        val exits = List(2) { CompletableFuture<Long?>() }
+        val ids =
+            (0..1).map { index ->
+                worker.start(
+                    RunWorkerProcess.Request(listOf(lib.path), "Forever", "run", emptyList(), directory.toString()),
+                    object : RunWorkerProcess.Listener {
+                        override fun output(text: String) {
+                            outputs[index].append(text)
+                        }
+
+                        override fun exited(
+                            code: Long?,
+                            error: String?,
+                        ) {
+                            exits[index].complete(code)
+                        }
+                    },
+                )
+            }
+        await().atMost(Duration.ofSeconds(60)).until { outputs.all { "started" in it } }
+        assertThat(worker.workerPids()).hasSizeGreaterThanOrEqualTo(2)
+        ids.forEach(worker::stop)
+        exits.forEach { it.get(30, SECONDS) }
 
         assertThat(run("Exit").code).isEqualTo(42)
     }
