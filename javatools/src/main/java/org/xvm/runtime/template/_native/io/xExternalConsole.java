@@ -1,5 +1,7 @@
 package org.xvm.runtime.template._native.io;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,10 +23,12 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 /**
- * The injectable "Console" that prints to the specified PrintWriter.
+ * The injectable "Console" that prints to the specified PrintWriter and, when the host supplies one,
+ * reads lines from the specified BufferedReader.
  */
 public class xExternalConsole
         extends xTerminalConsole {
@@ -41,13 +45,17 @@ public class xExternalConsole
     /**
      * Register an external console as a named native resource.
      *
+     * @param out  the output for the console
+     * @param in   (optional) the input for {@code readLine}; its end reads as an empty line. Without
+     *             it, {@code readLine} is unsupported
+     *
      * @return the ID contained in the registered resource name
      */
-    public static long register(NativeContainer container, PrintWriter out) {
+    public static long register(NativeContainer container, PrintWriter out, BufferedReader in) {
         long id = CONSOLE_ID.incrementAndGet();
         container.addResourceSupplier(
                 new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()),
-                (frame, opts) -> INSTANCE.ensureConsole(frame, out));
+                (frame, opts) -> INSTANCE.ensureConsole(frame, out, in));
         return id;
     }
 
@@ -66,11 +74,11 @@ public class xExternalConsole
     /**
      * Injection support.
      */
-    public ObjectHandle ensureConsole(Frame frame, PrintWriter out) {
+    public ObjectHandle ensureConsole(Frame frame, PrintWriter out, BufferedReader in) {
         ServiceContext   ctx = f_container.createServiceContext("Console");
         ClassComposition clz = getCanonicalClass();
 
-        ConsoleHandle hConsole = new ConsoleHandle(clz.maskAs(getCanonicalType()), ctx, out);
+        ConsoleHandle hConsole = new ConsoleHandle(clz.maskAs(getCanonicalType()), ctx, out, in);
         ctx.setService(hConsole);
         return hConsole;
     }
@@ -126,23 +134,52 @@ public class xExternalConsole
             }
         }
 
-        case "readLine":
-            return frame.raiseException(xException.unsupported(frame));
+        case "readLine": // String prompt = "", Boolean suppressEcho = False
+            return invokeReadLine(frame, hConsole, ahArg, iReturn);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+    }
+
+    /**
+     * Read a line from the host's input. The host owns echo, so "suppressEcho" is not honored.
+     */
+    private int invokeReadLine(Frame frame, ConsoleHandle hConsole, ObjectHandle[] ahArg,
+                               int iReturn) {
+        BufferedReader in = hConsole.f_in;
+        if (in == null) {
+            return frame.raiseException(xException.unsupported(frame));
+        }
+
+        String sPrompt = ahArg[0] instanceof StringHandle hString ? hString.getStringValue() : "";
+        if (!sPrompt.isEmpty()) {
+            hConsole.f_out.print(sPrompt);
+            hConsole.f_out.flush();
+        }
+
+        try {
+            String sLine = in.readLine();
+            return frame.assignValue(iReturn, sLine == null
+                    ? xString.EMPTY_STRING
+                    : xString.makeHandle(sLine));
+        } catch (IOException e) {
+            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
+        }
     }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
     protected static class ConsoleHandle
             extends ServiceHandle {
-        protected final PrintWriter f_out;
+        protected final PrintWriter    f_out;
+        protected final BufferedReader f_in;
 
-        protected ConsoleHandle(TypeComposition clazz, ServiceContext context, PrintWriter out) {
+        protected ConsoleHandle(TypeComposition clazz, ServiceContext context, PrintWriter out,
+                                BufferedReader in) {
             super(clazz, context);
 
             f_out = out;
+            f_in  = in;
         }
     }
 
