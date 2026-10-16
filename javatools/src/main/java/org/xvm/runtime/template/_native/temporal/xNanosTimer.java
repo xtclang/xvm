@@ -18,14 +18,13 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.WeakCallback;
 
-import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
-import org.xvm.runtime.template.numbers.xInt128;
+import org.xvm.runtime.template.numbers.LongLong;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
@@ -50,8 +49,6 @@ public class xNanosTimer
 
     @Override
     public void initNative() {
-        s_clzDuration = f_container.getTemplate("temporal.Duration").getCanonicalClass();
-
         markNativeProperty("startTime");
         markNativeProperty("previousElapsed");
         markNativeProperty("nanoTime");
@@ -75,12 +72,14 @@ public class xNanosTimer
         switch (sPropName) {
         case "startTime":
             return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(hTimer.startTime()));
+
         case "previousElapsed":
-            long prev = hTimer.previousElapsed();
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(prev));
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(
+                    hTimer.previousElapsed()));
+
         case "nanoTime":
-            long nanos = frame.f_context.f_container.nanoTime();
-            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(nanos));
+            return frame.assignValue(iReturn, xInt64.INSTANCE.makeJavaLong(
+                    frame.f_context.f_container.nanoTime()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -498,12 +497,7 @@ public class xNanosTimer
 
     public static final long     PICOS_PER_MILLI    = 1_000_000_000;
     public static final long     PICOS_PER_NANO     = 1_000;
-    public static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
-    public static final LongLong PICOS_PER_NANO_LL  = new LongLong(PICOS_PER_NANO);
     public static final long     NANOS_PER_MILLI    = 1_000_000;
-
-    /**
-     * Cached Duration class.
-     */
-    private static TypeComposition s_clzDuration;
+    public static final LongLong PICOS_PER_NANO_LL  = new LongLong(PICOS_PER_NANO);
+    public static final LongLong PICOS_PER_MILLI_LL = new LongLong(PICOS_PER_MILLI);
 }
