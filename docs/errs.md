@@ -1764,7 +1764,7 @@ The original structural work list is complete; highlights moved to resolved-iden
 | | task | notes |
 |---|---|---|
 | 2.1 | Keep the parsed AST on the cached analysis | everything in this group depends on it |
-| 2.2 | `documentHighlight` | implemented by resolved identity; read/write roles are not distinguished |
+| 2.2 | `documentHighlight` | implemented by resolved identity; reads are READ, assignment and compound-assignment targets WRITE, declarations TEXT |
 | 2.3 | `foldingRange`, `selectionRange` | both are node extents, which the AST has exactly |
 | 2.4 | `workspaceSymbol` | the per-document symbols are already cached per URI; this is a query over them |
 | 2.5 | Hover, the declaration half | the signature of the declaration under the cursor, from the same walk the outline uses |
@@ -1782,8 +1782,8 @@ mixed across edits. This is the incomplete-source decision; the current adapter 
 | 3.2 | Go-to-definition, same file | name -> `IdentityConstant` -> the declaring node in this document |
 | 3.3 | Hover with types | the node's resolved type, which is what makes hover worth more than a signature |
 | 3.4 | Find-references, same file | the inverse of 3.2 over one AST |
-| 3.5 | Project compilation and cross-file source ownership, then an index | still deferred; unsaved overlays and module identity are prerequisites. Snapshot-scoped IDs from separate compilations cannot simply be joined |
-| 3.6 | Completion after a dot | unavailable; requires incomplete-source support, scope/member enumeration and generic substitution. Snapshot queries must not trigger TypeInfo construction on request threads |
+| 3.5 | Project compilation and cross-file source ownership, then an index | partial: shared module compilation with unsaved overlays owns cross-file definition/references; definition, references and workspace symbols span discovered/configured source graphs, including unopened modules. A persistent workspace index is not implemented. Snapshot-scoped IDs from separate compilations cannot simply be joined |
+| 3.6 | Completion after a dot | bounded: an explicit compiler-only probe drives completion and signature help for the supported cursor contexts, with scope/member lookup and call-site substitutions (finding 1 below); broader incomplete syntax remains bounded. Snapshot queries must not trigger TypeInfo construction on request threads |
 
 ### 4. The diagnostics work this branch left open
 
@@ -1792,7 +1792,7 @@ These are `errs` tasks rather than LSP tasks, but each changes what an editor ca
 | | task | why the editor cares |
 |---|---|---|
 | 4.1 | Preserve the `VERIFY-75` reproducer with the replay PR | fixed and regression-tested here. The original base lost the warning; filing a remote issue remains a separate authorized action, not a coding blocker |
-| 4.2 | Follow up the fresh TypeInfo capture | 37 distinct messages are classified by source/caller; array assigned-properties, XODB anonymous map and XML cursor final-type checks remain open. The historical 70-message survey is not declared complete |
+| 4.2 | Follow up the fresh TypeInfo capture | 37 distinct messages are classified by source/caller; the array assigned-property, XODB anonymous map and XML cursor final-type checks are retained in `TypeInfoFinalCompositionTest` ([follow-up](errs-audit.md#final-composition-follow-up-2026-09-22)). The historical 70-message survey is not declared complete |
 | 4.3 | Audit generic/external-type uses and reporting ownership | the refreshed audit counted 121 no-argument calls, including runtime/JIT paths. Four source-use cases plus generic and serialized-dependency cases preserve the warning. No blanket migration or general claim that used types lose diagnostics is justified |
 | 4.4 | Continue the classified failure-path audit | the seven historical broad catches include runtime and display fallbacks. Only reachable, reproduced compiler losses justify fixes in this milestone |
 
@@ -2458,6 +2458,11 @@ reporting". They divide:
 The rest cluster - `RelOpExpression`, `TypeConstant`, `ArrayAccessExpression` - so a single file is
 a contained change. This is no longer a transitive closure; it is a backlog.
 
+Later: a [fresh recount](errs-audit.md#compilerembedding-follow-up-2026-09-22) finds 121
+no-argument calls by directory, not by call graph; the 124- and 53-site figures here are not a
+current migration list. Item 4.3 in the
+[open diagnostics work](#4-the-diagnostics-work-this-branch-left-open) tracks the caller audit.
+
 **The two that were one hop away are done, and they are the warning for the rest.** They wanted
 *opposite* treatment:
 
@@ -2467,8 +2472,8 @@ a contained change. This is no longer a transitive closure; it is a backlog.
   value is the answer and a diagnostic would be noise. It now says `silent(PROBE)` rather than
   using the no-arg form, whose javadoc says it is for the runtime and whose silence is a cascade.
 
-A sweep would have made both report and one would have been wrong. Whoever takes the remaining 53
-should expect to read each one.
+A sweep would have made both report and one would have been wrong. Whoever takes the remaining
+sites should expect to read each one.
 
 ### A TypeInfo that could not describe itself *(fixed)*
 
@@ -2637,9 +2642,12 @@ the code. The prior-art branch found real bugs in this category, not just untidi
   twenty points - but those points are between stages, not inside them, so a compilation is
   abandoned at the next boundary rather than promptly. Good enough while compilations take tens
   of milliseconds; the thing to watch is `waited` in the adapter's log.
-- Completion remains unavailable on incomplete source. Same-document definition and references
-  now use retained compiler identities; the earlier statement that the AST cannot expose them was
-  superseded by the public accessors and source associations described above.
+- Completion on incomplete source is bounded: an explicit compiler-only probe supplies completion
+  and signature help for the supported cursor contexts (see
+  [the measured adapter findings](#what-the-compiler-adapter-can-and-cannot-do-measured)).
+  Same-document definition and references now use retained compiler identities; the earlier
+  statement that the AST cannot expose them was superseded by the public accessors and source
+  associations described above.
 
 ### AST placement additions after L18
 

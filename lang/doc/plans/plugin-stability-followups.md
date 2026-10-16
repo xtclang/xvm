@@ -6,6 +6,10 @@ Items surfaced during the `lsp/vscode2` work that were explicitly deferred to ke
 
 ### 1. Source files not yet audited for "XTC → Ecstasy" naming
 
+**Status (2026-10-16):** audited; no user-facing "XTC" remains in the five files below.
+`XtcIntelliJLanguage` displays "Ecstasy" and the run producer names configurations `Run <module>`.
+The other literals are log messages and the `/icons/xtc.svg` resource path; "XTC" survives only in KDoc.
+
 Scope of the naming pass in this branch was limited to files touched during the `PluginManagerCore` fix plus run-config / wizard / TextMate provider. The following weren't opened, but a future pass should:
 
 - `XtcEnterHandlerDelegate.kt` (auto-indent on Enter)
