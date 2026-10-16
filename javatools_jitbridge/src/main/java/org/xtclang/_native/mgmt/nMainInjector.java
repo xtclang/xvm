@@ -11,6 +11,7 @@ import org.xtclang._native.io.TerminalConsole;
 import org.xtclang._native.numbers.RTRandom;
 
 import org.xtclang._native.temporal.LocalClock;
+import org.xtclang._native.temporal.NanosTimer;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Nullable;
@@ -91,5 +92,8 @@ public class nMainInjector
         suppliers.put(new Resource(clockType, "clock"),      LocalClock::$createUtcClock);
         suppliers.put(new Resource(clockType, "utcClock"),   LocalClock::$createUtcClock);
         suppliers.put(new Resource(clockType, "localClock"), LocalClock::$createLocalClock);
+
+        TypeConstant timerType = pool.ensureEcstasyTypeConstant("temporal.Timer");
+        suppliers.put(new Resource(timerType, "timer"), NanosTimer::$create);
     }
 }
