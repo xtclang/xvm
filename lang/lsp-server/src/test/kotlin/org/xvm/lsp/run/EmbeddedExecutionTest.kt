@@ -1,18 +1,26 @@
 package org.xvm.lsp.run
 
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.server.EmbeddedRuns
+import org.xvm.lsp.server.RunExitedParams
+import org.xvm.lsp.server.RunInputParams
+import org.xvm.lsp.server.RunOutputParams
+import org.xvm.lsp.server.RunParams
+import org.xvm.lsp.server.XtcLanguageClient
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -53,6 +61,16 @@ class EmbeddedExecutionTest {
                     console.print("started");
                     // runs until stopped: an empty while (True) is rejected as non-terminating
                     for (Int count = 0; count >= 0; ++count) {}
+                }
+            }
+            """,
+            ASK,
+            """
+            module Waiter {
+                void run() {
+                    @Inject Console console;
+                    console.print("waiting");
+                    console.readLine();
                 }
             }
             """,
@@ -136,6 +154,101 @@ class EmbeddedExecutionTest {
         exited.get(30, SECONDS)
 
         assertThat(run("Exit").code).isEqualTo(42)
+    }
+
+    @Test
+    fun `a program reads console input line by line, and the end of input reads as an empty line`() {
+        val output = StringBuffer()
+        val prompted = CompletableFuture<Unit>()
+        val exited = CompletableFuture<Pair<Long?, String?>>()
+        val id =
+            worker.start(
+                RunWorkerProcess.Request(listOf(lib.path), "Ask", "run", emptyList(), directory.toString()),
+                object : RunWorkerProcess.Listener {
+                    override fun output(text: String) {
+                        output.append(text)
+                        if ("Name? " in output) prompted.complete(Unit)
+                    }
+
+                    override fun exited(
+                        code: Long?,
+                        error: String?,
+                    ) {
+                        exited.complete(code to error)
+                    }
+                },
+            )
+        prompted.get(60, SECONDS)
+        worker.input(id, "Ada Lovelace ✓\n")
+        worker.endInput(id)
+        val (code, error) = exited.get(60, SECONDS)
+
+        assertThat(error).isNull()
+        assertThat(code).isEqualTo(0)
+        assertThat(output.toString()).contains("Hello, Ada Lovelace ✓!").contains("next=[]")
+    }
+
+    @Test
+    fun `stop ends a program waiting for input, and the worker serves the next run`() {
+        val output = StringBuffer()
+        val waiting = CompletableFuture<Unit>()
+        val exited = CompletableFuture<Long?>()
+        val id =
+            worker.start(
+                RunWorkerProcess.Request(listOf(lib.path), "Waiter", "run", emptyList(), directory.toString()),
+                object : RunWorkerProcess.Listener {
+                    override fun output(text: String) {
+                        output.append(text)
+                        if ("waiting" in output) waiting.complete(Unit)
+                    }
+
+                    override fun exited(
+                        code: Long?,
+                        error: String?,
+                    ) {
+                        exited.complete(code)
+                    }
+                },
+            )
+        waiting.get(60, SECONDS)
+        worker.stop(id)
+        exited.get(30, SECONDS)
+
+        assertThat(run("Exit").code).isEqualTo(42)
+    }
+
+    @Test
+    fun `input typed while the module is still building reaches the program`() {
+        CompilerTestSupport.configure()
+        val ask = source("Ask.x", ASK.trimIndent())
+        val output = StringBuffer()
+        val exited = CompletableFuture<RunExitedParams>()
+        val client =
+            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {
+                    output.append(params.text)
+                }
+
+                override fun runExited(params: RunExitedParams) {
+                    exited.complete(params)
+                }
+            }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Ask", ask)))
+            EmbeddedRuns(adapter, { client }).use { runs ->
+                val started = runs.run(RunParams(module = "Ask", runId = "typed-early"))
+                // typed right away: until the build finishes and the program starts, the server holds it
+                assertThat(runs.input(RunInputParams("typed-early", "Grace\n", end = true))).isTrue()
+                assertThat(started.get(60, SECONDS).runId).isEqualTo("typed-early")
+                val exit = exited.get(60, SECONDS)
+
+                assertThat(exit.error).isNull()
+                assertThat(output.toString()).contains("Hello, Grace!").contains("next=[]")
+                assertThat(runs.input(RunInputParams("typed-early", "late\n"))).isFalse()
+                assertThat(runs.input(RunInputParams("no-such-run", "text\n"))).isFalse()
+            }
+        }
     }
 
     @Test
@@ -245,6 +358,21 @@ class EmbeddedExecutionTest {
         )
         val (code, error) = exited.get(60, SECONDS)
         return Outcome(output.toString(), code, error)
+    }
+
+    private companion object {
+        const val ASK =
+            """
+            module Ask {
+                void run() {
+                    @Inject Console console;
+                    String name = console.readLine("Name? ");
+                    console.print($"Hello, {name}!");
+                    String next = console.readLine();
+                    console.print($"next=[{next}]");
+                }
+            }
+            """
     }
 
     private fun source(
