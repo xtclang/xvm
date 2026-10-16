@@ -583,23 +583,57 @@ class XdkAdapter
                 val changed =
                     inputScopes(uri).filter { scope ->
                         val module = project.modules.values.firstOrNull { it.uri == scope }
-                        val inputs = sourceInputs(scope)
                         val root = module?.root ?: XdkSources.file(scope)
-                        file == null ||
-                            root == null ||
-                            inputs == null ||
-                            requests[scope]?.result?.isDone == false ||
-                            // A failed current analysis still owns its captured source inputs.
-                            // Only fallback builds can predate a failure (e.g. a missing dependency);
-                            // matching that old build must not suppress recovery after recreation.
-                            (
-                                completed[scope]?.sourceInputs == null &&
-                                    project.affected(scope).any { completed[it]?.succeeded == false }
-                            ) ||
-                            !XdkFileChanges.unchanged(file, root, inputs, openSources)
+                        val running = requests[scope]?.takeUnless { it.result.isDone }
+                        when {
+                            file == null || root == null -> true
+
+                            // judged against what the running analysis reads, which no finished one has yet
+                            running != null -> !readsUnchanged(running, file, root, openSources)
+
+                            else -> {
+                                val inputs = sourceInputs(scope)
+                                inputs == null ||
+                                    // A failed current analysis still owns its captured source inputs.
+                                    // Only fallback builds can predate a failure (e.g. a missing dependency);
+                                    // matching that old build must not suppress recovery after recreation.
+                                    (
+                                        completed[scope]?.sourceInputs == null &&
+                                            project.affected(scope).any { completed[it]?.succeeded == false }
+                                    ) ||
+                                    !XdkFileChanges.unchanged(file, root, inputs, openSources)
+                            }
+                        }
                     }
                 project.orderedScopes(changed.flatMapTo(linkedSetOf(), project::affected))
             }
+
+        /**
+         * Whether a file event at [file] leaves the sources of [request], a running analysis, as it reads them.
+         * The watcher reports a change after making it, so an analysis that has not read its sources yet will
+         * read the changed files; the watcher's report of a folder the editor just created then cancels nothing.
+         */
+        private fun readsUnchanged(
+            request: Request,
+            file: File,
+            root: File,
+            overlays: Map<File, String>,
+        ): Boolean =
+            when (val read = request.sources) {
+                SourceRead.Pending -> true
+                SourceRead.Reading -> false
+                is SourceRead.Read -> read.inputs != null && XdkFileChanges.unchanged(file, root, read.inputs, overlays)
+            }
+
+        /** Records on [request] what [capture] read, so a file event during the analysis is judged against it. */
+        private fun <T> reading(
+            request: Request,
+            inputs: (T) -> XdkSources.Inputs?,
+            capture: () -> T,
+        ): T {
+            request.sources = SourceRead.Reading
+            return capture().also { request.sources = SourceRead.Read(inputs(it)) }
+        }
 
         private fun sourceInputs(scope: String): XdkSources.Inputs? =
             completed[scope]?.sourceInputs
@@ -1045,6 +1079,24 @@ class XdkAdapter
 
             /** The queued work of an editor compile. */
             val task: CompilerQueueTrace.Work get() = checkNotNull(queued) { "A build compile is never queued on its own" }
+
+            /** How far this analysis has got in reading its sources; see [readsUnchanged]. */
+            @Volatile
+            var sources: SourceRead = SourceRead.Pending
+        }
+
+        /** How far an analysis has got in reading its sources from disk and the editor's buffers. */
+        private sealed interface SourceRead {
+            /** Not read yet: it reads the files as they are after every file event received so far. */
+            data object Pending : SourceRead
+
+            /** Being read: a file may have been read before or after a change to it. */
+            data object Reading : SourceRead
+
+            /** Read; null when the analysis compiles only an open buffer. */
+            data class Read(
+                val inputs: XdkSources.Inputs?,
+            ) : SourceRead
         }
 
         /** New compilation request together with the superseded work that must be retired. */
@@ -1380,7 +1432,7 @@ class XdkAdapter
                 return compileOne(
                     request,
                     request.uri,
-                    captureSources(request) { isStale(request) },
+                    reading(request, { it?.inputs }) { captureSources(request) { isStale(request) } },
                     request.dependencies,
                 )
             }
@@ -1420,15 +1472,26 @@ class XdkAdapter
             each: (module: XdkSourceModule, analysis: ModuleAnalysis, reused: Boolean, sources: XdkSources?) -> Unit,
         ): ModuleAnalysis {
             val captured =
-                order.associateWith { module ->
-                    try {
-                        Result.success(
-                            XdkSources.capture(module.root, request.overlays, module.resourceFiles) {
-                                isStale(request)
-                            },
-                        )
-                    } catch (failure: IOException) {
-                        Result.failure(failure)
+                reading(
+                    request,
+                    { reads ->
+                        reads.entries
+                            .firstOrNull { it.key.uri == request.scope }
+                            ?.value
+                            ?.getOrNull()
+                            ?.inputs
+                    },
+                ) {
+                    order.associateWith { module ->
+                        try {
+                            Result.success(
+                                XdkSources.capture(module.root, request.overlays, module.resourceFiles) {
+                                    isStale(request)
+                                },
+                            )
+                        } catch (failure: IOException) {
+                            Result.failure(failure)
+                        }
                     }
                 }
             // A source-owned module must never fall back to an older host-supplied binary.
