@@ -15,10 +15,11 @@ class XtcBuildConfigurable(
         return panel {
             row("Build and run using:") {
                 comboBox(XtcBuildMode.entries.toList())
-                    .bindItem({ settings.mode }, { settings.mode = it ?: XtcBuildMode.AUTOMATIC })
+                    .bindItem({ settings.mode }, { settings.mode = it ?: XtcBuildMode.EMBEDDED })
                     .comment(
-                        "The embedded compiler builds with the language server's compiler and runs in its execution " +
-                            "worker, without Gradle. Run configurations set to the project default follow this choice.",
+                        "The embedded compiler, the default, builds with the language server's compiler and runs in its " +
+                            "execution worker, without Gradle, also when the project has a Gradle build. Run configurations " +
+                            "set to the project default follow this choice.",
                     )
             }
         }
