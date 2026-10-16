@@ -142,7 +142,9 @@ Once the status bar shows `✓ Ecstasy`:
 ### Building and running
 
 `xtc.build.mode` chooses how a workspace folder builds and runs, like IntelliJ's
-*Build and run using* setting:
+*Build and run using* setting. **Ecstasy: Select Build Mode** chooses it from a list for the
+active folder; in a folder with a Gradle build, the status bar shows the mode (**Embedded build** or
+**Gradle build**), and clicking it opens the same list.
 
 | Mode | Build / Rebuild | Run |
 |------|-----------------|-----|
@@ -160,7 +162,8 @@ Once the status bar shows `✓ Ecstasy`:
 Embedded is the default also in a folder with a Gradle build. It builds with the language server's
 compiler and bundled XDK, so the Gradle build's own settings, such as `runXtc` arguments, JVM options
 or its XDK version, do not apply; embedded builds and runs in such a folder say so in their terminal.
-Set `xtc.build.mode` to `gradle` to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
+Choose **Gradle** with **Ecstasy: Select Build Mode** or the status bar, or set `xtc.build.mode` to
+`gradle`, to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
 available in embedded mode, since it has no counterpart for them.
 
 Embedded builds and runs first save all open files, so the build matches the sources on disk.
@@ -237,6 +240,7 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecsta
 | `Ecstasy: Run Module`                    | Build and run the editor's module, per `xtc.build.mode` |
 | `Ecstasy: Build`                         | Build the folder's modules, per `xtc.build.mode`        |
 | `Ecstasy: Rebuild`                       | Rebuild the folder's modules from scratch               |
+| `Ecstasy: Select Build Mode`             | Choose embedded, Gradle or automatic for the folder     |
 | `Ecstasy: Restart Language Server`       | Stop and restart the LSP server                        |
 | `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
 
