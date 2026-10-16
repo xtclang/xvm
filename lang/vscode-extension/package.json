@@ -393,12 +393,12 @@
                         "enumItemLabels": ["Automatic", "Ecstasy compiler (embedded)", "Gradle"],
                         "enumDescriptions": [
                             "Use Gradle for folders with a Gradle build, and the embedded compiler otherwise.",
-                            "Build, run and rebuild with the language server's compiler; builds go to build/xtc/embedded.",
+                            "Build, run and rebuild with the language server's compiler; builds go to build/xtc/embedded. The default, also in folders with a Gradle build.",
                             "Build and run through the project's Gradle build."
                         ],
-                        "default": "auto",
+                        "default": "embedded",
                         "scope": "resource",
-                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode needs the compiler language service."
+                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode, the default, needs the compiler language service; in a folder with a Gradle build it does not apply the build's own settings."
                     },
                     "xtc.trace.server": {
                         "type": "string",
