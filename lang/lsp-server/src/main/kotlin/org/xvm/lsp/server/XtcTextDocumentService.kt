@@ -271,6 +271,29 @@ class XtcTextDocumentService(
         partial: ((R) -> PartialResults.Plan<R>)? = null,
         convert: (T) -> R,
     ): CompletableFuture<R> {
+        // File events reach the server before a workspace-wide request, but their rescan runs off the reader
+        // thread. Starting only once it has finished means the request sees them, and their refresh cannot
+        // retire it: a client such as LSP4IJ reports a refused willRenameFiles as an IDE error.
+        val rescan = if (workspace) server.discoveryIdle() else null
+        if (rescan != null && !rescan.isDone) {
+            return rescan
+                .handle { _, _ -> null }
+                .thenCompose { startQuery(method, uri, request, true, reportsOutOfSync, sourceOnly, progress, partial, convert) }
+        }
+        return startQuery(method, uri, request, workspace, reportsOutOfSync, sourceOnly, progress, partial, convert)
+    }
+
+    private fun <T, R> startQuery(
+        method: String,
+        uri: String,
+        request: () -> CompletableFuture<T>,
+        workspace: Boolean,
+        reportsOutOfSync: Boolean,
+        sourceOnly: Boolean,
+        progress: WorkDoneProgressParams?,
+        partial: ((R) -> PartialResults.Plan<R>)?,
+        convert: (T) -> R,
+    ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
         val trace = ExecutionTrace.span("lsp-query", method, uri)
         ExecutionTrace.event(trace, "start")
