@@ -65,60 +65,32 @@ public class NanosTimer
     // ----- NanosTimer implementation -------------------------------------------------------------
 
     /**
-     * The native property getter method:
-     *
-     * <p>{@code    Int nanoTime();}
-     */
-    public Int64 nanoTime$get(Ctx ctx) {
-        long nanos = ctx.container.nanoTime();
-        return Int64.$box(nanos);
-    }
-
-    /**
      * The primitive property getter method:
      *
-     * <p>{@code    Int nanoTime();}
+     * <p>{@code Int nanoTime();}
      */
     public long nanoTime$get$p(Ctx ctx) {
         return ctx.container.nanoTime();
     }
 
     /**
-     * The native property getter method:
-     *
-     * <p>{@code    Int startTime();}
-     */
-    public Int64 startTime$get(Ctx ctx) {
-        long nanos = ctx.container.nanoTime();
-        return Int64.$box(nanos);
-    }
-
-    /**
      * The primitive property getter method:
      *
-     * <p>{@code    Int startTime();}
+     * <p>{@code Int startTime();}
      */
     public long startTime$get$p(Ctx ctx) {
         return started;
     }
 
     /**
-     * The native property getter method:
-     *
-     * <p>{@code    Int startTime();}
-     */
-    public Int64 previousElapsed$get(Ctx ctx) {
-        long nanos = ctx.container.nanoTime();
-        return Int64.$box(nanos);
-    }
-
-    /**
      * The primitive property getter method:
-     * <p>{@code    Int startTime();}
+     *
+     * <p>{@code  Int previousTime();}
      */
     public long previousElapsed$get$p(Ctx ctx) {
         return previousElapsed;
     }
+
     // ----- Timer implementation ------------------------------------------------------------------
 
     @Override
@@ -141,8 +113,8 @@ public class NanosTimer
             return this;
         }
 
-        previousElapsed += (ctx.container.nanoTime() - started);
-        started = 0L;
+        previousElapsed += ctx.container.nanoTime() - started;
+        started          = 0L;
 
         for (nAlarmHolder holder : alarms) {
             holder.stop(ctx);
@@ -164,7 +136,7 @@ public class NanosTimer
 
     @Override
     public nFunction scheduleꖛ0$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
-                                  boolean keepAlive, boolean dfltKeepAlive) {
+                                   boolean keepAlive, boolean dfltKeepAlive) {
         long         nanos       = Int128.$div(ctx, delayLow, delayHigh, PICOS_PER_NANO, 0L);
         boolean      daemon      = !dfltKeepAlive && keepAlive;
         long         now         = ctx.container.nanoTime();
@@ -418,14 +390,15 @@ public class NanosTimer
                 this.alarm = alarm;
             }
 
-            private Ctx ctx;
+            private final Ctx ctx;
 
             private nAlarmHolder alarm;
 
             @Override
             public void run() {
-                nAlarmHolder alarm = this.alarm;
-                long extraMillis = alarm.checkReadyMillis(ctx);
+                nAlarmHolder alarm       = this.alarm;
+                long         extraMillis = alarm.checkReadyMillis(ctx);
+
                 if (extraMillis == 0) {
                     this.alarm = null;
                     alarm.run(ctx);
@@ -437,8 +410,8 @@ public class NanosTimer
 
             @Override
             public boolean cancel() {
-                boolean cancelled = super.cancel();
-                nAlarmHolder holder = this.alarm;
+                boolean      cancelled = super.cancel();
+                nAlarmHolder holder    = this.alarm;
                 if (holder != null && cancelled) {
                     this.alarm = null;
                 }
