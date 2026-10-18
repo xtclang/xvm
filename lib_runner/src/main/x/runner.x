@@ -66,8 +66,8 @@ module runner.xtclang.org {
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
      * @param rootDir     the optional file-system root for the task
-     * @param method      the name of the method to invoke in the module
-     * @param args        the argument array to pass to that method, or Null to pass none
+     * @param method      (optional) the name of the method to invoke in the module; `run` by default
+     * @param args        (optional) the argument array to pass to that method; `Null` to pass none
      *
      * @return the task identifier
      */
@@ -259,10 +259,7 @@ module runner.xtclang.org {
             running   = True;
 
             // the host decides from the method's signature whether an argument array is passed
-            Tuple callArgs = ();
-            if (String[] argv ?= args) {
-                callArgs = (argv);
-            }
+            Tuple callArgs = args == Null ? () : (args);
 
             @Future Tuple<Int, String> completion;
             @Future Tuple              outcome = container.as(Container).invoke(method, callArgs);

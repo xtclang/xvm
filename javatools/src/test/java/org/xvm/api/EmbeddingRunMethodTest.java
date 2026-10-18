@@ -77,17 +77,44 @@ public class EmbeddingRunMethodTest {
         String[] none = new String[0];
         String[] some = {"a", "b c"};
 
-        assertNull(InterpreterControl.entryArguments(module, "run", none));
-        assertNull(InterpreterControl.entryArguments(module, "run", some));
-        assertArrayEquals(none, InterpreterControl.entryArguments(module, "greet", null));
-        assertArrayEquals(some, InterpreterControl.entryArguments(module, "greet", some));
-        assertNull(InterpreterControl.entryArguments(module, "optional", none));
-        assertArrayEquals(some, InterpreterControl.entryArguments(module, "optional", some));
+        assertNull(EmbeddingSupport.entryArguments(module, "run", none));
+        assertNull(EmbeddingSupport.entryArguments(module, "run", some));
+        assertArrayEquals(none, EmbeddingSupport.entryArguments(module, "greet", null));
+        assertArrayEquals(some, EmbeddingSupport.entryArguments(module, "greet", some));
+        assertNull(EmbeddingSupport.entryArguments(module, "optional", none));
+        assertArrayEquals(some, EmbeddingSupport.entryArguments(module, "optional", some));
 
         assertRejected(module, "two", "Unsupported arguments");
         assertRejected(module, "typed", "Unsupported argument type");
         assertRejected(module, "overloaded", "Ambiguous method");
         assertRejected(module, "absent", "Missing method");
+    }
+
+    @Test
+    public void anEntryMethodContributedByAnAnnotationIsFoundAndRuns() throws IOException {
+        compileAndStore("""
+                module Contributions {
+                    annotation Runnable into module {
+                        void run() {
+                            @Inject Console console;
+                            console.print("run from an annotation");
+                        }
+                    }
+                }
+                """);
+        ModuleStructure module = compile("""
+                @Runnable
+                module Annotated {
+                    package contributions import Contributions;
+                    import contributions.Runnable;
+                }
+                """, input());
+        new DirRepository(dirOut.toFile(), false).storeModule(module);
+
+        // the module declares no run method of its own; its annotation contributes one
+        assertNull(EmbeddingSupport.entryArguments(module, "run", new String[0]));
+        String output = run("Annotated", "run", List.of(), null);
+        assertTrue(output.contains("run from an annotation"), output);
     }
 
     @Test
@@ -174,13 +201,17 @@ public class EmbeddingRunMethodTest {
 
     private static void assertRejected(ModuleStructure module, String methodName, String reason) {
         IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> InterpreterControl.entryArguments(module, methodName, new String[0]));
+                () -> EmbeddingSupport.entryArguments(module, methodName, new String[0]));
         assertTrue(failure.getMessage().contains(reason), failure.getMessage());
     }
 
     private static ModuleStructure compile(String source) {
+        return compile(source, repo());
+    }
+
+    private static ModuleStructure compile(String source, ModuleRepository repository) {
         ErrorList       errs   = new ErrorList(25);
-        ModuleStructure module = support.compile(source, repo(), errs);
+        ModuleStructure module = support.compile(source, repository, errs);
         assertNotNull(module, () -> "compile failed: " + errs.getErrors());
         assertFalse(errs.hasSeriousErrors(), () -> "compile failed: " + errs.getErrors());
         return module;
