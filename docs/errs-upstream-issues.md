@@ -452,7 +452,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
 | **UP27 — LSP4IJ — bridged; long continuation passes**; upstream [#1700](https://github.com/redhat-developer/lsp4ij/pull/1700) merged, unreleased | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Focused and long continuation runs pass with zero IDE errors/freeze dumps. Original errors remain recorded. | Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation, then repeat the many-file stress and long native acceptance. |
-| **UP28 — vscode-languageclient — bridged** | Closing the transport during initialization clears the internal startup promise before `start()` returns it. The lost promise can reject unhandled while the returned promise resolves, and default error handlers display duplicate notifications. | The Ecstasy client observes both the initiating and idempotent in-flight `start()` promises, requires Running, and owns one actionable startup notification. X272 checks command rejection, one visible failure, no unhandled rejection, offline export and recovery; `run-W9g4f3` passes X269–X272. | Upstream captures and always returns/observes the original startup promise, including transport closure. Remove the double observation only after X272 passes without it. |
+| **UP28 — vscode-languageclient — bridged**; lost promise fixed upstream in [#1867](https://github.com/microsoft/vscode-languageserver-node/pull/1867), unreleased; unhandled `stop()` open as [#1307](https://github.com/microsoft/vscode-languageserver-node/issues/1307) | Closing the transport during initialization clears the internal startup promise before `start()` returns it. The lost promise can reject unhandled while the returned promise resolves, and default error handlers display duplicate notifications. | The Ecstasy client observes both the initiating and idempotent in-flight `start()` promises, requires Running, and owns one actionable startup notification. X272 checks command rejection, one visible failure, no unhandled rejection, offline export and recovery; `run-W9g4f3` passes X269–X272. | Upstream captures and always returns/observes the original startup promise, including transport closure. Remove the double observation only after X272 passes without it. |
 | **UP29 — IntelliJ test Driver — bridged** | `waitFor` checks a successful predicate again after leaving its loop. A changed connection state can then produce an immediate false timeout; its deadline also uses wall-clock time. | Test-only `UiWaits` accepts each observation once and uses a monotonic deadline. Five regressions cover changing readiness, pending reads, actual timeout, cancellation and nullable values. Restart/refresh X137/X146/X259 pass with the UP27 bridge disabled. | Driver accepts the successful observation without another remote read and uses elapsed monotonic time; the regression and restart selection pass without our polling implementation. |
 
 ### UP29: a successful readiness observation was checked again (2026-10-06)
@@ -491,7 +491,21 @@ instance-level `stop` monkey patch is now a normal subclass override, retaining 
 the library's unawaited stop during failed initialization. `// TODO VSCODE: UP28` records removal.
 
 The final focused run checks the actual visible notification as well as the command outcome;
-expected negative-test notifications are cleared between cases. No upstream issue or PR was filed.
+expected negative-test notifications are cleared between cases.
+
+Upstream status (2026-10-18): the lost startup promise is fixed by another contributor's
+[#1867](https://github.com/microsoft/vscode-languageserver-node/pull/1867), merged 2026-09-29 but not in a release; the latest,
+`vscode-languageclient` 10.1.2, is from 2026-09-25. The double `start()` observation stays until a
+release contains it and X272 passes without it. The unawaited `stop()` during failed initialization
+is still on `main`: the client is still Starting, so `stop()` rejects with "Client is not running
+and can't be stopped" and nothing handles it. It is reported as [#1307](https://github.com/microsoft/vscode-languageserver-node/issues/1307), where the
+maintainer invited a pull request; [our comment](https://github.com/microsoft/vscode-languageserver-node/issues/1307#issuecomment-6253116299)
+confirms it on `main` and proposes releasing the half-started connection without `stop()`, with a
+test based on #1867's crash-on-initialize server. Our `stop()` override, which catches every
+rejection, stays until that is released. Whether a server that answers `initialize` with an error
+is left running has not been tested. Pull requests there require Microsoft's contributor license
+agreement. The duplicate notifications are configuration (`initializationFailedHandler`), not a
+defect to report.
 
 ## UP17: local workaround assessment (2026-10-05)
 
