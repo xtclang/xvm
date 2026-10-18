@@ -642,10 +642,13 @@ jobs:
                   cp "${VSIX_FILES[0]}" "$ASSET_NAME"
                   sha256sum "$ASSET_NAME" > "$CHECKSUM_NAME"
                   VERSION=$(unzip -p "$ASSET_NAME" extension/package.json | jq -r '.version')
+                  # The oldest VS Code the extension installs on, from its manifest (e.g. ^1.140.0).
+                  ENGINE=$(unzip -p "$ASSET_NAME" extension/package.json | jq -r '.engines.vscode')
 
                   echo "asset-name=$ASSET_NAME" >> $GITHUB_OUTPUT
                   echo "checksum-name=$CHECKSUM_NAME" >> $GITHUB_OUTPUT
                   echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "engine=${ENGINE#^}" >> $GITHUB_OUTPUT
 
                   echo "📦 Prepared release assets (extension version $VERSION):"
                   ls -lh "$ASSET_NAME" "$CHECKSUM_NAME"
@@ -665,6 +668,7 @@ jobs:
 
                   RELEASE_TAG="vscode-extension-snapshots"
                   VERSION="${{ steps.prepare.outputs.version }}"
+                  ENGINE="${{ steps.prepare.outputs.engine }}"
                   COMMIT="${{ steps.commit.outputs.commit }}"
                   ASSET_NAME="${{ steps.prepare.outputs.asset-name }}"
                   CHECKSUM_NAME="${{ steps.prepare.outputs.checksum-name }}"
@@ -676,7 +680,7 @@ jobs:
                   Build commit: \`${COMMIT}\`
                   Build date: ${BUILD_DATE}
 
-                  Requires VS Code 1.101 or newer. Install from the Extensions view via ... -> Install from VSIX...,
+                  Requires VS Code ${ENGINE} or newer. Install from the Extensions view via ... -> Install from VSIX...,
                   or from a terminal: \`code --install-extension ${ASSET_NAME}\`
 
                   Download the current GitHub snapshot VSIX: \`${ASSET_NAME}\`."
