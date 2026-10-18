@@ -47,23 +47,75 @@ internal object XdkLexical {
                 )
         } ?: true
 
-    /** Brace, parenthesis and bracket depths used while scanning a token sequence. */
+    /**
+     * Brace, parenthesis and bracket depths used while scanning a token sequence. [statementSwitches] marks, for each open brace, whether it is
+     * the body of a switch statement, whose `case` and `default` labels align with the `switch` in XDK
+     * style; a switch expression's labels are indented like any other content. [pendingSwitch] holds the
+     * parenthesis depth of a switch statement whose body has not opened yet, and [last] the previous
+     * token that is not a comment.
+     */
     private data class Nesting(
         val braces: Int = 0,
         val parentheses: Int = 0,
         val brackets: Int = 0,
+        val statementSwitches: List<Boolean> = emptyList(),
+        val pendingSwitch: Int? = null,
+        val last: Token.Id? = null,
     ) {
+        /** Whether the innermost open brace is a switch statement's body. */
+        val inStatementSwitch: Boolean get() = statementSwitches.lastOrNull() == true
+
         fun after(id: Token.Id): Nesting =
             when (id) {
-                Token.Id.L_CURLY -> copy(braces = braces + 1)
-                Token.Id.R_CURLY -> copy(braces = (braces - 1).coerceAtLeast(0))
-                Token.Id.L_PAREN, Token.Id.ASYNC_PAREN -> copy(parentheses = parentheses + 1)
-                Token.Id.R_PAREN -> copy(parentheses = (parentheses - 1).coerceAtLeast(0))
-                Token.Id.L_SQUARE -> copy(brackets = brackets + 1)
-                Token.Id.R_SQUARE -> copy(brackets = (brackets - 1).coerceAtLeast(0))
-                else -> this
+                Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT -> {
+                    this
+                }
+
+                Token.Id.SWITCH -> {
+                    copy(pendingSwitch = parentheses.takeIf { last in statementStarts }, last = id)
+                }
+
+                Token.Id.L_CURLY -> {
+                    copy(
+                        braces = braces + 1,
+                        statementSwitches = statementSwitches + (pendingSwitch == parentheses),
+                        pendingSwitch = null,
+                        last = id,
+                    )
+                }
+
+                Token.Id.R_CURLY -> {
+                    copy(braces = (braces - 1).coerceAtLeast(0), statementSwitches = statementSwitches.dropLast(1), last = id)
+                }
+
+                Token.Id.L_PAREN, Token.Id.ASYNC_PAREN -> {
+                    copy(parentheses = parentheses + 1, last = id)
+                }
+
+                Token.Id.R_PAREN -> {
+                    copy(parentheses = (parentheses - 1).coerceAtLeast(0), last = id)
+                }
+
+                Token.Id.L_SQUARE -> {
+                    copy(brackets = brackets + 1, last = id)
+                }
+
+                Token.Id.R_SQUARE -> {
+                    copy(brackets = (brackets - 1).coerceAtLeast(0), last = id)
+                }
+
+                Token.Id.SEMICOLON -> {
+                    copy(pendingSwitch = null, last = id)
+                }
+
+                else -> {
+                    copy(last = id)
+                }
             }
     }
+
+    /** Tokens after which a `switch` starts a statement rather than an expression; null is the start. */
+    private val statementStarts = setOf(null, Token.Id.SEMICOLON, Token.Id.L_CURLY, Token.Id.R_CURLY, Token.Id.COLON)
 
     private val closers = setOf(Token.Id.R_CURLY, Token.Id.R_PAREN, Token.Id.R_SQUARE)
     private val continuations =
@@ -143,7 +195,11 @@ internal object XdkLexical {
                     val continuation =
                         depth.parentheses + depth.brackets > 0 ||
                             previous[line] in continuations || onLine.firstOrNull()?.id == Token.Id.DOT
-                    val base = depth.braces * config.indentSize
+                    // in XDK style a switch statement's labels align with the `switch`, one level out
+                    val label =
+                        onLine.firstOrNull()?.id == Token.Id.CASE ||
+                            (onLine.firstOrNull()?.id == Token.Id.DEFAULT && onLine.getOrNull(1)?.id == Token.Id.COLON)
+                    val base = (depth.braces - if (label && depth.inStatementSwitch) 1 else 0) * config.indentSize
                     val leading = value.takeWhile { it == ' ' || it == '\t' }.length
                     val indent =
                         if (host != null && line > host.range.start.line) {

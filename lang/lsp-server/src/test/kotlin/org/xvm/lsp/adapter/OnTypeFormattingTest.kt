@@ -372,6 +372,24 @@ class OnTypeFormattingTest {
         }
 
         @Test
+        @DisplayName("close switch -> indent of the switch")
+        fun closeSwitch() {
+            val source =
+                """
+                module myapp {
+                    void run(Int x) {
+                        switch (x) {
+                        case 1:
+                            return;
+                            }
+                    }
+                }
+                """.trimIndent()
+            val indent = formatAfterTrigger(source, line = 5, column = 13, ch = "}")
+            assertThat(indent).isEqualTo(8)
+        }
+
+        @Test
         @DisplayName("no edit when brace already at correct indent")
         fun noEditWhenCorrect() {
             val source = "module myapp {\n}"
