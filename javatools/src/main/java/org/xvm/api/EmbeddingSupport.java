@@ -9,14 +9,18 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.InstantRepository;
 
@@ -331,8 +335,9 @@ public class EmbeddingSupport {
      * Create a runtime container and invoke the specified entry method of a module.
      *
      * <p>The method is selected the way the command-line runner selects it: exactly one method of
-     * that name must exist on the module, and an argument array is passed when the method requires
-     * one, or when arguments are supplied and the method accepts a parameter.
+     * that name must exist on the module, including the methods its annotations contribute, and an
+     * argument array is passed when the method requires one, or when arguments are supplied and the
+     * method accepts a parameter.
      *
      * @param input       the ModuleRepository providing any necessary modules
      * @param moduleName  the module name to execute; must be loadable from "input"
@@ -416,6 +421,54 @@ public class EmbeddingSupport {
             }
             return null;
         }
+    }
+
+    /**
+     * Select the module's entry method and decide what it is passed, following the command-line
+     * runner: the method is found among the module type's methods, including those its annotations
+     * and other contributions supply, and an argument array is passed when the method requires
+     * one, or when arguments are supplied and the method accepts a parameter. Each control calls
+     * this once it has linked its copy of the module, since the type's methods need the module's
+     * dependencies.
+     *
+     * @param module      the linked module to run
+     * @param methodName  the name of the entry method
+     * @param args        the supplied arguments, or null for none
+     *
+     * @return the argument array to pass, or null to pass none
+     *
+     * @throws IllegalArgumentException if the method is missing, ambiguous, or cannot accept
+     *         the arguments
+     */
+    static String[] entryArguments(ModuleStructure module, String methodName, String[] args) {
+        String[]     supplied = args == null ? new String[0] : args;
+        ConstantPool pool     = module.getConstantPool();
+        try (var _ = ConstantPool.withPool(pool)) {
+            Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
+            if (methods.size() != 1) {
+                throw new IllegalArgumentException((methods.isEmpty() ? "Missing" : "Ambiguous")
+                        + " method \"" + methodName + "\" in module " + module.getName());
+            }
+
+            MethodStructure method        = methods.iterator().next();
+            int             requiredCount = method.getRequiredParamCount();
+            if (requiredCount > 1) {
+                throw new IllegalArgumentException("Unsupported arguments for method \"" + methodName
+                        + "\": " + method.getIdentityConstant().getSignature().getValueString());
+            }
+
+            boolean passArgs = requiredCount == 1 || supplied.length > 0 && method.getParamCount() > 0;
+            if (!passArgs) {
+                return null;
+            }
+
+            TypeConstant typeArg = method.getParam(0).getType();
+            if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
+                throw new IllegalArgumentException("Unsupported argument type "
+                        + typeArg.getValueString() + " for method \"" + methodName + "\"");
+            }
+        }
+        return supplied;
     }
 
     // ----- constants -----------------------------------------------------------------------------
