@@ -19,6 +19,7 @@ import { liveWorkspaceCases } from './liveWorkspace';
 import { localRefactoringCases, memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
+import { onTypeCases } from './onType';
 import { platformCases } from './platform';
 import { progressCases } from './progress';
 import { refreshOverlapCases, reliabilityCases } from './reliability';
@@ -96,6 +97,7 @@ suite('XdkAdapter playbook', function () {
     adapterChooserCases();
     executionInputCases();
     buildModeCases();
+    onTypeCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
