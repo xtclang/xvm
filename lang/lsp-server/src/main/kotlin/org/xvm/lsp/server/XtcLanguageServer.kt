@@ -1255,6 +1255,9 @@ class XtcLanguageServer(
     @JsonRequest("xtc/stopRun")
     fun stopRun(params: StopRunParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.stop(params))
 
+    /** Process IDs of the live execution workers, for tests. */
+    internal fun runWorkerPids(): List<Long> = embeddedRuns.workerPids()
+
     /** Console input for a run, or its end. False when no such run is building or running. */
     @JsonRequest("xtc/runInput")
     fun runInput(params: RunInputParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.input(params))
