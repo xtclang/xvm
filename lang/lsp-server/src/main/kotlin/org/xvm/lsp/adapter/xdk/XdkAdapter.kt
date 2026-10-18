@@ -1757,10 +1757,11 @@ class XdkAdapter
         }
 
         /**
-         * Entry methods the runner can call in [module]: `run` with at most one required parameter. A module
-         * that [compiled] is asked through its type, which includes the methods its annotations contribute, as
-         * the runner finds them; one that did not offers the `run` it declares, so its run reports why it
-         * cannot start. Runs on the compiler worker, which owns the module's structures.
+         * Entry methods the runner can call in [module]: a `run` method, not a function, with at most one
+         * required parameter. A module that [compiled] is asked through its type, which includes the methods
+         * its annotations contribute, as the runner finds them; one that did not offers the `run` it declares,
+         * so its run reports why it cannot start. Runs on the compiler worker, which owns the module's
+         * structures.
          */
         private fun entryMethodsOf(
             module: ModuleStructure,
@@ -1773,12 +1774,12 @@ class XdkAdapter
                             ExecutionTrace.api("TypeConstant.ensureTypeInfo(entry-methods)") {
                                 module.identityConstant.type.ensureTypeInfo(ErrorList())
                             }
-                        info.findMethods("run", -1, TypeInfo.MethodKind.Any).mapNotNull { info.getMethodById(it)?.head?.methodStructure }
+                        info.findMethods("run", -1, TypeInfo.MethodKind.Method).mapNotNull { info.getMethodById(it)?.head?.methodStructure }
                     }
                 } else {
                     (module.getChild("run") as? MultiMethodStructure)?.methods().orEmpty()
                 }
-            return if (runs.any { it.requiredParamCount <= 1 }) listOf("run") else emptyList()
+            return if (runs.any { !it.isFunction && it.requiredParamCount <= 1 }) listOf("run") else emptyList()
         }
 
         // ----- what the tree can answer --------------------------------------------------------------
