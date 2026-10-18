@@ -552,6 +552,15 @@ fails with that reason; a program still running 10 seconds after Stop has its wo
 run reports why; a worker that dies ends its run with an error, and the next run gets a new worker.
 Shutting down the server shuts down every worker and ends active runs.
 
+A worker receives nothing until it reports its protocol version and the bundled XDK it runs, and
+these must be the server's own. They differ when the server's files are replaced while it runs, as
+by a plugin update; such a worker is ended, and its run says to restart the language server. After
+each run a worker reports the heap it still uses after a collection and its live threads, which the
+server logs; a worker keeping more than 512 MB or 200 threads is not used again. A program's output
+is sent in batches: text goes out 20 ms after it is printed, or as soon as 16,384 characters wait,
+and no more than that waits in the worker. The server forwards output to the client as it reads it,
+so a program printing faster than the client reads waits in its print rather than piling up output.
+
 `Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
 still building is held and delivered when the program starts. After `end`, or when the run is stopped,
 a program waiting for a line gets an empty one, as at the end of terminal input. Clients echo what the
