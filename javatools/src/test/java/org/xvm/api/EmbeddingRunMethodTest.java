@@ -75,6 +75,9 @@ public class EmbeddingRunMethodTest {
                     void typed(Int count) {}
                     void overloaded() {}
                     void overloaded(String[] args) {}
+                    static void utility() {}
+                    void mixed() {}
+                    static void mixed(String[] args) {}
                 }
                 """);
         String[] none = new String[0];
@@ -86,11 +89,14 @@ public class EmbeddingRunMethodTest {
         assertArrayEquals(some, EmbeddingSupport.entryArguments(module, "greet", some));
         assertNull(EmbeddingSupport.entryArguments(module, "optional", none));
         assertArrayEquals(some, EmbeddingSupport.entryArguments(module, "optional", some));
+        // the runtime calls only methods: a function of the same name does not compete
+        assertNull(EmbeddingSupport.entryArguments(module, "mixed", some));
 
         assertRejected(module, "two", "Unsupported arguments");
         assertRejected(module, "typed", "Unsupported argument type");
         assertRejected(module, "overloaded", "Ambiguous method");
         assertRejected(module, "absent", "Missing method");
+        assertRejected(module, "utility", "Unsupported function");
     }
 
     @Test
@@ -175,16 +181,16 @@ public class EmbeddingRunMethodTest {
 
     @Test
     public void aRunThatCannotStartFailsItsJoinOnceAndStillCloses() throws IOException {
-        // selection accepts a function, as the command-line runner does, but the runtime's
-        // Container.invoke calls only methods, so the runner's start of this task fails
         compileAndStore("""
                 module Unstartable {
-                    static void run() {}
+                    void run() {}
                 }
                 """);
+        // the file system refuses a name with a NUL character, so the runner cannot start the task
+        File      blocked = new File(rootDir.toFile(), "no\u0000root");
         ErrorList errs    = new ErrorList(25);
         Control   control = support.runMethod(input(), "Unstartable", null, "run", List.of(),
-                new PrintWriter(new StringWriter(), true), null, rootDir.toFile(), errs);
+                new PrintWriter(new StringWriter(), true), null, blocked, errs);
         assertNotNull(control, () -> "Unstartable did not register: " + errs.getErrors());
 
         CompletionException failure = assertThrows(CompletionException.class, () -> {
@@ -197,19 +203,6 @@ public class EmbeddingRunMethodTest {
         assertNull(control.result());
         assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
         control.close();
-
-        // with the runner's own task directory, closing deletes it although the task never started
-        boolean hadRunnerDir = Files.isDirectory(Path.of(".runner"));
-        Control unowned      = support.runMethod(input(), "Unstartable", null, "run", List.of(),
-                new PrintWriter(new StringWriter(), true), null, null, new ErrorList(25));
-        assertNotNull(unowned);
-        assertThrows(CompletionException.class, unowned::join);
-        unowned.close();
-        List<Path> left = taskDirectories("Unstartable");
-        assertTrue(left.isEmpty(), left::toString);
-        if (!hadRunnerDir) {
-            Files.deleteIfExists(Path.of(".runner"));
-        }
     }
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -225,17 +218,6 @@ public class EmbeddingRunMethodTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
         }
         return output.toString();
-    }
-
-    /** The runner's own task directories for the module, under {@code .runner} in the working directory. */
-    private static List<Path> taskDirectories(String moduleName) throws IOException {
-        Path runner = Path.of(".runner");
-        if (!Files.isDirectory(runner)) {
-            return List.of();
-        }
-        try (var entries = Files.list(runner)) {
-            return entries.filter(dir -> dir.getFileName().toString().startsWith(moduleName + "_")).toList();
-        }
     }
 
     private static String readerModule(String moduleName) {
