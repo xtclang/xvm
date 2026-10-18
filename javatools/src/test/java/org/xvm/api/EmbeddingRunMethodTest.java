@@ -15,6 +15,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.concurrent.CompletionException;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,6 +30,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -170,6 +173,45 @@ public class EmbeddingRunMethodTest {
         assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
     }
 
+    @Test
+    public void aRunThatCannotStartFailsItsJoinOnceAndStillCloses() throws IOException {
+        // selection accepts a function, as the command-line runner does, but the runtime's
+        // Container.invoke calls only methods, so the runner's start of this task fails
+        compileAndStore("""
+                module Unstartable {
+                    static void run() {}
+                }
+                """);
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.runMethod(input(), "Unstartable", null, "run", List.of(),
+                new PrintWriter(new StringWriter(), true), null, rootDir.toFile(), errs);
+        assertNotNull(control, () -> "Unstartable did not register: " + errs.getErrors());
+
+        CompletionException failure = assertThrows(CompletionException.class, () -> {
+            try (control) {
+                control.join();
+            }
+        });
+        assertEquals(0, failure.getSuppressed().length);
+        assertFalse(control.running());
+        assertNull(control.result());
+        assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
+        control.close();
+
+        // with the runner's own task directory, closing deletes it although the task never started
+        boolean hadRunnerDir = Files.isDirectory(Path.of(".runner"));
+        Control unowned      = support.runMethod(input(), "Unstartable", null, "run", List.of(),
+                new PrintWriter(new StringWriter(), true), null, null, new ErrorList(25));
+        assertNotNull(unowned);
+        assertThrows(CompletionException.class, unowned::join);
+        unowned.close();
+        List<Path> left = taskDirectories("Unstartable");
+        assertTrue(left.isEmpty(), left::toString);
+        if (!hadRunnerDir) {
+            Files.deleteIfExists(Path.of(".runner"));
+        }
+    }
+
     // ----- helpers -------------------------------------------------------------------------------
 
     private String run(String moduleName, String methodName, List<String> args,
@@ -183,6 +225,17 @@ public class EmbeddingRunMethodTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
         }
         return output.toString();
+    }
+
+    /** The runner's own task directories for the module, under {@code .runner} in the working directory. */
+    private static List<Path> taskDirectories(String moduleName) throws IOException {
+        Path runner = Path.of(".runner");
+        if (!Files.isDirectory(runner)) {
+            return List.of();
+        }
+        try (var entries = Files.list(runner)) {
+            return entries.filter(dir -> dir.getFileName().toString().startsWith(moduleName + "_")).toList();
+        }
     }
 
     private static String readerModule(String moduleName) {
