@@ -185,6 +185,12 @@ internal class EmbeddedRuns(
         return true
     }
 
+    /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
+    internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + worker.tracked()
+
+    /** Process IDs of the live execution workers, for tests. */
+    internal fun workerPids(): List<Long> = worker.workerPids()
+
     override fun close() = worker.close()
 
     private fun compiler(): XdkAdapter? = adapter as? XdkAdapter
