@@ -227,20 +227,12 @@ class InterpreterControl
             return;
         }
 
-        try {
-            if (running) {
-                try {
-                    postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
-                } catch (CompletionException e) {
-                    // the run can end after the check above and before the runner gets the
-                    // request, which then finds no task to stop
-                    if (!"terminated".equals(taskStatus())) {
-                        throw e;
-                    }
-                }
-            }
-            // wait for completion without rethrowing its failure so close() can release resources
-            completion.exceptionally(_ -> null).join();
+        if (running) {
+            postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
+        }
+        // a run that failed to start reports that through join() and the error listener; closing
+        // waits for the end without throwing the same exception again, and still releases the task
+        completion.exceptionally(_ -> null).join();
 
             if (rootDir == null) {
                 postRequest(connector, "deleteTaskDirectory", xInt64.makeHandle(taskId),

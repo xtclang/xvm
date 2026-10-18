@@ -234,43 +234,13 @@ module runner.xtclang.org {
             @Inject Clock clock;
             started = clock.now;
 
-            Directory taskDir;
-            if (String path ?= rootDir) {
-                @Inject FileStore storage;
-                taskDir = storage.dirFor(new Path(path)).ensure();
-            } else {
-                taskDir = taskRoot().dirFor(taskDirectoryName(template.name, id)).ensure();
-            }
-
-            BufferedConsole? bufferedConsole = Null;
-            Console          taskConsole;
-            if (Int consoleId ?= this.consoleId) {
-                @Inject(resourceName=$"console_{consoleId}") Console console;
-                taskConsole = console;
-            } else {
-                @Inject Console console;
-                bufferedConsole = new BufferedConsole($"{id}> ", console);
-                taskConsole = &bufferedConsole.maskAs(Console);
-            }
-
-            ResourceProvider injector = new TaskResourceProvider(taskDir, taskConsole);
-
-            container = new Container(template, Lightweight, repository, injector);
-            running   = True;
-
-            // the host decides from the method's signature whether an argument array is passed
-            Tuple callArgs = args == Null ? () : (args);
-
-            @Future Tuple<Int, String> completion;
-            @Future Tuple              outcome = container.as(Container).invoke(method, callArgs);
-            &outcome.whenComplete((tuple, exception) -> {
-                Int    result  = 0;
-                String failure = "";
-                if (exception == Null) {
-                    if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
-                        result = tuple[0].as(Int);
-                    }
-                    bufferedConsole?.flush();
+            // a task that cannot start ends here, and is unregistered so its directory can be
+            // deleted; once started, the completion handler below does the same
+            try {
+                Directory taskDir;
+                if (String path ?= rootDir) {
+                    @Inject FileStore storage;
+                    taskDir = storage.dirFor(new Path(path)).ensure();
                 } else {
                     taskDir = taskRoot().dirFor(taskDirectoryName(template.name, id)).ensure();
                 }
