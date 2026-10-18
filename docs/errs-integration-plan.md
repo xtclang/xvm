@@ -1987,6 +1987,26 @@ on #693 `:javatools:test` 583 tests, `:lang:lsp-server:test` 2,329 tests, 0 fail
 `spotlessCheck`, X280–X289 VS Code `run-It2Bzx` (10 of 10) and IntelliJ `run-9161841699426812232`
 (passed or partial as declared, no IDE failures); no worker processes left on either.
 
+**On-type indentation, switch layout and UI-thread reads (2026-10-18).** `2eca02469`: typing keeps
+the indentation a line gets. The compiler adapter no longer strips the indentation of a blank line
+after Enter, and IntelliJ's Enter repair indents a continued declaration's body from the line the
+declaration starts on. The new shared case X290 checks this in both editors (295 cases). `29cd0c3c6`:
+both formatters lay out switches as the XDK does, with statement `case` and `default` labels at the
+`switch`'s column and switch-expression labels one level deeper (X249 extended). `223518e24`: two
+IntelliJ plugin reads that could hold the read lock for long are now cancellable, following the
+LSP4IJ review of #1698: preparing a server's workspace edit, and walking compiler output roots, now
+one directory per read. Mirrored as `589977e42`, `704be7b02` and `51329f03d` on #693; the formatting
+plans' checklist updates stay on errs.
+
+Receipts: here `:lang:lsp-server:test` 2,355 tests, 0 failures, 2 existing skips, IntelliJ unit tests
+141, VS Code headless 71, `spotlessCheck`, VS Code `run-TtmMWx` (14 of 14) and IntelliJ
+`run-11536667068267921448` for the formatting and typing cases and X290; for the reads, IntelliJ unit
+tests 142 and IntelliJ `run-9084979834793452385` (X27, X49, X124, X144, X260, X263, 6 of 6). On #693
+`:lang:lsp-server:test` 2,355 tests, 0 failures, 2 existing skips, IntelliJ unit tests 142, VS Code
+headless 71, `spotlessCheck`, VS Code `run-1BiJT7` (14 of 14) and IntelliJ
+`run-8913852151414965107` for both sets (18 passed, X254 and X257 partial as declared, no IDE
+failures).
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
