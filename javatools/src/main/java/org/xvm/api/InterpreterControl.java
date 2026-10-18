@@ -1,6 +1,5 @@
 package org.xvm.api;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -46,9 +45,7 @@ import static org.xvm.util.Severity.ERROR;
 class InterpreterControl
         implements EmbeddingSupport.Control {
     /**
-     * Create and start the shared interpreter connector that hosts the runner module. Tasks are
-     * registered and started directly, so the runner's own run() method, which starts its HTTP
-     * endpoint, is not invoked.
+     * Create and start the shared interpreter connector that hosts the runner module.
      */
     static Connector createConnector(ModuleRepository repository) {
         InterpreterConnector connector = new InterpreterConnector(repository);
@@ -61,14 +58,14 @@ class InterpreterControl
      * Create and start a control for the specified module.
      *
      * @param methodName  the method to invoke
-     * @param args        the supplied arguments, or null for none; what the method is passed is
-     *                    decided by {@link EmbeddingSupport#entryArguments}
-     * @param consoleIn   (optional) the console's input; used only with a console
+     * @param args        the supplied arguments, or null for none
+     * @param consoleIn   the console's input, or {@link EmbeddingSupport.ConsoleInput#NONE};
+     *                    used only with a console
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
                                            ModuleRepository repository, String methodName,
                                            String[] args, PrintWriter console,
-                                           BufferedReader consoleIn, File rootDir,
+                                           EmbeddingSupport.ConsoleInput consoleIn, File rootDir,
                                            ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
@@ -83,7 +80,8 @@ class InterpreterControl
             String[]      callArgs = EmbeddingSupport.entryArguments(file.getModule(), methodName, args);
 
             if (console != null) {
-                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console, consoleIn);
+                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,
+                        consoleIn::readLine);
             }
 
             ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());
@@ -226,8 +224,7 @@ class InterpreterControl
         if (running) {
             postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
         }
-        // a run that failed to start reports that through join() and the error listener; closing
-        // waits for the end without throwing the same exception again, and still releases the task
+        // wait for completion without rethrowing its failure so close() can release resources
         completion.exceptionally(_ -> null).join();
 
         if (rootDir == null) {
