@@ -1898,6 +1898,11 @@ class XdkAdapter
                 )
             }
 
+        /**
+         * Re-indents the line being typed. Its trailing whitespace is kept, as the cursor is there (such as
+         * after a comment continuation's `// `). After Enter, a blank new line gets the indentation of the
+         * code that will be typed on it, rather than keeping or losing whatever the editor guessed.
+         */
         override fun onTypeFormatting(
             uri: String,
             line: Int,
@@ -1907,16 +1912,18 @@ class XdkAdapter
         ): List<TextEdit> =
             currentText(uri)
                 ?.let { text ->
-                    XdkLexical.format(
-                        text,
-                        FormattingConfig.resolve(options, editorFormattingConfig),
-                        options,
-                        Range(
-                            Position(line, 0),
-                            Position(line, text.lines().getOrNull(line)?.length ?: column),
-                        ),
-                        wrapLines = false,
-                    )
+                    val config = FormattingConfig.resolve(options, editorFormattingConfig)
+                    val typing = options.copy(trimTrailingWhitespace = false)
+                    val current = text.lines().getOrNull(line) ?: return@let emptyList()
+                    if (ch == "\n" && current.isBlank()) {
+                        XdkLexical
+                            .blankLineIndentation(text, line, config, typing)
+                            ?.takeIf { it != current }
+                            ?.let { listOf(TextEdit(Range(Position(line, 0), Position(line, current.length)), it)) }
+                            .orEmpty()
+                    } else {
+                        XdkLexical.format(text, config, typing, Range(Position(line, 0), Position(line, current.length)), wrapLines = false)
+                    }
                 }.orEmpty()
 
         override fun getDocumentLinks(

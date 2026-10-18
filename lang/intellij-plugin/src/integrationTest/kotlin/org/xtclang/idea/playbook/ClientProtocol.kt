@@ -124,6 +124,7 @@ class ClientProtocol(
                 "textDocument/moniker",
                 "textDocument/formatting",
                 "textDocument/rangesFormatting",
+                "textDocument/onTypeFormatting",
                 "textDocument/willSaveWaitUntil",
                 "textDocument/prepareTypeHierarchy",
                 "typeHierarchy/supertypes",
