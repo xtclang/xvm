@@ -25,6 +25,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.InstantRepository;
 
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -481,14 +482,14 @@ public class EmbeddingSupport {
             Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
             if (methods.size() != 1) {
                 throw new IllegalArgumentException((methods.isEmpty() ? "Missing" : "Ambiguous")
-                        + " method \"" + methodName + "\" in module " + module.getName());
+                        + " method " + quoted(methodName) + " in module " + module.getName());
             }
 
             MethodStructure method        = methods.iterator().next();
             int             requiredCount = method.getRequiredParamCount();
             if (requiredCount > 1) {
-                throw new IllegalArgumentException("Unsupported arguments for method \"" + methodName
-                        + "\": " + method.getIdentityConstant().getSignature().getValueString());
+                throw new IllegalArgumentException("Unsupported arguments for method " + quoted(methodName)
+                        + ": " + method.getIdentityConstant().getSignature().getValueString());
             }
 
             boolean passArgs = requiredCount == 1 || supplied.length > 0 && method.getParamCount() > 0;
@@ -501,7 +502,7 @@ public class EmbeddingSupport {
             TypeConstant typeArg = method.getParam(0).getType();
             if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
                 throw new IllegalArgumentException("Unsupported argument type "
-                        + typeArg.getValueString() + " for method \"" + methodName + "\"");
+                        + typeArg.getValueString() + " for method " + quoted(methodName));
             }
         }
         return supplied;
