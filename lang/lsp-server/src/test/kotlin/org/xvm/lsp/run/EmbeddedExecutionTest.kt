@@ -471,13 +471,19 @@ class EmbeddedExecutionTest {
         CompilerTestSupport.configure()
         val libraryText = "module Library { static Int value() = 7; }"
         val appText = "module App { void run() {} }"
+        // the runtime calls only methods, so a run function is no entry point
+        val utilityText = "module Utility { static void run() {} }"
         val library = source("Library.x", libraryText)
         val app = source("App.x", appText)
+        val utility = source("Utility.x", utilityText)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app)))
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app), XdkSourceModule("Utility", utility)),
+            )
             assertThat(adapter.compile(library, libraryText).success).isTrue()
             assertThat(adapter.compile(app, appText).success).isTrue()
+            assertThat(adapter.compile(utility, utilityText).success).isTrue()
 
             assertThat(adapter.runnableTargets().map { it.module }).containsExactly("App")
             assertThat(adapter.getCodeLensesAsync(app, false).get(30, SECONDS).mapNotNull { it.command?.command })

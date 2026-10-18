@@ -538,7 +538,8 @@ its code runs.
 Clients choose `runId` so they can route output that arrives before the `xtc/run` response.
 `args` reach the method exactly as given, never shell-parsed. The entry method follows the
 command-line runner's rule: exactly one method of that name on the module's type, including methods
-its annotations contribute, with at most one required parameter; a `String[]` is passed when the
+its annotations contribute (a function of that name is not an entry point, since the runtime calls
+methods), with at most one required parameter; a `String[]` is passed when the
 method requires one, or when arguments are given and it accepts a parameter. The Run lens appears
 only on modules with such a `run` method, found the same way when the module compiles. A module that
 does not build yet offers Run when it declares `run` itself, so the run can report why it failed.
