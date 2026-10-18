@@ -211,7 +211,7 @@ this bridge; they cannot be inferred from compiler type hints.
   input or a stop gives a waiting `readLine` an empty line (X287). Every part listed above now
   works. The box stays open until the runtime part has a `javatools` test of its own for extraction;
   JIT runs remain unsupported.
-- [ ] **R4 — Persistent worker supervision.** Add configuration/generation handshake, private IPC,
+- [x] **R4 — Persistent worker supervision.** Add configuration/generation handshake, private IPC,
   startup/stop deadlines, bounded output/backpressure, memory measurement and safe idle recycling.
   Verify worker death during a run, restart after crash, parent death, IDE close, XDK change and
   no leaked task/console/process. Bound retained artifacts and native-pool growth independently.
@@ -233,10 +233,18 @@ this bridge; they cannot be inferred from compiler type hints.
   characters of a run's text. After each run the worker reports its heap in use after a collection
   and its threads; the server logs them and does not reuse a worker keeping more than 512 MB or 200
   threads (a real worker keeps about 137 MB and 21 threads after a run). Ending a worker no longer
-  leaves its runs open when its closed output stream fails the server's read. Still open: parent
-  death, IDE close and leaked tasks, consoles or processes checked over repeated runs (the R8 soak),
-  and retained artifacts and native-pool growth bounded each on its own rather than through the
-  heap and thread counts.
+  leaves its runs open when its closed output stream fails the server's read.
+  *Completed 2026-10-18:* after each run the worker also reports the runtime's own pool threads and
+  the consoles and runs it still holds for ended programs, counted before the run's exit so the next
+  run is not among them. Each is bounded on its own: a worker that still holds a console or run,
+  whose runtime pool grew, or whose heap after a run grew more than 128 MB since its first run (what
+  runs retain, such as artifacts) is not used again, beside the 512 MB and 200-thread totals
+  (`RunWorkerSupervisionTest`). Over 25 mixed runs (exit codes, arguments, an exception, console
+  input, Stop) one real worker serves every run, holds no console or run afterwards, keeps its 11
+  pool threads, and its heap after a run (about 137 MB) grows by less than 1 MB. A killed language server
+  process takes its worker with it, and an editor closing the server's input ends its runs and
+  workers (`EmbeddedExecutionTest`). Runner tasks are not counted on their own; a leak of them would
+  show in that heap. The R8 soak extends this across platforms and debug sessions.
 - [ ] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.
