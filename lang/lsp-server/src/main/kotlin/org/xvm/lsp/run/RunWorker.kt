@@ -19,10 +19,15 @@ import java.io.PrintStream
 import java.io.PrintWriter
 import java.io.Reader
 import java.io.Writer
+import java.lang.management.ManagementFactory
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Entry point of the execution worker JVM. The language server starts it on demand and exchanges one
@@ -32,18 +37,22 @@ import kotlin.system.exitProcess
  *
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`), `input` (`id`, `text`),
  * `endInput` (`id`), `stop` (`id`), `shutdown`.
- * Events: `ready` (`pid`), `started` (`id`), `output` (`id`, `text`), `exit` (`id`, `code`, `error`), `log`
- * (`text`).
+ * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
+ * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, measured after
+ * the run's exit), `log` (`text`).
  */
 object RunWorker {
     @JvmStatic
     fun main(args: Array<String>) {
         val channel = RunWorkerChannel(PrintStream(FileOutputStream(FileDescriptor.out), false, Charsets.UTF_8))
         val runs = Runs(channel)
-        System.setOut(PrintStream(StrayOutput(channel, runs::current), true, Charsets.UTF_8))
-        System.setErr(PrintStream(StrayOutput(channel, runs::current), true, Charsets.UTF_8))
+        System.setOut(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
+        System.setErr(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
         XdkLibraries.configure()
-        channel.send("ready") { addProperty("pid", ProcessHandle.current().pid()) }
+        channel.send("ready") {
+            addProperty("pid", ProcessHandle.current().pid())
+            RunWorkerIdentity.current().addTo(this)
+        }
 
         BufferedReader(InputStreamReader(System.`in`, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
@@ -74,10 +83,14 @@ object RunWorker {
         private val active = ConcurrentHashMap<Long, EmbeddingSupport.Control>()
         private val inputs = ConcurrentHashMap<Long, ConsoleInput>()
 
+        /** The running program's output, which text the runtime prints directly joins in order. */
         @Volatile
-        private var latest: Long? = null
+        private var output: OutputBatches? = null
 
-        fun current(): Long? = latest
+        /** Text the runtime prints to System.out or System.err: shown with the running program, or logged. */
+        fun stray(text: String) {
+            output?.write(text) ?: channel.log(text.trimEnd())
+        }
 
         fun start(command: JsonObject) {
             val id = command["id"].asLong
@@ -86,7 +99,8 @@ object RunWorker {
                 return
             }
             val errors = ErrorList(100)
-            val console = PrintWriter(OutputEvents(channel, id), true)
+            val output = OutputBatches({ channel.output(id, it) })
+            val console = PrintWriter(output, true)
             // registered before the run starts: commands are read in order, so input for this run
             // can only arrive after this
             val input = ConsoleInput().also { inputs[id] = it }
@@ -116,7 +130,7 @@ object RunWorker {
             }
 
             active[id] = control
-            latest = id
+            this.output = output
             channel.send("started") { addProperty("id", id) }
             Thread
                 .ofPlatform()
@@ -127,10 +141,12 @@ object RunWorker {
                         control.join()
                         control.close()
                     } finally {
-                        console.flush()
+                        this.output = null
+                        output.close()
                         inputs.remove(id)?.end()
                         active.remove(id)
                         channel.exit(id, control.result(), errors.failure())
+                        channel.usage(id)
                     }
                 }
         }
@@ -211,49 +227,135 @@ object RunWorker {
         override fun close() = end()
     }
 
-    /** Program console output for one run. */
-    private class OutputEvents(
-        private val channel: RunWorkerChannel,
-        private val id: Long,
-    ) : Writer() {
-        override fun write(
-            buffer: CharArray,
-            offset: Int,
-            length: Int,
-        ) {
-            if (length > 0) channel.output(id, String(buffer, offset, length))
-        }
-
-        override fun flush() {}
-
-        override fun close() {}
-    }
-
-    /** Text the runtime prints to System.out or System.err: shown with the current run, or logged. */
+    /** Text the runtime prints to the process streams, passed on a line at a time, or in bounded pieces. */
     private class StrayOutput(
-        private val channel: RunWorkerChannel,
-        private val current: () -> Long?,
+        private val text: (String) -> Unit,
     ) : OutputStream() {
         private val line = ByteArrayOutputStream()
 
         @Synchronized
         override fun write(byte: Int) {
             line.write(byte)
-            if (byte == '\n'.code) flush()
+            if (byte == '\n'.code || line.size() >= OutputBatches.LIMIT) flush()
         }
 
         @Synchronized
         override fun flush() {
             if (line.size() == 0) return
-            val text = line.toString(Charsets.UTF_8)
+            val pending = line.toString(Charsets.UTF_8)
             line.reset()
-            current()?.let { channel.output(it, text) } ?: channel.log(text.trimEnd())
+            text(pending)
         }
     }
 
     private fun JsonObject.string(name: String): String? = get(name)?.takeUnless { it.isJsonNull }?.asString
 
     private fun JsonObject.strings(name: String): List<String> = getAsJsonArray(name)?.map { it.asString }.orEmpty()
+}
+
+/**
+ * One run's program output, sent in batches so that a program printing in a loop sends a few events rather
+ * than one per print: text goes out [delay] after it is written, or as soon as [limit] characters wait. No
+ * more than [limit] characters ever wait, so a program printing faster than the server reads blocks in its
+ * print until the server catches up, and its output never piles up in the worker. A flush does not end a
+ * batch; [close] sends the rest.
+ */
+internal class OutputBatches(
+    private val send: (String) -> Unit,
+    private val limit: Int = LIMIT,
+    private val delay: Duration = DELAY,
+) : Writer() {
+    private val pending = StringBuilder()
+    private var scheduled = false
+
+    @Synchronized
+    override fun write(
+        buffer: CharArray,
+        offset: Int,
+        length: Int,
+    ) {
+        var from = offset
+        val end = offset + length
+        while (from < end) {
+            val count = minOf(end - from, limit - pending.length)
+            pending.appendRange(buffer, from, from + count)
+            from += count
+            if (pending.length >= limit) sendPending(all = false)
+        }
+        if (pending.isNotEmpty() && !scheduled) {
+            scheduled = true
+            timers.schedule(
+                {
+                    synchronized(this) {
+                        scheduled = false
+                        sendPending(all = false)
+                    }
+                },
+                delay.inWholeMilliseconds,
+                TimeUnit.MILLISECONDS,
+            )
+        }
+    }
+
+    override fun flush() {}
+
+    /** Sends everything still waiting; the run's exit follows its output. */
+    @Synchronized
+    override fun close() = sendPending(all = true)
+
+    /** Sends what waits, keeping a trailing high surrogate for the next batch unless [all]. */
+    private fun sendPending(all: Boolean) {
+        var count = pending.length
+        // a surrogate pair stays in one event
+        if (!all && count > 1 && pending[count - 1].isHighSurrogate()) count--
+        if (count == 0) return
+        val text = pending.substring(0, count)
+        pending.delete(0, count)
+        send(text)
+    }
+
+    companion object {
+        /** The most characters one output event carries and a run's output holds while it waits. */
+        const val LIMIT = 16_384
+
+        /** How long written text waits for more before it is sent. */
+        val DELAY = 20.milliseconds
+
+        private val timers =
+            Executors.newSingleThreadScheduledExecutor { Thread(it, "xtc-run-output").apply { isDaemon = true } }
+    }
+}
+
+/**
+ * What a worker reports in `ready`, and the server requires before it sends the worker anything: the
+ * protocol both sides speak and the bundled XDK the worker runs, which must be the one the server compiles
+ * with. They differ when the server's files are replaced while it runs, e.g. by an IDE plugin update.
+ */
+internal data class RunWorkerIdentity(
+    val protocol: Int,
+    val xdk: String,
+) {
+    fun addTo(event: JsonObject) {
+        event.addProperty("protocol", protocol)
+        event.addProperty("xdk", xdk)
+    }
+
+    override fun toString() = "protocol $protocol with XDK ${xdk.take(12)}"
+
+    companion object {
+        /** Raised whenever a command or event changes; the first protocol had no number. */
+        const val PROTOCOL = 2
+
+        /** This JVM's identity. */
+        fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
+
+        /** The identity a `ready` event reports, or null when it has none, as from a first-protocol worker. */
+        fun of(event: JsonObject): RunWorkerIdentity? {
+            val protocol = event["protocol"]?.takeUnless { it.isJsonNull }?.asInt ?: return null
+            val xdk = event["xdk"]?.takeUnless { it.isJsonNull }?.asString ?: return null
+            return RunWorkerIdentity(protocol, xdk)
+        }
+    }
 }
 
 /** Writes worker events, one JSON object per line, to the protocol stream. */
@@ -288,4 +390,19 @@ internal class RunWorkerChannel(
     }
 
     fun log(text: String) = send("log") { addProperty("text", text) }
+
+    /**
+     * Reports what the worker holds once a run has ended: the heap in use after a collection, and the live
+     * threads. The server retires a worker whose runs leave too much behind.
+     */
+    fun usage(id: Long) {
+        System.gc()
+        val heap = ManagementFactory.getMemoryMXBean().heapMemoryUsage
+        send("usage") {
+            addProperty("id", id)
+            addProperty("heapUsed", heap.used)
+            addProperty("heapMax", heap.max)
+            addProperty("threads", ManagementFactory.getThreadMXBean().threadCount)
+        }
+    }
 }
