@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.LanguageServer
 import java.net.URI
+import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
@@ -36,10 +37,12 @@ class XtcClientFeatures : LSPClientFeatures() {
         result.whenComplete { _, _ -> edits.remove(result) }
         CompletableFuture.runAsync {
             try {
+                // Preparing an edit loads each target's document. A cancellable read lets the editor's
+                // write actions go first; the preparation has no side effects, so it is simply repeated.
                 val edit =
-                    ReadAction.computeBlocking<ServerWorkspaceEdit, RuntimeException> {
-                        ServerWorkspaceEdit.prepare(this, params)
-                    }
+                    ReadAction
+                        .nonBlocking(Callable { ServerWorkspaceEdit.prepare(this, params) })
+                        .executeSynchronously()
                 ApplicationManager.getApplication().invokeLater {
                     if (!result.isDone) {
                         try {

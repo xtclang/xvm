@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.Registration
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -69,6 +70,24 @@ internal class CompilerRootWatches(
     }
 
     companion object {
+        /**
+         * Lists each directory in [roots], and every directory below a root marked recursive, with one
+         * [read] per directory: a walk of a large tree never holds the read lock for long, so it cannot
+         * hold off the editor's write actions. [subdirectories] lists one directory's subdirectories.
+         */
+        fun <F> walk(
+            roots: List<Pair<F, Boolean>>,
+            read: (() -> List<F>) -> List<F>,
+            subdirectories: (F) -> List<F>,
+        ) {
+            val pending = ArrayDeque(roots)
+            while (pending.isNotEmpty()) {
+                val (directory, recursive) = pending.removeFirst()
+                val below = read { subdirectories(directory) }
+                if (recursive) below.forEach { pending.addLast(it to true) }
+            }
+        }
+
         /** Only explicit compiler roots, never a workspace-wide wildcard or arbitrary URI. */
         fun roots(registration: Registration): Set<Path> {
             if (
@@ -163,14 +182,15 @@ internal class CompilerVfsWatches : Disposable {
                 val existing = generateSequence(path) { it.parent }.firstOrNull(Files::isDirectory)
                 existing?.let(files::refreshAndFindFileByNioFile)?.let { it to (existing == path) }
             }
-        ReadAction.runBlocking<RuntimeException> {
-            directories.forEach { (file, recursive) ->
-                load(file, recursive)
-                // A still-missing nested root can have a different nearest ancestor next time.
-                // Probe only that directory's children until the recursive root exists.
-                if (!recursive) (file as? NewVirtualFile)?.markDirty()
-            }
-        }
+        // A cancellable read per directory: listing one again after a write action changes nothing.
+        CompilerRootWatches.walk(
+            directories,
+            read = { listing -> ReadAction.nonBlocking(Callable(listing)).executeSynchronously() },
+            subdirectories = ::subdirectories,
+        )
+        // A still-missing nested root can have a different nearest ancestor next time.
+        // Probe only that directory's children until the recursive root exists.
+        directories.filterNot { it.second }.forEach { (file, _) -> (file as? NewVirtualFile)?.markDirty() }
         val result = CompletableFuture<Void>()
         val groups = directories.groupBy({ it.second }, { it.first })
         CompletableFuture
@@ -187,14 +207,13 @@ internal class CompilerVfsWatches : Disposable {
         return result
     }
 
-    private fun load(
-        file: VirtualFile,
-        recursive: Boolean,
-    ) {
-        if (!file.isValid || !file.isDirectory || file.`is`(VFileProperty.SYMLINK)) return
-        val children = file.children
-        if (recursive) children.filter { it.isDirectory }.forEach { load(it, true) }
-    }
+    /** Loads [file]'s children into the VFS and returns its subdirectories; symbolic links are not followed. */
+    private fun subdirectories(file: VirtualFile): List<VirtualFile> =
+        if (!file.isValid || !file.isDirectory || file.`is`(VFileProperty.SYMLINK)) {
+            emptyList()
+        } else {
+            file.children.filter { it.isDirectory }
+        }
 
     override fun dispose() {
         timer.cancel(false)

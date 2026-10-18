@@ -52,6 +52,41 @@ class CompilerRootWatchesTest {
     }
 
     @Test
+    fun `a walk lists each directory in a read of its own, below recursive roots only`() {
+        val tree =
+            mapOf(
+                "root" to listOf("root/a", "root/b"),
+                "root/a" to listOf("root/a/c"),
+                "root/a/c" to emptyList(),
+                "root/b" to emptyList(),
+                "parent" to listOf("parent/unrelated"),
+            )
+        val reads = mutableListOf<List<String>>()
+        var inRead = false
+        CompilerRootWatches.walk(
+            listOf("root" to true, "parent" to false),
+            read = { listing ->
+                check(!inRead) { "reads must not nest" }
+                inRead = true
+                listing().also {
+                    inRead = false
+                    reads += it
+                }
+            },
+            subdirectories = { tree.getValue(it) },
+        )
+        // One read per directory, each holding the lock for a single listing. A missing root's
+        // nearest existing parent is listed but never walked.
+        assertThat(reads).containsExactly(
+            listOf("root/a", "root/b"),
+            listOf("parent/unrelated"),
+            listOf("root/a/c"),
+            emptyList(),
+            emptyList(),
+        )
+    }
+
+    @Test
     fun `decode wire registrations including relative patterns without watching global globs`() {
         fun registration(
             id: String,
