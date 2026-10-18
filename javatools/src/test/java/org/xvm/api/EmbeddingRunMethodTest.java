@@ -7,12 +7,13 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-import java.nio.file.Files;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 import java.nio.file.Path;
 
 import java.time.Duration;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import java.util.concurrent.CompletionException;
@@ -40,12 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Runs modules through {@link EmbeddingSupport#runMethod}: how the entry method is selected and
- * what it is passed, exact arguments, and console input. Needs the installed XDK
- * ({@code ./gradlew xdk:installDist}); without it the tests are skipped.
+ * what it is passed, exact arguments, and console input. The compiled XDK modules come from the
+ * test resources, where the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
  */
 public class EmbeddingRunMethodTest {
     private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
@@ -56,14 +56,14 @@ public class EmbeddingRunMethodTest {
     @TempDir
     Path rootDir;
 
-    private static List<File> xdkDirs;
+    private static File xdkModules;
     private static EmbeddingSupport support;
 
     @BeforeAll
-    static void configure() {
-        Path xdk = installedXdk();
-        assumeTrue(xdk != null, "the installed XDK is needed; run ./gradlew xdk:installDist");
-        xdkDirs = List.of(xdk.resolve("lib").toFile(), xdk.resolve("javatools").toFile());
+    static void configure() throws URISyntaxException {
+        URL modules = EmbeddingRunMethodTest.class.getResource("/xdk-modules");
+        assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
+        xdkModules = new File(modules.toURI());
         support = new EmbeddingSupport().configure(repo(), null);
     }
 
@@ -294,21 +294,6 @@ public class EmbeddingRunMethodTest {
     }
 
     private static ModuleRepository repo() {
-        List<ModuleRepository> repos = new ArrayList<>();
-        for (File dir : xdkDirs) {
-            repos.add(new DirRepository(dir, true));
-        }
-        return new LinkedRepository(repos.toArray(ModuleRepository.NO_REPOS));
-    }
-
-    /** The installed XDK of this checkout, found from the test's working directory, or null. */
-    private static Path installedXdk() {
-        for (Path dir = Path.of("").toAbsolutePath(); dir != null; dir = dir.getParent()) {
-            Path xdk = dir.resolve("xdk/build/install/xdk");
-            if (Files.isDirectory(xdk.resolve("lib")) && Files.isDirectory(xdk.resolve("javatools"))) {
-                return xdk;
-            }
-        }
-        return null;
+        return new DirRepository(xdkModules, true);
     }
 }
