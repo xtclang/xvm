@@ -25,6 +25,10 @@ import org.xvm.lsp.server.RunInputParams
 import org.xvm.lsp.server.RunOutputParams
 import org.xvm.lsp.server.RunParams
 import org.xvm.lsp.server.XtcLanguageClient
+import org.xvm.lsp.server.XtcLanguageServer
+import org.xvm.lsp.server.launchStdio
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -70,16 +74,7 @@ class EmbeddedExecutionTest {
                 }
             }
             """,
-            """
-            module Forever {
-                void run() {
-                    @Inject Console console;
-                    console.print("started");
-                    // runs until stopped: an empty while (True) is rejected as non-terminating
-                    for (Int count = 0; count >= 0; ++count) {}
-                }
-            }
-            """,
+            FOREVER,
             ASK,
             """
             module Waiter {
@@ -157,6 +152,128 @@ class EmbeddedExecutionTest {
             assertThat(usage.heapMax).isGreaterThanOrEqualTo(usage.heapUsed)
             assertThat(usage.threads).isPositive().isLessThan(limits.threads)
         }
+    }
+
+    @Test
+    fun `repeated runs reuse one worker and leave no run, console or pool thread behind`() {
+        RunWorkerProcess().use { workers ->
+            val reports = mutableListOf<RunWorkerProcess.Usage>()
+            val pids = mutableSetOf<Long>()
+
+            fun once(
+                module: String,
+                args: List<String> = emptyList(),
+                act: (Long, StringBuffer) -> Unit = { _, _ -> },
+            ): Outcome {
+                val output = StringBuffer()
+                val exited = CompletableFuture<Pair<Long?, String?>>()
+                val id =
+                    workers.start(
+                        RunWorkerProcess.Request(listOf(lib.path), module, "run", args, directory.toString()),
+                        object : RunWorkerProcess.Listener {
+                            override fun output(text: String) {
+                                output.append(text)
+                            }
+
+                            override fun exited(
+                                code: Long?,
+                                error: String?,
+                            ) {
+                                exited.complete(code to error)
+                            }
+                        },
+                    )
+                act(id, output)
+                val (code, error) = exited.get(60, SECONDS)
+                await().atMost(Duration.ofSeconds(30)).until { workers.usage().values.any { it.run == id } }
+                reports += workers.usage().values.single { it.run == id }
+                pids += workers.workerPids()
+                return Outcome(output.toString(), code, error)
+            }
+
+            // a normal exit, arguments, an exception, console input and a stopped program, five times over
+            repeat(5) {
+                assertThat(once("Echo", listOf("a b", "ü")).output).contains("args=2:a b|ü")
+                assertThat(once("Exit").code).isEqualTo(42)
+                assertThat(once("Thrower").error).contains("boom")
+                val asked =
+                    once("Ask") { id, output ->
+                        await().atMost(Duration.ofSeconds(60)).until { "Name? " in output }
+                        workers.input(id, "Ada\n")
+                        workers.endInput(id)
+                    }
+                assertThat(asked.output).contains("Hello, Ada!")
+                once("Waiter") { id, output ->
+                    await().atMost(Duration.ofSeconds(60)).until { "waiting" in output }
+                    workers.stop(id)
+                }
+            }
+            println("repeated runs: first ${reports.first()}, last ${reports.last()}")
+
+            assertThat(pids).describedAs("one worker served every run").hasSize(1)
+            assertThat(reports).hasSize(25).allSatisfy {
+                assertThat(it.consoles).isZero()
+                assertThat(it.runs).isZero()
+                assertThat(it.poolThreads).isPositive().isEqualTo(reports.first().poolThreads)
+            }
+            // after the first round has loaded what runs need, more runs retain nothing that adds up
+            assertThat(reports.last().heapUsed - reports[4].heapUsed).isLessThan(64L shl 20)
+            assertThat(workers.tracked()).isZero()
+        }
+    }
+
+    @Test
+    fun `a worker exits when the language server process dies`() {
+        val host =
+            ProcessBuilder(
+                ProcessHandle
+                    .current()
+                    .info()
+                    .command()
+                    .orElse("java"),
+                "-cp",
+                System.getProperty("java.class.path"),
+                RunWorkerHost::class.java.name,
+                lib.path,
+                "Forever",
+                directory.toString(),
+            ).redirectErrorStream(true)
+                .start()
+        try {
+            val pid =
+                CompletableFuture
+                    .supplyAsync {
+                        host
+                            .inputReader()
+                            .lineSequence()
+                            .first { it.startsWith("worker-pid=") }
+                            .removePrefix("worker-pid=")
+                            .toLong()
+                    }.get(60, SECONDS)
+            val worker = ProcessHandle.of(pid).orElseThrow()
+            // killed, as when the IDE or the operating system ends the server: nothing tells the worker
+            host.destroyForcibly()
+            assertThat(worker.onExit().get(30, SECONDS).isAlive).isFalse()
+        } finally {
+            host.destroyForcibly()
+        }
+    }
+
+    @Test
+    fun `closing the editor ends the server's runs and their workers`() {
+        CompilerTestSupport.configure()
+        val forever = source("Forever.x", FOREVER.trimIndent())
+        val adapter = XdkAdapter()
+        adapter.initializeWorkspace(listOf(directory.toString()))
+        adapter.replaceSourceModules(listOf(XdkSourceModule("Forever", forever)))
+        val server = XtcLanguageServer(adapter)
+        assertThat(server.run(RunParams(module = "Forever", runId = "editor-closes")).get(60, SECONDS).runId)
+            .isEqualTo("editor-closes")
+        val workers = server.runWorkerPids().map { ProcessHandle.of(it).orElseThrow() }
+        assertThat(workers).isNotEmpty()
+        // the editor closes its end: the server reads the end of its input, shuts down and ends its workers
+        launchStdio(server, ByteArrayInputStream(byteArrayOf()), ByteArrayOutputStream())
+        workers.forEach { assertThat(it.onExit().get(30, SECONDS).isAlive).isFalse() }
     }
 
     @Test
@@ -314,6 +431,7 @@ class EmbeddedExecutionTest {
 
                 assertThat(exit.error).isNull()
                 assertThat(output.toString()).contains("Hello, Grace!").contains("next=[]")
+                assertThat(runs.tracked()).isZero()
                 assertThat(runs.input(RunInputParams("typed-early", "late\n"))).isFalse()
                 assertThat(runs.input(RunInputParams("no-such-run", "text\n"))).isFalse()
             }
@@ -585,6 +703,18 @@ class EmbeddedExecutionTest {
     }
 
     private companion object {
+        const val FOREVER =
+            """
+            module Forever {
+                void run() {
+                    @Inject Console console;
+                    console.print("started");
+                    // runs until stopped: an empty while (True) is rejected as non-terminating
+                    for (Int count = 0; count >= 0; ++count) {}
+                }
+            }
+            """
+
         const val ASK =
             """
             module Ask {

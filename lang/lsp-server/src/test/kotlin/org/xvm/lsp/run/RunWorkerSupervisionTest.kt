@@ -98,7 +98,7 @@ class RunWorkerSupervisionTest {
             assertThat(quick.exit()).isEqualTo(0L to null)
             await().atMost(Duration.ofSeconds(10)).until { workers.usage().isNotEmpty() }
             val kept = workers.workerPids().single()
-            assertThat(workers.usage().getValue(kept)).isEqualTo(RunWorkerProcess.Usage(1L shl 20, 8L shl 30, 10))
+            assertThat(workers.usage().getValue(kept).copy(run = null)).isEqualTo(RunWorkerProcess.Usage(1L shl 20, 8L shl 30, 10, 8))
 
             for (module in listOf("Hoard", "Spawn")) {
                 val (_, run) = workers.run(module)
@@ -109,6 +109,22 @@ class RunWorkerSupervisionTest {
             val (_, next) = workers.run("Quick")
             assertThat(next.exit()).isEqualTo(0L to null)
             assertThat(workers.workerPids()).doesNotContain(kept)
+        }
+    }
+
+    @Test
+    fun `a worker that holds what an ended run left, grew its runtime pool or keeps growing its heap is retired`() {
+        // each bound on its own: none of these reaches the heap or thread totals
+        workers(RunWorkerProcess.Limits(heap = 1L shl 30, threads = 1_000)).use { workers ->
+            for (module in listOf("Leak", "Unended", "Pool", "Grow")) {
+                val (_, quick) = workers.run("Quick")
+                assertThat(quick.exit()).isEqualTo(0L to null)
+                val kept = workers.workerPids().single()
+                val (_, run) = workers.run(module)
+                assertThat(run.exit()).describedAs(module).isEqualTo(0L to null)
+                await().atMost(Duration.ofSeconds(10)).until { kept !in workers.workerPids() }
+            }
+            assertThat(workers.tracked()).isZero()
         }
     }
 
