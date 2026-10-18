@@ -32,8 +32,10 @@ import kotlin.time.Duration.Companion.seconds
  * the next run until it has been idle for [Limits.idle], and any other worker exits when its run ends.
  * A worker receives nothing until it reports the identity the server expects (the protocol version and
  * the bundled XDK, see [RunWorkerIdentity]); one that reports another is ended and its run says why.
- * After each run a worker reports the heap it still uses and its threads; one past [Limits.heap] or
- * [Limits.threads] serves no further run.
+ * After each run a worker reports the heap it still uses, its threads, and what the run left behind;
+ * one past [Limits.heap] or [Limits.threads], whose heap grew more than [Limits.growth] since its first
+ * run, whose runtime pool grew, or that still holds a console or run of an ended program serves no
+ * further run.
  */
 internal class RunWorkerProcess(
     private val command: () -> List<String> = ::defaultCommand,
@@ -61,7 +63,8 @@ internal class RunWorkerProcess(
 
     /**
      * How many programs run at once; how long a worker may take to start, to stop, or stay idle; and how much
-     * heap in use (in bytes) and how many threads a worker may keep after a run and still serve the next.
+     * heap in use (in bytes), growth of it since the worker's first run, and how many threads a worker may
+     * keep after a run and still serve the next.
      */
     data class Limits(
         val running: Int = 4,
@@ -69,14 +72,23 @@ internal class RunWorkerProcess(
         val stop: Duration = 10.seconds,
         val idle: Duration = 10.minutes,
         val heap: Long = 512L * MB,
+        val growth: Long = 128L * MB,
         val threads: Int = 200,
     )
 
-    /** What a worker keeps after a run: the heap in use after a collection, the heap's maximum, and its threads. */
+    /**
+     * What a worker keeps after a run: the heap in use after a collection, the heap's maximum, its threads,
+     * the threads of the runtime's own pool, and the consoles and runs it still holds for ended programs;
+     * [run] is the run this report follows.
+     */
     data class Usage(
         val heapUsed: Long,
         val heapMax: Long,
         val threads: Int,
+        val poolThreads: Int = 0,
+        val consoles: Int = 0,
+        val runs: Int = 0,
+        val run: Long? = null,
     )
 
     /** One worker JVM and the run it hosts, if any. Guarded by [lock], apart from its reader thread. */
@@ -91,7 +103,8 @@ internal class RunWorkerProcess(
         /** Commands waiting for the worker to report the expected identity; null once it has. */
         private var held: MutableList<JsonObject>? = mutableListOf()
 
-        /** What the worker kept after its last run. */
+        /** What the worker kept after its first and its last run. */
+        var first: Usage? = null
         var usage: Usage? = null
 
         /** Why the worker serves no further run once its current one ends. */
@@ -211,6 +224,9 @@ internal class RunWorkerProcess(
     /** Process IDs of the live workers, for tests. */
     internal fun workerPids(): List<Long> = synchronized(lock) { workers.filter { it.process.isAlive }.map { it.process.pid() } }
 
+    /** Runs the server still tracks, which is none once every run has ended; for tests. */
+    internal fun tracked(): Int = listeners.size + hosts.size
+
     /** What each live worker kept after its last run, by process ID, for tests. */
     internal fun usage(): Map<Long, Usage> =
         synchronized(lock) {
@@ -307,8 +323,15 @@ internal class RunWorkerProcess(
                         "usage" ->
                             measured(
                                 worker,
-                                id,
-                                Usage(event["heapUsed"].asLong, event["heapMax"].asLong, event["threads"].asInt),
+                                Usage(
+                                    event["heapUsed"].asLong,
+                                    event["heapMax"].asLong,
+                                    event["threads"].asInt,
+                                    event["poolThreads"]?.asInt ?: 0,
+                                    event["consoles"]?.asInt ?: 0,
+                                    event["runs"]?.asInt ?: 0,
+                                    id,
+                                ),
                             )
 
                         "log" -> logger.info("execution worker: {}", event["text"]?.asString)
@@ -356,29 +379,48 @@ internal class RunWorkerProcess(
         worker.ready.complete(Unit)
     }
 
-    /** The worker reports what it kept after a run; past the limits, it serves no further run. */
+    /**
+     * The worker reports what it kept after a run. Past a limit, it serves no further run: each limit bounds
+     * one thing on its own, so what is left of ended programs, retained growth and the runtime's pool are
+     * not hidden in the heap and thread totals.
+     */
     private fun measured(
         worker: Worker,
-        id: Long?,
         usage: Usage,
     ) {
         val pid = worker.process.pid()
         logger.info(
-            "execution worker {} after run {}: {} MB heap in use of {} MB, {} threads",
+            "execution worker {} after run {}: {} MB heap in use of {} MB, {} threads ({} in the runtime's pool), {} consoles, {} runs",
             pid,
-            id,
+            usage.run,
             usage.heapUsed / MB,
             usage.heapMax / MB,
             usage.threads,
+            usage.poolThreads,
+            usage.consoles,
+            usage.runs,
         )
-        val worn =
-            when {
-                usage.heapUsed > limits.heap -> "${usage.heapUsed / MB} MB heap in use after a run, over ${limits.heap / MB} MB"
-                usage.threads > limits.threads -> "${usage.threads} threads after a run, over ${limits.threads}"
-                else -> null
-            }
         synchronized(lock) {
+            val first = worker.first ?: usage.also { worker.first = it }
             worker.usage = usage
+            val worn =
+                when {
+                    usage.consoles > 0 -> "${usage.consoles} consoles of ended programs still registered"
+
+                    usage.runs > 0 -> "${usage.runs} ended runs still tracked"
+
+                    usage.heapUsed > limits.heap -> "${usage.heapUsed / MB} MB heap in use after a run, over ${limits.heap / MB} MB"
+
+                    usage.heapUsed - first.heapUsed > limits.growth ->
+                        "${(usage.heapUsed - first.heapUsed) / MB} MB more heap in use than after its first run, over ${limits.growth / MB} MB"
+
+                    usage.threads > limits.threads -> "${usage.threads} threads after a run, over ${limits.threads}"
+
+                    usage.poolThreads > first.poolThreads ->
+                        "its runtime pool grew from ${first.poolThreads} to ${usage.poolThreads} threads"
+
+                    else -> null
+                }
             if (worn == null || worker.ended != null) return
             logger.warn("execution worker {} keeps {}; it serves no further run", pid, worn)
             worker.worn = worn

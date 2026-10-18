@@ -12,7 +12,9 @@ import kotlin.system.exitProcess
  * with `mismatch` it reports another XDK, and with `unnumbered` no identity, as a first-protocol worker. The
  * module name says what a run does: `Quick` prints `ok` and exits with 0, `Polite` runs until stopped,
  * `Stubborn` ignores Stop, `Crash` ends the worker process, and `Hoard` and `Spawn` exit with 0 and report
- * 4 GB of heap or 10,000 threads in use afterwards. Each run that exits reports its usage.
+ * 4 GB of heap or 10,000 threads in use afterwards. `Leak`, `Unended`, `Pool` and `Grow` exit with 0 and
+ * report a console or a run still held, one more runtime pool thread, or 200 MB more heap than a `Quick`
+ * run. Each run that exits reports its usage; normally 1 MB of heap, 10 threads, 8 of them the pool's.
  */
 object FakeRunWorker {
     internal val IDENTITY = RunWorkerIdentity(RunWorkerIdentity.PROTOCOL, "fake-xdk")
@@ -41,7 +43,7 @@ object FakeRunWorker {
                     "run" -> {
                         send("started") { addProperty("id", id) }
                         when (val module = command["module"].asString) {
-                            "Quick", "Hoard", "Spawn" -> {
+                            "Quick", "Hoard", "Spawn", "Leak", "Unended", "Pool", "Grow" -> {
                                 output(id, "ok\n")
                                 send("exit") {
                                     addProperty("id", id)
@@ -50,14 +52,15 @@ object FakeRunWorker {
                                 usage(
                                     id,
                                     heap =
-                                        if (module ==
-                                            "Hoard"
-                                        ) {
-                                            4L shl 30
-                                        } else {
-                                            1L shl 20
+                                        when (module) {
+                                            "Hoard" -> 4L shl 30
+                                            "Grow" -> (1L shl 20) + (200L shl 20)
+                                            else -> 1L shl 20
                                         },
                                     threads = if (module == "Spawn") 10_000 else 10,
+                                    poolThreads = if (module == "Pool") 9 else 8,
+                                    consoles = if (module == "Leak") 1 else 0,
+                                    runs = if (module == "Unended") 1 else 0,
                                 )
                             }
 
@@ -98,11 +101,17 @@ object FakeRunWorker {
         id: Long?,
         heap: Long,
         threads: Int,
+        poolThreads: Int = 8,
+        consoles: Int = 0,
+        runs: Int = 0,
     ) = send("usage") {
         addProperty("id", id)
         addProperty("heapUsed", heap)
         addProperty("heapMax", 8L shl 30)
         addProperty("threads", threads)
+        addProperty("poolThreads", poolThreads)
+        addProperty("consoles", consoles)
+        addProperty("runs", runs)
     }
 
     private fun send(
