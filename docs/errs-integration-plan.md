@@ -1901,6 +1901,23 @@ catalog was not rerun: the changes touch embedded execution, the IntelliJ build 
 #693 at `f5174d024`: `:lang:lsp-server:test` 2,324 tests, 0 failures; X280–X289 VS Code `run-O4jVbp`
 (10 of 10) and IntelliJ `run-16133268169536834296` (passed or partial as declared, no IDE failures).
 
+**#703 review follow-up (2026-10-18).** ggleyzer requested changes on #703 with three inline
+comments: find the entry method through the type info (`getChild` misses methods contributed by
+annotations) and make the selection shared with `JitControl`; mark the runner's new parameters
+`(optional)`; and build the argument tuple as `(args? : [])`. `7b39bffb1` on #703's branch addresses
+all three; the suggested tuple form was tried and passes `[]` when there are no arguments, so a
+parameterless `run()` was not found, and a one-line conditional keeps the behaviour. The selection
+is called on the control's linked module copy, since the type info needs the module's
+dependencies. Mirrored as `1fdaa9b05` on this branch and `c402aae92` on #693.
+
+Receipts: on #703's branch `:javatools:test` 438 tests, 0 failures, 42 existing skips
+(`EmbeddingRunMethodTest` 6, none skipped; the new annotation test fails with the old lookup),
+`:xdk:test` 62 tests, 0 failures, 8 skips, `spotlessCheck`; on this branch `:javatools:test` 618
+tests, 0 failures, 42 skips, `org.xvm.lsp.run.*` 33 tests, `spotlessCheck`; on #693 `:javatools:test`
+582 tests, 0 failures, 42 skips, `org.xvm.lsp.run.*` 33 tests, `spotlessCheck`. Each after
+`xdk:installDist`, so the changed runner module ran. Not yet pushed, replied to or reflected in the
+pull request description.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
