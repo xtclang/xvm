@@ -1378,9 +1378,10 @@ public class EmbeddingSupport {
      * Select the module's entry method and decide what it is passed, following the command-line
      * runner: the method is found among the module type's methods, including those its annotations
      * and other contributions supply, and an argument array is passed when the method requires
-     * one, or when arguments are supplied and the method accepts a parameter. Each control calls
-     * this once it has linked its copy of the module, since the type's methods need the module's
-     * dependencies.
+     * one, or when arguments are supplied and the method accepts a parameter. Only methods are
+     * entry points: the runtime invokes a method on the module, so a function of that name is
+     * refused rather than left to fail when the run starts. Each control calls this once it has
+     * linked its copy of the module, since the type's methods need the module's dependencies.
      *
      * @param module      the linked module to run
      * @param methodName  the name of the entry method
@@ -1388,20 +1389,25 @@ public class EmbeddingSupport {
      *
      * @return the argument array to pass, or null to pass none
      *
-     * @throws IllegalArgumentException if the method is missing, ambiguous, or cannot accept
-     *         the arguments
+     * @throws IllegalArgumentException if the method is missing, ambiguous, a function, or cannot
+     *         accept the arguments
      */
     static String[] entryArguments(ModuleStructure module, String methodName, String[] args) {
         String[]     supplied = args == null ? new String[0] : args;
         ConstantPool pool     = module.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
-            Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
+            Set<MethodStructure> found = Connector.findMethods(module.getIdentityConstant(), methodName);
+            List<MethodStructure> methods = found.stream().filter(method -> !method.isFunction()).toList();
+            if (methods.isEmpty() && !found.isEmpty()) {
+                throw new IllegalArgumentException("Unsupported function \"" + methodName + "\" in module "
+                        + module.getName() + ": an entry point must be a method, not a static function");
+            }
             if (methods.size() != 1) {
                 throw new IllegalArgumentException((methods.isEmpty() ? "Missing" : "Ambiguous")
                         + " method \"" + methodName + "\" in module " + module.getName());
             }
 
-            MethodStructure method        = methods.iterator().next();
+            MethodStructure method        = methods.getFirst();
             int             requiredCount = method.getRequiredParamCount();
             if (requiredCount > 1) {
                 throw new IllegalArgumentException("Unsupported arguments for method \"" + methodName
