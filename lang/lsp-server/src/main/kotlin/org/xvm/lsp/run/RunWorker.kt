@@ -38,8 +38,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`), `input` (`id`, `text`),
  * `endInput` (`id`), `stop` (`id`), `shutdown`.
  * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
- * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, measured after
- * the run's exit), `log` (`text`).
+ * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, `poolThreads`,
+ * `consoles`, `runs`, sent after the run's exit), `log` (`text`).
  */
 object RunWorker {
     @JvmStatic
@@ -145,8 +145,10 @@ object RunWorker {
                         output.close()
                         inputs.remove(id)?.end()
                         active.remove(id)
+                        // counted before the exit, so the next run, which may start right after it, is not
+                        val kept = Kept(poolThreads(), EmbeddingSupport.instance().registeredConsoles(), active.size + inputs.size)
                         channel.exit(id, control.result(), errors.failure())
-                        channel.usage(id)
+                        channel.usage(id, kept)
                     }
                 }
         }
@@ -168,6 +170,9 @@ object RunWorker {
             // closing kills the task and waits for it, so keep the command reader responsive
             active[id]?.let { control -> Thread.ofVirtual().start { control.close() } }
         }
+
+        /** Threads of the runtime's own worker pool, which is fixed in size. */
+        private fun poolThreads(): Int = Thread.getAllStackTraces().keys.count { it.threadGroup?.name == "XVM" }
 
         fun stopAll() {
             inputs.values.forEach(ConsoleInput::end)
@@ -358,6 +363,16 @@ internal data class RunWorkerIdentity(
     }
 }
 
+/**
+ * What a run left behind: the runtime's pool threads, and the consoles and runs still registered for
+ * programs that have ended, which should be none.
+ */
+internal data class Kept(
+    val poolThreads: Int,
+    val consoles: Int,
+    val runs: Int,
+)
+
 /** Writes worker events, one JSON object per line, to the protocol stream. */
 internal class RunWorkerChannel(
     private val out: PrintStream,
@@ -392,10 +407,13 @@ internal class RunWorkerChannel(
     fun log(text: String) = send("log") { addProperty("text", text) }
 
     /**
-     * Reports what the worker holds once a run has ended: the heap in use after a collection, and the live
-     * threads. The server retires a worker whose runs leave too much behind.
+     * Reports what the worker holds once a run has ended: the heap in use after a collection, the live
+     * threads, and what the run [kept]. The server retires a worker whose runs leave too much behind.
      */
-    fun usage(id: Long) {
+    fun usage(
+        id: Long,
+        kept: Kept,
+    ) {
         System.gc()
         val heap = ManagementFactory.getMemoryMXBean().heapMemoryUsage
         send("usage") {
@@ -403,6 +421,9 @@ internal class RunWorkerChannel(
             addProperty("heapUsed", heap.used)
             addProperty("heapMax", heap.max)
             addProperty("threads", ManagementFactory.getThreadMXBean().threadCount)
+            addProperty("poolThreads", kept.poolThreads)
+            addProperty("consoles", kept.consoles)
+            addProperty("runs", kept.runs)
         }
     }
 }
