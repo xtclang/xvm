@@ -8130,14 +8130,14 @@
       }
     },
     "X249": {
-      "title": "format continuation and standalone comment margins without changing literals",
+      "title": "format continuation, switches and standalone comment margins without changing literals",
       "manual": [
         "Run Format Document, inspect the shared expected layout, repeat to check stability, then Undo/Redo/Undo. Literal contents must stay unchanged."
       ],
       "values": {
         "file": "Layout.x",
-        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nreturn value;\n}\n}\n",
-        "expected": "module Layout {\n    Int run() {\n        String literal = \"two  spaces\";\n        Int value =\n                1 +\n                2;\n        /* comment\n         * keep relative layout and { braces }\n         */\n        return value;\n    }\n}\n"
+        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nswitch (value) {\ncase 3:\nvalue = 4;\nbreak;\ndefault:\nbreak;\n}\nreturn switch (value) {\ncase 4: 1;\ndefault: 0;\n};\n}\n}\n",
+        "expected": "module Layout {\n    Int run() {\n        String literal = \"two  spaces\";\n        Int value =\n                1 +\n                2;\n        /* comment\n         * keep relative layout and { braces }\n         */\n        switch (value) {\n        case 3:\n            value = 4;\n            break;\n        default:\n            break;\n        }\n        return switch (value) {\n            case 4: 1;\n            default: 0;\n        };\n    }\n}\n"
       },
       "intellij": {
         "coverage": "full",
