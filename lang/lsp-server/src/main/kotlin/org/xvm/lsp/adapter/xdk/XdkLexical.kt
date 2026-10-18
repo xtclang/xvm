@@ -94,8 +94,17 @@ internal object XdkLexical {
         options: FormattingOptions,
         range: Range? = null,
         wrapLines: Boolean = true,
-    ): List<TextEdit> {
-        val tokens = lex(text) ?: return emptyList()
+    ): List<TextEdit> = formatOrNull(text, config, options, range, wrapLines).orEmpty()
+
+    /** [format]'s edits, or null when [text] cannot be lexed. */
+    private fun formatOrNull(
+        text: String,
+        config: FormattingConfig,
+        options: FormattingOptions,
+        range: Range?,
+        wrapLines: Boolean,
+    ): List<TextEdit>? {
+        val tokens = lex(text) ?: return null
         val lines = text.split(newlines)
         val lineTokens = tokens.groupBy { it.range.start.line }
         val nesting =
@@ -324,6 +333,24 @@ internal object XdkLexical {
             val end = lineStarts[range.end.line] + range.end.column
             Span(token.id, range, start, end, text.substring(start, end))
         }
+    }
+
+    /**
+     * The indentation [format] gives a statement on the blank [line] of [text], or null when the text
+     * cannot be lexed. A blank line has no token to indent, so this asks for a stand-in one: after Enter,
+     * the new line gets the indentation of the code that will be typed there.
+     */
+    fun blankLineIndentation(
+        text: String,
+        line: Int,
+        config: FormattingConfig,
+        options: FormattingOptions,
+    ): String? {
+        val start = offset(text, Position(line, 0))
+        val end = start + text.split(newlines)[line].length
+        val probe = text.replaceRange(start, end, "x")
+        return formatOrNull(probe, config, options, Range(Position(line, 0), Position(line, 1)), wrapLines = false)
+            ?.let { edits -> edits.firstOrNull { it.range.start == Position(line, 0) }?.newText ?: "" }
     }
 
     private fun offset(
