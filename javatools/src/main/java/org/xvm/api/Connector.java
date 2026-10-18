@@ -62,8 +62,8 @@ public abstract class Connector {
     public abstract Set<MethodStructure> findMethods(String sMethodName);
 
     /**
-     * Find an entry points for a given name in the specified module. The module's type information
-     * includes the methods its annotations and other contributions supply.
+     * Find the entry points for a given name in the specified module. Only methods are entry
+     * points; functions are not.
      */
     protected static Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName) {
         TypeInfo             typeInfo    = idModule.getType().ensureTypeInfo();

@@ -16,11 +16,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.xvm.api.EmbeddingSupport.ConsoleInput;
 import org.xvm.api.EmbeddingSupport.Control;
 
 import org.xvm.asm.DirRepository;
@@ -96,7 +99,8 @@ public class EmbeddingRunMethodTest {
         assertRejected(module, "typed", "Unsupported argument type");
         assertRejected(module, "overloaded", "Ambiguous method");
         assertRejected(module, "absent", "Missing method");
-        assertRejected(module, "utility", "Unsupported function");
+        // functions are not entry points
+        assertRejected(module, "utility", "Missing method");
     }
 
     @Test
@@ -122,7 +126,7 @@ public class EmbeddingRunMethodTest {
 
         // the module declares no run method of its own; its annotation contributes one
         assertNull(EmbeddingSupport.entryArguments(module, "run", new String[0]));
-        String output = run("Annotated", "run", List.of(), null);
+        String output = run("Annotated", "run", List.of(), ConsoleInput.NONE);
         assertTrue(output.contains("run from an annotation"), output);
     }
 
@@ -138,7 +142,7 @@ public class EmbeddingRunMethodTest {
                     }
                 }
                 """);
-        String output = run("Arguments", "greet", List.of("one", "two words", "ünï ✓ 𝄞"), null);
+        String output = run("Arguments", "greet", List.of("one", "two words", "ünï ✓ 𝄞"), ConsoleInput.NONE);
 
         assertTrue(output.contains("arg=[one]"), output);
         assertTrue(output.contains("arg=[two words]"), output);
@@ -149,7 +153,7 @@ public class EmbeddingRunMethodTest {
     public void consoleInputIsReadLineByLineAndEndsWithAnEmptyLine() throws IOException {
         compileAndStore(readerModule("Reader"));
         String output = run("Reader", "run", List.of(),
-                new BufferedReader(new StringReader("Ada Lovelace\n")));
+                ConsoleInput.of(new BufferedReader(new StringReader("Ada Lovelace\n"))));
 
         assertTrue(output.contains("name? "), output);
         assertTrue(output.contains("hello [Ada Lovelace]"), output);
@@ -157,9 +161,37 @@ public class EmbeddingRunMethodTest {
     }
 
     @Test
+    public void consoleInputIsReadOnAnIoThreadAndToldWhetherToEcho() throws IOException {
+        compileAndStore("""
+                module Secret {
+                    void run() {
+                        @Inject Console console;
+                        String name = console.readLine("name? ");
+                        String word = console.readLine("password? ", True);
+                        console.print($"read [{name}] and {word.size} characters");
+                    }
+                }
+                """);
+        var lines   = new ConcurrentLinkedQueue<>(List.of("Ada", "secret"));
+        var echo    = new CopyOnWriteArrayList<Boolean>();
+        var readers = new CopyOnWriteArrayList<Thread>();
+        String output = run("Secret", "run", List.of(), suppressEcho -> {
+            echo.add(suppressEcho);
+            readers.add(Thread.currentThread());
+            return lines.poll();
+        });
+
+        assertTrue(output.contains("read [Ada] and 6 characters"), output);
+        assertEquals(List.of(false, true), echo);
+        // waiting for a line occupies a virtual IO thread, not one of the runtime's service workers
+        assertEquals(2, readers.size());
+        assertTrue(readers.stream().allMatch(Thread::isVirtual), readers.toString());
+    }
+
+    @Test
     public void withoutConsoleInputReadLineIsUnsupported() throws IOException {
         compileAndStore(readerModule("Unread"));
-        String output = run("Unread", "run", List.of(), null);
+        String output = run("Unread", "run", List.of(), ConsoleInput.NONE);
 
         assertFalse(output.contains("hello ["), output);
     }
@@ -173,7 +205,7 @@ public class EmbeddingRunMethodTest {
                 """);
         ErrorList errs    = new ErrorList(25);
         Control   control = support.runMethod(input(), "Missing", null, "absent", List.of(),
-                new PrintWriter(new StringWriter(), true), null, rootDir.toFile(), errs);
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
 
         assertNull(control);
         assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
@@ -190,7 +222,7 @@ public class EmbeddingRunMethodTest {
         File      blocked = new File(rootDir.toFile(), "no\u0000root");
         ErrorList errs    = new ErrorList(25);
         Control   control = support.runMethod(input(), "Unstartable", null, "run", List.of(),
-                new PrintWriter(new StringWriter(), true), null, blocked, errs);
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, blocked, errs);
         assertNotNull(control, () -> "Unstartable did not register: " + errs.getErrors());
 
         CompletionException failure = assertThrows(CompletionException.class, () -> {
@@ -208,7 +240,7 @@ public class EmbeddingRunMethodTest {
     // ----- helpers -------------------------------------------------------------------------------
 
     private String run(String moduleName, String methodName, List<String> args,
-                       BufferedReader consoleIn) {
+                       ConsoleInput consoleIn) {
         StringWriter output  = new StringWriter();
         ErrorList    errs    = new ErrorList(25);
         Control      control = support.runMethod(input(), moduleName, null, methodName, args,
