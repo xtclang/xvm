@@ -24,7 +24,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | Protocol | `xtc/build`, `xtc/run`, `xtc/stopRun`, `xtc/runnableTargets`; `xtc/runOutput` and `xtc/runExited` notifications for a client-chosen run ID ([server README](../../lsp-server/README.md#embedded-build-and-run)) |
 | Build | [XdkBuild](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkBuild.kt) compiles the module's dependency order into `build/xtc/embedded/`, with per-module outcomes, skipped consumers of failed dependencies and attributable diagnostics |
 | Runnable targets | Read from the module structure the compiler registered: exactly one `run` method with at most one required parameter. Run lenses appear only on such modules; no user code runs |
-| Execution | [RunWorkerProcess](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorkerProcess.kt) starts [RunWorker](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt) lazily over JSON-lines stdio, reuses it and replaces it after death; stray worker output becomes events, never protocol frames |
+| Execution | [RunWorkerProcess](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorkerProcess.kt) starts [RunWorker](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt) lazily over JSON-lines stdio, reuses it and replaces it after death; stray worker output becomes events, never protocol frames; a worker must report the server's protocol and XDK before it receives anything, its output is batched and bounded, and it reports its heap and threads after each run |
 | Embedding API | `EmbeddingSupport.runMethod` selects an entry method with the CLI runner's rule and passes exact arguments; [InterpreterControl](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) no longer starts the runner's HTTP host; [runner.x](../../../lib_runner/src/main/x/runner.x) tasks take a method and arguments |
 | VS Code | `xtc.build.mode`; Build/Rebuild (`Cmd`/`Ctrl+F9`), Run lens, editor title Run, `Ctrl+Shift+R`/`Ctrl+Shift+F10`, tasks and `F5` follow it; runs stream into a task terminal and closing it stops the run ([README](../../vscode-extension/README.md#building-and-running)) |
 | IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../intellij-plugin/README.md#running-your-application)) |
@@ -221,8 +221,22 @@ this bridge; they cannot be inferred from compiler type hints.
   startup and stop deadlines (a worker not ready within 60 s, or a program still running 10 s after
   Stop, is ended and its run says why, without touching other runs); one idle worker is kept for the
   next run and exits after 10 minutes idle, any other when its run ends (`RunWorkerSupervisionTest`
-  with a stand-in worker, and two real programs at once in `EmbeddedExecutionTest`). A configuration
-  or generation handshake, bounded output and backpressure, and memory measurement remain.
+  with a stand-in worker, and two real programs at once in `EmbeddedExecutionTest`).
+  *2026-10-18:* a worker receives nothing until its `ready` reports the protocol version and the
+  bundled XDK's fingerprint the server expects; one that reports another, or none (a first-protocol
+  worker), is ended and its run says to restart the language server. The server's configuration is
+  fixed for its lifetime, so a new generation is a new server; the check catches a worker started
+  from replaced files. Output is batched (sent 20 ms after it is printed, or once 16,384 characters
+  wait) and bounded (no more waits), and the server forwards it synchronously, so a program printing
+  faster than the client reads waits in its print (`OutputBatchesTest`; 5,000 prints arrive whole
+  and in order in far fewer events in `EmbeddedExecutionTest`); VS Code keeps the last million
+  characters of a run's text. After each run the worker reports its heap in use after a collection
+  and its threads; the server logs them and does not reuse a worker keeping more than 512 MB or 200
+  threads (a real worker keeps about 137 MB and 21 threads after a run). Ending a worker no longer
+  leaves its runs open when its closed output stream fails the server's read. Still open: parent
+  death, IDE close and leaked tasks, consoles or processes checked over repeated runs (the R8 soak),
+  and retained artifacts and native-pool growth bounded each on its own rather than through the
+  heap and thread counts.
 - [ ] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.

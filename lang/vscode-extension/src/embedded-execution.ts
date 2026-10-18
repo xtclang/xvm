@@ -67,7 +67,10 @@ interface RunSession {
 
 const sessions = new Map<string, RunSession>();
 
-/** A build or run as its terminal shows it: everything written so far, and the exit code once finished. */
+/**
+ * A build or run as its terminal shows it: the text written so far (its last `KEPT_TEXT` characters), and the
+ * exit code once finished.
+ */
 export interface ExecutionUpdate {
     kind: 'build' | 'run';
     label: string;
@@ -99,6 +102,20 @@ export function endAllRuns(reason: string): void {
     for (const session of [...sessions.values()]) {
         session.exited(undefined, reason);
     }
+}
+
+/** The most text a build or run keeps for its updates, so a program that prints without end holds no more. */
+export const KEPT_TEXT = 1_000_000;
+
+/** `text` appended to `kept`, keeping the last `KEPT_TEXT` characters and never half a surrogate pair. */
+export function keptText(kept: string, text: string): string {
+    const all = kept + text;
+    if (all.length <= KEPT_TEXT) {
+        return all;
+    }
+    const start = all.length - KEPT_TEXT;
+    const code = all.charCodeAt(start);
+    return all.slice(code >= 0xdc00 && code <= 0xdfff ? start + 1 : start);
 }
 
 /** Terminal text needs carriage returns before line feeds. */
@@ -159,7 +176,7 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
     }
 
     protected write(text: string): void {
-        this.text += text;
+        this.text = keptText(this.text, text);
         this.writer.fire(terminalText(text));
         updates.fire({ kind: this.kind, label: this.label, text: this.text });
     }
