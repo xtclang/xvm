@@ -24,6 +24,21 @@ val xdkJavaToolsProvider = configurations.register("xdkJavaToolsProvider") {
     }
 }
 
+/**
+ * The compiled XDK modules, for tests that run real modules (EmbeddingRunMethodTest). They are
+ * consumed through the same variant as the XDK distribution's modules, so Gradle builds them before
+ * the tests instead of the tests depending on an installed XDK. Only the tests use them: javatools
+ * itself is what compiles these modules.
+ */
+val testXtcModules = configurations.register("testXtcModules") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc"))
+    }
+}
+
 dependencies {
     compileOnly(libs.jetbrains.annotations)
     implementation(libs.javatools.utils)
@@ -36,6 +51,16 @@ dependencies {
     implementation(libs.slf4j.nop) // to avoid startup warnings while preserving no-op logging
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
+    // the runner and the runtime's system modules; the runner brings the libraries it needs
+    testXtcModules(libs.xdk.ecstasy)
+    testXtcModules(libs.xdk.runner)
+    testXtcModules(libs.javatools.bridge)
+}
+
+tasks.processTestResources {
+    from(testXtcModules) {
+        into("xdk-modules")
+    }
 }
 
 /**
