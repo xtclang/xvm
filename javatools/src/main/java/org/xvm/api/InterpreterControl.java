@@ -13,17 +13,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.xvm.asm.Component;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.MultiMethodStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Debugger;
 import org.xvm.runtime.MainContainer;
@@ -69,7 +64,8 @@ class InterpreterControl
      * Create and start a control for the specified module.
      *
      * @param methodName  the method to invoke
-     * @param args        the argument array to pass to the method, or null to pass none
+     * @param args        the supplied arguments, or null for none; what the method is passed is
+     *                    decided by {@link EmbeddingSupport#entryArguments}
      * @param consoleIn   (optional) the console's input; used only with a console
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
@@ -87,7 +83,7 @@ class InterpreterControl
         try {
             FileStructure file     = prepareModule(interpreter, module, repository);
             MainContainer main     = interpreter.getMainContainer();
-            String[]      callArgs = entryArguments(file.getModule(), methodName, args);
+            String[]      callArgs = EmbeddingSupport.entryArguments(file.getModule(), methodName, args);
 
             if (console != null) {
                 consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console, consoleIn);
@@ -136,51 +132,6 @@ class InterpreterControl
             unregisterConsole(interpreter, consoleId);
             throw e;
         }
-    }
-
-    /**
-     * Select the module's entry method and decide what it is passed, following the command-line
-     * runner: an argument array is passed when the method requires one, or when arguments are
-     * supplied and the method accepts a parameter.
-     *
-     * @param module      the module to run
-     * @param methodName  the name of the entry method
-     * @param args        the supplied arguments, or null for none
-     *
-     * @return the argument array to pass, or null to pass none
-     *
-     * @throws IllegalArgumentException if the method is missing, ambiguous, or cannot accept
-     *         the arguments
-     */
-    static String[] entryArguments(ModuleStructure module, String methodName, String[] args) {
-        String[]  supplied = args == null ? new String[0] : args;
-        Component child    = module.getChild(methodName);
-        if (!(child instanceof MultiMethodStructure methods) || methods.methods().size() != 1) {
-            throw new IllegalArgumentException((child instanceof MultiMethodStructure ? "Ambiguous" : "Missing")
-                    + " method \"" + methodName + "\" in module " + module.getName());
-        }
-
-        MethodStructure method        = methods.methods().iterator().next();
-        int             requiredCount = method.getRequiredParamCount();
-        if (requiredCount > 1) {
-            throw new IllegalArgumentException("Unsupported arguments for method \"" + methodName
-                    + "\": " + method.getIdentityConstant().getSignature().getValueString());
-        }
-
-        boolean passArgs = requiredCount == 1 || supplied.length > 0 && method.getParamCount() > 0;
-        if (!passArgs) {
-            return null;
-        }
-
-        ConstantPool pool = module.getConstantPool();
-        try (var _ = ConstantPool.withPool(pool)) {
-            TypeConstant typeArg = method.getParam(0).getType();
-            if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
-                throw new IllegalArgumentException("Unsupported argument type "
-                        + typeArg.getValueString() + " for method \"" + methodName + "\"");
-            }
-        }
-        return supplied;
     }
 
     private static FileStructure prepareModule(InterpreterConnector connector, ModuleStructure module,
