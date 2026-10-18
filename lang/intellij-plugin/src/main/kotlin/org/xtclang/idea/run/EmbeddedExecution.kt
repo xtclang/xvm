@@ -1,10 +1,12 @@
 package org.xtclang.idea.run
 
 import com.intellij.execution.filters.Filter
+import com.intellij.execution.filters.HyperlinkInfo
 import com.intellij.execution.filters.LazyFileHyperlinkInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import org.eclipse.lsp4j.services.LanguageServer
@@ -96,6 +98,23 @@ internal class DiagnosticLinks(
 
     private companion object {
         val LOCATION = Regex("""^(.+?\.x):(\d+):(\d+): """)
+    }
+}
+
+/** Links [XtcBuildSettings.SETTINGS_PAGE] in a run console or the Build tool window to that settings page. */
+internal object BuildSettingsLink : Filter {
+    override fun applyFilter(
+        line: String,
+        entireLength: Int,
+    ): Filter.Result? {
+        val offset = line.indexOf(XtcBuildSettings.SETTINGS_PAGE)
+        if (offset < 0) return null
+        val start = entireLength - line.length + offset
+        return Filter.Result(
+            start,
+            start + XtcBuildSettings.SETTINGS_PAGE.length,
+            HyperlinkInfo { project -> ShowSettingsUtil.getInstance().showSettingsDialog(project, XtcBuildConfigurable::class.java) },
+        )
     }
 }
 
