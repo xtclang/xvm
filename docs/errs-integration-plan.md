@@ -2007,6 +2007,29 @@ headless 71, `spotlessCheck`, VS Code `run-1BiJT7` (14 of 14) and IntelliJ
 `run-8913852151414965107` for both sets (18 passed, X254 and X257 partial as declared, no IDE
 failures).
 
+**#703 review, second round (2026-10-18).** Gleyzer's review asked for nine changes; all are
+answered and resolved. On #703, `1c3a3420a` makes `xExternalConsole.readLine` read on the runtime's
+IO executor (`Container.scheduleIO`, then `Frame.waitForIO`), so a program waiting for input holds no
+service worker. It also passes `suppressEcho` to the host through `xExternalConsole.Input` and the new
+`EmbeddingSupport.ConsoleInput` (`ConsoleInput.NONE` replaces `null`). `Connector.findMethods` selects
+methods only, so `xtc run` refuses a static `run` before running it in both back ends. The rest are
+comment fixes. The `String[]` check keeps `isA`, as the command-line runner does, explained in the
+reply. `72784d3fb` quotes method names with `Handy.quoted`. Here `06e1d4a7d` carries both and adapts
+`RunWorker` (`ConsoleInput.of(BufferedReader(input))`); the editors still show typed input, since the
+echo request is not passed on to them yet. Mirrored on #693 as `4defdf759`.
+
+Receipts: on #703 `:javatools:test` 440 tests, 0 failures, 42 existing skips, `spotlessCheck`. Here
+`:javatools:test` 620 tests, `:lang:lsp-server:test` 2,355 tests, 0 failures, `spotlessCheck`,
+X280–X289 VS Code `run-1huZUh` (10 of 10) and IntelliJ `run-14639589039011185817`. On #693
+`:javatools:test` 584 tests, `:lang:lsp-server:test` 2,355 tests, 0 failures, `spotlessCheck`,
+X280–X289 VS Code `run-5FWiUt` (10 of 10) and IntelliJ `run-2914775556563454784` (passed or partial
+as declared, no IDE errors); no worker processes left on either.
+
+Open: `EmbeddingRunMethodTest` finds the XDK in `xdk/build/install/xdk` and is skipped without it.
+In #703's CI, `:javatools:test` ran at 14:24 and `:xdk:installDist` at 14:26, so CI skipped all of
+its tests. `javatools` has no dependency on the built XDK, unlike `lang/lsp-server`, which consumes
+the compiled modules through `libs.bundles.xdk.libraries` variants.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.

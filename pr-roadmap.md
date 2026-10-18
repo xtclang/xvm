@@ -38,6 +38,7 @@ and remaining R1–R8 work are in the
 | `35991ee97`, `b6f5ce147` | R4 done: console count for embedding hosts; worker bounds for leftovers, pool growth and retained heap growth; parent death, editor close and repeated-run tests | #693 (mirrored as `2705d5fdf`, `c0b6a1a62`) |
 | `2eca02469`, `29cd0c3c6`, `223518e24` | Indentation kept while typing (X290); switches laid out as the XDK does; cancellable reads for server workspace edits and compiler root walks | #693 (mirrored as `589977e42`, `704be7b02`, `51329f03d`) |
 | `d53d22be4` (plugin part) | The `createSettings` comment says why the override is permanent: UP13 is LSP4IJ's design, not a defect | #693 (mirrored as `6b5515248`) |
+| `06e1d4a7d` | #703 review: console input read on an IO thread with the echo request passed on, `ConsoleInput.NONE` in place of null, methods-only entry points, quoted method names; `RunWorker` adapted | #703 (`1c3a3420a`, `72784d3fb`); #693 (mirrored as `4defdf759`) |
 
 **2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](docs/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 
