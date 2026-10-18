@@ -69,6 +69,7 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Severity.ERROR;
 
@@ -1150,33 +1151,8 @@ public class EmbeddingSupport {
          * @return input that reads lines from the specified reader and ignores "suppressEcho"
          */
         static ConsoleInput of(BufferedReader reader) {
-            Objects.requireNonNull(reader, "reader");
+            requireNonNull(reader, "reader");
             return _ -> reader.readLine();
-        }
-    }
-
-    /**
-     * The method to invoke as a module's entry point, and the arguments to pass it.
-     *
-     * @param name  the name of the entry method, conventionally "run"
-     * @param args  the arguments for the entry method; never shell-parsed
-     */
-    public record EntryPoint(String name, List<String> args) {
-        /**
-         * The conventional entry point: "run", with no arguments.
-         */
-        public static final EntryPoint RUN = new EntryPoint("run");
-
-        public EntryPoint {
-            Objects.requireNonNull(name, "name");
-            args = List.copyOf(args);
-        }
-
-        /**
-         * Create an entry point for the specified method and arguments.
-         */
-        public EntryPoint(String name, String... args) {
-            this(name, List.of(args));
         }
     }
 
@@ -1306,10 +1282,9 @@ public class EmbeddingSupport {
      * @param methodName  the entry method to invoke, conventionally "run"
      * @param args        the arguments for the entry method; never shell-parsed
      * @param console     (optional) the PrintWriter for the executing application
-     * @param consoleIn   (optional) the input for the application's console: each
-     *                    {@code Console.readLine()} reads one line from it, and its end reads as an
-     *                    empty line. Used only with a console; without it, {@code readLine} is
-     *                    unsupported
+     * @param consoleIn   the input for the application's console, or {@link ConsoleInput#NONE}:
+     *                    each {@code Console.readLine()} reads one line from it, and its end reads
+     *                    as an empty line. Used only with a console
      * @param rootDir     (optional) the root directory for the application's file system, as
      *                    described for {@link #run(ModuleStructure, PrintWriter, File, Map, ErrorListener)}
      * @param errs        a means for the container to report uncaught exceptions and other errors
@@ -1324,12 +1299,12 @@ public class EmbeddingSupport {
             String                 methodName,
             List<String>           args,
             PrintWriter            console,
-            BufferedReader         consoleIn,
+            ConsoleInput           consoleIn,
             File                   rootDir,
             @NotNull ErrorListener errs) {
         return start(input, moduleName, version, requireNonNull(methodName, "methodName"),
-                requireNonNull(args, "args").toArray(String[]::new), console, consoleIn, rootDir,
-                null, null, errs);
+                requireNonNull(args, "args").toArray(String[]::new), console,
+                requireNonNull(consoleIn, "consoleIn"), rootDir, null, null, errs);
     }
 
     private Control start(
@@ -1339,7 +1314,7 @@ public class EmbeddingSupport {
             String                    methodName,
             String[]                  args,
             PrintWriter               console,
-            BufferedReader            consoleIn,
+            ConsoleInput              consoleIn,
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
@@ -1378,12 +1353,10 @@ public class EmbeddingSupport {
 
     /**
      * Select the module's entry method and decide what it is passed, following the command-line
-     * runner: the method is found among the module type's methods, including those its annotations
-     * and other contributions supply, and an argument array is passed when the method requires
-     * one, or when arguments are supplied and the method accepts a parameter. Only methods are
-     * entry points: the runtime invokes a method on the module, so a function of that name is
-     * refused rather than left to fail when the run starts. Each control calls this once it has
-     * linked its copy of the module, since the type's methods need the module's dependencies.
+     * runner: the method is found among the module type's methods, and an argument array is
+     * passed when the method requires one, or when arguments are supplied and the method accepts a
+     * parameter. Each control calls this once it has linked its copy of the module, since the
+     * type's methods need the module's dependencies.
      *
      * @param module      the linked module to run
      * @param methodName  the name of the entry method
@@ -1391,29 +1364,24 @@ public class EmbeddingSupport {
      *
      * @return the argument array to pass, or null to pass none
      *
-     * @throws IllegalArgumentException if the method is missing, ambiguous, a function, or cannot
+     * @throws IllegalArgumentException if the method is missing, ambiguous, or cannot
      *         accept the arguments
      */
     static String[] entryArguments(ModuleStructure module, String methodName, String[] args) {
         String[]     supplied = args == null ? new String[0] : args;
         ConstantPool pool     = module.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
-            Set<MethodStructure> found = Connector.findMethods(module.getIdentityConstant(), methodName);
-            List<MethodStructure> methods = found.stream().filter(method -> !method.isFunction()).toList();
-            if (methods.isEmpty() && !found.isEmpty()) {
-                throw new IllegalArgumentException("Unsupported function \"" + methodName + "\" in module "
-                        + module.getName() + ": an entry point must be a method, not a static function");
-            }
+            Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
             if (methods.size() != 1) {
                 throw new IllegalArgumentException((methods.isEmpty() ? "Missing" : "Ambiguous")
-                        + " method \"" + methodName + "\" in module " + module.getName());
+                        + " method " + quoted(methodName) + " in module " + module.getName());
             }
 
-            MethodStructure method        = methods.getFirst();
+            MethodStructure method        = methods.iterator().next();
             int             requiredCount = method.getRequiredParamCount();
             if (requiredCount > 1) {
-                throw new IllegalArgumentException("Unsupported arguments for method \"" + methodName
-                        + "\": " + method.getIdentityConstant().getSignature().getValueString());
+                throw new IllegalArgumentException("Unsupported arguments for method " + quoted(methodName)
+                        + ": " + method.getIdentityConstant().getSignature().getValueString());
             }
 
             boolean passArgs = requiredCount == 1 || supplied.length > 0 && method.getParamCount() > 0;
@@ -1421,10 +1389,12 @@ public class EmbeddingSupport {
                 return null;
             }
 
+            // as for the command-line runner, the parameter may be of any type a String[] can be
+            // passed as, such as Object or List<String>
             TypeConstant typeArg = method.getParam(0).getType();
             if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
                 throw new IllegalArgumentException("Unsupported argument type "
-                        + typeArg.getValueString() + " for method \"" + methodName + "\"");
+                        + typeArg.getValueString() + " for method " + quoted(methodName));
             }
         }
         return supplied;
