@@ -853,24 +853,27 @@ Test with the full LSP server running against a real XTC file:
 
 #### 6.3 Manual Testing in IntelliJ / VS Code
 
-**Status (2026-10-16):** superseded by the maintained
-[manual test plan §13a](../manual-test-plan.md#13a-on-type-formatting-auto-indent) and by
-`OnTypeFormattingTest`; run those instead. Two rows below have no §13a counterpart: Enter after
-`case X:` and Enter after a `//` comment.
+**Status (2026-10-18):** every row below is checked by a test. Shared case X290 types each scenario
+in VS Code and IntelliJ and requires the cursor line's indentation, and that the server's on-type
+edits for the same keystroke leave it there. `OnTypeFormattingTest` (Tree-sitter) and
+`XdkOnTypeFormattingTest` (compiler) check the server's answer for each row. The maintained manual
+checks are [manual test plan §13a](../manual-test-plan.md#13a-on-type-formatting-auto-indent).
 
 Follow this checklist in both editors:
 
-- [ ] Type `{` then Enter inside a class -- new line indented +4
-- [ ] Type `{` then Enter inside a method -- new line indented +4
-- [ ] Type Enter after a normal statement -- indent maintained
-- [ ] Type `}` to close a class -- brace outdented to class indent
-- [ ] Type `}` to close an if block -- brace outdented to if indent
-- [ ] Multi-line declaration: type `implements Foo`, Enter, then `{` -- body at correct indent
-- [ ] Switch/case: Enter after `case X:` -- indent +4 from case
-- [ ] Nested constructs: correct indent at 3+ nesting levels
-- [ ] String literal: Enter inside string -- no indent adjustment
-- [ ] Comment: Enter after `//` comment -- indent maintained
-- [ ] Large file performance: < 5ms per request
+- [x] Type `{` then Enter inside a class -- new line indented +4 (X290)
+- [x] Type `{` then Enter inside a method -- new line indented +4 (X290)
+- [x] Type Enter after a normal statement -- indent maintained (X290)
+- [x] Type `}` to close a class -- brace outdented to class indent (X290)
+- [x] Type `}` to close an if block -- brace outdented to if indent (X290)
+- [x] Multi-line declaration: type `implements Foo`, Enter, then `{` -- body at correct indent (X290:
+  Enter after a continued declaration's `{` gives the body 8, from the declaration's first line)
+- [x] Switch/case: Enter after `case X:` -- indent +4 from case (X290; cases align with their `switch`)
+- [x] Nested constructs: correct indent at 3+ nesting levels (X290)
+- [x] String literal: Enter inside string -- no indent adjustment (X290)
+- [x] Comment: Enter after `//` comment -- indent maintained (X290; VS Code also continues the `// `)
+- [x] Large file performance: < 5ms per request (1,203 lines, median of 100 requests: Tree-sitter
+  0.4 ms, compiler 3.1 ms, slowest 0.9 and 8.5 ms; `OnTypeFormattingTest`, `XdkOnTypeFormattingTest`)
 
 ### 7. Relationship to TextMate indentationRules
 
