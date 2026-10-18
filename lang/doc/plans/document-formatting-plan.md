@@ -47,11 +47,13 @@ However, the user can override this via editor settings — if the editor sends
 The defaults flow through the standard resolution chain: `xtc-format.toml > editor
 config > LSP options > XTC defaults`.
 
-### Design choice: case labels at switch indent
+### Design choice: case labels follow the XDK
 
-In XTC, `case` labels are formatted at the **same indent as the `switch` keyword**, not
-indented one level deeper (unlike the XDK standard library which currently uses +4).
-This is an intentional style decision.
+The formatters follow the XDK's own layout. In a switch **statement**, `case` and `default`
+labels are at the **same indent as the `switch` keyword**, with their statements one level in. In
+a switch **expression** (`return switch (x) {`, `Int y = switch (x) {`), the labels are one level
+inside the switch. Counted over the XDK's libraries (2026-10-18): statements align their labels
+302 times and indent them 7 times; expressions indent them 121 times and align them 4 times.
 
 ## Current State (Before This Work)
 
@@ -74,7 +76,7 @@ All rules derived from `lib_ecstasy/` source conventions:
 | Nested blocks (if, for, while, try) | +indent from statement | `if (...) {\n    ...` |
 | Continuation lines | +continuation from declaration | `const Foo\n        implements Bar` |
 | Continuation ending with `{` | +indent from declaration (not continuation) | `implements Bar {\n    body` |
-| Switch/case | `case` at same indent as `switch` | `switch {\ncase X:` |
+| Switch/case | statement: `case` at same indent as `switch`; expression: +indent | `switch {\ncase X:`; `return switch {\n    case X:` |
 | Case body | +indent from `case` | `case X:\n    stmt;` |
 | Annotations | Same indent as annotated element | `@Override\nvoid foo()` |
 | Closing `}` | Same indent as the line containing `{` | matches declaration indent |
@@ -96,9 +98,9 @@ For each line, determines the correct indentation using AST structural depth:
 1. **Blank lines** → 0 (empty line, no trailing whitespace)
 2. **String literal interior** → SKIP (never modify)
 3. **Comment interior** → `countIndentDepth(commentAncestor) * indentSize + 1`
-4. **Closing `}`** → `countIndentDepth(ownerNode) * indentSize`
+4. **Closing `}`** → `countIndentDepth(ownerNode) * indentSize`; a switch's closing brace aligns with the switch
 5. **Closing `)`** → `countIndentDepth(enclosingConstruct) * indentSize`
-6. **Case labels** → `countIndentDepth(switchNode) * indentSize`
+6. **Case labels** → `countIndentDepth(switchNode) * indentSize`, plus one level in a switch expression
 7. **Continuation keywords** → `countIndentDepth(declNode) * indentSize + continuationIndentSize`
 8. **General case** → `countIndentDepth(node) * indentSize`
 
@@ -135,7 +137,7 @@ whitespace, so it works correctly even on completely unindented files.
 | Basic indentation | 3 | Top-level module, nested class, method body |
 | Control flow | 1 | if/for/while blocks |
 | Continuation lines | 1 | extends/implements at continuation indent |
-| Switch/case | 1 | case at switch level |
+| Switch/case | 1 | case at switch level in a statement, one level in in an expression |
 | Closing delimiters | 1 | `}` matches opening construct |
 | Comments | 3 | Doc comment, block comment, line comment |
 | String literals | 1 | Multiline string content preserved |
