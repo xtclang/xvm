@@ -1973,10 +1973,10 @@ public class TerminalTypeConstant
     }
 
     @Override
-    public boolean isJitInterface() {
+    public boolean isJitImplInterface() {
         return isFormalType()
-                ? resolveConstraints().isJitInterface()
-                : super.isJitInterface();
+                ? resolveConstraints().isJitImplInterface()
+                : super.isJitImplInterface();
     }
 
     @Override

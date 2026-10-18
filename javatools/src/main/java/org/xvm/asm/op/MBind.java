@@ -171,7 +171,7 @@ public class MBind
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
         regTarget = regTarget.load(code);
-        if (regTarget.type().isJitInterface()) {
+        if (regTarget.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean));

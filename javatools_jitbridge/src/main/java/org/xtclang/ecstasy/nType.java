@@ -62,7 +62,7 @@ public class nType
     public Class $xvmClass(Ctx ctx) {
         if (xvmClass == null) {
             TypeSystem       typeSystem  = ctx.container.typeSystem;
-            java.lang.String className   = $dataType.getJitCCName(typeSystem);
+            java.lang.String className   = $dataType.getJitImplName(typeSystem);
             java.lang.String classOfType = TypeSystem.classOfClass(className);
             try {
                 java.lang.Class clz;

@@ -85,7 +85,7 @@ public class JumpIsA
 
         // load the argument and get its type
         RegisterInfo reg = bctx.loadArgument(code, m_nArgCond);
-        if (reg.type().isJitInterface()) {
+        if (reg.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         bctx.loadCtx(code);

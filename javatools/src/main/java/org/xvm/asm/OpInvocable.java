@@ -27,6 +27,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCallDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -332,13 +333,12 @@ public abstract class OpInvocable extends Op {
         ConstantPool pool       = bctx.pool();
         TypeConstant typeTarget = bctx.getArgumentType(m_nTarget);
         if (m_nTarget == A_THIS || m_nTarget == A_STRUCT) {
-            // resolve this receiver's generic narrowing before method lookup erases the formals;
-            // e.g. Map<Object, Int> becomes Map<Stringable, Int> after augmenting formal types
-            TypeConstant typeFormal = bctx.typeInfo.getClassStructure().getFormalType();
-            TypeConstant typeNarrow = tmx.augmentPropertyType(typeFormal, getAddress());
+            // apply branch narrowing to the resolved receiver, not the declaration's formal type;
+            // e.g. List<Char>.SubList must retain its Char parent parameter
+            TypeConstant typeNarrow = tmx.augmentPropertyType(bctx.thisType.removeAccess(), getAddress());
 
             typeTarget = typeTarget.removeAccess().combine(pool, typeNarrow).
-                    ensureAccess(typeTarget.getAccess());
+                    ensureAccess(typeTarget.getAccess()); // PRIVATE or STRUCT
         }
 
         MethodInfo        infoMethod = computeMethodInfo(bctx, typeTarget);
@@ -470,8 +470,18 @@ public abstract class OpInvocable extends Op {
             }
         }
 
-        JitMethodDesc jmd        = infoMethod.getJitDesc(bctx.builder, typeInvoke);
-        String        methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
+        // private detached methods require a static call with a receiver as the first argument
+        JitCallDesc   callDetached = bctx.builder.resolvePrivateDetachedCall(infoMethod, typeInvoke);
+        JitMethodDesc jmd;
+
+        if (callDetached == null) {
+            jmd = infoMethod.getJitDesc(bctx.builder, typeInvoke);
+        } else {
+            jmd = callDetached.jmd();
+            code.checkcast(callDetached.receiverCD());
+        }
+
+        String methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
 
         if (isTupleReturn()) {
             if (jmd.isPrimitivized() && fUnboxed) {
@@ -510,11 +520,14 @@ public abstract class OpInvocable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, anArgValue);
 
-        if (fPrimitive) {
+        if (callDetached != null) {
+            callDetached.invoke(code, fOptimized);
+        } else if (fPrimitive) {
             cdInvoke = typeInvoke.getJitCCDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
-        } else if (infoTarget.getType().isJitInterface()) {
-            code.invokeinterface(cdInvoke, methodName, md);
+        } else if (infoTarget.getType().isJitCCInterface()) {
+            code.invokeinterface(typeInvoke.isDerivedVirtualChildClass()
+                    ? typeInvoke.getJitCCDesc(bctx.typeSystem) : cdInvoke, methodName, md);
         } else {
             code.invokevirtual(cdInvoke, methodName, md);
         }
