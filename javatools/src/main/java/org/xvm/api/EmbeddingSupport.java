@@ -26,6 +26,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.InstantRepository;
 
+import org.xvm.runtime.template._native.io.xExternalConsole;
+
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Severity.ERROR;
 
@@ -122,6 +124,19 @@ public class EmbeddingSupport {
             }
             return connector;
         }
+    }
+
+    /**
+     * Diagnostics for a host that keeps the runtime across runs: the external consoles that runs
+     * registered and that are still registered. A run releases its console when it ends, so this is
+     * zero between runs; JIT runs register none.
+     *
+     * @return the number of registered external consoles
+     */
+    public int registeredConsoles() {
+        return ensureConnector() instanceof InterpreterConnector interpreter
+                ? xExternalConsole.registeredCount(interpreter.getNativeContainer())
+                : 0;
     }
 
     // ----- API -----------------------------------------------------------------------------------

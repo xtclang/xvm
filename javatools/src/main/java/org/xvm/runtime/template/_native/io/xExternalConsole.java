@@ -88,8 +88,16 @@ public class xExternalConsole
                 new InjectionKey(consoleName(id), INSTANCE.getCanonicalType()));
     }
 
+    /**
+     * @return how many named external console resources are registered, for a host that checks
+     *         that ended runs leave none behind
+     */
+    public static int registeredCount(NativeContainer container) {
+        return (int) container.getResourceNames().stream().filter(name -> name.startsWith(CONSOLE_PREFIX)).count();
+    }
+
     private static String consoleName(long id) {
-        return "console_" + id;
+        return CONSOLE_PREFIX + id;
     }
 
     /**
@@ -214,4 +222,6 @@ public class xExternalConsole
      * Atomic counter for injected Console objects.
      */
     private static final AtomicLong CONSOLE_ID = new AtomicLong();
+
+    private static final String CONSOLE_PREFIX = "console_";
 }
