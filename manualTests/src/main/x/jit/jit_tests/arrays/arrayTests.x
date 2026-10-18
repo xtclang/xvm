@@ -1,4 +1,5 @@
 import ecstasy.collections.Aggregator;
+import ecstasy.iterators.ExhaustedIterator;
 
 package arrayTests {
     void run() {
@@ -7,6 +8,7 @@ package arrayTests {
         testStringArray();
         testDefaultElements();
         testConstStringArray();
+        testEmptyIteratorArray();
         testAnonArrayVar();
         testNamedArrayVar();
         testPrimitiveArrayVar();
@@ -52,6 +54,15 @@ package arrayTests {
         String[] strings = ["hello", "world"];
         assert strings[0] == "hello";
         assert strings[1] == "world";
+    }
+
+    void testEmptyIteratorArray() {
+        Iterator<Int> iterator = new ExhaustedIterator<Int>();
+        assert iterator.knownEmpty();
+
+        // Iterator<Int>.toArray() must create an Int[] for its generic empty literal
+        Int[] values = iterator.toArray();
+        assert values.empty;
     }
 
     void testAnonArrayVar() {
