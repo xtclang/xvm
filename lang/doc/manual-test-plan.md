@@ -3592,7 +3592,7 @@ Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation an
 | X246 | Request linked editing for private/public method and primary constructor parameters. | No linked ranges: named callers and property contracts require graph Rename. |
 | X247 | Request linked ranges for `import types.Box as Box` in each method. | Include the explicit alias and its uses, excluding the imported target and other lexical scopes. |
 | X248 | Inspect outline, folds and selection in the shared damaged header/call/list/tuple variants, then repair. | Alias/current/later remain in the outline; method folds stay within source; selection strictly expands without duplicate spans; repair removes stale structure. |
-| X249 | Format continuation expressions and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable; literal contents and relative comment layout remain intact. |
+| X249 | Format continuation expressions, a switch statement and a switch expression, and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable: the switch statement's `case` and `default` align with its `switch` and its closing brace, with their statements one level in; the switch expression's labels are one level inside it. Literal contents and relative comment layout remain intact. |
 | X250 | Format the shared long concatenation, repeat, then Undo/Redo/Undo. | Wrap at token boundaries at the configured 120-column margin; preserve every literal and native history. |
 
 ### Graph-index acceptance
