@@ -1969,6 +1969,24 @@ Receipts: on #703's branch `:javatools:test` 439 tests, 0 failures, 42 existing 
 10) and IntelliJ `run-17031870419222515870` (passed or partial as declared, no IDE failures). Both
 selection tests fail with the previous lookups.
 
+**R4 completed (2026-10-18).** `35991ee97` lets an embedding host count the external consoles its
+runs still hold (`EmbeddingSupport.registeredConsoles()`; errs and #693 only, not #703). `b6f5ce147`:
+after each run the worker also reports the runtime's pool threads and the consoles and runs it still
+holds, counted before the exit; a worker holding one, whose pool grew, or whose heap after a run
+grew more than 128 MB since its first run is not used again. New tests: stand-in workers breaking
+each bound are retired; 25 mixed runs on one real worker leave no console or run, keep 11 pool
+threads and grow its heap by less than 1 MB; a killed server process takes its worker with it; an
+editor closing the server's input ends its runs and workers. Each new real-worker test fails when the
+behaviour it guards is broken (worker ignoring end of input, shutdown not closing runs, consoles never
+unregistered). Mirrored as `2705d5fdf` and `c0b6a1a62` on #693. The plan marks R4 done; runner tasks
+are not counted on their own.
+
+Receipts: here `:javatools:test` 619 tests, `:lang:lsp-server:test` 2,329 tests, 0 failures,
+`spotlessCheck`, X280–X289 VS Code `run-LZkQsp` (10 of 10) and IntelliJ `run-17895057394325915320`;
+on #693 `:javatools:test` 583 tests, `:lang:lsp-server:test` 2,329 tests, 0 failures,
+`spotlessCheck`, X280–X289 VS Code `run-It2Bzx` (10 of 10) and IntelliJ `run-9161841699426812232`
+(passed or partial as declared, no IDE failures); no worker processes left on either.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
