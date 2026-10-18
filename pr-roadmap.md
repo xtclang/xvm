@@ -32,6 +32,7 @@ and remaining R1–R8 work are in the
 | `27dffe40b`, `b92f689a0` | Shared cases X288 (build modes) and X289 (repeated runs); supervised execution workers running programs side by side (R4) | #693 (mirrored as `05a59b4af`, `c975116b4`) |
 | `4d0e2d225`, `c7cb85e22`, `89b3ad521` | VS Code install instructions; IntelliJ build notice links to its settings page; worker identity check, batched and bounded output, usage-based recycling (R4) | #693 (mirrored as `f830eb755`, `47e65f6a6`, `f5174d024`) |
 | `1fdaa9b05` | #703 review follow-up: entry methods found through the type info, including annotation-contributed ones; runner parameters documented as optional | #703 (`7b39bffb1`); #693 (mirrored as `c402aae92`) |
+| `f407b7f60` | Run lens and runnable targets for modules whose `run` an annotation contributes, found on the compiler worker | #693 (mirrored as `ff42f45cf`) |
 
 **2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](docs/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 

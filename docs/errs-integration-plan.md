@@ -1915,8 +1915,22 @@ Receipts: on #703's branch `:javatools:test` 438 tests, 0 failures, 42 existing 
 `:xdk:test` 62 tests, 0 failures, 8 skips, `spotlessCheck`; on this branch `:javatools:test` 618
 tests, 0 failures, 42 skips, `org.xvm.lsp.run.*` 33 tests, `spotlessCheck`; on #693 `:javatools:test`
 582 tests, 0 failures, 42 skips, `org.xvm.lsp.run.*` 33 tests, `spotlessCheck`. Each after
-`xdk:installDist`, so the changed runner module ran. Not yet pushed, replied to or reflected in the
-pull request description.
+`xdk:installDist`, so the changed runner module ran. Pushed on 2026-10-18 with replies to all three
+comments, an updated pull request description and ggleyzer re-requested; #703's CI passed on
+`7b39bffb1`.
+
+**Run lens for contributed entry methods (2026-10-18).** The language server chose runnable modules
+with `module.getChild("run")`, so after the runtime change a module whose `run` an annotation
+contributes ran but showed no Run lens. `f407b7f60` finds entry methods on the compiler worker when
+the module compiles, through its type (`TypeInfo.findMethods`), and keeps them with the analysis; a
+module that does not compile offers the `run` it declares, as before. This also stops reading
+compiler structures from the request thread. Mirrored as `ff42f45cf` on #693.
+
+Receipts on this branch: `:lang:lsp-server:test` 2,325 tests, 0 failures, 2 existing skips (the new
+test fails with the old lookup); `spotlessCheck`; X280–X289 VS Code `run-hUNK6T` (10 of 10) and
+IntelliJ `run-15169160191169121302` (passed, X286–X288 partial as declared, no IDE failures). On #693:
+`:lang:lsp-server:test` 2,325 tests, 0 failures; `spotlessCheck`; X280–X289 VS Code `run-wsL0qY` (10
+of 10) and IntelliJ `run-10277638236072662672` (passed or partial as declared, no IDE failures).
 
 ### IntelliJ parity backlog (L60)
 
