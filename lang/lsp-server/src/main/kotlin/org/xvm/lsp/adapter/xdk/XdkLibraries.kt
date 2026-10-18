@@ -74,6 +74,15 @@ internal object XdkLibraries {
 
     internal fun revision(name: String): String = bundle.artifacts.getValue(name).revision
 
+    /** One revision for the whole bundle: equal exactly when every bundled module is byte for byte the same. */
+    internal val fingerprint: String by lazy {
+        val revisions =
+            bundle.artifacts.entries
+                .sortedBy { it.key }
+                .joinToString("\n") { (name, artifact) -> "$name=${artifact.revision}" }
+        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(revisions.toByteArray()))
+    }
+
     internal fun symbolIndex(name: String): XdkArtifactSymbols? = bundle.artifacts[name]?.symbols?.value
 
     fun configure() {
