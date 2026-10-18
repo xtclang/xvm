@@ -69,14 +69,13 @@ clearing after unsaved edits. Runtime function targets and interface-valued dele
 
 ## Installation
 
-### From the Marketplace
-
-Search for **Ecstasy Language Support** in the Extensions view (`Cmd+Shift+X` / `Ctrl+Shift+X`) and click **Install**.
+The extension is not on the Visual Studio Marketplace yet, so it is installed from a VSIX file.
 
 ### From a VSIX
 
-1. Download `xtc-language-<version>.vsix` from the [releases page](https://github.com/xtclang/xvm/releases), or build it locally (see [Building](#building-from-source)).
-2. In VS Code: open the Extensions view → `···` menu → **Install from VSIX…** → select the file.
+1. Download `xtc-language-<version>.vsix` from the [VS Code extension snapshots release](https://github.com/xtclang/xvm/releases/tag/vscode-extension-snapshots), or build it locally (see [Building](#building-from-source)).
+2. In VS Code: open the Extensions view → `···` menu → **Install from VSIX…** → select the file,
+   or run `code --install-extension xtc-language-<version>.vsix` in a terminal.
 3. Reload VS Code when prompted.
 
 ### Building from Source
