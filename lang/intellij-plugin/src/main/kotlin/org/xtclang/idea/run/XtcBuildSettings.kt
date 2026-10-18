@@ -42,6 +42,9 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
     companion object {
         private val GRADLE_BUILD_FILES = listOf("build.gradle.kts", "build.gradle", "settings.gradle.kts", "settings.gradle")
 
+        /** Where the mode is chosen; consoles link it to the page ([BuildSettingsLink]). */
+        internal const val SETTINGS_PAGE = "Settings | Build, Execution, Deployment | Ecstasy"
+
         fun getInstance(project: Project): XtcBuildSettings = project.getService(XtcBuildSettings::class.java)
 
         /** The mode builds and runs use: [XtcBuildMode.EMBEDDED] or [XtcBuildMode.GRADLE], never automatic. */
@@ -66,7 +69,7 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
             if (hasGradleBuild(root)) {
                 "This project has a Gradle build, but embedded mode builds and runs with the language server's compiler " +
                     "and XDK; Gradle settings such as runXtc arguments, JVM options and the build's XDK version do not " +
-                    "apply. Choose Gradle in Settings | Build, Execution, Deployment | Ecstasy to use Gradle."
+                    "apply. Choose Gradle in $SETTINGS_PAGE to use Gradle."
             } else {
                 null
             }

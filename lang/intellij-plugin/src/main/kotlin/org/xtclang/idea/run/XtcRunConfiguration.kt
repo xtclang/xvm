@@ -184,8 +184,10 @@ internal class EmbeddedRunState(
             TextConsoleBuilderFactory
                 .getInstance()
                 .createBuilder(project)
-                .apply { addFilter(DiagnosticLinks(project)) }
-                .console
+                .apply {
+                    addFilter(DiagnosticLinks(project))
+                    addFilter(BuildSettingsLink)
+                }.console
         val handler =
             EmbeddedRunProcessHandler(
                 EmbeddedRunSessions.getInstance(project),
