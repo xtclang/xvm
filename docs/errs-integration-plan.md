@@ -1948,6 +1948,27 @@ Receipts: on #703's branch `:javatools:test` 439 tests, 0 failures, 42 existing 
 `org.xvm.lsp.run.*` 34 tests, `spotlessCheck`; on #693 `:javatools:test` 583 tests, 0 failures,
 `org.xvm.lsp.run.*` 34 tests, `spotlessCheck`. Each after `xdk:installDist`.
 
+**Entry points are methods (2026-10-18).** Selection took methods and functions alike
+(`MethodKind.Any`, as the command-line runner's lookup does), but `Container.invoke`, which starts a
+task, calls only methods: a module whose `run` is a static function was accepted and then failed at
+start, and a method and a function sharing the name were refused as ambiguous. `0723b7c03` on #703's
+branch selects only methods and refuses a `run` function before the run starts ("an entry point must
+be a method, not a static function"); mirrored as `86a1df130` here and `e62305311` on #693. The test
+for a run that cannot start now uses a root directory name with a NUL character; its half for the
+runner's own directory was removed, as no failing start can be produced there any longer.
+`9619b0f44` gives the Run lens and runnable targets the same rule (`MethodKind.Method`, and functions
+skipped for a module that does not compile); mirrored as `7ab9d3edf` on #693. Not changed: the
+command-line runner, whose `xtc run` of a module with a static `run` passes its own selection, then
+prints "Missing: run method" and exits with 1.
+
+Receipts: on #703's branch `:javatools:test` 439 tests, 0 failures, 42 existing skips
+(`EmbeddingRunMethodTest` 7), `:xdk:test` 62 tests, 0 failures, `spotlessCheck`; here `:javatools:test`
+619 tests, `:lang:lsp-server:test` 2,325 tests, 0 failures, `spotlessCheck`, X280–X289 VS Code
+`run-5UYJC9` (10 of 10) and IntelliJ `run-8446294414459385006`; on #693 `:javatools:test` 583 tests,
+`:lang:lsp-server:test` 2,325 tests, 0 failures, `spotlessCheck`, X280–X289 VS Code `run-1UuKAZ` (10 of
+10) and IntelliJ `run-17031870419222515870` (passed or partial as declared, no IDE failures). Both
+selection tests fail with the previous lookups.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
