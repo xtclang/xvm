@@ -64,6 +64,20 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `the notice links to the settings page that chooses the mode`(
+        @TempDir root: Path,
+    ) {
+        Files.writeString(root.resolve("build.gradle.kts"), "")
+        val before = "Building with the embedded compiler...\n"
+        val notice = checkNotNull(XtcBuildSettings.gradleNotUsed(root)) + "\n"
+        val link = checkNotNull(BuildSettingsLink.applyFilter(notice, before.length + notice.length)).resultItems.single()
+        assertThat((before + notice).substring(link.highlightStartOffset, link.highlightEndOffset))
+            .isEqualTo("Settings | Build, Execution, Deployment | Ecstasy")
+        assertThat(link.hyperlinkInfo).isNotNull()
+        assertThat(BuildSettingsLink.applyFilter(before, before.length)).isNull()
+    }
+
+    @Test
     fun `configurations saved with useGradle follow the project unless they ran the command line`() {
         assertThat(XtcRunConfiguration.runMode(null, "true")).isEqualTo(XtcRunMode.PROJECT)
         assertThat(XtcRunConfiguration.runMode(null, null)).isEqualTo(XtcRunMode.PROJECT)

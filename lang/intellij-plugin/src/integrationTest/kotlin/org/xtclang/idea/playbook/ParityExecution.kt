@@ -213,6 +213,8 @@ internal fun ParityScenarios.buildModeCases() {
             check(!built["errors"].asBoolean && !built["aborted"].asBoolean) { "Embedded build failed: $text" }
             check(EMBEDDED_BUILD in text) { text }
             check(data.string("notice") in text) { text }
+            // the notice links to the settings page that chooses the mode
+            check(built["links"].asJsonArray.any { it.asString == SETTINGS_PAGE }) { "No link to $SETTINGS_PAGE: ${built["links"]}" }
             runToEnd("embedded run finishes").let { check(data.string("output") in it) { it } }
             check(calls().isEmpty()) { "Embedded mode must not call Gradle: ${calls()}" }
 
@@ -263,6 +265,9 @@ internal fun ParityScenarios.buildModeCases() {
 
 /** What the Build tool window shows when the embedded compiler takes Build Project. */
 private const val EMBEDDED_BUILD = "with the embedded compiler"
+
+/** The settings page that chooses the build mode, which the embedded build's notice links to. */
+private const val SETTINGS_PAGE = "Settings | Build, Execution, Deployment | Ecstasy"
 
 /** Runs [body] with the project in embedded build mode, restoring the previous mode afterwards. */
 private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> Unit) {
