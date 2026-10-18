@@ -2025,10 +2025,15 @@ X280–X289 VS Code `run-1huZUh` (10 of 10) and IntelliJ `run-146395890390111858
 X280–X289 VS Code `run-5FWiUt` (10 of 10) and IntelliJ `run-2914775556563454784` (passed or partial
 as declared, no IDE errors); no worker processes left on either.
 
-Open: `EmbeddingRunMethodTest` finds the XDK in `xdk/build/install/xdk` and is skipped without it.
-In #703's CI, `:javatools:test` ran at 14:24 and `:xdk:installDist` at 14:26, so CI skipped all of
-its tests. `javatools` has no dependency on the built XDK, unlike `lang/lsp-server`, which consumes
-the compiled modules through `libs.bundles.xdk.libraries` variants.
+`EmbeddingRunMethodTest` used to find the XDK in `xdk/build/install/xdk` and skip without it. In
+#703's CI, `:javatools:test` ran at 14:24 and `:xdk:installDist` at 14:26, so CI skipped all of its
+tests. Fixed in `5977c8cf0` on #703, `ee022b504` here and `4c305ad44` on #693: `javatools` has a
+`testXtcModules` configuration on the distribution's `xtc` variant (`lib-ecstasy`, `lib-runner`,
+`javatools-bridge`), copied into the test resources, so Gradle builds the modules before the tests,
+as `lang/lsp-server` already does. The test reads them from the classpath and fails instead of
+skipping. With the installed XDK moved away all 8 tests ran on each branch, after the build rebuilt
+the modules it needed; `:javatools:test` 440, 620 and 584 tests, 0 failures, 42 existing skips;
+the configuration cache is reused; CI's task lists build their graphs (`--dry-run`).
 
 ### IntelliJ parity backlog (L60)
 
