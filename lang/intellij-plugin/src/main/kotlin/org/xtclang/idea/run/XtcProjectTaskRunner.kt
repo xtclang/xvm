@@ -66,7 +66,9 @@ internal class EmbeddedBuild(
     fun start(): CompletableFuture<TaskRunnerResults> {
         EmbeddedExecution.saveAll()
         val title = if (rebuild) "Rebuild Ecstasy modules" else "Build Ecstasy modules"
-        val descriptor = DefaultBuildDescriptor(Any(), title, project.basePath.orEmpty(), System.currentTimeMillis())
+        val descriptor =
+            DefaultBuildDescriptor(Any(), title, project.basePath.orEmpty(), System.currentTimeMillis())
+                .withExecutionFilter(BuildSettingsLink)
         val progress =
             BuildViewManager.createBuildProgress(project).start(
                 object : BuildProgressDescriptor {
