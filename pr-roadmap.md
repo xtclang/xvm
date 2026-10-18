@@ -36,6 +36,7 @@ and remaining R1–R8 work are in the
 | `e4b216229` | A run that cannot start: `close()` no longer rethrows `join()`'s failure, and the runner unregisters a task whose start throws | #703 (`2a02ead45`); #693 (mirrored as `491da5425`) |
 | `86a1df130`, `9619b0f44` | Entry points are methods only, in the runtime's selection and in the Run lens and runnable targets | #703 (`0723b7c03`); #693 (mirrored as `e62305311`, `7ab9d3edf`) |
 | `35991ee97`, `b6f5ce147` | R4 done: console count for embedding hosts; worker bounds for leftovers, pool growth and retained heap growth; parent death, editor close and repeated-run tests | #693 (mirrored as `2705d5fdf`, `c0b6a1a62`) |
+| `2eca02469`, `29cd0c3c6`, `223518e24` | Indentation kept while typing (X290); switches laid out as the XDK does; cancellable reads for server workspace edits and compiler root walks | #693 (mirrored as `589977e42`, `704be7b02`, `51329f03d`) |
 
 **2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](docs/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 
