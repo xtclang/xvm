@@ -1932,6 +1932,22 @@ IntelliJ `run-15169160191169121302` (passed, X286–X288 partial as declared, no
 `:lang:lsp-server:test` 2,325 tests, 0 failures; `spotlessCheck`; X280–X289 VS Code `run-wsL0qY` (10
 of 10) and IntelliJ `run-10277638236072662672` (passed or partial as declared, no IDE failures).
 
+**A run that cannot start closes cleanly (2026-10-18).** When the runner could not start a task,
+`join()` and `close()` threw the same exception object, so try-with-resources reported
+"Self-suppression not permitted"; `close()` also skipped releasing the task, and the runner left a
+task whose start threw registered, so deleting its directory failed the runner's `!findTask(id)`
+assertion. Both predate #703. `2a02ead45` on #703's branch: `close()` waits without rethrowing, and a
+`Task.start()` that throws unregisters the task and rethrows. Mirrored as `e4b216229` here and
+`491da5425` on #693. Found while testing: entry method selection accepts a static `run` function, as
+the command-line runner does, but `Container.invoke` calls only methods; left as is, as a question
+for review.
+
+Receipts: on #703's branch `:javatools:test` 439 tests, 0 failures, 42 existing skips
+(`EmbeddingRunMethodTest` 7, none skipped; the test fails without either half of the fix), `:xdk:test`
+62 tests, 0 failures, `spotlessCheck`; here `:javatools:test` 619 tests, 0 failures,
+`org.xvm.lsp.run.*` 34 tests, `spotlessCheck`; on #693 `:javatools:test` 583 tests, 0 failures,
+`org.xvm.lsp.run.*` 34 tests, `spotlessCheck`. Each after `xdk:installDist`.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
