@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
 import java.io.Closeable
+import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintStream
 import java.util.concurrent.CompletableFuture
@@ -29,10 +30,15 @@ import kotlin.time.Duration.Companion.seconds
  * The workers are supervised: one that does not report ready within [Limits.startup] is ended and its run
  * fails; a program still running [Limits.stop] after Stop has its worker ended; one idle worker is kept for
  * the next run until it has been idle for [Limits.idle], and any other worker exits when its run ends.
+ * A worker receives nothing until it reports the identity the server expects (the protocol version and
+ * the bundled XDK, see [RunWorkerIdentity]); one that reports another is ended and its run says why.
+ * After each run a worker reports the heap it still uses and its threads; one past [Limits.heap] or
+ * [Limits.threads] serves no further run.
  */
 internal class RunWorkerProcess(
     private val command: () -> List<String> = ::defaultCommand,
     private val limits: Limits = Limits(),
+    expected: () -> RunWorkerIdentity = RunWorkerIdentity::current,
 ) : Closeable {
     /** Receives one run's events, in order, on its worker's reader thread. */
     interface Listener {
@@ -53,12 +59,24 @@ internal class RunWorkerProcess(
         val rootDir: String?,
     )
 
-    /** How many programs run at once, and how long a worker may take to start, to stop, or stay idle. */
+    /**
+     * How many programs run at once; how long a worker may take to start, to stop, or stay idle; and how much
+     * heap in use (in bytes) and how many threads a worker may keep after a run and still serve the next.
+     */
     data class Limits(
         val running: Int = 4,
         val startup: Duration = 60.seconds,
         val stop: Duration = 10.seconds,
         val idle: Duration = 10.minutes,
+        val heap: Long = 512L * MB,
+        val threads: Int = 200,
+    )
+
+    /** What a worker keeps after a run: the heap in use after a collection, the heap's maximum, and its threads. */
+    data class Usage(
+        val heapUsed: Long,
+        val heapMax: Long,
+        val threads: Int,
     )
 
     /** One worker JVM and the run it hosts, if any. Guarded by [lock], apart from its reader thread. */
@@ -70,10 +88,35 @@ internal class RunWorkerProcess(
         var run: Long? = null
         var timer: ScheduledFuture<*>? = null
 
+        /** Commands waiting for the worker to report the expected identity; null once it has. */
+        private var held: MutableList<JsonObject>? = mutableListOf()
+
+        /** What the worker kept after its last run. */
+        var usage: Usage? = null
+
+        /** Why the worker serves no further run once its current one ends. */
+        var worn: String? = null
+
         /** Why the server ended this worker, reported to its run instead of an unexpected stop. */
         @Volatile var ended: String? = null
 
+        /** Sends [message], or holds it until the worker has reported the expected identity. */
         fun send(message: JsonObject): Boolean {
+            held?.let {
+                it += message
+                return true
+            }
+            return write(message)
+        }
+
+        /** The worker reported the expected identity: sends what was held, in order. */
+        fun release(): Boolean {
+            val commands = held ?: return true
+            held = null
+            return commands.all(::write)
+        }
+
+        fun write(message: JsonObject): Boolean {
             input.println(message.toString())
             return !input.checkError()
         }
@@ -90,6 +133,7 @@ internal class RunWorkerProcess(
     private val listeners = ConcurrentHashMap<Long, Listener>()
     private val hosts = ConcurrentHashMap<Long, Worker>()
     private val nextId = AtomicLong(1)
+    private val expected by lazy(expected)
     private val timers =
         Executors.newSingleThreadScheduledExecutor { Thread(it, "xtc-run-worker-timers").apply { isDaemon = true } }
 
@@ -106,9 +150,9 @@ internal class RunWorkerProcess(
         val refused =
             synchronized(lock) {
                 check(!closed) { "The execution worker is closed" }
-                // a worker that is being ended or retired is never reused
+                // a worker that is being ended or retired, or holds too much, is never reused
                 val worker =
-                    workers.firstOrNull { it.run == null && it.ended == null && it.process.isAlive }
+                    workers.firstOrNull { it.run == null && it.ended == null && it.worn == null && it.process.isAlive }
                         ?: if (workers.count { it.run != null } >= limits.running) {
                             return@synchronized "${limits.running} programs are already running; stop one to run another"
                         } else {
@@ -118,7 +162,7 @@ internal class RunWorkerProcess(
                 worker.timer = null
                 worker.run = id
                 hosts[id] = worker
-                // commands queue in the worker's input until it is ready, so they keep their order
+                // commands are held until the worker reports the expected identity, so they keep their order
                 val sent =
                     worker.send(
                         JsonObject().apply {
@@ -167,6 +211,12 @@ internal class RunWorkerProcess(
     /** Process IDs of the live workers, for tests. */
     internal fun workerPids(): List<Long> = synchronized(lock) { workers.filter { it.process.isAlive }.map { it.process.pid() } }
 
+    /** What each live worker kept after its last run, by process ID, for tests. */
+    internal fun usage(): Map<Long, Usage> =
+        synchronized(lock) {
+            workers.filter { it.process.isAlive }.mapNotNull { worker -> worker.usage?.let { worker.process.pid() to it } }.toMap()
+        }
+
     /** Sends a command for one run, when its worker is alive. */
     private fun command(
         name: String,
@@ -191,7 +241,7 @@ internal class RunWorkerProcess(
                 closed = true
                 workers.toList().onEach { worker ->
                     worker.ended = "The execution worker was shut down"
-                    worker.send(JsonObject().apply { addProperty("command", "shutdown") })
+                    worker.write(JsonObject().apply { addProperty("command", "shutdown") })
                     worker.input.close()
                 }
             }
@@ -228,47 +278,118 @@ internal class RunWorkerProcess(
         return worker
     }
 
+    /**
+     * Delivers the worker's events until its output ends, then ends the runs it still hosts. Ending a worker
+     * closes its streams, which ends the events as the worker's exit does.
+     */
     private fun read(worker: Worker) {
-        BufferedReader(InputStreamReader(worker.process.inputStream, Charsets.UTF_8)).useLines { lines ->
-            for (line in lines) {
-                val event = runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull()
-                if (event == null) {
-                    logger.warn("execution worker: {}", line)
-                    continue
-                }
-                val id = event["id"]?.asLong
-                when (event["event"]?.asString) {
-                    "output" -> id?.let(listeners::get)?.output(event["text"].asString)
+        try {
+            BufferedReader(InputStreamReader(worker.process.inputStream, Charsets.UTF_8)).useLines { lines ->
+                for (line in lines) {
+                    val event = runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull()
+                    if (event == null) {
+                        logger.warn("execution worker: {}", line)
+                        continue
+                    }
+                    val id = event["id"]?.asLong
+                    when (event["event"]?.asString) {
+                        "output" -> id?.let(listeners::get)?.output(event["text"].asString)
 
-                    "exit" ->
-                        if (id != null) {
-                            finished(worker, id)
-                            listeners.remove(id)?.exited(
-                                event["code"]?.asLong,
-                                event["error"]?.takeUnless { it.isJsonNull }?.asString,
+                        "exit" ->
+                            if (id != null) {
+                                finished(worker, id)
+                                listeners.remove(id)?.exited(
+                                    event["code"]?.asLong,
+                                    event["error"]?.takeUnless { it.isJsonNull }?.asString,
+                                )
+                            }
+
+                        "usage" ->
+                            measured(
+                                worker,
+                                id,
+                                Usage(event["heapUsed"].asLong, event["heapMax"].asLong, event["threads"].asInt),
                             )
-                        }
 
-                    "log" -> logger.info("execution worker: {}", event["text"]?.asString)
+                        "log" -> logger.info("execution worker: {}", event["text"]?.asString)
 
-                    "ready" -> worker.ready.complete(Unit).also { logger.debug("execution worker: {}", line) }
+                        "ready" -> accept(worker, RunWorkerIdentity.of(event))
 
-                    "started" -> logger.debug("execution worker: {}", line)
+                        "started" -> logger.debug("execution worker: {}", line)
 
-                    else -> logger.warn("execution worker sent an unknown event: {}", line)
+                        else -> logger.warn("execution worker sent an unknown event: {}", line)
+                    }
                 }
             }
+        } catch (_: IOException) {
+            // the stream was closed by ending the worker
+        } finally {
+            // a worker still running exits once its input ends
+            worker.input.close()
+            val runs =
+                synchronized(lock) {
+                    workers.remove(worker)
+                    worker.timer?.cancel(false)
+                    hosts.filterValues { it === worker }.keys.onEach(hosts::remove)
+                }
+            endRuns(runs, worker.ended ?: "The execution worker stopped unexpectedly")
         }
-        val runs =
-            synchronized(lock) {
-                workers.remove(worker)
-                worker.timer?.cancel(false)
-                hosts.filterValues { it === worker }.keys.onEach(hosts::remove)
-            }
-        endRuns(runs, worker.ended ?: "The execution worker stopped unexpectedly")
     }
 
-    /** The worker's run has ended: keep it for the next run if no other worker is idle, or let it go. */
+    /**
+     * The worker has started and reports its identity: it serves runs if that is the identity this server
+     * expects, and is ended otherwise, before it receives anything.
+     */
+    private fun accept(
+        worker: Worker,
+        identity: RunWorkerIdentity?,
+    ) {
+        val pid = worker.process.pid()
+        if (identity == expected) {
+            logger.info("execution worker {} ready: {}", pid, identity)
+            synchronized(lock) { if (!worker.release()) worker.end("The execution worker could not be started") }
+        } else {
+            val reported = identity?.toString() ?: "an earlier protocol"
+            logger.error("execution worker {} runs {}, but the language server expects {}; ending it", pid, reported, expected)
+            worker.end("The execution worker runs $reported, but the language server expects $expected; restart the language server")
+        }
+        worker.ready.complete(Unit)
+    }
+
+    /** The worker reports what it kept after a run; past the limits, it serves no further run. */
+    private fun measured(
+        worker: Worker,
+        id: Long?,
+        usage: Usage,
+    ) {
+        val pid = worker.process.pid()
+        logger.info(
+            "execution worker {} after run {}: {} MB heap in use of {} MB, {} threads",
+            pid,
+            id,
+            usage.heapUsed / MB,
+            usage.heapMax / MB,
+            usage.threads,
+        )
+        val worn =
+            when {
+                usage.heapUsed > limits.heap -> "${usage.heapUsed / MB} MB heap in use after a run, over ${limits.heap / MB} MB"
+                usage.threads > limits.threads -> "${usage.threads} threads after a run, over ${limits.threads}"
+                else -> null
+            }
+        synchronized(lock) {
+            worker.usage = usage
+            if (worn == null || worker.ended != null) return
+            logger.warn("execution worker {} keeps {}; it serves no further run", pid, worn)
+            worker.worn = worn
+            if (worker.run == null) retire(worker)
+        }
+    }
+
+    /**
+     * The worker's run has ended: keep it for the next run if no other worker is idle and it does not hold
+     * too much, or let it go.
+     */
     private fun finished(
         worker: Worker,
         id: Long,
@@ -277,7 +398,7 @@ internal class RunWorkerProcess(
             if (hosts.remove(id) == null || worker.run != id) return
             worker.run = null
             if (closed) return
-            if (workers.any { it !== worker && it.run == null }) {
+            if (worker.worn != null || workers.any { it !== worker && it.run == null && it.ended == null }) {
                 retire(worker)
             } else {
                 worker.timer = after(limits.idle) { synchronized(lock) { if (worker.run == null) retire(worker) } }
@@ -288,7 +409,7 @@ internal class RunWorkerProcess(
     /** Asks an idle worker to exit; its reader thread then removes it. Called under [lock]. */
     private fun retire(worker: Worker) {
         worker.ended = "The execution worker was shut down"
-        worker.send(JsonObject().apply { addProperty("command", "shutdown") })
+        worker.write(JsonObject().apply { addProperty("command", "shutdown") })
         worker.input.close()
     }
 
@@ -312,6 +433,8 @@ internal class RunWorkerProcess(
 
     private companion object {
         private val logger = LoggerFactory.getLogger(RunWorkerProcess::class.java)
+
+        private const val MB = 1024L * 1024
 
         /** The worker runs from the language server's own classpath, on the same Java runtime. */
         fun defaultCommand(): List<String> =
