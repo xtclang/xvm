@@ -81,7 +81,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         }
 
         val (declarationLine, bodyLine, closingLine) = fix
-        val declarationIndent = lineIndent(document, declarationLine)
+        val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
         val bodyIndent = declarationIndent + indentUnit(file)
 
         replaceLineWithIndent(document, bodyLine, bodyIndent)
@@ -243,7 +243,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 }
 
                 val (declarationLine, bodyLine, closingLine) = fix
-                val declarationIndent = lineIndent(document, declarationLine)
+                val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
                 val bodyIndent = declarationIndent + indentUnit(file)
 
                 replaceLineWithIndent(document, bodyLine, bodyIndent)
@@ -275,4 +275,25 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         }
 
     private fun visualizeIndent(indent: String): String = indent.replace("\t", "\\t").replace(" ", "·")
+}
+
+/**
+ * The first line of the declaration whose `{` ends [braceLine], given each line's text by [line]. A
+ * declaration continued over several lines (`class Point` then `implements Const {`) indents its body
+ * from its first line, as the language server's formatter does, not from the line holding the brace.
+ * A line continues the declaration below it unless it is blank, a comment, or ends a statement or block.
+ */
+internal fun declarationStart(
+    braceLine: Int,
+    line: (Int) -> String,
+): Int {
+    var start = braceLine
+    while (start > 0) {
+        val previous = line(start - 1).trim()
+        val ends = previous.isEmpty() || previous.endsWith(";") || previous.endsWith("{") || previous.endsWith("}")
+        val comment = previous.startsWith("//") || previous.startsWith("*") || previous.endsWith("*/")
+        if (ends || comment) break
+        start--
+    }
+    return start
 }
