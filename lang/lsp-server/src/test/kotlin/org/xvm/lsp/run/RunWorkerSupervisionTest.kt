@@ -12,8 +12,8 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * How the server supervises its execution workers, with a stand-in worker ([FakeRunWorker]) that can fail to
- * start, ignore Stop or crash: deadlines end such workers, their runs say why, and the next run gets a
- * working worker. Idle workers are retired.
+ * start, report another identity, ignore Stop, crash or keep too much: such workers are ended or retired,
+ * their runs say why, and the next run gets a working worker. Idle workers are retired.
  */
 class RunWorkerSupervisionTest {
     /** One run's output and its single exit. */
@@ -53,6 +53,7 @@ class RunWorkerSupervisionTest {
             )
         },
         limits,
+        { FakeRunWorker.IDENTITY },
     )
 
     private fun RunWorkerProcess.run(
@@ -68,6 +69,46 @@ class RunWorkerSupervisionTest {
             assertThat(code).isNull()
             assertThat(error).contains("did not start within")
             await().atMost(Duration.ofSeconds(10)).until { workers.workerPids().isEmpty() }
+        }
+    }
+
+    @Test
+    fun `a worker that reports another XDK or no protocol is ended before it runs anything, and its run says why`() {
+        for ((mode, reported) in listOf(
+            "mismatch" to "protocol ${RunWorkerIdentity.PROTOCOL} with XDK other-xdk",
+            "unnumbered" to "an earlier protocol",
+        )) {
+            workers(RunWorkerProcess.Limits(), mode = mode).use { workers ->
+                val (_, run) = workers.run("Quick")
+                val (code, error) = run.exit()
+                assertThat(code).isNull()
+                assertThat(error)
+                    .contains("runs $reported", "expects protocol ${RunWorkerIdentity.PROTOCOL} with XDK fake-xdk")
+                    .contains("restart the language server")
+                assertThat(run.output.toString()).doesNotContain("ok")
+                await().atMost(Duration.ofSeconds(10)).until { workers.workerPids().isEmpty() }
+            }
+        }
+    }
+
+    @Test
+    fun `a worker that keeps too much heap or too many threads after a run is retired, and the next run gets a new one`() {
+        workers(RunWorkerProcess.Limits(heap = 1L shl 30, threads = 1_000)).use { workers ->
+            val (_, quick) = workers.run("Quick")
+            assertThat(quick.exit()).isEqualTo(0L to null)
+            await().atMost(Duration.ofSeconds(10)).until { workers.usage().isNotEmpty() }
+            val kept = workers.workerPids().single()
+            assertThat(workers.usage().getValue(kept)).isEqualTo(RunWorkerProcess.Usage(1L shl 20, 8L shl 30, 10))
+
+            for (module in listOf("Hoard", "Spawn")) {
+                val (_, run) = workers.run(module)
+                assertThat(run.exit()).isEqualTo(0L to null)
+                // the only idle worker, yet not kept for the next run
+                await().atMost(Duration.ofSeconds(10)).until { workers.workerPids().isEmpty() }
+            }
+            val (_, next) = workers.run("Quick")
+            assertThat(next.exit()).isEqualTo(0L to null)
+            assertThat(workers.workerPids()).doesNotContain(kept)
         }
     }
 

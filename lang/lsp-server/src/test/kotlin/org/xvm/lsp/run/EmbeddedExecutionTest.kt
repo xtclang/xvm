@@ -31,6 +31,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Embedded build to disk through the compiler queue, and runs in the execution worker JVM. The worker
@@ -59,6 +60,16 @@ class EmbeddedExecutionTest {
             "module Exit { Int run() = 42; }",
             "module Greeter { void greet() { @Inject Console console; console.print(\"greetings\"); } }",
             "module Thrower { void run() { throw new IllegalState(\"boom\"); } }",
+            """
+            module Chatty {
+                void run() {
+                    @Inject Console console;
+                    for (Int line = 0; line < 5000; ++line) {
+                        console.print($"line {line}");
+                    }
+                }
+            }
+            """,
             """
             module Forever {
                 void run() {
@@ -123,6 +134,29 @@ class EmbeddedExecutionTest {
         val run = run("Thrower")
         assertThat(run.code).isNull()
         assertThat(run.error).contains("boom")
+    }
+
+    @Test
+    fun `a program printing in a loop sends all its output, in order, in far fewer events than prints`() {
+        val events = AtomicInteger()
+        val run = run("Chatty") { events.incrementAndGet() }
+        assertThat(run.error).isNull()
+        assertThat(run.output.lines().filter { it.isNotEmpty() }).isEqualTo((0 until 5000).map { "line $it" })
+        println("5000 prints arrived in ${events.get()} output events")
+        assertThat(events.get()).isLessThan(1000)
+    }
+
+    @Test
+    fun `after a run the worker reports the heap it keeps and its threads, within the limits`() {
+        assertThat(run("Exit").code).isEqualTo(42)
+        await().atMost(Duration.ofSeconds(30)).until { worker.usage().isNotEmpty() }
+        val limits = RunWorkerProcess.Limits()
+        assertThat(worker.usage().values).allSatisfy { usage ->
+            println("execution worker after a run: $usage")
+            assertThat(usage.heapUsed).isPositive().isLessThan(limits.heap)
+            assertThat(usage.heapMax).isGreaterThanOrEqualTo(usage.heapUsed)
+            assertThat(usage.threads).isPositive().isLessThan(limits.threads)
+        }
     }
 
     @Test
@@ -464,6 +498,7 @@ class EmbeddedExecutionTest {
         method: String = "run",
         args: List<String> = emptyList(),
         modulePath: List<String> = listOf(lib.path),
+        event: () -> Unit = {},
     ): Outcome {
         val output = StringBuffer()
         val exited = CompletableFuture<Pair<Long?, String?>>()
@@ -471,6 +506,7 @@ class EmbeddedExecutionTest {
             RunWorkerProcess.Request(modulePath, module, method, args, directory.toString()),
             object : RunWorkerProcess.Listener {
                 override fun output(text: String) {
+                    event()
                     output.append(text)
                 }
 
