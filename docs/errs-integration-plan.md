@@ -1884,6 +1884,23 @@ VS Code `run-Xy5uJy` (10 of 10) and IntelliJ `run-9277276310618929550` (passed o
 declared, no IDE failures); X288 and X289 also at `05a59b4af` (`run-Cg5ppi`,
 `run-8708972922734768033`).
 
+**Install instructions, the settings link and worker supervision (2026-10-18).** Three more commits,
+replayed onto #693 the same way (local on #693's branch until pushed):
+
+| Commit | Content | On #693 |
+|---|---|---|
+| `4d0e2d225` | VS Code README: the extension is not on the Visual Studio Marketplace; install the VSIX from the `vscode-extension-snapshots` release. The snapshot release notes take the required VS Code version from the VSIX manifest instead of a hard-coded 1.101 | `f830eb755` |
+| `c7cb85e22` | IntelliJ: the "Gradle settings do not apply" notice links its settings path to Settings › Build, Execution, Deployment › Ecstasy in the Build tool window and the Run console; X288 checks the Build window's link | `47e65f6a6` |
+| `89b3ad521` | R4: a worker receives nothing until it reports the expected protocol and XDK fingerprint; output batched (20 ms or 16,384 characters) and bounded, with VS Code keeping the last million characters of a run; heap and threads reported after each run, and a worker keeping over 512 MB or 200 threads is not reused; the server's reader no longer leaves runs open when an ended worker's stream closes | `f5174d024` |
+
+Receipts on this branch at `89b3ad521`: `:lang:lsp-server:test` 2,324 tests in 311 classes, 0
+failures, 2 existing skips; IntelliJ unit tests 138; VS Code headless suite 71; tsc, eslint and
+`spotlessCheck`. Native X280–X289: VS Code `run-um9C1C` (10 of 10), IntelliJ
+`run-12046073033367353672` (passed, X286–X288 partial as declared, no IDE failures). The rest of the
+catalog was not rerun: the changes touch embedded execution, the IntelliJ build notice and docs. On
+#693 at `f5174d024`: `:lang:lsp-server:test` 2,324 tests, 0 failures; X280–X289 VS Code `run-O4jVbp`
+(10 of 10) and IntelliJ `run-16133268169536834296` (passed or partial as declared, no IDE failures).
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
