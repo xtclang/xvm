@@ -313,7 +313,7 @@ class DocumentFormattingTest {
     @DisplayName("Switch/case indentation")
     inner class SwitchCaseTests {
         @Test
-        @DisplayName("case labels at same indent as switch keyword")
+        @DisplayName("a switch expression's case labels are one level inside it, as in the XDK")
         fun caseLabelsAtSwitchLevel() {
             val input =
                 """
@@ -331,14 +331,12 @@ class DocumentFormattingTest {
             val result = formatWhole(input)
             val lines = result.trimEnd('\n').split("\n")
 
-            val caseLine = lines.firstOrNull { it.trimStart().startsWith("case") }
+            val caseLine = lines.first { it.trimStart().startsWith("case") }
             val switchLine = lines.first { it.trimStart().startsWith("return switch") }
-            if (caseLine != null) {
-                val caseIndent = caseLine.takeWhile { it == ' ' }.length
-                val switchIndent = switchLine.takeWhile { it == ' ' }.length
-                // Case at same indent as the switch, or handled by general depth
-                assertThat(caseIndent).isEqualTo(switchIndent)
-            }
+            val caseIndent = caseLine.takeWhile { it == ' ' }.length
+            val switchIndent = switchLine.takeWhile { it == ' ' }.length
+            // a switch statement's labels align with it instead (SwitchFormattingTest)
+            assertThat(caseIndent).isEqualTo(switchIndent + 4)
         }
     }
 

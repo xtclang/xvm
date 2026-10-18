@@ -141,6 +141,12 @@ class XdkOnTypeFormattingTest {
                     8,
                 ),
                 Typed(
+                    "'}' closing a switch statement",
+                    "module OnType {\n    void run(Int x) {\n        switch (x) {\n        case 1:\n            return;\n            }§\n    }\n}\n",
+                    "}",
+                    8,
+                ),
+                Typed(
                     "Enter after 'case'",
                     "module OnType {\n    void run(Int x) {\n        switch (x) {\n        case 1:\n        §\n        }\n    }\n}\n",
                     "\n",
