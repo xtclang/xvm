@@ -48,6 +48,18 @@ async function embedded(body: (executions: Executions) => Promise<void>): Promis
     }
 }
 
+/** VS Code saves before a task unless told not to; the extension itself saves nothing. */
+async function withoutSavingBeforeTasks(body: () => Promise<void>): Promise<void> {
+    const settings = vscode.workspace.getConfiguration('task');
+    const original = settings.inspect<string>('saveBeforeRun')?.workspaceValue;
+    await settings.update('saveBeforeRun', 'never', vscode.ConfigurationTarget.Workspace);
+    try {
+        await body();
+    } finally {
+        await settings.update('saveBeforeRun', original, vscode.ConfigurationTarget.Workspace);
+    }
+}
+
 async function runLensTitles(document: vscode.TextDocument): Promise<string[]> {
     const provider = client().getFeature('textDocument/codeLens').getProvider(document)!.provider!;
     const token = new vscode.CancellationTokenSource();
@@ -105,12 +117,15 @@ export function executionCases(): void {
 
             await workspace.replace(library, data.brokenLibrary);
             assert.ok(library.isDirty, 'The broken library is unsaved before the build');
-            const failed = await executions.start('build', label, () => vscode.commands.executeCommand('xtc.build'), finished, 'Failing build finishes');
-            assert.ok(!library.isDirty, 'Build saves all files first');
-            assert.strictEqual(failed.exitCode, 1, failed.text);
-            assert.ok(failed.text.includes(data.failed), failed.text);
-            assert.ok(failed.text.includes(data.skipped), failed.text);
-            assert.ok(failed.text.split('\n').some(line => line.includes(data.diagnostic) && line.includes(': error: ')), failed.text);
+            // the build compiles the editor's text, and only VS Code's task setting would save it
+            await withoutSavingBeforeTasks(async () => {
+                const failed = await executions.start('build', label, () => vscode.commands.executeCommand('xtc.build'), finished, 'Failing build finishes');
+                assert.ok(library.isDirty, 'Build leaves the broken library unsaved');
+                assert.strictEqual(failed.exitCode, 1, failed.text);
+                assert.ok(failed.text.includes(data.failed), failed.text);
+                assert.ok(failed.text.includes(data.skipped), failed.text);
+                assert.ok(failed.text.split('\n').some(line => line.includes(data.diagnostic) && line.includes(': error: ')), failed.text);
+            });
         });
     });
 
@@ -301,13 +316,16 @@ export function buildModeCases(): void {
             };
             assert.ok((await runOnce('First run finishes')).includes(data.first));
             assert.ok((await runOnce('Second run of the unchanged module finishes')).includes(data.first));
-            // edited and not saved: the run saves first and runs the edit, not the earlier build
+            // edited and not saved: the run builds and runs the editor's text, not the earlier build, and
+            // leaves the file unsaved when VS Code's task setting does not save it
             await workspace.replace(document, data.edited);
             assert.ok(document.isDirty, 'The edit is unsaved before the run');
-            const edited = await runOnce('Run of the edited module finishes');
-            assert.ok(edited.includes(data.second), edited);
-            assert.ok(!edited.includes(data.first), edited);
-            assert.ok(!document.isDirty, 'The run saved the edit');
+            await withoutSavingBeforeTasks(async () => {
+                const edited = await runOnce('Run of the edited module finishes');
+                assert.ok(edited.includes(data.second), edited);
+                assert.ok(!edited.includes(data.first), edited);
+                assert.ok(document.isDirty, 'The run leaves the edit unsaved');
+            });
         });
     });
 }

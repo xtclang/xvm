@@ -165,7 +165,8 @@ Choose **Gradle** with **Ecstasy: Select Build Mode** or the status bar, or set 
 `gradle`, to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
 available in embedded mode, since it has no counterpart for them.
 
-Embedded builds and runs first save all open files, so the build matches the sources on disk.
+Embedded builds and runs compile the editor's text, saved or not; the extension saves no files. VS Code
+saves them before the build or run task as `task.saveBeforeRun` says (`always` by default).
 Build output lists each module (built, failed, or skipped because a dependency failed) and each
 diagnostic as `file:line:column`, which the terminal links to the source. Open files show the same
 errors as editor diagnostics. Embedded mode needs the compiler language service; the Tree-sitter

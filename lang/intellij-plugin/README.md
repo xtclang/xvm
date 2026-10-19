@@ -114,7 +114,8 @@ Ways to run a module:
   Application**), from the toolbar or `Shift+F10`.
 
 Build Project is `Cmd+F9` / `Ctrl+F9`; Rebuild Project is in the **Build** menu. In embedded mode
-both save all files first, and build every Ecstasy module, even from *Build Module*.
+both build every Ecstasy module, even from *Build Module*, from the editor's text, saved or not: the
+plugin saves no files. IntelliJ itself saves all files before a run, not before a build.
 
 An Ecstasy Application configuration has:
 

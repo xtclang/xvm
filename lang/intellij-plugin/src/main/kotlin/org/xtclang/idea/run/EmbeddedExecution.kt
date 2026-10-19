@@ -5,9 +5,9 @@ import com.intellij.execution.filters.HyperlinkInfo
 import com.intellij.execution.filters.LazyFileHyperlinkInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiDocumentManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.lsp.BuildResponse
@@ -36,9 +36,28 @@ internal object EmbeddedExecution {
                     ?: CompletableFuture.failedFuture<LanguageServer>(IllegalStateException("The Ecstasy language server is not available"))
             }.thenApply { it as XtcLanguageServer }
 
-    /** Builds always start from saved files, so the artifacts on disk match the sources. */
-    fun saveAll() {
-        ApplicationManager.getApplication().invokeAndWait { FileDocumentManager.getInstance().saveAllDocuments() }
+    /**
+     * Completes once the Ecstasy language server has every edit of the documents it has open. Builds and runs use
+     * the text the server holds, saved or not, so nothing is saved here; IntelliJ saves before a run on its own.
+     * LSP4IJ sends an edit once its document is committed, and a request can reach the server before it (LSP4IJ
+     * #1729), so the documents are committed and their pending changes sent before a build or run is requested.
+     */
+    fun editsSent(project: Project): CompletableFuture<Void> {
+        ApplicationManager.getApplication().invokeAndWait { PsiDocumentManager.getInstance(project).commitAllDocuments() }
+        return LanguageServerManager
+            .getInstance(project)
+            .getLanguageServer(CompilerSettings.SERVER_ID)
+            .thenCompose { item ->
+                val synchronizers =
+                    item
+                        ?.serverWrapper
+                        ?.openedDocuments
+                        .orEmpty()
+                        .mapNotNull { it.synchronizer }
+                CompletableFuture.allOf(
+                    *synchronizers.map { sync -> sync.didOpenFuture.thenCompose { sync.flushPendingChanges() } }.toTypedArray(),
+                )
+            }
     }
 
     /** The file a diagnostic URI names, or null for a URI that is not a local file. */
