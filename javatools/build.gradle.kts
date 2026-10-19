@@ -31,7 +31,7 @@ val xdkJavaToolsProvider = configurations.register("xdkJavaToolsProvider") {
 }
 
 /**
- * The compiled XDK modules, for tests that run real modules (EmbeddingRunMethodTest). They are
+ * The compiled XDK modules, for tests that run real modules (EmbeddingSupportTest). They are
  * consumed through the same variant as the XDK distribution's modules, so Gradle builds them before
  * the tests instead of the tests depending on an installed XDK. Only the tests use them: javatools
  * itself is what compiles these modules.
