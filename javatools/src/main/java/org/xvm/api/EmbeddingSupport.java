@@ -317,6 +317,8 @@ public class EmbeddingSupport {
 
         /**
          * Stop the app if necessary, wait for it to terminate, and release all of its resources.
+         * Closing again, also from another thread while the first close is in progress, returns
+         * once the first close is done.
          */
         @Override
         void close();

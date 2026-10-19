@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.time.Instant;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.xvm.asm.ErrorListener;
@@ -218,19 +219,43 @@ class InterpreterControl
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {
+            // another close stops and releases the run: return once it is done, not while the
+            // run may still be going
+            released.join();
             return;
         }
 
-        if (running) {
-            postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
-        }
-        // wait for completion without rethrowing its failure so close() can release resources
-        completion.exceptionally(_ -> null).join();
+        try {
+            if (running) {
+                try {
+                    postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
+                } catch (CompletionException e) {
+                    // the run can end after the check above and before the runner gets the
+                    // request, which then finds no task to stop
+                    if (!"terminated".equals(taskStatus())) {
+                        throw e;
+                    }
+                }
+            }
+            // wait for completion without rethrowing its failure so close() can release resources
+            completion.exceptionally(_ -> null).join();
 
-        if (rootDir == null) {
-            postRequest(connector, "deleteTaskDirectory", xInt64.makeHandle(taskId),
-                    xString.makeHandle(module.getSimpleName())).join();
+            if (rootDir == null) {
+                postRequest(connector, "deleteTaskDirectory", xInt64.makeHandle(taskId),
+                        xString.makeHandle(module.getSimpleName())).join();
+            }
+        } finally {
+            released.complete(null);
         }
+    }
+
+    /**
+     * @return the runner's status of the task: "running", "stopped" or "terminated" once the
+     *         task has ended and is no longer registered
+     */
+    private String taskStatus() {
+        return ((StringHandle) postRequest(connector, "taskStatus", xInt64.makeHandle(taskId))
+                .join()).getStringValue();
     }
 
     private final InterpreterConnector    connector;
@@ -241,7 +266,8 @@ class InterpreterControl
     private final Long                    consoleId;
     private final Instant                 started;
     private final CompletableFuture<Void> completion;
-    private final AtomicBoolean           closed = new AtomicBoolean();
+    private final AtomicBoolean           closed   = new AtomicBoolean();
+    private final CompletableFuture<Void> released = new CompletableFuture<>();
 
     private volatile boolean running = true;
     private volatile Instant stopped;

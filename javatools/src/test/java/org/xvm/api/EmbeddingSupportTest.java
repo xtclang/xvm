@@ -16,12 +16,15 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Phaser;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -33,7 +36,6 @@ import org.xvm.api.EmbeddingSupport.EntryPoint;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
-import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -47,8 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
- * a file system, failures, closing a run, how the entry method is selected and what it is passed,
- * exact arguments, and console input. The compiled XDK modules come from the test resources, where
+ * a file system, failures, closing a run, also as it ends and from two threads at once, how the
+ * entry method is selected and what it is passed, exact arguments, and console input. The compiled XDK modules come from the test resources, where
  * the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
  */
 public class EmbeddingSupportTest {
@@ -431,6 +433,82 @@ public class EmbeddingSupportTest {
         control.close();
     }
 
+    @Test
+    public void aCloseWhileAnotherIsInProgressReturnsWhenTheRunHasEnded() {
+        ModuleStructure module = compile("""
+                module Closing {
+                    void run() {
+                        @Inject Console console;
+                        @Inject Timer timer;
+                        @Future Tuple done;
+                        timer.schedule(Duration:1H, () -> {done = ();});
+                        console.print("waiting");
+                        return done;
+                    }
+                }
+                """);
+        for (int i = 0; i < 3; i++) {
+            CountDownLatch waiting = new CountDownLatch(1);
+            ErrorList      errs    = new ErrorList(25);
+            Control        control = support.run(module, signallingConsole("waiting", waiting), null, null, errs);
+            assertNotNull(control, () -> "Closing did not start: " + errs.getErrors());
+            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+
+            // both close at once, and each must find the run ended when its close returns
+            Phaser        together = new Phaser(2);
+            List<Boolean> running  = new CopyOnWriteArrayList<>();
+            List<Thread>  closers  = new ArrayList<>();
+            for (int k = 0; k < 2; k++) {
+                closers.add(Thread.ofPlatform().start(() -> {
+                    together.arriveAndAwaitAdvance();
+                    control.close();
+                    running.add(control.running());
+                }));
+            }
+            for (Thread closer : closers) {
+                assertTimeoutPreemptively(RUN_LIMIT, () -> closer.join());
+            }
+            assertEquals(List.of(false, false), running);
+        }
+    }
+
+    @Test
+    public void closingARunAsItEndsOnItsOwnEndsItOnce() throws IOException {
+        compileAndStore("""
+                module Ending {
+                    void run() {
+                        @Inject Console console;
+                        console.print("waiting");
+                        console.readLine();
+                    }
+                }
+                """);
+        for (int i = 0; i < 10; i++) {
+            CountDownLatch            waiting = new CountDownLatch(1);
+            CompletableFuture<String> line    = new CompletableFuture<>();
+            ErrorList                 errs    = new ErrorList(25);
+            Control                   control = support.runMethod(input(), "Ending", null,
+                    EntryPoint.RUN, signallingConsole("waiting", waiting), _ -> line.join(),
+                    rootDir.toFile(), errs);
+            assertNotNull(control, () -> "Ending did not start: " + errs.getErrors());
+            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+
+            // the end of input lets the program end while the close asks the runner to stop it,
+            // as a Stop does for a program waiting for input
+            line.complete(null);
+            assertTimeoutPreemptively(RUN_LIMIT, control::close);
+            assertFalse(control.running());
+            assertNotNull(control.whenStopped());
+            Long result = control.result();
+            assertTrue(result == null || result == 0L, () -> "result " + result);
+
+            // closing again changes nothing
+            control.close();
+            assertFalse(control.running());
+            assertEquals(result, control.result());
+        }
+    }
+
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -456,6 +534,21 @@ public class EmbeddingSupportTest {
                     }
                 }
                 """.formatted(moduleName, moduleName);
+    }
+
+    /**
+     * A console that counts down the latch when a line containing the text is printed.
+     */
+    private static PrintWriter signallingConsole(String text, CountDownLatch printed) {
+        return new PrintWriter(new StringWriter(), true) {
+            @Override
+            public void println(char[] chars) {
+                super.println(chars);
+                if (new String(chars).contains(text)) {
+                    printed.countDown();
+                }
+            }
+        };
     }
 
     private String run(String moduleName, String methodName, List<String> args,
@@ -498,7 +591,7 @@ public class EmbeddingSupportTest {
     }
 
     private static ModuleStructure compile(String source) {
-        return compile(source, repo());
+        return compile(source, input());
     }
 
     private static ModuleStructure compile(String source, ModuleRepository repository) {
@@ -513,9 +606,13 @@ public class EmbeddingSupportTest {
         new DirRepository(dirOut.toFile(), false).storeModule(compile(source));
     }
 
-    /** The compiled test modules, ahead of the XDK. */
+    /**
+     * The compiled test modules. Compiles and runs add the configured XDK repository, which keeps
+     * the modules it has loaded, as the execution worker's runs do; a new XDK repository here would
+     * load them again for every compile and run.
+     */
     private static ModuleRepository input() {
-        return new LinkedRepository(new DirRepository(dirOut.toFile(), true), repo());
+        return new DirRepository(dirOut.toFile(), true);
     }
 
     private static ModuleRepository repo() {
