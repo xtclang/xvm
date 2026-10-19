@@ -61,14 +61,13 @@ class InterpreterControl
     /**
      * Create and start a control for the specified module.
      *
-     * @param methodName  the method to invoke
-     * @param args        the supplied arguments
+     * @param entry       the entry method to invoke and its arguments
      * @param consoleIn   the console's input, or {@link EmbeddingSupport.ConsoleInput#NONE};
      *                    used only with a console
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
-                                           ModuleRepository repository, String methodName,
-                                           String[] args, PrintWriter console,
+                                           ModuleRepository repository,
+                                           EmbeddingSupport.EntryPoint entry, PrintWriter console,
                                            EmbeddingSupport.ConsoleInput consoleIn, File rootDir,
                                            ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
@@ -81,7 +80,7 @@ class InterpreterControl
         try {
             FileStructure   file   = prepareModule(interpreter, module, repository);
             MainContainer   main   = interpreter.getMainContainer();
-            MethodStructure method = EmbeddingSupport.entryMethod(file.getModule(), methodName, args);
+            MethodStructure method = EmbeddingSupport.entryMethod(file.getModule(), entry);
 
             if (console != null) {
                 consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,
@@ -96,9 +95,9 @@ class InterpreterControl
             ObjectHandle hRootDir    = rootDir == null
                     ? xNullable.NULL
                     : xString.makeHandle(rootDir.getAbsolutePath());
-            ObjectHandle hMethod     = xString.makeHandle(methodName);
-            ObjectHandle hArgs       = EmbeddingSupport.passesArguments(method, args)
-                    ? xString.makeArrayHandle(args)
+            ObjectHandle hMethod     = xString.makeHandle(entry.name());
+            ObjectHandle hArgs       = EmbeddingSupport.passesArguments(method, entry)
+                    ? xString.makeArrayHandle(entry.args().toArray(String[]::new))
                     : xNullable.NULL;
 
             ObjectHandle hTaskId = postRequest(
