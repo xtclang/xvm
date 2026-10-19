@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -59,7 +60,7 @@ class InterpreterControl
      * Create and start a control for the specified module.
      *
      * @param methodName  the method to invoke
-     * @param args        the supplied arguments, or null for none
+     * @param args        the supplied arguments
      * @param consoleIn   the console's input, or {@link EmbeddingSupport.ConsoleInput#NONE};
      *                    used only with a console
      */
@@ -76,9 +77,9 @@ class InterpreterControl
         Long    consoleId = null;
 
         try {
-            FileStructure file     = prepareModule(interpreter, module, repository);
-            MainContainer main     = interpreter.getMainContainer();
-            String[]      callArgs = EmbeddingSupport.entryArguments(file.getModule(), methodName, args);
+            FileStructure   file   = prepareModule(interpreter, module, repository);
+            MainContainer   main   = interpreter.getMainContainer();
+            MethodStructure method = EmbeddingSupport.entryMethod(file.getModule(), methodName, args);
 
             if (console != null) {
                 consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,
@@ -94,9 +95,9 @@ class InterpreterControl
                     ? xNullable.NULL
                     : xString.makeHandle(rootDir.getAbsolutePath());
             ObjectHandle hMethod     = xString.makeHandle(methodName);
-            ObjectHandle hArgs       = callArgs == null
-                    ? xNullable.NULL
-                    : xString.makeArrayHandle(callArgs);
+            ObjectHandle hArgs       = EmbeddingSupport.passesArguments(method, args)
+                    ? xString.makeArrayHandle(args)
+                    : xNullable.NULL;
 
             ObjectHandle hTaskId = postRequest(
                     interpreter, "registerTask",
