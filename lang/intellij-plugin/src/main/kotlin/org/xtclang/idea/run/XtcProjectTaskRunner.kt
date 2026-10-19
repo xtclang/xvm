@@ -64,7 +64,7 @@ internal class EmbeddedBuild(
     private val rebuild: Boolean,
 ) {
     fun start(): CompletableFuture<TaskRunnerResults> {
-        EmbeddedExecution.saveAll()
+        val editsSent = EmbeddedExecution.editsSent(project)
         val title = if (rebuild) "Rebuild Ecstasy modules" else "Build Ecstasy modules"
         val descriptor =
             DefaultBuildDescriptor(Any(), title, project.basePath.orEmpty(), System.currentTimeMillis())
@@ -81,6 +81,7 @@ internal class EmbeddedBuild(
         XtcBuildSettings.gradleNotUsed(project.basePath?.let(Path::of))?.let { progress.output("$it\n", ProcessOutputType.STDOUT) }
         return EmbeddedExecution
             .server(project)
+            .thenCombine(editsSent) { server, _ -> server }
             .thenCompose { it.build(BuildParams(rebuild = rebuild)) }
             .handle { build, failure ->
                 if (failure != null) {
