@@ -1550,11 +1550,15 @@ recommended process model, compiler API implications and full acceptance cases. 
 is part of overall professional XTC tooling completeness; these tasks are not silently added
 to the compiler-only PR:
 
-- [ ] **R1:** controlled repeat-run/runtime API baseline, including native-pool growth.
-  *Partial:* worker regressions for exits, exceptions, arguments, stop/reuse and no HTTP listener.
-  The only native-pool check was `LspTest.testPoolGrows`, which printed the pool size and asserted
-  nothing; it was removed with `LspTest` on 2026-10-19 (`b6629bd48`), so native-pool growth still
-  needs a test that asserts a bound.
+- [x] **R1:** controlled repeat-run/runtime API baseline, including native-pool growth.
+  Worker regressions cover exits, exceptions, arguments, stop/reuse and no HTTP listener.
+  `EmbeddingSupportTest` covers the rest since 2026-10-19: changed modules and dependencies,
+  closing as a run finishes, twice and from two threads at once, refused injections, and the
+  constant pools that outlive a run. Repeated runs add nothing to those pools, and a core type
+  argument adds its types to the native pool once, at most 100 constants. Two races in
+  `InterpreterControl.close()` are fixed: a close as the run ended on its own failed with "Task N has
+  terminated", and a second close returned while the run was still going. Cold and warm latency are
+  measured in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 - [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
   *Partial:* per-module build results and registered-structure entry points. Since `7886b4c1d` a
   build compiles the snapshot captured at the request through the analysis closure compile, reuses
@@ -1565,8 +1569,10 @@ to the compiler-only PR:
   (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, mirrored
   here): entry selection, arguments, console input, runs with a console and closing a suspended
   run. CI runs it since `ee022b504`. Closed 2026-10-19.
-- [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
-  *Partial:* lazy reused worker, replaced after death, closed with the server; no generation handshake.
+- [x] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
+  Completed 2026-10-18; see the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  Since 2026-10-19 the worker's output timer thread is no longer counted as a runtime pool thread,
+  which had retired a healthy worker after the first program that printed.
 - [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
   *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; shared X280–X285 and X287 pass natively.
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
