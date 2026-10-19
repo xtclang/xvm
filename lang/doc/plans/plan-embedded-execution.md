@@ -46,7 +46,7 @@ new *Module source* field. Each commit message records its validation, problems 
 | Interpreter control | [InterpreterControl](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) loads the runner once, copies an artifact into its native container and invokes task registration/start | Compiler ASTs need not be retained for execution; startup currently also invokes runner `run`, starting its HTTP service |
 | Runner | [runner.x](../../../lib_runner/src/main/x/runner.x) maintains task IDs and creates a fresh lightweight child container per task | Reuse the runtime/runner, while giving each normal rerun fresh application state. The Java embedding path should call task methods directly without starting HTTP |
 | Current execution limits | Runner invokes `container.invoke("run", ())`; custom injections are rejected; the [external console](../../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java) reads host-supplied input since 2026-10-16 | Entry-point arguments, input, output channels, asynchronous completion/stop and bounded shutdown need an explicit host API |
-| Repeat-run regressions | [EmbeddingSupportTest](../../../javatools/src/test/java/org/xvm/api/EmbeddingSupportTest.java) runs modules with a console, by name more than once, with a supplied root directory and with a failure, and closes a suspended run, each within a time limit | These checks came from the removed main-based `LspTest` and now run with `:javatools:test`; its run timings and native pool sizes were only printed, and are dropped |
+| Repeat-run regressions | [EmbeddingSupportTest](../../../javatools/src/test/java/org/xvm/api/EmbeddingSupportTest.java) runs modules with a console, by name more than once, with a supplied root directory and with a failure, and closes a suspended run, each within a time limit; it also runs changed modules and dependencies, closes runs as they finish, twice and from two threads at once, and bounds what repeated runs add to the runtime's constant pools (R1) | These checks came from the removed main-based `LspTest` and now run with `:javatools:test`; its run timings and native pool sizes were only printed, and are now [measured and asserted](#additive-delivery-and-acceptance) |
 | JIT execution | [JitControl](../../../javatools/src/main/java/org/xvm/api/JitControl.java) is unsupported; embedding selects the interpreter | First delivery targets interpreter execution; do not advertise JIT parity |
 | DAP | [XtcDebugServer](../../dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) is a placeholder: breakpoints are reported unverified with the reason, launch and attach fail with it, and there are no threads | A transport stub is not debugging. Breakpoints stay unverified until a runtime bridge confirms them |
 | Interpreter debugger | [Debugger](../../../javatools/src/main/java/org/xvm/runtime/Debugger.java) has frame/PC hooks; [ServiceContext](../../../javatools/src/main/java/org/xvm/runtime/ServiceContext.java) returns the global `DebugConsole.INSTANCE` | A real DAP bridge needs session-scoped debugger ownership and suspension/control APIs; parsing console output is not a suitable integration |
@@ -176,7 +176,7 @@ this bridge; they cannot be inferred from compiler type hints.
 
 ## Additive delivery and acceptance
 
-- [ ] **R1 — Runtime API baseline and repeat-run tests.** Convert the standalone probe's useful
+- [x] **R1 — Runtime API baseline and repeat-run tests.** Convert the standalone probe's useful
   assertions into bounded tests: same-name changed artifacts, different dependencies, success,
   exceptions, exit results, immediate stop, stop/finish races, close twice, repeated runs and pool
   growth. Separate unsupported injections/JIT/input from verified interpreter support. Measure cold
@@ -184,6 +184,29 @@ this bridge; they cannot be inferred from compiler type hints.
   *Partial (2026-10-15):* worker regressions cover success, exit codes, exceptions, named methods,
   missing methods, arguments with spaces and Unicode, stop then reuse, and no HTTP listener. Changed
   artifacts, races, double close, pool growth and latency remain.
+  *Completed 2026-10-19:* `EmbeddingSupportTest` covers the rest. A module changed under the same
+  name runs its new code, and an unchanged module runs with the current version of its dependency.
+  Closing a run as it ends on its own, closing it twice and closing it from two threads at once end
+  it once and leave no console registered. The tests found two bugs in `InterpreterControl.close()`.
+  A close as the run ended on its own failed with the runner's "Task N has terminated": the run could
+  end after the close saw it running and before the runner got the kill, which is what Stop does to a
+  program waiting for input, and the worker logged the failure. And a second close returned at once
+  while the run was still going, which RunWorker's Stop and its run thread could do. Now a kill that
+  finds the task gone, which the runner's `taskStatus` confirms, is not a failure, and a second close
+  returns when the first is done. Two constant pools outlive a run: the native container's, which
+  every run shares, and the runner's. After a module's first run, running it again, changed under
+  the same name, or running other modules whose type arguments are classes of their own adds nothing
+  to either. A type argument from the core library adds the types made with it to the native pool
+  once (14 constants for two such types), and the test allows at most 100. Additional injections and
+  custom injectors are refused with `UnsupportedOperationException`. JIT runs are not supported
+  (`useJit()` is false), and console input is verified (X287).
+  Latency on the development Mac, not asserted since it depends on the machine: the first run takes
+  about 1.7 s, most of it starting the interpreter and the runner, and a warm run of a trivial module
+  about 0.15 s. Compiling one takes about 0.75 s the first time and 70–130 ms after that. Both rely
+  on the configured XDK repository, which keeps the modules it has loaded. A caller that also
+  passes a new XDK repository as input loads them again, and a warm run then takes about 0.8 s and
+  a compile 0.5 s. The worker passes only its build output, and `EmbeddingSupportTest` now does
+  too, which took the class from 46 s to 12 s.
 - [ ] **R2 — Build results and runnable targets.** Reuse workspace snapshots/artifacts; prove entry
   eligibility and module ownership, arguments/defaults, unsaved compile-before-run, compile failure,
   stale target rejection, renamed roots and correct source revisions. Do not execute user code in
@@ -239,11 +262,17 @@ this bridge; they cannot be inferred from compiler type hints.
   whose runtime pool grew, or whose heap after a run grew more than 128 MB since its first run (what
   runs retain, such as artifacts) is not used again, beside the 512 MB and 200-thread totals
   (`RunWorkerSupervisionTest`). Over 25 mixed runs (exit codes, arguments, an exception, console
-  input, Stop) one real worker serves every run, holds no console or run afterwards, keeps its 11
+  input, Stop) one real worker serves every run, holds no console or run afterwards, keeps its
   pool threads, and its heap after a run (about 137 MB) grows by less than 1 MB. A killed language server
   process takes its worker with it, and an editor closing the server's input ends its runs and
   workers (`EmbeddedExecutionTest`). Runner tasks are not counted on their own; a leak of them would
   show in that heap. The R8 soak extends this across platforms and debug sessions.
+  *2026-10-19:* the worker's own output timer started on a program's first print, from one of the
+  runtime's pool threads, and joined their thread group, which is what the worker counts as the pool.
+  The first program that printed after a silent first run thus looked like pool growth and retired a
+  healthy worker, so the next run waited about 2 s for a new one. The timer thread has a group of its
+  own (`OutputBatchesTest`), and the pool count is the runtime's pool alone: one thread per core,
+  started by the first run.
 - [ ] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.
