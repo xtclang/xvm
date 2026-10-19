@@ -422,15 +422,17 @@ class XdkAdapter
         fun buildAsync(
             target: String?,
             rebuild: Boolean,
+            fallback: String? = null,
         ): CompletableFuture<XdkBuildResult> =
             synchronized(lifecycle) {
                 if (closed) return closedAdapter()
                 val graph = project
                 val inputs = dependencies
-                val module =
-                    target?.let { name ->
-                        graph.modules[name] ?: graph.modules.values.firstOrNull { it.uri == name || it.uri == graph.scope(name) }
-                    }
+                val find = { name: String ->
+                    graph.modules[name] ?: graph.modules.values.firstOrNull { it.uri == name || it.uri == graph.scope(name) }
+                }
+                // a root URI that names no module any more, as after its file moved, gives way to the module's name
+                val module = target?.let { find(it) ?: fallback?.let(find) }
                 if (target != null && module == null) {
                     return CompletableFuture.failedFuture(IllegalArgumentException("Unknown source module: $target"))
                 }

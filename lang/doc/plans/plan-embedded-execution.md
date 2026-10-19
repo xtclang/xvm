@@ -207,7 +207,7 @@ this bridge; they cannot be inferred from compiler type hints.
   passes a new XDK repository as input loads them again, and a warm run then takes about 0.8 s and
   a compile 0.5 s. The worker passes only its build output, and `EmbeddingSupportTest` now does
   too, which took the class from 46 s to 12 s.
-- [ ] **R2 — Build results and runnable targets.** Reuse workspace snapshots/artifacts; prove entry
+- [x] **R2 — Build results and runnable targets.** Reuse workspace snapshots/artifacts; prove entry
   eligibility and module ownership, arguments/defaults, unsaved compile-before-run, compile failure,
   stale target rejection, renamed roots and correct source revisions. Do not execute user code in
   target discovery. These passive compiler APIs can be extracted before runtime UI integration.
@@ -242,7 +242,19 @@ this bridge; they cannot be inferred from compiler type hints.
   (`EmbeddingSupport.entryMethod` and `passesArguments`; `EmbeddingSupportTest` for entry selection,
   optional argument arrays and defaults, exact arguments and missing methods; `EmbeddedExecutionTest`
   for arguments, a named method, a missing method and a method the module no longer declares).
-  Still open: renamed roots beyond the current graph.
+  *Renamed roots (2026-10-19):* discovery already followed a root file renamed or moved on disk, and
+  builds find modules in the current graph, but a run target saved with the old root URI (a VS Code
+  task or Rerun, an IntelliJ configuration's *Module source*) failed as an unknown source module,
+  even with the module's name unchanged, since both clients sent only the URI. `xtc/run` now takes
+  the name as `moduleName` beside the URI, and the server uses it when the URI no longer names a
+  module; a module renamed in its source is still found by its URI. IntelliJ's Run lens also brings
+  a reused configuration's name and source up to date. `EmbeddedExecutionTest` renames a discovered
+  root on disk and runs it by the old URI with its name and by the new URI, and refuses the old URI
+  alone; shared X291 runs a saved target again after the rename in both editors. Not covered:
+  renaming a root whose editor is still open (that buffer stays a source under the old path, and
+  builds report a duplicate module until it is closed); an IDE move of a discovered root into
+  another directory, which the rename work refuses; and the fallbacks for the name and dependencies
+  of a renamed root whose header does not parse, which are keyed by the old path. Closed 2026-10-19.
 - [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
