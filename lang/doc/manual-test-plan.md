@@ -1264,7 +1264,7 @@ module Hello {
 |---|------|-------|-----------------|
 | 18a.1 | Build | VS Code `Cmd`/`Ctrl+F9`; IntelliJ **Build → Build Project** | Output lists `✓ Hello -> …/build/xtc/embedded/lib/Hello.xtc`; IntelliJ shows it in the Build tool window |
 | 18a.2 | Build error | Break the source, save, build again | The diagnostic is listed as `file:line:column`; clicking it opens the source; the build fails |
-| 18a.3 | Unsaved edits | Edit without saving, then build | All files are saved first; the build reflects the edit |
+| 18a.3 | Unsaved edits | Edit without saving, then build | The build reflects the edit; the plugin saves nothing (VS Code saves per `task.saveBeforeRun`, IntelliJ before a run) |
 | 18a.4 | Run | Run lens, VS Code editor Run button or IntelliJ Run Context Configuration (`Ctrl+Shift+R` macOS / `Ctrl+Shift+F10`) | `Hello …` printed, then the exit code (VS Code: "Process finished with exit code 0") |
 | 18a.5 | Arguments | Configure arguments `a b,ü` (IntelliJ *Module arguments*; VS Code task `"args": ["a b", "ü"]`) | The program receives them unchanged, without shell parsing |
 | 18a.6 | Stop | Run `module Loop { void run() { for (Int count = 0; count >= 0; ++count) {} } }` (an empty `while (True)` is rejected as non-terminating), then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
@@ -3854,7 +3854,7 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 | ID | Actions | Expected result |
 |---|---|---|
 | X280 | Open LensRunnable and LensOnlyLibrary. Give LensOnlyLibrary a `run(String, String)`, then a `run()`. | Only LensRunnable has a **▶ Run** lens at first. Two required parameters still give no lens; adding `run()` adds the LensOnlyLibrary lens. |
-| X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second saves the edit first, fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
+| X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second builds the unsaved edit and leaves it unsaved (VS Code with `task.saveBeforeRun` set to `never`), fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
 | X282 | Run RunEcho with the arguments `a b` and `ü`. | Output `args=2:a b\|ü`, unchanged arguments without shell parsing, and exit code 3. |
 | X283 | Run RunForever; after it prints `started`, Rerun it (IntelliJ **Rerun**, VS Code **Tasks: Restart Running Task**); after the new run prints `started`, Stop it. Then run RunNext from its Run lens. | Rerun stops the first run and starts a new one that prints `started` again. The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
 | X284 | Run RunBroken, whose `run` returns a String as an Int. | The run prints the `RunBroken.x:2:` diagnostic and "Build failed; nothing was run.", runs nothing and ends with exit code 1. |
@@ -3892,7 +3892,7 @@ Like X280–X287, this case switches to the embedded build mode for its duration
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X289 | Run RunAgain, then run it again without changes. Edit it to print `second version`, do not save, and run it a third time. | The first two runs print `first version` and exit with code 0. The third run saves the edit first and prints `second version`, not `first version`. |
+| X289 | Run RunAgain, then run it again without changes. Edit it to print `second version`, do not save, and run it a third time. | The first two runs print `first version` and exit with code 0. The third run prints `second version`, not `first version`. VS Code, with `task.saveBeforeRun` set to `never`, leaves the edit unsaved; IntelliJ saves it before the run. |
 | X290 | In OnType.x, for each scenario put the cursor where it shows and type: Enter after `{` in a class, in a method, after a continued declaration's `{` and three levels deep; Enter after a statement, after `case 1:`, after a `//` comment and inside a string; `}` on the blank last line of a class and of an if block. | The cursor line ends at the indentation the code gives: 8 after a class's or method's `{`, a continued declaration's `{`, a statement, a comment and inside a string; 12 after `case 1:` (cases align with their `switch`); 16 three levels deep; the typed `}` at 4 for the class and 8 for the if block. The server's on-type edits for the same keystroke leave that indentation unchanged. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)

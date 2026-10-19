@@ -55,7 +55,8 @@ internal fun ParityScenarios.executionCases() {
             check(Files.readString(file) == data.string("librarySource")) { "The broken library is unsaved before the build" }
             val failed = JsonParser.parseString(execution.build(project, 120)).asJsonObject
             val failure = failed.string("text")
-            check(Files.readString(file) == data.string("brokenLibrary")) { "Build saves all files first" }
+            // the build compiles the editor's text without saving it
+            check(Files.readString(file) == data.string("librarySource")) { "Build leaves the broken library unsaved" }
             check(failed["errors"].asBoolean) { "The build must fail: $failure" }
             check(data.string("failed") in failure) { failure }
             check(data.string("skipped") in failure) { failure }
@@ -252,13 +253,14 @@ internal fun ParityScenarios.buildModeCases() {
             }
             runOnce("first run finishes").let { check(data.string("first") in it) { it } }
             runOnce("second run of the unchanged module finishes").let { check(data.string("first") in it) { it } }
-            // edited and not saved: the run saves first and runs the edit, not the earlier build
+            // edited and not saved: the run builds and runs the edit, not the earlier build; IntelliJ itself saves
+            // the file before a run
             replace(document, data.string("edited"))
             val file = directory.resolve(data.string("file"))
             check(Files.readString(file) == data.string("source")) { "The edit is unsaved before the run" }
             val edited = runOnce("run of the edited module finishes")
             check(data.string("second") in edited && data.string("first") !in edited) { edited }
-            check(Files.readString(file) == data.string("edited")) { "The run saved the edit" }
+            check(Files.readString(file) == data.string("edited")) { "IntelliJ saved the edit before the run" }
         }
     }
 }
