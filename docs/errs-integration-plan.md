@@ -1566,8 +1566,9 @@ to the compiler-only PR:
   2026-10-19 neither client saves first: builds and runs compile the editor's text, and IntelliJ
   waits for LSP4IJ's pending changes before the request (X281, X289 in both editors). Stale
   targets have their own tests: a removed method and a renamed module are refused, and neither
-  earlier artifact runs. Still open: arguments and defaults proven before the build, and renamed
-  roots beyond the current graph.
+  earlier artifact runs. Arguments and defaults are proven on the built module by the runner's
+  entry check before user code runs, which is the requirement (decided 2026-10-19). Still open:
+  renamed roots beyond the current graph.
 - [x] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
   Entry selection, exact arguments, output, completion and stop; console input since `82b6ba570`
   (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, mirrored
