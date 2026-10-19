@@ -103,6 +103,8 @@ data class RunParams(
     val args: List<String> = emptyList(),
     val workingDirectory: String? = null,
     val runId: String? = null,
+    /** The module's name, which the server uses when [module] is a root URI that no longer names a module. */
+    val moduleName: String? = null,
 )
 
 /** The build outcome, and the run's ID when the build succeeded and the run started. */

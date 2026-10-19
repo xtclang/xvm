@@ -639,6 +639,41 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a discovered module whose root file was renamed runs by its name when a saved target has the old file`() {
+        CompilerTestSupport.configure()
+        // a workspace of its own, so discovery finds no other test's sources
+        val old = source("moved-root/App.x", """module App { void run() { @Inject Console console; console.print("app runs"); } }""")
+        val workspace = directory.resolve("moved-root")
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(workspace.toString()))
+            // on the class's worker, which is already started; closing these runs would close it
+            val runs = EmbeddedRuns(adapter, { client }, worker)
+            assertThat(runs.run(RunParams(module = old, moduleName = "App", runId = "before")).get(60, SECONDS).runId)
+                .isEqualTo("before")
+            assertThat(client.exits.poll(60, SECONDS)?.error).isNull()
+
+            // renamed on disk, as by a terminal; the watcher reports both paths
+            val moved = Files.move(workspace.resolve("App.x"), workspace.resolve("Main.x"))
+            assertThat(adapter.applyFileEvents(listOf(old, moved.toUri().toString()))).isNotNull()
+            assertThatThrownBy { runs.run(RunParams(module = old, runId = "file only")).get(60, SECONDS) }
+                .hasRootCauseMessage("Unknown source module: $old")
+
+            client.output.setLength(0)
+            assertThat(runs.run(RunParams(module = old, moduleName = "App", runId = "moved")).get(60, SECONDS).runId)
+                .isEqualTo("moved")
+            assertThat(client.exits.poll(60, SECONDS)?.error).isNull()
+            assertThat(client.output.toString()).contains("app runs")
+            // and by the new file, which the Run lens now names
+            client.output.setLength(0)
+            assertThat(runs.run(RunParams(module = moved.toUri().toString(), runId = "lens")).get(60, SECONDS).runId)
+                .isEqualTo("lens")
+            assertThat(client.exits.poll(60, SECONDS)?.error).isNull()
+            assertThat(client.output.toString()).contains("app runs")
+        }
+    }
+
+    @Test
     fun `only modules with a callable run method are runnable targets with a Run lens`() {
         CompilerTestSupport.configure()
         val libraryText = "module Library { static Int value() = 7; }"

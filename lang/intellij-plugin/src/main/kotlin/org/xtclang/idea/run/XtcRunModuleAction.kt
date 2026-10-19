@@ -72,6 +72,12 @@ class XtcRunModuleAction :
                         }
                         runManager.setTemporaryConfiguration(it)
                     }
+            // the Run lens names the module as it is now: a configuration found by its name keeps up with a root
+            // file that was renamed or moved, and one found by its source with a module that was renamed
+            (settings.configuration as? XtcRunConfiguration)?.let { config ->
+                config.moduleName = moduleName
+                if (uri != null) config.moduleUri = uri
+            }
             runManager.selectedConfiguration = settings
             ProgramRunnerUtil.executeConfiguration(settings, DefaultRunExecutor.getRunExecutorInstance())
         }
