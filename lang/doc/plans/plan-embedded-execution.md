@@ -235,8 +235,15 @@ this bridge; they cannot be inferred from compiler type hints.
   module and is refused by the runner's entry check, and the earlier artifact's method does not run;
   a run of a module renamed in its source is refused before a build as an unknown source module
   (`EmbeddedExecutionTest`). The renamed module's earlier artifact stays in `build/xtc/embedded/lib`,
-  but nothing runs it: a build writes or removes only the artifacts of the modules it builds. Still
-  open: arguments and defaults proven before the build, and renamed roots beyond the current graph.
+  but nothing runs it: a build writes or removes only the artifacts of the modules it builds.
+  *Arguments and defaults (decided 2026-10-19):* they are proven on the module the run's build has
+  just produced, by the runner's entry check before any user code runs, not before the build: only
+  the built module is certain to be the one that runs, and an earlier check could use only editor
+  analysis that may be older. The check applies the command-line runner's rule
+  (`EmbeddingSupport.entryMethod` and `passesArguments`; `EmbeddingSupportTest` for entry selection,
+  optional argument arrays and defaults, exact arguments and missing methods; `EmbeddedExecutionTest`
+  for arguments, a named method, a missing method and a method the module no longer declares).
+  Still open: renamed roots beyond the current graph.
 - [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
