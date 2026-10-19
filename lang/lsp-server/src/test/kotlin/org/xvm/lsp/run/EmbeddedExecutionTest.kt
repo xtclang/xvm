@@ -2,6 +2,7 @@ package org.xvm.lsp.run
 
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.entry
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.services.LanguageClient
@@ -34,6 +35,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -586,6 +588,57 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a run of a method its module no longer declares is refused, and the earlier artifact's method does not run`() {
+        CompilerTestSupport.configure()
+        val app = source("Greeting.x", """module Greeting { void greet() { @Inject Console console; console.print("old greeting"); } }""")
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Greeting", app)))
+            // on the class's worker, which is already started; closing these runs would close it
+            val runs = EmbeddedRuns(adapter, { client }, worker)
+            assertThat(runs.run(RunParams(module = "Greeting", method = "greet", runId = "listed")).get(60, SECONDS).runId)
+                .isEqualTo("listed")
+            assertThat(client.exits.poll(60, SECONDS)?.error).isNull()
+            assertThat(client.output.toString()).contains("old greeting")
+
+            // a target listed for greet, which the module no longer declares
+            adapter.compile(app, "module Greeting { void run() {} }")
+            client.output.setLength(0)
+            val stale = runs.run(RunParams(module = "Greeting", method = "greet", runId = "stale")).get(60, SECONDS)
+            assertThat(stale.build.succeeded).isTrue()
+            assertThat(client.exits.poll(60, SECONDS)?.error).contains("greet")
+            assertThat(client.output.toString()).doesNotContain("old greeting")
+        }
+    }
+
+    @Test
+    fun `a run of a module renamed in its source is refused, and its earlier artifact does not run`() {
+        CompilerTestSupport.configure()
+        val file = source("Renamed.x", """module Before { void run() { @Inject Console console; console.print("before the rename"); } }""")
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Before", file)))
+            // on the class's worker, which is already started; closing these runs would close it
+            val runs = EmbeddedRuns(adapter, { client }, worker)
+            assertThat(runs.run(RunParams(module = "Before", runId = "before")).get(60, SECONDS).runId).isEqualTo("before")
+            assertThat(client.exits.poll(60, SECONDS)?.error).isNull()
+
+            // a target listed for Before, which the source now calls After
+            adapter.compile(file, """module After { void run() { @Inject Console console; console.print("after the rename"); } }""")
+            adapter.replaceSourceModules(listOf(XdkSourceModule("After", file)))
+            client.output.setLength(0)
+            // refused before a build; the earlier artifact is still in the build output, but nothing runs it
+            assertThatThrownBy { runs.run(RunParams(module = "Before", runId = "stale")).get(60, SECONDS) }
+                .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
+                .hasRootCauseMessage("Unknown source module: Before")
+            assertThat(client.exits.poll(1, SECONDS)).isNull()
+            assertThat(client.output.toString()).doesNotContain("before the rename")
+        }
+    }
+
+    @Test
     fun `only modules with a callable run method are runnable targets with a Run lens`() {
         CompilerTestSupport.configure()
         val libraryText = "module Library { static Int value() = 7; }"
@@ -672,6 +725,22 @@ class EmbeddedExecutionTest {
     /** Waits for a condition, checking it at once and then often: each wait here is short, and there are many. */
     private fun soon(seconds: Long) =
         await().pollDelay(Duration.ZERO).pollInterval(Duration.ofMillis(10)).atMost(Duration.ofSeconds(seconds))
+
+    /** Records the run output and exits the server sends its client. */
+    private class RunClient :
+        XtcLanguageClient,
+        LanguageClient by mock(LanguageClient::class.java) {
+        val output = StringBuffer()
+        val exits = LinkedBlockingQueue<RunExitedParams>()
+
+        override fun runOutput(params: RunOutputParams) {
+            output.append(params.text)
+        }
+
+        override fun runExited(params: RunExitedParams) {
+            exits.add(params)
+        }
+    }
 
     private data class Outcome(
         val output: String,
