@@ -34,6 +34,7 @@ package basic {
                 passed &= runTest(() -> literalTests.run());
                 passed &= runTest(() -> mapTests.run());
                 passed &= runTest(() -> tupleTests.run());
+                passed &= runTest(() -> hashCollectorTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

@@ -82,6 +82,8 @@ public class NativeNames {
         reservedMethodName.put("collections.Array.FreezableArray/freeze/1", "freeze");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
         reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
+        reservedMethodName.put("collections.HashCollector/compute/0", "compute");
+        reservedMethodName.put("collections.HashCollector/reset/0",   "reset");
         reservedMethodName.put("collections.Tuple/add/2",         "add");
         reservedMethodName.put("collections.Tuple/addAll/1",      "addAll");
         reservedMethodName.put("collections.Tuple/elementAt/1",   "elementAt");
@@ -162,6 +164,10 @@ public class NativeNames {
         reservedMethodName.put("temporal.Timer/schedule/3", "schedule");
         reservedMethodName.put("temporal.Timer/stop/0",     "stop");
         reservedMethodName.put("temporal.Timer/reset/0",    "reset");
+
+        // JavaTools Bridge _native types
+        reservedMethodName.put("collections.BasicHashCollector/compute/0", "compute");
+        reservedMethodName.put("collections.BasicHashCollector/reset/0",   "reset");
     }
 
     /**
@@ -177,7 +183,8 @@ public class NativeNames {
         if (jitName == null) {
             // there was no match for the exact type and method, try to match on super types
 
-            ConstantPool pool = classId.getConstantPool();
+            ConstantPool pool       = classId.getConstantPool();
+            String       methodName = methodId.getName();
             if (    classType.isA(pool.typeNumber()) ||
                     classType.isA(pool.typeFPNumber()) ||
                     classType.isA(pool.typeIntConvertible()) ||
@@ -186,13 +193,18 @@ public class NativeNames {
                 key     = createKey("numbers.Number", methodId);
                 jitName = reservedMethodName.get(key);
 
-                String methodName = methodId.getName();
                 if (jitName == null &&
                         (methodName.startsWith("toInt") || methodName.startsWith("toUInt") ||
                          methodName.startsWith("toDec") || methodName.startsWith("toFloat") ||
-                         methodName.startsWith("toNibble"))) {
+                         methodName.startsWith("toNibble") || methodName.startsWith("toByte"))) {
                     jitName = methodName;
                 }
+//            } else if (classType.isA(pool.ensureEcstasyTypeConstant("collections.HashCollector"))) {
+//                // HashCollector must have fixed names for these methods so that the
+//                // BasicHashCollector in the JIT bridge can hard code implementations
+//                if (methodName.startsWith("reset") || methodName.startsWith("compute")) {
+//                    jitName = methodName;
+//                }
             }
         }
 
@@ -212,6 +224,7 @@ public class NativeNames {
         Set<String> names = new HashSet<>(reservedMethodName.values());
         addConversionNames(names, "toInt",   "", "8", "16", "32", "64", "128", "N", "Literal");
         addConversionNames(names, "toUInt",  "", "8", "16", "32", "64", "128", "N");
+        addConversionNames(names, "toByte", "");
         addConversionNames(names, "toNibble", "");
         addConversionNames(names, "toDec",   "", "32", "64", "128", "N");
         addConversionNames(names, "toFloat", "8e4", "8e5", "16", "32", "64", "128", "N");

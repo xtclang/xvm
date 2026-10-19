@@ -6,6 +6,8 @@ import java.util.Map;
 
 import java.util.function.Function;
 
+import org.xtclang._native.collections.BasicHashCollector;
+
 import org.xtclang._native.io.TerminalConsole;
 
 import org.xtclang._native.numbers.RTRandom;
@@ -95,5 +97,9 @@ public class nMainInjector
 
         TypeConstant timerType = pool.ensureEcstasyTypeConstant("temporal.Timer");
         suppliers.put(new Resource(timerType, "timer"), NanosTimer::$create);
+
+        TypeConstant hashType = pool.ensureEcstasyTypeConstant("collections.HashCollector");
+        suppliers.put(new Resource(hashType, "hash"),
+                _ -> BasicHashCollector.$create(xvm.getCtx()));
     }
 }
