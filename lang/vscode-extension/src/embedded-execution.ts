@@ -198,9 +198,11 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
         }
     }
 
-    /** Builds always start from saved files, so the artifacts on disk match the sources. */
+    /**
+     * The server builds the editor's text, saved or not, so the extension saves nothing; VS Code saves before a
+     * task as `task.saveBeforeRun` says. The language client sends every edit before a later request.
+     */
     protected async connection(): Promise<LanguageClient | undefined> {
-        await vscode.workspace.saveAll(false);
         const client = this.client();
         if (!client?.isRunning()) {
             this.line('The Ecstasy language server is not running.');
