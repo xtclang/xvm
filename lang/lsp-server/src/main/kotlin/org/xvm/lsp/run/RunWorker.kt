@@ -111,8 +111,7 @@ object RunWorker {
                         LinkedRepository(*repositories.toTypedArray()),
                         command["module"].asString,
                         null,
-                        command.string("method") ?: "run",
-                        command.strings("args"),
+                        EmbeddingSupport.EntryPoint(command.string("method") ?: "run", command.strings("args")),
                         console,
                         // the editors always show what is typed: the echo request is not passed on to them yet
                         EmbeddingSupport.ConsoleInput.of(BufferedReader(input)),

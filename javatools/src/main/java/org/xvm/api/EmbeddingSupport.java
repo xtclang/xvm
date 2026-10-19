@@ -1157,6 +1157,31 @@ public class EmbeddingSupport {
     }
 
     /**
+     * The method to invoke as a module's entry point, and the arguments to pass it.
+     *
+     * @param name  the name of the entry method, conventionally "run"
+     * @param args  the arguments for the entry method; never shell-parsed
+     */
+    public record EntryPoint(String name, List<String> args) {
+        /**
+         * The conventional entry point: "run", with no arguments.
+         */
+        public static final EntryPoint RUN = new EntryPoint("run");
+
+        public EntryPoint {
+            requireNonNull(name, "name");
+            args = List.copyOf(args);
+        }
+
+        /**
+         * Create an entry point for the specified method and arguments.
+         */
+        public EntryPoint(String name, String... args) {
+            this(name, List.of(args));
+        }
+    }
+
+    /**
      * Represents management and monitoring information about a running Ecstasy module.
      */
     public interface Control
@@ -1267,23 +1292,24 @@ public class EmbeddingSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             @NotNull ErrorListener    errs) {
-        return start(input, moduleName, version, "run", new String[0], console, null, rootDir,
-                injections, customInjector, errs);
+        if (injections != null && !injections.isEmpty() || customInjector != null) {
+            throw new UnsupportedOperationException("Custom injectors are not implemented yet");
+        }
+        return runMethod(input, moduleName, version, EntryPoint.RUN, console, ConsoleInput.NONE,
+                rootDir, errs);
     }
 
     /**
      * Create a runtime container and invoke the specified entry method of a module.
      *
-     * <p>The method is selected the way the command-line runner selects it: exactly one method of
-     * that name must exist on the module, including the methods its annotations contribute, and an
-     * argument array is passed when the method requires one, or when arguments are supplied and the
-     * method accepts a parameter.
+     * <p>The method is selected the way the command-line runner selects it, as described for
+     * {@link #entryMethod} and {@link #passesArguments}.
      *
      * @param input       the ModuleRepository providing any necessary modules
      * @param moduleName  the module name to execute; must be loadable from "input"
      * @param version     (optional) the version of the module to load
-     * @param methodName  the entry method to invoke, conventionally "run"
-     * @param args        the arguments for the entry method; never shell-parsed
+     * @param entry       the entry method to invoke and its arguments, such as
+     *                    {@link EntryPoint#RUN}
      * @param console     (optional) the PrintWriter for the executing application
      * @param consoleIn   the input for the application's console, or {@link ConsoleInput#NONE}:
      *                    each {@code Console.readLine()} reads one line from it, and its end reads
@@ -1299,29 +1325,13 @@ public class EmbeddingSupport {
             ModuleRepository       input,
             String                 moduleName,
             Version                version,
-            String                 methodName,
-            List<String>           args,
+            EntryPoint             entry,
             PrintWriter            console,
             ConsoleInput           consoleIn,
             File                   rootDir,
             @NotNull ErrorListener errs) {
-        return start(input, moduleName, version, requireNonNull(methodName, "methodName"),
-                requireNonNull(args, "args").toArray(String[]::new), console,
-                requireNonNull(consoleIn, "consoleIn"), rootDir, null, null, errs);
-    }
-
-    private Control start(
-            ModuleRepository          input,
-            String                    moduleName,
-            Version                   version,
-            String                    methodName,
-            String[]                  args,
-            PrintWriter               console,
-            ConsoleInput              consoleIn,
-            File                      rootDir,
-            Map<String, List<String>> injections,
-            String                    customInjector,
-            @NotNull ErrorListener    errs) {
+        requireNonNull(entry, "entry");
+        requireNonNull(consoleIn, "consoleIn");
         verifyConfigured();
         requireNonNull(errs, "errs");
 
@@ -1334,7 +1344,7 @@ public class EmbeddingSupport {
             return null;
         }
 
-        if (injections != null && !injections.isEmpty() || customInjector != null || cfgInjector != null) {
+        if (cfgInjector != null) {
             throw new UnsupportedOperationException("Custom injectors are not implemented yet");
         }
 
@@ -1342,8 +1352,8 @@ public class EmbeddingSupport {
             var connector = ensureConnector();
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
-                    : InterpreterControl.create(connector, module, repository, methodName, args,
-                            console, consoleIn, rootDir, errs);
+                    : InterpreterControl.create(connector, module, repository, entry, console,
+                            consoleIn, rootDir, errs);
         } catch (RuntimeException | AssertionError e) {
             // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
             // assertion in the structure code past this report and out to the host. Errors are
@@ -1361,22 +1371,22 @@ public class EmbeddingSupport {
      * must be true for {@code module.getFileStructure()}, since the methods of its type depend on
      * its dependencies.
      *
-     * @param module      the linked module to run
-     * @param methodName  the name of the entry method
-     * @param args        the supplied arguments
+     * @param module  the linked module to run
+     * @param entry   the entry method's name and the supplied arguments
      *
-     * @return the entry method; {@link #passesArguments} tells whether it is passed "args"
+     * @return the entry method; {@link #passesArguments} tells whether it is passed the arguments
      *
      * @throws IllegalStateException     if the module is not linked
      * @throws IllegalArgumentException  if the method is missing or ambiguous, or if it cannot be
-     *                                   called with "args"
+     *                                   called with the arguments
      */
-    static MethodStructure entryMethod(ModuleStructure module, String methodName, String[] args) {
+    static MethodStructure entryMethod(ModuleStructure module, EntryPoint entry) {
         if (!module.getFileStructure().isLinked()) {
             throw new IllegalStateException("Module " + module.getName() + " is not linked");
         }
 
-        ConstantPool pool = module.getConstantPool();
+        String       methodName = entry.name();
+        ConstantPool pool       = module.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
             Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
             if (methods.size() != 1) {
@@ -1392,7 +1402,7 @@ public class EmbeddingSupport {
 
             // as for the command-line runner, the parameter may be of any type a String[] can be
             // passed as, such as Object or List<String>
-            if (passesArguments(method, args)) {
+            if (passesArguments(method, entry)) {
                 TypeConstant typeArg = method.getParam(0).getType();
                 if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
                     throw new IllegalArgumentException("Unsupported argument type "
@@ -1411,12 +1421,13 @@ public class EmbeddingSupport {
      * default value of the parameter applies.
      *
      * @param method  the entry method, as found by {@link #entryMethod}
-     * @param args    the supplied arguments
+     * @param entry   the entry method's name and the supplied arguments
      *
-     * @return true to pass "args" as an array; false to pass nothing
+     * @return true to pass the arguments as an array; false to pass nothing
      */
-    static boolean passesArguments(MethodStructure method, String[] args) {
-        return method.getRequiredParamCount() == 1 || args.length > 0 && method.getParamCount() > 0;
+    static boolean passesArguments(MethodStructure method, EntryPoint entry) {
+        return method.getRequiredParamCount() == 1
+                || !entry.args().isEmpty() && method.getParamCount() > 0;
     }
 
     // ----- constants -----------------------------------------------------------------------------
