@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.api.EmbeddingSupport.ConsoleInput;
 import org.xvm.api.EmbeddingSupport.Control;
+import org.xvm.api.EmbeddingSupport.EntryPoint;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
@@ -121,7 +122,7 @@ public class EmbeddingRunMethodTest {
         assertFalse(module.getFileStructure().isLinked());
 
         IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> EmbeddingSupport.entryMethod(module, "run", new String[0]));
+                () -> EmbeddingSupport.entryMethod(module, EntryPoint.RUN));
         assertTrue(failure.getMessage().contains("not linked"), failure.getMessage());
     }
 
@@ -244,7 +245,7 @@ public class EmbeddingRunMethodTest {
                 }
                 """);
         ErrorList errs    = new ErrorList(25);
-        Control   control = support.runMethod(input(), "Missing", null, "absent", List.of(),
+        Control   control = support.runMethod(input(), "Missing", null, new EntryPoint("absent"),
                 new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
 
         assertNull(control);
@@ -261,7 +262,7 @@ public class EmbeddingRunMethodTest {
         // the file system refuses a name with a NUL character, so the runner cannot start the task
         File      blocked = new File(rootDir.toFile(), "no\u0000root");
         ErrorList errs    = new ErrorList(25);
-        Control   control = support.runMethod(input(), "Unstartable", null, "run", List.of(),
+        Control   control = support.runMethod(input(), "Unstartable", null, EntryPoint.RUN,
                 new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, blocked, errs);
         assertNotNull(control, () -> "Unstartable did not register: " + errs.getErrors());
 
@@ -283,8 +284,9 @@ public class EmbeddingRunMethodTest {
                        ConsoleInput consoleIn) {
         StringWriter output  = new StringWriter();
         ErrorList    errs    = new ErrorList(25);
-        Control      control = support.runMethod(input(), moduleName, null, methodName, args,
-                new PrintWriter(output, true), consoleIn, rootDir.toFile(), errs);
+        Control      control = support.runMethod(input(), moduleName, null,
+                new EntryPoint(methodName, args), new PrintWriter(output, true), consoleIn,
+                rootDir.toFile(), errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         try (control) {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
@@ -307,13 +309,13 @@ public class EmbeddingRunMethodTest {
     }
 
     private static boolean passes(ModuleStructure module, String methodName, String[] args) {
-        return EmbeddingSupport.passesArguments(
-                EmbeddingSupport.entryMethod(module, methodName, args), args);
+        EntryPoint entry = new EntryPoint(methodName, args);
+        return EmbeddingSupport.passesArguments(EmbeddingSupport.entryMethod(module, entry), entry);
     }
 
     private static void assertRejected(ModuleStructure module, String methodName, String reason) {
         IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> EmbeddingSupport.entryMethod(module, methodName, new String[0]));
+                () -> EmbeddingSupport.entryMethod(module, new EntryPoint(methodName)));
         assertTrue(failure.getMessage().contains(reason), failure.getMessage());
     }
 
