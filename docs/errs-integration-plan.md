@@ -2061,6 +2061,18 @@ Receipts: on #703 `EmbeddingSupportTest` 16 tests, 0 failures, 0 skipped, `spotl
 rerun: on the server side only `RunWorker`'s call changes, and `EmbeddedExecutionTest` runs entry
 methods with arguments through the worker.
 
+**#693 rebased onto master (2026-10-19).** #693 conflicted with master after Dependabot's #705
+(`typescript-eslint` 8.71.1 to 8.71.2 in `lang/vscode-extension/package.json` and
+`package-lock.json`), so GitHub ran no CI for it after `51329f03d`. Its 128 commits are rebased from
+`bad3add9d` onto master `5bfd024cc`: `bad3add9d..09b6cfcbc` became `5bfd024cc..c1c134ecc`, pushed
+with a lease. Only `6d68d409a` (now `aa6730a75`) conflicted, because it adds `yauzl` next to the
+bumped line; both are kept. The rebased tree differs from the old one only by master's four
+Dependabot changes (also `spotless` 8.10.4, Kotlin 2.4.21 and `actions/setup-java` 6.1.0). The old tip
+is kept locally as `backup/693-pre-master-rebase-20261019`. #693 hashes recorded before this entry
+refer to the branch before the rebase; the third round's copies above are now `d62c4e050`,
+`69c143a72` and `c1c134ecc`. Receipts after the rebase: `org.xvm.api` 30 tests and `org.xvm.lsp.run`
+38 tests, 0 failures, 0 skipped, `spotlessCheck`; GitHub reports #693 mergeable again.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
