@@ -40,9 +40,11 @@ and remaining R1–R8 work are in the
 | `d53d22be4` (plugin part) | The `createSettings` comment says why the override is permanent: UP13 is LSP4IJ's design, not a defect | #693 (mirrored as `6b5515248`) |
 | `06e1d4a7d` | #703 review: console input read on an IO thread with the echo request passed on, `ConsoleInput.NONE` in place of null, methods-only entry points, quoted method names; `RunWorker` adapted | #703 (`1c3a3420a`, `72784d3fb`); #693 (mirrored as `4defdf759`) |
 | `ee022b504` | The embedding tests get the compiled XDK modules through the build (`testXtcModules`), so they run in CI instead of skipping | #703 (`5977c8cf0`); #693 (mirrored as `4c305ad44`) |
-| `5af99b8ba` | #703 review: `entryMethod` returns the chosen method and checks that the module is linked; `passesArguments` returns a boolean | #703 (`74d8fdbbb`); #693 (mirrored as `c8fa87338`) |
-| `95c17bfb7` | `EmbeddingSupport.EntryPoint` carries the method name and arguments, `start(...)` is gone, and the old `run(...)` with a console no longer fails on `null` console input; `RunWorker` adapted | #703 (`8e036b2d3`); #693 (mirrored as `b2975613b`) |
-| `b6629bd48` | `LspTest`'s checks move into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`), each run within a time limit; `LspTest` is removed | #703 (`5ae951c8b`); #693 (mirrored as `09b6cfcbc`) |
+| `5af99b8ba` | #703 review: `entryMethod` returns the chosen method and checks that the module is linked; `passesArguments` returns a boolean | #703 (`74d8fdbbb`); #693 (mirrored as `d62c4e050`) |
+| `95c17bfb7` | `EmbeddingSupport.EntryPoint` carries the method name and arguments, `start(...)` is gone, and the old `run(...)` with a console no longer fails on `null` console input; `RunWorker` adapted | #703 (`8e036b2d3`); #693 (mirrored as `69c143a72`) |
+| `b6629bd48` | `LspTest`'s checks move into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`), each run within a time limit; `LspTest` is removed | #703 (`5ae951c8b`); #693 (mirrored as `c1c134ecc`) |
+
+**2026-10-19 rebase:** #693 is rebased onto master `5bfd024cc` (`bad3add9d..09b6cfcbc` became `5bfd024cc..c1c134ecc`), so its earlier hashes in this table refer to the branch before the rebase; see the [rebase record](docs/errs-integration-plan.md) under the third #703 review round.
 
 **2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](docs/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 
