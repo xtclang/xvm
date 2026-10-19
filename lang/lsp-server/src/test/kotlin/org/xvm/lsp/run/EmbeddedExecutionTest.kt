@@ -144,7 +144,7 @@ class EmbeddedExecutionTest {
     @Test
     fun `after a run the worker reports the heap it keeps and its threads, within the limits`() {
         assertThat(run("Exit").code).isEqualTo(42)
-        await().atMost(Duration.ofSeconds(30)).until { worker.usage().isNotEmpty() }
+        soon(30).until { worker.usage().isNotEmpty() }
         val limits = RunWorkerProcess.Limits()
         assertThat(worker.usage().values).allSatisfy { usage ->
             println("execution worker after a run: $usage")
@@ -185,7 +185,7 @@ class EmbeddedExecutionTest {
                     )
                 act(id, output)
                 val (code, error) = exited.get(60, SECONDS)
-                await().atMost(Duration.ofSeconds(30)).until { workers.usage().values.any { it.run == id } }
+                soon(30).until { workers.usage().values.any { it.run == id } }
                 reports += workers.usage().values.single { it.run == id }
                 pids += workers.workerPids()
                 return Outcome(output.toString(), code, error)
@@ -198,13 +198,13 @@ class EmbeddedExecutionTest {
                 assertThat(once("Thrower").error).contains("boom")
                 val asked =
                     once("Ask") { id, output ->
-                        await().atMost(Duration.ofSeconds(60)).until { "Name? " in output }
+                        soon(60).until { "Name? " in output }
                         workers.input(id, "Ada\n")
                         workers.endInput(id)
                     }
                 assertThat(asked.output).contains("Hello, Ada!")
                 once("Waiter") { id, output ->
-                    await().atMost(Duration.ofSeconds(60)).until { "waiting" in output }
+                    soon(60).until { "waiting" in output }
                     workers.stop(id)
                 }
             }
@@ -334,7 +334,7 @@ class EmbeddedExecutionTest {
                     },
                 )
             }
-        await().atMost(Duration.ofSeconds(60)).until { outputs.all { "started" in it } }
+        soon(60).until { outputs.all { "started" in it } }
         assertThat(worker.workerPids()).hasSizeGreaterThanOrEqualTo(2)
         ids.forEach(worker::stop)
         exits.forEach { it.get(30, SECONDS) }
@@ -422,7 +422,8 @@ class EmbeddedExecutionTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Ask", ask)))
-            EmbeddedRuns(adapter, { client }).use { runs ->
+            // on the class's worker, which is already started; closing these runs would close it
+            EmbeddedRuns(adapter, { client }, worker).let { runs ->
                 val started = runs.run(RunParams(module = "Ask", runId = "typed-early"))
                 // typed right away: until the build finishes and the program starts, the server holds it
                 assertThat(runs.input(RunInputParams("typed-early", "Grace\n", end = true))).isTrue()
@@ -659,13 +660,18 @@ class EmbeddedExecutionTest {
             assertThat(adapter.runnableTargets().map { it.module }).containsExactly("Annotated")
             assertThat(adapter.getCodeLensesAsync(annotated, false).get(30, SECONDS).mapNotNull { it.command?.command })
                 .contains("xtc.runModule")
-            EmbeddedRuns(adapter, { client }).use { runs ->
+            // on the class's worker, which is already started; closing these runs would close it
+            EmbeddedRuns(adapter, { client }, worker).let { runs ->
                 assertThat(runs.run(RunParams(module = "Annotated", runId = "contributed")).get(60, SECONDS).runId).isEqualTo("contributed")
                 assertThat(exited.get(60, SECONDS).error).isNull()
                 assertThat(output.toString()).contains("run from an annotation")
             }
         }
     }
+
+    /** Waits for a condition, checking it at once and then often: each wait here is short, and there are many. */
+    private fun soon(seconds: Long) =
+        await().pollDelay(Duration.ZERO).pollInterval(Duration.ofMillis(10)).atMost(Duration.ofSeconds(seconds))
 
     private data class Outcome(
         val output: String,
