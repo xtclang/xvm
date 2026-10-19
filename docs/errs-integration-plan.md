@@ -1562,8 +1562,9 @@ to the compiler-only PR:
 - [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
   *Partial:* per-module build results and registered-structure entry points. Since `7886b4c1d` a
   build compiles the snapshot captured at the request through the analysis closure compile, reuses
-  unchanged modules, records revisions and a manifest, and removes failed artifacts; clients still
-  save first.
+  unchanged modules, records revisions and a manifest, and removes failed artifacts. Since
+  2026-10-19 neither client saves first: builds and runs compile the editor's text, and IntelliJ
+  waits for LSP4IJ's pending changes before the request (X281, X289 in both editors).
 - [x] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
   Entry selection, exact arguments, output, completion and stop; console input since `82b6ba570`
   (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, mirrored

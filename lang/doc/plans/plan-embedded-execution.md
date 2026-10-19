@@ -14,7 +14,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | Question | Decision |
 |----------|----------|
 | Default mode | Embedded, also with a Gradle build, whose own settings embedded builds and runs say do not apply (2026-10-16; previously automatic, which remains selectable) |
-| Unsaved buffers | Clients save all files first; the server builds the text it holds at the request, saved or not (R2, 2026-10-16) |
+| Unsaved buffers | Builds and runs compile the editor's text, saved or not, and neither client saves files (R2, 2026-10-19; until then both saved first). VS Code saves before the task as `task.saveBeforeRun` says, and IntelliJ before a run, not a build |
 | Run host | Execution worker JVMs started by the language server, one per running program and up to four at once; one idle worker is kept for the next run (2026-10-16; previously one worker running one program at a time) |
 | Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled |
 | Compiler queue | Builds reuse the server's serialized compile queue, not a second compiler |
@@ -223,6 +223,14 @@ this bridge; they cannot be inferred from compiler type hints.
   entry method is refused by the runner's entry check before user code runs. Still open: arguments
   and defaults proven against the entry method before the build, renamed-root handling beyond the
   current graph, and dedicated stale-target tests.
+  *Unsaved editor text (2026-10-19):* neither client saves before a build or run any more; the build
+  compiles the text the server holds. IntelliJ commits its documents and waits for LSP4IJ's pending
+  changes before it sends the request, since a request can reach the server before an edit's
+  `didChange` (LSP4IJ #1729), which a save never covered. The editors still save on their own:
+  VS Code before a task as `task.saveBeforeRun` says (`always` by default), and IntelliJ's default
+  runner before every run. Shared X281 and X289 check it in both editors, VS Code with
+  `task.saveBeforeRun` set to `never`: the build fails on the unsaved broken library and leaves it
+  unsaved, and the third run runs the unsaved edit.
 - [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
