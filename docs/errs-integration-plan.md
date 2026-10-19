@@ -1560,12 +1560,11 @@ to the compiler-only PR:
   build compiles the snapshot captured at the request through the analysis closure compile, reuses
   unchanged modules, records revisions and a manifest, and removes failed artifacts; clients still
   save first.
-- [ ] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
-  *Partial:* entry selection, exact arguments, output, completion and stop; console input since
-  `82b6ba570` (X287). Open until the runtime part has its own javatools test. That condition is
-  now met: `EmbeddingSupportTest` (#703, mirrored here) covers entry selection, arguments, console
-  input, runs with a console and closing a suspended run, and CI runs it since `ee022b504`. Tick
-  this once the remaining scope is confirmed.
+- [x] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
+  Entry selection, exact arguments, output, completion and stop; console input since `82b6ba570`
+  (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, mirrored
+  here): entry selection, arguments, console input, runs with a console and closing a suspended
+  run. CI runs it since `ee022b504`. Closed 2026-10-19.
 - [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
   *Partial:* lazy reused worker, replaced after death, closed with the server; no generation handshake.
 - [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
