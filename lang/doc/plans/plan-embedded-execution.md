@@ -231,6 +231,12 @@ this bridge; they cannot be inferred from compiler type hints.
   runner before every run. Shared X281 and X289 check it in both editors, VS Code with
   `task.saveBeforeRun` set to `never`: the build fails on the unsaved broken library and leaves it
   unsaved, and the third run runs the unsaved edit.
+  *Stale targets (2026-10-19):* a run of a method that its module no longer declares builds the
+  module and is refused by the runner's entry check, and the earlier artifact's method does not run;
+  a run of a module renamed in its source is refused before a build as an unknown source module
+  (`EmbeddedExecutionTest`). The renamed module's earlier artifact stays in `build/xtc/embedded/lib`,
+  but nothing runs it: a build writes or removes only the artifacts of the modules it builds. Still
+  open: arguments and defaults proven before the build, and renamed roots beyond the current graph.
 - [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
