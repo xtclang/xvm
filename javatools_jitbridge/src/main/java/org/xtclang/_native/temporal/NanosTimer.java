@@ -6,22 +6,22 @@ import java.lang.invoke.MethodType;
 
 import java.lang.ref.WeakReference;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.TimerTask;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nService;
 
 import org.xtclang.ecstasy.numbers.Int128;
-import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xtclang.ecstasy.temporal.Timer;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
-
-import org.xvm.util.ListSet;
 
 /**
  * The native implementation of NanosTimer.x from the Java Tools bridge.
@@ -55,7 +55,7 @@ public class NanosTimer
     /**
      * The set of {@link nAlarmHolder} instances schedule on this timer.
      */
-    private final Set<nAlarmHolder> alarms = new ListSet<>();
+    private final Set<nAlarmHolder> alarms = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * The Java {@link java.util.Timer} used to schedule alarms.
@@ -135,17 +135,15 @@ public class NanosTimer
     }
 
     @Override
-    public nFunction scheduleꖛ0$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
-                                   boolean keepAlive, boolean dfltKeepAlive) {
+    public nFunction schedule$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
+                                boolean keepAlive, boolean dfltKeepAlive) {
         long         nanos       = Int128.$div(ctx, delayLow, delayHigh, PICOS_PER_NANO, 0L);
         boolean      daemon      = !dfltKeepAlive && keepAlive;
         long         now         = ctx.container.nanoTime();
         long         triggerTime = now + nanos;
         nAlarmHolder alarm       = new nAlarmHolder(triggerTime, new WeakReference<>(function), daemon);
 
-        synchronized (alarms) {
-            alarms.add(alarm);
-        }
+        alarms.add(alarm);
 
         if (isRunning()) {
             alarm.start(ctx);
@@ -158,9 +156,7 @@ public class NanosTimer
      */
     public void removeAlarm(nAlarmHolder alarm) {
         boolean unregistered;
-        synchronized (alarms) {
-            unregistered = alarms.remove(alarm);
-        }
+        unregistered = alarms.remove(alarm);
         assert unregistered;
     }
 

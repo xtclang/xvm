@@ -43,6 +43,6 @@ public interface Timer {
      * @param dfltKeepAlive  {@code true} to indicate that the default value of {@code false}
      *                       should be used for the {@code keepAlive} parameter
      */
-    nFunction scheduleꖛ0$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
-                            boolean keepAlive, boolean dfltKeepAlive);
+    nFunction schedule$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
+                         boolean keepAlive, boolean dfltKeepAlive);
 }
