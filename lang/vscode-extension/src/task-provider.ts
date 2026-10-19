@@ -106,6 +106,8 @@ export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAc
     if (mode === 'embedded') {
         return createEmbeddedRunTask(client, definition, {
             module: definition.moduleUri ?? definition.moduleName,
+            // a saved task keeps its root URI after the file is renamed or moved; the name still finds the module
+            moduleName: definition.moduleName,
             label: definition.moduleName,
             method: definition.methodName,
             args: definition.args ?? splitModuleArguments(definition.moduleArguments),

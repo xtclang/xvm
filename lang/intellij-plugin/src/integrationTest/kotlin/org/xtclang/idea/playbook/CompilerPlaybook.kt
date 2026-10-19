@@ -454,6 +454,7 @@ class CompilerPlaybook(
             signatureScenarios()
             additionalScenarios()
             workspaceScenarios()
+            renamedRootScenario()
             for (id in listOf("X71", "X75")) {
                 scenario(id) { data ->
                     val editor = open(data.text("file"))
@@ -1404,6 +1405,50 @@ class CompilerPlaybook(
         val shortDescription = if (description.length > 80) description.take(77).trimEnd() + "…" else description
         withContext(OnDispatcher.EDT) {
             utility(PlaybookProgress::class).update(singleProject(), "$text — $shortDescription", "$text — $description")
+        }
+    }
+
+    private fun Driver.renamedRootScenario() {
+        scenario("X291") { scenario ->
+            // written before discovery is limited to the case's folder, so its walk finds the module
+            val folder = Path.of(singleProject().getBasePath()).resolve("X291")
+            val file = folder.resolve(scenario.text("file"))
+            val renamed = folder.resolve(scenario.text("destinationFile"))
+            val files = utility(ParityFiles::class).getInstance()
+            Files.createDirectories(folder)
+            Files.writeString(file, scenario.text("source"))
+            files.refreshAndFindFileByPath(file.toString())
+            discovered("X291") { data ->
+                val project = singleProject()
+                val module = data.text("module")
+                val execution = utility(EmbeddedExecutionProbe::class)
+                val lenses = utility(CodeLensProbe::class)
+                val previous = withContext(OnDispatcher.EDT) { execution.mode(project, "EMBEDDED") }
+                try {
+                    fun runSaved(message: String) {
+                        // a configuration saved with the module's root file
+                        execution.run(project, module, file.toUri().toString(), "")
+                        awaitUi(message, 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                        val output = execution.output(module)
+                        check(execution.exitCode(module) == data.values["exitCode"].asInt) {
+                            "Exit code ${execution.exitCode(module)}: $output"
+                        }
+                        check(data.text("output") in output) { output }
+                    }
+                    runSaved("run before the rename finishes")
+                    // renamed on disk, as by a terminal, with no editor open on it
+                    Files.move(file, renamed)
+                    files.refreshAndFindFileByPath(folder.toString())
+                    files.refreshAndFindFileByPath(renamed.toString())
+                    val editor = open(data.text("destinationFile"))
+                    awaitUi("Run lens on the renamed root", 45.seconds) {
+                        data.text("runTitle") in withContext(OnDispatcher.EDT) { lenses.titles(editor.editor) }
+                    }
+                    runSaved("run of the saved configuration after the rename finishes")
+                } finally {
+                    withContext(OnDispatcher.EDT) { execution.mode(project, previous) }
+                }
+            }
         }
     }
 
