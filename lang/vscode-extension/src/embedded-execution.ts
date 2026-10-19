@@ -255,6 +255,8 @@ class BuildTerminal extends ExecutionTerminal {
 /** What an embedded run executes: a module name or any of its source URIs, and its entry point. */
 export interface RunTarget {
     module: string;
+    /** The module's name, which the server uses when [module] is a root URI that no longer names a module. */
+    moduleName?: string;
     label: string;
     method?: string;
     args?: string[];
@@ -352,6 +354,7 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
         try {
             const response = await client.sendRequest<RunResponse>('xtc/run', {
                 module: this.target.module,
+                moduleName: this.target.moduleName,
                 method: this.target.method,
                 args: this.target.args ?? [],
                 workingDirectory: this.target.workingDirectory,

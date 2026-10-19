@@ -514,7 +514,7 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
-| `xtc/run` `{module, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
+| `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
 | `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
@@ -537,6 +537,9 @@ no longer declares the requested entry method is refused by the runner's entry c
 its code runs.
 
 Clients choose `runId` so they can route output that arrives before the `xtc/run` response.
+`module` is a module name or root URI. Both clients send a saved run target's root URI there and
+its name as `moduleName`, which the server uses when the URI no longer names a source module, as
+after the root file was renamed or moved; a module renamed in its source is still found by its URI.
 `args` reach the method exactly as given, never shell-parsed. The entry method follows the
 command-line runner's rule: exactly one method of that name on the module's type, including methods
 its annotations contribute (a function of that name is not an entry point, since the runtime calls
