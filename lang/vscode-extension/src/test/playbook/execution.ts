@@ -6,6 +6,7 @@ import { buildModeStatus } from '../../build-mode-selection';
 import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
+import { discovered } from './liveWorkspace';
 import { client, eventually, noErrors, playbook, type Workspace } from './support';
 
 /** Records what each embedded build or run terminal shows, keyed by kind and label. */
@@ -325,6 +326,31 @@ export function buildModeCases(): void {
                 assert.ok(edited.includes(data.second), edited);
                 assert.ok(!edited.includes(data.first), edited);
                 assert.ok(document.isDirty, 'The run leaves the edit unsaved');
+            });
+        });
+    });
+}
+
+/** Registered after the on-type cases, as the catalog orders X291 after X290. */
+export function renamedRootCases(): void {
+    playbook('X291', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await discovered(workspace, async () => {
+            await embedded(async executions => {
+                // a task saved with the module's root file, as tasks.json or Rerun keeps it
+                const runSaved = async (message: string) => {
+                    const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: workspace.uri(data.file).toString(), mode: 'embedded' }, getClient);
+                    const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
+                    assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                    assert.ok(run.text.includes(data.output), run.text);
+                };
+                await runSaved('Run before the rename finishes');
+                // renamed on disk, as by a terminal, with no editor open on it
+                await fs.rename(workspace.uri(data.file).fsPath, workspace.uri(data.destinationFile).fsPath);
+                const renamed = await vscode.workspace.openTextDocument(workspace.uri(data.destinationFile));
+                await vscode.window.showTextDocument(renamed);
+                await eventually(() => runLensTitles(renamed), titles => titles.includes(data.runTitle), 'Run lens on the renamed root');
+                await runSaved('Run of the saved task after the rename finishes');
             });
         });
     });

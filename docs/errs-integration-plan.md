@@ -1559,7 +1559,7 @@ to the compiler-only PR:
   `InterpreterControl.close()` are fixed: a close as the run ended on its own failed with "Task N has
   terminated", and a second close returned while the run was still going. Cold and warm latency are
   measured in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
-- [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
+- [x] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
   *Partial:* per-module build results and registered-structure entry points. Since `7886b4c1d` a
   build compiles the snapshot captured at the request through the analysis closure compile, reuses
   unchanged modules, records revisions and a manifest, and removes failed artifacts. Since
@@ -1567,8 +1567,10 @@ to the compiler-only PR:
   waits for LSP4IJ's pending changes before the request (X281, X289 in both editors). Stale
   targets have their own tests: a removed method and a renamed module are refused, and neither
   earlier artifact runs. Arguments and defaults are proven on the built module by the runner's
-  entry check before user code runs, which is the requirement (decided 2026-10-19). Still open:
-  renamed roots beyond the current graph.
+  entry check before user code runs, which is the requirement (decided 2026-10-19). A run target
+  saved with a root file that was since renamed or moved finds its module by name (`moduleName`
+  beside the URI; X291 in both editors). Closed 2026-10-19; an open editor on the renamed root and
+  IDE moves of discovered roots into another directory stay with the rename work.
 - [x] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
   Entry selection, exact arguments, output, completion and stop; console input since `82b6ba570`
   (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, mirrored
