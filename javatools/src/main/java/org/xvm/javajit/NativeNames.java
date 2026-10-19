@@ -199,12 +199,6 @@ public class NativeNames {
                          methodName.startsWith("toNibble") || methodName.startsWith("toByte"))) {
                     jitName = methodName;
                 }
-//            } else if (classType.isA(pool.ensureEcstasyTypeConstant("collections.HashCollector"))) {
-//                // HashCollector must have fixed names for these methods so that the
-//                // BasicHashCollector in the JIT bridge can hard code implementations
-//                if (methodName.startsWith("reset") || methodName.startsWith("compute")) {
-//                    jitName = methodName;
-//                }
             }
         }
 
