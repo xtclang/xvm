@@ -10,15 +10,18 @@ import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import java.util.List;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -43,11 +46,12 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Runs modules through {@link EmbeddingSupport#runMethod}: how the entry method is selected and
- * what it is passed, exact arguments, and console input. The compiled XDK modules come from the
- * test resources, where the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
+ * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
+ * a file system, failures, closing a run, how the entry method is selected and what it is passed,
+ * exact arguments, and console input. The compiled XDK modules come from the test resources, where
+ * the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
  */
-public class EmbeddingRunMethodTest {
+public class EmbeddingSupportTest {
     private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
 
     @TempDir
@@ -61,10 +65,159 @@ public class EmbeddingRunMethodTest {
 
     @BeforeAll
     static void configure() throws URISyntaxException {
-        URL modules = EmbeddingRunMethodTest.class.getResource("/xdk-modules");
+        URL modules = EmbeddingSupportTest.class.getResource("/xdk-modules");
         assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
         xdkModules = new File(modules.toURI());
         support = new EmbeddingSupport().configure(repo(), null);
+    }
+
+    @Test
+    public void compilingReportsInvalidSource() {
+        assertEquals("Trivial", compile(helloModule("Trivial")).getName());
+
+        ErrorList errs = new ErrorList(25);
+        assertNull(support.compile("module Broken { void run( }", repo(), errs));
+        assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
+    }
+
+    @Test
+    public void aModuleRunsWithAConsole() {
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(compile(helloModule("Hello")),
+                new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Hello did not start: " + errs.getErrors());
+
+        try (control) {
+            await(control);
+        }
+        assertTrue(output.toString().contains("hello from Hello"), output.toString());
+        assertFalse(errs.hasSeriousErrors(), errs.getErrors().toString());
+    }
+
+    @Test
+    public void aStoredModuleRunsByNameMoreThanOnce() throws IOException {
+        compileAndStore(helloModule("Again"));
+        for (int i = 0; i < 2; i++) {
+            StringWriter output  = new StringWriter();
+            ErrorList    errs    = new ErrorList(25);
+            Control      control = support.run(input(), "Again", null,
+                    new PrintWriter(output, true), rootDir.toFile(), null, null, errs);
+            assertNotNull(control, () -> "Again did not start: " + errs.getErrors());
+
+            try (control) {
+                await(control);
+            }
+            assertTrue(output.toString().contains("hello from Again"), output.toString());
+        }
+    }
+
+    @Test
+    public void aRunUsesTheSuppliedRootDirectory() {
+        ModuleStructure module = compile("""
+                module FileSystemTest {
+                    void run() {
+                        @Inject FileStore storage;
+                        @Inject Directory rootDir;
+                        @Inject Directory homeDir;
+                        @Inject Directory curDir;
+                        @Inject Directory tmpDir;
+
+                        assert rootDir.path == storage.root.path;
+                        assert homeDir.path == storage.root.path;
+                        assert curDir.path  == storage.root.path;
+                        assert tmpDir.name == ".temp";
+
+                        rootDir.fileFor("root.txt").ensure();
+                        tmpDir.fileFor("temporary.txt").ensure();
+                    }
+                }
+                """);
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.run(module, null, rootDir.toFile(), null, errs);
+        assertNotNull(control, () -> "FileSystemTest did not start: " + errs.getErrors());
+
+        try (control) {
+            await(control);
+        }
+        assertFalse(errs.hasSeriousErrors(), errs.getErrors().toString());
+        assertTrue(Files.isRegularFile(rootDir.resolve("root.txt")));
+        assertTrue(Files.isRegularFile(rootDir.resolve(".temp/temporary.txt")));
+    }
+
+    @Test
+    public void aFailedRunReportsItsExceptionThroughTheConsole() {
+        String message = "deliberate failure the host must learn about";
+        ModuleStructure module = compile("""
+                module Crasher {
+                    void run() {
+                        throw new IllegalState("%s");
+                    }
+                }
+                """.formatted(message));
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Crasher did not start: " + errs.getErrors());
+
+        try (control) {
+            await(control);
+        }
+        assertTrue(output.toString().contains(message), output.toString());
+    }
+
+    @Test
+    public void closingASuspendedRunTerminatesIt() throws InterruptedException {
+        ModuleStructure module = compile("""
+                module Waiting {
+                    void run() {
+                        @Inject Console console;
+                        @Inject Timer timer;
+                        try {
+                            @Future Tuple done;
+                            timer.schedule(Duration:1H, () -> {done = ();});
+                            console.print("waiting");
+                            return done;
+                        } catch (Exception e) {
+                            console.print("caught termination");
+                        }
+                    }
+                }
+                """);
+        StringWriter   output  = new StringWriter();
+        CountDownLatch waiting = new CountDownLatch(1);
+        PrintWriter    console = new PrintWriter(output, true) {
+            @Override
+            public void println(char[] chars) {
+                super.println(chars);
+                if (new String(chars).contains("waiting")) {
+                    waiting.countDown();
+                }
+            }
+        };
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.run(module, console, null, null, errs);
+        assertNotNull(control, () -> "Waiting did not start: " + errs.getErrors());
+
+        try (control) {
+            // a run that ends before suspending also releases the wait, so it fails below instead
+            // of blocking until the time limit
+            Thread.ofVirtual().start(() -> {
+                try {
+                    control.join();
+                } finally {
+                    waiting.countDown();
+                }
+            });
+            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            assertTrue(output.toString().contains("waiting"),
+                    () -> "Waiting ended before it suspended: " + output);
+
+            // a close() that waited for the pending one-hour timer would not return in time
+            assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        }
+        assertTrue(output.toString().contains("Service terminated"), output.toString());
+        assertFalse(output.toString().contains("caught termination"), output.toString());
     }
 
     @Test
@@ -279,6 +432,31 @@ public class EmbeddingRunMethodTest {
     }
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Wait for a run to end, and check that it reports a start and a stop in that order.
+     */
+    private static void await(Control control) {
+        Instant started = control.whenStarted();
+        assertNotNull(started);
+
+        assertTimeoutPreemptively(RUN_LIMIT, control::join);
+
+        Instant stopped = control.whenStopped();
+        assertNotNull(stopped);
+        assertFalse(stopped.isBefore(started), () -> started + " to " + stopped);
+    }
+
+    private static String helloModule(String moduleName) {
+        return """
+                module %s {
+                    void run() {
+                        @Inject Console console;
+                        console.print("hello from %s");
+                    }
+                }
+                """.formatted(moduleName, moduleName);
+    }
 
     private String run(String moduleName, String methodName, List<String> args,
                        ConsoleInput consoleIn) {
