@@ -326,8 +326,17 @@ internal class OutputBatches(
         /** How long written text waits for more before it is sent. */
         val DELAY = 20.milliseconds
 
+        // the thread starts when a program first prints, on one of the runtime's pool threads, and would join
+        // their group, which is what the worker reports as the runtime's pool; it has a group of its own
         private val timers =
-            Executors.newSingleThreadScheduledExecutor { Thread(it, "xtc-run-output").apply { isDaemon = true } }
+            Executors.newSingleThreadScheduledExecutor(
+                Thread
+                    .ofPlatform()
+                    .group(ThreadGroup("xtc-run-output"))
+                    .name("xtc-run-output")
+                    .daemon(true)
+                    .factory(),
+            )
     }
 }
 
