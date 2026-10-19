@@ -522,7 +522,8 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome |
 
 Builds compile the text the server holds when the build is requested, open documents included,
-saved or not (both clients save first anyway); edits made after that belong to the next build. They
+saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
+IntelliJ saves before a run). Edits made after that belong to the next build. They
 run on the same serialized compile queue and through the same module-closure compile as editor
 analysis, and write `build/xtc/embedded/lib` and `build/xtc/embedded/dependencies` in the workspace
 folder that owns the module. A module whose sources and dependency revisions are exactly those of an
