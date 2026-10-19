@@ -9070,6 +9070,25 @@
         "limitations": []
       }
     },
+    "X291": {
+      "title": "a discovered module whose root file was renamed on disk runs again from a run target saved with the old file",
+      "manual": [
+        "Renaming the root file while its editor is still open is not covered: the open buffer stays a source under the old path, and builds report a duplicate module until it is closed."
+      ],
+      "values": {
+        "file": "MovedRoot.x",
+        "destinationFile": "RenamedRoot.x",
+        "module": "MovedRoot",
+        "source": "module MovedRoot {\n    void run() {\n        @Inject Console console;\n        console.print(\"moved root runs\");\n    }\n}\n",
+        "runTitle": "\u25b6 Run MovedRoot",
+        "output": "moved root runs",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
