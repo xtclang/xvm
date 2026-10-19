@@ -179,7 +179,7 @@ internal class EmbeddedRunState(
         runner: ProgramRunner<*>,
     ): ExecutionResult {
         val project = environment.project
-        EmbeddedExecution.saveAll()
+        val editsSent = EmbeddedExecution.editsSent(project)
         val console =
             TextConsoleBuilderFactory
                 .getInstance()
@@ -191,7 +191,7 @@ internal class EmbeddedRunState(
         val handler =
             EmbeddedRunProcessHandler(
                 EmbeddedRunSessions.getInstance(project),
-                { EmbeddedExecution.server(project) },
+                { EmbeddedExecution.server(project).thenCombine(editsSent) { server, _ -> server } },
                 request,
                 label,
                 XtcBuildSettings.gradleNotUsed(project.basePath?.let { Path(it) }),
