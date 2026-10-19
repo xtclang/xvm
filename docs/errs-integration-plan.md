@@ -2035,6 +2035,32 @@ skipping. With the installed XDK moved away all 8 tests ran on each branch, afte
 the modules it needed; `:javatools:test` 440, 620 and 584 tests, 0 failures, 42 existing skips;
 the configuration cache is reused; CI's task lists build their graphs (`--dry-run`).
 
+**#703 review, third round (2026-10-19).** Gleyzer asked why `entryArguments` returned the array it
+was given or null, although its doc said it decides what is passed; why the doc said "once it has
+linked its copy of the module" instead of naming the linked state; and why the length of the
+supplied array matters. On #703, `74d8fdbbb` splits it into `entryMethod`, which returns the chosen
+method and throws `IllegalStateException` for a module whose `FileStructure.isLinked()` is false,
+and `passesArguments`, a boolean. The length rule is unchanged: it lets a parameter's default apply
+when no arguments are given, as `xtc run` does, which the reply explains. `8e036b2d3` passes the
+method name and the arguments as one `EmbeddingSupport.EntryPoint` (`EntryPoint.RUN` is `run` with no
+arguments), so `runMethod` has 8 parameters and the private 11-parameter `start(...)` is gone. It also
+fixes the old `run(...)` overloads with a console: they passed `null` console input, so
+`consoleIn::readLine` threw `NullPointerException` and the run failed to start. That broke earlier in
+#703, not on master. `5ae951c8b` removes the main-based `LspTest`, which no build ran, and moves its
+checks that assert behavior into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`),
+each run within a time limit. Both threads are answered and resolved, and #703's description is
+updated. Here `5af99b8ba`, `95c17bfb7` and `b6629bd48` carry them: `95c17bfb7` adapts `RunWorker`
+(`EmbeddingSupport.EntryPoint(method, args)`) and `docs/errs.md`, and `b6629bd48` points
+`plan-embedded-execution.md` at the new test. Mirrored on #693 as `c8fa87338`, `b2975613b` and
+`09b6cfcbc`.
+
+Receipts: on #703 `EmbeddingSupportTest` 16 tests, 0 failures, 0 skipped, `spotlessCheck`; with the old
+`null` console input restored, the 4 tests that run the old `run(...)` with a console fail with
+`NullPointerException`. Here `org.xvm.api` 41 tests and `org.xvm.lsp.run` 38 tests, on #693 30 and 38,
+0 failures, 0 skipped, `spotlessCheck` on both. The full suites and the X280–X289 playbooks were not
+rerun: on the server side only `RunWorker`'s call changes, and `EmbeddedExecutionTest` runs entry
+methods with arguments through the worker.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
