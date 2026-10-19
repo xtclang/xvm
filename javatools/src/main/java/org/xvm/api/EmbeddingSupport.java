@@ -1267,8 +1267,8 @@ public class EmbeddingSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             @NotNull ErrorListener    errs) {
-        return start(input, moduleName, version, "run", null, console, null, rootDir, injections,
-                customInjector, errs);
+        return start(input, moduleName, version, "run", new String[0], console, null, rootDir,
+                injections, customInjector, errs);
     }
 
     /**
@@ -1355,24 +1355,28 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Select the module's entry method and decide what it is passed, following the command-line
-     * runner: the method is found among the module type's methods, and an argument array is
-     * passed when the method requires one, or when arguments are supplied and the method accepts a
-     * parameter. Each control calls this once it has linked its copy of the module, since the
-     * type's methods need the module's dependencies.
+     * Find the entry method of a module, as the command-line runner does: exactly one method of
+     * that name must exist on the module type, including the methods its annotations contribute.
+     * Functions are not entry points. The module must be linked: {@link FileStructure#isLinked()}
+     * must be true for {@code module.getFileStructure()}, since the methods of its type depend on
+     * its dependencies.
      *
      * @param module      the linked module to run
      * @param methodName  the name of the entry method
-     * @param args        the supplied arguments, or null for none
+     * @param args        the supplied arguments
      *
-     * @return the argument array to pass, or null to pass none
+     * @return the entry method; {@link #passesArguments} tells whether it is passed "args"
      *
-     * @throws IllegalArgumentException if the method is missing, ambiguous, or cannot
-     *         accept the arguments
+     * @throws IllegalStateException     if the module is not linked
+     * @throws IllegalArgumentException  if the method is missing or ambiguous, or if it cannot be
+     *                                   called with "args"
      */
-    static String[] entryArguments(ModuleStructure module, String methodName, String[] args) {
-        String[]     supplied = args == null ? new String[0] : args;
-        ConstantPool pool     = module.getConstantPool();
+    static MethodStructure entryMethod(ModuleStructure module, String methodName, String[] args) {
+        if (!module.getFileStructure().isLinked()) {
+            throw new IllegalStateException("Module " + module.getName() + " is not linked");
+        }
+
+        ConstantPool pool = module.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
             Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
             if (methods.size() != 1) {
@@ -1380,27 +1384,39 @@ public class EmbeddingSupport {
                         + " method " + quoted(methodName) + " in module " + module.getName());
             }
 
-            MethodStructure method        = methods.iterator().next();
-            int             requiredCount = method.getRequiredParamCount();
-            if (requiredCount > 1) {
+            MethodStructure method = methods.iterator().next();
+            if (method.getRequiredParamCount() > 1) {
                 throw new IllegalArgumentException("Unsupported arguments for method " + quoted(methodName)
                         + ": " + method.getIdentityConstant().getSignature().getValueString());
             }
 
-            boolean passArgs = requiredCount == 1 || supplied.length > 0 && method.getParamCount() > 0;
-            if (!passArgs) {
-                return null;
-            }
-
             // as for the command-line runner, the parameter may be of any type a String[] can be
             // passed as, such as Object or List<String>
-            TypeConstant typeArg = method.getParam(0).getType();
-            if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
-                throw new IllegalArgumentException("Unsupported argument type "
-                        + typeArg.getValueString() + " for method " + quoted(methodName));
+            if (passesArguments(method, args)) {
+                TypeConstant typeArg = method.getParam(0).getType();
+                if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
+                    throw new IllegalArgumentException("Unsupported argument type "
+                            + typeArg.getValueString() + " for method " + quoted(methodName));
+                }
             }
+            return method;
         }
-        return supplied;
+    }
+
+    /**
+     * Decide whether an entry method is passed the supplied arguments, as the command-line runner
+     * does. The arguments are a single value, an array for the first parameter, so any further
+     * parameters must have default values. The array is passed when the method requires it, or
+     * when it is not empty and the method has a parameter. Otherwise nothing is passed, and a
+     * default value of the parameter applies.
+     *
+     * @param method  the entry method, as found by {@link #entryMethod}
+     * @param args    the supplied arguments
+     *
+     * @return true to pass "args" as an array; false to pass nothing
+     */
+    static boolean passesArguments(MethodStructure method, String[] args) {
+        return method.getRequiredParamCount() == 1 || args.length > 0 && method.getParamCount() > 0;
     }
 
     // ----- constants -----------------------------------------------------------------------------

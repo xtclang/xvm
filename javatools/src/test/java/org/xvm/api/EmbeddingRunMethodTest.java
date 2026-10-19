@@ -33,7 +33,6 @@ import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -74,7 +73,9 @@ public class EmbeddingRunMethodTest {
                     void run() {}
                     void greet(String[] args) {}
                     void optional(String[] args = []) {}
+                    void extra(String[] args, Int count = 0, String name = "") {}
                     void two(String first, String second) {}
+                    void three(String[] args, String first, String second = "") {}
                     void typed(Int count) {}
                     void overloaded() {}
                     void overloaded(String[] args) {}
@@ -86,21 +87,42 @@ public class EmbeddingRunMethodTest {
         String[] none = new String[0];
         String[] some = {"a", "b c"};
 
-        assertNull(EmbeddingSupport.entryArguments(module, "run", none));
-        assertNull(EmbeddingSupport.entryArguments(module, "run", some));
-        assertArrayEquals(none, EmbeddingSupport.entryArguments(module, "greet", null));
-        assertArrayEquals(some, EmbeddingSupport.entryArguments(module, "greet", some));
-        assertNull(EmbeddingSupport.entryArguments(module, "optional", none));
-        assertArrayEquals(some, EmbeddingSupport.entryArguments(module, "optional", some));
+        assertFalse(passes(module, "run", none));
+        assertFalse(passes(module, "run", some));
+        assertTrue(passes(module, "greet", none));
+        assertTrue(passes(module, "greet", some));
+        // without arguments, nothing is passed and the parameter's default applies
+        assertFalse(passes(module, "optional", none));
+        assertTrue(passes(module, "optional", some));
+        // the array goes to the first parameter, and the others take their defaults
+        assertTrue(passes(module, "extra", none));
+        assertTrue(passes(module, "extra", some));
         // the runtime calls only methods: a function of the same name does not compete
-        assertNull(EmbeddingSupport.entryArguments(module, "mixed", some));
+        assertFalse(passes(module, "mixed", some));
 
         assertRejected(module, "two", "Unsupported arguments");
+        assertRejected(module, "three", "Unsupported arguments");
         assertRejected(module, "typed", "Unsupported argument type");
         assertRejected(module, "overloaded", "Ambiguous method");
         assertRejected(module, "absent", "Missing method");
         // functions are not entry points
         assertRejected(module, "utility", "Missing method");
+    }
+
+    @Test
+    public void anUnlinkedModuleIsRejected() throws IOException {
+        compileAndStore("""
+                module Unlinked {
+                    void run() {}
+                }
+                """);
+        ModuleStructure module = new DirRepository(dirOut.toFile(), true).loadModule("Unlinked");
+        assertNotNull(module);
+        assertFalse(module.getFileStructure().isLinked());
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> EmbeddingSupport.entryMethod(module, "run", new String[0]));
+        assertTrue(failure.getMessage().contains("not linked"), failure.getMessage());
     }
 
     @Test
@@ -125,7 +147,7 @@ public class EmbeddingRunMethodTest {
         new DirRepository(dirOut.toFile(), false).storeModule(module);
 
         // the module declares no run method of its own; its annotation contributes one
-        assertNull(EmbeddingSupport.entryArguments(module, "run", new String[0]));
+        assertFalse(passes(module, "run", new String[0]));
         String output = run("Annotated", "run", List.of(), ConsoleInput.NONE);
         assertTrue(output.contains("run from an annotation"), output);
     }
@@ -147,6 +169,24 @@ public class EmbeddingRunMethodTest {
         assertTrue(output.contains("arg=[one]"), output);
         assertTrue(output.contains("arg=[two words]"), output);
         assertTrue(output.contains("arg=[ünï ✓ 𝄞]"), output);
+    }
+
+    @Test
+    public void anOptionalArgumentArrayIsPassedOnlyWhenArgumentsAreGiven() throws IOException {
+        compileAndStore("""
+                module Defaults {
+                    void run(String[] args = ["fallback"], Int times = 2) {
+                        @Inject Console console;
+                        console.print($"args={args.size}:{args[0]} times={times}");
+                    }
+                }
+                """);
+
+        String output = run("Defaults", "run", List.of(), ConsoleInput.NONE);
+        assertTrue(output.contains("args=1:fallback times=2"), output);
+
+        output = run("Defaults", "run", List.of("given"), ConsoleInput.NONE);
+        assertTrue(output.contains("args=1:given times=2"), output);
     }
 
     @Test
@@ -266,9 +306,14 @@ public class EmbeddingRunMethodTest {
                 """.formatted(moduleName);
     }
 
+    private static boolean passes(ModuleStructure module, String methodName, String[] args) {
+        return EmbeddingSupport.passesArguments(
+                EmbeddingSupport.entryMethod(module, methodName, args), args);
+    }
+
     private static void assertRejected(ModuleStructure module, String methodName, String reason) {
         IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> EmbeddingSupport.entryArguments(module, methodName, new String[0]));
+                () -> EmbeddingSupport.entryMethod(module, methodName, new String[0]));
         assertTrue(failure.getMessage().contains(reason), failure.getMessage());
     }
 
