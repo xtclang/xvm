@@ -1552,6 +1552,9 @@ to the compiler-only PR:
 
 - [ ] **R1:** controlled repeat-run/runtime API baseline, including native-pool growth.
   *Partial:* worker regressions for exits, exceptions, arguments, stop/reuse and no HTTP listener.
+  The only native-pool check was `LspTest.testPoolGrows`, which printed the pool size and asserted
+  nothing; it was removed with `LspTest` on 2026-10-19 (`b6629bd48`), so native-pool growth still
+  needs a test that asserts a bound.
 - [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
   *Partial:* per-module build results and registered-structure entry points. Since `7886b4c1d` a
   build compiles the snapshot captured at the request through the analysis closure compile, reuses
@@ -1559,7 +1562,10 @@ to the compiler-only PR:
   save first.
 - [ ] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
   *Partial:* entry selection, exact arguments, output, completion and stop; console input since
-  `82b6ba570` (X287). Open until the runtime part has its own javatools test.
+  `82b6ba570` (X287). Open until the runtime part has its own javatools test. That condition is
+  now met: `EmbeddingSupportTest` (#703, mirrored here) covers entry selection, arguments, console
+  input, runs with a console and closing a suspended run, and CI runs it since `ee022b504`. Tick
+  this once the remaining scope is confirmed.
 - [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
   *Partial:* lazy reused worker, replaced after death, closed with the server; no generation handshake.
 - [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
@@ -1860,8 +1866,10 @@ existing skips (the new class 5 tests, none skipped), xdk 62 (8 skips), `spotles
 [#703](https://github.com/xtclang/xvm/pull/703).
 
 - [x] Open the runtime pull request from `lagergren/embedded-run-runtime` against master: #703.
-- [ ] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingRunMethodTest` then
-  come from master.
+- [ ] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingSupportTest` then
+  come from master. (#693 was already rebased onto master `5bfd024cc` on 2026-10-19, before #703
+  merged, because a Dependabot bump conflicted; the test was renamed from `EmbeddingRunMethodTest`
+  in #703's third review round.)
 
 **Build mode cases and supervised workers (later on 2026-10-16).** Two more commits, each replayed onto
 #693 the same way (local on #693's branch until pushed):
@@ -13602,9 +13610,14 @@ and no upstream issues or PRs were opened.
 
 - [x] Repair the two recorded LSP4J defects locally, with separate commits and failing controls.
 - [ ] Validate a compatible repaired LSP4J build in the server and bundled IntelliJ client;
-  remove each compatibility boundary only after its existing acceptance gate passes.
-- [ ] Obtain separate authorization before submitting upstream issues/PRs or pushing either
-  repair branch. IntelliJ Platform and VS Code repair work remains deferred.
+  remove each compatibility boundary only after its existing acceptance gate passes. For UP06
+  this now waits for an LSP4J release that contains #991.
+- [x] UP06: filed with the user's authorization as LSP4J
+  [#990](https://github.com/eclipse-lsp4j/lsp4j/issues/990) and fixed by
+  [#991](https://github.com/eclipse-lsp4j/lsp4j/pull/991), merged 2026-10-19 (`e64042cf`),
+  unreleased. Until a release contains it, LSP4IJ parses such reports with its own adapter (#1723).
+- [ ] UP15: obtain separate authorization before filing it upstream or pushing its repair branch.
+  IntelliJ Platform and VS Code repair work remains deferred.
 
 ## Additional local LSP4IJ repairs (2026-10-07)
 
