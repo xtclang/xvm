@@ -25,6 +25,9 @@ import static org.xvm.asm.ErrorListener.in;
  * a stale analysis ran to the end.
  */
 public class ErrorListenerCancelTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = "PARSER-03";
+
     @Test
     public void testTheWorkIsNotAbandonedUntilSomebodySaysSo() {
         ErrorList     errs  = new ErrorList(UNLIMITED);
@@ -149,7 +152,4 @@ public class ErrorListenerCancelTest {
             assertTrue(quiet.branch(null).isAbortDesired());
         });
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = "PARSER-03";
 }

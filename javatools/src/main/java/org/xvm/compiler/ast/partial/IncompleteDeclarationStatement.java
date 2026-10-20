@@ -24,6 +24,18 @@ import static org.xvm.asm.ErrorListener.in;
  * validation contexts.
  */
 public final class IncompleteDeclarationStatement extends Statement {
+    // Only real syntax children participate in adoption and tree copying.
+    private final List<IncompleteStatement> cursors;
+
+    private final Kind  kind;
+    private final Token name;
+    private final long  start;
+    private final long  end;
+
+    private final List<Parameter> formals;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteDeclarationStatement.class, "cursors", "formals");
+
     /** Distinguishes the declaration headers retained when parsing stops at incomplete syntax. */
     public enum Kind { METHOD, PROPERTY }
 
@@ -150,16 +162,4 @@ public final class IncompleteDeclarationStatement extends Statement {
     public String toString() {
         return kind + getNameToken().map(token -> " " + token.getValueText()).orElse("") + " <incomplete>";
     }
-
-    // Only real syntax children participate in adoption and tree copying.
-    private final List<IncompleteStatement> cursors;
-
-    private final Kind  kind;
-    private final Token name;
-    private final long  start;
-    private final long  end;
-
-    private final List<Parameter> formals;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteDeclarationStatement.class, "cursors", "formals");
 }

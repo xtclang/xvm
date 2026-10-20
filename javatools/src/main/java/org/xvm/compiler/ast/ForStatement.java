@@ -260,7 +260,7 @@ public class ForStatement
             ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
-            m_labelVars = new ValidationScope(ctx, errs);
+            labelVars = new ValidationScope(ctx, errs);
 
             // the test expression plays a role of an "if", since the block cannot be entered if this
             // expression evaluates to "false"
@@ -306,10 +306,10 @@ public class ForStatement
                 }
             }
 
-            if (m_listContinues != null) {
+            if (continues != null) {
                 // the last "continue" is translated as a "break"
-                mergeJumps(ctx, m_listContinues);
-                m_listContinues = null;
+                mergeJumps(ctx, continues);
+                continues = null;
             }
 
             List<Statement> listUpdate = update;
@@ -383,7 +383,7 @@ public class ForStatement
             }
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_labelVars = null;
+            labelVars = null;
 
             errs.merge();
             return fValidInit && fValid ? this : null;
@@ -393,19 +393,19 @@ public class ForStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean  fCompletes = fReachable;
-        Register regFirst   = m_regFirst;
-        Register regCount   = m_regCount;
+        Register regFirst   = firstRegister;
+        Register regCount   = countRegister;
 
         code.add(new Enter());
 
         if (regFirst != null) {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
-            code.add(new Var_IN(m_regFirst, name, pool().valTrue()));
+            code.add(new Var_IN(firstRegister, name, pool().valTrue()));
         }
 
         if (regCount != null) {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
-            code.add(new Var_IN(m_regCount, name, pool().val0()));
+            code.add(new Var_IN(countRegister, name, pool().val0()));
         }
 
         List<Statement> listInit   = init;
