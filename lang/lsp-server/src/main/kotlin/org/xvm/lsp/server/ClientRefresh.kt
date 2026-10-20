@@ -11,6 +11,11 @@ import java.util.concurrent.atomic.AtomicReference
 internal class ClientRefresh(
     private val client: () -> LanguageClient?,
 ) : AutoCloseable {
+    private val enabled = AtomicReference<Set<Feature>>(emptySet())
+    private val ready = AtomicBoolean()
+    private val closed = AtomicBoolean()
+    private val slots = Feature.entries.associateWith { Slot(it) }
+
     /** Client presentation with its own negotiated refresh capability and request slot. */
     enum class Feature {
         DIAGNOSTICS,
@@ -19,11 +24,6 @@ internal class ClientRefresh(
         LENSES,
         FOLDING,
     }
-
-    private val enabled = AtomicReference<Set<Feature>>(emptySet())
-    private val ready = AtomicBoolean()
-    private val closed = AtomicBoolean()
-    private val slots = Feature.entries.associateWith { Slot(it) }
 
     fun configure(features: Set<Feature>) {
         enabled.set(features.toSet())
