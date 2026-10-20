@@ -37,6 +37,10 @@ class EmbeddingRepositoryFailureTest {
     @TempDir
     Path directory;
 
+    private final ByteArrayOutputStream output = new ByteArrayOutputStream();
+    private PrintStream original;
+    private PrintStream captured;
+
     @BeforeEach
     void captureRepositoryOutput() {
         original = System.out;
@@ -96,8 +100,4 @@ class EmbeddingRepositoryFailureTest {
             assertFalse(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
         });
     }
-
-    private final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    private PrintStream original;
-    private PrintStream captured;
 }

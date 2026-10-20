@@ -14,6 +14,12 @@ import static org.xvm.asm.ErrorListener.in;
 
 /** A missing local name and its written initializer; no register or inferred type is invented. */
 public final class IncompleteLocalDeclaration extends Statement {
+    private final IncompleteStatement cursor;
+    private final Expression initializer;
+    private final long end;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteLocalDeclaration.class, "cursor", "initializer");
+
     /**
      * Retain an unfinished local declaration and its written initializer as syntax.
      *
@@ -90,10 +96,4 @@ public final class IncompleteLocalDeclaration extends Statement {
     protected boolean emit(Context ctx, boolean reachable, Code code, ErrorListener errs) {
         throw new IllegalStateException("An incomplete local declaration cannot emit code");
     }
-
-    private final IncompleteStatement cursor;
-    private final Expression initializer;
-    private final long end;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteLocalDeclaration.class, "cursor", "initializer");
 }

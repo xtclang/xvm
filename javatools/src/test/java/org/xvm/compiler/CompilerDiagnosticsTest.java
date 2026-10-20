@@ -27,6 +27,8 @@ import static org.xvm.asm.ErrorListener.collecting;
  * they carry a usable location, and that a host's own listener hears them.
  */
 public class CompilerDiagnosticsTest {
+    private static final String DOC = "module M { void run() { console.print(\"x\") } }";
+
     @Test
     public void testAHostListenerHearsTheDiagnostics() {
         List<ErrorListener.ErrorInfo> heard = new ArrayList<>();
@@ -141,6 +143,4 @@ public class CompilerDiagnosticsTest {
             // an unrecoverable parse abandons its progress; the diagnostics are the point here
         }
     }
-
-    private static final String DOC = "module M { void run() { console.print(\"x\") } }";
 }
