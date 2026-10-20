@@ -37,6 +37,7 @@ import org.xvm.api.EmbeddingSupport.EntryPoint;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -360,6 +361,22 @@ public class EmbeddingSupportTest {
         assertFalse(errs.hasSeriousErrors(), errs::toString);
 
         assertFalse(runReporting("Unused", EntryPoint.RUN).hasError(EmbeddingSupport.WARN_ARGUMENTS_IGNORED));
+    }
+
+    @Test
+    public void aMethodThatCannotBeAnEntryPointIsReportedWithTheRunnersMessage() throws IOException {
+        compileAndStore(helloModule("Refused"));
+        int       consoles = support.registeredConsoles();
+        ErrorList errs     = new ErrorList(25);
+        Control   control  = support.runMethod(input(), "Refused", null, new EntryPoint("absent"),
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
+
+        assertNull(control);
+        // the reason alone, as xtc run reports it, rather than a failure to create the container
+        assertEquals(List.of(EmbeddingSupport.ERR_ENTRY_METHOD),
+                errs.getErrors().stream().map(ErrorInfo::getCode).toList());
+        assertEquals("Missing method \"absent\" in module Refused", errs.getErrors().getFirst().getMessageText());
+        assertEquals(consoles, support.registeredConsoles());
     }
 
     @Test

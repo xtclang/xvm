@@ -417,7 +417,8 @@ public class EmbeddingSupport {
      * Create a runtime container and invoke the specified entry method of a module.
      *
      * <p>The method is selected the way the command-line runner selects it, as described for
-     * {@link #entryMethod} and {@link #passesArguments}.
+     * {@link #entryMethod} and {@link #passesArguments}. A method that cannot be an entry point is
+     * reported as {@link #ERR_ENTRY_METHOD}, with the command-line runner's message.
      *
      * @param input       the ModuleRepository providing any necessary modules
      * @param moduleName  the module name to execute; must be loadable from "input"
@@ -582,4 +583,8 @@ public class EmbeddingSupport {
      * "%1" - name of the entry method
      */
     public static final String WARN_ARGUMENTS_IGNORED   = "EMB-6";
+    /**
+     * "%1" - why the module's entry method cannot be run, as the command-line runner reports it
+     */
+    public static final String ERR_ENTRY_METHOD         = "EMB-7";
 }
