@@ -518,8 +518,8 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
-| `xtc/runOutput` `{runId, text}` | notification | Program output, in order |
-| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome |
+| `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
+| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
 
 Builds compile the text the server holds when the build is requested, open documents included,
 saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
