@@ -50,14 +50,6 @@ internal class XdkProject(
 ) {
     val modules: Map<String, XdkSourceModule> = immutableMap(modules.associateBy { it.name })
 
-    /** Canonical source-module inputs used to compare project configurations. */
-    private data class Configuration(
-        val name: String,
-        val uri: String,
-        val dependencies: Set<String>,
-        val resources: List<String>?,
-    )
-
     private val configuration =
         modules.map { Configuration(it.name, it.uri, it.dependencies, it.resourceRoots) }.toSet()
     private val ordered: List<XdkSourceModule>
@@ -93,6 +85,14 @@ internal class XdkProject(
         modules.forEach(::visit)
         ordered = result.toList()
     }
+
+    /** Canonical source-module inputs used to compare project configurations. */
+    private data class Configuration(
+        val name: String,
+        val uri: String,
+        val dependencies: Set<String>,
+        val resources: List<String>?,
+    )
 
     fun scope(uri: String): String? = XdkSources.file(uri)?.let(::scope)
 

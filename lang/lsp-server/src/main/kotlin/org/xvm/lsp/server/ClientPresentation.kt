@@ -32,6 +32,9 @@ internal data class ClientPresentation(
     val pullDiagnosticRelatedInformation: Boolean = false,
     val pullDiagnosticTags: Set<DiagnosticTag> = emptySet(),
 ) {
+    val codeActions: Boolean
+        get() = actionLiterals || applyEdit
+
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) {
             MarkupContent(MarkupKind.MARKDOWN, markdown)
@@ -55,9 +58,6 @@ internal data class ClientPresentation(
             ?: CompletionItemKind.Text.takeIf { it in completionKinds }
             ?: completionKinds.minByOrNull { it.value }
             ?: CompletionItemKind.Text
-
-    val codeActions: Boolean
-        get() = actionLiterals || applyEdit
 
     /** Templates contain source indentation. Avoid a second indent by clients that always adjust it. */
     fun completionTemplate(text: String): String {
