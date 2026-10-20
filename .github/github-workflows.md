@@ -266,8 +266,12 @@ The lang checks run only on `ubuntu-latest`. The `Validate lang` step passes `-P
 | **IntelliJ plugin snapshot ZIP** | per the table above (`effective-publish-intellij=true`) | GitHub Releases (`intellij-plugin-snapshots` prerelease) |
 | **VS Code extension snapshot VSIX** | per the table above (`effective-publish-vscode=true`) | GitHub Releases (`vscode-extension-snapshots` prerelease) |
 | **IntelliJ plugin, JetBrains Marketplace** | with the IntelliJ plugin snapshot ZIP | JetBrains Marketplace, in the channel `xdk.intellij.release.channel` in `version.properties` names (currently `alpha`), as a timestamped version (`0.4.4-SNAPSHOT.<yyyyMMddHHmmss>`) |
+| **VS Code extension, VS Code Marketplace** | with the VS Code extension snapshot VSIX, from `master` only, once the repository variable `VSCODE_MARKETPLACE_PUBLISH` is `true` | VS Code Marketplace (`xtclang.xtc-language`), as a pre-release whose patch is `commit.yml`'s run number (`0.4.<run number>`) |
 
 Note on Marketplace: the snapshot pipeline (`publish-snapshot.yml`) is the only workflow that uploads to JetBrains Marketplace; `promote-release.yml` does not publish the IntelliJ plugin. Each snapshot gets its own timestamped version because Marketplace versions are immutable.
+The VS Code Marketplace accepts only `major.minor.patch` versions, so its pre-release keeps the
+extension's major and minor version and takes the run number as its patch; the repository version and
+every other artifact, including the snapshot VSIX, keep their versions.
 
 ---
 
@@ -365,6 +369,12 @@ gh workflow run commit.yml \
 - Release tag: `vscode-extension-snapshots` (prerelease)
 - Assets: `xtc-language-{VERSION}.vsix` and its `.sha256`
 - Like `intellij-plugin-snapshots` (and `xdk-snapshots`), the release is recreated on each publish so its tag follows the build commit; download URLs are keyed by tag and stay stable
+
+**VS Code Marketplace pre-release** (job `publish-vscode-marketplace`, with the snapshot above):
+- Publishes the CI-built `vscode-marketplace-{commit}` artifact, packaged by `:lang:vscode-extension:packageMarketplaceExtension -Pvscode.marketplace.build=<run number>` as a pre-release (`vsce package --pre-release`)
+- Runs only for `master` and only when the repository variable `VSCODE_MARKETPLACE_PUBLISH` is `true`
+- Authenticates with trusted publishing (`vsce publish --oidc`), so there is no token secret. Before enabling it, the `xtclang` publisher needs a trusted publishing policy on the Marketplace for this repository and `.github/workflows/publish-snapshot.yml`. Azure DevOps global personal access tokens, which the Marketplace's manual steps use, stop working on December 1, 2026.
+- `--skip-duplicate` makes a rerun of the same CI run, whose version is already published, a success
 
 **Manual Trigger**:
 ```bash
