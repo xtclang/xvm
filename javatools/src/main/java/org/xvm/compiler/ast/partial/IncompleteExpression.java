@@ -19,6 +19,10 @@ import org.xvm.compiler.ast.Expression;
  * receiver/argument ownership without a second semantic cache or clone-reset protocol.
  */
 public final class IncompleteExpression extends Expression {
+    private final IncompleteStatement site;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteExpression.class, "site");
+
     /**
      * Retain an incomplete site in a value-expression position without fabricating a value.
      *
@@ -95,8 +99,4 @@ public final class IncompleteExpression extends Expression {
     public String toString() {
         return site.toString();
     }
-
-    private final IncompleteStatement site;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteExpression.class, "site");
 }

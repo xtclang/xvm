@@ -20,6 +20,9 @@ import static org.xvm.util.Severity.ERROR;
  * Recording a diagnostic and deciding to abandon the work are two questions.
  */
 public class ErrorListenerAbortTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = "PARSER-03";
+
     /**
      * The budget still stops the work; it is just asked for rather than returned from the act of
      * recording.
@@ -109,7 +112,4 @@ public class ErrorListenerAbortTest {
         assertTrue(runtime.isAbortDesired());
         assertSame(report, errors.getErrors().getLast(), "forward the original diagnostic intact");
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = "PARSER-03";
 }

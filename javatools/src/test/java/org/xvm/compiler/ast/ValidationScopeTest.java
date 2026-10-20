@@ -130,6 +130,8 @@ class ValidationScopeTest {
 
     /** Inject a failure at a loop callback, and observe lazy-variable registration. */
     private abstract static class LoopContext extends Context {
+        int registrations;
+
         LoopContext() { super(null, false); }
 
         @Override
@@ -150,7 +152,5 @@ class ValidationScopeTest {
         }
 
         abstract void validateBody();
-
-        int registrations;
     }
 }
