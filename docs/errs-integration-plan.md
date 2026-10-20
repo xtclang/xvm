@@ -12848,7 +12848,8 @@ through [the rebase table](errs-rebase-2026-10-05.tsv); they have not been silen
   evidence. The focused runs above do not close those gates.
 - [ ] Decide the breaking embedding-API release/version and test every extracted PR independently.
   The integrated branch passing does not establish that any extracted slice builds alone.
-- [ ] Continue L73/R1–R8 reusable execution/DAP as a separate runtime workstream. L77 colors
+- [ ] Continue L73/R5–R8 reusable execution/DAP as a separate runtime workstream (R1–R4 are
+  closed). L77 colors
   await a recognized Ecstasy color API; L78 notebooks stay deferred by the user's decision;
   L79 debugger inline values require the runtime/debugging context. None is silently counted as
   complete compiler-only functionality.
@@ -13623,12 +13624,16 @@ and no upstream issues or PRs were opened.
 - [x] Repair the two recorded LSP4J defects locally, with separate commits and failing controls.
 - [ ] Validate a compatible repaired LSP4J build in the server and bundled IntelliJ client;
   remove each compatibility boundary only after its existing acceptance gate passes. For UP06
-  this now waits for an LSP4J release that contains #991.
+  this now waits for an LSP4J release that contains #991, and for UP15 one that contains #997.
 - [x] UP06: filed with the user's authorization as LSP4J
   [#990](https://github.com/eclipse-lsp4j/lsp4j/issues/990) and fixed by
   [#991](https://github.com/eclipse-lsp4j/lsp4j/pull/991), merged 2026-10-19 (`e64042cf`),
   unreleased. Until a release contains it, LSP4IJ parses such reports with its own adapter (#1723).
-- [ ] UP15: obtain separate authorization before filing it upstream or pushing its repair branch.
+- [x] UP15: filed with the user's authorization as LSP4J
+  [#996](https://github.com/eclipse-lsp4j/lsp4j/issues/996), with fix
+  [#997](https://github.com/eclipse-lsp4j/lsp4j/pull/997), open (2026-10-20). #997 keeps converting
+  parameters while streaming: the local `13dfc35b` buffered them as a `JsonElement`, which a JMH
+  benchmark showed roughly doubled their parse time.
   IntelliJ Platform and VS Code repair work remains deferred.
 
 ## Additional local LSP4IJ repairs (2026-10-07)
@@ -13657,9 +13662,13 @@ for XVM GUI acceptance against the replacement plugin.
 - [x] Implement and add regression coverage for UP04/UP05/UP09/UP10/UP11/UP12/UP14/UP18/UP19/UP21
   and the bounded UP25/UP26 features in the local upstream branch.
 - [x] Add native UP02 `willSave` dispatch and truthful capability negotiation.
-- [ ] Finish UP02 `willSaveWaitUntil` through a safe asynchronous pre-save lifecycle.
+- [ ] Finish UP02 `willSaveWaitUntil` through a safe asynchronous pre-save lifecycle. Filed upstream
+  as feature request [#1743](https://github.com/redhat-developer/lsp4ij/issues/1743) on 2026-10-20,
+  without a pull request.
 - [ ] Finish UP03 generic asynchronous preflight and transaction rollback; destination-aware
-  resource renames alone do not complete that scope.
+  resource renames alone do not complete that scope. Upstream, the resource renames are in pull
+  request [#1739](https://github.com/redhat-developer/lsp4ij/pull/1739), and the UI wait is issue
+  [#1740](https://github.com/redhat-developer/lsp4ij/issues/1740).
 - [ ] Run the individual native replacement gates against this new local plugin, especially
   X254 virtual library content and X257 inline invocation/selection. Keep release bridges and
   partial scenario status until those checks pass.
