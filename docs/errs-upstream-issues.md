@@ -637,9 +637,13 @@ dependency, not either repair.
 
 ## Follow-up discipline
 
-- [ ] Prepare minimal upstream reports from the recorded evidence; obtain authorization before
-  submitting them. Keep our EOF cleanup bug distinct from the LSP4IJ startup race.
-- [ ] Recheck UP15 on a repaired LSP4J release and require `InvalidParams` for typed-parameter
+- [x] File the LSP4IJ and LSP4J reports from the recorded evidence, with the user's authorization
+  for each: see [Upstream pull requests](#upstream-pull-requests-2026-10-18). Our EOF cleanup bug was
+  kept out of the LSP4IJ startup race report (#1696).
+- [ ] File the VS Code (UP16, UP23), IntelliJ Platform (UP17, UP24) and IntelliJ test Driver (UP20,
+  UP29) reports. The VS Code and IntelliJ Platform ones are deferred by the user's instruction.
+- [ ] Recheck UP15 on a repaired LSP4J release, containing
+  [#997](https://github.com/eclipse-lsp4j/lsp4j/pull/997), and require `InvalidParams` for typed-parameter
   failures while retaining `ParseError` for actual invalid JSON syntax.
 - [ ] Repair/report UP16 independently of compiler work; keep X130 failed whenever it reproduces.
   VS Code upstream repair work is currently deferred by the user's instruction.
