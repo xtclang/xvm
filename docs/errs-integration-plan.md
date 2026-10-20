@@ -1581,10 +1581,10 @@ to the compiler-only PR:
   Since 2026-10-19 the worker's output timer thread is no longer counted as a runtime pool thread,
   which had retired a healthy worker after the first program that printed.
 - [x] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
-  Both IDEs route Run/Build/Stop/Rerun through the shared requests. Shared X280–X289 and X291–X293
+  Both IDEs route Run/Build/Stop/Rerun through the shared requests. Shared X280–X289 and X291–X294
   cover Run lenses, builds, arguments and exit codes, Stop, Rerun, failed builds, debug launches,
-  console input, build modes, running again, renamed roots, fresh program state (X292) and refused
-  entry methods (X293), and pass natively in both editors, IntelliJ with Ultimate disabled. Closed
+  console input, build modes, running again, renamed roots, fresh program state (X292), refused
+  entry methods (X293) and dropped arguments (X294), and pass natively in both editors, IntelliJ with Ultimate disabled. Closed
   2026-10-20; what stays open (no `.x` gutter icon, no real Gradle build in a shared case, soak in
   R8) is in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
@@ -5638,8 +5638,8 @@ than positional nulls. Constructors retained for compatibility do not promise un
 pattern arity, serialization shape or equality semantics across releases.
 
 The runtime-annotation metadata correction should be extracted as an independent compiler fix,
-with its annotation application and reporting-TypeInfo controls. The structured `EMB-6` module-root
-diagnostic belongs with the embedding diagnostics slice. Neither requires new AST state.
+with its annotation application and reporting-TypeInfo controls. The structured `EMB-8` module-root
+diagnostic (`EMB-6` until #703 took that code) belongs with the embedding diagnostics slice. Neither requires new AST state.
 
 Task 1 validation: a fresh compiler test run reported 474 tests with 40 existing skips; LSP tests
 reported 568 with three existing skips; all seven packaged compiler-stdio tests ran. That is 1,006

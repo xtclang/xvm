@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
+import org.xvm.asm.ErrorListener
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.lsp.adapter.xdk.XdkLibraries
@@ -98,9 +99,9 @@ object RunWorker {
                 channel.exit(id, null, "Another program is still running")
                 return
             }
-            val errors = ErrorList(100)
             val output = OutputBatches({ channel.output(id, it) })
             val console = PrintWriter(output, true)
+            val errors = RunErrors(console)
             // registered before the run starts: commands are read in order, so input for this run
             // can only arrive after this
             val input = ConsoleInput().also { inputs[id] = it }
@@ -182,7 +183,7 @@ object RunWorker {
         private fun ErrorList.failure(): String? =
             errors
                 .filter { it.severity.isAtLeast(Severity.ERROR) }
-                .joinToString("\n") { it.message }
+                .joinToString("\n") { it.messageText }
                 .ifEmpty { null }
     }
 
@@ -369,6 +370,19 @@ internal data class RunWorkerIdentity(
             val xdk = event["xdk"]?.takeUnless { it.isJsonNull }?.asString ?: return null
             return RunWorkerIdentity(protocol, xdk)
         }
+    }
+}
+
+/**
+ * What a run reports. A warning, such as one for arguments the entry method does not take, is also
+ * shown in the run's output when it is reported, which is before the program starts.
+ */
+private class RunErrors(
+    private val console: PrintWriter,
+) : ErrorList(100) {
+    override fun log(err: ErrorListener.ErrorInfo) {
+        if (err.severity == Severity.WARNING) console.println("Warning: ${err.messageText}")
+        super.log(err)
     }
 }
 
