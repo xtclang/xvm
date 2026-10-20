@@ -11,18 +11,6 @@ import java.util.Set.copyOf as immutableSet
 
 /** The compiler and its matching libraries travel together in the language server. */
 internal object XdkLibraries {
-    /** Bundled compiler repository and the immutable artifacts used to reopen its modules. */
-    private data class Bundle(
-        val repository: BuildRepository,
-        val artifacts: Map<String, Artifact>,
-    )
-
-    /** Library artifact revision with lazily materialized detached symbols. */
-    private data class Artifact(
-        val revision: String,
-        val symbols: Lazy<XdkArtifactSymbols>,
-    )
-
     /**
      * Package metadata can be displayed without constructing compiler constants or repositories.
      */
@@ -70,10 +58,6 @@ internal object XdkLibraries {
         }
     }
 
-    internal fun module(name: String) = bundle.repository.loadModule(name)
-
-    internal fun revision(name: String): String = bundle.artifacts.getValue(name).revision
-
     /** One revision for the whole bundle: equal exactly when every bundled module is byte for byte the same. */
     internal val fingerprint: String by lazy {
         val revisions =
@@ -82,6 +66,22 @@ internal object XdkLibraries {
                 .joinToString("\n") { (name, artifact) -> "$name=${artifact.revision}" }
         HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(revisions.toByteArray()))
     }
+
+    /** Bundled compiler repository and the immutable artifacts used to reopen its modules. */
+    private data class Bundle(
+        val repository: BuildRepository,
+        val artifacts: Map<String, Artifact>,
+    )
+
+    /** Library artifact revision with lazily materialized detached symbols. */
+    private data class Artifact(
+        val revision: String,
+        val symbols: Lazy<XdkArtifactSymbols>,
+    )
+
+    internal fun module(name: String) = bundle.repository.loadModule(name)
+
+    internal fun revision(name: String): String = bundle.artifacts.getValue(name).revision
 
     internal fun symbolIndex(name: String): XdkArtifactSymbols? = bundle.artifacts[name]?.symbols?.value
 
