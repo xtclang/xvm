@@ -1573,8 +1573,8 @@ to the compiler-only PR:
   IDE moves of discovered roots into another directory stay with the rename work.
 - [x] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
   Entry selection, exact arguments, output, completion and stop; console input since `82b6ba570`
-  (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, mirrored
-  here): entry selection, arguments, console input, runs with a console and closing a suspended
+  (X287). The runtime part has its own javatools test, `EmbeddingSupportTest` (#703, merged
+  into master on 2026-10-20 as `bdb674af5`, and mirrored here): entry selection, arguments, console input, runs with a console and closing a suspended
   run. CI runs it since `ee022b504`. Closed 2026-10-19.
 - [x] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
   Completed 2026-10-18; see the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
@@ -1883,10 +1883,11 @@ existing skips (the new class 5 tests, none skipped), xdk 62 (8 skips), `spotles
 [#703](https://github.com/xtclang/xvm/pull/703).
 
 - [x] Open the runtime pull request from `lagergren/embedded-run-runtime` against master: #703.
-- [ ] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingSupportTest` then
+- [x] Once it merges, rebase #693 onto master; the runtime changes and `EmbeddingSupportTest` then
   come from master. (#693 was already rebased onto master `5bfd024cc` on 2026-10-19, before #703
   merged, because a Dependabot bump conflicted; the test was renamed from `EmbeddingRunMethodTest`
-  in #703's third review round.)
+  in #703's third review round.) Done 2026-10-20, after #703 merged as `bdb674af5`; see
+  [#703 merged and #693 rebased](#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 
 **Build mode cases and supervised workers (later on 2026-10-16).** Two more commits, each replayed onto
 #693 the same way (local on #693's branch until pushed):
@@ -2135,6 +2136,22 @@ Dependabot's newer `typescript-eslint`), and the embedding files only by older d
 (`(r, e)` and `m_errors` naming, one spacing). Receipts on #693: `EmbeddingSupportTest` 24,
 `EmbeddedExecutionTest` 29 and `EmbeddingDiagnosticsTest` 11 tests, 0 failures, 0 skipped;
 `spotlessCheck`. The native receipts are those recorded with the commits here.
+
+**#703 merged and #693 rebased (2026-10-20).** Gleyzer approved #703 at `249ef7ac5`; `7434194aa`,
+`ab7bbd23c` and `ba8479fae` came after his approval. #703's 17 commits were rebased onto master
+`5bfd024cc` (four Dependabot bumps; `javatools` and `lib_runner` unchanged) as `550d5e138`, whose CI
+passed, and it was squash-merged as `bdb674af5`. The repository deletes merged head branches, so
+`lagergren/embedded-run-runtime` is gone.
+
+#693 was then rebased from `f769bae47` onto `bdb674af5` as `9461a6c1b`, with conflicts resolved
+toward #693's own changes (`git rebase -X theirs`); the old tip is kept locally as
+`backup/693-pre-703-merge-rebase-20261020`. The rebased tree is identical to `f769bae47`'s. No commit
+became empty, so all 139 remain, and the commits that mirrored #703 now undo and redo code that
+master already has (a squash merge of #693 does not carry that). In #703's files, #693 now differs
+from master only by its own changes: the compiler API in `EmbeddingSupport`, the ErrorListener style
+in `InterpreterControl`, and `LAUNCHER-04`, `PARSER-31` and `EMB-8` in `errors.properties`; its diff
+against master went from 893 to 886 files. #693 hashes recorded before this entry refer to the branch
+before this rebase.
 
 ### IntelliJ parity backlog (L60)
 
