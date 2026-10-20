@@ -11,6 +11,9 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Enforces the wire lifecycle without restricting direct embedding/test use of server services. */
 internal class ProtocolLifecycle {
+    private val state = AtomicReference(State(Phase.NEW))
+    private val output = AtomicReference<MessageConsumer>()
+
     /** Connection phase used to validate the ordering of wire requests and notifications. */
     private enum class Phase {
         NEW,
@@ -25,9 +28,6 @@ internal class ProtocolLifecycle {
         val phase: Phase,
         val initialization: Either<String, Number>? = null,
     )
-
-    private val state = AtomicReference(State(Phase.NEW))
-    private val output = AtomicReference<MessageConsumer>()
 
     fun wrap(
         next: MessageConsumer,

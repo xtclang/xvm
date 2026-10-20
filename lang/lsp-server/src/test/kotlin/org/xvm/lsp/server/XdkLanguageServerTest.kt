@@ -190,16 +190,16 @@ class XdkLanguageServerTest {
     private class PendingAdapter(
         private val delegate: MockAdapter = MockAdapter(),
     ) : Adapter by delegate {
+        private val pending = mutableListOf<Pending>()
+        val count: Int
+            get() = pending.size
+
         /** Retains one compilation's exact input and future until the test chooses its completion order. */
         private data class Pending(
             val uri: String,
             val content: String,
             val result: CompletableFuture<CompilationResult>,
         )
-
-        private val pending = mutableListOf<Pending>()
-        val count: Int
-            get() = pending.size
 
         override fun compileAsync(
             uri: String,
