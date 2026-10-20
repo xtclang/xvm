@@ -2153,6 +2153,35 @@ in `InterpreterControl`, and `LAUNCHER-04`, `PARSER-31` and `EMB-8` in `errors.p
 against master went from 893 to 886 files. #693 hashes recorded before this entry refer to the branch
 before this rebase.
 
+**Site-based diagnostics and master's close hang (2026-10-20).** `8637b9eca` here, and `07a48c315` on
+#693 (cherry-picked with `-x`, a fast-forward from `9461a6c1b`), replace the two remaining reports in
+older forms: `InterpreterControl` reports EMB-6 with `errs.warn(...)` instead of
+`errs.log(WARNING, ...)`, and `ModuleInfo` reports a parse that threw without serious errors with
+`fatal(Parser.FATAL_ERROR, in(source, pos, pos))` instead of the deprecated
+`log(Severity, String, Object[], Source, long, long)`. The `ModuleInfo` call predates both branches; it
+is on master too. Compiling `javatools` (main and test), `javatools_utils` and `javatools_jitbridge`
+with `-Xlint:deprecation` and `org.xtclang.java.warningsAsErrors=false` reports no other deprecated
+use on either branch, and reports the old `ModuleInfo` line when it is put back. The
+`lang/lsp-server` (main and test) and `lang/dsl` Kotlin compiles report no warnings, and the lang
+build does not suppress them. Receipts: `:javatools:test` 636 tests here and 600 on #693, 0
+failures, 42 existing skips each; `spotlessCheck` on both.
+
+Master's CI hung once on `bdb674af5` (run 39440797959; a rerun passed) in
+`EmbeddingSupportTest.closingARunAsItEndsOnItsOwnEndsItOnceAndLeavesNothingBehind`: `close()` waited
+forever for the runner's `killTask`, with the runtime idle. A temporary branch,
+`lagergren/debug-close-race`, repeated the scenario up to 1000 times on the CI runner and dumped the
+runtime on a hang; four runs hung, at iterations 82, 110, 74 and 11, always with the `Task` fiber in
+`Container.kill`'s `WaitForResult`, responded and ready, in an idle service. The cause is a lost
+wake-up in `Frame.waitForExternalCompletion`: it schedules the service and the wait frame marks the
+fiber responded in two callbacks, and a future completed as a dependent, as `Container.kill`'s
+`terminateServices().thenApply(...)` is, runs the scheduling first, so the service can drain and go
+idle before the fiber is ready. [#709](https://github.com/xtclang/xvm/pull/709) (`554c8f99c`, against
+master) marks the fiber and then schedules the service in one callback, as `createWaitIOFrame` does;
+with it the probe ran 1000 iterations without a hang (run 39459197798). #709 has no deterministic
+regression test: forcing the interleaving needs a `Runtime` that runs scheduled work inline, and
+`InterpreterConnector` creates its own. The debug branch is deleted from origin; the local ref is kept.
+Neither this branch nor #693 carries the fix yet.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
