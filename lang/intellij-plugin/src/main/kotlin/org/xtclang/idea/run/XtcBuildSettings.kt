@@ -28,16 +28,16 @@ enum class XtcBuildMode(
 @Service(Service.Level.PROJECT)
 @State(name = "EcstasyBuild", storages = [Storage("ecstasy-build.xml")])
 class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.Options>(Options()) {
-    data class Options(
-        // Explicit bindings preserve immutable fields in IntelliJ's XML serializer.
-        @field:OptionTag @JvmField val mode: XtcBuildMode = XtcBuildMode.EMBEDDED,
-    )
-
     var mode: XtcBuildMode
         get() = state.mode
         set(value) {
             updateState { it.copy(mode = value) }
         }
+
+    data class Options(
+        // Explicit bindings preserve immutable fields in IntelliJ's XML serializer.
+        @field:OptionTag @JvmField val mode: XtcBuildMode = XtcBuildMode.EMBEDDED,
+    )
 
     companion object {
         private val GRADLE_BUILD_FILES = listOf("build.gradle.kts", "build.gradle", "settings.gradle.kts", "settings.gradle")
