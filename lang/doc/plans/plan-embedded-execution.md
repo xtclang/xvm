@@ -326,7 +326,12 @@ this bridge; they cannot be inferred from compiler type hints.
   which worker ran a program, and worker reuse over 25 mixed runs was already asserted there. Shared
   X293 runs, from a run target, a module without a `run` method and one whose `run` requires two
   parameters: both build, and each run is refused with the reason and exit code 1 before user code
-  runs. IntelliJ runs the shared cases in IntelliJ IDEA 2026.2.3 with Ultimate features disabled.
+  runs. The run shows the reason alone, `Missing method "run" in module RunLibrary`, as `xtc run`
+  does: until 2026-10-20 the runtime reported it as a failure to create the application container
+  and the worker added the error code. Shared X294 runs a module whose `run` has no parameters with
+  an argument: the argument is dropped, the output shows the runtime's warning (EMB-6, as `xtc run`
+  warns) before the program's own output, and the program runs. IntelliJ runs the shared cases in
+  IntelliJ IDEA 2026.2.3 with Ultimate features disabled.
   Not covered: `.x` files have no IntelliJ gutter Run icon, since there is no PSI parser (the Run
   lens, context and shortcut actions run them); X288 drives Gradle mode with a stub wrapper, not a
   real Gradle build; repeated-run soak belongs to R8.
