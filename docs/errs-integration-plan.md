@@ -2180,7 +2180,30 @@ master) marks the fiber and then schedules the service in one callback, as `crea
 with it the probe ran 1000 iterations without a hang (run 39459197798). #709 has no deterministic
 regression test: forcing the interleaving needs a `Runtime` that runs scheduled work inline, and
 `InterpreterConnector` creates its own. The debug branch is deleted from origin; the local ref is kept.
-Neither this branch nor #693 carries the fix yet.
+The fix is cherry-picked here as `b1b20aa91` and on #693 as `0f99181ac`; `:javatools:test` passes on
+both (636 and 600 tests, 0 failures, 42 existing skips).
+
+**New files without Hungarian names, fields first (2026-10-20).** Every Java, Kotlin, TypeScript and
+JavaScript file this branch adds relative to master now uses plain names and declares its fields
+first, without changing initialization order: `b82d4c556` (javatools: 22 renames, such as
+`LoopStatement`'s `m_regFirst` → `firstRegister` and the bindings' `f_` fields, and the fields of 29
+classes), `b02450e9a` (language server, 29 classes), `d7cbde5e9` (IntelliJ plugin, 17 classes),
+`6a355ad00` (build logic and manual tests) and `acb6a12ab` (`LoopStatement.ensureContinueLabel`'s
+`nodeOrigin`, `ctxOrigin` and `ctxDest`). Old files keep their own names, also where they share a
+field name with a renamed one (`SwitchStatement.m_listContinues`). `InvocationBinding.finishFacts`'
+result maps were renamed `surviving*`, since plain names would have hidden the renamed fields. #693
+has the same changes as `685202f97`, `452c28f19`, `706bcbfea`, `7cc9d37eb` and `ca18ee71f`. Receipts:
+`:javatools:test` 636 here and 600 on #693, `:lang:lsp-server:test` 2,361 on both, 0 failures;
+`:lang:intellij-plugin:test` 143 here; spotlessCheck on both.
+
+**VS Code Marketplace and upstream fixes (2026-10-20).** The `xtclang` publisher exists on the
+Marketplace, but nothing is published. Branch `lagergren/vscode-marketplace-publishing`
+(`11e898c62`, off master, not yet pushed) packages a Marketplace pre-release (`0.4.<run number>`)
+and publishes it with `vsce publish --oidc` behind the repository variable
+`VSCODE_MARKETPLACE_PUBLISH`; the manual setup and checks before it merges are
+[#710](https://github.com/xtclang/xvm/issues/710). LSP4IJ #1744 is closed (implemented by #1749). Fixes
+for UP16, UP17, UP20, UP24 and UP29 are prepared and verified natively; see
+[upstream fixes](errs-upstream-issues.md#upstream-fixes-prepared-2026-10-20).
 
 ### IntelliJ parity backlog (L60)
 
