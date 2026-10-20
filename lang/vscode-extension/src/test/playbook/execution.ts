@@ -355,3 +355,50 @@ export function renamedRootCases(): void {
         });
     });
 }
+
+/** Registered after the renamed-root case, as the catalog orders X292 and X293 after X291. */
+export function runEntryCases(): void {
+    playbook('X292', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const runOnce = async (message: string) => {
+                const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
+                const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
+                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                // the counter keeps its count within a run, and a run that went on from the run before it would
+                // print the counts after that run's
+                assert.ok(run.text.includes(data.output), run.text);
+                assert.ok(!run.text.includes(data.carriedOver), run.text);
+            };
+            await runOnce('First run finishes');
+            await runOnce('Second run finishes');
+        });
+    });
+
+    playbook('X293', async (workspace, data) => {
+        const library = await workspace.open(data.file, data.source);
+        const twoArguments = await workspace.open(data.twoArgumentsFile, data.twoArgumentsSource);
+        await configureModules(workspace, [
+            { name: data.module, file: data.file },
+            { name: data.twoArgumentsModule, file: data.twoArgumentsFile },
+        ]);
+        await noErrors(library.uri);
+        await noErrors(twoArguments.uri);
+        await embedded(async executions => {
+            // neither module has a Run lens, so each runs from a task, as one saved in tasks.json
+            const refused = async (moduleName: string, uri: vscode.Uri, message: string, expected: string) => {
+                const task = createXtcRunTask({ type: 'xtc', moduleName, moduleUri: uri.toString(), mode: 'embedded' }, getClient);
+                const run = await executions.start('run', moduleName, () => vscode.tasks.executeTask(task), finished, message);
+                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                assert.ok(run.text.includes(expected), run.text);
+                return run.text;
+            };
+            await refused(data.module, library.uri, 'Run of a module without run is refused', data.message);
+            const text = await refused(data.twoArgumentsModule, twoArguments.uri, 'Run of a run method requiring two arguments is refused',
+                data.twoArgumentsMessage);
+            assert.ok(!text.includes(data.twoArgumentsOutput), `Nothing ran: ${text}`);
+        });
+    });
+}

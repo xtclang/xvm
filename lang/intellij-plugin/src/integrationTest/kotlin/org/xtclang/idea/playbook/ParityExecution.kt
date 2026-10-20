@@ -265,6 +265,58 @@ internal fun ParityScenarios.buildModeCases() {
     }
 }
 
+/** Fresh program state, and refused entry methods; registered after the on-type cases, as the catalog orders X292 and X293. */
+internal fun ParityScenarios.runEntryCases() {
+    case("X292") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val module = data.string("module")
+            repeat(2) { round ->
+                execution.run(project, module, uri(data.string("file")), "")
+                awaitUi("run ${round + 1} finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                val output = execution.output(module)
+                check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+                // the counter keeps its count within a run, and a run that went on from the run before it would
+                // print the counts after that run's
+                check(data.string("output") in output && data.string("carriedOver") !in output) { output }
+            }
+        }
+    }
+
+    case("X293") { data ->
+        val library = open(data.string("file"), data.string("source"))
+        val twoArguments = open(data.string("twoArgumentsFile"), data.string("twoArgumentsSource"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList()),
+                SharedScenarios.SourceModule(data.string("twoArgumentsModule"), uri(data.string("twoArgumentsFile")), emptyList()),
+            ),
+        )
+        clean(library)
+        clean(twoArguments)
+        embedded { execution, project ->
+            // neither module has a Run lens, so each runs from an Ecstasy run configuration
+            fun refused(
+                module: String,
+                file: String,
+                expected: String,
+            ): String {
+                execution.run(project, module, uri(file), "")
+                awaitUi("run of $module is refused", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                val output = execution.output(module)
+                check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+                check(expected in output) { output }
+                return output
+            }
+            refused(data.string("module"), data.string("file"), data.string("message"))
+            val output = refused(data.string("twoArgumentsModule"), data.string("twoArgumentsFile"), data.string("twoArgumentsMessage"))
+            check(data.string("twoArgumentsOutput") !in output) { "Nothing ran: $output" }
+        }
+    }
+}
+
 /** What the Build tool window shows when the embedded compiler takes Build Project. */
 private const val EMBEDDED_BUILD = "with the embedded compiler"
 

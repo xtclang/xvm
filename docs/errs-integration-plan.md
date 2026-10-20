@@ -1580,8 +1580,13 @@ to the compiler-only PR:
   Completed 2026-10-18; see the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
   Since 2026-10-19 the worker's output timer thread is no longer counted as a runtime pool thread,
   which had retired a healthy worker after the first program that printed.
-- [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
-  *Partial:* both IDEs route Run/Build/Stop/Rerun through the shared requests; shared X280–X285 and X287 pass natively.
+- [x] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
+  Both IDEs route Run/Build/Stop/Rerun through the shared requests. Shared X280–X289 and X291–X293
+  cover Run lenses, builds, arguments and exit codes, Stop, Rerun, failed builds, debug launches,
+  console input, build modes, running again, renamed roots, fresh program state (X292) and refused
+  entry methods (X293), and pass natively in both editors, IntelliJ with Ultimate disabled. Closed
+  2026-10-20; what stays open (no `.x` gutter icon, no real Gradle build in a shared case, soak in
+  R8) is in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
   *Partial:* the placeholder reports breakpoints unverified and refuses launch (`eba208bb3`); no session service.
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
@@ -12848,7 +12853,7 @@ through [the rebase table](errs-rebase-2026-10-05.tsv); they have not been silen
   evidence. The focused runs above do not close those gates.
 - [ ] Decide the breaking embedding-API release/version and test every extracted PR independently.
   The integrated branch passing does not establish that any extracted slice builds alone.
-- [ ] Continue L73/R5–R8 reusable execution/DAP as a separate runtime workstream (R1–R4 are
+- [ ] Continue L73/R6–R8 reusable execution/DAP as a separate runtime workstream (R1–R5 are
   closed). L77 colors
   await a recognized Ecstasy color API; L78 notebooks stay deferred by the user's decision;
   L79 debugger inline values require the runtime/debugging context. None is silently counted as
