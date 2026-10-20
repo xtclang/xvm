@@ -9,13 +9,13 @@ import java.util.concurrent.CompletableFuture
 
 /** Connection-local, lexically scoped proof for the synchronous VFS portion of a guarded edit. */
 internal class PreflightedRenames {
+    private val applying = ScopedValue.newInstance<Move>()
+
     /** Source and destination identifying a move already validated by the refactoring transaction. */
     private data class Move(
         val from: Path,
         val to: Path,
     )
-
-    private val applying = ScopedValue.newInstance<Move>()
 
     fun apply(
         from: Path,

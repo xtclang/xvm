@@ -27,6 +27,11 @@ import java.net.URI
 internal class DocumentStartupMessages(
     private val snapshot: (String) -> Snapshot?,
 ) {
+    private val lock = Any()
+    private val opening = mutableMapOf<String, Opening>()
+    private val opened = mutableMapOf<URI, Sent>()
+    private val folds = mutableMapOf<String, Fold>()
+
     /** Owner, document stamp and text used to check whether startup synchronization is still current. */
     data class Snapshot(
         val owner: Any,
@@ -59,11 +64,6 @@ internal class DocumentStartupMessages(
         val text: String,
         val retiredVersion: Int = -1,
     )
-
-    private val lock = Any()
-    private val opening = mutableMapOf<String, Opening>()
-    private val opened = mutableMapOf<URI, Sent>()
-    private val folds = mutableMapOf<String, Fold>()
 
     /** Prove that an incoming edit's version describes this live editor incarnation and text. */
     fun editSnapshot(

@@ -81,6 +81,12 @@ internal class DirectoryDocumentMoves(
     companion object {
         private val logger = logger<DirectoryDocumentMoves>()
 
+        internal val disconnectMethod by lazy {
+            LanguageServerWrapper::class.java
+                .getDeclaredMethod("disconnect", URI::class.java, Boolean::class.javaPrimitiveType)
+                .apply { check(trySetAccessible()) { "LSP4IJ document disconnect is inaccessible" } }
+        }
+
         internal fun descendants(
             events: List<VFileEvent>,
             openedFiles: () -> List<VirtualFile>,
@@ -95,12 +101,6 @@ internal class DirectoryDocumentMoves(
                 }
             if (directories.isEmpty()) return emptyList()
             return openedFiles().distinct().filter { file -> directories.any { VfsUtilCore.isAncestor(it, file, true) } }
-        }
-
-        internal val disconnectMethod by lazy {
-            LanguageServerWrapper::class.java
-                .getDeclaredMethod("disconnect", URI::class.java, Boolean::class.javaPrimitiveType)
-                .apply { check(trySetAccessible()) { "LSP4IJ document disconnect is inaccessible" } }
         }
     }
 }
