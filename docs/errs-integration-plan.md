@@ -2098,6 +2098,44 @@ refer to the branch before the rebase; the third round's copies above are now `d
 `69c143a72` and `c1c134ecc`. Receipts after the rebase: `org.xvm.api` 30 tests and `org.xvm.lsp.run`
 38 tests, 0 failures, 0 skipped, `spotlessCheck`; GitHub reports #693 mergeable again.
 
+**#703 additions and #693 synchronization (2026-10-20).** Gleyzer's fourth round asked why
+`passesArguments` is a separate method and whether arguments are simply ignored when it returns
+false, and proposed a stricter argument check. The replies explain that `entryMethod` already
+rejects more than one required parameter, and that the proposed check would refuse
+`run(String[] args)` without arguments, which `xtc run` accepts; both threads are resolved. On #703:
+`249ef7ac5` warns of arguments for an entry method without parameters (EMB-6, as `xtc run` warns),
+`7434194aa` lets a host count the consoles its runs still hold (cherry-picked from `35991ee97` here,
+which the worker already used), `ab7bbd23c` adds the R1 tests this branch has had since `b9b9fbf0a`,
+and `ba8479fae` reports a method that cannot be an entry point as EMB-7 with `xtc run`'s message
+instead of EMB-3's container failure. #703's description is updated; `EmbeddingSupportTest` 24
+tests, 0 failures, 0 skipped. #703 takes EMB-6 and EMB-7, so this branch's `ERR_MODULE_SOURCE`
+moves to EMB-8 (`428c261ea`, which also mirrors `249ef7ac5` and `ba8479fae`). `35ef2d17d` makes the
+worker show a run's warnings in its output and report why a run cannot start without the error
+code; shared X294 checks the warning (299 cases).
+
+#693 moved from `a3d1d3dd3` to `f769bae47` as a fast-forward. Each commit ends with
+`(cherry picked from commit …)`; `docs/errs*.md` changes are left out, as before.
+
+| #693 | Source | Subject |
+|---|---|---|
+| `29cbc87fb` | #703 `ab7bbd23c` | Cover R1 in EmbeddingSupportTest |
+| `781f41f9a` | `cbb5a23df` | Keep the worker's output timer out of the runtime pool count |
+| `1cc7a0367` | `efdd96a8e` | Close R1 |
+| `63d796098` | `9dbf6c163` | Build and run the editor's text without saving files first (R2) |
+| `50b828ec8` | `1e16e9d3c` | Test that stale run targets are refused (R2) |
+| `b6c4246ea` | `7b90b28b4` | Settle R2's arguments item |
+| `6437f1498` | `9fadd4803` | Run a saved target after its root file was renamed or moved, and close R2 |
+| `bdb9b668f` | `05a958374` | Check fresh program state and refused entry methods, and close R5 |
+| `03c020eec` | `428c261ea` | Warn of dropped entry arguments and report refused entry methods as xtc run does |
+| `f769bae47` | `35ef2d17d` | Show a run's warnings in its output |
+
+After the sync, `lang/` on #693 differs from this branch only where it did before (the plan
+documents, the playbook's link to this document, `XtcDebugServerLauncher.kt`'s formatting and
+Dependabot's newer `typescript-eslint`), and the embedding files only by older differences
+(`(r, e)` and `m_errors` naming, one spacing). Receipts on #693: `EmbeddingSupportTest` 24,
+`EmbeddedExecutionTest` 29 and `EmbeddingDiagnosticsTest` 11 tests, 0 failures, 0 skipped;
+`spotlessCheck`. The native receipts are those recorded with the commits here.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
