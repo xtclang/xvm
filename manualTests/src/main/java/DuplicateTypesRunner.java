@@ -85,12 +85,12 @@ public class DuplicateTypesRunner {
         COMPANION_ONLY("App", false),
         DISTINCT_SCOPES("DistinctScopes", false);
 
+        private final String  module;
+        private final boolean duplicate;
+
         Scenario(String module, boolean duplicate) {
             this.module    = module;
             this.duplicate = duplicate;
         }
-
-        private final String  module;
-        private final boolean duplicate;
     }
 }
