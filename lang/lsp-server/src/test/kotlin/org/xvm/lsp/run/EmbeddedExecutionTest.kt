@@ -67,6 +67,19 @@ class EmbeddedExecutionTest {
             "module Greeter { void greet() { @Inject Console console; console.print(\"greetings\"); } }",
             "module Thrower { void run() { throw new IllegalState(\"boom\"); } }",
             """
+            module Counter {
+                static service Calls {
+                    Int count = 0;
+                    Int next() = ++count;
+                }
+
+                void run() {
+                    @Inject Console console;
+                    console.print($"calls={Calls.next()},{Calls.next()}");
+                }
+            }
+            """,
+            """
             module Chatty {
                 void run() {
                     @Inject Console console;
@@ -221,6 +234,20 @@ class EmbeddedExecutionTest {
             // after the first round has loaded what runs need, more runs retain nothing that adds up
             assertThat(reports.last().heapUsed - reports[4].heapUsed).isLessThan(64L shl 20)
             assertThat(workers.tracked()).isZero()
+        }
+    }
+
+    @Test
+    fun `each run starts with fresh program state, though one worker serves both`() {
+        RunWorkerProcess().use { workers ->
+            val pids = mutableSetOf<Long>()
+            repeat(2) { round ->
+                // the counter keeps its count within a run; a run in the container of the run before it would go on
+                // counting from that run's calls
+                assertThat(run("Counter", workers = workers).output).describedAs("run ${round + 1}").contains("calls=1,2")
+                pids += workers.workerPids()
+            }
+            assertThat(pids).describedAs("one worker served both runs").hasSize(1)
         }
     }
 
@@ -788,11 +815,12 @@ class EmbeddedExecutionTest {
         method: String = "run",
         args: List<String> = emptyList(),
         modulePath: List<String> = listOf(lib.path),
+        workers: RunWorkerProcess = worker,
         event: () -> Unit = {},
     ): Outcome {
         val output = StringBuffer()
         val exited = CompletableFuture<Pair<Long?, String?>>()
-        worker.start(
+        workers.start(
             RunWorkerProcess.Request(modulePath, module, method, args, directory.toString()),
             object : RunWorkerProcess.Listener {
                 override fun output(text: String) {
