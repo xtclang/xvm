@@ -307,7 +307,7 @@ this bridge; they cannot be inferred from compiler type hints.
   healthy worker, so the next run waited about 2 s for a new one. The timer thread has a group of its
   own (`OutputBatchesTest`), and the pool count is the runtime's pool alone: one thread per core,
   started by the first run.
-- [ ] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
+- [x] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.
   Assert worker reuse and distinct child sessions. Verify IntelliJ without Ultimate functionality.
@@ -320,6 +320,16 @@ this bridge; they cannot be inferred from compiler type hints.
   Gradle build (with a stub wrapper, so no Gradle build runs) and X289 runs a module again,
   unchanged and after an unsaved edit. A real Gradle build and repeated-run soak are not driven by
   shared cases.
+  *Completed 2026-10-20:* shared X292 runs a module twice whose static service counts the calls made
+  to it: each run prints `calls=1,2`, so no run goes on from the program state of the run before it.
+  `EmbeddedExecutionTest` checks the same with one worker serving both runs; the editors cannot see
+  which worker ran a program, and worker reuse over 25 mixed runs was already asserted there. Shared
+  X293 runs, from a run target, a module without a `run` method and one whose `run` requires two
+  parameters: both build, and each run is refused with the reason and exit code 1 before user code
+  runs. IntelliJ runs the shared cases in IntelliJ IDEA 2026.2.3 with Ultimate features disabled.
+  Not covered: `.x` files have no IntelliJ gutter Run icon, since there is no PSI parser (the Run
+  lens, context and shortcut actions run them); X288 drives Gradle mode with a stub wrapper, not a
+  real Gradle build; repeated-run soak belongs to R8.
 - [ ] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
   no-debug execution, output, completion, disconnect and terminate to the same session service.
   Advertise only functioning requests. DAP facade shutdown must follow an explicit run ownership policy.
