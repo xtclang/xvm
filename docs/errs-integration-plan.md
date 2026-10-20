@@ -13662,9 +13662,10 @@ for XVM GUI acceptance against the replacement plugin.
 - [x] Implement and add regression coverage for UP04/UP05/UP09/UP10/UP11/UP12/UP14/UP18/UP19/UP21
   and the bounded UP25/UP26 features in the local upstream branch.
 - [x] Add native UP02 `willSave` dispatch and truthful capability negotiation.
-- [ ] Finish UP02 `willSaveWaitUntil` through a safe asynchronous pre-save lifecycle. Filed upstream
-  as feature request [#1743](https://github.com/redhat-developer/lsp4ij/issues/1743) on 2026-10-20,
-  without a pull request.
+- [ ] Finish UP02 `willSaveWaitUntil` through a safe pre-save lifecycle. Filed upstream as feature
+  request [#1743](https://github.com/redhat-developer/lsp4ij/issues/1743) and implemented in pull
+  request [#1746](https://github.com/redhat-developer/lsp4ij/pull/1746) on 2026-10-20, with a wait of
+  at most 1.5 s before the save, since Actions on Save run after it.
 - [ ] Finish UP03 generic asynchronous preflight and transaction rollback; destination-aware
   resource renames alone do not complete that scope. Upstream, the resource renames are in pull
   request [#1739](https://github.com/redhat-developer/lsp4ij/pull/1739), and the UI wait is issue
