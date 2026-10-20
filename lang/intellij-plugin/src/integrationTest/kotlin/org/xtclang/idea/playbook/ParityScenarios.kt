@@ -40,6 +40,7 @@ class ParityScenarios(
         executionInputCases()
         buildModeCases()
         onTypeCases()
+        runEntryCases()
     }
 
     internal fun case(
