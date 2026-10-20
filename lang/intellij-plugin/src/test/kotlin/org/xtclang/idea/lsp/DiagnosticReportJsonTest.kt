@@ -17,6 +17,19 @@ import org.junit.jupiter.api.Test
  * valid report shape must not terminate the message reader or lose related-document updates.
  */
 class DiagnosticReportJsonTest {
+    private val json = handler(true)
+
+    private val wire =
+        """
+        {"kind":"full","resultId":"root-1","items":[],"relatedDocuments":{
+          "file:///Library.x":{"kind":"full","resultId":"library-1","items":[{
+            "range":{"start":{"line":2,"character":3},"end":{"line":2,"character":7}},
+            "severity":1,"message":"Unresolved name"
+          }]},
+          "file:///Other.x":{"kind":"unchanged","resultId":"other-1"}
+        }}
+        """.trimIndent()
+
     @Test
     fun `related full and unchanged reports decode without killing the message reader`() {
         // Include the real method's response adapter as well as the client's Gson configuration.
@@ -67,17 +80,4 @@ class DiagnosticReportJsonTest {
         body: String,
     ) = (handler.parseMessage("""{"jsonrpc":"2.0","id":"1","result":$body}""") as ResponseMessage)
         .result as DocumentDiagnosticReport
-
-    private val json = handler(true)
-
-    private val wire =
-        """
-        {"kind":"full","resultId":"root-1","items":[],"relatedDocuments":{
-          "file:///Library.x":{"kind":"full","resultId":"library-1","items":[{
-            "range":{"start":{"line":2,"character":3},"end":{"line":2,"character":7}},
-            "severity":1,"message":"Unresolved name"
-          }]},
-          "file:///Other.x":{"kind":"unchanged","resultId":"other-1"}
-        }}
-        """.trimIndent()
 }

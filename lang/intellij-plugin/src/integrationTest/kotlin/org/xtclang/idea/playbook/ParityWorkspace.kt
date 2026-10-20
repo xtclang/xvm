@@ -32,8 +32,6 @@ class ParityWorkspace(
     val protocol = ClientProtocol(driver)
     val trace = ClientTrace(driver)
 
-    internal fun replacementGate(id: String): Boolean = id in System.getProperty("xtc.playbook.replacementGates", "").split(',')
-
     val common =
         JsonParser
             .parseString(
@@ -44,6 +42,43 @@ class ParityWorkspace(
     /** The project directory; most cases write only under [directory]. */
     val projectRoot: Path = with(driver) { Path.of(singleProject().getBasePath()) }
     val directory: Path = projectRoot.resolve("parity/$id")
+
+    init {
+        Files.createDirectories(directory)
+        // Existing cases use the common workspace. Close its tabs before same-named per-case files
+        // are opened; otherwise editor lookup by tab name can bind to a different source buffer.
+        with(driver) {
+            dismissPopups()
+            withContext(OnDispatcher.EDT) {
+                val manager = service<FileEditorManager>(singleProject())
+                manager
+                    .getAllEditors()
+                    .map { it.getFile() }
+                    .distinctBy { it.getPath() }
+                    .forEach(manager::closeFile)
+                // The common-workspace cases also leave closed dirty buffers. Retire them
+                // before this independent case, just as close() retires our own buffers;
+                // otherwise a later native Save All formats every preceding fixture first.
+                val documents = service<ParityDocuments>()
+                documents
+                    .getUnsavedDocuments()
+                    .filter {
+                        documents.getFile(it)?.getPath()?.startsWith(projectRoot.toString() + "/") == true
+                    }.forEach(documents::reloadFromDisk)
+            }
+        }
+        configure(emptyList())
+        with(driver) {
+            withContext(OnDispatcher.EDT) {
+                // Instantiate LSP4IJ's trace console before traffic begins. A hidden, never
+                // created tool window otherwise retains no console document to inspect.
+                getToolWindow("Language Servers").show()
+                getToolWindow("Language Servers").hide()
+            }
+        }
+    }
+
+    internal fun replacementGate(id: String): Boolean = id in System.getProperty("xtc.playbook.replacementGates", "").split(',')
 
     /** Couples a fixture's path and text with its playbook workspace identity. */
     inner class Document(
@@ -94,41 +129,6 @@ class ParityWorkspace(
         fun params(at: Int? = null): Map<String, Any> =
             mapOf("textDocument" to mapOf("uri" to uri)) +
                 if (at == null) emptyMap() else mapOf("position" to position(text, at))
-    }
-
-    init {
-        Files.createDirectories(directory)
-        // Existing cases use the common workspace. Close its tabs before same-named per-case files
-        // are opened; otherwise editor lookup by tab name can bind to a different source buffer.
-        with(driver) {
-            dismissPopups()
-            withContext(OnDispatcher.EDT) {
-                val manager = service<FileEditorManager>(singleProject())
-                manager
-                    .getAllEditors()
-                    .map { it.getFile() }
-                    .distinctBy { it.getPath() }
-                    .forEach(manager::closeFile)
-                // The common-workspace cases also leave closed dirty buffers. Retire them
-                // before this independent case, just as close() retires our own buffers;
-                // otherwise a later native Save All formats every preceding fixture first.
-                val documents = service<ParityDocuments>()
-                documents
-                    .getUnsavedDocuments()
-                    .filter {
-                        documents.getFile(it)?.getPath()?.startsWith(projectRoot.toString() + "/") == true
-                    }.forEach(documents::reloadFromDisk)
-            }
-        }
-        configure(emptyList())
-        with(driver) {
-            withContext(OnDispatcher.EDT) {
-                // Instantiate LSP4IJ's trace console before traffic begins. A hidden, never
-                // created tool window otherwise retains no console document to inspect.
-                getToolWindow("Language Servers").show()
-                getToolWindow("Language Servers").hide()
-            }
-        }
     }
 
     fun fixture(file: String): String = fixtures.getValue(file)
