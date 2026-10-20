@@ -9120,7 +9120,27 @@
         "twoArgumentsSource": "module RunTwoArguments {\n    void run(String first, String second) {\n        @Inject Console console;\n        console.print(\"two arguments ran\");\n    }\n}\n",
         "twoArgumentsMessage": "Unsupported arguments for method \"run\"",
         "twoArgumentsOutput": "two arguments ran",
+        "containerFailure": "Unable to create the application container",
         "exitCode": 1
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X294": {
+      "title": "arguments for a run method without parameters are dropped with a warning, and the program runs",
+      "manual": [],
+      "values": {
+        "file": "RunNoParameters.x",
+        "module": "RunNoParameters",
+        "source": "module RunNoParameters {\n    void run() {\n        @Inject Console console;\n        console.print(\"ran without parameters\");\n    }\n}\n",
+        "args": [
+          "ignored"
+        ],
+        "warning": "Warning: Method \"run\" does not take any parameters; ignoring the specified arguments.",
+        "output": "ran without parameters",
+        "exitCode": 0
       },
       "intellij": {
         "coverage": "full",
