@@ -16,6 +16,38 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Java-lexer editing helpers. A failed lex never authorizes a source rewrite. */
 internal object XdkLexical {
+    private val newlines = Regex("\r\n|\r|\n")
+    private val urls = Regex("https?://[^\\s<>\"'`\\\\]+")
+    private val comments = setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT)
+    private val strings =
+        setOf(Token.Id.LIT_STRING, Token.Id.LIT_CHAR, Token.Id.LIT_BINSTR, Token.Id.TEMPLATE)
+
+    /** Tokens after which a `switch` starts a statement rather than an expression; null is the start. */
+    private val statementStarts = setOf(null, Token.Id.SEMICOLON, Token.Id.L_CURLY, Token.Id.R_CURLY, Token.Id.COLON)
+
+    private val closers = setOf(Token.Id.R_CURLY, Token.Id.R_PAREN, Token.Id.R_SQUARE)
+    private val continuations =
+        setOf(
+            Token.Id.ASN,
+            Token.Id.ADD,
+            Token.Id.SUB,
+            Token.Id.MUL,
+            Token.Id.DIV,
+            Token.Id.MOD,
+            Token.Id.DIVREM,
+            Token.Id.COND_AND,
+            Token.Id.COND_OR,
+            Token.Id.COND_XOR,
+            Token.Id.COND_ELSE,
+            Token.Id.ADD_ASN,
+            Token.Id.SUB_ASN,
+            Token.Id.MUL_ASN,
+            Token.Id.DIV_ASN,
+            Token.Id.COND_ASN,
+            Token.Id.COND_NN_ASN,
+            Token.Id.LAMBDA,
+        )
+
     /** Compiler token with source offsets and editor range for syntax-aware edits. */
     private data class Span(
         val id: Token.Id,
@@ -24,12 +56,6 @@ internal object XdkLexical {
         val end: Int,
         val text: String,
     )
-
-    private val newlines = Regex("\r\n|\r|\n")
-    private val urls = Regex("https?://[^\\s<>\"'`\\\\]+")
-    private val comments = setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT)
-    private val strings =
-        setOf(Token.Id.LIT_STRING, Token.Id.LIT_CHAR, Token.Id.LIT_BINSTR, Token.Id.TEMPLATE)
 
     /**
      * Over-approximate path expressions without interpreting paths or suppressing compiler errors.
@@ -113,32 +139,6 @@ internal object XdkLexical {
                 }
             }
     }
-
-    /** Tokens after which a `switch` starts a statement rather than an expression; null is the start. */
-    private val statementStarts = setOf(null, Token.Id.SEMICOLON, Token.Id.L_CURLY, Token.Id.R_CURLY, Token.Id.COLON)
-
-    private val closers = setOf(Token.Id.R_CURLY, Token.Id.R_PAREN, Token.Id.R_SQUARE)
-    private val continuations =
-        setOf(
-            Token.Id.ASN,
-            Token.Id.ADD,
-            Token.Id.SUB,
-            Token.Id.MUL,
-            Token.Id.DIV,
-            Token.Id.MOD,
-            Token.Id.DIVREM,
-            Token.Id.COND_AND,
-            Token.Id.COND_OR,
-            Token.Id.COND_XOR,
-            Token.Id.COND_ELSE,
-            Token.Id.ADD_ASN,
-            Token.Id.SUB_ASN,
-            Token.Id.MUL_ASN,
-            Token.Id.DIV_ASN,
-            Token.Id.COND_ASN,
-            Token.Id.COND_NN_ASN,
-            Token.Id.LAMBDA,
-        )
 
     fun format(
         text: String,
