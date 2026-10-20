@@ -38,8 +38,10 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
+import static org.xvm.api.EmbeddingSupport.WARN_ARGUMENTS_IGNORED;
 
 import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.WARNING;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.
@@ -79,6 +81,10 @@ class InterpreterControl
             FileStructure   file   = prepareModule(interpreter, module, repository);
             MainContainer   main   = interpreter.getMainContainer();
             MethodStructure method = EmbeddingSupport.entryMethod(file.getModule(), entry);
+            if (errs != null && !entry.args().isEmpty() && method.getParamCount() == 0) {
+                // the arguments are dropped, with the command-line runner's warning
+                errs.log(WARNING, WARN_ARGUMENTS_IGNORED, new Object[] {entry.name()}, module);
+            }
 
             if (console != null) {
                 consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,

@@ -47,6 +47,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.util.Severity.WARNING;
+
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
  * a file system, failures, closing a run, also as it ends and from two threads at once, how the
@@ -346,6 +348,18 @@ public class EmbeddingSupportTest {
     }
 
     @Test
+    public void argumentsForAMethodWithoutParametersAreDroppedWithAWarning() throws IOException {
+        compileAndStore(helloModule("Unused"));
+
+        ErrorList errs = runReporting("Unused", new EntryPoint("run", List.of("ignored")));
+        assertTrue(errs.getErrors().stream().anyMatch(info -> info.getSeverity() == WARNING
+                && info.getCode().equals(EmbeddingSupport.WARN_ARGUMENTS_IGNORED)), errs::toString);
+        assertFalse(errs.hasSeriousErrors(), errs::toString);
+
+        assertFalse(runReporting("Unused", EntryPoint.RUN).hasError(EmbeddingSupport.WARN_ARGUMENTS_IGNORED));
+    }
+
+    @Test
     public void consoleInputIsReadLineByLineAndEndsWithAnEmptyLine() throws IOException {
         compileAndStore(readerModule("Reader"));
         String output = run("Reader", "run", List.of(),
@@ -563,6 +577,20 @@ public class EmbeddingSupportTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
         }
         return output.toString();
+    }
+
+    /**
+     * Run an entry method to its end, and return what the run reported.
+     */
+    private ErrorList runReporting(String moduleName, EntryPoint entry) {
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.runMethod(input(), moduleName, null, entry,
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
+        assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+        return errs;
     }
 
     private static String readerModule(String moduleName) {
