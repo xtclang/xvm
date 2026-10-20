@@ -8,10 +8,6 @@ service BasicHashCollector
 
     @Override HashCollector add(UInt8 value) = addByte(value);
 
-    @Override HashCollector reset() = TODO("native");
-
-    @Override Int compute() = TODO("native");
-
     /**
      * This method is here so that it will have a consistent name in the JIT and on the JIT Bridge
      * implementation of this type. If we used the add method it would not be consistent due to

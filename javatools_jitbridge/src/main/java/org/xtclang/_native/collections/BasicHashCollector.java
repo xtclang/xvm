@@ -27,7 +27,7 @@ public class BasicHashCollector
     }
 
     @Override
-    public BasicHashCollector reset(Ctx ctx) {
+    public HashCollector reset(Ctx ctx) {
         delegate.reset();
         return this;
     }

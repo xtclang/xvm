@@ -164,10 +164,6 @@ public class NativeNames {
         reservedMethodName.put("temporal.Timer/schedule/3", "schedule");
         reservedMethodName.put("temporal.Timer/stop/0",     "stop");
         reservedMethodName.put("temporal.Timer/reset/0",    "reset");
-
-        // JavaTools Bridge _native types
-        reservedMethodName.put("collections.BasicHashCollector/compute/0", "compute");
-        reservedMethodName.put("collections.BasicHashCollector/reset/0",   "reset");
     }
 
     /**
@@ -183,8 +179,7 @@ public class NativeNames {
         if (jitName == null) {
             // there was no match for the exact type and method, try to match on super types
 
-            ConstantPool pool       = classId.getConstantPool();
-            String       methodName = methodId.getName();
+            ConstantPool pool = classId.getConstantPool();
             if (    classType.isA(pool.typeNumber()) ||
                     classType.isA(pool.typeFPNumber()) ||
                     classType.isA(pool.typeIntConvertible()) ||
@@ -193,9 +188,10 @@ public class NativeNames {
                 key     = createKey("numbers.Number", methodId);
                 jitName = reservedMethodName.get(key);
 
+                String methodName = methodId.getName();
                 if (jitName == null &&
-                        (methodName.startsWith("toInt") || methodName.startsWith("toUInt") ||
-                         methodName.startsWith("toDec") || methodName.startsWith("toFloat") ||
+                        (methodName.startsWith("toInt")    || methodName.startsWith("toUInt") ||
+                         methodName.startsWith("toDec")    || methodName.startsWith("toFloat") ||
                          methodName.startsWith("toNibble") || methodName.startsWith("toByte"))) {
                     jitName = methodName;
                 }
