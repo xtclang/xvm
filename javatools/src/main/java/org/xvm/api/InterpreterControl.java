@@ -39,7 +39,11 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
 import static org.xvm.asm.ErrorListener.at;
 
+import static org.xvm.api.EmbeddingSupport.ERR_ENTRY_METHOD;
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
+import static org.xvm.api.EmbeddingSupport.WARN_ARGUMENTS_IGNORED;
+
+import static org.xvm.util.Severity.WARNING;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.
@@ -76,9 +80,21 @@ class InterpreterControl
         Long    consoleId = null;
 
         try {
-            FileStructure   file   = prepareModule(interpreter, module, repository);
-            MainContainer   main   = interpreter.getMainContainer();
-            MethodStructure method = EmbeddingSupport.entryMethod(file.getModule(), entry);
+            FileStructure   file = prepareModule(interpreter, module, repository);
+            MainContainer   main = interpreter.getMainContainer();
+            MethodStructure method;
+            try {
+                method = EmbeddingSupport.entryMethod(file.getModule(), entry);
+            } catch (IllegalArgumentException e) {
+                // the method is why the run does not start, as the command-line runner reports it;
+                // its container was never the problem
+                errs.error(ERR_ENTRY_METHOD, at(module), e.getMessage());
+                return null;
+            }
+            if (!entry.args().isEmpty() && method.getParamCount() == 0) {
+                // the arguments are dropped, with the command-line runner's warning
+                errs.log(WARNING, WARN_ARGUMENTS_IGNORED, at(module), entry.name());
+            }
 
             if (console != null) {
                 consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,

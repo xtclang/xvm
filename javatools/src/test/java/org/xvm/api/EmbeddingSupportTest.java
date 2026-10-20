@@ -37,6 +37,7 @@ import org.xvm.api.EmbeddingSupport.EntryPoint;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -48,6 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.xvm.util.Severity.WARNING;
 
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
@@ -346,6 +349,34 @@ public class EmbeddingSupportTest {
 
         output = run("Defaults", "run", List.of("given"), ConsoleInput.NONE);
         assertTrue(output.contains("args=1:given times=2"), output);
+    }
+
+    @Test
+    public void argumentsForAMethodWithoutParametersAreDroppedWithAWarning() throws IOException {
+        compileAndStore(helloModule("Unused"));
+
+        ErrorList errs = runReporting("Unused", new EntryPoint("run", List.of("ignored")));
+        assertTrue(errs.getErrors().stream().anyMatch(info -> info.getSeverity() == WARNING
+                && info.getCode().equals(EmbeddingSupport.WARN_ARGUMENTS_IGNORED)), errs::toString);
+        assertFalse(errs.hasSeriousErrors(), errs::toString);
+
+        assertFalse(runReporting("Unused", EntryPoint.RUN).hasError(EmbeddingSupport.WARN_ARGUMENTS_IGNORED));
+    }
+
+    @Test
+    public void aMethodThatCannotBeAnEntryPointIsReportedWithTheRunnersMessage() throws IOException {
+        compileAndStore(helloModule("Refused"));
+        int       consoles = support.registeredConsoles();
+        ErrorList errs     = new ErrorList(25);
+        Control   control  = support.runMethod(input(), "Refused", null, new EntryPoint("absent"),
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
+
+        assertNull(control);
+        // the reason alone, as xtc run reports it, rather than a failure to create the container
+        assertEquals(List.of(EmbeddingSupport.ERR_ENTRY_METHOD),
+                errs.getErrors().stream().map(ErrorInfo::getCode).toList());
+        assertEquals("Missing method \"absent\" in module Refused", errs.getErrors().getFirst().getMessageText());
+        assertEquals(consoles, support.registeredConsoles());
     }
 
     @Test
@@ -697,6 +728,20 @@ public class EmbeddingSupportTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
         }
         return output.toString();
+    }
+
+    /**
+     * Run an entry method to its end, and return what the run reported.
+     */
+    private ErrorList runReporting(String moduleName, EntryPoint entry) {
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.runMethod(input(), moduleName, null, entry,
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
+        assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+        return errs;
     }
 
     private static String readerModule(String moduleName) {

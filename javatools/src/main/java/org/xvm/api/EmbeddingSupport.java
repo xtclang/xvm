@@ -1300,7 +1300,8 @@ public class EmbeddingSupport {
      * Create a runtime container and invoke the specified entry method of a module.
      *
      * <p>The method is selected the way the command-line runner selects it, as described for
-     * {@link #entryMethod} and {@link #passesArguments}.
+     * {@link #entryMethod} and {@link #passesArguments}. A method that cannot be an entry point is
+     * reported as {@link #ERR_ENTRY_METHOD}, with the command-line runner's message.
      *
      * @param input       the ModuleRepository providing any necessary modules
      * @param moduleName  the module name to execute; must be loadable from "input"
@@ -1415,7 +1416,9 @@ public class EmbeddingSupport {
      * does. The arguments are a single value, an array for the first parameter, so any further
      * parameters must have default values. The array is passed when the method requires it, or
      * when it is not empty and the method has a parameter. Otherwise nothing is passed, and a
-     * default value of the parameter applies.
+     * default value of the parameter applies. Arguments for a method without parameters are
+     * dropped, and {@link #runMethod} reports {@link #WARN_ARGUMENTS_IGNORED}, as the command-line
+     * runner warns of them.
      *
      * @param method  the entry method, as found by {@link #entryMethod}
      * @param entry   the entry method's name and the supplied arguments
@@ -1454,7 +1457,15 @@ public class EmbeddingSupport {
      */
     public static final String ERR_INTERNAL             = "EMB-5";
     /**
+     * "%1" - name of the entry method
+     */
+    public static final String WARN_ARGUMENTS_IGNORED   = "EMB-6";
+    /**
+     * "%1" - why the module's entry method cannot be run, as the command-line runner reports it
+     */
+    public static final String ERR_ENTRY_METHOD         = "EMB-7";
+    /**
      * The source does not contain a module declaration.
      */
-    public static final String ERR_MODULE_SOURCE        = "EMB-6";
+    public static final String ERR_MODULE_SOURCE        = "EMB-8";
 }
