@@ -92,6 +92,8 @@ public class RegisteredChildFieldsTest {
 
     /** Supplies an inherited child field that must participate in traversal and copying. */
     private abstract static class Parent extends Statement {
+        private Expression receiver;
+
         Parent(Expression receiver) {
             this.receiver = adopt(receiver);
         }
@@ -120,12 +122,15 @@ public class RegisteredChildFieldsTest {
         public String toString() {
             return "registered children";
         }
-
-        private Expression receiver;
     }
 
     /** Combines inherited and local registered children with a deliberately unregistered expression. */
     private static final class Child extends Parent {
+        private List<Expression> arguments;
+        private final Expression unregistered = name("unregistered");
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Child.class, "receiver", "arguments");
+
         Child(Expression receiver, List<Expression> arguments) {
             super(receiver);
             this.arguments = new ArrayList<>(arguments);
@@ -136,10 +141,5 @@ public class RegisteredChildFieldsTest {
         protected Field[] getChildFields() {
             return CHILD_FIELDS;
         }
-
-        private List<Expression> arguments;
-        private final Expression unregistered = name("unregistered");
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Child.class, "receiver", "arguments");
     }
 }
