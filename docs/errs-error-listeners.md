@@ -571,7 +571,7 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
 3. The [bounded diagnostic audit](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23)
    now covers `@Parsed`: runtime arguments exposed a false constructor error in reporting metadata,
    fixed without weakening actual annotation validation. A non-module root now reports positioned
-   `EMB-6` instead of losing its console-only explanation and synthesizing `EMB-5`. Historical
+   `EMB-8` (`EMB-6` until #703 took that code) instead of losing its console-only explanation and synthesizing `EMB-5`. Historical
    suppression counts are not an exhaustive proof. I4 now fixes the reproduced bound-generic
    typing/binary-AST failure. The [atomic/switch audit](errs-audit.md#atomic-binary-ast-and-switch-conversion-audit-2026-09-24)
    fixes existing atomic result/owner metadata and unhandled access cases, with no listener changes.
