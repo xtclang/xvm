@@ -493,6 +493,9 @@ class SemanticModel
         }
 
         internal companion object {
+            private val SOURCE_ORDER = compareBy(Range::start, Range::end)
+            private val INNERMOST = compareByDescending(Range::start).thenBy(Range::end)
+
             /**
              * Merge detached tables after the compiler worker has proven cross-module identity aliases.
              */
@@ -572,8 +575,5 @@ class SemanticModel
                     )
                 }
             }
-
-            private val SOURCE_ORDER = compareBy(Range::start, Range::end)
-            private val INNERMOST = compareByDescending(Range::start).thenBy(Range::end)
         }
     }

@@ -13,6 +13,9 @@ import java.util.concurrent.atomic.AtomicReference
 internal class ClientTrace(
     private val client: () -> LanguageClient?,
 ) : AutoCloseable {
+    private val level = AtomicReference(Level.OFF)
+    private val closed = AtomicBoolean()
+
     /** Protocol trace verbosity negotiated with the client through initialize and setTrace. */
     private enum class Level(
         val value: String,
@@ -21,9 +24,6 @@ internal class ClientTrace(
         MESSAGES("messages"),
         VERBOSE("verbose"),
     }
-
-    private val level = AtomicReference(Level.OFF)
-    private val closed = AtomicBoolean()
 
     fun configure(value: String?) {
         Level.entries.firstOrNull { it.value == value }?.let(level::set)

@@ -7,6 +7,8 @@ import java.util.concurrent.atomic.AtomicReference
  * no compiler, AST, constant pool or refactoring authorization survives here.
  */
 internal class XdkNavigationIndex {
+    private val current = AtomicReference(Snapshot())
+
     /** Module source inputs and dependency revisions determining reusable navigation facts. */
     data class Key(
         val name: String,
@@ -35,8 +37,6 @@ internal class XdkNavigationIndex {
         val builds: Map<String, Build> = emptyMap(),
         val navigation: Map<String, XdkWorkspaceNavigation> = emptyMap(),
     )
-
-    private val current = AtomicReference(Snapshot())
 
     fun snapshot(): Snapshot = current.get()
 
