@@ -43,8 +43,6 @@ import static org.xvm.api.EmbeddingSupport.ERR_ENTRY_METHOD;
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
 import static org.xvm.api.EmbeddingSupport.WARN_ARGUMENTS_IGNORED;
 
-import static org.xvm.util.Severity.WARNING;
-
 /**
  * Interpreter-backed management and monitoring for one runner task.
  */
@@ -93,7 +91,7 @@ class InterpreterControl
             }
             if (!entry.args().isEmpty() && method.getParamCount() == 0) {
                 // the arguments are dropped, with the command-line runner's warning
-                errs.log(WARNING, WARN_ARGUMENTS_IGNORED, at(module), entry.name());
+                errs.warn(WARN_ARGUMENTS_IGNORED, at(module), entry.name());
             }
 
             if (console != null) {
