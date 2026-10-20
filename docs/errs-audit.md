@@ -687,7 +687,8 @@ eight added cases in `TypeInfoFinalCompositionTest` cover:
 The file-discovery check also reproduced a reporting defect: a file containing `class NotModule {}`
 reached the embedding compiler's module-root check, which used a console-only message. The host
 then saw a synthesized internal error instead of the source problem. The embedding check now emits
-`EMB-6` through the structured listener at the offending declaration. `EmbeddingDiagnosticsTest`
+`EMB-8` (`EMB-6` until 2026-10-20, when the runtime pull request #703 took `EMB-6` and `EMB-7`)
+through the structured listener at the offending declaration. `EmbeddingDiagnosticsTest`
 covers file and in-memory entry points, including source ranges, and verifies that malformed source
 beside an unreadable `.xtc` retains its parser diagnostics while valid source still compiles. Discovery
 fallback remains intentional; loading a corrupt dependency through a repository remains a visible
