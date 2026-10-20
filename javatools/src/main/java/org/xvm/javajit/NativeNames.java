@@ -162,12 +162,6 @@ public class NativeNames {
         reservedMethodName.put("temporal.Timer/schedule/3", "schedule");
         reservedMethodName.put("temporal.Timer/stop/0",     "stop");
         reservedMethodName.put("temporal.Timer/reset/0",    "reset");
-
-        // JavaTools Bridge _native types
-        reservedMethodName.put("temporal.NanosTimer/start/0",    "start");
-        reservedMethodName.put("temporal.NanosTimer/schedule/3", "schedule");
-        reservedMethodName.put("temporal.NanosTimer/stop/0",     "stop");
-        reservedMethodName.put("temporal.NanosTimer/reset/0",    "reset");
     }
 
     /**
