@@ -8,6 +8,14 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** Observes the existing worker; no compiler work or future completion runs under this lock. */
 internal class CompilerQueueTrace {
+    private val queue = queues.incrementAndGet()
+    private val lock = Any()
+    private val submitted = AtomicLong()
+    private val enqueued = AtomicLong()
+    private val started = AtomicLong()
+    private val jobs = linkedMapOf<Long, Job>()
+    private val readyOrder = linkedSetOf<Long>()
+
     /** Scheduling phase reported for a compiler request before and during execution. */
     private enum class Phase {
         DEBOUNCING,
@@ -21,14 +29,6 @@ internal class CompilerQueueTrace {
         val submission: Long,
         val phase: Phase,
     )
-
-    private val queue = queues.incrementAndGet()
-    private val lock = Any()
-    private val submitted = AtomicLong()
-    private val enqueued = AtomicLong()
-    private val started = AtomicLong()
-    private val jobs = linkedMapOf<Long, Job>()
-    private val readyOrder = linkedSetOf<Long>()
 
     fun task(
         kind: String,
