@@ -66,12 +66,15 @@ module runner.xtclang.org {
      * @param repository  the repository used to resolve the module's dependencies
      * @param consoleId   the optional ID of the named native console resource
      * @param rootDir     the optional file-system root for the task
+     * @param method      (optional) the name of the method to invoke in the module; `run` by default
+     * @param args        (optional) the argument array to pass to that method; `Null` to pass none
      *
      * @return the task identifier
      */
     Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                     String? rootDir = Null) =
-            TaskRegistry.registerTask(template, repository, consoleId, rootDir=rootDir);
+                     String? rootDir = Null, String method = "run", String[]? args = Null) =
+            TaskRegistry.registerTask(template, repository, consoleId, rootDir=rootDir,
+                                      method=method, args=args);
 
     /**
      * Start the identified task.
@@ -109,9 +112,11 @@ module runner.xtclang.org {
          * Implementation of the `registerTask` API.
          */
         Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                         Boolean retainStore = True, String? rootDir = Null) {
+                         Boolean retainStore = True, String? rootDir = Null, String method = "run",
+                         String[]? args = Null) {
             Int  id   = nextTaskId++;
-            Task task = new Task(id, template, repository, consoleId, retainStore, rootDir);
+            Task task = new Task(id, template, repository, consoleId, retainStore, rootDir, method,
+                                 args);
             tasks[id] = task;
             return id;
         }
@@ -204,7 +209,7 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                 Boolean retainStore, String? rootDir) {
+                 Boolean retainStore, String? rootDir, String method, String[]? args) {
         private Container? container;
 
         private Time? started;
@@ -229,55 +234,70 @@ module runner.xtclang.org {
             @Inject Clock clock;
             started = clock.now;
 
-            Directory taskDir;
-            if (String path ?= rootDir) {
-                @Inject FileStore storage;
-                taskDir = storage.dirFor(new Path(path)).ensure();
-            } else {
-                taskDir = taskRoot().dirFor(taskDirectoryName(template.name, id)).ensure();
-            }
-
-            BufferedConsole? bufferedConsole = Null;
-            Console          taskConsole;
-            if (Int consoleId ?= this.consoleId) {
-                @Inject(resourceName=$"console_{consoleId}") Console console;
-                taskConsole = console;
-            } else {
-                @Inject Console console;
-                bufferedConsole = new BufferedConsole($"{id}> ", console);
-                taskConsole = &bufferedConsole.maskAs(Console);
-            }
-
-            ResourceProvider injector = new TaskResourceProvider(taskDir, taskConsole);
-
-            container = new Container(template, Lightweight, repository, injector);
-            running   = True;
-
-            @Future Tuple<Int, String> completion;
-            @Future Tuple              outcome = container.as(Container).invoke("run", ());
-            &outcome.whenComplete((tuple, exception) -> {
-                Int    result  = 0;
-                String failure = "";
-                if (exception == Null) {
-                    if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
-                        result = tuple[0].as(Int);
-                    }
-                    bufferedConsole?.flush();
+            // a task that cannot start ends here, and is unregistered so its directory can be
+            // deleted; once started, the completion handler below does the same
+            try {
+                Directory taskDir;
+                if (String path ?= rootDir) {
+                    @Inject FileStore storage;
+                    taskDir = storage.dirFor(new Path(path)).ensure();
                 } else {
-                    failure = exception.toString();
-                    taskConsole.print($"Unhandled exception: {failure}");
+                    taskDir = taskRoot().dirFor(taskDirectoryName(template.name, id)).ensure();
                 }
 
-                running    = False;
-                container  = Null;
-                completion = (result, failure);
-                TaskRegistry.unregisterTask^(id);
+                BufferedConsole? bufferedConsole = Null;
+                Console          taskConsole;
+                if (Int consoleId ?= this.consoleId) {
+                    @Inject(resourceName=$"console_{consoleId}") Console console;
+                    taskConsole = console;
+                } else {
+                    @Inject Console console;
+                    bufferedConsole = new BufferedConsole($"{id}> ", console);
+                    taskConsole = &bufferedConsole.maskAs(Console);
+                }
 
+                ResourceProvider injector = new TaskResourceProvider(taskDir, taskConsole);
+
+                container = new Container(template, Lightweight, repository, injector);
+                running   = True;
+
+                // the host decides from the method's signature whether an argument array is passed
+                Tuple callArgs = args == Null ? () : (args);
+
+                @Future Tuple<Int, String> completion;
+                @Future Tuple              outcome = container.as(Container).invoke(method, callArgs);
+                &outcome.whenComplete((tuple, exception) -> {
+                    Int    result  = 0;
+                    String failure = "";
+                    if (exception == Null) {
+                        if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
+                            result = tuple[0].as(Int);
+                        }
+                        bufferedConsole?.flush();
+                    } else {
+                        failure = exception.toString();
+                        taskConsole.print($"Unhandled exception: {failure}");
+                    }
+
+                    running    = False;
+                    container  = Null;
+                    completion = (result, failure);
+                    TaskRegistry.unregisterTask^(id);
+
+                    if (!retainStore) {
+                        TaskRegistry.deleteTaskDirectory^(id, template.name);
+                    }
+                });
+                return completion;
+            } catch (Exception e) {
+                running   = False;
+                container = Null;
+                TaskRegistry.unregisterTask(id);
                 if (!retainStore) {
-                    TaskRegistry.deleteTaskDirectory^(id, template.name);
+                    TaskRegistry.deleteTaskDirectory(id, template.name);
                 }
-            });
-            return completion;
+                throw e;
+            }
         }
 
         void kill() {

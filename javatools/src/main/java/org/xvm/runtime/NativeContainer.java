@@ -416,6 +416,14 @@ public class NativeContainer
         f_mapResources.remove(key);
     }
 
+    /**
+     * @return a snapshot of the names of the native resources this container supplies, for
+     *         diagnostics such as counting the registered external consoles
+     */
+    public Set<String> getResourceNames() {
+        return Set.copyOf(f_mapResourceNames.keySet());
+    }
+
     public ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts) {
         ObjectHandle hStorage = m_hOSStorage;
         if (hStorage == null) {

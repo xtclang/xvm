@@ -1,6 +1,8 @@
 package org.xvm.api;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.time.Instant;
@@ -8,17 +10,25 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.InstantRepository;
 
+import org.xvm.runtime.template._native.io.xExternalConsole;
+
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -114,6 +124,19 @@ public class EmbeddingSupport {
             }
             return connector;
         }
+    }
+
+    /**
+     * Diagnostics for a host that keeps the runtime across runs: the external consoles that runs
+     * registered and that are still registered. A run releases its console when it ends, so this is
+     * zero between runs; JIT runs register none.
+     *
+     * @return the number of registered external consoles
+     */
+    public int registeredConsoles() {
+        return ensureConnector() instanceof InterpreterConnector interpreter
+                ? xExternalConsole.registeredCount(interpreter.getNativeContainer())
+                : 0;
     }
 
     // ----- API -----------------------------------------------------------------------------------
@@ -217,6 +240,65 @@ public class EmbeddingSupport {
     }
 
     /**
+     * The host's input for an embedded application's console.
+     */
+    @FunctionalInterface
+    public interface ConsoleInput {
+        /**
+         * Input for a console that has none: reading a line is unsupported.
+         */
+        ConsoleInput NONE = _ -> {
+            throw new UnsupportedOperationException("The console has no input");
+        };
+
+        /**
+         * Read the next line. The runtime calls this on one of its IO threads, so it may block
+         * until the host has a line.
+         *
+         * @param suppressEcho  true when the application asks that the line not be shown as it is
+         *                      typed, as for a password; how to honor that is up to the host
+         *
+         * @return the line, or null at the end of the input
+         *
+         * @throws UnsupportedOperationException if this console has no input, as for {@link #NONE}
+         */
+        String readLine(boolean suppressEcho) throws IOException;
+
+        /**
+         * @return input that reads lines from the specified reader and ignores "suppressEcho"
+         */
+        static ConsoleInput of(BufferedReader reader) {
+            Objects.requireNonNull(reader, "reader");
+            return _ -> reader.readLine();
+        }
+    }
+
+    /**
+     * The method to invoke as a module's entry point, and the arguments to pass it.
+     *
+     * @param name  the name of the entry method, conventionally "run"
+     * @param args  the arguments for the entry method; never shell-parsed
+     */
+    public record EntryPoint(String name, List<String> args) {
+        /**
+         * The conventional entry point: "run", with no arguments.
+         */
+        public static final EntryPoint RUN = new EntryPoint("run");
+
+        public EntryPoint {
+            Objects.requireNonNull(name, "name");
+            args = List.copyOf(args);
+        }
+
+        /**
+         * Create an entry point for the specified method and arguments.
+         */
+        public EntryPoint(String name, String... args) {
+            this(name, List.of(args));
+        }
+    }
+
+    /**
      * Represents management and monitoring information about a running Ecstasy module.
      */
     public interface Control
@@ -250,6 +332,8 @@ public class EmbeddingSupport {
 
         /**
          * Stop the app if necessary, wait for it to terminate, and release all of its resources.
+         * Closing again, also from another thread while the first close is in progress, returns
+         * once the first close is done.
          */
         @Override
         void close();
@@ -322,6 +406,48 @@ public class EmbeddingSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             ErrorListener             errs) {
+        if (injections != null && !injections.isEmpty() || customInjector != null) {
+            throw new UnsupportedOperationException("Custom injectors are not implemented yet");
+        }
+        return runMethod(input, moduleName, version, EntryPoint.RUN, console, ConsoleInput.NONE,
+                rootDir, errs);
+    }
+
+    /**
+     * Create a runtime container and invoke the specified entry method of a module.
+     *
+     * <p>The method is selected the way the command-line runner selects it, as described for
+     * {@link #entryMethod} and {@link #passesArguments}. A method that cannot be an entry point is
+     * reported as {@link #ERR_ENTRY_METHOD}, with the command-line runner's message.
+     *
+     * @param input       the ModuleRepository providing any necessary modules
+     * @param moduleName  the module name to execute; must be loadable from "input"
+     * @param version     (optional) the version of the module to load
+     * @param entry       the entry method to invoke and its arguments, such as
+     *                    {@link EntryPoint#RUN}
+     * @param console     (optional) the PrintWriter for the executing application
+     * @param consoleIn   the input for the application's console, or {@link ConsoleInput#NONE}:
+     *                    each {@code Console.readLine()} reads one line from it, and its end reads
+     *                    as an empty line. Used only with a console
+     * @param rootDir     (optional) the root directory for the application's file system, as
+     *                    described for {@link #run(ModuleStructure, PrintWriter, File, Map, ErrorListener)}
+     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     *                    other errors
+     *
+     * @return a Control object for the running module, or null if it could not be started, in
+     *         which case the reason is reported to "errs"
+     */
+    public Control runMethod(
+            ModuleRepository input,
+            String           moduleName,
+            Version          version,
+            EntryPoint       entry,
+            PrintWriter      console,
+            ConsoleInput     consoleIn,
+            File             rootDir,
+            ErrorListener    errs) {
+        Objects.requireNonNull(entry, "entry");
+        Objects.requireNonNull(consoleIn, "consoleIn");
         verifyConfigured();
 
         ModuleRepository repository = new LinkedRepository(input, cfgRepo);
@@ -336,17 +462,16 @@ public class EmbeddingSupport {
             return null;
         }
 
-        if (injections != null && !injections.isEmpty()
-                || customInjector != null || cfgInjector != null) {
-            throw new UnsupportedOperationException(
-                    "Custom injectors are not implemented yet");
+        if (cfgInjector != null) {
+            throw new UnsupportedOperationException("Custom injectors are not implemented yet");
         }
 
         try {
             Connector connector = ensureConnector();
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
-                    : InterpreterControl.create(connector, module, repository, console, rootDir, errs);
+                    : InterpreterControl.create(connector, module, repository, entry, console,
+                            consoleIn, rootDir, errs);
         } catch (RuntimeException | AssertionError e) {
             // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
             // assertion in the structure code past this report and out to the host. Errors are
@@ -358,6 +483,74 @@ public class EmbeddingSupport {
             }
             return null;
         }
+    }
+
+    /**
+     * Find the entry method of a module, as the command-line runner does: exactly one method of
+     * that name must exist on the module type, including the methods its annotations contribute.
+     * Functions are not entry points. The module must be linked: {@link FileStructure#isLinked()}
+     * must be true for {@code module.getFileStructure()}, since the methods of its type depend on
+     * its dependencies.
+     *
+     * @param module  the linked module to run
+     * @param entry   the entry method's name and the supplied arguments
+     *
+     * @return the entry method; {@link #passesArguments} tells whether it is passed the arguments
+     *
+     * @throws IllegalStateException     if the module is not linked
+     * @throws IllegalArgumentException  if the method is missing or ambiguous, or if it cannot be
+     *                                   called with the arguments
+     */
+    static MethodStructure entryMethod(ModuleStructure module, EntryPoint entry) {
+        if (!module.getFileStructure().isLinked()) {
+            throw new IllegalStateException("Module " + module.getName() + " is not linked");
+        }
+
+        String       methodName = entry.name();
+        ConstantPool pool       = module.getConstantPool();
+        try (var _ = ConstantPool.withPool(pool)) {
+            Set<MethodStructure> methods = Connector.findMethods(module.getIdentityConstant(), methodName);
+            if (methods.size() != 1) {
+                throw new IllegalArgumentException((methods.isEmpty() ? "Missing" : "Ambiguous")
+                        + " method " + quoted(methodName) + " in module " + module.getName());
+            }
+
+            MethodStructure method = methods.iterator().next();
+            if (method.getRequiredParamCount() > 1) {
+                throw new IllegalArgumentException("Unsupported arguments for method " + quoted(methodName)
+                        + ": " + method.getIdentityConstant().getSignature().getValueString());
+            }
+
+            // as for the command-line runner, the parameter may be of any type a String[] can be
+            // passed as, such as Object or List<String>
+            if (passesArguments(method, entry)) {
+                TypeConstant typeArg = method.getParam(0).getType();
+                if (!pool.ensureArrayType(pool.typeString()).isA(typeArg)) {
+                    throw new IllegalArgumentException("Unsupported argument type "
+                            + typeArg.getValueString() + " for method " + quoted(methodName));
+                }
+            }
+            return method;
+        }
+    }
+
+    /**
+     * Decide whether an entry method is passed the supplied arguments, as the command-line runner
+     * does. The arguments are a single value, an array for the first parameter, so any further
+     * parameters must have default values. The array is passed when the method requires it, or
+     * when it is not empty and the method has a parameter. Otherwise nothing is passed, and a
+     * default value of the parameter applies. Arguments for a method without parameters are
+     * dropped, and {@link #runMethod} reports {@link #WARN_ARGUMENTS_IGNORED}, as the command-line
+     * runner warns of them.
+     *
+     * @param method  the entry method, as found by {@link #entryMethod}
+     * @param entry   the entry method's name and the supplied arguments
+     *
+     * @return true to pass the arguments as an array; false to pass nothing
+     */
+    static boolean passesArguments(MethodStructure method, EntryPoint entry) {
+        return method.getRequiredParamCount() == 1
+                || !entry.args().isEmpty() && method.getParamCount() > 0;
     }
 
     // ----- constants -----------------------------------------------------------------------------
@@ -386,4 +579,12 @@ public class EmbeddingSupport {
      * "%2" - additional description (may be null)
      */
     public static final String ERR_INTERNAL             = "EMB-5";
+    /**
+     * "%1" - name of the entry method
+     */
+    public static final String WARN_ARGUMENTS_IGNORED   = "EMB-6";
+    /**
+     * "%1" - why the module's entry method cannot be run, as the command-line runner reports it
+     */
+    public static final String ERR_ENTRY_METHOD         = "EMB-7";
 }

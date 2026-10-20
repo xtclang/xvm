@@ -9,10 +9,12 @@ import java.io.PrintWriter;
 import java.time.Instant;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -35,9 +37,12 @@ import org.xvm.runtime.template._native.io.xExternalConsole;
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
+import static org.xvm.api.EmbeddingSupport.ERR_ENTRY_METHOD;
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
+import static org.xvm.api.EmbeddingSupport.WARN_ARGUMENTS_IGNORED;
 
 import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.WARNING;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.
@@ -51,16 +56,21 @@ class InterpreterControl
         InterpreterConnector connector = new InterpreterConnector(repository);
         connector.loadModule("runner.xtclang.org");
         connector.start(null);
-        connector.getMainContainer().invokeAsync("run").join();
         return connector;
     }
 
     /**
      * Create and start a control for the specified module.
+     *
+     * @param entry       the entry method to invoke and its arguments
+     * @param consoleIn   the console's input, or {@link EmbeddingSupport.ConsoleInput#NONE};
+     *                    used only with a console
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
-                                           ModuleRepository repository, PrintWriter console,
-                                           File rootDir, ErrorListener errs) {
+                                           ModuleRepository repository,
+                                           EmbeddingSupport.EntryPoint entry, PrintWriter console,
+                                           EmbeddingSupport.ConsoleInput consoleIn, File rootDir,
+                                           ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }
@@ -69,11 +79,27 @@ class InterpreterControl
         Long    consoleId = null;
 
         try {
-            FileStructure file = prepareModule(interpreter, module, repository);
-            MainContainer main = interpreter.getMainContainer();
+            FileStructure   file = prepareModule(interpreter, module, repository);
+            MainContainer   main = interpreter.getMainContainer();
+            MethodStructure method;
+            try {
+                method = EmbeddingSupport.entryMethod(file.getModule(), entry);
+            } catch (IllegalArgumentException e) {
+                // the method is why the run does not start, as the command-line runner reports it;
+                // its container was never the problem
+                if (errs != null) {
+                    errs.log(ERROR, ERR_ENTRY_METHOD, new Object[] {e.getMessage()}, module);
+                }
+                return null;
+            }
+            if (errs != null && !entry.args().isEmpty() && method.getParamCount() == 0) {
+                // the arguments are dropped, with the command-line runner's warning
+                errs.log(WARNING, WARN_ARGUMENTS_IGNORED, new Object[] {entry.name()}, module);
+            }
 
             if (console != null) {
-                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console);
+                consoleId = xExternalConsole.register(interpreter.getNativeContainer(), console,
+                        consoleIn::readLine);
             }
 
             ObjectHandle hModule     = xRTModuleTemplate.makeHandle(main, file.getModule());
@@ -84,10 +110,14 @@ class InterpreterControl
             ObjectHandle hRootDir    = rootDir == null
                     ? xNullable.NULL
                     : xString.makeHandle(rootDir.getAbsolutePath());
+            ObjectHandle hMethod     = xString.makeHandle(entry.name());
+            ObjectHandle hArgs       = EmbeddingSupport.passesArguments(method, entry)
+                    ? xString.makeArrayHandle(entry.args().toArray(String[]::new))
+                    : xNullable.NULL;
 
             ObjectHandle hTaskId = postRequest(
                     interpreter, "registerTask",
-                    hModule, hRepository, hConsoleId, hRootDir).join();
+                    hModule, hRepository, hConsoleId, hRootDir, hMethod, hArgs).join();
             long taskId = ((JavaLong) hTaskId).getValue();
 
             CompletableFuture<Void> completion = new CompletableFuture<>();
@@ -206,18 +236,43 @@ class InterpreterControl
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {
+            // another close stops and releases the run: return once it is done, not while the
+            // run may still be going
+            released.join();
             return;
         }
 
-        if (running) {
-            postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
-        }
-        completion.join();
+        try {
+            if (running) {
+                try {
+                    postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
+                } catch (CompletionException e) {
+                    // the run can end after the check above and before the runner gets the
+                    // request, which then finds no task to stop
+                    if (!"terminated".equals(taskStatus())) {
+                        throw e;
+                    }
+                }
+            }
+            // wait for completion without rethrowing its failure so close() can release resources
+            completion.exceptionally(_ -> null).join();
 
-        if (rootDir == null) {
-            postRequest(connector, "deleteTaskDirectory", xInt64.makeHandle(taskId),
-                    xString.makeHandle(module.getSimpleName())).join();
+            if (rootDir == null) {
+                postRequest(connector, "deleteTaskDirectory", xInt64.makeHandle(taskId),
+                        xString.makeHandle(module.getSimpleName())).join();
+            }
+        } finally {
+            released.complete(null);
         }
+    }
+
+    /**
+     * @return the runner's status of the task: "running", "stopped" or "terminated" once the
+     *         task has ended and is no longer registered
+     */
+    private String taskStatus() {
+        return ((StringHandle) postRequest(connector, "taskStatus", xInt64.makeHandle(taskId))
+                .join()).getStringValue();
     }
 
     private final InterpreterConnector    connector;
@@ -228,7 +283,8 @@ class InterpreterControl
     private final Long                    consoleId;
     private final Instant                 started;
     private final CompletableFuture<Void> completion;
-    private final AtomicBoolean           closed = new AtomicBoolean();
+    private final AtomicBoolean           closed   = new AtomicBoolean();
+    private final CompletableFuture<Void> released = new CompletableFuture<>();
 
     private volatile boolean running = true;
     private volatile Instant stopped;
