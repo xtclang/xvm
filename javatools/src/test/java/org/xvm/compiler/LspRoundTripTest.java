@@ -35,6 +35,25 @@ import static org.xvm.asm.ErrorListener.collecting;
  * severity, a code, a message, and a range in a named document.
  */
 public class LspRoundTripTest {
+    private static final String URI_A = "file:///Untitled-1.x";
+    private static final String URI_B = "file:///Untitled-2.x";
+
+    private static final String BROKEN_A = """
+            module A {
+                void run() {
+                    console.print("no semicolon")
+                }
+            }
+            """;
+
+    private static final String BROKEN_B = """
+            module B {
+                void run() {
+                    Int x = ;
+                }
+            }
+            """;
+
     /**
      * The minimum a problem view needs: which file, which line and column, how bad, and why.
      */
@@ -131,23 +150,4 @@ public class LspRoundTripTest {
         assertEquals(2, first.startLine(), "zero-based line 2 is the console.print line");
         assertTrue(first.startCol() > 0, "and it is not column zero");
     }
-
-    private static final String URI_A = "file:///Untitled-1.x";
-    private static final String URI_B = "file:///Untitled-2.x";
-
-    private static final String BROKEN_A = """
-            module A {
-                void run() {
-                    console.print("no semicolon")
-                }
-            }
-            """;
-
-    private static final String BROKEN_B = """
-            module B {
-                void run() {
-                    Int x = ;
-                }
-            }
-            """;
 }
