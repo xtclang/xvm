@@ -26,6 +26,9 @@ import static org.xvm.asm.ErrorList.UNLIMITED;
  * report would have vanished with no trace.
  */
 public class ParserAttemptTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = Parser.MISSING_SEMICOLON;
+
     /**
      * A kept attempt's diagnostics reach the caller.
      */
@@ -175,7 +178,4 @@ public class ParserAttemptTest {
             assertEquals(1, errors.getErrors().size());
         });
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = Parser.MISSING_SEMICOLON;
 }
