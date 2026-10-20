@@ -18,6 +18,7 @@ import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -41,6 +42,7 @@ import org.xvm.asm.ModuleStructure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,8 +51,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
- * a file system, failures, closing a run, also as it ends and from two threads at once, how the
- * entry method is selected and what it is passed, exact arguments, and console input. The compiled XDK modules come from the test resources, where
+ * a file system, failures, closing a run, how the entry method is selected and what it is passed,
+ * exact arguments, console input, changed modules and dependencies, and what repeated runs leave
+ * in the runtime's constant pools. The compiled XDK modules come from the test resources, where
  * the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
  */
 public class EmbeddingSupportTest {
@@ -434,6 +437,85 @@ public class EmbeddingSupportTest {
     }
 
     @Test
+    public void additionalInjectionsAndCustomInjectorsAreRefused() {
+        ModuleStructure module = compile(helloModule("Injected"));
+        ErrorList       errs   = new ErrorList(25);
+
+        assertThrows(UnsupportedOperationException.class, () -> support.run(module,
+                new PrintWriter(new StringWriter(), true), rootDir.toFile(),
+                Map.of("name", List.of("value")), errs));
+        assertThrows(UnsupportedOperationException.class, () -> support.run(input(), "Injected",
+                null, new PrintWriter(new StringWriter(), true), rootDir.toFile(), null,
+                "Injected:Injector", errs));
+    }
+
+    @Test
+    public void aChangedModuleOfTheSameNameRunsItsNewCode() throws IOException {
+        for (int version = 1; version <= 2; version++) {
+            compileAndStore(itemModule("Edited", version));
+            String output = run("Edited", "run", List.of(), ConsoleInput.NONE);
+            assertTrue(output.contains("item " + version + " v" + version), output);
+        }
+    }
+
+    @Test
+    public void aModuleRunsWithTheCurrentVersionOfItsDependency() throws IOException {
+        compileAndStore(libraryModule("v1"));
+        new DirRepository(dirOut.toFile(), false).storeModule(compile("""
+                module Consumer {
+                    package library import Library;
+                    void run() {
+                        @Inject Console console;
+                        console.print($"library {library.label()}");
+                    }
+                }
+                """, input()));
+        String output = run("Consumer", "run", List.of(), ConsoleInput.NONE);
+        assertTrue(output.contains("library v1"), output);
+
+        // Consumer is not compiled again
+        compileAndStore(libraryModule("v2"));
+        output = run("Consumer", "run", List.of(), ConsoleInput.NONE);
+        assertTrue(output.contains("library v2"), output);
+    }
+
+    @Test
+    public void repeatedRunsGrowTheRuntimePoolsOnlyForANewCoreTypeArgument() throws IOException {
+        // the first run of a module may add constants to the two pools that outlive a run: the
+        // native container's, which every run shares, and the runner's
+        compileAndStore(itemModule("Steady", 0));
+        run("Steady", "run", List.of(), ConsoleInput.NONE);
+        PoolSizes before = poolSizes();
+
+        // running it again, changed under the same name, or running other modules whose type
+        // arguments are classes of their own adds none
+        run("Steady", "run", List.of(), ConsoleInput.NONE);
+        for (int version = 1; version <= 2; version++) {
+            compileAndStore(itemModule("Steady", version));
+            run("Steady", "run", List.of(), ConsoleInput.NONE);
+        }
+        for (int i = 0; i < 2; i++) {
+            compileAndStore(itemModule("Other" + i, 0));
+            run("Other" + i, "run", List.of(), ConsoleInput.NONE);
+        }
+        assertEquals(before, poolSizes());
+
+        // a type argument from the core library is shared: the first module to use it adds the
+        // types it makes to the native pool (14 constants for these in October 2026), and the
+        // next module adds none
+        compileAndStore(coreTypeArgumentModule("FirstUse", "UInt16"));
+        run("FirstUse", "run", List.of(), ConsoleInput.NONE);
+        PoolSizes afterFirstUse = poolSizes();
+        int       added         = afterFirstUse.nativePool() - before.nativePool();
+        assertTrue(added > 0 && added <= 100, () -> "a new type argument added " + added + " constants");
+        assertEquals(before.runnerPool(), afterFirstUse.runnerPool());
+
+        compileAndStore(coreTypeArgumentModule("SecondUse", "UInt16"));
+        run("SecondUse", "run", List.of(), ConsoleInput.NONE);
+        assertEquals(afterFirstUse, poolSizes());
+    }
+
+    @Test
     public void aCloseWhileAnotherIsInProgressReturnsWhenTheRunHasEnded() {
         ModuleStructure module = compile("""
                 module Closing {
@@ -473,7 +555,7 @@ public class EmbeddingSupportTest {
     }
 
     @Test
-    public void closingARunAsItEndsOnItsOwnEndsItOnce() throws IOException {
+    public void closingARunAsItEndsOnItsOwnEndsItOnceAndLeavesNothingBehind() throws IOException {
         compileAndStore("""
                 module Ending {
                     void run() {
@@ -483,6 +565,7 @@ public class EmbeddingSupportTest {
                     }
                 }
                 """);
+        int consoles = support.registeredConsoles();
         for (int i = 0; i < 10; i++) {
             CountDownLatch            waiting = new CountDownLatch(1);
             CompletableFuture<String> line    = new CompletableFuture<>();
@@ -501,6 +584,7 @@ public class EmbeddingSupportTest {
             assertNotNull(control.whenStopped());
             Long result = control.result();
             assertTrue(result == null || result == 0L, () -> "result " + result);
+            assertEquals(consoles, support.registeredConsoles());
 
             // closing again changes nothing
             control.close();
@@ -534,6 +618,56 @@ public class EmbeddingSupportTest {
                     }
                 }
                 """.formatted(moduleName, moduleName);
+    }
+
+    /**
+     * A module with a class of its own, used as a type argument, that prints its version.
+     */
+    private static String itemModule(String moduleName, int version) {
+        return """
+                module %s {
+                    class Item(Int n) {
+                        String describe() = $"item {n} v%d";
+                    }
+                    void run() {
+                        @Inject Console console;
+                        Map<String, Item> items = new HashMap();
+                        items.put("a", new Item(%d));
+                        console.print(items["a"]?.describe() : "none");
+                    }
+                }
+                """.formatted(moduleName, version, version);
+    }
+
+    private static String libraryModule(String label) {
+        return """
+                module Library {
+                    String label() = "%s";
+                }
+                """.formatted(label);
+    }
+
+    /**
+     * A module that makes types with a type argument from the core library.
+     */
+    private static String coreTypeArgumentModule(String moduleName, String typeName) {
+        return """
+                module %s {
+                    void run() {
+                        Map<String, %s> byName = new HashMap();
+                        Array<Map<%s, String>> nested = new Array();
+                    }
+                }
+                """.formatted(moduleName, typeName, typeName);
+    }
+
+    /** The sizes of the two constant pools that outlive a run. */
+    private record PoolSizes(int nativePool, int runnerPool) {}
+
+    private static PoolSizes poolSizes() {
+        InterpreterConnector connector = assertInstanceOf(InterpreterConnector.class, support.ensureConnector());
+        return new PoolSizes(connector.getNativeContainer().getConstantPool().size(),
+                connector.getConstantPool().size());
     }
 
     /**
