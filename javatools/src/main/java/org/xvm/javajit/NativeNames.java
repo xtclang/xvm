@@ -82,6 +82,8 @@ public class NativeNames {
         reservedMethodName.put("collections.Array.FreezableArray/freeze/1", "freeze");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
         reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
+        reservedMethodName.put("collections.HashCollector/compute/0", "compute");
+        reservedMethodName.put("collections.HashCollector/reset/0",   "reset");
         reservedMethodName.put("collections.Tuple/add/2",         "add");
         reservedMethodName.put("collections.Tuple/addAll/1",      "addAll");
         reservedMethodName.put("collections.Tuple/elementAt/1",   "elementAt");
@@ -188,9 +190,9 @@ public class NativeNames {
 
                 String methodName = methodId.getName();
                 if (jitName == null &&
-                        (methodName.startsWith("toInt") || methodName.startsWith("toUInt") ||
-                         methodName.startsWith("toDec") || methodName.startsWith("toFloat") ||
-                         methodName.startsWith("toNibble"))) {
+                        (methodName.startsWith("toInt")    || methodName.startsWith("toUInt") ||
+                         methodName.startsWith("toDec")    || methodName.startsWith("toFloat") ||
+                         methodName.startsWith("toNibble") || methodName.startsWith("toByte"))) {
                     jitName = methodName;
                 }
             }
@@ -212,6 +214,7 @@ public class NativeNames {
         Set<String> names = new HashSet<>(reservedMethodName.values());
         addConversionNames(names, "toInt",   "", "8", "16", "32", "64", "128", "N", "Literal");
         addConversionNames(names, "toUInt",  "", "8", "16", "32", "64", "128", "N");
+        addConversionNames(names, "toByte", "");
         addConversionNames(names, "toNibble", "");
         addConversionNames(names, "toDec",   "", "32", "64", "128", "N");
         addConversionNames(names, "toFloat", "8e4", "8e5", "16", "32", "64", "128", "N");
