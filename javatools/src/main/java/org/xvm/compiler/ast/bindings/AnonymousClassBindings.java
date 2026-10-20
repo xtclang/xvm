@@ -17,13 +17,15 @@ import org.xvm.compiler.ast.NewExpression;
  * retains construction metadata; consumers read immutable identity snapshots of the associations.
  */
 public final class AnonymousClassBindings {
+    private final Map<Register, Register> origins = new IdentityHashMap<>();
+
     private AnonymousClassBindings() {}
 
     /**
      * @return an immutable snapshot, preserving register identity rather than register equality
      */
     public Map<Register, Register> getCaptureOrigins() {
-        return Collections.unmodifiableMap(new IdentityHashMap<>(f_origins));
+        return Collections.unmodifiableMap(new IdentityHashMap<>(origins));
     }
 
     /**
@@ -32,6 +34,10 @@ public final class AnonymousClassBindings {
      * does not expose the writer or make the compiler objects safe for concurrent use.
      */
     public static final class Collector {
+        private final NewExpression          owner;
+        private final Map<String, Register>  registers;
+        private final AnonymousClassBindings bindings = new AnonymousClassBindings();
+
         /**
          * Retain the result of ordinary capture analysis for one construction.
          *
@@ -39,8 +45,8 @@ public final class AnonymousClassBindings {
          * @param registers  captured names mapped to their enclosing source registers
          */
         public Collector(NewExpression owner, Map<String, Register> registers) {
-            f_owner     = owner;
-            f_registers = Map.copyOf(registers);
+            this.owner     = owner;
+            this.registers = Map.copyOf(registers);
         }
 
         /**
@@ -50,7 +56,7 @@ public final class AnonymousClassBindings {
          * @return the collected bindings, or null if another construction owns this collector
          */
         public AnonymousClassBindings getBindings(NewExpression owner) {
-            return f_owner == owner ? f_bindings : null;
+            return this.owner == owner ? bindings : null;
         }
 
         /**
@@ -61,7 +67,7 @@ public final class AnonymousClassBindings {
          */
         public Map<PropertyConstant, Register> propertyOrigins(Component component) {
             var origins = new HashMap<PropertyConstant, Register>();
-            f_registers.forEach((name, register) -> {
+            registers.forEach((name, register) -> {
                 if (component.getChild(name) instanceof PropertyStructure property && property.isSynthetic()) {
                     origins.put(property.getIdentityConstant(), register.getOriginalRegister());
                 }
@@ -71,7 +77,7 @@ public final class AnonymousClassBindings {
 
         /** @return the immutable name map used by ordinary capture rewriting */
         public Map<String, Register> registers() {
-            return f_registers;
+            return registers;
         }
 
         /**
@@ -81,13 +87,7 @@ public final class AnonymousClassBindings {
          * @param captured  the register used to read that capture inside the anonymous class
          */
         public void bind(String name, Register captured) {
-            f_bindings.f_origins.put(captured.getOriginalRegister(), f_registers.get(name).getOriginalRegister());
+            bindings.origins.put(captured.getOriginalRegister(), registers.get(name).getOriginalRegister());
         }
-
-        private final NewExpression          f_owner;
-        private final Map<String, Register>  f_registers;
-        private final AnonymousClassBindings f_bindings = new AnonymousClassBindings();
     }
-
-    private final Map<Register, Register> f_origins = new IdentityHashMap<>();
 }

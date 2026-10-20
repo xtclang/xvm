@@ -36,6 +36,18 @@ import static org.xvm.asm.ErrorListener.in;
  * succeeded (isValidated and a fitting TypeFit), never a failed child's placeholder type.
  */
 public final class IncompleteStatement extends Statement {
+    private final Expression       target;
+    private final List<Expression> arguments;
+
+    private final Token       operator;
+    private final List<Token> separators;
+    private final long        endPosition;
+    private final String      diagnosticCode;
+    private final Token       cursorName;
+    private final Token       argumentPrefix;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteStatement.class, "target", "arguments");
+
     /**
      * Retain a bounded unfinished operation and its written children for explicit partial analysis.
      *
@@ -399,16 +411,4 @@ public final class IncompleteStatement extends Statement {
                         : "." + getMemberName().map(Token::getValueText).orElse(""));
         return syntax + " <incomplete>";
     }
-
-    private final Expression       target;
-    private final List<Expression> arguments;
-
-    private final Token       operator;
-    private final List<Token> separators;
-    private final long        endPosition;
-    private final String      diagnosticCode;
-    private final Token       cursorName;
-    private final Token       argumentPrefix;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteStatement.class, "target", "arguments");
 }

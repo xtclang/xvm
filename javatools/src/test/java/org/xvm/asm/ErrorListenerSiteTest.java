@@ -24,6 +24,9 @@ import static org.xvm.asm.ErrorListener.tee;
  * Tests the reporting API that takes the message parameters as a trailing varargs.
  */
 public class ErrorListenerSiteTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = "PARSER-03";
+
     @Test
     public void testParametersArePassedAsATrailingVarargs() {
         Source    source = new Source(SOURCE);
@@ -115,7 +118,4 @@ public class ErrorListenerSiteTest {
         recorder.logTo(later);
         assertEquals(1, later.getErrors().size());
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = "PARSER-03";
 }

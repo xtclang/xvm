@@ -14,19 +14,21 @@ import static java.util.Objects.requireNonNull;
  * compiler operation; sharing a holder across threads is not supported.
  */
 public final class Reporting {
+    private ErrorListener destination;
+
     /**
      * @param errs  where diagnostics go to begin with; null if the owner has no destination
      *              until one is given to it
      */
     public Reporting(ErrorListener errs) {
-        m_errs = errs;
+        destination = errs;
     }
 
     /**
      * @return where diagnostics go right now, or null if the owner has none
      */
     public ErrorListener get() {
-        return m_errs;
+        return destination;
     }
 
     /**
@@ -45,23 +47,21 @@ public final class Reporting {
      */
     public final class Scope
             implements AutoCloseable {
+        private final ErrorListener previous;
+
         private Scope(ErrorListener errs) {
-            f_errsPrev = m_errs;
-            m_errs     = requireNonNull(errs, "errs");
+            previous    = destination;
+            destination = requireNonNull(errs, "errs");
         }
 
         @Override
         public void close() {
-            m_errs = f_errsPrev;
+            destination = previous;
         }
-
-        private final ErrorListener f_errsPrev;
     }
 
     @Override
     public String toString() {
-        return "Reporting(" + m_errs + ")";
+        return "Reporting(" + destination + ")";
     }
-
-    private ErrorListener m_errs;
 }
