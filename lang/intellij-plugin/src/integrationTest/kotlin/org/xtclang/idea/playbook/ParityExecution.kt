@@ -265,7 +265,7 @@ internal fun ParityScenarios.buildModeCases() {
     }
 }
 
-/** Fresh program state, and refused entry methods; registered after the on-type cases, as the catalog orders X292 and X293. */
+/** Fresh program state, refused entry methods and dropped arguments; registered after the on-type cases, as the catalog orders X292–X294. */
 internal fun ParityScenarios.runEntryCases() {
     case("X292") { data ->
         val document = open(data.string("file"), data.string("source"))
@@ -308,11 +308,30 @@ internal fun ParityScenarios.runEntryCases() {
                 val output = execution.output(module)
                 check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
                 check(expected in output) { output }
+                // the reason alone, as xtc run reports it, not a failure to create the program's container
+                check(data.string("containerFailure") !in output) { output }
                 return output
             }
             refused(data.string("module"), data.string("file"), data.string("message"))
             val output = refused(data.string("twoArgumentsModule"), data.string("twoArgumentsFile"), data.string("twoArgumentsMessage"))
             check(data.string("twoArgumentsOutput") !in output) { "Nothing ran: $output" }
+        }
+    }
+
+    case("X294") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val module = data.string("module")
+            execution.run(project, module, uri(data.string("file")), data.strings("args").joinToString(","))
+            awaitUi("run with dropped arguments finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+            val output = execution.output(module)
+            check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+            val warning = output.indexOf(data.string("warning"))
+            check(
+                warning >= 0 && warning < output.indexOf(data.string("output")),
+            ) { "The warning comes before the program's output: $output" }
         }
     }
 }
