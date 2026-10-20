@@ -44,16 +44,16 @@ public abstract class LoopStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
-        Context ctxDest = ensureValidationContext();
-        Label   label   = getContinueLabel();
+    public Label ensureContinueLabel(AstNode origin, Context originContext) {
+        Context destination = ensureValidationContext();
+        Label   label       = getContinueLabel();
 
-        if (ctxOrigin.isReachable()) {
+        if (originContext.isReachable()) {
             // record the jump that landed on this statement by recording its assignment impact
             if (continues == null) {
                 continues = new ArrayList<>();
             }
-            continues.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
+            continues.add(prepareJump(origin, originContext, destination, label));
         }
 
         return label;
