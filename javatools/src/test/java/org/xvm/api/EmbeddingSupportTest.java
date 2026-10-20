@@ -41,6 +41,7 @@ import org.xvm.api.EmbeddingSupport.EntryPoint;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -61,6 +62,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.xvm.util.Severity.WARNING;
 
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
@@ -966,6 +969,20 @@ public class EmbeddingSupportTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
         }
         return output.toString();
+    }
+
+    /**
+     * Run an entry method to its end, and return what the run reported.
+     */
+    private ErrorList runReporting(String moduleName, EntryPoint entry) {
+        ErrorList errs    = new ErrorList(25);
+        Control   control = support.runMethod(input(), moduleName, null, entry,
+                new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
+        assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+        return errs;
     }
 
     private static String readerModule(String moduleName) {
