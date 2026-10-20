@@ -25,19 +25,19 @@ internal class EditorRefresh(
     private val owner: Disposable,
     private val isDisposed: () -> Boolean,
 ) {
-    /** Editor presentation whose refresh requests can be coalesced independently. */
-    enum class Feature {
-        LENSES,
-        HINTS,
-        TOKENS,
-    }
-
     private val renderers =
         mapOf(
             Feature.LENSES to CodeVisionEditorFeature(),
             Feature.HINTS to DeclarativeInlayHintsEditorFeature(),
             Feature.TOKENS to SemanticTokensEditorFeature(),
         )
+
+    /** Editor presentation whose refresh requests can be coalesced independently. */
+    enum class Feature {
+        LENSES,
+        HINTS,
+        TOKENS,
+    }
 
     /** Editor and PSI file paired with the presentation updates to run for that editor. */
     private data class Presentation(
