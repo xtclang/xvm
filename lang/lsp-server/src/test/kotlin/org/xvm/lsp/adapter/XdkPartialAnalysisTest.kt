@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** A real compiler consumer of the bounded partial-analysis API; no fallback parser or mock. */
 class XdkPartialAnalysisTest {
+    @TempDir lateinit var directory: Path
+
     @ParameterizedTest
     @ValueSource(
         strings =
@@ -105,8 +107,6 @@ class XdkPartialAnalysisTest {
         assertThatThrownBy { (binding.variables() as MutableList).clear() }
             .isInstanceOf(UnsupportedOperationException::class.java)
     }
-
-    @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @ValueSource(strings = ["return ", "Int result = ", "var result = ", "result = "])
