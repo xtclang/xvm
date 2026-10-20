@@ -94,7 +94,7 @@ public class NanosTimer
     // ----- Timer implementation ------------------------------------------------------------------
 
     @Override
-    public synchronized NanosTimer start(Ctx ctx) {
+    public synchronized Timer start(Ctx ctx) {
         if (started != 0) {
             return this;
         }
@@ -108,7 +108,7 @@ public class NanosTimer
     }
 
     @Override
-    public synchronized NanosTimer stop(Ctx ctx) {
+    public synchronized Timer stop(Ctx ctx) {
         if (started == 0) {
             return this;
         }
@@ -123,7 +123,7 @@ public class NanosTimer
     }
 
     @Override
-    public synchronized NanosTimer reset(Ctx ctx) {
+    public synchronized Timer reset(Ctx ctx) {
         previousElapsed = 0L;
         if (started != 0) {
             started = ctx.container.nanoTime();
@@ -155,8 +155,7 @@ public class NanosTimer
      * Remove the specified alarm from this timer.
      */
     public void removeAlarm(nAlarmHolder alarm) {
-        boolean unregistered;
-        unregistered = alarms.remove(alarm);
+        boolean unregistered = alarms.remove(alarm);
         assert unregistered;
     }
 
