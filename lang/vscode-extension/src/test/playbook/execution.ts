@@ -356,7 +356,7 @@ export function renamedRootCases(): void {
     });
 }
 
-/** Registered after the renamed-root case, as the catalog orders X292 and X293 after X291. */
+/** Registered after the renamed-root case, as the catalog orders X292–X294 after X291. */
 export function runEntryCases(): void {
     playbook('X292', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
@@ -393,12 +393,28 @@ export function runEntryCases(): void {
                 const run = await executions.start('run', moduleName, () => vscode.tasks.executeTask(task), finished, message);
                 assert.strictEqual(run.exitCode, data.exitCode, run.text);
                 assert.ok(run.text.includes(expected), run.text);
+                // the reason alone, as xtc run reports it, not a failure to create the program's container
+                assert.ok(!run.text.includes(data.containerFailure), run.text);
                 return run.text;
             };
             await refused(data.module, library.uri, 'Run of a module without run is refused', data.message);
             const text = await refused(data.twoArgumentsModule, twoArguments.uri, 'Run of a run method requiring two arguments is refused',
                 data.twoArgumentsMessage);
             assert.ok(!text.includes(data.twoArgumentsOutput), `Nothing ran: ${text}`);
+        });
+    });
+
+    playbook('X294', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args: data.args, mode: 'embedded' }, getClient);
+            const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, 'Run with dropped arguments finishes');
+            assert.strictEqual(run.exitCode, data.exitCode, run.text);
+            assert.ok(run.text.includes(data.warning), run.text);
+            assert.ok(run.text.includes(data.output), run.text);
+            assert.ok(run.text.indexOf(data.warning) < run.text.indexOf(data.output), `The warning comes before the program's output: ${run.text}`);
         });
     });
 }

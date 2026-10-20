@@ -306,10 +306,17 @@ class EmbeddedExecutionTest {
     }
 
     @Test
-    fun `a missing entry method is reported instead of starting`() {
+    fun `a missing entry method is reported instead of starting, with the command-line runner's message`() {
         val run = run("Exit", method = "nope")
         assertThat(run.code).isNull()
-        assertThat(run.error).contains("nope")
+        assertThat(run.error).isEqualTo("Missing method \"nope\" in module Exit")
+    }
+
+    @Test
+    fun `arguments for a run method without parameters are dropped, with the runner's warning in the output`() {
+        val run = run("Exit", args = listOf("ignored"))
+        assertThat(run.code).isEqualTo(42)
+        assertThat(run.output).contains("Warning: Method \"run\" does not take any parameters; ignoring the specified arguments.")
     }
 
     @Test
