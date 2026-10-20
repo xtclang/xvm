@@ -425,11 +425,17 @@ the bridge removed.
 
 [Issue #1697](https://github.com/redhat-developer/lsp4ij/issues/1697) tracks an intermittent
 `WebFilterQuickFixTest` failure seen in CI while #1696 was under review; it is a test flake, not a
-register entry. [Issue #1709](https://github.com/redhat-developer/lsp4ij/issues/1709) proposes a `.gitattributes`: 558 files are stored
-with CRLF and nothing stops Git from converting them, so with `core.autocrlf=input` a small edit to
-one shows as a rewrite of the whole file. Until it is settled, the local checkout's
-`.git/info/attributes` holds `* -text`, which keeps endings as stored in every worktree and is
-never committed.
+register entry. [Issue #1709](https://github.com/redhat-developer/lsp4ij/issues/1709) proposed a `.gitattributes`, on the premise
+that with `core.autocrlf=input` Git converts an edited CRLF file to LF, so that a small edit shows as
+a rewrite of the whole file. Re-tested on 2026-10-20 with Git 2.54, that premise is wrong: a one-line
+edit that keeps a file's endings stages as one line under every `core.autocrlf` setting, since Git
+does not auto-convert a file stored with CRLF. The whole-file diff came from edits that wrote LF into
+CRLF files (557 of them on `main` `9d1e5cd7`), so edits to those files must preserve their bytes.
+Option 1 (`* -text`) would not prevent that, and no pull request was opened for it; a
+[correction](https://github.com/redhat-developer/lsp4ij/issues/1709#issuecomment-6289336781) on
+the issue says so. Only normalizing to LF would, and that touches every CRLF file, so it waits until
+our open pull requests are merged. The local checkout's `.git/info/attributes` still holds
+`* -text`, which is never committed.
 
 UP13 is not filed: LSP4IJ keeps server configuration global by design and leaves other sources
 to clients that override `createSettings`, as ours does (see the register).
