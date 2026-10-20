@@ -16,18 +16,18 @@ import java.util.concurrent.atomic.AtomicReference
 internal class CompilerImportService(
     private val project: Project,
 ) : Disposable {
+    private val owner = AtomicReference(createModel())
+    val model: CompilerImport get() = owner.get()
+
+    private val disposed = AtomicBoolean()
+    private val active = AtomicReference<ProgressIndicator?>()
+
     private fun createModel() =
         CompilerImport(
             read = { CompilerWorkspaceModels.read(CompilerWorkspaceModels.roots(project)) },
             validate = { CompilerBuildModel.parse(it) },
             importId = { CompilerBuildModel.parse(it)["importId"]?.asString },
         )
-
-    private val owner = AtomicReference(createModel())
-    val model: CompilerImport get() = owner.get()
-
-    private val disposed = AtomicBoolean()
-    private val active = AtomicReference<ProgressIndicator?>()
 
     fun rootsRemoved() {
         if (disposed.get()) return
