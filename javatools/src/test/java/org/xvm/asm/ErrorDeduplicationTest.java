@@ -15,6 +15,9 @@ import static org.xvm.asm.ErrorListener.in;
  * distinguish is not merely reported once - it is discarded, uncounted and unannounced.
  */
 public class ErrorDeduplicationTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = "PARSER-03";
+
     /**
      * An expression and the larger expression containing it start at the same character, so two
      * diagnostics differing only in where they end is an ordinary shape, not a contrived one.
@@ -92,7 +95,4 @@ public class ErrorDeduplicationTest {
 
         assertEquals(Thread.currentThread().getName(), errs.getErrors().getFirst().origin().thread());
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = "PARSER-03";
 }

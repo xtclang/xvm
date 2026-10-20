@@ -75,12 +75,12 @@ public class ForEachStatement
         Context ctxDest = ensureValidationContext();
 
         // record the jump that landed on this statement by recording its assignment impact
-        if (m_listContinues == null) {
-            m_listContinues = new ArrayList<>();
+        if (continues == null) {
+            continues = new ArrayList<>();
         }
 
         Label label = getContinueLabel();
-        m_listContinues.add(prepareJump(this, ctxOrigin, ctxDest, label));
+        continues.add(prepareJump(this, ctxOrigin, ctxDest, label));
         return label;
     }
 
@@ -207,9 +207,9 @@ public class ForEachStatement
         assert hasLabelVar(sName);
 
         Register reg = switch (sName) {
-            case "first" -> m_regFirst;
+            case "first" -> firstRegister;
             case "last"  -> m_regLast;
-            case "count" -> m_regCount;
+            case "count" -> countRegister;
             case "entry" -> m_regEntry;
             case "Key"   -> m_regKeyType;
             case "Value" -> m_regValType;
@@ -218,7 +218,7 @@ public class ForEachStatement
 
         if (reg == null) {
             // this occurs only during validate()
-            assert m_labelVars != null;
+            assert labelVars != null;
 
             String       sLabel = ((LabeledStatement) getParent()).getName();
             Token        tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
@@ -234,15 +234,15 @@ public class ForEachStatement
             };
 
             reg = ctx.createRegister(type, getLabelName() + '.' + sName);
-            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
+            labelVars.ctx().registerVar(tok, reg, labelVars.errs());
 
             switch (sName) {
-            case "first": m_regFirst   = reg; break;
-            case "last" : m_regLast    = reg; break;
-            case "count": m_regCount   = reg; break;
-            case "entry": m_regEntry   = reg; break;
-            case "Key"  : m_regKeyType = reg; break;
-            case "Value": m_regValType = reg; break;
+            case "first": firstRegister = reg; break;
+            case "last" : m_regLast     = reg; break;
+            case "count": countRegister = reg; break;
+            case "entry": m_regEntry    = reg; break;
+            case "Key"  : m_regKeyType  = reg; break;
+            case "Value": m_regValType  = reg; break;
             default:
                 throw new IllegalStateException();
             }
@@ -292,7 +292,7 @@ public class ForEachStatement
             ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
-            m_labelVars = new ValidationScope(ctx, errs);
+            labelVars = new ValidationScope(ctx, errs);
 
             // ultimately, the condition has to be re-written, because it is inevitably shorthand for
             // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -510,7 +510,7 @@ public class ForEachStatement
                 }
             }
 
-            List<Break> listContinues = m_listContinues;
+            List<Break> listContinues = continues;
             if (listContinues != null) {
                 for (Break continueInfo : listContinues) {
                     ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
@@ -555,7 +555,7 @@ public class ForEachStatement
             ctx.exit();
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_labelVars = null;
+            labelVars = null;
 
             errs.merge();
             return fValid ? this : null;
@@ -570,11 +570,11 @@ public class ForEachStatement
 
         if (isLabeled()) {
             ConstantPool pool = pool();
-            if (m_regFirst != null) {
-                code.add(new Var_IN(m_regFirst, toConst(m_regFirst.getName()), pool.valTrue()));
+            if (firstRegister != null) {
+                code.add(new Var_IN(firstRegister, toConst(firstRegister.getName()), pool.valTrue()));
             }
-            if (m_regCount != null) {
-                code.add(new Var_IN(m_regCount, toConst(m_regCount.getName()), pool.val0()));
+            if (countRegister != null) {
+                code.add(new Var_IN(countRegister, toConst(countRegister.getName()), pool.val0()));
             }
             if (m_regLast != null) {
                 // no need to initialize; we always compute it
@@ -774,11 +774,11 @@ public class ForEachStatement
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
         code.add(range.isReverse() ? new IP_Dec(regVal) : new IP_Inc(regVal));
-        if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
+        if (firstRegister != null) {
+            code.add(new Move(pool.valFalse(), firstRegister));
         }
-        if (m_regCount != null) {
-            code.add(new IP_Inc(m_regCount));
+        if (countRegister != null) {
+            code.add(new IP_Inc(countRegister));
         }
         code.add(new LoopEnd());
 
@@ -868,11 +868,11 @@ public class ForEachStatement
         code.add(new IP_Dec(regVal));
         code.add(labelUpdateVars);
 
-        if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
+        if (firstRegister != null) {
+            code.add(new Move(pool.valFalse(), firstRegister));
         }
-        if (m_regCount != null) {
-            code.add(new IP_Inc(m_regCount));
+        if (countRegister != null) {
+            code.add(new IP_Inc(countRegister));
         }
         code.add(new LoopEnd());
 
@@ -906,7 +906,7 @@ public class ForEachStatement
         // LOOP_END
         // Exit:
 
-        Register regCount = m_regCount;
+        Register regCount = countRegister;
         if (regCount == null) {
             regCount = code.createRegister(pool.typeInt64());
             code.add(new Var_IN(regCount,
@@ -991,8 +991,8 @@ public class ForEachStatement
         code.add(getContinueLabel());
         code.add(new JumpTrue(regLast, getEndLabel()));
         code.add(new IP_Inc(regCount));
-        if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
+        if (firstRegister != null) {
+            code.add(new Move(pool.valFalse(), firstRegister));
         }
         code.add(new LoopEnd());
 
@@ -1181,11 +1181,11 @@ public class ForEachStatement
         if (hasContinueLabel()) {
             code.add(getContinueLabel());
         }
-        if (m_regFirst != null) {
-            code.add(new Move(pool().valFalse(), m_regFirst));
+        if (firstRegister != null) {
+            code.add(new Move(pool().valFalse(), firstRegister));
         }
-        if (m_regCount != null) {
-            code.add(new IP_Inc(m_regCount));
+        if (countRegister != null) {
+            code.add(new IP_Inc(countRegister));
         }
         code.add(new LoopEnd());
         return reachable;
