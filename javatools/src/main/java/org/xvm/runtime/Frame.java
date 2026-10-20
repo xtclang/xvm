@@ -525,8 +525,15 @@ public class Frame
     // a convenience method for futures that complete outside the service response queue
     public int waitForExternalCompletion(CompletableFuture<ObjectHandle> cf, int iReturn,
                                          Continuation continuation) {
-        // this future is completed directly; similarly to WaitIOFrame need to schedule the waiter
-        cf.whenComplete((r, x) -> f_context.ensureScheduled(true));
+        // this future is completed directly; similarly to WaitIOFrame need to schedule the waiter,
+        // and to mark the fiber responded before that: the wait frame's own notification is a
+        // separate callback that can run after this one (as when the future completes as a
+        // dependent of another one), and a service scheduled before then finds no ready fiber
+        // and goes idle with nothing left to schedule it
+        cf.whenComplete((r, x) -> {
+            f_fiber.onResponse();
+            f_context.ensureScheduled(true);
+        });
 
         return wait(cf, iReturn, continuation);
     }
