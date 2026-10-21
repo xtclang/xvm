@@ -18,6 +18,9 @@ interface XtcLanguageServer : LanguageServer {
     @JsonRequest("xtc/compilerSourceModules")
     fun compilerSourceModules(): CompletableFuture<List<SourceModuleConfiguration>>
 
+    @JsonRequest("xtc/discoverConsumers")
+    fun discoverConsumers(params: DiscoverConsumersParams): CompletableFuture<ConsumerDiscovery>
+
     @JsonRequest("xtc/rename")
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?>
 
@@ -161,4 +164,15 @@ data class SourceModuleConfiguration(
     val uri: String,
     val dependencies: List<String> = emptyList(),
     val resourceRoots: List<String>? = null,
+)
+
+/** Folders to search for modules that import the current source graph. */
+data class DiscoverConsumersParams(
+    val roots: List<String>,
+)
+
+/** Consumers found under the searched folders, and modules there whose names would collide in the graph. */
+data class ConsumerDiscovery(
+    val modules: List<SourceModuleConfiguration> = emptyList(),
+    val conflicts: List<SourceModuleConfiguration> = emptyList(),
 )

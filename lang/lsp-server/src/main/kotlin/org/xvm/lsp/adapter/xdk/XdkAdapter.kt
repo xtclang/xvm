@@ -2285,6 +2285,12 @@ class XdkAdapter
                 }
             }
 
+        /** Modules under [roots] that consume the current graph, for the host to add; nothing is installed. */
+        internal fun discoverConsumers(roots: List<File>): XdkConsumerDiscovery.Result {
+            val (buffers, graph) = synchronized(lifecycle) { overlays.toMap() to project.modules.values.toList() }
+            return XdkConsumerDiscovery.discover(roots, graph, buffers) { synchronized(lifecycle) { closed } }
+        }
+
         /**
          * Compiler-proven edits for IDE file-tree operations; no filesystem or configuration writes.
          */
