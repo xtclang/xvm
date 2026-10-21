@@ -2,6 +2,7 @@ package org.xtclang.idea.lsp
 
 import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageServer
@@ -42,6 +43,9 @@ interface XtcLanguageServer : LanguageServer {
     /** Console input for a run, or its end. False when no such run is building or running. */
     @JsonRequest("xtc/runInput")
     fun runInput(params: RunInputParams): CompletableFuture<Boolean>
+
+    @JsonRequest("xtc/runLenses")
+    fun runLenses(params: TextDocumentIdentifier): CompletableFuture<List<RunLens>>
 
     @JsonRequest("xtc/runnableTargets")
     fun runnableTargets(): CompletableFuture<List<RunnableTarget>>
@@ -137,6 +141,12 @@ data class RunExitedParams(
     val runId: String = "",
     val exitCode: Long? = null,
     val error: String? = null,
+)
+
+/** A Run lens of a document: the module it runs and the zero-based line it is on. */
+data class RunLens(
+    val module: String = "",
+    val line: Int = 0,
 )
 
 /** A source module whose latest compilation declares a callable entry point. */
