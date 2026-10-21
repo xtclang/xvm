@@ -587,14 +587,6 @@ Compiler, Language Service, Formatting, and Runtime and Logs. The effective stat
 reports saved origins, ignored scope overrides and connection changes awaiting restart.
 Untrusted and virtual workspaces are explicitly unsupported; remote hosts remain unvalidated.
 
-### Experimental color-value picker
-
-The opt-in color-value prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
-fixture. It supplies native color swatches and picker edits separately from normal semantic
-highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
-Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
-See the [prototype recipe and acceptance](../doc/manual-test-plan.md#experimental-color-value-picker).
-
 The playbook keeps its startup theme. For explicit theme comparisons, the Node/npm launcher accepts
 `--playbook --cases=X277 --theme="Default Light Modern"` and the optional `--lexical-baseline`.
 It writes settings before opening VS Code and exports rendered lexical styles for comparison;

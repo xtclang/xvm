@@ -22,8 +22,9 @@ documented refusals, not open tasks; the few worth revisiting are under
 - [x] `errs-upstream-issues.md`: LSP4IJ #1744 (UP25) recorded as closed on 2026-10-20.
 - [x] `errs-integration-plan.md`: a 2026-10-21 Marketplace follow-up after the 2026-10-20
   paragraph: #711, the two publishers, #710 assigned to Cam, and the vsce 4.0.0 `--oidc` caveat.
-- [x] `errs-integration-plan.md`, the R1–R8 section: the inventory is now the 299-case catalog,
-  with the October 7 284-case run as the latest full-catalog run.
+- [x] `errs-integration-plan.md`, the R1–R8 section: the inventory is now the current catalog (299
+  cases then; 296 since X273–X275 were retired with the color prototype), with the October 7 284-case
+  run as the latest full-catalog run.
 
 ## 2. LSP features
 
@@ -35,15 +36,14 @@ documented refusals, not open tasks; the few worth revisiting are under
 - [ ] Add a shared acceptance case for each server command, in both editors.
 - Rule kept: no generic command registry or placeholder handler without a named user action.
 
-### L77: colors (prototype only)
+### L77: colors (removed)
 
-- [ ] Decide whether a real Ecstasy color or graphics API is coming. Until then the prototype stays
-  behind `XTC_LSP_COLOR_PROTOTYPE=true` / `-Dxtc.lsp.colorPrototype=true` and isn't advertised.
-- [ ] Color refresh and retry ownership: a recompile while a color request waits leaves the editor
-  without swatches until the next edit, since LSP has no color refresh.
-- [ ] If it's promoted: advertise it by default, drop the flag, and keep X273–X275 passing on a
-  fresh launch and in a long session.
-- [ ] If it isn't: remove the prototype.
+- [x] Decided: no Ecstasy color type is coming for now, so document colors are out of the editor
+  target. They put swatches and a picker beside color values; they never colored the code.
+- [x] Removed the prototype, its flag, X273–X275 and their docs; the theme list and X277's theme
+  screenshot moved to the highlighting cases, and `b7cb7df88`'s protocol regression moved to
+  `FileEventDuringAnalysisTest` (2026-10-21).
+- [ ] Mirror the removal into #693, which still carries the prototype.
 
 ### L78: notebooks (deferred)
 
@@ -64,7 +64,7 @@ documented refusals, not open tasks; the few worth revisiting are under
 - [ ] Prolonged-session acceptance (editing, restart, process leaks) on each supported platform.
 - [ ] Cross-platform and remote acceptance: Windows, Linux, and restricted or remote workspaces.
 - [ ] An uninterrupted full-catalog VS Code run. The latest 284-case run: 281 pass; X130 (UP16),
-  X218 (UP23) and X273 (L77 refresh) fail.
+  X218 (UP23) and X273 fail. X273 tested the color prototype and is retired with it.
 - [ ] For each host limitation, either a released fix with its acceptance passing, or a recorded
   release exception: UP16, UP23 (already accepted as an exception), UP25, UP26, UP17.
 - [ ] IntelliJ bulk replacement in a heavily decorated large file (UP17): after a platform fix,
