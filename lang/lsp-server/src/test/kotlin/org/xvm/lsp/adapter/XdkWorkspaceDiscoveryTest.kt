@@ -148,6 +148,35 @@ class XdkWorkspaceDiscoveryTest {
         }
     }
 
+    @Test
+    fun `a root whose header does not parse keeps its name and imports when it is renamed`() {
+        source("Base.x", "module Base {}")
+        val app = source("App.x", "module App { package lib import Base; }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+
+            fun graph() = adapter.sourceModuleInputs().associate { it.name to (it.uri to it.dependencies) }
+            assertThat(graph()["App"]).isEqualTo(app to setOf("Base"))
+
+            // the header stops parsing: discovery keeps what it knew about the root
+            val file = directory.resolve("App.x").toFile()
+            file.writeText("modul App { package lib import Base; }")
+            assertThat(adapter.applyFileEvents(listOf(app))).isNotNull()
+            assertThat(graph()["App"]).isEqualTo(app to setOf("Base"))
+
+            // renamed while it still does not parse, as an IDE rename reports it: the old path deleted, the new created
+            val renamed = directory.resolve("Renamed.x").toFile()
+            assertThat(file.renameTo(renamed)).isTrue()
+            val uri = renamed.canonicalFile.toURI().toString()
+            assertThat(adapter.applyFileEvents(listOf(app, uri))).isNotNull()
+            assertThat(graph()["App"]).isEqualTo(uri to setOf("Base"))
+
+            // a full walk finds the same
+            adapter.refreshDiscoveredSources()
+            assertThat(graph()["App"]).isEqualTo(uri to setOf("Base"))
+        }
+    }
+
     private fun source(
         name: String,
         text: String,
