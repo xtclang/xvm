@@ -54,6 +54,9 @@ internal fun compilerPropertyRelations(
                             type.getSingleUnderlyingClass(true),
                             property.propertyBodies.map { it.identity },
                             property.propertyBodies.all {
+                                // SansCode is a class adopting an interface property without redeclaring it: its
+                                // identity is still the interface's written declaration, so renaming that
+                                // declaration renames the adopted property too.
                                 it.implementation in
                                     setOf(
                                         Implementation.Explicit,
@@ -61,6 +64,7 @@ internal fun compilerPropertyRelations(
                                         Implementation.Default,
                                         Implementation.FromInto,
                                         Implementation.Delegating,
+                                        Implementation.SansCode,
                                     )
                             },
                         )
