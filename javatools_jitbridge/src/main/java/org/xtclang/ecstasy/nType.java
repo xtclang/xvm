@@ -155,6 +155,14 @@ public class nType
     }
 
     /**
+     * Native implementation of: "static <CompileType extends Type> Boolean equals(CompileType value1,
+     * CompileType value2)".
+     */
+    public static boolean equals$p(Ctx ctx, nType CompileType, nType value1, nType value2) {
+        return value1.$dataType.equals(value2.$dataType);
+    }
+
+    /**
      * "Comparable" interface  support.
      */
     public boolean equals$p(Ctx ctx, Object value1, Object value2) {

@@ -152,8 +152,8 @@ package innerOuterTests {
             ParentInherited parent = new ParentInherited();
             ParentBase base = parent;
             ParentBase.Child child = base.createChild();
-            // TODO: Ref.type is not yet implemented by nRef
-            // assert &child.type == ParentInherited.Child;
+            assert &child.type == ParentInherited.Child;
+
             Outer outer = child.outer;
             assert &outer == &parent;
             assert child.report() == "Derived.Child";
