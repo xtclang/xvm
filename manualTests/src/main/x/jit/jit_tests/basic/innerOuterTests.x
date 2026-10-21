@@ -356,8 +356,7 @@ package innerOuterTests {
             class C0 {
                 @Override
                 static <CompileType extends C0> Int measure(CompileType value) {
-                    // TODO: Type equality emits a missing nType.equals$p(Ctx,nType,nType,nType)
-                    // assert CompileType == Derived.C1;
+                    assert CompileType == Derived.C1;
                     return 2;
                 }
             }
@@ -369,10 +368,14 @@ package innerOuterTests {
 
     package genericFunkyChild {
         void testInheritedFunction() {
-            // TODO: the inherited measure() call throws TypeMismatch for Derived<Int>.C0
-            // Derived<Int> parent = new Derived();
-            // Derived<Int>.C1 child = parent.new C1();
-            // assert Derived<Int>.C1.measure(child) == 2;
+            // the inherited measure() call must preserve the enclosing parent's type argument
+            Derived<Int>    parent = new Derived();
+            Derived<Int>.C1 child  = parent.new C1();
+            assert Derived<Int>.C1.measure(child) == 2;
+
+            Derived<String>    textParent = new Derived();
+            Derived<String>.C1 textChild  = textParent.new C1();
+            assert Derived<String>.C1.measure(textChild) == 2;
         }
 
         interface Measurable {

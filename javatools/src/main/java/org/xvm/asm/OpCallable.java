@@ -678,7 +678,9 @@ public abstract class OpCallable extends Op {
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem    ts        = bctx.typeSystem;
+        TypeSystem   ts   = bctx.typeSystem;
+        ConstantPool pool = ts.pool();
+
         ClassDesc     cdTarget;
         String        sJitName;
         JitMethodDesc jmdCall;
@@ -799,11 +801,11 @@ public abstract class OpCallable extends Op {
             } else {
                 // inherited functions live on their declaring implementation; for virtual children,
                 // that implementation may be outside the target's Java superclass chain
-                TypeConstant typeImpl = body.getIdentity().getClassIdentity().getType();
+                TypeConstant typeImpl = body.resolveDeclaringType(pool, typeTarget);
 
                 cdTarget   = typeImpl.getJitImplDesc(ts);
                 fInterface = typeImpl.isJitImplInterface();
-                jmdCall    = infoMethod.getJitDesc(builder, typeTarget);
+                jmdCall    = infoMethod.getJitDesc(builder, typeImpl);
             }
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
@@ -813,7 +815,6 @@ public abstract class OpCallable extends Op {
             TypeConstant typeFn = regFn.type();
             assert typeFn.isFunction();
 
-            ConstantPool   pool         = ts.pool();
             TypeConstant[] atypeParams  = pool.extractFunctionParams(typeFn);
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(typeFn);
 
