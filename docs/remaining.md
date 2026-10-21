@@ -90,7 +90,9 @@ Only if a real need comes up; each is a documented refusal today.
   stay refused (they need per-receiver alternatives); Implicit, Field and Native stay refused.
 - [ ] Rename: VS Code edited-file resource history with refactoring auto-save off, instead of the
   current pre-edit refusal.
-- [ ] Rename: host discovery of external repositories beyond the explicit `sourceModules`.
+- [x] Rename: host discovery of external repositories beyond the explicit `sourceModules`. Done
+  2026-10-21: `xtc/discoverConsumers` and **Add consumers from folders** in both editors; discovered
+  modules join the graph only through `sourceModules`.
 - [ ] L63: wider expression and statement extraction, mutable captures, broader inline and global
   safe delete, each with its own semantic proof.
 
