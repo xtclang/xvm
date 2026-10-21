@@ -43,7 +43,7 @@ internal object XdkWorkspaceDiscovery {
             if (text == null) {
                 Catalog(files - file)
             } else {
-                Catalog(files + (file to header(file, text, files[file], cancelled)))
+                Catalog(withoutLeftBuffers(files + (file to header(file, text, files[file], cancelled)), mapOf(file to text)))
             }
 
         fun modules(previous: Collection<XdkSourceModule>): List<XdkSourceModule> {
@@ -98,10 +98,13 @@ internal object XdkWorkspaceDiscovery {
                         if (!folder.isDirectory) emptyList() else walk(folder, cancelled)
                     }.toSet() + buffers.keys.filter { includes(folders, it) }
             return Catalog(
-                sources.associateWith { file ->
-                    checkCurrent(cancelled)
-                    header(file, buffers[file] ?: file.readText(), files[file], cancelled)
-                },
+                withoutLeftBuffers(
+                    sources.associateWith { file ->
+                        checkCurrent(cancelled)
+                        header(file, buffers[file] ?: file.readText(), files[file], cancelled)
+                    },
+                    buffers,
+                ),
             )
         }
 
@@ -134,13 +137,27 @@ internal object XdkWorkspaceDiscovery {
                     sources[file] = header(file, buffers[file] ?: file.readText(), files[file], cancelled)
                 }
             }
-            val removed = (before.keys - sources.keys).groupBy { before.getValue(it).text }
+            val current = withoutLeftBuffers(sources, buffers)
+            val removed = (before.keys - current.keys).groupBy { before.getValue(it).text }
             val moves =
-                (sources.keys - before.keys)
-                    .mapNotNull { file -> removed[sources.getValue(file).text]?.singleOrNull()?.let { file to it } }
+                (current.keys - before.keys)
+                    .mapNotNull { file -> removed[current.getValue(file).text]?.singleOrNull()?.let { file to it } }
                     .toMap()
-            return Catalog(sources, moves)
+            return Catalog(current, moves)
         }
+    }
+
+    /**
+     * Drops an open buffer whose file is gone when a file on disk has exactly its text: an editor left open on a file
+     * renamed or moved outside the IDE, which would otherwise declare the module a second time. Once its text changes
+     * it is a source again, like any unsaved buffer.
+     */
+    private fun withoutLeftBuffers(
+        sources: Map<File, Header>,
+        buffers: Map<File, String>,
+    ): Map<File, Header> {
+        val onDisk = sources.filterKeys { it !in buffers || it.isFile }.values.mapTo(mutableSetOf()) { it.text }
+        return sources.filter { (file, header) -> file !in buffers || file.isFile || header.text !in onDisk }
     }
 
     private fun buffers(overlays: Map<String, String>): Map<File, String> =
