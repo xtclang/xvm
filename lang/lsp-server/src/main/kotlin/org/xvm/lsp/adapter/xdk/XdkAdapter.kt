@@ -924,6 +924,7 @@ class XdkAdapter
                                                 discoverImports = !discovery.get().explicit,
                                                 diagnosticCache = diagnosticCache,
                                                 navigationIndex = navigationIndex,
+                                                discoveryFolders = discovery.get().folders,
                                             ),
                                         )
                                     } catch (_: IOException) {
