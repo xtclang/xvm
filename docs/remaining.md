@@ -44,7 +44,7 @@ documented refusals, not open tasks; the few worth revisiting are under
   screenshot moved to the highlighting cases, and `b7cb7df88`'s protocol regression moved to
   `FileEventDuringAnalysisTest` (2026-10-21).
 - [x] Mirrored into #693 as `40f2c385e`, with the R3 tick as `8bb4a7d10` (2026-10-21).
-- [ ] #693's description still lists the prototype under "Known follow-ups".
+- [x] Removed the prototype bullet from #693's "Known follow-ups" (2026-10-21).
 
 ### L78: notebooks (deferred)
 
