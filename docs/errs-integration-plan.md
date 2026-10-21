@@ -2268,7 +2268,7 @@ compiles and `spotlessCheck` pass. The prototype bullet is removed from #693's k
 
 ### Speculative beyond-scope batch (2026-10-21)
 
-Done as separate local commits on this branch, not mirrored into #693:
+Done as separate commits on this branch; all but the docs-only record are mirrored into #693 (below):
 
 - `cfeaff904` renames adopted interface properties (property SansCode) and pins every composition
   route with fixtures; union-typed property reads stay refused.
@@ -2300,6 +2300,15 @@ text on the server; X300 runs only in the editor drivers. Consumer discovery has
 folder dialogs are not driven. Adding the cases exposed that `98de2769b` broke
 `compileIntegrationTestKotlin` (a constructor parameter took the probes' trailing lambda), fixed in
 the commit after it.
+
+Mirrored into #693 on 2026-10-21 (`40f2c385e..8954d3a81`): `b5b569e52`, `bf1073970`, `19e2e5bf2`,
+`8e085a0e2`, `f51824782`, `452262dfc`, `9f256a63c`, `835caa2c8` and `8954d3a81`, the same changes in
+the same order. #693 has no `docs/errs-*.md` or `remaining.md`, so those parts are left out and the
+three affected messages say so; `6be52d893`, which only records the batch, is not mirrored. On #693:
+`:lang:lsp-server:test` 2,369 tests (2 existing skips) and `:lang:intellij-plugin:test` 143, 0
+failures; `compileIntegrationTestKotlin` (forced), the VS Code compile and `spotlessCheck` pass; the
+same 12 native cases pass in VS Code (`run-k45i5W`) and IntelliJ (`run-2514175634325952141`, START and
+12).
 
 ### IntelliJ parity backlog (L60)
 
