@@ -32,6 +32,8 @@ internal object XdkWorkspaceDiscovery {
      */
     class Catalog(
         private val files: Map<File, Header> = emptyMap(),
+        // A file the last events added with exactly the text of a file they removed: a rename or move.
+        private val moved: Map<File, File> = emptyMap(),
     ) {
         fun withSource(
             file: File,
@@ -48,7 +50,7 @@ internal object XdkWorkspaceDiscovery {
             val roots =
                 files
                     .mapNotNull { (file, header) ->
-                        val name = header.module ?: previous.firstOrNull { it.root == file }?.name
+                        val name = header.module ?: previousAt(file, previous)?.name
                         name?.takeUnless(XdkLibraries.moduleNames::contains)?.let { file to it }
                     }.toMap()
             val names = roots.values.toSet()
@@ -61,7 +63,7 @@ internal object XdkWorkspaceDiscovery {
                     val imports =
                         headers.flatMap { it.imports } +
                             if (headers.any { it.incomplete }) {
-                                previous.firstOrNull { it.root == root }?.dependencies.orEmpty()
+                                previousAt(root, previous)?.dependencies.orEmpty()
                             } else {
                                 emptySet()
                             }
@@ -72,6 +74,16 @@ internal object XdkWorkspaceDiscovery {
                     )
                 }
         }
+
+        /**
+         * The module [previous] had at [file], or at the path [file] was moved from. A header that does not parse
+         * keeps the name and imports it had, also after a rename, until it parses again.
+         */
+        private fun previousAt(
+            file: File,
+            previous: Collection<XdkSourceModule>,
+        ): XdkSourceModule? =
+            previous.firstOrNull { it.root == file } ?: moved[file]?.let { from -> previous.firstOrNull { it.root == from } }
 
         fun rescan(
             folders: List<File>,
@@ -106,6 +118,7 @@ internal object XdkWorkspaceDiscovery {
         ): Catalog {
             val buffers = buffers(overlays)
             val sources = files.toMutableMap()
+            val before = files.toMap()
             for (path in paths) {
                 checkCurrent(cancelled)
                 sources.keys.removeIf { (it == path || it.toPath().startsWith(path.toPath())) && it !in buffers }
@@ -121,7 +134,12 @@ internal object XdkWorkspaceDiscovery {
                     sources[file] = header(file, buffers[file] ?: file.readText(), files[file], cancelled)
                 }
             }
-            return Catalog(sources)
+            val removed = (before.keys - sources.keys).groupBy { before.getValue(it).text }
+            val moves =
+                (sources.keys - before.keys)
+                    .mapNotNull { file -> removed[sources.getValue(file).text]?.singleOrNull()?.let { file to it } }
+                    .toMap()
+            return Catalog(sources, moves)
         }
     }
 
