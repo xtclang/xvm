@@ -1597,7 +1597,7 @@ satisfy this track. The placeholder reports breakpoints unverified and refuses l
 real breakpoint support needs the runtime bridge.
 
 Current native automation inventory (2026-10-21): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **296 cases**: X1–X294 except the retired
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **302 cases**: X1–X300 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
 added since, among them the embedded run cases above, have selected native receipts recorded with
@@ -2289,7 +2289,17 @@ Not done: the VS Code auto-save-off resource history (no clean implementation; s
 [remaining.md](remaining.md)), inlining several copies (the plan relocates a range once), and global
 safe delete (a closed-world decision comes first). Validation: `:lang:lsp-server:test` 2,364 tests,
 0 failures, the 2 existing skips; `:lang:intellij-plugin:test` 143; both editors' compiles, ESLint on
-the changed TypeScript and `spotlessCheck` pass. No native playbook ran.
+the changed TypeScript and `spotlessCheck` pass.
+
+Native playbooks (same day): new shared cases X295–X299 (bitwise `&`, a `val` capture, statements
+with their own local and a field write, a returned local, and the closure refusal) and X300 (an adopted
+interface property renamed with a closed consumer), with X181–X184 and X230–X231, pass in VS Code
+1.140.0 (`run-8aEHoH`, 12 passing) and IntelliJ 2026.2.3 with LSP4IJ 0.21.0
+(`run-13425416533727244926`, START and 12 passed). `XdkL63SharedActionsTest` checks X295–X299's exact
+text on the server; X300 runs only in the editor drivers. Consumer discovery has no playbook case: its
+folder dialogs are not driven. Adding the cases exposed that `98de2769b` broke
+`compileIntegrationTestKotlin` (a constructor parameter took the probes' trailing lambda), fixed in
+the commit after it.
 
 ### IntelliJ parity backlog (L60)
 

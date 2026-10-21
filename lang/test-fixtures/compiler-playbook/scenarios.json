@@ -9079,6 +9079,119 @@
         "limitations": []
       }
     },
+    "X295": {
+      "title": "extract a bitwise AND expression to a private helper",
+      "manual": [
+        "Select the text and inspect Extract expression to private method. Apply it, check the exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int mask() = 12;\n    Int read(Int input) {\n        return input & mask();\n    }\n}",
+        "selected": "input & mask()",
+        "title": "Extract expression to private method",
+        "expected": "module Extract {\n    Int mask() = 12;\n    Int read(Int input) {\n        return extractedMethod(input);\n    }\n\n    private Int extractedMethod(Int input) {\n        return input & mask();\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X296": {
+      "title": "extract an expression capturing an inferred val local with its compiler type",
+      "manual": [
+        "Select the text and inspect Extract expression to private method. Apply it, check the exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int input) {\n        val doubled = input * 2;\n        return doubled + input;\n    }\n}",
+        "selected": "doubled + input",
+        "title": "Extract expression to private method",
+        "expected": "module Extract {\n    Int read(Int input) {\n        val doubled = input * 2;\n        return extractedMethod(doubled, input);\n    }\n\n    private Int extractedMethod(Int64 doubled, Int input) {\n        return doubled + input;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X297": {
+      "title": "extract statements that declare their own local and write a field",
+      "manual": [
+        "Select the text and inspect Extract statements to private method. Apply it, check the exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int total = 0;\n    void emit(Int value) {}\n    void run(Int input) {\n        Int local = input + 1;\n        emit(local);\n        total = local;\n    }\n}",
+        "selected": "Int local = input + 1;\n        emit(local);\n        total = local;",
+        "title": "Extract statements to private method",
+        "expected": "module Extract {\n    Int total = 0;\n    void emit(Int value) {}\n    void run(Int input) {\n        extractedMethod(input);\n    }\n\n    private void extractedMethod(Int input) {\n        Int local = input + 1;\n        emit(local);\n        total = local;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X298": {
+      "title": "extract statements that change a local and return its new value to the caller",
+      "manual": [
+        "Select the text and inspect Extract statements to private method. Apply it, check the exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        Int total = input;\n        total += 2;\n        emit(total);\n        emit(total);\n    }\n}",
+        "selected": "total += 2;\n        emit(total);",
+        "title": "Extract statements to private method",
+        "expected": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        Int total = input;\n        total = extractedMethod(total);\n        emit(total);\n    }\n\n    private Int extractedMethod(Int total) {\n        total += 2;\n        emit(total);\n        return total;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X299": {
+      "title": "refuse extracting statements that change a local a lambda also names",
+      "manual": [
+        "Select the two statements and inspect Extract statements to private method. It must be absent; the source stays unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        Int total = input;\n        function Int() read = () -> total;\n        total += 1;\n        emit(read());\n        emit(total);\n    }\n}",
+        "selected": "total += 1;\n        emit(read());",
+        "title": "Extract statements to private method",
+        "expected": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        Int total = input;\n        function Int() read = () -> total;\n        total += 1;\n        emit(read());\n        emit(total);\n    }\n}",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X300": {
+      "title": "rename an interface property that a class adopts without redeclaring it, with a closed consumer",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "name {",
+        "replacement": "label",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    interface Named {\n        @RO String name {\n            @Override String get() = \"default\";\n        }\n    }\n    class First implements Named {}\n}",
+            "destination": "Library.x",
+            "expected": "module Library {\n    interface Named {\n        @RO String label {\n            @Override String get() = \"default\";\n        }\n    }\n    class First implements Named {}\n}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package lib import Library;\n    String use(lib.First first) = first.name;\n}",
+            "destination": "Consumer.x",
+            "expected": "module Consumer {\n    package lib import Library;\n    String use(lib.First first) = first.label;\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
