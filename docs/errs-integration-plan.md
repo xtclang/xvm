@@ -2264,8 +2264,7 @@ plan (only that file of `af0ec33d7` exists there), and `40f2c385e` is this remov
 `lsp-feature-tiers.md` and `plan-ide-integration.md` never described the prototype, so they keep
 their own text; `docs/` holds no plan there. On #693 the same `:lang:lsp-server:test` (2,337 tests, 2
 existing skips) and `:lang:intellij-plugin:test` (143) pass with 0 failures, and both harnesses'
-compiles and `spotlessCheck` pass. #693's description still lists the prototype among its known
-follow-ups.
+compiles and `spotlessCheck` pass. The prototype bullet is removed from #693's known follow-ups.
 
 ### IntelliJ parity backlog (L60)
 
