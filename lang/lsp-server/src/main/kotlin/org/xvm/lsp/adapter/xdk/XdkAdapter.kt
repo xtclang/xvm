@@ -523,6 +523,12 @@ class XdkAdapter
                 entryMethods(module.uri).map { XdkRunnableTarget(module.name, module.uri, it) }
             }
 
+        /** The modules [uri]'s Run lenses run, each with the zero-based line its lens is on. */
+        internal fun runLensLines(uri: String): List<Pair<String, Int>> =
+            runLenses(uri).mapNotNull { lens ->
+                (lens.command?.arguments?.getOrNull(1) as? String)?.let { it to lens.range.start.line }
+            }
+
         /** Entry methods the runner can call in the module [uri] belongs to, from its latest compilation. */
         private fun entryMethods(uri: String): List<String> = module(uri)?.entryMethods.orEmpty()
 

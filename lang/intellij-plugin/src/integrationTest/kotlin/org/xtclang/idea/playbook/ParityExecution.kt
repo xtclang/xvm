@@ -3,6 +3,7 @@ package org.xtclang.idea.playbook
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.nio.file.Files
@@ -21,14 +22,38 @@ internal fun ParityScenarios.executionCases() {
         fun runTitles(document: ParityWorkspace.Document) =
             with(driver) { withContext(OnDispatcher.EDT) { probe.titles(document.editor.editor) } }.filter { it.startsWith("▶ Run") }
 
+        // IntelliJ also shows a Run icon in the gutter, on the line of the Run lens (the module declaration)
+        val gutter = with(driver) { utility(RunGutterProbe::class) }
+
+        fun runIcons(document: ParityWorkspace.Document) =
+            with(driver) { withContext(OnDispatcher.EDT) { gutter.icons(document.editor.editor) } }
+
         awaitUi("Run lens on a module with run()", 45.seconds) { data.string("runTitle") in runTitles(runnable) }
+        awaitUi("Run icon in the gutter of a module with run()", 45.seconds) {
+            runIcons(runnable) ==
+                listOf("Run ${data.string("module")}@0")
+        }
         check(runTitles(library).isEmpty()) { "No Run lens on a module without run(): ${runTitles(library)}" }
+        check(runIcons(library).isEmpty()) { "No Run icon on a module without run(): ${runIcons(library)}" }
         replace(library, data.string("uncallable"))
         clean(library)
         check(runTitles(library).isEmpty()) { "No Run lens when run() needs two arguments: ${runTitles(library)}" }
+        check(runIcons(library).isEmpty()) { "No Run icon when run() needs two arguments: ${runIcons(library)}" }
         replace(library, data.string("runnableLibrary"))
         clean(library)
         awaitUi("Run lens after adding run()", 45.seconds) { data.string("libraryRunTitle") in runTitles(library) }
+        awaitUi("Run icon after adding run()", 45.seconds) { runIcons(library) == listOf("Run ${data.string("libraryModule")}@0") }
+        // clicking the icon runs the module, as the lens does; a run builds a configured source module
+        val module = data.string("module")
+        configure(listOf(SharedScenarios.SourceModule(module, uri(data.string("file")), emptyList())))
+        clean(runnable)
+        awaitUi("Run icon on the configured module", 45.seconds) { runIcons(runnable) == listOf("Run $module@0") }
+        embedded { execution, project ->
+            execution.expect(project, module)
+            with(driver) { withContext(OnDispatcher.EDT) { gutter.click(runnable.editor.editor, "Run $module") } }
+            awaitUi("run from the gutter icon finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+            check(execution.exitCode(module) == 0) { "Exit code ${execution.exitCode(module)}: ${execution.output(module)}" }
+        }
     }
 
     case("X281") { data ->
@@ -352,6 +377,17 @@ private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> 
     } finally {
         with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, previous) } }
     }
+}
+
+/** The Run icons in an editor's gutter, as "Run Module@line", and a click on one. */
+@Remote("org.xtclang.idea.playbook.probe.RunGutterUi", plugin = "org.xtclang.playbook.probe")
+internal interface RunGutterProbe {
+    fun icons(editor: Editor): List<String>
+
+    fun click(
+        editor: Editor,
+        tooltip: String,
+    )
 }
 
 /** Embedded Build Project and runs, recorded by the IDE-side probe. */
