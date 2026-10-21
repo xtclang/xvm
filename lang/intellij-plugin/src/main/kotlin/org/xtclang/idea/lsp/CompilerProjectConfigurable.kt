@@ -43,10 +43,11 @@ class CompilerProjectConfigurable
     @JvmOverloads
     constructor(
         private val project: Project,
-        private val readModules: (Project) -> CompletableFuture<List<SourceModuleConfiguration>> =
-            ::effectiveModules,
+        // Declared before readModules so that a trailing lambda, as tests pass it, still supplies readModules.
         private val findConsumers: (Project, List<String>) -> CompletableFuture<ConsumerDiscovery> =
             ::discoveredConsumers,
+        private val readModules: (Project) -> CompletableFuture<List<SourceModuleConfiguration>> =
+            ::effectiveModules,
     ) : Configurable {
         private val discovery = JBCheckBox("Use Gradle model or automatic source discovery")
         private val effective =
