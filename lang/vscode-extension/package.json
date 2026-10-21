@@ -657,7 +657,7 @@
         "playwright-core": "^1.63.0",
         "sharp": "^0.35.5",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.71.1",
+        "typescript-eslint": "^8.71.2",
         "yauzl": "^3.4.0"
     },
     "overrides": {
