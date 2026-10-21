@@ -366,7 +366,7 @@ internal object XdkRename {
     }
 
     /** New helper parameters may replace only the selected reads; their call arguments still bind
-     * to the original stable values. Every moved call and every unaffected edge remains identical. */
+     * to the original plain values. Every moved call and every unaffected edge remains identical. */
     fun preservesMethodExtraction(
         before: CompilerRenameFacts,
         after: CompilerRenameFacts,
@@ -428,7 +428,7 @@ internal object XdkRename {
         val actual = edges(after, plan.proposed, sourceParameters = true) { _, at -> at } ?: return false
         val captures =
             candidate.captures.associate { capture ->
-                if (capture.declaration !in before.extraction.stableValues) return false
+                if (capture.declaration !in before.extraction.plainValues) return false
                 val parameterStart = insertionStart + capture.parameterOffset
                 val parameterEnd = parameterStart + capture.name.length
                 val parameter = Target.Declaration(Site(source, parameterStart, parameterEnd), SemanticModel.SymbolKind.PARAMETER)
