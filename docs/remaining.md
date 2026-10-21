@@ -89,12 +89,32 @@ Only if a real need comes up; each is a documented refusal today.
   Done 2026-10-21: adopted interface properties (SansCode) now rename; union-typed property reads
   stay refused (they need per-receiver alternatives); Implicit, Field and Native stay refused.
 - [ ] Rename: VS Code edited-file resource history with refactoring auto-save off, instead of the
-  current pre-edit refusal.
+  current pre-edit refusal. Investigated 2026-10-21, no clean implementation: an extension cannot put
+  a move and its text edits into one undo group, `isRefactoring` saves only when the setting is on,
+  and VS Code moves a dirty file by recreating its model, which drops the old model's text Undo.
+  Writing the moved file as create plus delete would itself save it. The refusal stays.
+  - [ ] The refusal only works for Rename. In an Explorer move (`willRenameFiles`) the thrown
+    refusal is only logged, so the move goes ahead without the Ecstasy edits; and Explorer moves
+    never auto-save, so the setting does not protect them.
+  - [ ] X103 applies an edit-and-move with a plain `applyEdit` and, after Undo, never checks the
+    moved member's text at its old path, which is the documented failure.
 - [x] Rename: host discovery of external repositories beyond the explicit `sourceModules`. Done
   2026-10-21: `xtc/discoverConsumers` and **Add consumers from folders** in both editors; discovered
   modules join the graph only through `sourceModules`.
-- [ ] L63: wider expression and statement extraction, mutable captures, broader inline and global
-  safe delete, each with its own semantic proof.
+- [x] L63 wider extraction (2026-10-21): bitwise `&` (only `&name` stays refused), locals declared
+  with `val`/`var` that never change, and statement runs that declare their own locals or write
+  fields.
+- [x] L63 mutable captures (2026-10-21): a local changed before the selection is passed by its
+  current value (X184 is now positive), and statements that write one local return it to the caller
+  (X231 is now positive). This also fixed a hole: a local named with `&` counted as unchanging.
+- [ ] L63 broader inline: inlining every read of a constant, or inlining and removing a single-use
+  member. `XdkRename.Plan` relocates each original range to one place, so N copies need their own
+  proof, like member inline's single copy.
+- [ ] L63 global safe delete: deleting public or protected members needs an explicit closed-world or
+  consumer-manifest decision first; the proof itself is not the obstacle.
+- [ ] Remove the leftover `System.err.println("DECL owner ...")` in `XdkMissingDeclarations.kt`
+  (from `b970b7f56`, also on #693); it writes to stderr whenever a method is not a direct class
+  member.
 
 ## 3. Embedded run and debugging
 
