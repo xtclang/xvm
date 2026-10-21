@@ -43,7 +43,8 @@ documented refusals, not open tasks; the few worth revisiting are under
 - [x] Removed the prototype, its flag, X273–X275 and their docs; the theme list and X277's theme
   screenshot moved to the highlighting cases, and `b7cb7df88`'s protocol regression moved to
   `FileEventDuringAnalysisTest` (2026-10-21).
-- [ ] Mirror the removal into #693, which still carries the prototype.
+- [x] Mirrored into #693 as `40f2c385e`, with the R3 tick as `8bb4a7d10` (2026-10-21).
+- [ ] #693's description still lists the prototype under "Known follow-ups".
 
 ### L78: notebooks (deferred)
 
@@ -227,7 +228,7 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
-- [ ] Keep #693 in sync with new `lagergren/errs` commits (last synchronized 2026-10-20).
+- [ ] Keep #693 in sync with new `lagergren/errs` commits (last synchronized 2026-10-21).
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
 - [ ] Submit, when authorized: compilation-owned syntax and semantic facts
