@@ -121,7 +121,8 @@ Only if a real need comes up; each is a documented refusal today.
   consumer-manifest decision first; the proof itself is not the obstacle.
 - [x] Remove the leftover `System.err.println("DECL owner ...")` in `XdkMissingDeclarations.kt`
   (from `b970b7f56`, also on #693); it wrote to stderr whenever a method was not a direct class
-  member (`33558e8ad`).
+  member (`33558e8ad`; mirrored into #693 as `b5015fc13`, where `:lang:lsp-server:test` passes 2,374
+  tests with the 2 existing skips).
 
 ## 3. Embedded run and debugging
 
