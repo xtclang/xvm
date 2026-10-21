@@ -7655,17 +7655,16 @@
       }
     },
     "X231": {
-      "title": "refuse statement extraction of mutable captures",
+      "title": "extract statements that change an input, returning its new value to the caller",
       "manual": [
-        "Select emit(input); and inspect Extract statements to private method. Verify refusal and unchanged sources."
+        "Select the three statements and inspect Extract statements to private method. Apply it, inspect exact text and diagnostics, then Undo/Redo/Undo."
       ],
       "values": {
         "file": "Extract.x",
         "source": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        emit(input);\n        input++;\n        emit(input + 1);\n    }\n}",
         "selected": "emit(input);\n        input++;\n        emit(input + 1);",
         "title": "Extract statements to private method",
-        "expected": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        emit(input);\n        input++;\n        emit(input + 1);\n    }\n}",
-        "refused": true
+        "expected": "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n        input = extractedMethod(input);\n    }\n\n    private Int extractedMethod(Int input) {\n        emit(input);\n        input++;\n        emit(input + 1);\n        return input;\n    }\n}"
       },
       "intellij": {
         "coverage": "full",

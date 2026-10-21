@@ -389,12 +389,13 @@ internal object XdkRename {
                     .filter { it != insertion && it.end <= insertion.start }
                     .sumOf { it.text.length - (it.end - it.start) }
         // The old expression maps to its relocated body, not to the replacement call.
-        val callStart =
+        val replacementStart =
             candidate.replacement.start +
                 plan.edits[source]
                     .orEmpty()
                     .filter { it != candidate.replacement && it.end <= candidate.replacement.start }
                     .sumOf { it.text.length - (it.end - it.start) }
+        val callStart = replacementStart + candidate.callOffset
 
         fun oldSite(at: SemanticModel.SourceLocation): Site? {
             if (at.sourceName != source) return null
@@ -463,7 +464,27 @@ internal object XdkRename {
         if (candidate.statements) {
             val at = position(proposed, helperStart)
             val symbol = model.symbolAt(at.line, at.column) ?: return false
-            if (symbol.signature?.returns?.isNotEmpty() != false) return false
+            val returns = symbol.signature?.returns ?: return false
+            if (returns.size != if (candidate.result == null) 0 else 1) return false
+        }
+        candidate.result?.let { result ->
+            // The call assigns back to the original local, the helper returns its own parameter, and the call has
+            // exactly the local's type, so the value the statements leave behind is the one the caller sees.
+            val parameterStart = insertionStart + result.parameterOffset
+            val parameter =
+                Target.Declaration(
+                    Site(source, parameterStart, parameterStart + result.name.length),
+                    SemanticModel.SymbolKind.PARAMETER,
+                )
+            val local = Target.Declaration(oldSite(result.declaration) ?: return false, result.kind)
+            val returned = insertionStart + candidate.returnOffset
+            if (actual[Site(source, replacementStart, replacementStart + result.name.length)] != local ||
+                actual[Site(source, returned, returned + result.name.length)] != parameter
+            ) {
+                return false
+            }
+            val arguments = candidate.captures.joinToString(", ") { it.name }
+            if (!sameType(result.declaration, location(callStart, callStart + candidate.name.length + arguments.length + 2))) return false
         }
         val call = model.calls.singleOrNull { it.callee == location(callStart, callStart + candidate.name.length).range } ?: return false
         if (call.arguments.size != candidate.captures.size ||

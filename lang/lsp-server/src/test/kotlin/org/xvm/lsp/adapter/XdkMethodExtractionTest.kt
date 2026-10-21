@@ -360,14 +360,88 @@ class XdkMethodExtractionTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["input++;", "input = 5;"])
+    fun `statements that change a parameter return its new value to the caller`(middle: String) {
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    §emit(input);
+                    $middle
+                    emit(input);§
+                    emit(input);
+                }
+            }
+            """.trimIndent(),
+            title = "Extract statements to private method",
+        ) { _, changed ->
+            assertThat(changed).contains(
+                "input = extractedMethod(input);\n        emit(input);",
+                "private Int extractedMethod(Int input) {",
+                "$middle\n        emit(input);\n        return input;\n    }",
+            )
+        }
+    }
+
+    @Test
+    fun `statements that change a local return its new value to the caller`() {
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    Int total = input;
+                    §total += 2;
+                    emit(total);§
+                    emit(total);
+                }
+            }
+            """.trimIndent(),
+            title = "Extract statements to private method",
+        ) { _, changed ->
+            assertThat(changed).contains(
+                "total = extractedMethod(total);",
+                "private Int extractedMethod(Int total) {",
+                "total += 2;\n        emit(total);\n        return total;",
+            )
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "Int other = input;|§total += 1;\nother += 1;§",
+            "function Int() read = () -> total;|§total += 1;\nemit(read());§",
+            "|try {\n    §total += 1;§\n} catch (Exception e) {}",
+        ],
+    )
+    fun `statements writing two locals a closure's local or inside try are refused`(example: String) {
+        val (before, statements) = example.split('|')
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    Int total = input;
+                    ${before.ifEmpty { "emit(total);" }}
+                    ${statements.replace("\n", "\n                    ")}
+                    emit(total);
+                }
+            }
+            """.trimIndent(),
+            expected = false,
+            title = "Extract statements to private method",
+        ) { _, _ -> error("Unexpected statement extraction") }
+    }
+
+    @ParameterizedTest
     @ValueSource(
         strings = [
             "if (input > 0) { emit(input); }",
-            "input++;",
-            "input = 5;",
         ],
     )
-    fun `statement extraction refuses intervening control flow and mutable captures`(middle: String) {
+    fun `statement extraction refuses intervening control flow`(middle: String) {
         query(
             """
             module Extract {

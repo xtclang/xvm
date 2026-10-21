@@ -3495,7 +3495,7 @@ matching action exists and the source remains unchanged.
 | X228 | Refuse inventing an initializer for a missing static constant. | Refuse without editing; retain the original diagnostics. |
 | X229 | Extract a nested expression using its compiler selected type. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X230 | Extract contiguous statements preserving order with native history. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
-| X231 | Refuse statement extraction of mutable captures. | Refuse without editing; retain the original diagnostics. |
+| X231 | Extract statements that change an input: select `emit(input); input++; emit(input + 1);`, apply, then Undo/Redo/Undo. | `input = extractedMethod(input);` and `private Int extractedMethod(Int input)` ending in `return input;`. Undo restores the source exactly. |
 | X232 | Inline a constant local across an intervening statement. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X233 | Inline one private call while retaining the method declaration. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X234 | Inline a private constant read while retaining its declaration. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
