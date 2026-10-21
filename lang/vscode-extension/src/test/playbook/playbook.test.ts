@@ -96,10 +96,11 @@ suite('XdkAdapter playbook', function () {
     executionInputCases();
     buildModeCases();
     onTypeCases();
-    renamedRootCases();
+    renamedRootCases(['X291']);
     runEntryCases();
     localRefactoringCases(['X295', 'X296', 'X297', 'X298', 'X299']);
     renameFamilyCases(['X300']);
+    renamedRootCases(['X301']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
