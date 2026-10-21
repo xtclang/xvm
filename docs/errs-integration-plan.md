@@ -2620,7 +2620,7 @@ adapter remains opt-in; Tree-sitter remains the shipped default.
 | Lambda parameters | Written register/source identity plus capture normalization supports local replay, including lambda values that escape. Generated lambda methods are not exported as parameter contracts. | Incomplete analysis and binding changes still refuse edits. |
 | Escaped method values | Function-value calls cannot have named arguments: `InvocationExpression.testFunction` emits `COMPILER-141`. The previous requirement for callable-origin propagation was unnecessary for parameter spelling. Selected method-value references and direct named callers still undergo full replay. | Unknown runtime targets and reflective strings are not inferred from a function type. |
 | Composition routes | Method dispatch accepts written Explicit/Default/Declared/Abstract/SansCode, follows FromInto/Capped/Delegating and keeps each Union leg as a separate receiver alternative; it refuses Implicit, Field, Native and unknown, recursive or over-depth routes. Property chains accept Explicit/Declared/Default/FromInto/Delegating and, since 2026-10-21, SansCode: a class adopting an interface property without redeclaring it keeps the interface's written declaration as its identity. Every member must remain source-owned. | A union type's same-named property is a synthetic contract outside the written declarations, so reads through a union receiver stay refused; supporting them needs the per-receiver alternatives methods already have. Implicit accessors, generated Field accessors and Native runtime contracts stay refused, and binary/native contracts stay read-only. Fixtures for each route are in `CompilerDispatchRoutesTest` and `XdkRenameBoundaryTest`. |
-| External consumers | `sourceModules` is the explicit consumer manifest and accepts absolute file roots outside workspace folders. `xtc/rename.scope` reports configured/discovered boundary, dependency-ordered modules, captured source URIs and input revision. | Omitted consumers are unknown and remain untouched, even beside a configured root. Hosts must enumerate every intended consumer. This is not whole-program rename or automatic external repository discovery. |
+| External consumers | `sourceModules` is the explicit consumer manifest and accepts absolute file roots outside workspace folders. `xtc/rename.scope` reports configured/discovered boundary, dependency-ordered modules, captured source URIs and input revision. | Omitted consumers are unknown and remain untouched, even beside a configured root. Hosts must enumerate every intended consumer. This is not whole-program rename or automatic external repository discovery. Since 2026-10-21 a host can search folders for consumers with `xtc/discoverConsumers` and add them to the manifest (**Add consumers from folders** in both editors); nothing joins the graph without the host adding it. |
 
 Remaining rename work:
 
@@ -2631,8 +2631,12 @@ Remaining rename work:
 - [ ] Support VS Code edited-file resource history with refactoring auto-save disabled, or retain
   the documented pre-edit refusal (the current policy).
 - [x] Add saved multi-root workspace, folder-override refusal and in-flight settings-change acceptance: September 29 X118/CFG1–CFG3 receipts below. Intervening configuration edits during native Undo/Redo remain separate history stress coverage.
-- [ ] Define optional host discovery/indexing of external repositories if automatic enumeration
+- [x] Define optional host discovery/indexing of external repositories if automatic enumeration
   beyond explicit sourceModules is required. The configured boundary itself is implemented.
+  Done 2026-10-21 as host-driven discovery: `xtc/discoverConsumers` returns the modules under chosen
+  folders that import the graph, directly or through each other, and name collisions separately. It
+  installs nothing; both editors' **Add consumers from folders** add the chosen modules to
+  `sourceModules`, which stays the only manifest, so rename receipts still name every module checked.
 
 This batch changes no Java AST node or compiler pipeline; it consumes existing compiler facts.
 
