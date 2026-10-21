@@ -134,6 +134,15 @@ internal fun ParityScenarios.highlightingCases() {
     }
 }
 
+/** Capture the installed scheme without cycling the visible editor through other palettes. */
+internal fun ParityWorkspace.captureColorScheme(document: ParityWorkspace.Document) {
+    with(driver) {
+        withContext(OnDispatcher.EDT) {
+            utility(HighlightingProbe::class).screenshot(document.editor.editor, directory.resolve("$id-current-theme.png").toString())
+        }
+    }
+}
+
 /** Reads editor highlighters to verify the final theme-based colors shown to the user. */
 @Remote("org.xtclang.idea.playbook.probe.HighlightingUi", plugin = "org.xtclang.playbook.probe")
 internal interface HighlightingProbe {
@@ -146,4 +155,9 @@ internal interface HighlightingProbe {
         editor: Editor,
         offset: Int,
     ): List<String>
+
+    fun screenshot(
+        editor: Editor,
+        file: String,
+    )
 }
