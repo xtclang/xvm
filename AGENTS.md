@@ -9,6 +9,15 @@ This covers `git push`, `git push -u`, `git branch -D`, `git push --delete`, and
 `gh` command (e.g. `gh pr create`). Local commits and local branches are fine when requested —
 nothing leaves the machine without the user saying so.
 
+## Git — rebase, never merge out of master
+
+Never merge master into a branch: no `git merge master` or `git merge origin/master`, no `git pull`
+without rebase, and not GitHub's **Update branch** merge (use **Update with rebase**). Catch a branch
+up with `git fetch origin` and `git rebase origin/master`, then push it with
+`git push --force-with-lease`, which is still a push and needs the user's go-ahead as above. PRs land
+on master as one squash commit; rebasing only catches a branch up. The full workflow, including how
+to resolve conflicts and how master is protected, is in [doc/git-workflow.md](doc/git-workflow.md).
+
 ## Gradle: `clean` runs alone
 
 A custom aggregator over the composite builds rejects `clean` combined with any other task
