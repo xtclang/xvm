@@ -1234,6 +1234,7 @@ and VS Code render them automatically from the LSP server response — no plugin
 | 18.4 | Multiple files | Open two `.x` runnable modules | Each shows its own module's Run lens |
 | 18.5 | No entry point (compiler adapter) | Open `module mylib { Int f() = 1; }` | No Run lens; a module needs exactly one `run` method with at most one required parameter |
 | 18.6 | Lens runs the module | Click the lens | The module builds and runs as in [18a](#18a-embedded-build-and-run) |
+| 18.7 | Gutter Run icon (IntelliJ) | Look at the gutter of the lens line, hover the icon, then click it | A Run icon with the tooltip "Run myapp" is on the `module` line, and clicking it runs the module as the lens does (automated in X280) |
 
 ---
 
@@ -1279,7 +1280,7 @@ module Hello {
 
 Known limits: up to four programs at a time per server, each in its own execution worker (a fifth run
 reports that four programs are already running); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
-*Build Module* builds every Ecstasy module; no IntelliJ gutter Run icon.
+*Build Module* builds every Ecstasy module.
 
 ---
 
@@ -3789,7 +3790,7 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X280 | Open LensRunnable and LensOnlyLibrary. Give LensOnlyLibrary a `run(String, String)`, then a `run()`. | Only LensRunnable has a **▶ Run** lens at first. Two required parameters still give no lens; adding `run()` adds the LensOnlyLibrary lens. |
+| X280 | Open LensRunnable and LensOnlyLibrary. Give LensOnlyLibrary a `run(String, String)`, then a `run()`. | Only LensRunnable has a **▶ Run** lens at first. Two required parameters still give no lens; adding `run()` adds the LensOnlyLibrary lens. IntelliJ also shows a Run icon in the gutter of each lens line (tooltip "Run *module*"), and clicking LensRunnable's icon runs it to exit code 0. |
 | X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second builds the unsaved edit and leaves it unsaved (VS Code with `task.saveBeforeRun` set to `never`), fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
 | X282 | Run RunEcho with the arguments `a b` and `ü`. | Output `args=2:a b\|ü`, unchanged arguments without shell parsing, and exit code 3. |
 | X283 | Run RunForever; after it prints `started`, Rerun it (IntelliJ **Rerun**, VS Code **Tasks: Restart Running Task**); after the new run prints `started`, Stop it. Then run RunNext from its Run lens. | Rerun stops the first run and starts a new one that prints `started` again. The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
