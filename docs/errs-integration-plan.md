@@ -2259,8 +2259,13 @@ Kept or moved:
   "Document changed during analysis"; with it, it passes. `XdkFileChangesTest` still covers the
   adapter level.
 
-#693 still carries the prototype (`XdkColorPrototype.kt`, `ParityColors.kt`, `probe/ColorUi.kt` and
-the rest); this removal has not been mirrored there.
+Mirrored into #693 on 2026-10-21 (`ca18ee71f..40f2c385e`): `8bb4a7d10` ticks R3 in the execution
+plan (only that file of `af0ec33d7` exists there), and `40f2c385e` is this removal. #693's
+`lsp-feature-tiers.md` and `plan-ide-integration.md` never described the prototype, so they keep
+their own text; `docs/` holds no plan there. On #693 the same `:lang:lsp-server:test` (2,337 tests, 2
+existing skips) and `:lang:intellij-plugin:test` (143) pass with 0 failures, and both harnesses'
+compiles and `spotlessCheck` pass. #693's description still lists the prototype among its known
+follow-ups.
 
 ### IntelliJ parity backlog (L60)
 
