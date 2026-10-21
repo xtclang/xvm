@@ -9,14 +9,9 @@ import com.intellij.driver.sdk.WaitForException
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
-import com.intellij.driver.sdk.ui.components.elements.JTableUiComponent
-import com.intellij.driver.sdk.ui.components.elements.accessibleList
-import com.intellij.driver.sdk.ui.components.elements.accessibleTable
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
-import com.intellij.driver.sdk.ui.components.elements.popup
 import com.intellij.driver.sdk.ui.components.elements.tree
-import com.intellij.driver.sdk.ui.remote.Component
 import com.intellij.driver.sdk.ui.ui
 import kotlin.time.Duration.Companion.seconds
 
@@ -94,7 +89,7 @@ fun Driver.chooseXtcFileRename() {
     }
 }
 
-/** Select the intention list, excluding its separate preview popup, without moving the pointer. */
+/** Choose from the intention list, excluding its separate preview popup, without moving the pointer. */
 fun Driver.choosePopup(
     editor: JEditorUiComponent,
     expected: List<String>,
@@ -102,38 +97,33 @@ fun Driver.choosePopup(
     reopen: () -> Unit,
 ) {
     val inspection = PopupInspection(this, editor, reopen)
+    val choices = utility(NativePopupChoices::class)
+
+    // Each read, and the choice, is one step in the IDE: a list that closes in between reads as closed and
+    // has nothing chosen from it, so the wait goes on and may reopen it while the source is unchanged.
+    fun rows() = withContext(OnDispatcher.EDT) { choices.listRows() }
     // Capture the source/caret before dispatch: an intention can move the caret while it
     // discovers actions. Recovery must retain the requested location, not that later position.
     reopen()
-    val popup = ui.popup("//div[@class='HeavyWeightWindow'][.//div[@class='MyList']]")
     awaitUi(
         "native popup contains $expected",
         45.seconds,
-        errorMessage = {
-            "Expected $expected; rendered rows: ${if (popup.present()) popup.accessibleList { byClass("MyList") }.items else "no list"}"
-        },
+        errorMessage = { "Expected $expected; rendered rows: ${rows() ?: "no list"}" },
     ) {
         inspection.recover()
-        if (!popup.present()) {
+        val rows = rows()
+        if (rows == null) {
             try {
-                awaitUi("intention menu opens", 2.seconds) { popup.present() }
+                awaitUi("intention menu opens", 2.seconds) { rows() != null }
             } catch (_: WaitForException) {
                 // Reopen only an unapplied inspection, never a completed generation or rename.
                 inspection.reopenUnapplied()
             }
             return@awaitUi false
         }
-        val rows = popup.accessibleList { byClass("MyList") }.items
-        expected.all { name -> rows.any { it.contains(name) } }
+        expected.all { name -> rows.any { it.contains(name) } } && withContext(OnDispatcher.EDT) { choices.chooseListRow(selected) }
     }
-    val list = popup.accessibleList { byClass("MyList") }
-    val index = list.items.indexOfFirst { it.contains(selected) }
-    check(index >= 0)
-    withContext(OnDispatcher.EDT) {
-        cast(list.component, NativeListSelection::class).setSelectedIndex(index)
-    }
-    popup.keyboard { enter() }
-    awaitUi("chosen popup closes", 15.seconds) { popup.notPresent() }
+    awaitUi("chosen popup closes", 15.seconds) { rows() == null }
 }
 
 /** LSP4IJ renders multiple navigation targets through IntelliJ's Show Usages table. */
@@ -144,38 +134,21 @@ fun Driver.chooseTargets(
     reopen: () -> Unit,
 ) {
     val inspection = PopupInspection(this, editor, reopen)
-    val popup = ui.popup()
-    val table = popup.accessibleTable()
+    val choices = utility(NativePopupChoices::class)
+
+    fun rows() = withContext(OnDispatcher.EDT) { choices.tableRows() }
     awaitUi(
         message = "native navigation chooser contains exactly $expected",
-        errorMessage = {
-            "Expected $expected; rendered rows: ${if (table.present()) table.content() else "no table"}"
-        },
+        errorMessage = { "Expected $expected; rendered rows: ${rows() ?: "no table"}" },
         timeout = 45.seconds,
     ) {
         inspection.recover()
-        if (!popup.present()) return@awaitUi false
-        val rows = table.content().values.map { it.values.joinToString(" ") }
-        rows.size == expected.size && expected.all { name -> rows.any { it.contains(name) } }
+        val rows = rows() ?: return@awaitUi false
+        rows.size == expected.size &&
+            expected.all { name -> rows.any { it.contains(name) } } &&
+            withContext(OnDispatcher.EDT) { choices.chooseTableRowContaining(selected, expected.size) }
     }
-    val row =
-        table
-            .content()
-            .entries
-            .single { (_, cells) -> cells.values.any { it.contains(selected) } }
-            .key
-    chooseNavigationRow(table, row)
-    awaitUi("selected declaration closes the chooser", 15.seconds) { popup.notPresent() }
-}
-
-/** Invoke the chooser's registered Enter action once, independent of desktop keyboard focus. */
-internal fun Driver.chooseNavigationRow(
-    table: JTableUiComponent,
-    row: Int,
-) {
-    withContext(OnDispatcher.EDT) {
-        utility(NativeNavigationChooser::class).choose(table.component, row)
-    }
+    awaitUi("selected declaration closes the chooser", 15.seconds) { rows() == null }
 }
 
 fun Driver.quickFix(
@@ -247,19 +220,24 @@ interface NativeButton {
     fun doClick()
 }
 
-/** Selects a native list row before invoking the associated dialog action. */
-@Remote("javax.swing.JList")
-interface NativeListSelection {
-    fun setSelectedIndex(index: Int)
-}
+/** Reads and chooses the rows of the showing list or table popup in one IDE step each. */
+@Remote("org.xtclang.idea.playbook.probe.PopupChoices", plugin = "org.xtclang.playbook.probe")
+internal interface NativePopupChoices {
+    fun listRows(): List<String>?
 
-/** Selects and activates a native navigation-popup target deterministically. */
-@Remote("org.xtclang.idea.playbook.probe.NavigationChooser", plugin = "org.xtclang.playbook.probe")
-internal interface NativeNavigationChooser {
-    fun choose(
-        component: Component,
-        row: Int,
-    )
+    fun chooseListRow(text: String): Boolean
+
+    fun tableRows(): List<String>?
+
+    fun chooseTableRow(
+        index: Int,
+        rows: Int,
+    ): Boolean
+
+    fun chooseTableRowContaining(
+        text: String,
+        rows: Int,
+    ): Boolean
 }
 
 /** A library use must be rejected by prepareRename before any refactoring dialog or edit. */
