@@ -1598,13 +1598,15 @@ child containers are the foundation; existing IDE shell commands and the DAP pla
 satisfy this track. The placeholder reports breakpoints unverified and refuses launch (2026-10-15);
 real breakpoint support needs the runtime bridge.
 
-Current native automation inventory: **128 shared cases with driver assertions**, plus startup.
-The [native demo continuation](#native-intellij-demo-continuation-2026-09-29) records the current
-execution and corrections; it does not claim an uninterrupted full-current-catalog pass.
-The previously missing 50 case bodies and X20/X81/X82 assertions are now written, compiled and
-included in the clean 113-case native checkpoint `run-6034631232732848040`. Completion still requires
-explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
-is a percentage of total LSP completeness.
+Current native automation inventory (2026-10-21): the shared catalog,
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **299 cases**: X1–X294, CFG1–CFG3, 7a.8
+and 7a.9, plus startup. The latest full-catalog run is the
+[October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
+added since, among them the embedded run cases above, have selected native receipts recorded with
+their features. The earlier 113- and 128-case inventories, and the
+[native demo continuation](#native-intellij-demo-continuation-2026-09-29), are historical.
+Completion still requires explicit evidence per feature; neither 24 capability flags nor a selected
+passing playbook is a percentage of total LSP completeness.
 
 ### Embedded build and run R2–R5 (2026-10-15)
 
@@ -2204,6 +2206,23 @@ and publishes it with `vsce publish --oidc` behind the repository variable
 [#710](https://github.com/xtclang/xvm/issues/710). LSP4IJ #1744 is closed (implemented by #1749). Fixes
 for UP16, UP17, UP20, UP24 and UP29 are prepared and verified natively; see
 [upstream fixes](errs-upstream-issues.md#upstream-fixes-prepared-2026-10-20).
+
+**VS Code Marketplace follow-up (2026-10-21).** The publishing branch is pushed and open as
+[#711](https://github.com/xtclang/xvm/pull/711). The Marketplace has two publishers, both with
+domain xtclang.org and no extensions: `xtclang` (display name "xtclang.org"), which is kept because
+a publisher ID never changes and `xtclang.xtc-language` already names it, and `xtclang-org`
+(display name "xtclang"), a duplicate to delete. Neither domain is verified: `xtclang`'s request
+has waited since about May with no DNS record behind it, and `xtclang-org` has a validated TXT
+record. Verification needs an extension on the Marketplace for six months first. Deleted publisher
+IDs are reserved forever ([microsoft/vsmarketplace#1728](https://github.com/microsoft/vsmarketplace/issues/1728)),
+and the web portal has no delete button, so the duplicate goes through `vsce delete-publisher` or
+Marketplace support. [#710](https://github.com/xtclang/xvm/issues/710) is rewritten and assigned to
+Cam: the owner adds him to both publishers, then he deletes the duplicate, redoes the DNS proof for
+`xtclang` and sets up trusted publishing. The pinned vsce 4.0.0 hides `--oidc` and sends the GitHub
+token as `Bearer` without an `api-version`; [microsoft/vscode-vsce#1337](https://github.com/microsoft/vscode-vsce/pull/1337)
+fixes that only in the 4.0.1 pre-releases, so #711 needs a newer vsce, or `--azure-credential`
+if the Marketplace has no trusted publishing setting. Everything still open across the branch is
+listed in [remaining.md](remaining.md).
 
 ### IntelliJ parity backlog (L60)
 
