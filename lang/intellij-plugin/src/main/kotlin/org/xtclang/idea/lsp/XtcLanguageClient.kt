@@ -24,6 +24,7 @@ import org.eclipse.lsp4j.UnregistrationParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.xtclang.idea.XtcIntelliJLanguage
 import org.xtclang.idea.run.EmbeddedRunSessions
+import org.xtclang.idea.run.RunGutterIcons
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -152,8 +153,11 @@ class XtcLanguageClient(
 
     override fun publishDiagnostics(params: PublishDiagnosticsParams) {
         semanticUpdate {
-            clientFeatures.findFileByUri(params.uri)?.let(::invalidateSemanticFacts)
+            val file = clientFeatures.findFileByUri(params.uri)
+            file?.let(::invalidateSemanticFacts)
             super.publishDiagnostics(params)
+            // a publication follows each analysis, which is what decides whether the module can run
+            file?.let { RunGutterIcons.refresh(project, it) }
         }.exceptionally { failure ->
             if (!isDisposed && !project.isDisposed) {
                 logger.warn("Failed to publish Ecstasy diagnostics", failure)
@@ -165,6 +169,8 @@ class XtcLanguageClient(
     override fun refreshDiagnostics(): CompletableFuture<Void> =
         semanticUpdate {
             FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
+            // IntelliJ pulls diagnostics, so this refresh, not a publication, follows each analysis
+            refreshRunIcons()
         }.thenCompose {
             if (isDisposed || project.isDisposed) {
                 CompletableFuture.completedFuture(null)
@@ -173,7 +179,13 @@ class XtcLanguageClient(
             }
         }
 
-    override fun refreshCodeLenses(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.LENSES)
+    override fun refreshCodeLenses(): CompletableFuture<Void> {
+        refreshRunIcons()
+        return refreshEditors(EditorRefresh.Feature.LENSES)
+    }
+
+    /** The gutter Run icons follow the Run lenses, from the same analysis. */
+    private fun refreshRunIcons() = FileEditorManager.getInstance(project).openFiles.forEach { RunGutterIcons.refresh(project, it) }
 
     override fun refreshInlayHints(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.HINTS)
 

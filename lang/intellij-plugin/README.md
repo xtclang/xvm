@@ -134,9 +134,9 @@ Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run get
 application container in one worker JVM, which is reused across runs and restarted if it dies;
 programs never run inside the language server. A failed build prints its diagnostics in the console,
 linked to the sources, and runs nothing. A program that reads console input reads the lines typed
-into its Run console, including lines typed while it still builds; **Send EOF** ends the input. There
-is no Ecstasy debugger, and `.x` files have no gutter Run icon because the plugin has no PSI parser.
-Embedded mode needs the compiler language service.
+into its Run console, including lines typed while it still builds; **Send EOF** ends the input. A
+module with a Run lens also has a Run icon in the gutter of that line, which runs it the same way.
+There is no Ecstasy debugger. Embedded mode needs the compiler language service.
 
 ## Development
 
@@ -675,6 +675,7 @@ intellij-plugin/
 │   │   ├── run/
 │   │   │   ├── EmbeddedExecution.kt           # Embedded build/run server access, run routing, reports
 │   │   │   ├── EmbeddedRunProcessHandler.kt   # An embedded run as a process (console, Stop, Rerun)
+│   │   │   ├── RunGutterIcons.kt              # Gutter Run icons on the Run lens lines
 │   │   │   ├── XtcBuildConfigurable.kt        # Build, Execution, Deployment | Ecstasy page
 │   │   │   ├── XtcBuildSettings.kt            # Project build mode (automatic, embedded, Gradle)
 │   │   │   ├── XtcProjectTaskRunner.kt        # Embedded Build/Rebuild Project
