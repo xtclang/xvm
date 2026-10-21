@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-07 (native color prototype and theme acceptance)
+> **Last Updated**: 2026-10-21 (color prototype removed)
 
 The latest [L82 acceptance record](../../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
 separates native harness corrections, the production unchanged-library-settings invalidation bug,
@@ -271,7 +271,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
 | Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
 | Inline completion | Compiler names/values, automatic ambiguity suppression and explicit alternatives; selected-range and revision guards | L76; native IntelliJ invocation/selection remains UP26 |
-| Document colors and color presentations | Opt-in fixture RGBA constructor prototype; default provider remains off. Compiler identity, aliases, byte literals and picker round trips are tested. Shared X273–X275 pass native swatches, edits, Undo/Redo and recovery in both editors; a public library contract remains pending. | L77 |
+| Document colors and color presentations | None. The fixture-only prototype and X273–X275 were removed on 2026-10-21; Ecstasy has no color type for swatches and pickers to apply to. Source highlighting is semantic tokens. | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
 | Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. Both editors pass visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap. Shared-process native window lifetime passes; UP15 retains its upstream classification gap. | L81 / X141, X143, X145–X147, X259; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
@@ -1568,12 +1568,11 @@ overlap refusal, failed/invalid output retention and retry. Both editors use a c
 producer and native controls; acceptance receipts are recorded in the integration plan.
 The current remaining settings work is listed explicitly in
 [the UI remainder](../../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
-L77 now has an opt-in fixture-only RGBA prototype for document colors and picker edits; production
-enablement remains deferred. The October 7 scope clarification requests only theme-based source
-highlighting in the LSP server; a public Ecstasy color library is outside this work.
-Native X273–X275 and semantic X41/X154 pass in
-both editors, including reviewed dark/light/high-contrast captures. See the
-[color acceptance receipt](../../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07). The user explicitly deferred
+L77's fixture-only document-color prototype was removed on 2026-10-21, with X273–X275: the
+requested feature is theme-based source highlighting, which semantic tokens provide, and Ecstasy has
+no color type for swatches and pickers. Semantic X41/X154 pass in both editors, including reviewed
+dark/light/high-contrast captures. See the
+[removal record](../../../docs/errs-integration-plan.md#l77-color-prototype-removed-2026-10-21). The user explicitly deferred
 L78 notebooks while file-based tooling is completed. L79 follows the runtime/DAP track.
 
 

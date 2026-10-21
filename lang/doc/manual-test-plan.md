@@ -117,9 +117,6 @@ notifications are failures; do not replay a timed-out mutation to manufacture a 
 - IntelliJ uses the supported read-only file fallback for library content (X254).
   X257 covers inline-completion constraints partly through the installed connection because
   released LSP4IJ does not expose all required native invocation metadata. Both report partial coverage.
-- The optional color-value prototype is disabled by default. X273–X275 explicitly enable it;
-  its native swatch refresh has a recorded VS Code failure. Theme-based source highlighting is
-  separate and enabled by default.
 - Error notifications are intentional in the negative import/settings cases X261/X262,
   X268–X270 and failed JVM launch X272. Their retention and recovery assertions must still pass.
 
@@ -1326,7 +1323,7 @@ colors, and a theme can give multiple categories the same appearance.
 #### Compiler semantic-color prototype
 
 This is the requested source-highlighting feature. It uses the IDE theme and requires no new
-Ecstasy library or application-color API. The separate color-value picker experiment below is opt-in.
+Ecstasy library or application-color API.
 
 Open [`semantic-colors.code-workspace`](../test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
 in VS Code with the compiler extension, then open `SemanticColors.x`. The workspace only adds
@@ -1339,8 +1336,7 @@ workspace styling is not an IntelliJ setting.
 Inspect lowercase `counter` as `class`, uppercase `Count` as `parameter`, `count` as `property`,
 `next` as `variable`, `Reader` and imported `List` as `interface`, `Mode` as `enum`, and both uses
 of `Quiet` as `enumMember`. `create` is `function.static` at its declaration and call; `read` is
-`method`. The `count += 1` target has `modification`; its reads do not. This is source-code
-highlighting, separate from color-value swatches and pickers.
+`method`. The `count += 1` target has `modification`; its reads do not.
 
 `XdkSemanticColorTest` compiles this fixture and checks classifications. Shared X41/X154 check
 functions, enum values, imported interfaces and writes in both editor drivers. Both cases pass in
@@ -1350,61 +1346,6 @@ The backend suite also checks the real platform `CircularBuffer` fixture, includ
 names used as parameters/properties/locals and incomplete-member edits followed by repair.
 
 ---
-
-### Experimental color-value picker
-
-This opt-in experiment is separate from syntax/semantic highlighting. The ordinary fixture
-[`ColorPrototype.x`](../test-fixtures/color-values/ColorPrototype.x) defines a four-byte `Rgba`
-const: sRGB channels, straight alpha, opaque by default. It is not an XDK library API.
-The server recognizes that resolved constructor identity, including aliases, rather than matching
-arbitrary `Color` names or `"#ff8000"` strings. Normal launches advertise no color provider.
-
-Build and launch an isolated VS Code development host from the repository root:
-
-```bash
-./gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
-XTC_LSP_COLOR_PROTOTYPE=true code --new-window \
-  --user-data-dir /tmp/ecstasy-color-prototype \
-  --extensionDevelopmentPath="$PWD/lang/vscode-extension" \
-  "$PWD/lang/test-fixtures/color-values"
-```
-
-The separate, reusable profile ensures an already running VS Code process does not discard the
-prototype environment. Keep **Editor: Color Decorators** enabled. For IntelliJ, start the
-development IDE with the same environment, then open `lang/test-fixtures/color-values` as a project:
-
-```bash
-XTC_LSP_COLOR_PROTOTYPE=true ./gradlew :lang:intellij-plugin:runIde \
-  -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
-```
-
-Both hosts use standard `textDocument/documentColor` / `textDocument/colorPresentation` requests.
-LSP4IJ implements color squares and its native chooser through its
-[document color support](https://github.com/redhat-developer/lsp4ij/blob/main/docs/LSPSupport.md#document-color).
-The server can alternatively be started directly with `-Dxtc.lsp.colorPrototype=true` before
-`-jar`. Startup logs confirm the experimental `ColorPrototype.Rgba` mapping is enabled.
-
-Use the same steps in either editor, without saving changes to the tracked fixture:
-
-| Check | Action | Expected result |
-|---|---|---|
-| Swatches | Open `ColorPrototype.x` and wait for successful analysis | `accent` is opaque orange; `translucent()` has RGB 200/80/40 and alpha 128/255. |
-| Apply | Open `accent`'s picker and choose blue with approximately half opacity | Its byte literals change and an `alpha = …` argument appears; the edited source compiles and the swatch agrees within byte rounding. |
-| Named arguments | Change the color returned by `translucent()` | Blue/red/alpha/green stay in their written order and retain labels; only numeric values change. |
-| Dismiss and Undo | Open and dismiss the picker without selecting a new value; reopen, change opacity, Undo and Redo | Dismissal without selection preserves source. Both native pickers apply selected values immediately; closing afterward retains the edit. Undo/Redo restores the corresponding source and color. |
-| Dynamic/ordinary text | Inspect `dynamic(red)` and `ordinaryText` | Neither receives a swatch. No runtime expressions are evaluated. |
-| Failure and recovery | Change a channel to 256, then restore it | Compiler diagnostic and no stale swatch/edit while the compilation fails; swatches return after repair. |
-| Baseline | Relaunch without the prototype environment/property | No `colorProvider`; normal semantic token coloring continues independently. |
-
-Backend tests cover binary and typedef aliases, same-named unrelated types, comments, trailing
-commas, UTF-16 columns, CRLF/LF/CR preservation, rounding, changed defaults, stale ranges and
-document closure. References and compound constant expressions are deliberately outside the
-literal-only prototype. The real packaged stdio test verifies opt-in and an edit/recompile round
-trip. Shared X273–X275 automate native swatches, picker edits, dismissal, Undo/Redo and error recovery.
-The launchers enable the prototype when those cases are selected, including a full catalog run.
-Native acceptance passes in VS Code `run-atPCiE` and IntelliJ `run-5420151303010878432`
-(zero IDE failures). X41/X154 also pass in both editors, with dark/light/high-contrast screenshots
-reviewed. See the [acceptance reports](#acceptance-reports).
 
 ## XdkAdapter Playbook
 
@@ -1811,7 +1752,7 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, monikers, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Inline values are not advertised. Document colors are off by default and advertised only when the experimental color prototype is explicitly enabled; the harness enables it for selections containing X273–X275. Native formatting is exercised further in X102/X107. |
+| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, monikers, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Inline values are not advertised. Document colors are not advertised. Native formatting is exercised further in X102/X107. |
 | X32 | Try completion in `box.pair(unknown = \|);`, `box.pair(first = "x", first = \|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
 
 ### F. Type-definition and implementation lookup
@@ -3752,14 +3693,6 @@ stopped-server sessions. Running processes are protected; cleanup runs on the ne
 | X271 | Stop the language server, then Export Server Logs. The ZIP identifies offline mode and contains only this project's recorded launcher/server session; restart restores diagnostics. | Shared X271 in both editors. |
 | X272 | Save JVM option `-Xmx1K`, restart and observe the intentional JVM startup failure. Export logs while stopped; correct/reset the option and restart. Buffers and diagnostics recover. | Shared X272 in both editors; uses a disposable test profile. |
 
-### Color-value prototype (X273–X275)
-
-| ID | Action | Expected result |
-|---|---|---|
-| X273 | With the color prototype enabled, verify only two swatches in `ColorPrototype.x`; use native opacity/RGB picker controls on positional and reordered named constructors. Inspect dark/light/high-contrast schemes. | Source preserves labels, order and surrounding text; edited bytes compile and match the picker color. Both editor drivers use the shared source and negative controls. |
-| X274 | Open and dismiss the native color picker without choosing a value, then change opacity once, Undo once and Redo once. | Dismissal preserves source; Undo and Redo restore the exact corresponding constructors and reported RGBA. |
-| X275 | Change a channel from 255 to 256, then restore the source. | Compiler error removes all native color swatches; repair restores exactly the two known colors. Ordinary strings and dynamic expressions never gain swatches. |
-
 Automation checks installed settings/export operations and exact restart/status boundaries;
 it supplies the save destination rather than driving the OS chooser. Manually verify chooser
 Cancel and overwrite confirmation. Full editor exit/reopen is covered separately below; inspect
@@ -3918,7 +3851,8 @@ Its first native color request receives `ContentModified`; a later explicit prov
 the expected colors, but the 30-second rendered check still fails. A fresh selected launch reproduces
 that failure. X274/X275, theme-based highlighting X276/X277, documentation X278 and reference lenses
 X279 pass in the continuation. Do not replace this evidence with a retry that edits the source or
-toggles rendering merely to obtain a pass. The color prototype remains off by default.
+toggles rendering merely to obtain a pass. The color prototype and X273–X275 were removed on
+2026-10-21.
 
 See the [acceptance reports](#acceptance-reports)
 for every receipt, the X31/X127 harness corrections and the outstanding prototype refresh investigation.
