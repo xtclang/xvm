@@ -12,6 +12,7 @@ import org.xvm.compiler.ast.ExpressionStatement
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.ReturnStatement
 import org.xvm.compiler.ast.StatementBlock
@@ -155,13 +156,14 @@ internal object XdkMethodExtraction {
         }
         val tokens = ExecutionTrace.api("Lexer.lex(extract-method)") { Lexer(Source(text), errors).asSequence().toList() }
         if (errors.hasSeriousErrors()) return null
-        // Ref-taking and super dispatch need a different contract. Preserve bitwise expressions in
-        // a later slice once syntax distinguishes them from address-taking at the extraction site.
+        // Ref-taking (&name) and super dispatch need a different contract; a bitwise & is an ordinary operator.
         val selectedTokens =
             ExecutionTrace.api("Lexer.lex(extract-method-selection)") {
                 Lexer(Source(text.substring(start, end)), errors).asSequence().toList()
             }
-        if (selectedTokens.any { it.id == Token.Id.BIT_AND || it.valueText == "super" }) return null
+        if (selectedNodes.any { it is NameExpression && it.isSuppressDeref } || selectedTokens.any { it.valueText == "super" }) {
+            return null
+        }
         if (expression != null && selectedLocation !in facts.types) return null
         val occurrences = model.occurrences.filter { it.range.start >= range.start && it.range.end <= range.end }
         val inputs =
