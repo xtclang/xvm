@@ -7,6 +7,7 @@ import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 /** Embedded build and run through Build Project, Ecstasy run configurations, Stop, console input and the Run lens. */
@@ -359,6 +360,58 @@ internal fun ParityScenarios.runEntryCases() {
             ) { "The warning comes before the program's output: $output" }
         }
     }
+
+    case("X303") { data ->
+        // Gradle mode runs ./gradlew in the project root, so the project goes there; nothing of it may be there yet,
+        // apart from the build directory, which embedded builds share
+        val rootEntries = data.strings("rootEntries").map(projectRoot::resolve)
+        rootEntries.forEach { check(!Files.exists(it)) { "X303 needs a project root without ${projectRoot.relativize(it)}" } }
+        val project = with(driver) { singleProject() }
+        val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
+        val generated = Files.createTempDirectory("xtc-new-project")
+        val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, "GRADLE") } }
+        try {
+            val created = JsonParser.parseString(execution.newProject(generated.toString(), data.string("project"))).asJsonObject
+            check(created["success"].asBoolean) { created.string("message") }
+            generated.resolve(data.string("project")).toFile().copyRecursively(projectRoot.toFile())
+            projectRoot.resolve("gradlew").toFile().setExecutable(true)
+            val catalog = Files.readString(projectRoot.resolve(data.string("catalog")))
+            val version = Regex(data.string("versionPattern"), RegexOption.MULTILINE).find(catalog)?.groupValues?.get(1)
+            checkNotNull(version) { "An XTC version in ${data.string("catalog")}" }
+            data.strings("mavenLocal").forEach { artifact ->
+                check(Files.isDirectory(Path.of(System.getProperty("user.home"), ".m2", "repository", artifact, version))) {
+                    "X303 builds with $artifact $version from mavenLocal; run ./gradlew publishLocal first"
+                }
+            }
+            val module = data.string("module")
+            val file = projectRoot.resolve(data.string("moduleFile"))
+
+            fun gradleRun(message: String): String {
+                execution.run(project, module, file.toUri().toString(), data.string("args"))
+                awaitUi(message, 120.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                return execution.output(module)
+            }
+
+            // the Ecstasy Application configuration calls ./gradlew runXtc, which compiles the module (not its tests) first
+            val output = gradleRun("Gradle run finishes")
+            check(execution.exitCode(module) == 0) { "Exit code ${execution.exitCode(module)}: $output" }
+            check(data.string("output") in output) { output }
+            val artifact = data.strings("artifacts").first()
+            check(Files.exists(projectRoot.resolve(artifact))) { "The Gradle run builds $artifact: $output" }
+
+            // a type error in the saved module fails the compile, and the run reports it instead of running
+            Files.writeString(file, data.string("broken"))
+            val failed = gradleRun("Gradle run of the broken module finishes")
+            check(execution.exitCode(module) != 0) { "The broken module must not run: $failed" }
+            check(data.string("brokenCode") in failed && data.string("brokenLocation") in failed) { failed }
+        } finally {
+            with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, previous) } }
+            rootEntries.forEach { it.toFile().deleteRecursively() }
+            // only when nothing else, such as embedded build output, is left in them
+            data.strings("sharedDirectories").forEach { projectRoot.resolve(it).toFile().delete() }
+            generated.toFile().deleteRecursively()
+        }
+    }
 }
 
 /** What the Build tool window shows when the embedded compiler takes Build Project. */
@@ -396,6 +449,11 @@ interface EmbeddedExecutionProbe {
     fun mode(
         project: Project,
         value: String,
+    ): String
+
+    fun newProject(
+        parent: String,
+        name: String,
     ): String
 
     fun build(

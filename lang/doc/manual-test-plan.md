@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **304 scenarios**: X1–X302 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **305 scenarios**: X1–X303 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 304 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 305 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1268,7 +1268,7 @@ module Hello {
 | 18a.6 | Stop | Run `module Loop { void run() { for (Int count = 0; count >= 0; ++count) {} } }` (an empty `while (True)` is rejected as non-terminating), then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
 | 18a.7 | Rerun | IntelliJ **Rerun**, or VS Code **Tasks: Restart Running Task**, while a run is active | The old run stops and a new one starts in the same console (automated in X283) |
 | 18a.8 | Failed build skips the run | Run a module that does not compile | The diagnostics print and nothing runs |
-| 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before |
+| 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before; the program's output shows in the task terminal or Run console (X303 automates this for a project made by `xtc init`, apart from reading VS Code's terminal) |
 | 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs (the run is automated in X285) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
@@ -1513,7 +1513,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 304 scenarios: X1–X302 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 305 scenarios: X1–X303 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1523,11 +1523,12 @@ Cases may carry `tags` defined by the catalog's `tagDefinitions`, and both run r
 `slow` marks the cases whose median took at least 10 seconds in either editor across the recorded
 passing runs up to 2026-10-08; most cases take one to four seconds. The 16 slow cases are X27,
 X50, X65, X67, X97, X108, X122, X142, X143, X144, X145, X146, X148, X265, X277 and CFG1. Full and
-focused runs still include them. A future fast profile could exclude them for quick checks, with
+focused runs still include them. X303, added on 2026-10-21, is tagged `slow` too, since it runs a real Gradle
+build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 304 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 305 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3866,6 +3867,18 @@ rows 18a.15–18a.17 in [section 18a](#18a-embedded-build-and-run).
 | ID | Actions | Expected result |
 |---|---|---|
 | X302 | With no source settings, move `Library.x` (no resource expressions) into `moved/`, with `Consumer.x` closed, then Undo/Redo. | `Library/` moves with it to `moved/Library/`; the module stays in the discovered graph, the consumer keeps its import and nothing reports errors; Undo restores both paths. Automated in VS Code; the IntelliJ driver does not run discovered-graph moves yet. A root that uses resources, or a destination outside the discovered folders, is still refused. |
+
+### Project made by New Project, built with Gradle (X303)
+
+Like X288, this case works at the folder root (VS Code) or project root (IntelliJ), where Gradle mode
+runs `./gradlew`, and removes the project and its build output afterwards, keeping any embedded build
+output in `build/xtc/embedded`. It needs `./gradlew publishLocal` (and, for VS
+Code's `xtc init`, `./gradlew xdk:installDist`) first, and builds with the XTC Gradle plugin and XDK
+last published to mavenLocal.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X303 | Make the application project `GradleBuilt` with `xtc init` (what VS Code's **Ecstasy: Create Project** runs) or the IntelliJ New Project wizard's creator, put it at the root and choose the Gradle build mode. Build and Run it (IntelliJ: Run with the argument `World`). Then save a type error in `GradleBuilt.x` and Build (IntelliJ: Run) again. | The build ends with exit code 0 and writes `build/xtc/main/lib/GradleBuilt.xtc` and the test module `GradleBuiltTest.xtc`; the run ends with exit code 0, and IntelliJ's Run console shows `Hello, World!`. The broken module fails the build: VS Code shows `COMPILER-43` on line 3 of `GradleBuilt.x` in Problems, and IntelliJ's run fails with `GradleBuilt.x:3` and `COMPILER-43` in its console. IntelliJ's Build Project in Gradle mode is the IDE's own builder and is not driven. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
