@@ -8883,7 +8883,7 @@
     "X288": {
       "title": "Build and Run follow the build mode beside a Gradle build: embedded by default, Gradle once chosen, embedded again after switching back",
       "manual": [
-        "Choosing the mode in the VS Code quick pick or status bar, or in IntelliJ's Build and run using box, is checked manually (18a.14); a real Gradle build is not run."
+        "Choosing the mode in the VS Code quick pick or status bar, or in IntelliJ's Build and run using box, is checked manually (18a.14); a real Gradle build is not run here (X303 runs one)."
       ],
       "values": {
         "file": "BuildModes.x",
@@ -9244,6 +9244,65 @@
         "coverage": "not-implemented",
         "limitations": [
           "The IntelliJ type-move driver works on a configured graph; running it on the discovered graph of one case folder needs a discovery helper at the ParityWorkspace level. The server behavior is covered by XdkFileOperationsTest."
+        ]
+      }
+    },
+    "X303": {
+      "title": "A project made the way New Project makes it builds, tests and runs with its own Gradle build once Gradle mode is chosen",
+      "tags": [
+        "slow"
+      ],
+      "manual": [
+        "The Gradle run's output in VS Code's task terminal is read manually (18a.9); the case checks the task's exit code and the failed build's error in Problems",
+        "Needs ./gradlew publishLocal first (and xdk:installDist for VS Code's xtc init); the build uses the XTC Gradle plugin and XDK last published to mavenLocal, which may be older than the tree"
+      ],
+      "values": {
+        "project": "GradleBuilt",
+        "module": "GradleBuilt",
+        "moduleFile": "src/main/x/GradleBuilt.x",
+        "rootEntries": [
+          ".gitignore",
+          ".gradle",
+          "build.gradle.kts",
+          "gradle",
+          "gradle.properties",
+          "gradlew",
+          "gradlew.bat",
+          "settings.gradle.kts",
+          "src",
+          "build/reports",
+          "build/tmp",
+          "build/xtc/main",
+          "build/xtc/test",
+          "build/xtc/xdk",
+          "build/xunit"
+        ],
+        "sharedDirectories": [
+          "build/xtc",
+          "build"
+        ],
+        "catalog": "gradle/libs.versions.toml",
+        "versionPattern": "^xtc = \"([^\"]+)\"$",
+        "mavenLocal": [
+          "org/xtclang/xtc-plugin",
+          "org/xtclang/xdk"
+        ],
+        "artifacts": [
+          "build/xtc/main/lib/GradleBuilt.xtc",
+          "build/xtc/test/lib/GradleBuiltTest.xtc"
+        ],
+        "args": "World",
+        "output": "Hello, World!",
+        "broken": "module GradleBuilt {\n    void run() {\n        Int count = \"none\";\n    }\n}\n",
+        "brokenCode": "COMPILER-43",
+        "brokenLine": 2,
+        "brokenLocation": "GradleBuilt.x:3",
+        "statusGradle": "$(tools) Gradle build"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "The project is made by the New Project wizard's project creator with the plugin's own version, not through the wizard's pages, and copied into the open project. Build Project in Gradle mode goes to the IDE's builder, which needs the Gradle project imported, so the case uses Run: the Ecstasy Application configuration calls ./gradlew runXtc, which compiles the module first."
         ]
       }
     },
