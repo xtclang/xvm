@@ -206,8 +206,25 @@ internal object XdkMethodExtraction {
 
                         else -> return null
                     }
-                if (type is VariableTypeExpression || type is AnnotatedTypeExpression) return null
-                Capture(declaration, symbol.kind, symbol.name, spelling(type) ?: return null, 0, 0)
+                if (type is AnnotatedTypeExpression) return null
+                val spelled =
+                    if (type is VariableTypeExpression) {
+                        // val/var writes no type: spell the initializer's compiler type. The proof checks that the
+                        // parameter has the declaration's own type, so a narrower or wider spelling is refused.
+                        val value =
+                            (parents[written] as? AssignmentStatement)
+                                ?.takeIf { it.lValue === written && it.op.id == Token.Id.ASN }
+                                ?.rValue ?: return null
+                        facts.sourceTypes[
+                            SemanticModel.SourceLocation(
+                                source,
+                                SemanticModel.Range(position(value.startPosition), position(value.endPosition)),
+                            ),
+                        ] ?: return null
+                    } else {
+                        spelling(type) ?: return null
+                    }
+                Capture(declaration, symbol.kind, symbol.name, spelled, 0, 0)
             }
         val names = tokens.filter { it.id == Token.Id.IDENTIFIER }.map { it.valueText }.toSet() + model.symbols.map { it.name }
         val name = generateSequence(0) { it + 1 }.map { if (it == 0) "extractedMethod" else "extractedMethod$it" }.first { it !in names }
