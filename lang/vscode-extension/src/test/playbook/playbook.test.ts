@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
 import { adapterChooserCases } from './adapters';
 import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced';
-import { colorCases } from './colors';
 import { compilerImportCases } from './compilerImports';
 import { completionCases } from './completion';
 import { referenceLensCases } from './referenceLenses';
@@ -89,7 +88,6 @@ suite('XdkAdapter playbook', function () {
     compilerImportCases();
     librarySettingsCases();
     runtimeSettingsCases();
-    colorCases();
     highlightingCases();
     documentationCases();
     referenceLensCases();

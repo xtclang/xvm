@@ -583,13 +583,13 @@ acceptance, offline export and L82 release evidence remain; Run/DAP, color and n
 their recorded scope. See the [runtime/log contract](../../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 
-L77 has an opt-in fixture-only RGBA constructor prototype; ordinary launches advertise no color
-provider. Shared X273–X275 now pass native picker edits, dismissal, Undo/Redo, rendered swatch
-refresh and invalid-source recovery in both editors. X41/X154 and dark/light/high-contrast captures
-verify the independent semantic-highlighting path. A public Ecstasy color library is outside the
-scope: the user clarified on October 7 that only theme-based source highlighting is requested.
-The IDE theme chooses colors from the server's standard token classifications. See the
-[native color receipt](../../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
+L77's opt-in document-color prototype, which recognized only a test-fixture RGBA constructor, was
+removed on 2026-10-21 with its shared cases X273–X275; the server advertises no color provider.
+Document colors put swatches and a picker next to color values in source; they do not color the
+code. Source highlighting is theme-based semantic tokens: X41/X154 and dark/light/high-contrast
+captures verify it, and the IDE theme chooses colors from the server's token classifications.
+Document colors would return only if Ecstasy gains a real color type. See the
+[removal record](../../../docs/errs-integration-plan.md#l77-color-prototype-removed-2026-10-21).
 
 The October 7 source-highlighting follow-up adds resolved annotation occurrences and bundled-library
 ownership, retaining lexical escape/keyword/literal detail. Shared X276/X277 cover native rendering,

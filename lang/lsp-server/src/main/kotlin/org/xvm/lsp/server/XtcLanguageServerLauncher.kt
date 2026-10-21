@@ -104,10 +104,7 @@ private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBacke
     when (requested) {
         AdapterBackend.COMPILER -> {
             logger.info("using the Ecstasy compiler for diagnostics and document symbols")
-            val colorPrototype =
-                (System.getProperty("xtc.lsp.colorPrototype") ?: System.getenv("XTC_LSP_COLOR_PROTOTYPE")) == "true"
-            if (colorPrototype) logger.info("enabling experimental ColorPrototype.Rgba color values")
-            XdkAdapter(colorPrototype) to AdapterBackend.COMPILER
+            XdkAdapter() to AdapterBackend.COMPILER
         }
 
         AdapterBackend.TREE_SITTER -> {
