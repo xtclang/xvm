@@ -183,7 +183,9 @@ internal object XdkMethodExtraction {
         val captured =
             inputs.map { symbol ->
                 val declaration = SemanticModel.SourceLocation(symbol.declarationSource, symbol.declaration ?: return null)
-                if (declaration.sourceName != source || declaration !in facts.stableValues || declaration !in facts.types) return null
+                // Passing the current value is reading it: the selection does not write it (checked next), and nothing
+                // else can while it runs, because a plain value is never held by reference.
+                if (declaration.sourceName != source || declaration !in facts.plainValues || declaration !in facts.types) return null
                 if (occurrences.filter { it.symbol == symbol.id }.any {
                         it.role != SemanticModel.Role.REFERENCE ||
                             it.usage != SemanticModel.Usage.READ
