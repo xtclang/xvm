@@ -38,6 +38,8 @@ internal class XdkProjectQueries(
     private val discoverImports: Boolean = false,
     private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
     private val navigationIndex: XdkNavigationIndex = XdkNavigationIndex(),
+    // The folders discovery walks; a root moved outside them would leave the discovered graph.
+    private val discoveryFolders: List<File> = emptyList(),
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -547,8 +549,20 @@ internal class XdkProjectQueries(
             }
         val rootMoves =
             rootOperations.map { (from, to) ->
-                // Discovery cannot persist resource roots left outside the moved companion tree.
-                if (discoverImports) return null
+                // Discovery persists no resource roots and finds a root only under its folders. A moved root must use
+                // no resources and stay where the walk finds it, so that the proof's graph is the one discovery builds.
+                if (discoverImports) {
+                    val module = project.modules.values.first { it.root == from }
+                    if (sources[module]
+                            ?.inputs
+                            ?.text
+                            ?.values
+                            ?.any(XdkLexical::mayUseResources) != false ||
+                        !XdkWorkspaceDiscovery.includes(discoveryFolders, to)
+                    ) {
+                        return null
+                    }
+                }
                 XdkSourceMoves.plan(from, to, texts, directories) ?: return null
             }
         val typeOperations =
@@ -695,7 +709,9 @@ internal class XdkProjectQueries(
                             (module.dependencies + typeMove.dependencies[module.name].orEmpty()).mapTo(linkedSetOf()) { names[it] ?: it },
                             (
                                 module.resourceFiles ?: sources[module]?.inputs?.resources?.roots?.takeIf {
-                                    File(paths[module.root.path] ?: module.root.path).parentFile != module.root.parentFile
+                                    // a configured graph keeps a moved root's resource roots; discovery deduces them again
+                                    !discoverImports &&
+                                        File(paths[module.root.path] ?: module.root.path).parentFile != module.root.parentFile
                                 }
                             )?.map { resource ->
                                 val move =
