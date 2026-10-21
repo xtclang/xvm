@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **303 scenarios**: X1–X301 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **304 scenarios**: X1–X302 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 303 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 304 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1512,7 +1512,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 303 scenarios: X1–X301 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 304 scenarios: X1–X302 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1526,7 +1526,7 @@ focused runs still include them. A future fast profile could exclude them for qu
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 303 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 304 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3859,6 +3859,12 @@ rows 18a.15–18a.17 in [section 18a](#18a-embedded-build-and-run).
 | ID | Actions | Expected result |
 |---|---|---|
 | X301 | As X291 for `OpenRoot.x`, but leave its editor open: Run it from a saved target, rename the file to `RenamedOpenRoot.x` outside the IDE, open the renamed file and run the same target again. | Both runs print `open root runs` and exit with code 0. The editor left open on the old path does not declare `OpenRoot` a second time. |
+
+### Discovered root moved into another folder (X302)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X302 | With no source settings, move `Library.x` (no resource expressions) into `moved/`, with `Consumer.x` closed, then Undo/Redo. | `Library/` moves with it to `moved/Library/`; the module stays in the discovered graph, the consumer keeps its import and nothing reports errors; Undo restores both paths. Automated in VS Code; the IntelliJ driver does not run discovered-graph moves yet. A root that uses resources, or a destination outside the discovered folders, is still refused. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
