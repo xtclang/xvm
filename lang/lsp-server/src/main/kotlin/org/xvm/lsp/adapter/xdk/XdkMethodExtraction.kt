@@ -78,6 +78,7 @@ internal object XdkMethodExtraction {
 
         fun statementEnd(node: AstNode): Int? {
             val end = offset(node.endPosition) ?: return null
+            if (text.getOrNull(end - 1) == ';') return end
             return Regex("[ \t]*;")
                 .find(text, end)
                 ?.takeIf { it.range.first == end }
@@ -96,7 +97,9 @@ internal object XdkMethodExtraction {
                             (offset(node.startPosition) ?: -1) >= start && (offset(node.startPosition) ?: Int.MAX_VALUE) < end
                         }
                     }.singleOrNull { selected ->
-                        selected.isNotEmpty() && selected.all { it is ExpressionStatement } &&
+                        // Locals declared here and field writes may move; a write to an outer local is refused below.
+                        selected.isNotEmpty() &&
+                            selected.all { it is ExpressionStatement || it is AssignmentStatement || it is VariableDeclarationStatement } &&
                             offset(selected.first().startPosition) == start && statementEnd(selected.last()) == end
                     } ?: return null
             }
@@ -166,11 +169,17 @@ internal object XdkMethodExtraction {
         }
         if (expression != null && selectedLocation !in facts.types) return null
         val occurrences = model.occurrences.filter { it.range.start >= range.start && it.range.end <= range.end }
-        val inputs =
+        val variables =
             occurrences
                 .mapNotNull { it.symbol?.let(model::symbol) }
                 .filter { it.kind in setOf(SemanticModel.SymbolKind.VARIABLE, SemanticModel.SymbolKind.PARAMETER) }
                 .distinctBy { it.id }
+        // A local declared in the selection moves with it, so nothing after the selection may use it.
+        val (declared, inputs) =
+            variables.partition { symbol ->
+                symbol.declarationSource == source && symbol.declaration?.let { it.start >= range.start && it.end <= range.end } == true
+            }
+        if (declared.any { symbol -> model.occurrences.any { it.symbol == symbol.id && it.range.start >= range.end } }) return null
         val captured =
             inputs.map { symbol ->
                 val declaration = SemanticModel.SourceLocation(symbol.declarationSource, symbol.declaration ?: return null)
