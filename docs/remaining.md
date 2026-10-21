@@ -225,10 +225,10 @@ passes with the workaround disabled. The gates are in
 
 ### vscode-languageclient
 
-- [ ] UP28: #1896 (fix for #1307) needs three maintainer approvals; as a community PR its head
-  commit's signature doesn't count. Nothing to do but wait or ask for reviews.
-- [ ] UP28: after a release with #1867 and #1896, remove the double observation of `start()`;
-  gate: X272.
+- [x] UP28: #1896 (fix for #1307) merged by the maintainer on 2026-10-21 (`49328700`); #1307 is
+  still open.
+- [ ] UP28: after a release with #1867 and #1896 (the latest is still 10.1.2, 2026-09-25), remove
+  the double observation of `start()` and the `stop()` override; gate: X272.
 
 ### Not filed yet: fixes ready locally
 
