@@ -40,6 +40,7 @@ import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SetTraceParams
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressParams
@@ -1266,6 +1267,13 @@ class XtcLanguageServer(
      */
     @JsonRequest("xtc/run")
     fun run(params: RunParams): CompletableFuture<RunResponse> = embeddedRuns.run(params)
+
+    /** The Run lenses of one document, for clients that mark the same lines elsewhere, such as IntelliJ's gutter. */
+    @JsonRequest("xtc/runLenses")
+    fun runLenses(params: TextDocumentIdentifier): CompletableFuture<List<RunLens>> =
+        supplyAsync("xtc/runLenses", params.uri, { "${it.size} lenses" }) {
+            (adapter as? XdkAdapter)?.runLensLines(params.uri).orEmpty().map { (module, line) -> RunLens(module, line) }
+        }
 
     /** Source modules whose latest compilation declares a callable entry point. */
     @JsonRequest("xtc/runnableTargets")
