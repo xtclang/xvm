@@ -2313,8 +2313,8 @@ same 12 native cases pass in VS Code (`run-k45i5W`) and IntelliJ (`run-251417563
 
 ### R5 gaps closed (2026-10-21)
 
-The five gaps the execution plan left open after R5, as separate commits on this branch (not yet
-mirrored into #693):
+The five gaps the execution plan left open after R5, as separate commits on this branch, all
+mirrored into #693 (below):
 
 - `54bfdb7d2`: a renamed root whose header does not parse keeps the module name and imports of its
   last parse. Discovery records a file added with the exact text of a removed one
@@ -2340,6 +2340,15 @@ Not covered: IntelliJ's Build Project in Gradle mode, Debug or configuration act
 icon, and X302 in IntelliJ. X303 builds with whatever plugin and XDK were last published to
 mavenLocal. Validation: `:lang:lsp-server:test` 2,374 tests, 0 failures, the 2 existing skips; `:lang:intellij-plugin:test` 143, 0 failures; ESLint on the
 changed TypeScript and `spotlessCheck` pass.
+
+Mirrored into #693 on 2026-10-21 (`8954d3a81..fb4157063`): `5578994fb`, `b2929983c`, `f4805aa8e`,
+`21db0ead8` and `fb4157063`, the same changes in the same order, cherry-picked with `-x`. #693 has
+no `docs/errs-*.md`, so three of them leave out their change to this file's catalog count, and their
+messages say so; `670954781` and `c553468d0`, which only record work here, are not mirrored. On
+#693: `:lang:lsp-server:test` 2,374 tests (the 2 existing skips) and `:lang:intellij-plugin:test`
+143, 0 failures, from fresh JUnit XML; X280, X288, X291 and X301–X303 pass in VS Code
+(`run-yvBP7L`), and in IntelliJ X280, X291 and X301 pass with X288 and X303 partial
+(`run-13040826915320426889`, no IDE errors).
 
 ### IntelliJ parity backlog (L60)
 
