@@ -130,6 +130,41 @@ class XdkFileOperationsTest {
     }
 
     @Test
+    fun `a discovered root that uses no resources moves to another folder with its companion`() {
+        write("Library.x", "module Library {}")
+        write("Library/Box.x", "class Box {}")
+        write("Consumer.x", "module Consumer { package lib import Library; lib.Box make() = new lib.Box(); }")
+        Files.createDirectory(directory.resolve("moved"))
+        session { adapter ->
+            val moves = mapOf(uri("Library.x") to uri("moved/Library.x"))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(30, SECONDS))
+            assertThat(edit.changes).isEmpty()
+            assertThat(edit.renames.values.map { Path.of(URI(it)) }).containsExactly(directory.resolve("moved/Library"))
+            apply(edit, moves)
+            assertThat(directory.resolve("moved/Library/Box.x")).exists()
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+        }
+    }
+
+    @Test
+    fun `a discovered root move is refused when the root uses resources or would leave the discovered folders`() {
+        write("ws/App.x", "module App { static String text() = $./data.txt; }")
+        write("ws/data.txt", "resource")
+        write("ws/Library.x", "module Library {}")
+        Files.createDirectories(directory.resolve("ws/moved"))
+        Files.createDirectories(directory.resolve("elsewhere"))
+        session { adapter ->
+            adapter.initializeWorkspace(listOf(directory.resolve("ws").toString()))
+            assertThat(adapter.renameFilesAsync(mapOf(uri("ws/App.x") to uri("ws/moved/App.x"))).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(mapOf(uri("ws/Library.x") to uri("elsewhere/Library.x"))).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(mapOf(uri("ws/Library.x") to uri("ws/moved/Library.x"))).get(30, SECONDS)).isNotNull()
+        }
+        assertThat(directory.resolve("ws/App.x")).exists()
+        assertThat(directory.resolve("ws/Library.x")).exists()
+    }
+
+    @Test
     fun `configured root moves collisions symlinks and overlapping requests are refused without writes`() {
         write("App.x", "module App { Box make() = new Box(); }")
         write("App/Box.x", "class Box {}")

@@ -9210,6 +9210,43 @@
         "limitations": []
       }
     },
+    "X302": {
+      "title": "move a discovered module root that uses no resources into another folder, with its companion folder and Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "Library.x",
+        "afterRoot": "moved/Library.x",
+        "from": "Library.x",
+        "to": "moved/Library.x",
+        "consumer": "Consumer.x",
+        "directories": [
+          "moved"
+        ],
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {}",
+            "destination": "moved/Library.x"
+          },
+          {
+            "file": "Library/Box.x",
+            "source": "class Box {}",
+            "destination": "moved/Library/Box.x"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package lib import Library;\n    lib.Box make() = new lib.Box();\n}",
+            "destination": "Consumer.x"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "The IntelliJ type-move driver works on a configured graph; running it on the discovered graph of one case folder needs a discovery helper at the ParityWorkspace level. The server behavior is covered by XdkFileOperationsTest."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
