@@ -2266,6 +2266,31 @@ their own text; `docs/` holds no plan there. On #693 the same `:lang:lsp-server:
 existing skips) and `:lang:intellij-plugin:test` (143) pass with 0 failures, and both harnesses'
 compiles and `spotlessCheck` pass. The prototype bullet is removed from #693's known follow-ups.
 
+### Speculative beyond-scope batch (2026-10-21)
+
+Done as separate local commits on this branch, not mirrored into #693:
+
+- `cfeaff904` renames adopted interface properties (property SansCode) and pins every composition
+  route with fixtures; union-typed property reads stay refused.
+- `98de2769b` adds `xtc/discoverConsumers` and **Add consumers from folders** in both editors; found
+  modules join the graph only through `sourceModules`.
+- `b378b78a1` extracts and inlines bitwise `&`; only `&name` stays refused.
+- `6358da305` passes `val`/`var` locals that never change into extracted methods, spelled from the
+  initializer's compiler type.
+- `37dc1b7e5` lets statement extraction declare its own locals and write fields.
+- `d83070f5c` passes a plain local changed before the selection by its current value. Plain means no
+  Ref or Var reaches it: the compiler keeps `isEffectivelyFinal` true after `&name`, so the builder
+  now records registers named with `&`. That also fixes a hole where such a local counted as
+  unchanging. X184 becomes positive, and the shared-case test now runs X181–X184.
+- `b435f72d3` lets statements that write one plain local return it (`v = extractedMethod(v);`),
+  refusing two written values, a local a closure names, and `try`/`using`. X231 becomes positive.
+
+Not done: the VS Code auto-save-off resource history (no clean implementation; see
+[remaining.md](remaining.md)), inlining several copies (the plan relocates a range once), and global
+safe delete (a closed-world decision comes first). Validation: `:lang:lsp-server:test` 2,364 tests,
+0 failures, the 2 existing skips; `:lang:intellij-plugin:test` 143; both editors' compiles, ESLint on
+the changed TypeScript and `spotlessCheck` pass. No native playbook ran.
+
 ### IntelliJ parity backlog (L60)
 
 All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
