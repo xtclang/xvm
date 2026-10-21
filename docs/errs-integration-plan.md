@@ -1583,8 +1583,9 @@ to the compiler-only PR:
   cover Run lenses, builds, arguments and exit codes, Stop, Rerun, failed builds, debug launches,
   console input, build modes, running again, renamed roots, fresh program state (X292), refused
   entry methods (X293) and dropped arguments (X294), and pass natively in both editors, IntelliJ with Ultimate disabled. Closed
-  2026-10-20; what stays open (no `.x` gutter icon, no real Gradle build in a shared case, soak in
-  R8) is in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  2026-10-20. The gaps left then (no `.x` gutter icon, no real Gradle build in a shared case, and
+  three renamed-root cases) were closed on 2026-10-21 ([below](#r5-gaps-closed-2026-10-21)); soak
+  is R8's, and what stays open is in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 - [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
   *Partial:* the placeholder reports breakpoints unverified and refuses launch (`eba208bb3`); no session service.
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
@@ -2309,6 +2310,36 @@ three affected messages say so; `6be52d893`, which only records the batch, is no
 failures; `compileIntegrationTestKotlin` (forced), the VS Code compile and `spotlessCheck` pass; the
 same 12 native cases pass in VS Code (`run-k45i5W`) and IntelliJ (`run-2514175634325952141`, START and
 12).
+
+### R5 gaps closed (2026-10-21)
+
+The five gaps the execution plan left open after R5, as separate commits on this branch (not yet
+mirrored into #693):
+
+- `54bfdb7d2`: a renamed root whose header does not parse keeps the module name and imports of its
+  last parse. Discovery records a file added with the exact text of a removed one
+  (`XdkWorkspaceDiscoveryTest`).
+- `5ab3a005f`: discovery drops an open buffer whose file is gone when a file on disk has its text, so
+  a root renamed outside the IDE with its editor open no longer declares its module twice. New shared
+  X301 (X291 with the root's editor left open) passes in VS Code (`run-GctEw4`) and IntelliJ
+  (`run-4205972961116341110`); with the fix reverted, VS Code X301 fails.
+- `a152acfca`: a discovered root whose module uses no resources can be moved into another directory
+  inside the discovery folders, with its companion folder (`XdkFileOperationsTest`). New shared X302
+  passes in VS Code (`run-0JeA0j`) and fails there with the fix reverted. IntelliJ records it as not
+  implemented, since its type-move driver works on a configured graph.
+- `53c9d3eed`: IntelliJ shows a Run icon in the gutter of each Run lens line. `.x` files have no PSI,
+  so the icons are document line highlighters, placed from a new `xtc/runLenses` request. IntelliJ
+  X280 checks the icons and runs the module from one (`run-8190292223384484870`).
+- `7a28e49bd`: new shared X303 makes a project the way New Project does (VS Code `xtc init`, the
+  IntelliJ wizard's creator), chooses Gradle mode, and builds and runs it with its own Gradle build
+  and the XTC plugin and XDK in mavenLocal; a saved type error then fails the build. VS Code
+  `run-2VWzIc` passes X288 and X303. IntelliJ `run-6946269300745727450` records both as partial,
+  since Build Project in Gradle mode is the IDE's builder, which needs a Gradle import.
+
+Not covered: IntelliJ's Build Project in Gradle mode, Debug or configuration actions on the gutter
+icon, and X302 in IntelliJ. X303 builds with whatever plugin and XDK were last published to
+mavenLocal. Validation: `:lang:lsp-server:test` 2,374 tests, 0 failures, the 2 existing skips; `:lang:intellij-plugin:test` 143, 0 failures; ESLint on the
+changed TypeScript and `spotlessCheck` pass.
 
 ### IntelliJ parity backlog (L60)
 
