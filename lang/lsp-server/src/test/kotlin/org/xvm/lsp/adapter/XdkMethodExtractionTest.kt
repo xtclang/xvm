@@ -341,6 +341,39 @@ class XdkMethodExtractionTest {
         ) { _, _ -> error("Unexpected statement extraction") }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["val", "var"])
+    fun `an inferred local that never changes is passed with its compiler type`(keyword: String) {
+        query(
+            """
+            module Extract {
+                Int read(Int input) {
+                    $keyword doubled = input * 2;
+                    return §doubled + input§;
+                }
+            }
+            """.trimIndent(),
+        ) { _, changed ->
+            // The initializer's compiler type, with typedefs resolved, as nested-expression helpers spell it.
+            assertThat(changed).contains("return extractedMethod(doubled, input);", "private Int extractedMethod(Int64 doubled, Int input)")
+        }
+    }
+
+    @Test
+    fun `an inferred local that is reassigned is still refused`() {
+        refused(
+            """
+            module Extract {
+                Int read(Int input) {
+                    var total = input;
+                    total += 1;
+                    return §total + input§;
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
     @Test
     fun `a reference to a caller local is not moved into a helper`() {
         refused(
