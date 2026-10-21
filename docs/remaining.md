@@ -120,14 +120,19 @@ Only if a real need comes up; each is a documented refusal today.
 
 ### R5 gaps
 
-- [ ] IntelliJ gutter Run icon for `.x` files. It needs a PSI parser; the Run lens, context menu and
-  shortcut work today.
-- [ ] A shared case with a real Gradle build; X288 uses a stub wrapper.
-- [ ] Renaming a root whose editor is still open: that buffer stays a source under the old path, and
-  builds report a duplicate module until it's closed.
-- [ ] An IDE move of a discovered root into another directory, which the rename work refuses.
-- [ ] The name and dependency fallbacks of a renamed root whose header doesn't parse, which are
-  keyed by the old path.
+- [x] IntelliJ gutter Run icon for `.x` files: document line highlighters on the Run lens lines,
+  from a new `xtc/runLenses` request, with no PSI needed; clicking one runs the module as the lens
+  does (`53c9d3eede`, IntelliJ X280 `run-8190292223384484870`).
+- [x] A shared case with a real Gradle build: X303 builds and runs a project made by `xtc init` or
+  the IntelliJ wizard's creator in Gradle mode (`7a28e49bd6`, VS Code `run-2VWzIc`, IntelliJ
+  `run-6946269300745727450`). IntelliJ's Build Project in Gradle mode is not driven.
+- [x] Renaming a root whose editor is still open: discovery drops the open buffer whose file is gone
+  when a file on disk has its text (`5ab3a005fc`, X301 in both editors).
+- [x] An IDE move of a discovered root into another directory: allowed when the module uses no
+  resources and the destination is inside the discovery folders (`a152acfca3`, X302 in VS Code).
+- [x] The name and dependency fallbacks of a renamed root whose header doesn't parse: discovery
+  records a file added with the exact text of a removed one, and keeps its last parse
+  (`54bfdb7d22`).
 
 ### R6: DAP lifecycle on real run sessions
 
