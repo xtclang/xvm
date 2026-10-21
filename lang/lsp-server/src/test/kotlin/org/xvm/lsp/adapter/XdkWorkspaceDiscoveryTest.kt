@@ -177,6 +177,33 @@ class XdkWorkspaceDiscoveryTest {
         }
     }
 
+    @Test
+    fun `an editor left open on a root renamed outside the IDE does not declare its module twice`() {
+        source("Base.x", "module Base {}")
+        val text = "module App { package lib import Base; }"
+        val app = source("App.x", text)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.updateDocument(app, text)
+
+            fun graph() = adapter.sourceModuleInputs().map { it.name to it.uri }
+
+            val renamed = directory.resolve("Renamed.x").toFile()
+            assertThat(directory.resolve("App.x").toFile().renameTo(renamed)).isTrue()
+            val uri = renamed.canonicalFile.toURI().toString()
+            assertThat(adapter.applyFileEvents(listOf(app, uri))).isNotNull()
+            assertThat(graph().filter { it.first == "App" }).containsExactly("App" to uri)
+
+            // a full walk still sees the open buffer, and leaves it out the same way
+            adapter.refreshDiscoveredSources()
+            assertThat(graph().filter { it.first == "App" }).containsExactly("App" to uri)
+
+            // an edit makes the buffer a source again, as any unsaved buffer is
+            adapter.updateDocument(app, "module Draft {}")
+            assertThat(graph()).contains("Draft" to app, "App" to uri)
+        }
+    }
+
     private fun source(
         name: String,
         text: String,

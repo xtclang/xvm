@@ -9005,7 +9005,7 @@
     "X291": {
       "title": "a discovered module whose root file was renamed on disk runs again from a run target saved with the old file",
       "manual": [
-        "Renaming the root file while its editor is still open is not covered: the open buffer stays a source under the old path, and builds report a duplicate module until it is closed."
+        "With its editor still open, the same rename is X301."
       ],
       "values": {
         "file": "MovedRoot.x",
@@ -9186,6 +9186,24 @@
             "expected": "module Consumer {\n    package lib import Library;\n    String use(lib.First first) = first.label;\n}"
           }
         ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X301": {
+      "title": "a discovered module whose root file is renamed on disk while its editor is open runs again from the saved target",
+      "manual": [],
+      "values": {
+        "file": "OpenRoot.x",
+        "destinationFile": "RenamedOpenRoot.x",
+        "module": "OpenRoot",
+        "editorOpen": true,
+        "source": "module OpenRoot {\n    void run() {\n        @Inject Console console;\n        console.print(\"open root runs\");\n    }\n}\n",
+        "runTitle": "▶ Run OpenRoot",
+        "output": "open root runs",
+        "exitCode": 0
       },
       "intellij": {
         "coverage": "full",
