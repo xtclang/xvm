@@ -6395,17 +6395,16 @@
       }
     },
     "X184": {
-      "title": "refuse method extraction when a captured input is mutable",
+      "title": "extract an expression reading an input changed before it, passing its current value",
       "manual": [
-        "Select the complete expression and inspect the private-method action. It must be absent; the installed-connection refusal leaves source unchanged."
+        "Select the complete expression and inspect the private-method action. Apply it, check exact helper signature/body, diagnostics and Undo/Redo/Undo."
       ],
       "values": {
         "file": "Extract.x",
         "source": "module Extract {\n    Int read(Int input) {\n        input++;\n        return input + 1;\n    }\n}",
         "selected": "input + 1",
         "title": "Extract expression to private method",
-        "expected": "module Extract {\n    Int read(Int input) {\n        input++;\n        return input + 1;\n    }\n}",
-        "refused": true
+        "expected": "module Extract {\n    Int read(Int input) {\n        input++;\n        return extractedMethod(input);\n    }\n\n    private Int extractedMethod(Int input) {\n        return input + 1;\n    }\n}"
       },
       "intellij": {
         "coverage": "full",

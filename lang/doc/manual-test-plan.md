@@ -3290,7 +3290,7 @@ X181–X184 pass in both drivers in the selected runs recorded at the top of thi
 | X181 | Select the complete returned expression; apply **Extract expression to private method**, then Undo/Redo/Undo. | One private helper receives the stable input; comments and overload bindings survive, with exact edits and clean diagnostics. |
 | X182 | Extract the complete typed initializer. | Explicit helper parameters receive the stable local and method parameter in the expected order; the result type stays `Int`. |
 | X183 | Extract inside `Box<Element>`. | The helper stays inside that generic owner; its `Element` signature and implicit instance call still resolve. |
-| X184 | Select the returned expression after `input++` and inspect actions. | Private-method extraction is absent. Query the whole selection, not a zero-length caret; source remains unchanged. |
+| X184 | Select the returned expression after `input++`, apply Extract expression to private method, then Undo/Redo/Undo. | `return extractedMethod(input);` and `private Int extractedMethod(Int input)` returning `input + 1`: the helper receives `input`'s current value. Undo restores the source exactly. |
 
 Backend controls additionally cover contextual `Int8`, short circuiting, static methods, fresh
 names, CRLF/Unicode, reference-backed storage, method formals, lambdas, conditional returns and
