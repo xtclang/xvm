@@ -75,10 +75,17 @@ documented refusals, not open tasks; the few worth revisiting are under
 
 ### Test harness stability
 
-- [ ] Popup inspection race: a popup that disappears between its presence check and its row read,
-  keeping the document-change guard and never replaying an accepted edit.
+- [x] Popup inspection race: a popup that disappears between its presence check and its row read,
+  keeping the document-change guard and never replaying an accepted edit. The rows are read and a
+  row is chosen in one IDE step each, so a closed popup reads as absent and the wait reopens it
+  through the guard (`803e8a7af`; `focusRecovery` `run-10337819264986324821`, 31 cases
+  `run-8746776659092611335`).
 - [ ] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state. It
-  hasn't recurred in the 277- and 284-case runs, but it was never diagnosed.
+  hasn't recurred in the 277- and 284-case runs, but it was never diagnosed. Tried on 2026-10-21 with
+  the 79 cases that ran before it in `run-8615971651239916856`: X105 passes on the current code, with
+  the UP07 equal-report bridge off (`run-1679585523095307991`), and with that bridge off and fixture
+  files opened before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Not
+  reproduced; the trigger is still unknown.
 
 ### Beyond the current scope
 
@@ -112,9 +119,9 @@ Only if a real need comes up; each is a documented refusal today.
   proof, like member inline's single copy.
 - [ ] L63 global safe delete: deleting public or protected members needs an explicit closed-world or
   consumer-manifest decision first; the proof itself is not the obstacle.
-- [ ] Remove the leftover `System.err.println("DECL owner ...")` in `XdkMissingDeclarations.kt`
-  (from `b970b7f56`, also on #693); it writes to stderr whenever a method is not a direct class
-  member.
+- [x] Remove the leftover `System.err.println("DECL owner ...")` in `XdkMissingDeclarations.kt`
+  (from `b970b7f56`, also on #693); it wrote to stderr whenever a method was not a direct class
+  member (`33558e8ad`).
 
 ## 3. Embedded run and debugging
 

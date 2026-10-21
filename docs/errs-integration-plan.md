@@ -811,8 +811,14 @@ on a failure, before IDE cleanup, with verbose tracing in the disposable project
   errors visible; do not globally suppress server errors in the harness.
   Done later in `581e09197`: CFG2 expires only its cyclic-graph notification after asserting
   rejection; see the [L69–L71 / PLAT2c batch](#next-implementation-batch-l69l71--plat2c-2026-09-29).
-- [ ] **Popup inspection race:** handle a popup disappearing between its presence check and row
+- [x] **Popup inspection race:** handle a popup disappearing between its presence check and row
   read, while retaining the document-change guard and never replaying an accepted edit.
+  Done 2026-10-21 in `803e8a7af`. The Driver looked a closed popup up again for 15 s and threw
+  `WaitForException` out of the wait, as an experiment showed (15.5 s). The `PopupChoices` probe
+  now reads the intention list's or navigation table's rows, and chooses one, in one IDE step each;
+  a closed popup reads as absent, and only `PopupInspection` reopens it, under its guard.
+  `focusRecovery` closes the menu as it first shows and checks one applied action
+  (`run-10337819264986324821`); the 31 cases using these helpers pass (`run-8746776659092611335`).
 
 This run does not add PLAT2e's missing resource-settings or precise PLAT3 native scenarios. The
 separate startup-editing test was not rerun; the full VS Code result is recorded below. The scenario/capability
@@ -9723,6 +9729,11 @@ L64/L65's bounded implementation and shared acceptance scope is complete. Remain
   Two selected passes do not establish that the intermittent host/harness behavior is fixed.
   Not recurred: X105 passes in the later uninterrupted 277- and 284-case IntelliJ runs, but this
   timeout was never reproduced or diagnosed. Later X185 intention-popup failures are tracked under UP07.
+  2026-10-21: the 79 cases that ran before X105 in that run, selected again, pass with X105 on the
+  current code, with the UP07 equal-report bridge (`DiagnosticQuickFixes`) turned off
+  (`run-1679585523095307991`), and with that bridge off and `discovered` opening the case's file
+  before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Neither later change
+  alone or together brings it back, so the trigger is still unknown; the item stays open.
 - [x] Obtain one uninterrupted full IntelliJ receipt after that stability work. The combined
   receipts above already cover every case, but do not establish a single clean run.
   Done later: `run-11949889098742489342` (277 cases) and `run-4144503954102473659` (284 cases)
