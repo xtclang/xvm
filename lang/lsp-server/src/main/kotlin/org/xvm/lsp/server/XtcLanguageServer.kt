@@ -1231,6 +1231,31 @@ class XtcLanguageServer(
                 .orEmpty()
         }
 
+    /**
+     * Modules under the given folders that import the current source graph, directly or through each other.
+     * Nothing is installed: the host adds the ones it wants to its explicit source modules.
+     */
+    @JsonRequest("xtc/discoverConsumers")
+    fun discoverConsumers(params: DiscoverConsumersParams): CompletableFuture<ConsumerDiscovery> {
+        val roots = params.roots.map { XdkSources.file(it) }
+        if (roots.isEmpty() || roots.any { it == null || !it.isDirectory }) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(ResponseError(ResponseErrorCode.InvalidParams, "Expected file URIs of existing folders", null)),
+            )
+        }
+        return supplyAsync(
+            "xtc/discoverConsumers",
+            params.roots.joinToString(),
+            { "${it.modules.size} consumers, ${it.conflicts.size} conflicts" },
+        ) {
+            val found = (adapter as? XdkAdapter)?.discoverConsumers(roots.filterNotNull())
+            ConsumerDiscovery(
+                found?.modules.orEmpty().map(::SourceModuleConfiguration),
+                found?.conflicts.orEmpty().map(::SourceModuleConfiguration),
+            )
+        }
+    }
+
     /** Embedded build: compiles to the workspace's embedded output directory through the compiler queue. */
     @JsonRequest("xtc/build")
     fun build(params: BuildParams): CompletableFuture<BuildResponse> = embeddedRuns.build(params)

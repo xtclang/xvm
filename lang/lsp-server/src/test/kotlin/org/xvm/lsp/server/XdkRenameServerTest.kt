@@ -27,6 +27,7 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -41,6 +42,7 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -245,6 +247,44 @@ class XdkRenameServerTest {
             assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name }).contains("App", "Other")
         } finally {
             release.countDown()
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
+    fun `consumer discovery reports importers under a folder and refuses roots that are not folders`() {
+        directory = directory.toRealPath()
+        val library =
+            directory.resolve("workspace/Library.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("module Library {}")
+            }
+        val consumer =
+            directory.resolve("external/Consumer.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("module Consumer { package lib import Library; }")
+            }
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).get(20, SECONDS)
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("Library", library.toURI().toString())))
+            val found = server.discoverConsumers(DiscoverConsumersParams(listOf(consumer.parentFile.toURI().toString()))).get(30, SECONDS)
+            assertThat(found.modules).containsExactly(
+                SourceModuleConfiguration("Consumer", consumer.toURI().toString(), listOf("Library")),
+            )
+            assertThat(found.conflicts).isEmpty()
+            assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name }).containsExactly("Library")
+            listOf(emptyList(), listOf(consumer.toURI().toString()), listOf("untitled:Folder")).forEach { roots ->
+                assertThat(server.discoverConsumers(DiscoverConsumersParams(roots)))
+                    .failsWithin(20, SECONDS)
+                    .withThrowableOfType(ExecutionException::class.java)
+                    .satisfies({
+                        assertThat((it.cause as ResponseErrorException).responseError.code)
+                            .isEqualTo(ResponseErrorCode.InvalidParams.value)
+                    })
+            }
+        } finally {
             server.shutdown().get(20, SECONDS)
         }
     }
