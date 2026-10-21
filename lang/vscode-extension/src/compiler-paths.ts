@@ -129,6 +129,31 @@ export class CompilerPathDraft implements vscode.Disposable {
     }
 }
 
+/**
+ * Searches folders outside the graph for modules that import it, directly or through each other, and adds the
+ * chosen ones to the explicit source modules. The server installs nothing; this setting stays the manifest.
+ */
+async function addConsumers(draft: CompilerPathDraft): Promise<void> {
+    const roots = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: true, openLabel: 'Search for consumers' });
+    if (!roots?.length) return;
+    const found = await getClient()?.sendRequest<{ modules: SourceModule[]; conflicts: SourceModule[] }>('xtc/discoverConsumers', { roots: roots.map(root => root.toString()) });
+    if (!found) return;
+    if (found.conflicts.length) {
+        void vscode.window.showWarningMessage(`Skipped modules whose names are already taken: ${found.conflicts.map(module => `${module.name} (${vscode.Uri.parse(module.uri).fsPath})`).join(', ')}`);
+    }
+    if (!found.modules.length) {
+        void vscode.window.showInformationMessage('No module in the chosen folders imports the current source graph.');
+        return;
+    }
+    const picks = await vscode.window.showQuickPick(
+        found.modules.map(module => ({ label: module.name, description: vscode.Uri.parse(module.uri).fsPath, picked: true, module })),
+        { canPickMany: true, title: 'Add consumers to the explicit source modules' });
+    if (!picks?.length) return;
+    const effective = (compilerSourceModules() as SourceModule[] | null) ?? await getClient()?.sendRequest<SourceModule[]>('xtc/compilerSourceModules') ?? [];
+    draft.assertCurrent();
+    await vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', [...effective, ...picks.map(pick => pick.module)], vscode.ConfigurationTarget.Workspace);
+}
+
 export function registerCompilerPaths(context: vscode.ExtensionContext): void {
     const output = vscode.window.createOutputChannel('Ecstasy Compiler Paths');
     const draftsChanged = new vscode.EventEmitter<void>();
@@ -152,7 +177,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         draftsChanged.fire();
         const draft = new CompilerPathDraft(draftsChanged.event);
         try {
-            const selection = await vscode.window.showQuickPick(['Show effective paths', 'Refresh Gradle model', 'Prepare generated resources', 'Open build file', 'Edit explicit module paths', 'Reset to build model / discovery']);
+            const selection = await vscode.window.showQuickPick(['Show effective paths', 'Refresh Gradle model', 'Prepare generated resources', 'Open build file', 'Edit explicit module paths', 'Add consumers from folders', 'Reset to build model / discovery']);
             if (selection === 'Show effective paths') return report();
             if (selection === 'Refresh Gradle model') return refreshCompilerBuild();
             if (selection === 'Prepare generated resources') return refreshCompilerBuild(true);
@@ -167,6 +192,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
                 if (selected) await vscode.window.showTextDocument(vscode.Uri.parse(selected));
                 return;
             }
+            if (selection === 'Add consumers from folders') return addConsumers(draft);
             if (selection !== 'Edit explicit module paths') return;
             const owner = await folder();
             if (!owner) return;
