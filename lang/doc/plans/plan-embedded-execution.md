@@ -256,7 +256,7 @@ this bridge; they cannot be inferred from compiler type hints.
   builds report a duplicate module until it is closed); an IDE move of a discovered root into
   another directory, which the rename work refuses; and the fallbacks for the name and dependencies
   of a renamed root whose header does not parse, which are keyed by the old path. Closed 2026-10-19.
-- [ ] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
+- [x] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
   replace textual parsing. No per-run CLI or new VM.
@@ -265,8 +265,9 @@ this bridge; they cannot be inferred from compiler type hints.
   *Console input (2026-10-16):* `Console.readLine()` reads lines both clients send with
   `xtc/runInput`; input typed during the build is held until the program starts, and the end of
   input or a stop gives a waiting `readLine` an empty line (X287). Every part listed above now
-  works. The box stays open until the runtime part has a `javatools` test of its own for extraction;
-  JIT runs remain unsupported.
+  works. The runtime part has its own `javatools` test, `EmbeddingSupportTest`, merged into master
+  with #703 (`bdb674af5`, 2026-10-20); CI runs it since `ee022b504`. JIT runs remain unsupported.
+  Closed 2026-10-19.
 - [x] **R4 — Persistent worker supervision.** Add configuration/generation handshake, private IPC,
   startup/stop deadlines, bounded output/backpressure, memory measurement and safe idle recycling.
   Verify worker death during a run, restart after crash, parent death, IDE close, XDK change and
