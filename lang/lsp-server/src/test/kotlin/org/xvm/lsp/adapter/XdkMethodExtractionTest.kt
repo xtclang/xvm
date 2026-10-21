@@ -24,7 +24,14 @@ class XdkMethodExtractionTest {
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["Int|input + step()", "Int8|input + 1", "Boolean|input && flag()", "String|input + \"!\"", "Int[]|[input, step()]"],
+        strings = [
+            "Int|input + step()",
+            "Int8|input + 1",
+            "Boolean|input && flag()",
+            "String|input + \"!\"",
+            "Int[]|[input, step()]",
+            "Int|input & step()",
+        ],
     )
     fun `whole return expression keeps its type calls and stable inputs`(example: String) {
         val (type, expression) = example.split('|')
@@ -332,6 +339,21 @@ class XdkMethodExtractionTest {
             expected = false,
             title = "Extract statements to private method",
         ) { _, _ -> error("Unexpected statement extraction") }
+    }
+
+    @Test
+    fun `a reference to a caller local is not moved into a helper`() {
+        refused(
+            """
+            module Extract {
+                Int describe(Ref<Int> ref) = ref.get();
+                Int read(Int input) {
+                    Int local = input;
+                    return §describe(&local)§;
+                }
+            }
+            """.trimIndent(),
+        )
     }
 
     private fun refused(marked: String) = query(marked, expected = false) { _, _ -> error("Unexpected extraction") }
