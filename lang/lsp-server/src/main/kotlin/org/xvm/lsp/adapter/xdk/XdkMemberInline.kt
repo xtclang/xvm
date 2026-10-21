@@ -4,7 +4,6 @@ import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
-import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.Expression
@@ -117,7 +116,13 @@ internal object XdkMemberInline {
         val to = XdkRename.offset(text, expressionRange.end) ?: return null
         val value = text.substring(from, to)
         val tokens = ExecutionTrace.api("Lexer.lex(inline-member)") { Lexer(Source(value), errors).asSequence().toList() }
-        if (errors.hasSeriousErrors() || tokens.any { it.id == Token.Id.BIT_AND || it.valueText == "super" }) return null
+        // Ref-taking (&name) and super dispatch change meaning when copied; a bitwise & is an ordinary operator.
+        if (errors.hasSeriousErrors() ||
+            XdkRefactoringSyntax.tree(expression).any { (node, _) -> node is NameExpression && node.isSuppressDeref } ||
+            tokens.any { it.valueText == "super" }
+        ) {
+            return null
+        }
         // Copying a recursive invocation or escaped self-reference is not method expansion.
         if (model.occurrences.any {
                 it.symbol == symbol.id && it.range.start >= expressionRange.start && it.range.end <= expressionRange.end
