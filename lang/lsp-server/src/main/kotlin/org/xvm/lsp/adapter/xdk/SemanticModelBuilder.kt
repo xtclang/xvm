@@ -292,6 +292,9 @@ private class SemanticModelBuilder(
     private val captureOrigins = IdentityHashMap<Register, Register>()
     private val capturedProperties = mutableMapOf<PropertyConstant, Register>()
     private val registers = IdentityHashMap<Register, SymbolId>()
+
+    // Registers named with & somewhere: a Ref or Var to them can change them from code that does not name them.
+    private val referenced: MutableSet<Register> = Collections.newSetFromMap(IdentityHashMap())
     private val constants = linkedMapOf<Constant, SymbolId>()
     private val symbols = linkedMapOf<SymbolId, Symbol>()
     private val typeIds = linkedMapOf<TypeConstant, TypeId>()
@@ -682,6 +685,7 @@ private class SemanticModelBuilder(
                         }
                     val target = callees[node] ?: node.resolvedTarget ?: delegate
                     refer(node.nameToken, target, expressionType, node.source, writes[at])
+                    if (node.isSuppressDeref) (normalized(target as? Argument) as? Register)?.let(referenced::add)
                     if (complete && target is Register && target.isSuper) {
                         val method =
                             generateSequence(node.parent) { it.parent }
@@ -1908,7 +1912,9 @@ private class SemanticModelBuilder(
                 if (symbol.kind !in setOf(SymbolKind.VARIABLE, SymbolKind.PARAMETER)) return@mapNotNull null
                 val source = symbol.declarationSource ?: return@mapNotNull null
                 val range = symbol.declaration ?: return@mapNotNull null
-                Triple(SourceLocation(source, range), register.originalType, register.isEffectivelyFinal && !register.isVar)
+                // The compiler still calls a register effectively final when &name lets a Var change it.
+                val plain = !register.isVar && register !in referenced
+                Value(SourceLocation(source, range), register.originalType, register.isEffectivelyFinal && plain, plain)
             }
         val nodes = nodesIn(requireNotNull(compilation.parsed()))
         val modules = compilerModuleAliases(nodes)
@@ -1932,12 +1938,23 @@ private class SemanticModelBuilder(
                             ?: return@mapNotNull null
                     location(node.source, node.startPosition, node.endPosition) to source
                 }.toMap()
+        // One declaration can have several registers, and only some of them are named with &: all must agree.
+        val declarations = values.groupBy { it.location }
         return CompilerExtractionFacts(
-            expressionTypes.toMap() + values.associate { it.first to it.second },
-            values.filter { it.third }.mapTo(linkedSetOf()) { it.first },
+            expressionTypes.toMap() + values.associate { it.location to it.type },
+            declarations.filterValues { all -> all.all { it.stable } }.keys.toCollection(linkedSetOf()),
             sourceTypes,
+            declarations.filterValues { all -> all.all { it.plain } }.keys.toCollection(linkedSetOf()),
         )
     }
+
+    /** A local or parameter: plain when no Ref or Var can change it, stable when it is plain and never changes. */
+    private data class Value(
+        val location: SourceLocation,
+        val type: TypeConstant,
+        val stable: Boolean,
+        val plain: Boolean,
+    )
 
     /** Inspect validated initializers on the worker; do not retain ASTs or infer purity from spelling. */
     fun removableLocals(compilation: EmbeddingSupport.Compilation): Set<SourceLocation> =
