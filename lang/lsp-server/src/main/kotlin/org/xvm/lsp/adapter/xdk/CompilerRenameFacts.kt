@@ -129,6 +129,7 @@ internal data class CompilerExtractionFacts(
     val types: Map<SemanticModel.SourceLocation, TypeConstant>,
     val stableValues: Set<SemanticModel.SourceLocation>,
     val sourceTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+    val plainValues: Set<SemanticModel.SourceLocation> = emptySet(),
 )
 
 /** Types and stable value reads needed to prove a new helper's signature and captured inputs. */
@@ -136,6 +137,8 @@ internal data class ExtractMethodFacts(
     val types: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
     val stableValues: Set<SemanticModel.SourceLocation> = emptySet(),
     val sourceTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+    /** Locals and parameters never held by reference, so only their own method's statements can change them. */
+    val plainValues: Set<SemanticModel.SourceLocation> = emptySet(),
 )
 
 /** Detached comparison facts. Keeping compiler constants here retains every root's entire pool. */
@@ -187,6 +190,7 @@ internal class CompilerRenameFacts(
                     attempts.flatMap { it.extraction.types.entries }.associate { it.toPair() },
                     attempts.flatMapTo(linkedSetOf()) { it.extraction.stableValues },
                     attempts.flatMap { it.extraction.sourceTypes.entries }.associate { it.toPair() },
+                    attempts.flatMapTo(linkedSetOf()) { it.extraction.plainValues },
                 ),
                 attempts.flatMap { it.missingMethods }.distinct(),
                 attempts.flatMap { it.methodSignatures.entries }.associate { it.toPair() },
@@ -532,6 +536,7 @@ internal fun captureRenameFacts(
                     .toMap(),
                 extraction?.stableValues.orEmpty(),
                 extraction?.sourceTypes.orEmpty(),
+                extraction?.plainValues.orEmpty(),
             ),
         callables =
             callables

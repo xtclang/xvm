@@ -136,12 +136,12 @@ class XdkMethodExtractionTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "input++;\nreturn §input + 1§;",
             "@Volatile Int stored = input;\nreturn §stored + 1§;",
-            "Int changed = input;\nchanged++;\nreturn §changed + 1§;",
+            "Var<Int> ref = &input;\nref.set(2);\nreturn §input + 1§;",
+            "Int fixed = input;\nVar<Int> ref = &fixed;\nreturn §fixed + 1§;",
         ],
     )
-    fun `refuse mutation and reference storage`(body: String) {
+    fun `refuse values that a Ref or Var can change`(body: String) {
         refused(
             """
             module Extract {
@@ -403,18 +403,19 @@ class XdkMethodExtractionTest {
     }
 
     @Test
-    fun `an inferred local that is reassigned is still refused`() {
-        refused(
+    fun `a local changed before the selection is passed by its current value`() {
+        query(
             """
             module Extract {
                 Int read(Int input) {
                     var total = input;
                     total += 1;
+                    input++;
                     return §total + input§;
                 }
             }
             """.trimIndent(),
-        )
+        ) { _, changed -> assertThat(changed).contains("input++;", "return extractedMethod(total, input);", "return total + input;") }
     }
 
     @Test
