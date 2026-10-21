@@ -79,7 +79,7 @@ documented refusals, not open tasks; the few worth revisiting are under
   keeping the document-change guard and never replaying an accepted edit. The rows are read and a
   row is chosen in one IDE step each, so a closed popup reads as absent and the wait reopens it
   through the guard (`803e8a7af`; `focusRecovery` `run-10337819264986324821`, 31 cases
-  `run-8746776659092611335`).
+  `run-8746776659092611335`). Mirrored into #693 as `b7d5d1ad2`.
 - [ ] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state. It
   hasn't recurred in the 277- and 284-case runs, but it was never diagnosed. Tried on 2026-10-21 with
   the 79 cases that ran before it in `run-8615971651239916856`: X105 passes on the current code, with
