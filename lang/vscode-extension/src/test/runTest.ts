@@ -51,7 +51,7 @@ async function main(): Promise<void> {
     const lexicalBaseline = args.includes('--lexical-baseline');
     if (themes.length > 1 || (themes.length > 0 && !playbook)) throw new Error('Use --theme=NAME once, with --playbook');
     const theme = themes[0]?.slice('--theme='.length) ?? 'Default Dark Modern';
-    if (themes.length && !(await import('./playbook/shared.js')).catalog.common.colorPrototype.themes.vscode.includes(theme)) {
+    if (themes.length && !(await import('./playbook/shared.js')).catalog.common.themes.vscode.includes(theme)) {
         throw new Error(`Unsupported playbook theme: ${theme}`);
     }
     if (lexicalBaseline && (!playbook || selected.length !== 1 || selected[0] !== 'X277')) {
@@ -115,7 +115,6 @@ async function main(): Promise<void> {
                 `--remote-debugging-port=${uiPort}`, '--remote-debugging-address=127.0.0.1'
             ],
             extensionTestsEnv: playbook ? {
-                XTC_LSP_COLOR_PROTOTYPE: String((await import('./playbook/shared.js')).catalog.common.colorPrototype.cases.some(id => selected.includes(id as typeof selected[number]))),
                 XTC_PLAYBOOK_REPORT_DIR: runDirectory,
                 XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'),
                 XTC_PLAYBOOK_CASES: selected.join(','),

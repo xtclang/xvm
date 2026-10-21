@@ -3,7 +3,8 @@
 Latest full-catalog checkpoint: [October 7 acceptance](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)
 covers all 284 shared cases: IntelliJ 282 passed/two partial in one uninterrupted process;
 VS Code 281 passed/three failed across the full attempt and recorded continuations. UP16/UP23
-remain host failures; X273 exposes an experimental color-picker refresh failure. The earlier
+remain host failures; X273 exposed an experimental color-picker refresh failure (the prototype
+and X273–X275 were [removed on 2026-10-21](#l77-color-prototype-removed-2026-10-21)). The earlier
 [UI1–UI7 acceptance](#ui1ui7-completion-batch-2026-10-06) and
 [local upstream and API review](#local-upstream-acceptance-and-api-boundary-review-2026-10-06)
 add nine reconciled LSP4IJ repair commits, opt-in local-plugin acceptance, a real platform
@@ -1253,7 +1254,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L74 monikers | Implemented and validated: normalized artifact identities, source/binary equality, overload/generic calls, replacement, private/local visibility and shared X252/X253. | Bounded to current successful semantic snapshots. L75 adds direct library document monikers; no LSIF exporter or native moniker browser is claimed. |
 | L75 document content | Negotiated immutable virtual source content/refresh and direct library monikers pass backend, packaged and selected acceptance. | IntelliJ uses protected file fallback until LSP4IJ implements content providers (UP25). |
 | L76 inline completion | Compiler cursor projection, capability negotiation, cancellation and shared X255–X258 pass batched backend and selected editor validation. | Plain names/expected-type values only. LSP4IJ native invocation/selection constraints are UP26; no generative service is implied. |
-| L77 colors | Opt-in fixture prototype implements document colors and picker presentations for compiler-resolved `ColorPrototype.Rgba` constructors. | Shared X273–X275 pass native picker acceptance in both editors. A real library/product contract remains; no public XDK color API or default color provider is introduced. |
+| L77 colors | None: the fixture-only document-color prototype and X273–X275 were removed on 2026-10-21. | Excluded until Ecstasy has a color type; highlighting is semantic tokens. See the [removal record](#l77-color-prototype-removed-2026-10-21). |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
@@ -1339,17 +1340,14 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   read-only libraries, canceled and obsolete results. Whole-method generation and an AI service
   are outside this compiler feature. Commit the contract, semantic projection/tests, protocol/tests,
   then shared native acceptance cases; batch validation after implementation.
-- [ ] **L77 — Color support (fixture prototype implemented; public API remains deferred).**
-  The user authorized a bounded prototype on 2026-10-06. `textDocument/documentColor` and
-  `textDocument/colorPresentation` now support an explicit fixture constructor behind
-  `XTC_LSP_COLOR_PROTOTYPE=true` / `-Dxtc.lsp.colorPrototype=true`; no provider is advertised
-  by default. Compiler identity and UInt8 channel literals establish the meaning, not arbitrary
-  color-looking strings. See the [prototype record](#l77-color-value-prototype-2026-10-06).
-  Shared X273–X275 pass native picker acceptance in both editors. Production promotion remains
-  deferred. On 2026-10-07 the user clarified that the requested work is exclusively theme-based
-  source highlighting in the LSP server, not a public application-color API. The attempted
-  `lib_color` addition was removed before any commit. No graphics library is added to the XDK
-  solely to fill this LSP checkbox.
+- [x] **L77 — Color support: excluded; the prototype is removed.** `textDocument/documentColor` and
+  `textDocument/colorPresentation` put swatches and a picker next to color values in source; they do
+  not color the code. The bounded prototype (2026-10-06/07), which recognized only a test-fixture
+  `Rgba` constructor behind `XTC_LSP_COLOR_PROTOTYPE`, was removed on 2026-10-21 with X273–X275:
+  Ecstasy has no color type, and the requested feature, theme-based source highlighting, is
+  semantic tokens. No color provider is advertised. Document colors are out of the editor target
+  until Ecstasy gains a real color type. See the
+  [removal record](#l77-color-prototype-removed-2026-10-21).
 - [ ] **L78 — Notebook documents (explicitly deferred).** Define XTC cell/module semantics and implement
   `notebookDocument/didOpen`, `didChange`, `didSave`, `didClose` and notebook synchronization
   capabilities. Current source trees/file overlays do not constitute notebook support. The user
@@ -1599,8 +1597,8 @@ satisfy this track. The placeholder reports breakpoints unverified and refuses l
 real breakpoint support needs the runtime bridge.
 
 Current native automation inventory (2026-10-21): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **299 cases**: X1–X294, CFG1–CFG3, 7a.8
-and 7a.9, plus startup. The latest full-catalog run is the
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **296 cases**: X1–X294 except the retired
+X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
 added since, among them the embedded run cases above, have selected native receipts recorded with
 their features. The earlier 113- and 128-case inventories, and the
@@ -2223,6 +2221,46 @@ token as `Bearer` without an `api-version`; [microsoft/vscode-vsce#1337](https:/
 fixes that only in the 4.0.1 pre-releases, so #711 needs a newer vsce, or `--azure-credential`
 if the Marketplace has no trusted publishing setting. Everything still open across the branch is
 listed in [remaining.md](remaining.md).
+
+### L77 color prototype removed (2026-10-21)
+
+The opt-in document-color prototype is gone. LSP's `textDocument/documentColor` and
+`textDocument/colorPresentation` show a swatch beside a color *value* in source and let a picker
+rewrite it; they never change how code is colored. The prototype recognized only the test-fixture
+constructor `ColorPrototype.Rgba(UInt8, UInt8, UInt8, UInt8)`, since Ecstasy has no color type, and
+was off unless `XTC_LSP_COLOR_PROTOTYPE` or `-Dxtc.lsp.colorPrototype` was set. Source highlighting is
+unaffected: it is the TextMate grammar plus the compiler's semantic tokens (23 standard types, 10
+modifiers), colored by the editor theme. Finer highlighting goes through custom semantic token types
+and modifiers, mapped in VS Code with `semanticTokenTypes`/`semanticTokenScopes` and in IntelliJ with
+LSP4IJ's semantic-token color provider; it never needed document colors.
+
+Removed: `DocumentColor.kt` (`ColorValue`, `DocumentColor`, `ColorPresentation`),
+`XdkColorPrototype.kt`, `AdapterCapability.DOCUMENT_COLOR`, the adapter's color methods and its
+`colorPrototype` constructor and capture, the server's `colorProvider` advertisement and its
+`documentColor`/`colorPresentation` handlers, the launcher's flag, IntelliJ's forwarding of the
+property, `XdkColorValueTest`, `ColorValueProtocolTest`, `XdkStdioTest`'s packaged round trip, the
+`color-values/ColorPrototype.x` fixture, the IntelliJ `ParityColors.kt` and `probe/ColorUi.kt`, the
+VS Code `playbook/colors.ts`, the catalog's `common.colorPrototype` and the cases X273–X275, and the
+manual recipe and README sections. Both harnesses keep X273–X275 as retired IDs, so the catalog keeps
+X1–X294 in order without reusing them.
+
+Kept or moved:
+- The theme list the highlighting cases inspect moves from `common.colorPrototype.themes` to
+  `common.themes`; VS Code's `--theme` check reads it there.
+- X277's screenshot of the current theme: VS Code's `captureColorTheme` moves into `highlighting.ts`,
+  IntelliJ's `captureColorScheme` into `ParityHighlighting.kt`, with a window-only `screenshot` on the
+  existing `HighlightingUi` probe instead of the color probe's (which also captured the picker).
+- X31 now lists `colorProvider` among the capabilities that must not be advertised, instead of
+  checking it against the prototype switch. `XdkStdioTest` asserts no `colorProvider`.
+- `b7cb7df88`'s protocol-level regression lived in `ColorValueProtocolTest`, because a color request
+  is the one feature with no refresh. It moves to `FileEventDuringAnalysisTest` with a hover request:
+  a file in a new folder is opened, the first compile is held, hover is sent, then the watcher's
+  folder and file events. With `b7cb7df88`'s `XdkAdapter` change reverted, the test fails with
+  "Document changed during analysis"; with it, it passes. `XdkFileChangesTest` still covers the
+  adapter level.
+
+#693 still carries the prototype (`XdkColorPrototype.kt`, `ParityColors.kt`, `probe/ColorUi.kt` and
+the rest); this removal has not been mirrored there.
 
 ### IntelliJ parity backlog (L60)
 
@@ -13379,7 +13417,7 @@ is used because Java `Source.toString(start, end)` normalizes CRLF.
   color spaces, named colors, constant evaluation, conversions and runtime values remain outside
   this experiment.
 
-The [manual recipe](../lang/doc/manual-test-plan.md#l77-color-value-prototype) covers both editors.
+The manual recipe covered both editors (removed with the prototype on 2026-10-21).
 The focused validation run passes 93 backend/protocol/capability/highlighting tests plus one
 packaged stdio test, with zero failures/errors/skips. This is a prototype receipt, not full L77
 completion or a full IDE suite run.
