@@ -18,7 +18,7 @@ class XdkMemberInlineTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
-    @ValueSource(strings = ["1 + 2", "probe() + probe()", "stored + probe()"])
+    @ValueSource(strings = ["1 + 2", "probe() + probe()", "stored + probe()", "stored & probe()"])
     fun `inline method call preserves bindings evaluation order and its declaration`(expression: String) {
         query(
             """
