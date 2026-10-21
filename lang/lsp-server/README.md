@@ -430,6 +430,13 @@ Other LSP clients can send the same `{ "sourceModules": [...] }` object in
 `initializationOptions.xtcCompiler`, answer `workspace/configuration` for `xtc.compiler`, or send
 `workspace/didChangeConfiguration` with `{ "xtc": { "compiler": { "sourceModules": [...] } } }`.
 Absent settings preserve the current host graph; late replies and replies after shutdown are ignored.
+
+Consumers outside the workspace are never found on their own: rename covers exactly the graph. A host can
+search folders with `xtc/discoverConsumers` (`{ "roots": [folder URIs] }`). It returns the modules there
+that import the current graph, directly or through each other, as `modules`, and modules whose names
+the graph or another found module already uses as `conflicts`. It installs nothing; the host adds the
+modules it wants to `sourceModules`, which stays the only manifest. Both editors offer this as
+**Add consumers from folders**.
 This configures source graphs only; binary artifacts/source indices still use the host API below.
 The explicit Tree-sitter backend ignores compiler settings.
 
