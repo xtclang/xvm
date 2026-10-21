@@ -176,6 +176,11 @@ class CompilerPlaybookTest {
             "X240",
             "X241",
             "X242",
+            "X295",
+            "X296",
+            "X297",
+            "X298",
+            "X299",
         ).forEach { id ->
             val data = shared.scenarios.getValue(id)
             fixture("$id/Extract.x", data.text("source"))
@@ -190,7 +195,7 @@ class CompilerPlaybookTest {
             val data = shared.scenarios.getValue(id)
             fixture("$id/${data.text("file")}", data.rows("variants").first()["source"].asString)
         }
-        ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168", "X220")).forEach { id ->
+        ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168", "X220", "X300")).forEach { id ->
             shared.scenarios.getValue(id).rows("files").forEach { file ->
                 fixture("$id/${file["file"].asString}", file["source"].asString)
             }

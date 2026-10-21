@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **299 scenarios**: X1–X294, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **302 scenarios**: X1–X300 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 299 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 302 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1512,7 +1512,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 299 scenarios: X1–X294, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 302 scenarios: X1–X300 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1526,7 +1526,7 @@ focused runs still include them. A future fast profile could exclude them for qu
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 299 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 302 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3842,6 +3842,17 @@ rows 18a.15–18a.17 in [section 18a](#18a-embedded-build-and-run).
 | X292 | Run RunFresh, then run it again. | Each run prints `calls=1,2` and exits with code 0: its static service keeps its count within a run, and the second run starts with fresh program state instead of going on to `calls=3,4`. Which execution worker ran each program is not visible in the editors; the server's `EmbeddedExecutionTest` checks that one worker served both. |
 | X293 | Run RunLibrary, which has no `run` method, and RunTwoArguments, whose `run` requires two parameters, each from a run target (a VS Code task or an IntelliJ Ecstasy Application), since neither has a Run lens. | Both modules build, and each run is refused before user code runs: the output gives the reason (`Missing method "run" in module RunLibrary`, `Unsupported arguments for method "run"`), the run ends with exit code 1, and RunTwoArguments prints nothing. The reason is shown alone, as `xtc run` shows it, not as a failure to create the application container. |
 | X294 | Run RunNoParameters, whose `run` has no parameters, with the argument `ignored` (a VS Code task's `args`, IntelliJ's *Module arguments*). | The output shows `Warning: Method "run" does not take any parameters; ignoring the specified arguments.`, then `ran without parameters`, and the run exits with code 0, as `xtc run` warns and runs. |
+
+### Wider extraction and adopted-property rename (X295–X300)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X295 | Extract `input & mask()` (a bitwise AND, not a reference). | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X296 | Extract `doubled + input` where `doubled` is a `val`. | The helper takes `Int64 doubled`, the initializer's compiler type; compile cleanly; Undo/Redo/Undo. |
+| X297 | Extract three statements that declare `local` and write the field `total`. | A void helper; `local` moves with the statements; compile cleanly; Undo/Redo/Undo. |
+| X298 | Extract `total += 2; emit(total);` while `total` is read afterwards. | `total = extractedMethod(total);` and a helper ending in `return total;`; compile cleanly; Undo/Redo/Undo. |
+| X299 | Select `total += 1; emit(read());` where a lambda reads `total`. | No action; the source stays unchanged. |
+| X300 | Rename `Named.name` in Library to `label` with Consumer closed, then Undo. `First` adopts it without redeclaring it. | The interface declaration and the consumer's `first.name` change together; Undo restores both. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

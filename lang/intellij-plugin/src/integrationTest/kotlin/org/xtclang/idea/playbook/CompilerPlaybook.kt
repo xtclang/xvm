@@ -1453,7 +1453,7 @@ class CompilerPlaybook(
     }
 
     private fun Driver.workspaceScenarios() {
-        ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168", "X220")).forEach { id ->
+        ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168", "X220", "X300")).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val projectSettings = data.values["projectSettingsRoundTrip"]?.asBoolean == true
@@ -1693,6 +1693,11 @@ class CompilerPlaybook(
             "X240",
             "X241",
             "X242",
+            "X295",
+            "X296",
+            "X297",
+            "X298",
+            "X299",
         ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
