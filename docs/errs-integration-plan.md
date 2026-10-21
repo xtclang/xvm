@@ -1597,7 +1597,7 @@ satisfy this track. The placeholder reports breakpoints unverified and refuses l
 real breakpoint support needs the runtime bridge.
 
 Current native automation inventory (2026-10-21): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **303 cases**: X1–X301 except the retired
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **304 cases**: X1–X302 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
 added since, among them the embedded run cases above, have selected native receipts recorded with

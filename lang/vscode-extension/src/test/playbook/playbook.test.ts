@@ -29,7 +29,7 @@ import { runtimeSettingsCases } from './runtimeSettings';
 import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases, semanticClosureCases } from './semantics';
 import { syntaxCompletionCases } from './syntaxCompletion';
-import { typeMoveCases } from './typeMoves';
+import { discoveredRootMoveCases, typeMoveCases } from './typeMoves';
 import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
 
 suite('XdkAdapter playbook', function () {
@@ -101,6 +101,7 @@ suite('XdkAdapter playbook', function () {
     localRefactoringCases(['X295', 'X296', 'X297', 'X298', 'X299']);
     renameFamilyCases(['X300']);
     renamedRootCases(['X301']);
+    discoveredRootMoveCases(['X302']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
