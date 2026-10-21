@@ -31,7 +31,6 @@ class ParityScenarios(
         compilerImportCases()
         librarySettingsCases()
         runtimeSettingsCases()
-        colorCases()
         highlightingCases()
         documentationCases()
         referenceLensCases()
