@@ -200,6 +200,67 @@ class CompilerDispatchRoutesTest {
     }
 
     @Test
+    fun `runtime native methods on a source service are refused as dispatch routes`() {
+        inspect("service Svc { Int read() = 1; }") { module, errors ->
+            val owner = type(module, "Svc", errors)
+            val native = owner.methods.values.filter { it.chain.firstOrNull()?.implementation == Implementation.Native }
+            assertThat(native).isNotEmpty()
+            native.forEach { method ->
+                val route = owner.dispatch(method, errors)
+                assertThat(route.supported).isFalse()
+                assertThat(route.methods.map { it.moduleConstant.name }).containsOnly("ecstasy.xtclang.org")
+            }
+            val written = owner.methods.values.single { it.identity.name == "read" }
+            assertThat(owner.dispatch(written, errors).supported).isTrue()
+        }
+    }
+
+    @Test
+    fun `stored properties read through a generated field accessor that property relations never expose`() {
+        inspectRelations("class Box { Int value = 0; }") { module, nodes, errors ->
+            val owner = type(module, "Box", errors)
+            val property = owner.properties.values.single { it.name == "value" }
+            assertThat(property.ensureOptimizedGetChain(owner, null).map { it.implementation })
+                .containsExactly(Implementation.Field)
+            val chain = compilerPropertyRelations(nodes, errors).chains.single { it.owner.name == "Box" }
+            assertThat(chain.properties.map { it.parentConstant.name to it.name }).containsExactly("Box" to "value")
+            assertThat(chain.supported).isTrue()
+        }
+    }
+
+    @Test
+    fun `classes adopting an interface property keep the written interface declaration`() {
+        inspectRelations(
+            "interface Named { @RO String name { @Override String get() = \"default\"; } } " +
+                "class First implements Named {} class Stored implements Named { @Override String name = \"stored\"; }",
+        ) { module, nodes, errors ->
+            val adopted = type(module, "First", errors).properties.values.single { it.name == "name" }
+            assertThat(adopted.propertyBodies.map { it.implementation }).contains(Implementation.SansCode)
+            val relations = compilerPropertyRelations(nodes, errors)
+            val first = relations.chains.single { it.owner.name == "First" }
+            assertThat(first.properties.map { it.parentConstant.name }).containsOnly("Named")
+            assertThat(first.supported).isTrue()
+            assertThat(relations.declarations.containsAll(first.properties)).isTrue()
+            val stored = relations.chains.single { it.owner.name == "Stored" }
+            assertThat(stored.properties.map { it.parentConstant.name }).containsExactly("Stored", "Named")
+            assertThat(stored.supported).isTrue()
+        }
+    }
+
+    @Test
+    fun `a union type's same-named property is a synthetic contract outside the written declarations`() {
+        inspectRelations("class First { Int value = 1; } class Second { Int value = 2; }") { module, nodes, errors ->
+            val first = (module.getChild("First") as ClassStructure).formalType
+            val second = (module.getChild("Second") as ClassStructure).formalType
+            val union = module.constantPool.ensureUnionTypeConstant(first, second).ensureTypeInfo(errors)
+            val property = union.properties.values.single { it.name == "value" }
+            val relations = compilerPropertyRelations(nodes, errors)
+            assertThat(property.propertyBodies.map { it.identity }).noneMatch { it in relations.declarations }
+            assertThat(relations.chains.map { it.owner.name }).containsExactlyInAnyOrder("First", "Second")
+        }
+    }
+
+    @Test
     fun `native binary methods do not acquire written executable implementation targets`() {
         inspect("") { module, errors ->
             val info = module.constantPool.typeString().ensureTypeInfo(errors)
@@ -222,6 +283,11 @@ class CompilerDispatchRoutesTest {
     private fun inspect(
         body: String,
         check: (ClassStructure, ErrorList) -> Unit,
+    ) = inspectRelations(body) { module, _, errors -> check(module, errors) }
+
+    private fun inspectRelations(
+        body: String,
+        check: (ClassStructure, List<AstNode>, ErrorList) -> Unit,
     ) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
@@ -230,8 +296,11 @@ class CompilerDispatchRoutesTest {
                 .instance()
                 .compileModule(Source("module Routes { $body }", "Routes.x"), null, errors)
         assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
+
+        fun nodes(node: AstNode): List<AstNode> = listOf(node) + node.childNodes().flatMap(::nodes)
+        val nodes = nodes(requireNotNull(compilation.parsed()))
         ConstantPool.withPool(compilation.pool()).use {
-            check(requireNotNull(compilation.file()).module, errors)
+            check(requireNotNull(compilation.file()).module, nodes, errors)
         }
         assertThat(errors.hasSeriousErrors()).describedAs(errors.errors.toString()).isFalse()
     }

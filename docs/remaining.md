@@ -84,8 +84,10 @@ documented refusals, not open tasks; the few worth revisiting are under
 
 Only if a real need comes up; each is a documented refusal today.
 
-- [ ] Rename: fixtures for every unsupported composition route (Implicit, Union, SansCode, Field,
+- [x] Rename: fixtures for every unsupported composition route (Implicit, Union, SansCode, Field,
   Native) before enabling source-owned routes; binary and native contracts stay read-only.
+  Done 2026-10-21: adopted interface properties (SansCode) now rename; union-typed property reads
+  stay refused (they need per-receiver alternatives); Implicit, Field and Native stay refused.
 - [ ] Rename: VS Code edited-file resource history with refactoring auto-save off, instead of the
   current pre-edit refusal.
 - [ ] Rename: host discovery of external repositories beyond the explicit `sourceModules`.
