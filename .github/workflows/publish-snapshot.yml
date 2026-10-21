@@ -716,3 +716,77 @@ jobs:
                   echo "**Assets:**" >> $GITHUB_STEP_SUMMARY
                   echo "- \`${{ steps.prepare.outputs.asset-name }}\`" >> $GITHUB_STEP_SUMMARY
                   echo "- \`${{ steps.prepare.outputs.checksum-name }}\`" >> $GITHUB_STEP_SUMMARY
+
+    publish-vscode-marketplace:
+        name: Publish VS Code extension pre-release to the Marketplace
+        # Off until the repository variable VSCODE_MARKETPLACE_PUBLISH is true. Before that, the
+        # Marketplace publisher (xtclang) needs a trusted publishing policy for this repository and
+        # this workflow (.github/workflows/publish-snapshot.yml); there is no token to store. Only
+        # master publishes: other branches can dispatch this workflow to test the other lanes.
+        if: |
+            github.event.inputs.publish-vscode-extension == 'true' &&
+            github.ref == 'refs/heads/master' &&
+            vars.VSCODE_MARKETPLACE_PUBLISH == 'true'
+        runs-on: ubuntu-latest
+        permissions:
+            actions: read
+            contents: read
+            id-token: write
+
+        steps:
+            - name: Determine source CI run and commit
+              id: commit
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  if [ -z "${{ github.event.inputs.ci-run-id }}" ]; then
+                      echo "❌ ERROR: ci-run-id is required for VS Code Marketplace publication"
+                      echo "This workflow publishes the VSIX that CI packaged; it does not rebuild it."
+                      exit 1
+                  fi
+                  RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                  GH_COMMIT=$(gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID" --jq '.head_sha')
+                  echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
+                  {
+                      echo "run-id=$RUN_ID"
+                      echo "commit=$GH_COMMIT"
+                  } >> "$GITHUB_OUTPUT"
+
+            - name: Download VS Code Marketplace pre-release from CI
+              uses: actions/download-artifact@v8
+              with:
+                  name: vscode-marketplace-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts/vscode-marketplace
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
+
+            - name: Publish the pre-release
+              id: publish
+              shell: bash
+              run: |
+                  VSIX_FILES=(artifacts/vscode-marketplace/*.vsix)
+                  if [ "${#VSIX_FILES[@]}" -ne 1 ] || [ ! -f "${VSIX_FILES[0]}" ]; then
+                      echo "❌ ERROR: expected exactly one .vsix in the CI artifact, found: ${VSIX_FILES[*]}"
+                      exit 1
+                  fi
+                  VERSION=$(unzip -p "${VSIX_FILES[0]}" extension/package.json | jq -r '.version')
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+                  echo "📤 Publishing xtclang.xtc-language $VERSION as a Marketplace pre-release"
+                  # The version is CI's run number, so a rerun of the same CI run finds it published and
+                  # --skip-duplicate makes that a success. vsce matches lang/vscode-extension's devDependency.
+                  npx --yes @vscode/vsce@4.0.0 publish --oidc --pre-release --skip-duplicate --packagePath "${VSIX_FILES[0]}"
+                  echo "✅ VS Code Marketplace pre-release published"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  {
+                      echo "### ✅ VS Code Extension Pre-release Published to the Marketplace"
+                      echo ""
+                      echo "- **Extension version:** ${{ steps.publish.outputs.version }}"
+                      echo "- **Commit:** ${{ steps.commit.outputs.commit }}"
+                      echo "- **Marketplace:** https://marketplace.visualstudio.com/items?itemName=xtclang.xtc-language"
+                  } >> "$GITHUB_STEP_SUMMARY"
