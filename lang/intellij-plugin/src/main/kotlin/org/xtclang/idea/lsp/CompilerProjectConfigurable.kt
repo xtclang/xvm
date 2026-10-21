@@ -3,6 +3,7 @@ package org.xtclang.idea.lsp
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -10,6 +11,7 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -43,6 +45,8 @@ class CompilerProjectConfigurable
         private val project: Project,
         private val readModules: (Project) -> CompletableFuture<List<SourceModuleConfiguration>> =
             ::effectiveModules,
+        private val findConsumers: (Project, List<String>) -> CompletableFuture<ConsumerDiscovery> =
+            ::discoveredConsumers,
     ) : Configurable {
         private val discovery = JBCheckBox("Use Gradle model or automatic source discovery")
         private val effective =
@@ -188,6 +192,21 @@ class CompilerProjectConfigurable
                         },
                     )
                     add(
+                        JButton("Add consumers from folders").apply {
+                            addActionListener {
+                                if (!discovery.isSelected) {
+                                    val folders =
+                                        FileChooser.chooseFiles(
+                                            FileChooserDescriptorFactory.createMultipleFoldersDescriptor(),
+                                            project,
+                                            null,
+                                        )
+                                    if (folders.isNotEmpty()) addConsumers(folders.map { Path.of(it.path).toUri().toString() })
+                                }
+                            }
+                        },
+                    )
+                    add(
                         JButton("Reset to build model").apply {
                             addActionListener { discovery.isSelected = true }
                         },
@@ -310,6 +329,49 @@ class CompilerProjectConfigurable
             }
         }
 
+        /**
+         * Adds the modules under [roots] that import the running graph as rows. An empty table first takes the
+         * effective modules, so the consumers join the graph instead of replacing it. Nothing applies until Apply.
+         */
+        private fun addConsumers(roots: List<String>) {
+            val modality = ModalityState.stateForComponent(table)
+            val effective = if (rows.rowCount == 0) readModules(project) else CompletableFuture.completedFuture(emptyList())
+            findConsumers(project, roots).thenCombine(effective) { found, modules -> found to modules }.thenAccept { (found, modules) ->
+                ApplicationManager.getApplication().invokeLater({
+                    if (project.isDisposed || discovery.isSelected) return@invokeLater
+                    if (rows.rowCount == 0) modules.forEach(::addRow)
+                    val present = (0 until rows.rowCount).mapTo(mutableSetOf()) { rows.getValueAt(it, 0)?.toString()?.trim() }
+                    val (taken, added) = found.modules.partition { it.name in present }
+                    added.forEach(::addRow)
+                    val skipped = found.conflicts + taken
+                    if (skipped.isNotEmpty()) {
+                        Messages.showWarningDialog(
+                            table,
+                            "Skipped modules whose names are already taken:\n" + skipped.joinToString("\n") { "${it.name}: ${it.uri}" },
+                            "Ecstasy Consumers",
+                        )
+                    } else if (added.isEmpty()) {
+                        Messages.showInfoMessage(
+                            table,
+                            "No module in the chosen folders imports the current source graph.",
+                            "Ecstasy Consumers",
+                        )
+                    }
+                }, modality)
+            }
+        }
+
+        private fun addRow(module: SourceModuleConfiguration) {
+            rows.addRow(
+                arrayOf(
+                    module.name,
+                    module.uri,
+                    module.dependencies.joinToString(", "),
+                    module.resourceRoots?.let { paths -> Gson().toJson(paths) }.orEmpty(),
+                ),
+            )
+        }
+
         override fun disposeUIResources() {
             reportRevision.incrementAndGet()
         }
@@ -405,16 +467,7 @@ class CompilerProjectConfigurable
             discovery.isSelected = original == null
             table.isEnabled = !discovery.isSelected
             rows.rowCount = 0
-            original.orEmpty().forEach {
-                rows.addRow(
-                    arrayOf(
-                        it.name,
-                        it.uri,
-                        it.dependencies.joinToString(", "),
-                        it.resourceRoots?.let { paths -> Gson().toJson(paths) }.orEmpty(),
-                    ),
-                )
-            }
+            original.orEmpty().forEach(::addRow)
         }
 
         override fun apply() {
@@ -472,5 +525,28 @@ private fun effectiveModules(project: Project): CompletableFuture<List<SourceMod
             }
     return CompletableFuture.allOf(*requests.toTypedArray()).thenApply {
         requests.flatMap { it.join() }
+    }
+}
+
+/** Ask the running compiler servers for consumers under [roots]; nothing is installed. */
+private fun discoveredConsumers(
+    project: Project,
+    roots: List<String>,
+): CompletableFuture<ConsumerDiscovery> {
+    val requests =
+        LanguageServiceAccessor
+            .getInstance(project)
+            .startedServers
+            .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
+            .map { wrapper ->
+                wrapper.initializedServer.thenCompose { server ->
+                    (server as? XtcLanguageServer)?.discoverConsumers(DiscoverConsumersParams(roots))
+                        ?: CompletableFuture.completedFuture(ConsumerDiscovery())
+                }
+            }
+    return CompletableFuture.allOf(*requests.toTypedArray()).thenApply {
+        requests.map { it.join() }.let { found ->
+            ConsumerDiscovery(found.flatMap { it.modules }.distinct(), found.flatMap { it.conflicts }.distinct())
+        }
     }
 }
