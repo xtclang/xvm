@@ -823,13 +823,13 @@ public interface ErrorListener {
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam,
                 Source source, long lPosStart, long lPosEnd) {
-            m_origin     = Origin.here();
-            m_severity   = severity;
-            m_sCode      = sCode;
-            m_aoParam    = aoParam;
-            m_source     = source;
-            m_lPosStart  = lPosStart;
-            m_lPosEnd    = lPosEnd;
+            m_origin    = Origin.here();
+            m_severity  = severity;
+            m_sCode     = sCode;
+            m_aoParam   = aoParam;
+            m_source    = source;
+            m_lPosStart = lPosStart;
+            m_lPosEnd   = lPosEnd;
         }
 
         /**

@@ -49,8 +49,8 @@ public class Lexer
         }
         requireNonNull(errs, "errs");
 
-        m_source        = source;
-        f_errs = errs;
+        m_source = source;
+        f_errs   = errs;
 
         eatWhitespace();
     }
@@ -59,9 +59,9 @@ public class Lexer
      * @param parent a Lexer that this Lexer can delegate to
      */
     protected Lexer(Lexer parent) {
-        m_source        = parent.m_source;
-        f_errs = parent.f_errs;
-        m_fWhitespace   = parent.m_fWhitespace;
+        m_source      = parent.m_source;
+        f_errs        = parent.f_errs;
+        m_fWhitespace = parent.m_fWhitespace;
     }
 
     // ----- Iterator methods ----------------------------------------------------------------------
