@@ -31,7 +31,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 
 Known limits: up to four programs at a time per server (a fifth run reports that four programs
 are already running); IntelliJ Build Module builds
-every module; `.x` files have no IntelliJ gutter Run icon because there is no PSI parser; older
+every module; older
 IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
 new *Module source* field. The commits and validation are recorded in the
 [integration plan](../../../docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
@@ -256,6 +256,14 @@ this bridge; they cannot be inferred from compiler type hints.
   builds report a duplicate module until it is closed); an IDE move of a discovered root into
   another directory, which the rename work refuses; and the fallbacks for the name and dependencies
   of a renamed root whose header does not parse, which are keyed by the old path. Closed 2026-10-19.
+  *2026-10-21:* all three are fixed. Discovery drops an open buffer whose file is gone when a file on
+  disk has the same text, so the old path no longer declares the module a second time (shared X301:
+  X291's rename with the root's editor left open). A discovered root whose module uses no resources
+  can be moved into another directory inside the discovery folders, with its companion folder and
+  Undo/Redo (`XdkFileOperationsTest`, shared X302 in VS Code); a root that uses resources, or a
+  destination outside those folders, is still refused. A renamed root whose header does not parse
+  keeps the module name and imports of its last parse, because discovery records a file added with
+  the exact text of a removed one (`XdkWorkspaceDiscoveryTest`).
 - [x] **R3 — Asynchronous embedded execution.** Extend Java/lib_runner entry selection and argument
   passing, session completion, stop, output/input and resource ownership. Preserve caller-owned
   directories and dispose only session-owned temporary resources. Structured exception/exit events
@@ -333,9 +341,16 @@ this bridge; they cannot be inferred from compiler type hints.
   an argument: the argument is dropped, the output shows the runtime's warning (EMB-6, as `xtc run`
   warns) before the program's own output, and the program runs. IntelliJ runs the shared cases in
   IntelliJ IDEA 2026.2.3 with Ultimate features disabled.
-  Not covered: `.x` files have no IntelliJ gutter Run icon, since there is no PSI parser (the Run
-  lens, context and shortcut actions run them); X288 drives Gradle mode with a stub wrapper, not a
-  real Gradle build; repeated-run soak belongs to R8.
+  Not covered then: `.x` files had no IntelliJ gutter Run icon, and X288 drives Gradle mode with a
+  stub wrapper, not a real Gradle build.
+  *2026-10-21:* IntelliJ shows a Run icon in the gutter of each Run lens line. `.x` files have no PSI
+  for a run line marker, so the icons are document line highlighters placed from a new
+  `xtc/runLenses` request; a click runs the module as the lens does (shared X280). Shared X303 makes
+  a project the way New Project does (VS Code `xtc init`, the IntelliJ wizard's creator), chooses
+  Gradle mode, and builds and runs it with its own Gradle build and the XTC plugin and XDK in
+  mavenLocal; a saved type error then fails the build. Not covered: IntelliJ's Build Project in
+  Gradle mode, which is the IDE's builder and needs a Gradle import; Debug or configuration actions
+  on the gutter icon; repeated-run soak, which belongs to R8.
 - [ ] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
   no-debug execution, output, completion, disconnect and terminate to the same session service.
   Advertise only functioning requests. DAP facade shutdown must follow an explicit run ownership policy.
