@@ -331,11 +331,13 @@ export function buildModeCases(): void {
     });
 }
 
-/** Registered after the on-type cases, as the catalog orders X291 after X290. */
-export function renamedRootCases(): void {
-    playbook('X291', async (workspace, data) => {
+/** X291 is registered after the on-type cases and X301 after X300, in catalog order. */
+export function renamedRootCases(ids: readonly ('X291' | 'X301')[]): void {
+    for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         await discovered(workspace, async () => {
+            // X301 leaves an editor open on the root, which keeps its document open after the file is renamed
+            if ('editorOpen' in data && data.editorOpen) await workspace.open(data.file);
             await embedded(async executions => {
                 // a task saved with the module's root file, as tasks.json or Rerun keeps it
                 const runSaved = async (message: string) => {
@@ -345,7 +347,7 @@ export function renamedRootCases(): void {
                     assert.ok(run.text.includes(data.output), run.text);
                 };
                 await runSaved('Run before the rename finishes');
-                // renamed on disk, as by a terminal, with no editor open on it
+                // renamed on disk, as by a terminal
                 await fs.rename(workspace.uri(data.file).fsPath, workspace.uri(data.destinationFile).fsPath);
                 const renamed = await vscode.workspace.openTextDocument(workspace.uri(data.destinationFile));
                 await vscode.window.showTextDocument(renamed);
