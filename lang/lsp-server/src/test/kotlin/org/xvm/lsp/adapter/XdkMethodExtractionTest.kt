@@ -316,15 +316,58 @@ class XdkMethodExtractionTest {
         ) { _, changed -> assertThat(changed).contains("private lib.Value extractedMethod(lib.Value input)") }
     }
 
+    @Test
+    fun `statements may declare locals that only they use and write fields`() {
+        query(
+            """
+            module Extract {
+                Int total = 0;
+                void emit(Int value) {}
+                void run(Int input) {
+                    §Int local = input + 1;
+                    emit(local);
+                    total = local;§
+                }
+            }
+            """.trimIndent(),
+            title = "Extract statements to private method",
+        ) { _, changed ->
+            assertThat(changed).contains(
+                "extractedMethod(input);",
+                "private void extractedMethod(Int input)",
+                "Int local = input + 1;",
+                "total = local;",
+            )
+        }
+    }
+
+    @Test
+    fun `a local declared in the statements and used after them is refused`() {
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    §Int local = input + 1;
+                    emit(local);§
+                    emit(local);
+                }
+            }
+            """.trimIndent(),
+            expected = false,
+            title = "Extract statements to private method",
+        ) { _, _ -> error("Unexpected statement extraction") }
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings = [
             "if (input > 0) { emit(input); }",
-            "Int local = input;",
             "input++;",
+            "input = 5;",
         ],
     )
-    fun `statement extraction refuses intervening control flow declarations and mutable captures`(middle: String) {
+    fun `statement extraction refuses intervening control flow and mutable captures`(middle: String) {
         query(
             """
             module Extract {
