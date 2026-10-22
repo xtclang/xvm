@@ -2490,10 +2490,30 @@ Four more commits, runtime and editors for each, and a rewrite, on this branch o
 
 The plan's R9–R13 (`cc4e55021`) list the debugger features beyond R7.
 
+### R7: watches and hover on paths (2026-10-22)
+
+Two more commits, runtime and editors, on this branch only:
+
+- `2e4a81205` (R7m, `javatools`): `SessionDebugger.evaluate()` reads a path in a stopped frame, a
+  name (`this`, `<exception>`, the innermost variable, or else a field of `this`) and then fields
+  and array elements, without running code, on the waiting fiber's thread as variables are; each
+  failure has its reason. `SessionDebuggerTest` 15; `:javatools:test` 652, the 42 existing skips.
+- `c966674fc` (R7n, `lang`): DAP `evaluate` with a frame, in the watch, hover and repl contexts,
+  and `supportsEvaluateForHovers` (worker protocol 8); without a frame the console's line is still
+  the program's input. Shared X310 in both editors (VS Code `run-yxqVow`, IntelliJ
+  `run-1497514308845821898`). `:lang:dap-server:test` 20, `:lang:lsp-server:test` 2,385,
+  `:lang:intellij-plugin:test` 151.
+
+Found on the way: LSP4IJ shows an exception stop's hint one second later on an editor that may
+have closed (UP31); IntelliJ's X307 now waits for it. The IntelliJ probe read a session's console
+before its exit code, which once reported an ended session without its last output; it now reads
+the exit code first.
+
 ### R6–R7 integration bursts (2026-10-22)
 
 R6 and R7's first part are seven code commits on this branch, with their records; variables and
-stepping add burst E. All the work
+stepping add burst E, exception stops, pause and stop on entry burst F, and watches and hover on
+paths burst G. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2508,6 +2528,7 @@ master `1c4efe422`.
 | D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
 | E: variables and stepping | `51cccbfbf` (R7e), `05e3ff076` (R7f), `769d6f34d` (R7g), `a78d736f5` (R7h) | R7e and R7g `javatools` only; R7f and R7h `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | A–D | `:javatools:test` (`SessionDebuggerTest`); `:lang:dap-server:test`, `:lang:lsp-server:test`, `:lang:intellij-plugin:test`; both playbooks X280–X285, X287, X289, X304–X306 |
 | F: exceptions, pause and entry | `bf0b25af4` (R7i), `9d2c2f738` (R7j), `5a7bf8def` (R7k), `5a64247bd`, `48f00ef8c` (R7l) | R7i, R7k and the rewrite `javatools` only; R7j and R7l `lang` as E's | E | as E's, with both playbooks to X309 (X308 and X309 VS Code only) |
+| G: watches and hover | `2e4a81205` (R7m), `c966674fc` (R7n) | R7m `javatools` only; R7n `lang` as E's | F | as E's, with both playbooks to X310 (X308 and X309 VS Code only) |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
