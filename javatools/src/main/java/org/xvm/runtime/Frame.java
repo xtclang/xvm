@@ -567,6 +567,20 @@ public class Frame
         return Op.R_EXCEPTION;
     }
 
+    // whether a guard in effect now would catch the exception; nothing is changed, and a
+    // "finally" does not count, since it passes the exception on
+    public boolean catches(ExceptionHandle hException) {
+        Guard[] aGuard = m_aGuard;
+        if (aGuard != null) {
+            for (int iGuard = m_iGuard; iGuard >= 0; iGuard--) {
+                if (aGuard[iGuard].catches(this, hException)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // find the closest "AllGuard" and continue with execution of the corresponding code
     public int processAllGuard(DeferredGuardAction deferredAction) {
         Guard[] aGuard = m_aGuard;
@@ -2256,6 +2270,14 @@ public class Frame
         public abstract int handleException(Frame frame, ExceptionHandle hException, int iGuard);
 
         /**
+         * @return true if this guard catches the exception; unlike {@link #handleException}, this
+         *         changes nothing
+         */
+        public boolean catches(Frame frame, ExceptionHandle hException) {
+            return false;
+        }
+
+        /**
          * Drop to the scope of the exception/finally handler;
          * perform an implicit "enter" with a variable introduction (exception or Null)
          */
@@ -2332,6 +2354,17 @@ public class Frame
                 }
             }
             return Op.R_EXCEPTION;
+        }
+
+        @Override
+        public boolean catches(Frame frame, ExceptionHandle hException) {
+            TypeConstant typeException = hException.getType();
+            for (int nClassId : f_anClassConstId) {
+                if (typeException.isA(frame.resolveType(nClassId))) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
