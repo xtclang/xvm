@@ -2430,11 +2430,38 @@ program's fibers without running more of it, and the debugger leaves the runner'
 Not covered: variables, stepping, exception stops, pause, evaluation and source revisions. The
 opt-in IntelliJ `projectLifecycle` check of the same Gradle task fails ("closed project's pending
 reply retires"), and fails the same way on `ef1491a6c`, before this work
-(`run-15132038242161374573`); it is listed as open in `docs/remaining.md`.
+(`run-15132038242161374573`); it is listed as open in `docs/remaining.md`, and was fixed later the
+same day in `3813e27a9` ([below](#r7-variables-and-stepping-2026-10-22)).
+
+### R7: variables and stepping (2026-10-22)
+
+Four more commits, runtime and editors for each, on this branch only and not for #693:
+
+- `51cccbfbf` (R7e, `javatools`): `SessionDebugger.scopes()` and `variables()`. A stopped frame's
+  `this` and named registers, an object's fields and an array's first 100 elements, with value
+  and type text, read on the waiting fiber's own interpreter thread; another service's state is
+  not expanded, and references last until the program resumes. Answers are completed off the
+  debugger's lock, after IntelliJ's X305 found the worker deadlocked between that lock and its
+  channel. `SessionDebuggerTest` 7 tests; `:javatools:test` 644 tests, the 42 existing skips.
+- `05e3ff076` (R7f, `lang`): worker protocol 4 (`scopes`, `variables`), DAP `scopes` and
+  `variables` with paging, stops that send the program's waiting output first, and shared X305 in
+  both editors (VS Code `run-SQPPVx`, IntelliJ `run-7310647732030191697`, with the same cases as VS
+  Code). `:lang:lsp-server:test` 2,382, `:lang:dap-server:test` 16, `:lang:intellij-plugin:test` 148.
+- `769d6f34d` (R7g, `javatools`): `SessionDebugger.step()` over, into and out of calls; a return or
+  an exception leaving the stepped frame continues the step into its caller, and any other stop
+  ends it. `SessionDebuggerTest` 9 tests; `:javatools:test` 646 tests.
+- `a78d736f5` (R7h, `lang`): worker protocol 5 (`step`), DAP `next`, `stepIn` and `stepOut`, and
+  shared X306 in both editors (VS Code `run-DLPFYQ`, IntelliJ `run-6073636771825028984`).
+  `:lang:dap-server:test` 17, `:lang:lsp-server:test` 2,383, `:lang:intellij-plugin:test` 151.
+
+Between them, `3813e27a9` fixes the opt-in IntelliJ project lifecycle check, which is not debugger
+work: requests still waiting when a connection ends are now cancelled, and the check sends its
+edits before its requests. It is a candidate for #693, if the user wants it there.
 
 ### R6–R7 integration bursts (2026-10-22)
 
-R6 and R7's first part are seven code commits on this branch, with their records. All the work
+R6 and R7's first part are seven code commits on this branch, with their records; variables and
+stepping add burst E. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2447,6 +2474,7 @@ master `1c4efe422`.
 | B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
 | C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
 | D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
+| E: variables and stepping | `51cccbfbf` (R7e), `05e3ff076` (R7f), `769d6f34d` (R7g), `a78d736f5` (R7h) | R7e and R7g `javatools` only; R7f and R7h `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | A–D | `:javatools:test` (`SessionDebuggerTest`); `:lang:dap-server:test`, `:lang:lsp-server:test`, `:lang:intellij-plugin:test`; both playbooks X280–X285, X287, X289, X304–X306 |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.

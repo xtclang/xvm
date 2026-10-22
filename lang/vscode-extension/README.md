@@ -192,9 +192,11 @@ same execution workers. The Debug Console shows the build, the program's output 
 debug toolbar's Stop ends the program, also while it still builds, and a line typed in the Debug
 Console while the program runs is its console input. Breakpoints are verified when the program
 starts, and a breakpoint or `assert:debug` stops the program: the editor shows the line, and the
-Call Stack view the stopped fiber's frames and the other fibers that wait. Continue runs the program
-on, and Stop ends it where it is. Variables, stepping, exception breakpoints and Pause are not
-available yet. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
+the selected frame's locals, and expands objects into their fields and arrays into their elements.
+Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
+caller. Continue runs the program on, and Stop ends it where it is. Exception breakpoints and Pause
+are not available yet. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
 says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
