@@ -1,12 +1,18 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-**Status (2026-10-15):** not implemented. VS Code debug launches currently run the module without a
-debugger, through the same embedded or Gradle Run as the Run button; IntelliJ keeps DAP registration
-disabled. The `dap-server` placeholder no longer pretends: breakpoints are reported unverified
-with the reason, launch and attach fail with it, there are no threads, and it advertises only the
-configuration handshake. A DAP `launch` should reuse the embedded build and execution-worker sessions
-(`xtc/build`, `xtc/run`) rather than start its own runtime; see R6/R7 in the
-[execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+**Status (2026-10-22):** debug sessions are real, but there is no runtime debugger yet. R6 is done:
+a session runs inside the language server and travels over its connection, so a `launch` builds and
+runs the module with the same embedded build and execution workers as Run, reports the program's
+output and exit, and stops it on `terminate`, `disconnect` or the end of the session. VS Code uses
+it for `F5`, `Ctrl+F5` and `launch.json` configurations in embedded mode; IntelliJ keeps DAP
+registration disabled. Breakpoints are reported unverified with the reason, there are no threads,
+and only `configurationDone` and `terminate` are advertised. The session code is the `dap-server`
+library, hosted by the language server ([server README](../lsp-server/README.md#embedded-build-and-run));
+sections 1 and 11 still describe the earlier plan, in which the adapter was a process of its own.
+The runtime bridge below is R7 in the
+[execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance). Since the
+program runs in an execution worker JVM, R7's debugger has to live in that worker, and the session
+reaches it through the worker's channel instead of holding `Frame` objects itself.
 
 This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
