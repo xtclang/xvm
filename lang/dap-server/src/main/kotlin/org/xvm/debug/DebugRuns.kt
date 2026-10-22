@@ -70,6 +70,13 @@ data class VariableState(
     val variablesReference: Int,
 )
 
+/** How a stopped fiber is stepped: over a call, into one, or out of the current method. */
+enum class StepKind {
+    OVER,
+    IN,
+    OUT,
+}
+
 /** Why and where the program stopped: the reason, what stopped it in words, the fiber, and the breakpoints' IDs. */
 data class StopState(
     val reason: String,
@@ -159,6 +166,16 @@ interface DebugRuns {
         runId: String,
         reference: Int,
     ): CompletableFuture<List<VariableState>>
+
+    /**
+     * Resumes the stopped program, stepping one of its fibers: it stops again, with the reason `step`, where the step
+     * ends. False when that fiber does not wait; the program then stays stopped.
+     */
+    fun step(
+        runId: String,
+        threadId: Int,
+        kind: StepKind,
+    ): CompletableFuture<Boolean>
 
     /** Resumes the stopped program. False when no such run is active. */
     fun resume(runId: String): Boolean
