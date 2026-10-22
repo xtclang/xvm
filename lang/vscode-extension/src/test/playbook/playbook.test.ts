@@ -8,7 +8,7 @@ import { completionCases } from './completion';
 import { referenceLensCases } from './referenceLenses';
 import { documentationCases } from './documentation';
 import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
-import { buildModeCases, executionCases, executionInputCases, gradleProjectCases, renamedRootCases, runEntryCases } from './execution';
+import { buildModeCases, debugSessionCases, executionCases, executionInputCases, gradleProjectCases, renamedRootCases, runEntryCases } from './execution';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases, indexingCases, libraryContentCases, monikerCases } from './graph';
 import { highlightingCases } from './highlighting';
@@ -103,6 +103,7 @@ suite('XdkAdapter playbook', function () {
     renamedRootCases(['X301']);
     discoveredRootMoveCases(['X302']);
     gradleProjectCases();
+    debugSessionCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
