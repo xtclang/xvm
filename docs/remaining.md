@@ -144,14 +144,22 @@ Only if a real need comes up; each is a documented refusal today.
 
 ### R6: DAP lifecycle on real run sessions
 
+Closed 2026-10-22 for VS Code (`6312fd242`, `ccc0695d5`, `44d121779`; shared X285 in VS Code `run-ZuRYb6`).
+IntelliJ keeps DAP disabled and offers no Debug runner; its parity is R8's.
+
 - [x] Placeholder half: no synthetic breakpoints or threads; launch and attach fail with the reason;
   only the configuration handshake is advertised (`XtcDebugServerTest`, `eba208bb3`).
-- [ ] Connect DAP `launch` to the run session service.
-- [ ] No-debug execution through the same service.
-- [ ] Program output and completion events.
-- [ ] `disconnect` and `terminate`.
-- [ ] Advertise only the requests that work.
-- [ ] Decide and implement how the DAP facade's shutdown relates to the run it owns.
+- [x] Connect DAP `launch` to the run session service: sessions live in the language server, over
+  its connection (`xtc/debugStart`, `xtc/debugMessage`, `xtc/debugEnd`), and launch through the
+  service `xtc/run` uses (`ccc0695d5`).
+- [x] No-debug execution through the same service: a `noDebug` launch takes the same path, and an
+  embedded run passes `assert:debug` instead of hanging in the console debugger (`6312fd242`).
+- [x] Program output and completion events: `output`, then `exited` and `terminated`; a failed build
+  reports its diagnostics and fails the launch.
+- [x] `disconnect` and `terminate`: both stop the program, also while it still builds.
+- [x] Advertise only the requests that work: `configurationDone` and `terminate`.
+- [x] The session owns the program it launched: `terminate`, `disconnect`, ending the session and
+  the server's shutdown stop it, and its exit ends the session.
 
 ### R7: runtime debugger bridge
 
