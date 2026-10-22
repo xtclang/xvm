@@ -1592,16 +1592,19 @@ to the compiler-only PR:
   2026-10-20. The gaps left then (no `.x` gutter icon, no real Gradle build in a shared case, and
   three renamed-root cases) were closed on 2026-10-21 ([below](#r5-gaps-closed-2026-10-21)); soak
   is R8's, and what stays open is in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
-- [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
-  *Partial:* the placeholder reports breakpoints unverified and refuses launch (`eba208bb3`); no session service.
+- [x] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
+  The placeholder reported breakpoints unverified and refused launch (`eba208bb3`). Since
+  2026-10-22 a session lives in the language server, over its connection, launches through the
+  embedded build and run, and owns its program; VS Code uses it, and IntelliJ keeps DAP disabled
+  ([below](#r6-debug-sessions-2026-10-22)).
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
 
 Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Compiler-only operations must
 continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and lib_runner
 child containers are the foundation; existing IDE shell commands and the DAP placeholder do not
-satisfy this track. The placeholder reports breakpoints unverified and refuses launch (2026-10-15);
-real breakpoint support needs the runtime bridge.
+satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6); real breakpoint support
+needs the runtime bridge (R7).
 
 Current native automation inventory (2026-10-21): the shared catalog,
 `lang/test-fixtures/compiler-playbook/scenarios.json`, has **305 cases**: X1–X303 except the retired
@@ -2355,6 +2358,38 @@ messages say so; `670954781` and `c553468d0`, which only record work here, are n
 143, 0 failures, from fresh JUnit XML; X280, X288, X291 and X301–X303 pass in VS Code
 (`run-yvBP7L`), and in IntelliJ X280, X291 and X301 pass with X288 and X303 partial
 (`run-13040826915320426889`, no IDE errors).
+
+### R6 debug sessions (2026-10-22)
+
+R6, on this branch only (not mirrored into #693), in three commits:
+
+- `6312fd242`: an embedded run passes `assert:debug`. Every service used the JVM-wide `DebugConsole`,
+  which in the execution worker read its commands from standard input, the server's protocol pipe,
+  so the program never ended. The debugger is now the runtime's (`Runtime.getDebugger()`, the
+  console unless a host sets another), and `InterpreterControl.createConnector()` sets the new
+  `Debugger.NONE`. A new `EmbeddedExecutionTest` case timed out after 60 s before the change and
+  passes in 0.33 s with it; `:javatools:test` passes 637 tests, 0 failures, the 42 existing skips.
+- `ccc0695d5`: debug sessions in the language server. `xtc/debugStart` creates one, `xtc/debugMessage`
+  notifications carry its DAP messages both ways, and `xtc/debugEnd` ends it; `DebugSessions` runs
+  each session's messages on a thread of its own. `dap-server` is now a library of the server, and
+  its `XtcDebugServer` launches through `EmbeddedRuns`, which gains a launch that reports to any
+  listener and starts once the client's configuration is done. The session owns its program:
+  `terminate`, `disconnect`, ending the session and the server's shutdown stop it, also while it
+  still builds, which `xtc/stopRun` now does too. `XtcDebugServerTest` covers the session with a
+  stand-in for the runs (12 tests); `EmbeddedExecutionTest` runs sessions end to end on a real
+  worker, including a terminate during the build and console input from the debug console (35).
+- `44d121779`: VS Code starts these sessions for `F5`, `Ctrl+F5` and `launch.json` configurations in
+  embedded mode, through an inline adapter that forwards DAP messages over the language client;
+  Gradle mode still runs the Gradle task. The `dap-server.jar` copy is gone from the extension.
+  Shared X285 now starts a real session in VS Code; it passes with X280–X284, X287 and X289
+  (`run-AsiYLv`), and again with console input added (`run-ZuRYb6`). Its first native run failed:
+  VS Code sends `configurationDone` without arguments, which the session's non-null parameter
+  rejected, and the server test now sends it the same way.
+
+Not covered: IntelliJ, which keeps DAP disabled and offers no Debug runner; typing into VS Code's
+Debug Console itself, which X285 replaces by the `evaluate` request it sends; and any runtime
+debugging, which is R7. Validation: `:lang:lsp-server:test` 2,379 tests, 0 failures, the 2 existing skips; `:lang:dap-server:test` 12,
+0 failures; ESLint, `tsc` and `spotlessCheck` pass.
 
 ### IntelliJ parity backlog (L60)
 
