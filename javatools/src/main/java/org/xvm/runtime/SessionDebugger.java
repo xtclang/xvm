@@ -42,6 +42,8 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.runtime.template.text.xString.StringHandle;
+
 /**
  * A debugger that its host drives through calls rather than a terminal, for hosts such as an IDE's
  * debug adapter. The host makes the program's modules known ({@link #addModule}), sets breakpoints
@@ -62,6 +64,12 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * calls or is called by; out of one, once its frame returns. A frame that returns, or that an
  * exception leaves, during a step over continues it as a step into, so it stops at its caller's
  * next line. Any other stop, such as a breakpoint, ends the step.
+ *
+ * <p>A thrown exception stops the program, with the reason "exception", at the frame that throws
+ * it, when the host asks for every thrown exception, or for those that no frame will catch: no
+ * frame of the throwing fiber, nor of the fibers that called it, has a "catch" for it then. The
+ * exception is that frame's first variable, {@link #EXCEPTION}, while the program is stopped
+ * there; it stops the program once, not again as it leaves each frame.
  *
  * <p>Variables are read on the interpreter thread of the waiting fiber whose frame holds them,
  * which reads them while it waits, so a read never races the program; {@link #variables} answers
@@ -169,8 +177,9 @@ public final class SessionDebugger
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint" or "step"), what stopped it in
-     * words, the fiber that stopped, and the IDs of the breakpoints it stopped at.
+     * Why and where the program stopped: the reason ("breakpoint", "step" or "exception"), what
+     * stopped it in words (an exception's type and text), the fiber that stopped, and the IDs of
+     * the breakpoints it stopped at.
      */
     public record Stop(String reason, String description, int threadId, List<Integer> breakpointIds) {
     }
@@ -179,6 +188,11 @@ public final class SessionDebugger
      * The name of a frame's scope of local variables.
      */
     public static final String LOCALS = "Locals";
+
+    /**
+     * The name of the variable that holds the exception a frame is throwing.
+     */
+    public static final String EXCEPTION = "<exception>";
 
     /**
      * The value of a variable that has not been assigned.
@@ -247,6 +261,18 @@ public final class SessionDebugger
         m_mapCache  = new ConcurrentHashMap<>();
         updateActive();
         return listResult;
+    }
+
+    /**
+     * Choose which thrown exceptions stop the program, at the frame that throws them.
+     *
+     * @param fAll       true to stop at every thrown exception
+     * @param fUncaught  true to stop at the exceptions that no frame will catch
+     */
+    public synchronized void setExceptionStops(boolean fAll, boolean fUncaught) {
+        m_fStopAllThrown = fAll;
+        m_fStopUncaught  = fUncaught;
+        updateActive();
     }
 
     /**
@@ -443,9 +469,18 @@ public final class SessionDebugger
 
     @Override
     public int checkBreakPoint(Frame frame, ExceptionHandle hEx) {
-        // exceptions are not stopped at; unwind this one without asking again
         leave(frame);
-        return Op.R_EXCEPTION;
+
+        // an exception stops the program once, at the first frame of the program that throws it
+        if (hEx != m_hExceptionStopped && !frame.isNative() && !isHost(frame)
+                && (m_fStopAllThrown || m_fStopUncaught && !isCaught(frame, hEx))) {
+            m_hExceptionStopped = hEx;
+            stop(frame, "exception", describe(hEx), List.of(), null);
+        }
+
+        // asked again at each frame the exception leaves, so a step learns that its frame is left;
+        // a fiber that is ending meanwhile ends at its next line
+        return Op.R_NEXT;
     }
 
     // ----- stopping ------------------------------------------------------------------------------
@@ -477,6 +512,31 @@ public final class SessionDebugger
         if (stepping != null && stepping.frame() == frame && stepping.step() != Step.IN) {
             m_stepping = new Stepping(Step.IN, frame, frame.f_fiber);
         }
+    }
+
+    /**
+     * @return true if a frame of the fiber at the specified frame, or of a fiber that called it,
+     *         will catch the exception
+     */
+    private static boolean isCaught(Frame frame, ExceptionHandle hEx) {
+        for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
+            Frame frameAt = stackFrame.frame;
+            if (frameAt != null && !frameAt.isNative() && frameAt.catches(hEx)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return the exception's type and its text, if it has one
+     */
+    private static String describe(ExceptionHandle hEx) {
+        String       sType = hEx.getType().getValueString();
+        ObjectHandle hText = hEx.getField(null, "text");
+        return hText instanceof StringHandle hString
+                ? sType + ": " + hString.getStringValue()
+                : sType;
     }
 
     /**
@@ -577,13 +637,15 @@ public final class SessionDebugger
     }
 
     /**
-     * Turn the runtime's "debugger is active" flag on while there are breakpoints, the program is
-     * stopped or a fiber steps, so that every line is checked; otherwise lines run at full speed.
+     * Turn the runtime's "debugger is active" flag on while there are breakpoints or exception
+     * stops, the program is stopped or a fiber steps, so that every line and thrown exception is
+     * checked; otherwise lines run at full speed.
      */
     private void updateActive() {
         Runtime runtime = m_runtime;
         if (runtime != null) {
-            runtime.setDebuggerActive(m_fStopped || m_stepping != null || !m_mapBreaks.isEmpty());
+            runtime.setDebuggerActive(m_fStopped || m_stepping != null || !m_mapBreaks.isEmpty()
+                    || m_fStopAllThrown || m_fStopUncaught);
         }
     }
 
@@ -649,11 +711,17 @@ public final class SessionDebugger
     }
 
     /**
-     * @return the frame's {@code this} and its named registers in scope
+     * @return the exception the frame is throwing, if any, then its {@code this} and its named
+     *         registers in scope
      */
     private List<Variable> locals(Frame frameWait, Frame frame) {
-        List<Variable> listVars = new ArrayList<>();
-        ObjectHandle   hThis    = frame.f_hThis;
+        List<Variable>  listVars   = new ArrayList<>();
+        ExceptionHandle hException = frame.m_hException;
+        if (hException != null) {
+            listVars.add(variable(frameWait, EXCEPTION, hException));
+        }
+
+        ObjectHandle hThis = frame.f_hThis;
         if (hThis != null) {
             listVars.add(variable(frameWait, "this", hThis));
         }
@@ -1063,6 +1131,21 @@ public final class SessionDebugger
      * The step that runs, or null.
      */
     private volatile Stepping m_stepping;
+
+    /**
+     * True to stop at every thrown exception.
+     */
+    private volatile boolean m_fStopAllThrown;
+
+    /**
+     * True to stop at the thrown exceptions that no frame will catch.
+     */
+    private volatile boolean m_fStopUncaught;
+
+    /**
+     * The last exception the program stopped at, which does not stop it again as it unwinds.
+     */
+    private volatile ExceptionHandle m_hExceptionStopped;
 
     /**
      * Counts the stops and resumes, so a waiting fiber knows which stop it waits for.
