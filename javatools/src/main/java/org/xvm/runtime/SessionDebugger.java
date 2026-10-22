@@ -20,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
@@ -52,7 +55,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * debug adapter. The host makes the program's modules known ({@link #addModule}), sets breakpoints
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
- * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables}), and
+ * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables},
+ * {@link #evaluate}), and
  * resumes it ({@link #resume}), steps one of its fibers ({@link #step}) or pauses it
  * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
  * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
@@ -87,7 +91,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * runs while this debugger holds its lock. Only the waiting fiber's own frames have variables,
  * not those of the fiber that called it, and another service's state is not expanded: a read
  * touches only the waiting service's state and immutable values. A variable's reference to its
- * fields or elements, like a frame's ID, lasts until the program resumes.
+ * fields or elements, like a frame's ID, lasts until the program resumes. A path to a value, such
+ * as {@code point.x} or {@code ints[1]}, is evaluated the same way, without running any of the
+ * program's code.
  *
  * <p>A breakpoint is installed by file and line: it stops every fiber that reaches the first op of
  * that line in any method compiled from that file. A file is the module's source directory and
@@ -139,6 +145,12 @@ public final class SessionDebugger implements Debugger {
     private static final int MAX_TEXT = 1000;
 
     private static final Integer[] NO_BREAKS = new Integer[0];
+
+    /**
+     * One part of a path: its first name, then a field or an array element.
+     */
+    private static final Pattern PATH_PART = Pattern.compile(
+            "\\G(?:(?<root><exception>|[A-Za-z_][A-Za-z0-9_]*)|\\.(?<field>[A-Za-z_][A-Za-z0-9_]*)|\\[(?<index>\\d{1,9})])");
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -433,19 +445,47 @@ public final class SessionDebugger implements Debugger {
     public CompletableFuture<List<Variable>> variables(int reference) {
         var future = new CompletableFuture<List<Variable>>();
         synchronized (this) {
-            Halt     current  = halt;
-            Target   target   = current == null ? null : current.targets.get(reference);
-            Snapshot snapshot = target == null ? null : current.stacks.get(target.thread());
-            if (snapshot == null) {
+            Halt   current = halt;
+            Target target  = current == null ? null : current.targets.get(reference);
+            if (target == null || !request(current, target, future)) {
                 future.complete(List.of());
-            } else if (snapshot.thread() == Thread.currentThread()) {
-                read(current, snapshot.frame(), target, future);
-            } else {
-                current.reads.computeIfAbsent(target.thread(), _ -> new ArrayList<>()).add(new Read(target, future));
-                notifyAll();
             }
         }
         return future;
+    }
+
+    /**
+     * Evaluate a path in a stopped frame without running any of the program's code: a variable of
+     * the frame, {@code this}, {@link #EXCEPTION} or a field of {@code this}, then any fields
+     * ({@code .name}) and array elements ({@code [index]}), such as {@code point.x} or
+     * {@code ints[1]}. The innermost variable of a name is the one meant. The waiting fiber that
+     * holds the frame reads the value on its own thread, as {@link #variables} reads variables.
+     *
+     * @param frameId  the ID of a frame that {@link #stackTrace} returned
+     * @param path     the path to evaluate
+     *
+     * @return the value, as a variable named by the path, with a reference to its fields or
+     *         elements; fails, with the reason in words, if the text is not a path, the path names
+     *         no value, or the frame is not one of this stop's
+     */
+    public CompletableFuture<Variable> evaluate(int frameId, String path) {
+        ValuePath parsed;
+        try {
+            parsed = ValuePath.parse(path);
+        } catch (IllegalArgumentException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
+        var future = new CompletableFuture<List<Variable>>();
+        synchronized (this) {
+            Halt    current = halt;
+            FrameAt at      = current == null ? null : current.frames.get(frameId);
+            if (at == null || !request(current, new Evaluation(at.thread(), at.frame(), parsed), future)) {
+                return CompletableFuture.failedFuture(new IllegalArgumentException(
+                        "The frame is not one of the stopped program's, so nothing can be evaluated in it."));
+            }
+        }
+        return future.thenApply(List::getFirst);
     }
 
     /**
@@ -778,6 +818,26 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * Have the waiting fiber that the target belongs to read it, on its own thread, or on this one
+     * if it is that thread, as the listener's may be. Called while holding this debugger's monitor.
+     *
+     * @return false if that fiber does not wait
+     */
+    private boolean request(Halt current, Target target, CompletableFuture<List<Variable>> future) {
+        Snapshot snapshot = current.stacks.get(target.thread());
+        if (snapshot == null) {
+            return false;
+        }
+        if (snapshot.thread() == Thread.currentThread()) {
+            read(current, snapshot.frame(), target, future);
+        } else {
+            current.reads.computeIfAbsent(target.thread(), _ -> new ArrayList<>()).add(new Read(target, future));
+            notifyAll();
+        }
+        return true;
+    }
+
+    /**
      * @return the snapshot of the specified fiber, if the program is stopped and the fiber waits
      */
     private Snapshot snapshotOf(int threadId) {
@@ -847,8 +907,9 @@ public final class SessionDebugger implements Debugger {
         List<Variable> vars;
         try {
             vars = switch (target) {
-                case Locals(int _, Frame scope)          -> locals(current, frame, scope);
-                case Children(int _, ObjectHandle value) -> children(current, frame, value);
+                case Locals(int _, Frame scope)                  -> locals(current, frame, scope);
+                case Children(int _, ObjectHandle value)         -> children(current, frame, value);
+                case Evaluation(int _, Frame scope, ValuePath p) -> List.of(resolve(current, frame, scope, p));
             };
         } catch (RuntimeException e) {
             // a value the debugger cannot read fails the read, not the program
@@ -902,23 +963,120 @@ public final class SessionDebugger implements Debugger {
      *         there are
      */
     private List<Variable> elements(Halt current, Frame waitingFrame, ArrayHandle array) {
-        var  vars     = new ArrayList<Variable>();
-        long size     = array.m_hDelegate.m_cSize;
-        var  template = (xArray) array.getTemplate();
+        var  vars = new ArrayList<Variable>();
+        long size = array.m_hDelegate.m_cSize;
         for (int i = 0, count = (int) Math.min(size, MAX_ELEMENTS); i < count; i++) {
-            // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds), which must not
-            // stay on the waiting frame
-            ExceptionHandle pending = waitingFrame.m_hException;
-            if (template.extractArrayValue(waitingFrame, array, i, Op.A_STACK) != Op.R_NEXT) {
-                waitingFrame.m_hException = pending;
+            ObjectHandle element = element(waitingFrame, array, i);
+            if (element == null) {
                 break;
             }
-            vars.add(variable(current, waitingFrame, "[" + i + "]", waitingFrame.popStack()));
+            vars.add(variable(current, waitingFrame, "[" + i + "]", element));
         }
         if (size > MAX_ELEMENTS) {
             vars.add(new Variable("...", (size - MAX_ELEMENTS) + " more", "", 0));
         }
         return vars;
+    }
+
+    /**
+     * @return the array's element at the specified index, read through the waiting frame's stack,
+     *         or null if it cannot be read
+     */
+    private static ObjectHandle element(Frame waitingFrame, ArrayHandle array, long index) {
+        // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds), which must not stay
+        // on the waiting frame
+        var             template = (xArray) array.getTemplate();
+        ExceptionHandle pending  = waitingFrame.m_hException;
+        if (template.extractArrayValue(waitingFrame, array, index, Op.A_STACK) != Op.R_NEXT) {
+            waitingFrame.m_hException = pending;
+            return null;
+        }
+        return waitingFrame.popStack();
+    }
+
+    /**
+     * @return the value the path names, as a variable named by the path
+     */
+    private Variable resolve(Halt current, Frame waitingFrame, Frame frame, ValuePath path) {
+        ObjectHandle value = root(frame, path.root());
+        for (PathPart part : path.parts()) {
+            ObjectHandle shown = value instanceof RefHandle ref ? ref.getReferent() : value;
+            if (shown == null) {
+                throw new IllegalArgumentException(path.text() + ": a value on the way is unassigned.");
+            }
+            value = switch (part) {
+                case Field(String name) -> field(waitingFrame, shown, name, path);
+                case Element(int index) -> element(waitingFrame, shown, index, path);
+            };
+        }
+        return variable(current, waitingFrame, path.text(), value);
+    }
+
+    /**
+     * @return the frame's value of the specified name: {@code this}, the exception it throws, its
+     *         innermost variable of that name, or a field of {@code this}
+     */
+    private static ObjectHandle root(Frame frame, String name) {
+        switch (name) {
+        case "this":
+            if (frame.f_hThis == null) {
+                throw new IllegalArgumentException("This frame has no \"this\".");
+            }
+            return frame.f_hThis;
+
+        case EXCEPTION:
+            if (frame.m_hException == null) {
+                throw new IllegalArgumentException("This frame throws no exception.");
+            }
+            return frame.m_hException;
+        }
+
+        for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
+            VarInfo info = frame.getVarInfo(i);
+            if (info != null && name.equals(info.getName())) {
+                return frame.f_ahVar[i];
+            }
+        }
+        if (frame.f_hThis instanceof GenericHandle self) {
+            FieldInfo field = DebugConsole.getFieldLayout(self.getComposition()).get(name);
+            if (field != null) {
+                return self.getField(field.getIndex());
+            }
+        }
+        throw new IllegalArgumentException("There is no variable \"" + name + "\" in this frame.");
+    }
+
+    /**
+     * @return the object's field of the specified name
+     */
+    private static ObjectHandle field(Frame waitingFrame, ObjectHandle value, String name, ValuePath path) {
+        if (!(value instanceof GenericHandle object) || value instanceof EnumHandle || value.getComposition() == null) {
+            throw new IllegalArgumentException(path.text() + ": " + typeText(value) + " has no fields to read.");
+        }
+        if (value instanceof ServiceHandle service && service.f_context != waitingFrame.f_context) {
+            throw new IllegalArgumentException(path.text() + ": another service's state is read only while it is stopped.");
+        }
+        FieldInfo field = DebugConsole.getFieldLayout(object.getComposition()).get(name);
+        if (field == null) {
+            throw new IllegalArgumentException(path.text() + ": " + typeText(value) + " has no field \"" + name + "\".");
+        }
+        return object.getField(field.getIndex());
+    }
+
+    /**
+     * @return the array's element at the specified index
+     */
+    private static ObjectHandle element(Frame waitingFrame, ObjectHandle value, int index, ValuePath path) {
+        if (!(value instanceof ArrayHandle array)) {
+            throw new IllegalArgumentException(path.text() + ": " + typeText(value) + " is not an array.");
+        }
+        long size = array.m_hDelegate.m_cSize;
+        ObjectHandle element = index < size ? element(waitingFrame, array, index) : null;
+        if (element == null) {
+            String reason = "index " + index + " is out of bounds for size " + size + ".";
+            throw new IllegalArgumentException(path.text() + ": " + reason);
+        }
+        return element;
     }
 
     /**
@@ -1242,6 +1400,60 @@ public final class SessionDebugger implements Debugger {
      * A value's fields or elements.
      */
     private record Children(int thread, ObjectHandle value) implements Target {
+    }
+
+    /**
+     * A path to evaluate in a frame.
+     */
+    private record Evaluation(int thread, Frame frame, ValuePath path) implements Target {
+    }
+
+    /**
+     * A path to a value, as the host wrote it: its first name, then its fields and elements.
+     */
+    private record ValuePath(String text, String root, List<PathPart> parts) {
+        /**
+         * @return the path the text writes, which may be surrounded by spaces
+         *
+         * @throws IllegalArgumentException if the text is not a path
+         */
+        static ValuePath parse(String text) {
+            String  trimmed = text.strip();
+            Matcher matcher = PATH_PART.matcher(trimmed);
+            if (!matcher.lookingAt() || matcher.group("root") == null) {
+                throw notAPath(trimmed);
+            }
+
+            String root  = matcher.group("root");
+            var    parts = new ArrayList<PathPart>();
+            while (matcher.end() < trimmed.length()) {
+                // each part after the first is a field or an element; a name there is not a path
+                if (!matcher.find(matcher.end()) || matcher.group("root") != null) {
+                    throw notAPath(trimmed);
+                }
+                parts.add(matcher.group("field") != null
+                        ? new Field(matcher.group("field"))
+                        : new Element(Integer.parseInt(matcher.group("index"))));
+            }
+            return new ValuePath(trimmed, root, List.copyOf(parts));
+        }
+
+        private static IllegalArgumentException notAPath(String text) {
+            return new IllegalArgumentException("\"" + text + "\" is not evaluated: only variables, their fields"
+                    + " and array elements are, such as point.x or ints[1].");
+        }
+    }
+
+    /**
+     * A field or an array element of a path.
+     */
+    private sealed interface PathPart {
+    }
+
+    private record Field(String name) implements PathPart {
+    }
+
+    private record Element(int index) implements PathPart {
     }
 
     /**
