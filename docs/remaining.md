@@ -321,7 +321,7 @@ IntelliJ's side of R9 and R10, each a local commit in `~/src/lsp4ij` on a branch
 with tests ([details](errs-upstream-issues.md#lsp4ij-dap-features-prepared-2026-10-22)). UP32 and UP34 are
 filed; the others wait for their R9 or R10 adapter work, a native check, and the user's go-ahead to file them.
 
-- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` `82dbb3e9`): breakpoints that don't suspend as DAP logpoints; the
+- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `05360b0d`): breakpoints that don't suspend as DAP logpoints; the
   "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
   program stopped while IntelliJ shows it running.
 - [ ] UP33 `feat/dap-exception-info` (`04164852`): the exception hint from `exceptionInfo`.
