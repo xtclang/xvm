@@ -7,11 +7,13 @@ import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 
 import java.util.concurrent.CompletableFuture;
@@ -50,8 +52,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
  * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables}), and
- * resumes it ({@link #resume}) or steps one of its fibers ({@link #step}). It debugs the runtime it
- * is set on with {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
+ * resumes it ({@link #resume}), steps one of its fibers ({@link #step}) or pauses it
+ * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
+ * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
  *
  * <p>A stop holds the whole runtime: the fiber that stops waits on its interpreter thread, and so
  * does every other fiber that reaches a line while the program is stopped. Each takes a snapshot
@@ -64,6 +67,12 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * calls or is called by; out of one, once its frame returns. A frame that returns, or that an
  * exception leaves, during a step over continues it as a step into, so it stops at its caller's
  * next line. Any other stop, such as a breakpoint, ends the step.
+ *
+ * <p>A pause stops the program at the next line any of its fibers reaches, with the reason "pause",
+ * or, asked for before the program starts, at its first line, with the reason "entry": the first
+ * line of a module the host made known, not of the libraries that run before it, or of any code if
+ * none is known. A program whose fibers all wait, for input or for each other, stops when one of
+ * them next runs.
  *
  * <p>A thrown exception stops the program, with the reason "exception", at the frame that throws
  * it, when the host asks for every thrown exception, or for those that no frame will catch: no
@@ -177,9 +186,9 @@ public final class SessionDebugger
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint", "step" or "exception"), what
-     * stopped it in words (an exception's type and text), the fiber that stopped, and the IDs of
-     * the breakpoints it stopped at.
+     * Why and where the program stopped: the reason ("breakpoint", "step", "exception", "pause" or
+     * "entry"), what stopped it in words (an exception's type and text), the fiber that stopped,
+     * and the IDs of the breakpoints it stopped at.
      */
     public record Stop(String reason, String description, int threadId, List<Integer> breakpointIds) {
     }
@@ -223,6 +232,7 @@ public final class SessionDebugger
      * @param module  a module of the program
      */
     public synchronized void addModule(ModuleStructure module) {
+        f_setModules.add(module.getName());
         index(module);
     }
 
@@ -368,6 +378,26 @@ public final class SessionDebugger
     }
 
     /**
+     * Stop the program at the next line any of its fibers reaches, with the reason "pause"; does
+     * nothing while it is stopped.
+     */
+    public synchronized void pause() {
+        if (!m_fStopped) {
+            m_pause = new Pause("pause", false);
+            updateActive();
+        }
+    }
+
+    /**
+     * Stop the program at its first line, with the reason "entry"; called before it starts, and
+     * after the program's modules are made known.
+     */
+    public synchronized void stopOnEntry() {
+        m_pause = new Pause("entry", true);
+        updateActive();
+    }
+
+    /**
      * Resume the stopped program; does nothing while it runs.
      */
     public synchronized void resume() {
@@ -409,6 +439,7 @@ public final class SessionDebugger
     public synchronized void terminate() {
         m_fTerminating = true;
         m_stepping     = null;
+        m_pause        = null;
         resume();
     }
 
@@ -418,6 +449,7 @@ public final class SessionDebugger
         m_mapBreaks = Map.of();
         m_mapCache  = new ConcurrentHashMap<>();
         m_stepping  = null;
+        m_pause     = null;
         resume();
         m_runtime = null;
     }
@@ -451,13 +483,17 @@ public final class SessionDebugger
             return end(frame);
         }
 
-        // a breakpoint on the line where a step ends is reported as the breakpoint
+        // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint
         Integer[] anBreak  = breaksOf(frame);
         Stepping  stepping = m_stepping;
+        Pause     pause    = m_pause;
         if (iPC < anBreak.length && anBreak[iPC] != null) {
             stop(frame, "breakpoint", null, List.of(anBreak[iPC]), null);
         } else if (stepping != null && stepping.endsAt(frame) && startsLine(frame, iPC)) {
             stop(frame, "step", null, List.of(), stepping);
+        } else if (pause != null && startsLine(frame, iPC)
+                && (!pause.program() || isProgram(frame))) {
+            stop(frame, pause.reason(), null, List.of(), pause);
         }
         return m_fTerminating ? end(frame) : iPC + 1;
     }
@@ -540,6 +576,17 @@ public final class SessionDebugger
     }
 
     /**
+     * @return true if the frame runs code of a module the host made known, or if none is known
+     */
+    private synchronized boolean isProgram(Frame frame) {
+        MethodStructure function = frame.getFunction();
+        ClassStructure  clz      = function == null ? null : function.getContainingClass();
+        return f_setModules.isEmpty()
+                || clz != null
+                        && f_setModules.contains(clz.getFileStructure().getModule().getName());
+    }
+
+    /**
      * @return true if the op at the specified index starts a line, as a step ends at
      */
     private static boolean startsLine(Frame frame, int iPC) {
@@ -550,13 +597,13 @@ public final class SessionDebugger
 
     /**
      * Stop the program at the specified frame, tell the listener, and wait until the host resumes
-     * it. If the program is already stopped, wait for that stop to end first; a step's stop is then
-     * not made, unless the step still runs.
+     * it. If the program is already stopped, wait for that stop to end first; the stop a step or a
+     * pause asked for is then not made, unless that step or pause is still pending.
      *
-     * @param stepping  the step that ends here, or null for any other stop
+     * @param request  the step or pause that ends here, or null for any other stop
      */
     private void stop(Frame frame, String sReason, String sDescription, List<Integer> listIds,
-                      Stepping stepping) {
+                      Object request) {
         Stop stop;
         long cGeneration;
         synchronized (this) {
@@ -567,12 +614,14 @@ public final class SessionDebugger
                     return;
                 }
             }
-            if (m_fDetached || m_fTerminating || stepping != null && m_stepping != stepping) {
+            if (m_fDetached || m_fTerminating
+                    || request != null && request != m_stepping && request != m_pause) {
                 return;
             }
 
-            // any stop ends the step
+            // any stop ends the step and the pause
             m_stepping  = null;
+            m_pause     = null;
             m_fStopped  = true;
             cGeneration = ++m_cGeneration;
             f_mapStacks.clear();
@@ -638,14 +687,14 @@ public final class SessionDebugger
 
     /**
      * Turn the runtime's "debugger is active" flag on while there are breakpoints or exception
-     * stops, the program is stopped or a fiber steps, so that every line and thrown exception is
-     * checked; otherwise lines run at full speed.
+     * stops, the program is stopped, a fiber steps or a pause is pending, so that every line and
+     * thrown exception is checked; otherwise lines run at full speed.
      */
     private void updateActive() {
         Runtime runtime = m_runtime;
         if (runtime != null) {
-            runtime.setDebuggerActive(m_fStopped || m_stepping != null || !m_mapBreaks.isEmpty()
-                    || m_fStopAllThrown || m_fStopUncaught);
+            runtime.setDebuggerActive(m_fStopped || m_stepping != null || m_pause != null
+                    || !m_mapBreaks.isEmpty() || m_fStopAllThrown || m_fStopUncaught);
         }
     }
 
@@ -867,7 +916,7 @@ public final class SessionDebugger
      */
     private Integer[] breaksOf(Frame frame) {
         Op[]            aOp      = frame.f_aOp;
-        MethodStructure function = frame.f_function;
+        MethodStructure function = frame.getFunction();
         if (aOp == null || function == null) {
             return NO_BREAKS;
         }
@@ -1018,6 +1067,13 @@ public final class SessionDebugger
     }
 
     /**
+     * A pause that is pending: the reason of the stop it asks for, and whether it stops only in
+     * the program's own modules.
+     */
+    private record Pause(String reason, boolean program) {
+    }
+
+    /**
      * A frame of a waiting fiber, by that fiber's ID.
      */
     private record FrameAt(int thread, Frame frame) {
@@ -1055,6 +1111,11 @@ public final class SessionDebugger
      * The host's listener.
      */
     private final Listener f_listener;
+
+    /**
+     * The names of the known modules.
+     */
+    private final Set<String> f_setModules = new HashSet<>();
 
     /**
      * The methods compiled from each source file, by real path, from the known modules.
@@ -1131,6 +1192,11 @@ public final class SessionDebugger
      * The step that runs, or null.
      */
     private volatile Stepping m_stepping;
+
+    /**
+     * The pause that is pending, or null.
+     */
+    private volatile Pause m_pause;
 
     /**
      * True to stop at every thrown exception.
