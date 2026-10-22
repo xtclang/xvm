@@ -522,11 +522,14 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 |---------|-----------|---------|
 | `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
 | `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
-| `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
+| `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
 | `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
 | `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
+| `xtc/debugStart` | request | Starts a Debug Adapter Protocol (DAP) session carried by this connection, and returns its `sessionId` |
+| `xtc/debugMessage` `{sessionId, message}` | notification, both ways | One DAP message of the session: the client's requests, the server's responses and events |
+| `xtc/debugEnd` `{sessionId}` | notification | Ends the session, which stops the program it launched |
 
 Builds compile the text the server holds when the build is requested, open documents included,
 saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
@@ -581,7 +584,22 @@ so a program printing faster than the client reads waits in its print rather tha
 `Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
 still building is held and delivered when the program starts. After `end`, or when the run is stopped,
 a program waiting for a line gets an empty one, as at the end of terminal input. Clients echo what the
-user types, so `readLine`'s `suppressEcho` is not honored.
+user types, so `readLine`'s `suppressEcho` is not honored. A run stopped while its module still builds
+never starts, and its exit says `Stopped before the program started.`
+
+A debug session's `launch` builds and runs the module the same way, in the same execution workers.
+Its arguments are `module` (a name), `moduleUri` (a source URI of the module, used in place of the
+name when given), `method`, `args` (an array passed as given, or a comma-separated string), `cwd` (the
+program's root directory) and `noDebug`. The program starts after the client's `configurationDone`,
+or two seconds after its build when the client sends none, and the launch is answered once it has
+started. Its output arrives as DAP `output` events and its exit as `exited` and `terminated`; a failed
+build reports its diagnostics as output and fails the launch. The session owns the program it
+launched: `terminate` and `disconnect` stop it, also while it still builds, and so do `xtc/debugEnd`
+and the server shutting down. A line the client sends as a `repl` `evaluate` while the program runs
+is its console input. There is no runtime debugger yet, so a session advertises only
+`configurationDone` and `terminate`, reports every breakpoint unverified with that reason, has no
+threads, and refuses `pause` and `attach`. In the worker, `assert:debug` continues, since an
+embedding host has no terminal for the command-line debugger.
 
 ## Context-Aware Completion
 
@@ -637,6 +655,7 @@ precise supported contexts and exclusions.
 | `XdkDependency` | Immutable module bytes, revisioned symbol keys and optional detached source locations |
 | `XdkBuild` | Embedded build of a source-module order into `build/xtc/embedded`, with per-module outcomes |
 | `EmbeddedRuns` | `xtc/build`/`xtc/run` service: builds on the compile queue, then runs in the execution worker |
+| `DebugSessions` | DAP sessions over the client connection; each is `dap-server`'s `XtcDebugServer`, launching through `EmbeddedRuns` |
 | `RunWorkerProcess` / `RunWorker` | The execution worker JVM and its JSON-lines control protocol |
 
 ## Building
