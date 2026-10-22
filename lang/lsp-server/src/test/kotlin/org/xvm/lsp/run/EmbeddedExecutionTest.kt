@@ -785,6 +785,56 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a debugged program stops on entry in its own code, and pause stops it while it runs`() {
+        CompilerTestSupport.configure()
+        val spins = source("Spins.x", SPINS.trimIndent())
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Spins", spins)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Spins", "moduleUri": "$spins", "stopOnEntry": true}""")
+            sessions.request(id, 3, "configurationDone")
+            val entry = client.until(id) { it.event == "stopped" }
+            val stopped = entry.last()["body"].asJsonObject
+            assertThat(stopped["reason"].asString).isEqualTo("entry")
+            assertThat(entry.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .doesNotContain("spinning")
+            val thread = stopped["threadId"].asInt
+
+            /** The innermost frame of the stopped fiber, as name and line. */
+            fun top(request: Int): Pair<String, Int> {
+                sessions.request(id, request, "stackTrace", """{"threadId": $thread}""")
+                val frame =
+                    client
+                        .until(id) { it.response == "stackTrace" }
+                        .last()["body"]
+                        .asJsonObject["stackFrames"]
+                        .asJsonArray
+                        .first()
+                        .asJsonObject
+                return frame["name"].asString to frame["line"].asInt
+            }
+            assertThat(top(4).first).isEqualTo("Spins.run")
+
+            sessions.request(id, 5, "continue", """{"threadId": $thread}""")
+            client.until(id) { it.event == "output" && "spinning" in it["body"].asJsonObject["output"].asString }
+            sessions.request(id, 6, "pause", """{"threadId": $thread}""")
+            val paused = client.until(id) { it.event == "stopped" }
+            assertThat(paused.single { it.response == "pause" }["success"].asBoolean).isTrue()
+            assertThat(paused.last()["body"].asJsonObject["reason"].asString).isEqualTo("pause")
+            assertThat(top(7)).isIn("Spins.run" to 6, "Spins.run" to 7)
+
+            // the program never ends on its own; terminating the session ends it where it is
+            sessions.request(id, 8, "terminate")
+            client.until(id) { it.event == "terminated" }
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `terminating a debug session while its program is stopped ends the program`() {
         CompilerTestSupport.configure()
         val halts = source("Halts.x", STOPS.trimIndent().replace("Stops", "Halts"))
@@ -1303,6 +1353,20 @@ class EmbeddedExecutionTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """
+
+        const val SPINS =
+            """
+            module Spins {
+                void run() {
+                    @Inject Console console;
+                    console.print("spinning");
+                    Int count = 0;
+                    while (True) {
+                        ++count;
+                    }
                 }
             }
             """

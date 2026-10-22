@@ -223,6 +223,7 @@ internal class RunWorkerProcess(
                             request.debug?.let { setup ->
                                 add("breakpoints", RunWorkerDebug.sources(setup.breakpoints))
                                 add("exceptions", RunWorkerDebug.exceptions(setup.exceptions))
+                                if (setup.stopOnEntry) addProperty("stopOnEntry", true)
                             }
                         },
                     )
@@ -314,6 +315,9 @@ internal class RunWorkerProcess(
             addProperty("thread", thread)
             addProperty("step", kind.name.lowercase())
         }.thenApply { it["stepped"].asBoolean }
+
+    /** Pauses a debugged run at the next line one of its fibers reaches. */
+    fun pause(id: Long) = command("pause", id)
 
     /** Resumes a stopped run. */
     fun resume(id: Long) = command("continue", id)

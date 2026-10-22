@@ -229,7 +229,7 @@ export function executionCases(): void {
     });
 }
 
-/** X304-X307, registered after X303 in catalog order: a breakpoint, the stopped frame's variables, steps, and an exception stop. */
+/** X304-X309, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause and stop on entry. */
 export function debugSessionCases(): void {
     playbook('X304', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
@@ -441,6 +441,89 @@ export function debugSessionCases(): void {
                 assert.ok(dapOutput(sent).includes(data.message), dapOutput(sent));
             } finally {
                 // a case that fails while its program is stopped leaves no session for the next one
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+    playbook('X308', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapOutput(sent), output => output.includes(data.started), 'The program runs');
+                const from = sent.length;
+                await vscode.commands.executeCommand('workbench.action.debug.pause');
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'Pause stops the program');
+                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'pause');
+                const frames = await eventually(
+                    async () => sent.slice(from).filter(message => message.type === 'response' && message.command === 'stackTrace')
+                        .flatMap(message => message.body?.stackFrames ?? []),
+                    values => values.length > 0, 'VS Code shows where the program paused');
+                assert.strictEqual(frames[0].name, data.frame, JSON.stringify(frames));
+                assert.ok((data.lines as number[]).includes(frames[0].line), JSON.stringify(frames[0]));
+
+                // the program never ends on its own: stopping the session ends it
+                assert.ok(started, 'The Ecstasy debug session started');
+                await vscode.debug.stopDebugging(started);
+                await eventually(async () => ended, value => value, 'Stopping the session ends the program');
+            } finally {
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+
+    playbook('X309', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, stopOnEntry: true }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops on entry');
+                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'entry');
+                const frames = await eventually(
+                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                        .flatMap(message => message.body?.stackFrames ?? []),
+                    values => values.length > 0, 'VS Code shows where the program stopped');
+                assert.strictEqual(frames[0].name, data.frame, JSON.stringify(frames));
+                assert.ok(frames[0].line <= data.lastLine, JSON.stringify(frames[0]));
+                assert.ok(!dapOutput(sent).includes(data.output), 'Nothing has run yet');
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
                 if (started && !ended) await vscode.debug.stopDebugging(started);
                 start.dispose();
                 termination.dispose();
