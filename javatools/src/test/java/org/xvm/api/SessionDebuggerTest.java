@@ -18,6 +18,8 @@ import java.util.Map;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,13 +52,15 @@ import org.xvm.runtime.SessionDebugger.Variable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs modules compiled from source files under a {@link SessionDebugger}: breakpoints by file and
- * line, how they are verified, the stack of a stop, the variables of its frames, stepping over,
+ * line, how they are verified, the stack of a stop, the variables of its frames and paths to
+ * values in them, stepping over,
  * into and out of calls, stops at thrown exceptions, pausing and stopping on entry, assert:debug,
  * other fibers waiting while the program is stopped, fibers yielding to each other while
  * breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test
@@ -304,6 +308,81 @@ public class SessionDebuggerTest {
             // references last until the program resumes
             assertTrue(read(session, point.variablesReference()).isEmpty());
             assertTrue(session.scopes(frames.get(0).id()).isEmpty());
+        }
+    }
+
+    @Test
+    public void pathsToVariablesFieldsAndElementsEvaluateWithoutRunningCode() throws Exception {
+        Path  source  = compile("Paths", VARS.replace("Vars", "Paths"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Paths"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 21)));
+
+        Control control = run("Paths", new StringWriter(), session);
+        try (control) {
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            int                  report = frames.get(0).id();
+
+            assertEquals("3", evaluate(session, report, "point.x").value());
+            assertEquals("Int", evaluate(session, report, "point.x").type());
+            assertEquals("3", evaluate(session, report, " ints[2] ").value());
+            assertEquals("7", evaluate(session, report, "sum").value());
+            Variable point = evaluate(session, report, "point");
+            assertEquals("point", point.name());
+            assertNotEquals(0, point.variablesReference());
+            assertEquals("4", byName(read(session, point.variablesReference())).get("y").value());
+
+            // what cannot be evaluated says why
+            assertFails("There is no variable \"nope\" in this frame.", session, report, "nope");
+            assertFails("ints[3]: index 3 is out of bounds for size 3.", session, report, "ints[3]");
+            assertFails("\"ints[1]x\" is not evaluated: only variables, their fields and array elements are,"
+                    + " such as point.x or ints[1].", session, report, "ints[1]x");
+            assertFails("point.z: Paths:Point has no field \"z\".", session, report, "point.z");
+            assertFails("sum.x: Int has no fields to read.", session, report, "sum.x");
+            assertFails("\"point.x + 1\" is not evaluated: only variables, their fields and array elements are,"
+                    + " such as point.x or ints[1].", session, report, "point.x + 1");
+
+            // the caller's frame: another service's state is not read
+            int run = frames.get(1).id();
+            assertFails("counter.count: another service's state is read only while it is stopped.", session, run,
+                    "counter.count");
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.", session,
+                    report, "sum");
+        }
+    }
+
+    @Test
+    public void aBareNameIsAFieldOfThisWhenNoVariableHasIt() throws Exception {
+        Path source = compile("Boxes", """
+                module Boxes {
+                    class Box(Int size) {
+                        Int doubled() {
+                            return size * 2;
+                        }
+                    }
+                    Int run() = new Box(21).doubled();
+                }
+                """);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Boxes"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 4)));
+
+        Control control = run("Boxes", new StringWriter(), session);
+        try (control) {
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+            assertEquals("21", evaluate(session, frame, "size").value());
+            assertEquals("21", evaluate(session, frame, "this.size").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(42L, control.result());
         }
     }
 
@@ -683,6 +762,20 @@ public class SessionDebuggerTest {
 
     private static List<Variable> read(SessionDebugger session, int reference) throws Exception {
         return session.variables(reference).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    private static Variable evaluate(SessionDebugger session, int frame, String path) throws Exception {
+        return session.evaluate(frame, path).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    /**
+     * Assert that evaluating the path fails with the specified reason.
+     */
+    private static void assertFails(String reason, SessionDebugger session, int frame, String path) {
+        var failure = assertThrows(ExecutionException.class,
+                () -> session.evaluate(frame, path).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+        Throwable cause = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
+        assertEquals(reason, cause.getMessage());
     }
 
     private static Map<String, Variable> byName(List<Variable> vars) {
