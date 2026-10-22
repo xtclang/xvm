@@ -7,6 +7,7 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Injection;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -755,6 +756,20 @@ public class Frame
      */
     public MethodStructure getFunction() {
         return f_function;
+    }
+
+    /**
+     * @return the class of the function this frame runs, or null if it runs none
+     */
+    public ClassStructure getContainingClass() {
+        return f_function == null ? null : f_function.getContainingClass();
+    }
+
+    /**
+     * @return the ops this frame runs, or null if it has none
+     */
+    public Op[] getOps() {
+        return f_aOp;
     }
 
     /**
