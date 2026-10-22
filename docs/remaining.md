@@ -178,7 +178,8 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   (`41cb8b60c`).
 - [ ] Initial suspension (stop on entry).
 - [x] Real, verified breakpoints, installed before the program's first line (`41cb8b60c`, `e73878550`).
-- [ ] Exception stops.
+- [ ] Exception stops: every thrown exception, or those no frame will catch, at the frame that throws
+  (runtime `bf0b25af4`; the editors' half is next).
 - [x] Fibers and threads: a stop holds every fiber that reaches a line; `threads` lists those that
   wait.
 - [x] Stacks: immutable snapshots, with file and line per frame.
@@ -186,7 +187,10 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   the waiting fiber's thread (`51cccbfbf`, `05e3ff076`; shared X305).
 - [x] Stepping over, into and out of calls (`769d6f34d`, `a78d736f5`; shared X306).
 - [ ] Pause.
-- [ ] Bounded evaluation.
+- [ ] Watches and hover on variables and paths such as `point.x` or `ints[1]`, answered from the
+  variables without running code (the console debugger's `WO` and `WR`).
+- [ ] Bounded evaluation: Debug Console expressions, watches and hover on any expression, with side
+  effects, cancellation and timeouts defined (the console's `E`, `EM` and `WE`).
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
@@ -195,6 +199,40 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   handler that carries the session over the language server connection (`69c2ff2f8`; X304 in
   IntelliJ `run-6846671860304618586`). LSP4IJ's DAP API is experimental, which Plugin Verifier reports
   without failing the build.
+
+### R9–R13: debugger features beyond R7
+
+Planned in [the execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance),
+after the R8 gate unless one is chosen to gate the release. The console debugger's commands they
+come from are in parentheses.
+
+- [ ] R9: conditional breakpoints (`BC`), hit counts and logpoints.
+- [ ] R9: function breakpoints, which stop when a method is entered.
+- [ ] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
+  exception views.
+- [ ] R9: data breakpoints, which stop when a property or field changes.
+- [ ] R10: value formats (`V`) and identity codes (`DI`).
+- [ ] R10: a value's `toString()` on demand (`DS`), through R7's evaluation.
+- [ ] R10: computed properties as lazy variables; only fields show now.
+- [ ] R10: paging of large arrays and collections, in place of the first 100 elements.
+- [ ] R10: changing a variable's value while stopped (`setVariable`).
+- [ ] R10: completions in the Debug Console.
+- [ ] R11: Run to Cursor in both editors (`SL`); VS Code's sets a temporary breakpoint, so check
+  whether it already works.
+- [ ] R11: choosing which call on a line to step into (`stepInTargets`).
+- [ ] R11: restarting a frame (`T`).
+- [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
+- [ ] R12: every service and fiber in Threads, with their containers (`VF`), and thread events.
+- [ ] R12: frames whose source file is not on the machine, such as library code, through the
+  `source` request from the bundled XDK's sources.
+- [ ] R12: the loaded modules (`modules`, `loadedSources`).
+- [ ] R13: Debug for Gradle-mode and command-line runs.
+- [ ] R13: debugging tests.
+- [ ] R13: attaching to a program that already runs.
+
+Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
+`runInTerminal`; the console debugger's own terminal views, command history, repeated steps and
+breakpoint list, which the editors replace.
 
 ### R8: runtime release gate
 
