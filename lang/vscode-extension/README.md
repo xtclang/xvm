@@ -198,7 +198,9 @@ Step Over, Step Into and Step Out move the stopped fiber line by line, into a ca
 caller. The Breakpoints view's exception filters stop the program where an uncaught exception, on by
 default, or any exception is thrown, with the exception shown first among the frame's variables.
 Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
-first line. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+first line. While the program is stopped, the Watch view, hovers and the Debug Console show paths
+such as `point.x` or `ints[1]` in the selected frame, and expand them like variables; what is not
+evaluated, such as `point.x + 1` or a name the frame does not have, shows why. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
 says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
