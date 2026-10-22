@@ -210,6 +210,16 @@ The existing console debugger is a full implementation of the `Debugger` interfa
 | Watch expressions (`WO`, `WR`) | Partial (WE TODO) | `evaluate` in watch context |
 | Stack traces | Fully implemented | `stackTrace` |
 | Source display | Fully implemented | `source` |
+| `toString()` display (`DS`) | Fully implemented | `evaluate`, or a variable's value on demand (R10) |
+| Identity code (`DI`) | Fully implemented | Variable presentation (R10) |
+| Value view mode (`V`) | Fully implemented | `variables`/`evaluate` with `format` (R10) |
+| Multi-result evaluation (`EM`) | Fully implemented | `evaluate` (R7) |
+| Reset to a previous frame (`T`) | Fully implemented | `restartFrame` (R11) |
+| Services and fibers view (`VF`) | Fully implemented | `threads`, with every service and fiber (R12) |
+
+Status (2026-10-22): line breakpoints, stacks, variables, stepping and the runtime half of
+exception stops work through `SessionDebugger`; what is still to do, with its R task, is in the
+[execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 
 **Step modes** (enum `StepMode`):
 - `None` — running, only breakpoints trigger
