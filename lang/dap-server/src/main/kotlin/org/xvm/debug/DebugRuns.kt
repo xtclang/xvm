@@ -53,6 +53,23 @@ data class FrameState(
     val line: Int,
 )
 
+/** A scope of a stopped frame: its name, and the reference its variables are read by. */
+data class ScopeState(
+    val name: String,
+    val variablesReference: Int,
+)
+
+/**
+ * A variable of a stopped program, or a field or element of one: its name, its value and type in words (the type
+ * is empty when it is not known), and the reference its own fields or elements are read by, or 0 when it has none.
+ */
+data class VariableState(
+    val name: String,
+    val value: String,
+    val type: String,
+    val variablesReference: Int,
+)
+
 /** Why and where the program stopped: the reason, what stopped it in words, the fiber, and the breakpoints' IDs. */
 data class StopState(
     val reason: String,
@@ -127,6 +144,21 @@ interface DebugRuns {
         runId: String,
         threadId: Int,
     ): CompletableFuture<List<FrameState>>
+
+    /** The scopes of a stopped frame, which are its local variables; none for a frame whose variables are not read. */
+    fun scopes(
+        runId: String,
+        frameId: Int,
+    ): CompletableFuture<List<ScopeState>>
+
+    /**
+     * The variables of a scope, or the fields or elements of a variable, by its reference; none for a reference
+     * from before the program last resumed.
+     */
+    fun variables(
+        runId: String,
+        reference: Int,
+    ): CompletableFuture<List<VariableState>>
 
     /** Resumes the stopped program. False when no such run is active. */
     fun resume(runId: String): Boolean

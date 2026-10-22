@@ -150,6 +150,16 @@ internal class DebugSessions(
             threadId: Int,
         ) = runs.stackTrace(runId, threadId)
 
+        override fun scopes(
+            runId: String,
+            frameId: Int,
+        ) = runs.scopes(runId, frameId)
+
+        override fun variables(
+            runId: String,
+            reference: Int,
+        ) = runs.variables(runId, reference)
+
         override fun resume(runId: String) = runs.resume(runId)
     }
 
