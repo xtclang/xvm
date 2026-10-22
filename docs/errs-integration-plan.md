@@ -2434,18 +2434,19 @@ reply retires"), and fails the same way on `ef1491a6c`, before this work
 
 ### R6–R7 integration bursts (2026-10-22)
 
-R6 and R7's first part are seven code commits on this branch, with their records. They fall into
-four bursts that integrate in this order; each lists what it needs and what its own validation is.
-None of them goes into #693: #693 takes no debugger work, only unrelated bug fixes (decided
+R6 and R7's first part are seven code commits on this branch, with their records. All the work
+stays on this branch; the bursts below only say which commits belong together, in what order, what
+each needs, and what to validate when it is integrated, whenever and wherever that is decided.
+None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
 2026-10-22). The conflict preview was a cherry-pick into a throwaway worktree on 2026-10-22, onto
 master `1c4efe422`.
 
-| Burst | Commits, in order | Paths | Needs | Goes to | Validation |
-|-------|-------------------|-------|-------|---------|------------|
-| A: runtime | `6312fd242` (without its `EmbeddedExecutionTest` case, which is B's), `41cb8b60c` (R7a) | `javatools` only | master | A runtime pull request to master, as #703 was | `:javatools:test` (`EmbeddingSupportTest`, `SessionDebuggerTest`), `spotlessCheck` |
-| B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | A `lang` pull request of its own, after A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
-| C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | With B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
-| D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | With B and C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
+| Burst | Commits, in order | Paths | Needs | Validation |
+|-------|-------------------|-------|-------|------------|
+| A: runtime | `6312fd242` (without its `EmbeddedExecutionTest` case, which is B's), `41cb8b60c` (R7a) | `javatools` only | master | `:javatools:test` (`EmbeddingSupportTest`, `SessionDebuggerTest`), `spotlessCheck` |
+| B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
+| C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
+| D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
