@@ -3,6 +3,7 @@ package org.xvm.debug
 import com.google.gson.Gson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
@@ -12,9 +13,12 @@ import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import org.eclipse.lsp4j.debug.PauseArguments
+import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
+import org.eclipse.lsp4j.debug.StackTraceArguments
+import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
@@ -28,8 +32,9 @@ import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.SECONDS
 
 /**
- * A debug session launches through the language server's runs and owns the program it launched. Without a runtime
- * debugger it must say so: nothing it reports may suggest that debugging works.
+ * A debug session launches through the language server's runs, owns the program it launched, installs its
+ * breakpoints before the program's first line, and reports stops, threads and stacks from the program. What it
+ * cannot do yet, it says so and does not advertise.
  */
 class XtcDebugServerTest {
     private val runs = Runs()
@@ -52,23 +57,6 @@ class XtcDebugServerTest {
     }
 
     @Test
-    fun `breakpoints are reported unverified with the reason`() {
-        val response =
-            server
-                .setBreakpoints(
-                    SetBreakpointsArguments().apply {
-                        source = Source().apply { path = "/work/App.x" }
-                        breakpoints = arrayOf(SourceBreakpoint().apply { line = 3 }, SourceBreakpoint().apply { line = 7 })
-                    },
-                ).get(10, SECONDS)
-        assertThat(response.breakpoints.map { it.line }).containsExactly(3, 7)
-        assertThat(response.breakpoints).allSatisfy {
-            assertThat(it.isVerified).isFalse()
-            assertThat(it.message).isEqualTo(XtcDebugServer.NOT_AVAILABLE)
-        }
-    }
-
-    @Test
     fun `a launch starts the program once the configuration is done, and its exit ends the session`() {
         val launched = server.launch(mutableMapOf("module" to "App", "method" to "greet", "args" to listOf("one", "two words")))
         assertThat(runs.target).isEqualTo(LaunchTarget("App", "App", "greet", listOf("one", "two words")))
@@ -82,17 +70,120 @@ class XtcDebugServerTest {
 
         assertThat(client.output(OutputEventArgumentsCategory.STDOUT)).isEqualTo("hello\n")
         assertThat(client.output(OutputEventArgumentsCategory.CONSOLE))
-            .startsWith("Building and running App with the embedded compiler...\n${XtcDebugServer.NOT_AVAILABLE}\n")
+            .startsWith("Building and running App with the embedded compiler...\n")
             .endsWith("Process finished with exit code 3\n")
         assertThat(client.events).containsSubsequence("exited 3", "terminated")
     }
 
     @Test
-    fun `a launch without debugging does not mention breakpoints`() {
+    fun `breakpoints set before the start are pending, installed with the program, and reported as installed`() {
+        server.launch(mutableMapOf("module" to "App"))
+        val pending = server.setBreakpoints(breakpoints("/work/App.x", 3, 7)).get(10, SECONDS).breakpoints
+        assertThat(pending).allSatisfy {
+            assertThat(it.isVerified).isFalse()
+            assertThat(it.message).isEqualTo(XtcDebugServer.PENDING)
+        }
+        assertThat(pending.map { it.line }).containsExactly(3, 7)
+
+        server.configurationDone(null)
+        val requested = pending.map { BreakpointRequest(it.id, it.line) }
+        assertThat(runs.ready.toCompletableFuture().get(10, SECONDS)).containsExactly(SourceBreakpoints("/work/App.x", requested))
+        runs.events.breakpoints(
+            "/work/App.x",
+            listOf(BreakpointState(pending[0].id, 4, true), BreakpointState(pending[1].id, 7, false, "no code")),
+        )
+
+        assertThat(client.breakpoints.map { Triple(it.breakpoint.id, it.breakpoint.line, it.breakpoint.isVerified) })
+            .containsExactly(Triple(pending[0].id, 4, true), Triple(pending[1].id, 7, false))
+        assertThat(client.breakpoints.map { it.breakpoint.source.path }).containsOnly("/work/App.x")
+    }
+
+    @Test
+    fun `breakpoints set while the program runs are installed at once, also those changed as it started`() {
+        server.configurationDone(null)
+        server.setBreakpoints(breakpoints("/work/A.x", 1))
+        runs.onReady = { server.setBreakpoints(breakpoints("/work/B.x", 2)) }
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        // B.x changed after the program's breakpoints were taken and before it started
+        assertThat(runs.installed.map { it.path }).containsExactly("/work/B.x")
+
+        val response = server.setBreakpoints(breakpoints("/work/A.x", 5)).get(10, SECONDS)
+        assertThat(response.breakpoints.single().isVerified).isTrue()
+        assertThat(runs.installed.map { it.path }).containsExactly("/work/B.x", "/work/A.x")
+    }
+
+    @Test
+    fun `a stop reports every fiber stopped, with threads and stacks from the program, until continue`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val stopped = client.stops.single()
+        assertThat(stopped.threadId).isEqualTo(12)
+        assertThat(stopped.allThreadsStopped).isTrue()
+        assertThat(stopped.hitBreakpointIds).containsExactly(4)
+        assertThat(
+            server
+                .threads()
+                .get(10, SECONDS)
+                .threads
+                .map { it.id to it.name },
+        ).containsExactly(12 to "App")
+
+        val frames =
+            server
+                .stackTrace(
+                    StackTraceArguments().apply {
+                        threadId = 12
+                        startFrame = 0
+                        levels = 1
+                    },
+                ).get(10, SECONDS)
+        assertThat(frames.totalFrames).isEqualTo(2)
+        assertThat(
+            frames.stackFrames.map { Triple(it.name, it.source.path, it.line) },
+        ).containsExactly(Triple("App.twice", "/work/App.x", 11))
+        assertThat(
+            frames.stackFrames
+                .single()
+                .source.name,
+        ).isEqualTo("App.x")
+        assertThat(server.scopes(ScopesArguments().apply { frameId = 1 }).get(10, SECONDS).scopes).isEmpty()
+
+        server.continue_(null).get(10, SECONDS)
+        assertThat(runs.resumed).isEqualTo(1)
+    }
+
+    @Test
+    fun `a launch without debugging installs no breakpoints and says so`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App", "noDebug" to true)).get(10, SECONDS)
 
-        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE)).doesNotContain(XtcDebugServer.NOT_AVAILABLE)
+        assertThat(runs.ready.toCompletableFuture().get(10, SECONDS)).isNull()
+        val response = server.setBreakpoints(breakpoints("/work/App.x", 3)).get(10, SECONDS)
+        assertThat(response.breakpoints.single().message).isEqualTo(XtcDebugServer.NOT_DEBUGGING)
+        assertThat(server.threads().get(10, SECONDS).threads).isEmpty()
+    }
+
+    @Test
+    fun `a client that counts lines from 0 gets its lines back as it counts them`() {
+        server.initialize(InitializeRequestArguments().apply { linesStartAt1 = false })
+        server.configurationDone(null)
+        server.setBreakpoints(breakpoints("/work/App.x", 10))
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .get()
+                .orEmpty()
+                .single()
+                .breakpoints
+                .single()
+                .line,
+        ).isEqualTo(11)
+        val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).get(10, SECONDS)
+        assertThat(frames.stackFrames.map { it.line }).containsExactly(10, 4)
     }
 
     @Test
@@ -156,6 +247,16 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `requests whose arguments are optional work without them, as VS Code sends configurationDone`() {
+        server.configurationDone(null).get(10, SECONDS)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        server.terminate(null).get(10, SECONDS)
+        runs.events.exited(null, "Stopped.")
+        server.disconnect(null).get(10, SECONDS)
+        assertThat(client.events).containsSubsequence("exited 1", "terminated")
+    }
+
+    @Test
     fun `a line typed in the debug console while the program runs is its input, and nothing is evaluated`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
@@ -172,20 +273,26 @@ class XtcDebugServerTest {
     }
 
     @Test
-    fun `requests whose arguments are optional work without them, as VS Code sends configurationDone`() {
-        server.configurationDone(null).get(10, SECONDS)
-        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
-        server.terminate(null).get(10, SECONDS)
-        runs.events.exited(null, "Stopped.")
-        server.disconnect(null).get(10, SECONDS)
-        assertThat(client.events).containsSubsequence("exited 1", "terminated")
+    fun `attach and pause fail with the reason, and a breakpoint needs a file`() {
+        assertFailsWith("Attaching is not available; launch the module instead.") { server.attach(mutableMapOf()) }
+        assertFailsWith(XtcDebugServer.NO_PAUSE) { server.pause(PauseArguments()) }
+        val response =
+            server
+                .setBreakpoints(
+                    SetBreakpointsArguments().apply {
+                        source = Source().apply { name = "untitled" }
+                        breakpoints = arrayOf(SourceBreakpoint().apply { line = 1 })
+                    },
+                ).get(10, SECONDS)
+        assertThat(response.breakpoints.single().message).isEqualTo(XtcDebugServer.NO_SOURCE)
     }
 
-    @Test
-    fun `attach and pause fail with the reason`() {
-        assertFailsWith("Attaching is not available; launch the module instead.") { server.attach(mutableMapOf()) }
-        assertFailsWith(XtcDebugServer.NOT_AVAILABLE) { server.pause(PauseArguments()) }
-        assertThat(server.threads().get(10, SECONDS).threads).isEmpty()
+    private fun breakpoints(
+        path: String,
+        vararg lines: Int,
+    ) = SetBreakpointsArguments().apply {
+        source = Source().apply { this.path = path }
+        breakpoints = lines.map { line -> SourceBreakpoint().apply { this.line = line } }.toTypedArray()
     }
 
     private fun evaluate(
@@ -211,22 +318,28 @@ class XtcDebugServerTest {
         lateinit var runId: String
         lateinit var target: LaunchTarget
         lateinit var events: ProgramEvents
-        lateinit var ready: CompletionStage<*>
+        lateinit var ready: CompletionStage<out List<SourceBreakpoints>?>
         var result: LaunchResult? = null
+        var onReady: () -> Unit = {}
         val inputs = CopyOnWriteArrayList<String>()
         val stopped = CopyOnWriteArrayList<String>()
+        val installed = CopyOnWriteArrayList<SourceBreakpoints>()
+        var resumed = 0
 
         override fun launch(
             runId: String,
             target: LaunchTarget,
             events: ProgramEvents,
-            ready: CompletionStage<*>,
+            ready: CompletionStage<out List<SourceBreakpoints>?>,
         ): CompletableFuture<LaunchResult> {
             this.runId = runId
             this.target = target
             this.events = events
             this.ready = ready
-            return ready.toCompletableFuture().thenApply { result ?: LaunchResult(runId, "  ✓ App") }
+            return ready.toCompletableFuture().thenApply {
+                onReady()
+                result ?: LaunchResult(runId, "  ✓ App")
+            }
         }
 
         override fun input(
@@ -235,11 +348,32 @@ class XtcDebugServerTest {
         ) = (runId == this.runId).also { if (it) inputs.add(text) }
 
         override fun stop(runId: String) = (runId == this.runId).also { if (it) stopped.add(runId) }
+
+        override fun setBreakpoints(
+            runId: String,
+            breakpoints: SourceBreakpoints,
+        ): CompletableFuture<List<BreakpointState>> {
+            installed.add(breakpoints)
+            return CompletableFuture.completedFuture(breakpoints.breakpoints.map { BreakpointState(it.id, it.line, true) })
+        }
+
+        override fun threads(runId: String) = CompletableFuture.completedFuture(listOf(ThreadState(12, "App")))
+
+        override fun stackTrace(
+            runId: String,
+            threadId: Int,
+        ) = CompletableFuture.completedFuture(
+            listOf(FrameState(1, "App.twice", "/work/App.x", 11), FrameState(2, "App.run", "/work/App.x", 5)),
+        )
+
+        override fun resume(runId: String) = true.also { resumed++ }
     }
 
     /** Records the events the session sends its client. */
     private class Client : IDebugProtocolClient {
         val events = CopyOnWriteArrayList<String>()
+        val stops = CopyOnWriteArrayList<StoppedEventArguments>()
+        val breakpoints = CopyOnWriteArrayList<BreakpointEventArguments>()
         private val outputs = CopyOnWriteArrayList<OutputEventArguments>()
 
         fun output(category: String) = outputs.filter { it.category == category }.joinToString("") { it.output }
@@ -258,6 +392,14 @@ class XtcDebugServerTest {
 
         override fun terminated(args: TerminatedEventArguments) {
             events.add("terminated")
+        }
+
+        override fun stopped(args: StoppedEventArguments) {
+            stops.add(args)
+        }
+
+        override fun breakpoint(args: BreakpointEventArguments) {
+            breakpoints.add(args)
         }
     }
 }
