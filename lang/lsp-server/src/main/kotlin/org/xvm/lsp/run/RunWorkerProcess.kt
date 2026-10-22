@@ -8,6 +8,7 @@ import org.xvm.debug.BreakpointState
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -287,6 +288,17 @@ internal class RunWorkerProcess(
     ): CompletableFuture<List<VariableState>> =
         request("variables", id) { addProperty("reference", reference) }
             .thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
+
+    /** Steps a stopped run's fiber; false when that fiber does not wait. */
+    fun step(
+        id: Long,
+        thread: Int,
+        kind: StepKind,
+    ): CompletableFuture<Boolean> =
+        request("step", id) {
+            addProperty("thread", thread)
+            addProperty("step", kind.name.lowercase())
+        }.thenApply { it["stepped"].asBoolean }
 
     /** Resumes a stopped run. */
     fun resume(id: Long) = command("continue", id)
