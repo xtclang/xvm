@@ -8,6 +8,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -44,8 +45,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * the process streams directly, travels as events and so can never corrupt the protocol. Stdin closing,
  * which is also what happens when the language server exits or dies, stops any run and ends the worker.
  *
- * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints` to run under the
- * debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`; for a run under the debugger,
+ * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints` and `exceptions`
+ * to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`; for a run under
+ * the debugger, `exceptionStops` (`id`, `all`, `uncaught`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -87,6 +89,7 @@ object RunWorker {
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
                     "step" -> runs.step(command)
+                    "exceptionStops" -> runs.exceptionStops(command)
                     "continue" -> runs.resume(command["id"].asLong)
                     "shutdown" -> break
                     else -> channel.log("Unknown worker command: $line")
@@ -136,7 +139,10 @@ object RunWorker {
                 try {
                     val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
                     val debugger =
-                        command.getAsJsonArray("breakpoints")?.let { debugger(id, repositories, RunWorkerDebug.sourcesOf(it), output) }
+                        command.getAsJsonArray("breakpoints")?.let { breakpoints ->
+                            val exceptions = RunWorkerDebug.exceptionsOf(command["exceptions"])
+                            debugger(id, repositories, RunWorkerDebug.sourcesOf(breakpoints), exceptions, output)
+                        }
                     EmbeddingSupport.instance().runMethod(
                         LinkedRepository(*repositories.toTypedArray()),
                         command["module"].asString,
@@ -208,13 +214,15 @@ object RunWorker {
 
         /**
          * The runtime debugger of a run started with breakpoints: it knows the program's own modules, so the
-         * breakpoints in their files are verified, and installs the breakpoints, reporting each file's, before
-         * the program starts. Its stops are reported as `stopped` events, after the program's output so far.
+         * breakpoints in their files are verified, and installs the breakpoints, reporting each file's, and the
+         * exception stops before the program starts. Its stops are reported as `stopped` events, after the
+         * program's output so far.
          */
         private fun debugger(
             id: Long,
             repositories: List<ModuleRepository>,
             sources: List<SourceBreakpoints>,
+            exceptions: ExceptionStops,
             output: OutputBatches,
         ): SessionDebugger {
             val debugger =
@@ -235,6 +243,7 @@ object RunWorker {
                     add("breakpoints", RunWorkerDebug.states(install(debugger, source)))
                 }
             }
+            debugger.setExceptionStops(exceptions.all, exceptions.uncaught)
             debuggers[id] = debugger
             return debugger
         }
@@ -285,6 +294,11 @@ object RunWorker {
                 val step = SessionDebugger.Step.valueOf(command["step"].asString.uppercase())
                 addProperty("stepped", debugger.step(command["thread"].asInt, step))
             }
+
+        fun exceptionStops(command: JsonObject) {
+            val stops = RunWorkerDebug.exceptionsOf(command)
+            debuggers[command["id"].asLong]?.setExceptionStops(stops.all, stops.uncaught)
+        }
 
         fun resume(id: Long) {
             debuggers[id]?.resume()
@@ -511,7 +525,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 5
+        const val PROTOCOL = 6
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
