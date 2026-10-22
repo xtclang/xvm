@@ -3,8 +3,9 @@
 Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of embedded build and
 Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
-2026-10-22 for VS Code. The runtime debugger (R7) and the release gate (R8) are not implemented. The
-audit in the next section describes the code before the first delivery.
+2026-10-22 for VS Code, and so did R7's first part: breakpoints, stops, threads and stacks. The rest
+of R7 and the release gate (R8) are not implemented. The audit in the next section describes the
+code before the first delivery.
 
 ## First delivery (2026-10-15)
 
@@ -384,6 +385,41 @@ this bridge; they cannot be inferred from compiler type hints.
 - [ ] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
   breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping and bounded
   evaluation. Test source revisions, stale handles, resume/stop races and multiple service contexts.
+  *Breakpoints, stops and stacks (2026-10-22; `41cb8b60c`, `e73878550`, `bb016ce17`):* the first end-to-end case,
+  set a breakpoint, stop there, see the call stack, continue, works in VS Code. It came in three
+  steps, each its own commit and integration burst:
+  1. *Runtime (`javatools`).* `SessionDebugger`, a second implementation of the interpreter's
+     `Debugger` interface for hosts without a terminal. The host makes the program's modules known,
+     sets breakpoints by file and 1-based line, gets each stop through a listener, reads immutable
+     thread and stack snapshots, and resumes. A breakpoint on a line without code moves to the next
+     line with code in its method; one in a file no known module came from, or on a line with no
+     code to follow, is refused with the reason. A stop holds every fiber that reaches a line, and
+     the program's clocks, as the console debugger does. Lines run at full speed until there are
+     breakpoints, and fibers keep yielding to each other, since nothing steps. The runner's own
+     code is never debugged (`setHost`), and closing a stopped run ends the program where it is
+     (`terminate`) instead of letting it run on, which the first version did.
+     `EmbeddingSupport.runMethod()` takes a run's debugger, set before the task starts and
+     replaced by `Debugger.NONE` when the run ends.
+  2. *Execution worker and server (`lang`).* A run started with breakpoints gets a
+     `SessionDebugger` in the worker JVM, beside the program; the session in the language server
+     only translates and never holds runtime objects. The worker protocol (version 3) gains
+     breakpoints on `run`, `setBreakpoints`, `threads`, `stackTrace` and `continue`, and the
+     `breakpoints`, `stopped` and `reply` events. The DAP session installs the breakpoints set
+     before `configurationDone` before the program's first line, reports how each was installed
+     with `breakpoint` events, forwards stops, and answers `threads`, `stackTrace`, `scopes` (empty)
+     and `continue`.
+  3. *VS Code.* No client code changed: the inline adapter carries the new messages. Shared X304
+     sets a breakpoint, stops there, checks the stack VS Code asks for, and continues to the exit
+     code; X285 keeps the run and console input. VS Code `run-iwSxfQ` passes both with the other
+     execution cases.
+
+  Still open: variables and scopes, stepping, exception stops, pause, bounded evaluation, source
+  revisions (a breakpoint is matched by file and line, not by the revision that was built), and
+  IntelliJ (step 4: LSP4IJ's DAP client over a process handler on the language server
+  connection, which uses experimental API, or IntelliJ's own debugger API). The debugger is the
+  runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program at
+  a time satisfies. Integration bursts are listed in the
+  [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
 - [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.
