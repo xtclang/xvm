@@ -2,8 +2,9 @@
 
 Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of embedded build and
 Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
-covers parts of R1–R5. Debugging (R6/R7) and the release gate (R8) are not implemented. The audit in
-the next section describes the code before that delivery.
+covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
+2026-10-22 for VS Code. The runtime debugger (R7) and the release gate (R8) are not implemented. The
+audit in the next section describes the code before the first delivery.
 
 ## First delivery (2026-10-15)
 
@@ -351,12 +352,35 @@ this bridge; they cannot be inferred from compiler type hints.
   mavenLocal; a saved type error then fails the build. Not covered: IntelliJ's Build Project in
   Gradle mode, which is the IDE's builder and needs a Gradle import; Debug or configuration actions
   on the gutter icon; repeated-run soak, which belongs to R8.
-- [ ] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
+- [x] **R6 — Honest DAP lifecycle.** Remove synthetic verified breakpoints/threads, connect launch,
   no-debug execution, output, completion, disconnect and terminate to the same session service.
   Advertise only functioning requests. DAP facade shutdown must follow an explicit run ownership policy.
   The placeholder half is done: synthetic breakpoints and threads are gone, launch and attach fail with
-  the reason, and only the configuration handshake is advertised (`XtcDebugServerTest`). The session
-  service connection is not.
+  the reason, and only the configuration handshake is advertised (`XtcDebugServerTest`).
+  *Completed 2026-10-22 (`6312fd242`, `ccc0695d5`, `44d121779`):* a debug session lives in the language
+  server and travels over its connection: `xtc/debugStart` creates it, `xtc/debugMessage`
+  notifications carry its DAP messages both ways, and `xtc/debugEnd` ends it. No socket, credentials
+  or second process are needed, and the session uses the server's own build and workers; `dap-server`
+  is now a library of the server, and VS Code no longer ships a `dap-server.jar`. `launch` builds and
+  runs through the service `xtc/run` uses, and starts the program after `configurationDone` (or two
+  seconds after its build when a client sends none); a `noDebug` launch takes the same path. Output
+  arrives as `output` events and the exit as `exited` and `terminated`; a failed build reports its
+  diagnostics as output and fails the launch. The session advertises only `configurationDone` and
+  `terminate`, reports breakpoints unverified with the reason, has no threads, and refuses `pause`
+  and `attach`. *Ownership:* the session owns the program it launched. `terminate`, `disconnect`,
+  `xtc/debugEnd` and the server's shutdown stop it, also while it still builds, and its exit ends
+  the session. `xtc/stopRun` now stops a run that is still building too: the program never starts,
+  and its exit says `Stopped before the program started.` A line the client sends from its debug
+  console while the program runs is the program's input. Embedded runs set the runtime's new
+  `Debugger.NONE`, so `assert:debug` continues: until then the command-line debugger read its
+  commands from the worker's standard input, which is the server's protocol pipe, and the run never
+  ended. In VS Code, `F5`, `Ctrl+F5` and `launch.json` configurations start such a session in
+  embedded mode, and Gradle mode still runs the Gradle task. Shared X285 checks it in VS Code
+  (`run-ZuRYb6`): exit code 4, the breakpoint unverified with the reason, the session ending with
+  the program, and a line sent as the Debug Console's `evaluate` request read by a second program.
+  IntelliJ keeps DAP disabled and offers no Debug runner (X285). Enabling it needs a process handler
+  that carries the session over the language server connection, which LSP4IJ's DAP client can use,
+  since it reads DAP from a handler's output and writes to its input; that parity is R8's.
 - [ ] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
   breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping and bounded
   evaluation. Test source revisions, stale handles, resume/stop races and multiple service contexts.
