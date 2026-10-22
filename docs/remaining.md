@@ -163,14 +163,29 @@ IntelliJ keeps DAP disabled and offers no Debug runner; its parity is R8's.
 
 ### R7: runtime debugger bridge
 
-- [ ] Session-scoped runtime hooks and initial suspension.
-- [ ] Real, verified breakpoints and exception stops.
-- [ ] Fibers and threads.
-- [ ] Stacks, scopes and variables.
+The first end-to-end case works in VS Code (`41cb8b60c`, `e73878550`, `bb016ce17`; shared X304 in VS Code
+`run-iwSxfQ`): a breakpoint stops the program, the call stack shows, and Continue runs it on. The
+three commits are separate [integration bursts](errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
+
+- [x] A runtime debugger per run, for hosts without a terminal: `SessionDebugger`, set through
+  `EmbeddingSupport.runMethod()` before the program starts, with the runner's own code left alone
+  (`41cb8b60c`).
+- [ ] Initial suspension (stop on entry).
+- [x] Real, verified breakpoints, installed before the program's first line (`41cb8b60c`, `e73878550`).
+- [ ] Exception stops.
+- [x] Fibers and threads: a stop holds every fiber that reaches a line; `threads` lists those that
+  wait.
+- [x] Stacks: immutable snapshots, with file and line per frame.
+- [ ] Scopes and variables (`scopes` answers none).
 - [ ] Stepping.
+- [ ] Pause.
 - [ ] Bounded evaluation.
-- [ ] Source maps tied to source revisions.
+- [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
+  source revision.
+- [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
 - [ ] Tests: source revisions, stale handles, resume/stop races, multiple service contexts.
+- [ ] IntelliJ debug sessions (R7 step 4): decide between LSP4IJ's DAP client over a process
+  handler on the language server connection (experimental API) and IntelliJ's own debugger API.
 
 ### R8: runtime release gate
 
