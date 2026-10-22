@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
+import org.xvm.debug.DebugSetup
+import org.xvm.debug.ExceptionStops
 import org.xvm.debug.LaunchResult
 import org.xvm.debug.LaunchTarget
 import org.xvm.debug.ProgramEvents
@@ -109,7 +111,7 @@ internal class DebugSessions(
             runId: String,
             target: LaunchTarget,
             events: ProgramEvents,
-            ready: CompletionStage<out List<SourceBreakpoints>?>,
+            ready: CompletionStage<out DebugSetup?>,
         ): CompletableFuture<LaunchResult> =
             runs
                 .launch(
@@ -143,6 +145,11 @@ internal class DebugSessions(
             runId: String,
             breakpoints: SourceBreakpoints,
         ) = runs.setBreakpoints(runId, breakpoints)
+
+        override fun setExceptionStops(
+            runId: String,
+            stops: ExceptionStops,
+        ) = runs.setExceptionStops(runId, stops)
 
         override fun threads(runId: String) = runs.threads(runId)
 
