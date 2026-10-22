@@ -433,13 +433,19 @@ this bridge; they cannot be inferred from compiler type hints.
      answer `next`, `stepIn` and `stepOut`. Shared X306 steps in both editors (VS Code `run-DLPFYQ`,
      IntelliJ `run-6073636771825028984`).
 
-  7. *Exception stops (`bf0b25af4` runtime; the editors' half follows).* `SessionDebugger` stops at
+  7. *Exception stops (`bf0b25af4` runtime, `9d2c2f738` editors).* `SessionDebugger` stops at
      every thrown exception, or at those no frame will catch, at the frame that throws, once; the
-     exception is that frame's first variable.
+     exception is that frame's first variable. The session's filters, Uncaught Exceptions on by
+     default and All Exceptions, reach it before the program's first line (worker protocol 6).
+     Shared X307 stops at an uncaught exception in both editors with no setup.
+  8. *Pause and stop on entry (`5a7bf8def` runtime, `48f00ef8c` editors).* Pause stops a running
+     program at the next line a fiber reaches; `stopOnEntry` stops it at the first line of its own
+     modules (worker protocol 7). Shared X308 pauses in VS Code, and X309 stops on entry there;
+     IntelliJ's Pause waits on LSP4IJ (UP30), and its configuration has no stop-on-entry option.
+     `5a64247bd` rewrote `SessionDebugger` plainly, with less mutable state, without changing it.
 
-  Still open: the editors' half of exception stops, pause, stop on entry, watches and hover on
-  variables and paths, bounded evaluation, and source revisions (a breakpoint is matched by file
-  and line, not by the revision that was built). The debugger is
+  Still open: watches and hover on variables and paths, bounded evaluation, and source revisions (a
+  breakpoint is matched by file and line, not by the revision that was built). The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
