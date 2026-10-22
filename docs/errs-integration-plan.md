@@ -1600,11 +1600,18 @@ to the compiler-only PR:
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
   *Partial (2026-10-22):* breakpoints stop the program in VS Code and IntelliJ, with threads,
   stacks and continue, through a runtime debugger in the execution worker
-  ([below](#r7-breakpoints-stops-and-stacks-2026-10-22)); variables, stepping, exception stops,
-  pause, evaluation and source revisions remain.
+  ([below](#r7-breakpoints-stops-and-stacks-2026-10-22)); variables and stepping followed
+  ([below](#r7-variables-and-stepping-2026-10-22)), and the runtime half of exception stops;
+  the rest of exception stops, pause, watches and hover on paths, evaluation and source revisions
+  remain.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
+- [ ] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
+  debugger's commands: breakpoint kinds (R9), values (R10), execution control (R11), program
+  structure and sources (R12), and debugging beyond embedded runs (R13), listed in the
+  [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 
-Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Compiler-only operations must
+Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8; R9–R13 follow R8, unless one is
+chosen to gate the release. Compiler-only operations must
 continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and lib_runner
 child containers are the foundation; existing IDE shell commands and the DAP placeholder do not
 satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6); real breakpoint support

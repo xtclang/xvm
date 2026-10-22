@@ -382,8 +382,10 @@ this bridge; they cannot be inferred from compiler type hints.
   IntelliJ then kept DAP disabled and offered no Debug runner (X285); since R7's fourth step, its
   debug sessions are the same, through LSP4IJ's DAP client.
 - [ ] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
-  breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping and bounded
-  evaluation. Test source revisions, stale handles, resume/stop races and multiple service contexts.
+  breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping, pause, watches and
+  hover on variables and paths (which run no code), and bounded evaluation. Test source revisions,
+  stale handles, resume/stop races and multiple service contexts. The debugger features beyond
+  these are R9–R13.
   *Breakpoints, stops and stacks (2026-10-22; `41cb8b60c`, `e73878550`, `bb016ce17`):* the first end-to-end case,
   set a breakpoint, stop there, see the call stack, continue, works in VS Code. It came in three
   steps, each its own commit and integration burst:
@@ -431,15 +433,48 @@ this bridge; they cannot be inferred from compiler type hints.
      answer `next`, `stepIn` and `stepOut`. Shared X306 steps in both editors (VS Code `run-DLPFYQ`,
      IntelliJ `run-6073636771825028984`).
 
-  Still open: exception stops, pause, stop on entry, bounded evaluation, and source revisions (a
-  breakpoint is matched by file and line, not by the revision that was built). The debugger is
+  7. *Exception stops (`bf0b25af4` runtime; the editors' half follows).* `SessionDebugger` stops at
+     every thrown exception, or at those no frame will catch, at the frame that throws, once; the
+     exception is that frame's first variable.
+
+  Still open: the editors' half of exception stops, pause, stop on entry, watches and hover on
+  variables and paths, bounded evaluation, and source revisions (a breakpoint is matched by file
+  and line, not by the revision that was built). The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
 - [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.
+- [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
+  logpoints, which print without stopping; function breakpoints, which stop when a method is
+  entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
+  for the editors' exception views; and data breakpoints, which stop when a property or field
+  changes. Conditions and logpoint messages are expressions, so they build on R7's evaluation.
+- [ ] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
+  tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
+  R7's evaluation; computed properties as lazy variables, where only fields show now; paging of
+  large arrays and collections in place of the first 100 elements; changing a variable's value
+  while stopped (`setVariable`); and completions in the Debug Console.
+- [ ] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
+  temporary breakpoint, so it may already work and needs checking), choosing which call on a line
+  to step into (`stepInTargets`), restarting a frame (the console's `T`), and continuing, stepping or
+  pausing one fiber while the others stay stopped.
+- [ ] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
+  containers, also those that run or wait for a reply (the console's `VF`), not only those stopped
+  at a line, and thread events as they start and end; frames whose source file is not on the
+  machine, such as library code, served through the `source` request from the bundled XDK's
+  sources; and the loaded modules (`modules`, `loadedSources`).
+- [ ] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
+  are refused now; debugging tests; and attaching to a program that already runs.
+
+Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
+execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;
+`runInTerminal`, since programs run in the execution worker; and the console debugger's own
+terminal features (its views, command history, repeated steps and breakpoint list), which the
+editors' views and breakpoint management replace.
 
 R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 precedes R4/R5;
-R6 shares the established service, followed by R7. R8 closes production acceptance. Current
+R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
+R8, unless one of them is chosen to gate the release, which moves it in front of R8. Current
 compiler-only tests and the LSP playbook do not establish any of these runtime gates.
