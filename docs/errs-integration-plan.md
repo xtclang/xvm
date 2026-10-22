@@ -2468,6 +2468,28 @@ the same diff, applied unchanged, with its message's validation limited to what 
 on #693, `PendingRequestsTest` passes 3 tests and `PreflightedRenamesTest` 8, the integration
 tests compile, and `spotlessCheck` passes.
 
+### R7: exception stops, pause and stop on entry (2026-10-22)
+
+Four more commits, runtime and editors for each, and a rewrite, on this branch only:
+
+- `bf0b25af4` (R7i, `javatools`): exception stops at the throwing frame, once; "uncaught" judged at
+  the throw by the catch clauses of the throwing fiber and its callers (`Frame.catches()`); the
+  exception is the frame's first variable. `SessionDebuggerTest` 11; `:javatools:test` 648.
+- `9d2c2f738` (R7j, `lang`): the session's exception filters, Uncaught Exceptions on by default,
+  in the debug setup before the first line (worker protocol 6); shared X307 in both editors
+  (VS Code `run-YKxcsv`, IntelliJ `run-15685393796771813149`).
+- `5a7bf8def` (R7k, `javatools`): pause at the next line a fiber reaches, and stop on entry in the
+  program's own modules; `Frame.getFunction()`. `SessionDebuggerTest` 13; `:javatools:test` 650.
+- `5a64247bd` (`javatools`): `SessionDebugger` and its test rewritten plainly (fields first, plain
+  names, the per-stop state in one `Halt`, sealed reference targets, pattern switches), with
+  `Frame.getOps()` and `Frame.getContainingClass()`; no behavior change.
+- `48f00ef8c` (R7l, `lang`): DAP `pause`, `stopOnEntry` (worker protocol 7) and a running program's
+  thread for an editor's Pause; shared X308 and X309 pass in VS Code (`run-eEwGRI`). IntelliJ's
+  Pause waits on LSP4IJ, which never sent `pause`: UP30, fixed in LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757),
+  with which X308 passes natively in IntelliJ.
+
+The plan's R9–R13 (`cc4e55021`) list the debugger features beyond R7.
+
 ### R6–R7 integration bursts (2026-10-22)
 
 R6 and R7's first part are seven code commits on this branch, with their records; variables and
@@ -2485,6 +2507,7 @@ master `1c4efe422`.
 | C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
 | D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
 | E: variables and stepping | `51cccbfbf` (R7e), `05e3ff076` (R7f), `769d6f34d` (R7g), `a78d736f5` (R7h) | R7e and R7g `javatools` only; R7f and R7h `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | A–D | `:javatools:test` (`SessionDebuggerTest`); `:lang:dap-server:test`, `:lang:lsp-server:test`, `:lang:intellij-plugin:test`; both playbooks X280–X285, X287, X289, X304–X306 |
+| F: exceptions, pause and entry | `bf0b25af4` (R7i), `9d2c2f738` (R7j), `5a7bf8def` (R7k), `5a64247bd`, `48f00ef8c` (R7l) | R7i, R7k and the rewrite `javatools` only; R7j and R7l `lang` as E's | E | as E's, with both playbooks to X309 (X308 and X309 VS Code only) |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
