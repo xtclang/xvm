@@ -2456,7 +2456,10 @@ Four more commits, runtime and editors for each, on this branch only and not for
 
 Between them, `3813e27a9` fixes the opt-in IntelliJ project lifecycle check, which is not debugger
 work: requests still waiting when a connection ends are now cancelled, and the check sends its
-edits before its requests. It is a candidate for #693, if the user wants it there.
+edits before its requests. It went into #693 on 2026-10-22 as `5955362da` (`5a24c43d8..5955362da`):
+the same diff, applied unchanged, with its message's validation limited to what holds there;
+on #693, `PendingRequestsTest` passes 3 tests and `PreflightedRenamesTest` 8, the integration
+tests compile, and `spotlessCheck` passes.
 
 ### R6–R7 integration bursts (2026-10-22)
 
