@@ -556,7 +556,7 @@ public class ServiceContext {
             while (iPC >= 0) { // most common op return loop
                 frame.m_iPC = iPC;
 
-                if (++cOps > MAX_OPS_PER_RUN && !isDebuggerActive()) {
+                if (++cOps > MAX_OPS_PER_RUN && !(isDebuggerActive() && getDebugger().holdsFibers())) {
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
                 }
