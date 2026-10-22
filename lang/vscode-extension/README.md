@@ -186,11 +186,14 @@ that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty li
 
 ### Debugging
 
-There is no Ecstasy debugger yet. `F5` (**Run → Start Debugging**) and `launch.json` configurations
-run the module the same way the Run button does, following `xtc.build.mode`, and say that the
-debugger is not available. Breakpoints are not hit. The bundled `dap-server.jar` is a placeholder
-that says the same thing if a session reaches it: breakpoints stay unverified with that reason, and
-launch and attach fail with it.
+`F5` (**Run → Start Debugging**), `Ctrl+F5` and `launch.json` configurations start a debug session in
+the language server, which builds and runs the module as the Run button does in embedded mode, in the
+same execution workers. The Debug Console shows the build, the program's output and its exit code; the
+debug toolbar's Stop ends the program, also while it still builds, and a line typed in the Debug
+Console while the program runs is its console input. There is no Ecstasy debugger yet, so breakpoints
+are shown unverified with that reason and are not hit, and a program cannot be paused. In Gradle
+mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and says that debugging is
+not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
 
@@ -202,7 +205,7 @@ A launch configuration in `.vscode/launch.json` selects the module, entry method
     "module": "MyApp",
     "method": "run",          // optional, defaults to "run"
     "args": "arg1,arg2",      // optional: comma-separated, or an array passed exactly as given
-    "cwd": "${workspaceFolder}"  // not used yet; runs use the folder that owns the module
+    "cwd": "${workspaceFolder}"  // optional: the program's root directory; the folder that owns the module by default
 }
 ```
 
@@ -345,7 +348,7 @@ vscode-extension/
 ├── src/
 │   ├── extension.ts                # Activation / deactivation entry point
 │   ├── commands.ts                 # Ecstasy: ... command registrations
-│   ├── debug-adapter.ts            # DAP descriptor factory and config provider
+│   ├── debug-adapter.ts            # Debug sessions carried over the language client, and config provider
 │   ├── java.ts                     # Java 25+ discovery and JVM argument construction
 │   ├── lsp-client.ts               # LSP client lifecycle and crash recovery
 │   ├── status-bar.ts               # Status bar state management
@@ -356,8 +359,7 @@ vscode-extension/
 │   └── xtc.json                    # Code snippets
 ├── language-configuration.json     # Brackets, comments, surrounding pairs
 ├── server/
-│   ├── lsp-server.jar              # LSP server (copied from :lang:lsp-server)
-│   └── dap-server.jar              # DAP server (copied from :lang:dap-server)
+│   └── lsp-server.jar              # LSP server, which also hosts debug sessions (copied from :lang:lsp-server)
 └── icons/
     ├── xtc.png                     # Marketplace / extension icon (256×256)
     ├── xtc-file.png                # File icon for .x files
