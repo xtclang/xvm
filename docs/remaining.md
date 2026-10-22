@@ -307,13 +307,13 @@ passes with the workaround disabled. The gates are in
   IntelliJ's console no longer shows the output a program prints after Resume (X304 expects
   `after 42`; the exit code still matches). It passes on 0.21.0. Find the change before the next
   LSP4IJ release reaches the pin.
-- [ ] UP31, not filed yet: after an exception stop, LSP4IJ shows the exception in the editor one
+- [ ] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758)): after an exception stop, LSP4IJ shows the exception in the editor one
   second later, on the editor it found at the stop, without checking that it is still open; an
   editor closed in that second fails with `DisposalException` "Editor is already disposed" (0.21.0
-  and `main`). X307 waits for the hint before it resumes and closes its file. The fix is local, on
-  LSP4IJ branch `fix/dap-exception-hint-disposed-editor` (`958e56f1`), with a failing control and
-  native evidence; file its pull request. Gate after a release: X307 without the wait, and no IDE
-  errors.
+  and `main`). X307 waits for the hint before it resumes and closes its file. The pull request skips
+  the hint for a disposed editor; its test fails without the check, and natively an X307 that closes
+  its file right after the stop reports the IDE error on `main` and none with the fix. Gate after a
+  release: X307 without the wait, and no IDE errors.
 
 ### LSP4J
 
