@@ -146,7 +146,10 @@ line, call stack and the other fibers that wait shown in the Debug tool window. 
 shows the frame's locals and expands objects and arrays; LSP4IJ shows strings and numbers without
 their type. **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
 **Resume Program** runs it on and **Stop** ends it where it is. An uncaught exception stops the
-program where it is thrown, by default, and the exception is the frame's first variable. **Pause
+program where it is thrown, by default, and the exception is the frame's first variable. The
+Watches view and **Evaluate Expression** show paths such as `point.x` or `ints[1]` in the selected
+frame, and what is not evaluated shows why; LSP4IJ's debugger hover evaluates the name under the
+mouse. **Pause
 Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/remaining.md`, fixed in
 LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration has no stop-on-entry option. Debug is not offered for
 Gradle or command-line runs.
