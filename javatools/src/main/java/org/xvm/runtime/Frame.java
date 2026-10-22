@@ -751,6 +751,13 @@ public class Frame
     }
 
     /**
+     * @return the function this frame runs, or null for a native frame that runs none
+     */
+    public MethodStructure getFunction() {
+        return f_function;
+    }
+
+    /**
      * @return "private:this"
      */
     public ObjectHandle getThis() {
