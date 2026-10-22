@@ -195,8 +195,10 @@ starts, and a breakpoint or `assert:debug` stops the program: the editor shows t
 Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
 the selected frame's locals, and expands objects into their fields and arrays into their elements.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
-caller. Continue runs the program on, and Stop ends it where it is. Exception breakpoints and Pause
-are not available yet. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+caller. The Breakpoints view's exception filters stop the program where an uncaught exception, on by
+default, or any exception is thrown, with the exception shown first among the frame's variables.
+Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
+first line. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
 says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
@@ -209,7 +211,8 @@ A launch configuration in `.vscode/launch.json` selects the module, entry method
     "module": "MyApp",
     "method": "run",          // optional, defaults to "run"
     "args": "arg1,arg2",      // optional: comma-separated, or an array passed exactly as given
-    "cwd": "${workspaceFolder}"  // optional: the program's root directory; the folder that owns the module by default
+    "cwd": "${workspaceFolder}",  // optional: the program's root directory; the folder that owns the module by default
+    "stopOnEntry": false        // optional: stop at the program's first line
 }
 ```
 
