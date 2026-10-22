@@ -604,6 +604,11 @@
                                 "type": "string",
                                 "description": "Working directory",
                                 "default": "${workspaceFolder}"
+                            },
+                            "stopOnEntry": {
+                                "type": "boolean",
+                                "description": "Stop the program at its first line",
+                                "default": false
                             }
                         }
                     }

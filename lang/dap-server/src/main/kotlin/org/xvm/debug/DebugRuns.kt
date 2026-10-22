@@ -76,10 +76,14 @@ data class ExceptionStops(
     val uncaught: Boolean = false,
 )
 
-/** What a debugged program starts with: the breakpoints installed before its first line, and its exception stops. */
+/**
+ * What a debugged program starts with: the breakpoints installed before its first line, its exception stops, and
+ * whether it stops at its first line.
+ */
 data class DebugSetup(
     val breakpoints: List<SourceBreakpoints>,
     val exceptions: ExceptionStops = ExceptionStops(),
+    val stopOnEntry: Boolean = false,
 )
 
 /** How a stopped fiber is stepped: over a call, into one, or out of the current method. */
@@ -194,6 +198,12 @@ interface DebugRuns {
         threadId: Int,
         kind: StepKind,
     ): CompletableFuture<Boolean>
+
+    /**
+     * Pauses the running program: it stops, with the reason `pause`, at the next line any of its fibers reaches.
+     * False when no such run is active.
+     */
+    fun pause(runId: String): Boolean
 
     /** Resumes the stopped program. False when no such run is active. */
     fun resume(runId: String): Boolean
