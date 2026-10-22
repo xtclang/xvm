@@ -86,10 +86,12 @@ documented refusals, not open tasks; the few worth revisiting are under
   the UP07 equal-report bridge off (`run-1679585523095307991`), and with that bridge off and fixture
   files opened before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Not
   reproduced; the trigger is still unknown.
-- [ ] The opt-in IntelliJ `projectLifecycle` check fails: "closed project's pending reply retires"
-  times out after 15 s. It fails the same way on `ef1491a6c`, before the R6–R7 work
-  (`run-15132038242161374573`), so it predates it; its last recorded pass is
-  `run-8589502777162952560`, recorded with the 2026-10-05 rebase acceptance.
+- [x] The opt-in IntelliJ `projectLifecycle` check failed most runs, at "closed project's pending
+  reply retires" or at "Close must overlap a pending native request"; it also failed on
+  `ef1491a6c`, before the R6–R7 work (`run-15132038242161374573`). Fixed in `3813e27a9`: requests
+  still waiting when a connection ends are cancelled (LSP4J left them waiting forever, also the
+  plugin's own `xtc/*` requests), and the check sends its edits before its requests. It passed five
+  runs in a row afterwards, among them `run-13148533765814685610` and `run-9366023975714933137`.
 
 ### Beyond the current scope
 
@@ -180,8 +182,9 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
 - [x] Fibers and threads: a stop holds every fiber that reaches a line; `threads` lists those that
   wait.
 - [x] Stacks: immutable snapshots, with file and line per frame.
-- [ ] Scopes and variables (`scopes` answers none).
-- [ ] Stepping.
+- [x] Scopes and variables: a frame's locals, an object's fields and an array's elements, read on
+  the waiting fiber's thread (`51cccbfbf`, `05e3ff076`; shared X305).
+- [x] Stepping over, into and out of calls (`769d6f34d`, `a78d736f5`; shared X306).
 - [ ] Pause.
 - [ ] Bounded evaluation.
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
