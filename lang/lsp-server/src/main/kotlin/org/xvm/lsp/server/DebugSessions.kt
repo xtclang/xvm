@@ -168,6 +168,12 @@ internal class DebugSessions(
             reference: Int,
         ) = runs.variables(runId, reference)
 
+        override fun evaluate(
+            runId: String,
+            frameId: Int,
+            expression: String,
+        ) = runs.evaluate(runId, frameId, expression)
+
         override fun step(
             runId: String,
             threadId: Int,
