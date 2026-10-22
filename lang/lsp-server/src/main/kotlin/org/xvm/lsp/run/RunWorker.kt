@@ -47,8 +47,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints` to run under the
  * debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`; for a run under the debugger,
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
- * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`) and
- * `continue` (`id`). The debug data's JSON forms are in [RunWorkerDebug].
+ * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
+ * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
+ * in [RunWorkerDebug].
  * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
  * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, `poolThreads`,
  * `consoles`, `runs`, sent after the run's exit), `log` (`text`); for a run under the debugger, `breakpoints` (`id`,
@@ -85,6 +86,7 @@ object RunWorker {
                     "stackTrace" -> runs.stackTrace(command)
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
+                    "step" -> runs.step(command)
                     "continue" -> runs.resume(command["id"].asLong)
                     "shutdown" -> break
                     else -> channel.log("Unknown worker command: $line")
@@ -276,6 +278,13 @@ object RunWorker {
                 }
             }
         }
+
+        /** Answers whether the fiber was stepped; one that does not wait is not, and the program stays stopped. */
+        fun step(command: JsonObject) =
+            reply(command) { debugger ->
+                val step = SessionDebugger.Step.valueOf(command["step"].asString.uppercase())
+                addProperty("stepped", debugger.step(command["thread"].asInt, step))
+            }
 
         fun resume(id: Long) {
             debuggers[id]?.resume()
@@ -502,7 +511,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 4
+        const val PROTOCOL = 5
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
