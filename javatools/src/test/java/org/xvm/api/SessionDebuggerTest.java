@@ -57,9 +57,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Runs modules compiled from source files under a {@link SessionDebugger}: breakpoints by file and
  * line, how they are verified, the stack of a stop, the variables of its frames, stepping over,
- * into and out of calls, stops at thrown exceptions, assert:debug, other fibers waiting while the
- * program is stopped, fibers yielding to each other while breakpoints are set, and closing a
- * stopped run. The compiled XDK modules come from the test resources, as for
+ * into and out of calls, stops at thrown exceptions, pausing and stopping on entry, assert:debug,
+ * other fibers waiting while the program is stopped, fibers yielding to each other while
+ * breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test resources, as for
  * {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
@@ -370,6 +370,61 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void pauseStopsARunningProgramAtTheNextLineItReaches() throws Exception {
+        compile("Spins", SPINS);
+        Stops        stops   = new Stops();
+        var          session = new SessionDebugger(stops);
+        StringWriter output  = new StringWriter();
+        Control      control = run("Spins", output, session);
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+                while (!output.toString().contains("spinning")) {
+                    Thread.sleep(10);
+                }
+            });
+            session.pause();
+            Stop stop = stops.next();
+            assertEquals("pause", stop.reason());
+            StackFrameInfo top = session.stackTrace(stop.threadId()).getFirst();
+            assertEquals("Spins.run", top.name());
+            assertTrue(top.line() == 6 || top.line() == 7, "stopped in the loop: " + top.line());
+
+            // a pause while stopped does nothing: the program runs on after it resumes
+            session.pause();
+            session.resume();
+            Thread.sleep(300);
+            assertEquals(null, stops.poll());
+            assertFalse(session.isStopped());
+        }
+        assertFalse(control.running());
+    }
+
+    @Test
+    public void stopOnEntryStopsAtTheProgramsFirstLine() throws Exception {
+        compile("Entry", TWICE.replace("Twice", "Entry"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        // the program's module is known, so the libraries that run before it do not stop it
+        session.addModule(input().loadModule("Entry"));
+        session.stopOnEntry();
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Entry", output, session);
+        try (control) {
+            Stop stop = stops.next();
+            assertEquals("entry", stop.reason());
+            StackFrameInfo top = session.stackTrace(stop.threadId()).getFirst();
+            assertEquals("Entry.run", top.name());
+            assertTrue(top.line() <= 4, "stopped before the first print: " + top.line());
+            assertFalse(output.toString().contains("before"), output.toString());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(42L, control.result());
+        }
+    }
+
+    @Test
     public void assertDebugStopsTheProgram() throws Exception {
         compile("Pauses", """
                 module Pauses {
@@ -578,6 +633,22 @@ public class SessionDebuggerTest {
                     Int sum = point.x + point.y;
                     @Inject Console console;
                     console.print($"{sum} {ints.size} {text}");
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints "spinning" and then loops on lines 6 and 7 forever.
+     */
+    private static final String SPINS = """
+            module Spins {
+                void run() {
+                    @Inject Console console;
+                    console.print("spinning");
+                    Int count = 0;
+                    while (True) {
+                        ++count;
+                    }
                 }
             }
             """;
