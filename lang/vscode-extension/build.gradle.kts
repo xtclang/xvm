@@ -76,14 +76,6 @@ val copyLspServer =
         outputFile.set(layout.projectDirectory.file("server/lsp-server.jar"))
     }
 
-// Copy DAP server JAR (bundled for debugging support)
-val copyDapServer =
-    tasks.register<CopyFileTask>("copyDapServer") {
-        description = "Copy DAP server JAR"
-        sourceFile.set(project(":dap-server").tasks.named<Jar>("jar").flatMap { it.archiveFile })
-        outputFile.set(layout.projectDirectory.file("server/dap-server.jar"))
-    }
-
 // Copy LICENSE from repository root
 val copyLicense =
     tasks.register<CopyFileTask>("copyLicense") {
@@ -180,7 +172,7 @@ val stagePackage =
         from(copyLicense, copyLanguageConfig)
         from(copyCompilerModelImport) { into("resources") }
         from(copyTextMateGrammar) { into("syntaxes") }
-        from(listOf(copyLspServer, copyDapServer)) { into("server") }
+        from(copyLspServer) { into("server") }
         from(generateIcons) { into("icons") }
         from(npmBundle) { into("out") }
         from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("bin") }
@@ -244,7 +236,7 @@ val testVscodeExtension =
     tasks.register<NpmTask>("testVscodeExtension") {
         group = "verification"
         description = "Run headless integration tests for the VS Code extension"
-        dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
+        dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyLicense, generateIcons)
         args.set(listOf("run", "test:vscode"))
         finalizedBy(pruneTestReports)
         // Cache directory used by @vscode/test-electron to keep the downloaded
@@ -293,7 +285,7 @@ val build =
 // Assemble prepares all resources without packaging
 val assemble =
     tasks.named("assemble") {
-        dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, npmCompile, generateIcons)
+        dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyLicense, npmCompile, generateIcons)
     }
 
 // Launch VS Code with extension loaded for testing

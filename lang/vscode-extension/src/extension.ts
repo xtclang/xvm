@@ -113,7 +113,7 @@ export function activate(context: vscode.ExtensionContext): void {
         createBuildModeStatus(),
         vscode.commands.registerCommand('xtc.selectBuildMode', selectBuildMode),
         vscode.tasks.registerTaskProvider(XtcTaskProvider.type, new XtcTaskProvider(getClient)),
-        vscode.debug.registerDebugAdapterDescriptorFactory('xtc', new XtcDebugAdapterDescriptorFactory(context)),
+        vscode.debug.registerDebugAdapterDescriptorFactory('xtc', new XtcDebugAdapterDescriptorFactory(getClient)),
         vscode.debug.registerDebugConfigurationProvider('xtc', new XtcDebugConfigurationProvider(getClient))
     );
 
