@@ -10,6 +10,7 @@ import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import org.eclipse.lsp4j.debug.PauseArguments
@@ -18,6 +19,8 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceArguments
+import org.eclipse.lsp4j.debug.StepInArguments
+import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
@@ -34,8 +37,8 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * A debug session launches through the language server's runs, owns the program it launched, installs its
- * breakpoints before the program's first line, and reports stops, threads, stacks and variables from the program.
- * What it cannot do yet, it says so and does not advertise.
+ * breakpoints before the program's first line, reports stops, threads, stacks and variables from the program, and
+ * steps it. What it cannot do yet, it says so and does not advertise.
  */
 class XtcDebugServerTest {
     private val runs = Runs()
@@ -191,6 +194,20 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `next, stepIn and stepOut step the stopped fiber, and a fiber that does not wait cannot be stepped`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        server.next(NextArguments().apply { threadId = 12 }).get(10, SECONDS)
+        server.stepIn(StepInArguments().apply { threadId = 12 }).get(10, SECONDS)
+        server.stepOut(StepOutArguments().apply { threadId = 12 }).get(10, SECONDS)
+        assertThat(runs.steps).containsExactly(12 to StepKind.OVER, 12 to StepKind.IN, 12 to StepKind.OUT)
+
+        assertFailsWith(XtcDebugServer.NOT_STOPPED) { server.next(NextArguments().apply { threadId = 13 }) }
+    }
+
+    @Test
     fun `a launch without debugging installs no breakpoints and says so`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App", "noDebug" to true)).get(10, SECONDS)
@@ -201,6 +218,8 @@ class XtcDebugServerTest {
         assertThat(server.threads().get(10, SECONDS).threads).isEmpty()
         assertThat(server.scopes(ScopesArguments().apply { frameId = 1 }).get(10, SECONDS).scopes).isEmpty()
         assertThat(server.variables(VariablesArguments().apply { variablesReference = 7 }).get(10, SECONDS).variables).isEmpty()
+        assertFailsWith(XtcDebugServer.NOT_STOPPED) { server.next(NextArguments().apply { threadId = 12 }) }
+        assertThat(runs.steps).isEmpty()
     }
 
     @Test
@@ -362,6 +381,7 @@ class XtcDebugServerTest {
         val inputs = CopyOnWriteArrayList<String>()
         val stopped = CopyOnWriteArrayList<String>()
         val installed = CopyOnWriteArrayList<SourceBreakpoints>()
+        val steps = CopyOnWriteArrayList<Pair<Int, StepKind>>()
         var resumed = 0
 
         override fun launch(
@@ -426,6 +446,12 @@ class XtcDebugServerTest {
                 else -> emptyList()
             },
         )
+
+        override fun step(
+            runId: String,
+            threadId: Int,
+            kind: StepKind,
+        ): CompletableFuture<Boolean> = CompletableFuture.completedFuture((threadId == 12).also { if (it) steps.add(threadId to kind) })
 
         override fun resume(runId: String) = true.also { resumed++ }
     }
