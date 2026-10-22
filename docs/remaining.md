@@ -303,10 +303,11 @@ passes with the workaround disabled. The gates are in
   first thread the adapter reports, and each child session's; natively, X308 passes with it and
   fails on `main` without it. Gate after a release: X308 in IntelliJ with coverage full, and its
   IntelliJ case restored.
-- [ ] Look into X304 on LSP4IJ `main`: with a build of `main` (`ef2b18c3`), with or without UP30,
-  IntelliJ's console no longer shows the output a program prints after Resume (X304 expects
-  `after 42`; the exit code still matches). It passes on 0.21.0. Find the change before the next
-  LSP4IJ release reaches the pin.
+- [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
+  prints after Resume, but that was our probe's race: it read the console before the exit code, so a
+  program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
+  reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
+  (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 - [ ] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758)): after an exception stop, LSP4IJ shows the exception in the editor one
   second later, on the editor it found at the stop, without checking that it is still open; an
   editor closed in that second fails with `DisposalException` "Editor is already disposed" (0.21.0
@@ -318,13 +319,13 @@ passes with the workaround disabled. The gates are in
 ### LSP4IJ: DAP features ready locally, not filed
 
 IntelliJ's side of R9 and R10, each a local commit in `~/src/lsp4ij` on a branch off `main` (`ef2b18c3`),
-with tests ([details](errs-upstream-issues.md#lsp4ij-dap-features-prepared-2026-10-22)). UP32 and UP34 are
-filed; the others wait for their R9 or R10 adapter work, a native check, and the user's go-ahead to file them.
+with tests ([details](errs-upstream-issues.md#lsp4ij-dap-features-prepared-2026-10-22)). UP32, UP33 and UP34
+are filed; the others wait for their R9 or R10 adapter work, a native check, and the user's go-ahead to file them.
 
-- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `05360b0d`): breakpoints that don't suspend as DAP logpoints; the
+- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `f2a38e58`): breakpoints that don't suspend as DAP logpoints; the
   "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
   program stopped while IntelliJ shows it running.
-- [ ] UP33 `feat/dap-exception-info` (`04164852`): the exception hint from `exceptionInfo`.
+- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), `feat/dap-exception-info` `04164852`): the exception hint from `exceptionInfo`.
 - [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), `feat/dap-exception-filter-conditions` `a4f73d29`): conditions on exception filters, sent
   as `filterOptions`.
 - [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.
