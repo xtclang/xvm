@@ -115,24 +115,20 @@ internal object RunWorkerDebug {
                 it.asJsonObject
             }.map { ScopeState(it["name"].asString, it["reference"].asInt) }
 
-    fun variables(variables: List<VariableState>) =
-        JsonArray().apply {
-            variables.forEach { variable ->
-                add(
-                    JsonObject().apply {
-                        addProperty("name", variable.name)
-                        addProperty("value", variable.value)
-                        addProperty("type", variable.type)
-                        addProperty("reference", variable.variablesReference)
-                    },
-                )
-            }
+    fun variables(variables: List<VariableState>) = JsonArray().apply { variables.forEach { add(variable(it)) } }
+
+    fun variable(variable: VariableState) =
+        JsonObject().apply {
+            addProperty("name", variable.name)
+            addProperty("value", variable.value)
+            addProperty("type", variable.type)
+            addProperty("reference", variable.variablesReference)
         }
 
-    fun variablesOf(json: JsonArray): List<VariableState> =
-        json.map { it.asJsonObject }.map {
-            VariableState(it["name"].asString, it["value"].asString, it["type"].asString, it["reference"].asInt)
-        }
+    fun variablesOf(json: JsonArray): List<VariableState> = json.map { variableOf(it.asJsonObject) }
+
+    fun variableOf(json: JsonObject) =
+        VariableState(json["name"].asString, json["value"].asString, json["type"].asString, json["reference"].asInt)
 
     fun exceptions(stops: ExceptionStops) =
         JsonObject().apply {
