@@ -5,9 +5,11 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.FrameState
+import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
+import org.xvm.debug.VariableState
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
@@ -289,6 +291,18 @@ internal class EmbeddedRuns(
         runId: String,
         thread: Int,
     ): CompletableFuture<List<FrameState>> = debugged(runId) { worker.stackTrace(it, thread) }
+
+    /** A stopped frame's scopes. */
+    internal fun scopes(
+        runId: String,
+        frame: Int,
+    ): CompletableFuture<List<ScopeState>> = debugged(runId) { worker.scopes(it, frame) }
+
+    /** The variables of a scope, or the fields or elements of a variable. */
+    internal fun variables(
+        runId: String,
+        reference: Int,
+    ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference) }
 
     /** Resumes a stopped program under the debugger. False when no such run is active. */
     internal fun resume(runId: String): Boolean {

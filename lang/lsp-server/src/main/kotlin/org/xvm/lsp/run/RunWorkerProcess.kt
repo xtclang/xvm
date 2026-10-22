@@ -6,9 +6,11 @@ import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.FrameState
+import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
+import org.xvm.debug.VariableState
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.IOException
@@ -270,6 +272,21 @@ internal class RunWorkerProcess(
         thread: Int,
     ): CompletableFuture<List<FrameState>> =
         request("stackTrace", id) { addProperty("thread", thread) }.thenApply { RunWorkerDebug.framesOf(it.getAsJsonArray("frames")) }
+
+    /** A stopped frame's scopes. */
+    fun scopes(
+        id: Long,
+        frame: Int,
+    ): CompletableFuture<List<ScopeState>> =
+        request("scopes", id) { addProperty("frame", frame) }.thenApply { RunWorkerDebug.scopesOf(it.getAsJsonArray("scopes")) }
+
+    /** The variables of a scope, or the fields or elements of a variable, as the waiting fiber read them. */
+    fun variables(
+        id: Long,
+        reference: Int,
+    ): CompletableFuture<List<VariableState>> =
+        request("variables", id) { addProperty("reference", reference) }
+            .thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
 
     /** Resumes a stopped run. */
     fun resume(id: Long) = command("continue", id)
