@@ -176,17 +176,20 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
 - [x] A runtime debugger per run, for hosts without a terminal: `SessionDebugger`, set through
   `EmbeddingSupport.runMethod()` before the program starts, with the runner's own code left alone
   (`41cb8b60c`).
-- [ ] Initial suspension (stop on entry).
+- [x] Initial suspension: a launch's `stopOnEntry` stops at the first line of the program's own
+  modules (`5a7bf8def`, `48f00ef8c`; shared X309 in VS Code; IntelliJ's configuration has no option).
 - [x] Real, verified breakpoints, installed before the program's first line (`41cb8b60c`, `e73878550`).
-- [ ] Exception stops: every thrown exception, or those no frame will catch, at the frame that throws
-  (runtime `bf0b25af4`; the editors' half is next).
+- [x] Exception stops: every thrown exception, or those no frame will catch, at the frame that throws,
+  with filters in both editors, Uncaught Exceptions on by default (`bf0b25af4`, `9d2c2f738`; shared
+  X307).
 - [x] Fibers and threads: a stop holds every fiber that reaches a line; `threads` lists those that
   wait.
 - [x] Stacks: immutable snapshots, with file and line per frame.
 - [x] Scopes and variables: a frame's locals, an object's fields and an array's elements, read on
   the waiting fiber's thread (`51cccbfbf`, `05e3ff076`; shared X305).
 - [x] Stepping over, into and out of calls (`769d6f34d`, `a78d736f5`; shared X306).
-- [ ] Pause.
+- [x] Pause, at the next line a fiber reaches (`5a7bf8def`, `48f00ef8c`; shared X308 in VS Code).
+  IntelliJ's Pause Program waits on LSP4IJ (UP30).
 - [ ] Watches and hover on variables and paths such as `point.x` or `ints[1]`, answered from the
   variables without running code (the console debugger's `WO` and `WR`).
 - [ ] Bounded evaluation: Debug Console expressions, watches and hover on any expression, with side
@@ -291,6 +294,18 @@ passes with the workaround disabled. The gates are in
 - [ ] UP03 (#1720, #1739): narrow the guarded Rename/Move entry points; gate: X103 and X130.
 - [ ] UP03: follow LSP4IJ #1740 (generic UI wait during the `will*` requests), still open.
 - UP13 stays: the `createSettings` override is LSP4IJ's supported extension point.
+
+### LSP4IJ: pull requests open
+
+- [ ] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)): LSP4IJ's `DAPDebugProcess` did not implement `startPausing()` (0.21.0 and
+  `main`), so IntelliJ's Pause Program did nothing for any DAP session. The pull request pauses the
+  first thread the adapter reports, and each child session's; natively, X308 passes with it and
+  fails on `main` without it. Gate after a release: X308 in IntelliJ with coverage full, and its
+  IntelliJ case restored.
+- [ ] Look into X304 on LSP4IJ `main`: with a build of `main` (`ef2b18c3`), with or without UP30,
+  IntelliJ's console no longer shows the output a program prints after Resume (X304 expects
+  `after 42`; the exit code still matches). It passes on 0.21.0. Find the change before the next
+  LSP4IJ release reaches the pin.
 
 ### LSP4J
 

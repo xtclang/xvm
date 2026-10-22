@@ -1,6 +1,6 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-**Status (2026-10-22):** sessions are real, stop at breakpoints, show variables and step, in VS Code and IntelliJ. R6 is done: a
+**Status (2026-10-22):** sessions are real, stop at breakpoints and exceptions, show variables, step and pause, in VS Code and IntelliJ (pause in VS Code only, until LSP4IJ pauses). R6 is done: a
 session runs inside the language server and travels over its connection, so a `launch` builds and
 runs the module with the same embedded build and execution workers as Run, reports the program's
 output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7's first
@@ -217,8 +217,8 @@ The existing console debugger is a full implementation of the `Debugger` interfa
 | Reset to a previous frame (`T`) | Fully implemented | `restartFrame` (R11) |
 | Services and fibers view (`VF`) | Fully implemented | `threads`, with every service and fiber (R12) |
 
-Status (2026-10-22): line breakpoints, stacks, variables, stepping and the runtime half of
-exception stops work through `SessionDebugger`; what is still to do, with its R task, is in the
+Status (2026-10-22): line breakpoints, stacks, variables, stepping, exception stops, pause and stop
+on entry work through `SessionDebugger`; what is still to do, with its R task, is in the
 [execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 
 **Step modes** (enum `StepMode`):
