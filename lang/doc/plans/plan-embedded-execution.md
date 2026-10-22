@@ -3,8 +3,8 @@
 Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of embedded build and
 Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
-2026-10-22 for VS Code, and so did R7's first part: breakpoints, stops, threads and stacks. The rest
-of R7 and the release gate (R8) are not implemented. The audit in the next section describes the
+2026-10-22, and so did R7's first part: breakpoints, stops, threads and stacks, in VS Code and
+IntelliJ. The rest of R7 and the release gate (R8) are not implemented. The audit in the next section describes the
 code before the first delivery.
 
 ## First delivery (2026-10-15)
@@ -379,9 +379,8 @@ this bridge; they cannot be inferred from compiler type hints.
   embedded mode, and Gradle mode still runs the Gradle task. Shared X285 checks it in VS Code
   (`run-ZuRYb6`): exit code 4, the breakpoint unverified with the reason, the session ending with
   the program, and a line sent as the Debug Console's `evaluate` request read by a second program.
-  IntelliJ keeps DAP disabled and offers no Debug runner (X285). Enabling it needs a process handler
-  that carries the session over the language server connection, which LSP4IJ's DAP client can use,
-  since it reads DAP from a handler's output and writes to its input; that parity is R8's.
+  IntelliJ then kept DAP disabled and offered no Debug runner (X285); since R7's fourth step, its
+  debug sessions are the same, through LSP4IJ's DAP client.
 - [ ] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
   breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping and bounded
   evaluation. Test source revisions, stale handles, resume/stop races and multiple service contexts.
@@ -413,12 +412,18 @@ this bridge; they cannot be inferred from compiler type hints.
      code; X285 keeps the run and console input. VS Code `run-iwSxfQ` passes both with the other
      execution cases.
 
-  Still open: variables and scopes, stepping, exception stops, pause, bounded evaluation, source
-  revisions (a breakpoint is matched by file and line, not by the revision that was built), and
-  IntelliJ (step 4: LSP4IJ's DAP client over a process handler on the language server
-  connection, which uses experimental API, or IntelliJ's own debugger API). The debugger is the
-  runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program at
-  a time satisfies. Integration bursts are listed in the
+  4. *IntelliJ (`69c2ff2f8`; chosen 2026-10-22: LSP4IJ's DAP client).* The Ecstasy Application
+     configuration is an LSP4IJ DAP run configuration whose Debug, offered with the embedded
+     compiler only, goes to LSP4IJ's runner; Run keeps its own paths. The adapter's "server" is a
+     process handler without an operating-system process, which carries the session's framed DAP
+     messages over the language server connection. Shared X304 passes natively in IntelliJ too
+     (`run-6846671860304618586`), and X285 debugs DebugRun to its exit code. LSP4IJ's DAP API is
+     experimental: Plugin Verifier reports it without failing the build.
+
+  Still open: variables and scopes, stepping, exception stops, pause, bounded evaluation, and
+  source revisions (a breakpoint is matched by file and line, not by the revision that was
+  built). The debugger is the runtime's, so it debugs every run of its `EmbeddingSupport`, which
+  the worker's one program at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
 - [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
