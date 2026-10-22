@@ -330,6 +330,9 @@ are filed; the others wait for their R9 or R10 adapter work, a native check, and
   as `filterOptions`.
 - [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.
 - [ ] UP36 `feat/dap-value-formats` (`b0a76151`): a "Show Values as Hexadecimal" toggle.
+- [ ] UP37, not filed: `DAPExpressionCodeFragment` ignores the `isPhysical` that IntelliJ asks for, so
+  IntelliJ 2026.2's logpoint editor fails its inspection pass's assertion on a breakpoint's "Evaluate and
+  log" expression, an IDE error with the `-ea` IntelliJ ships. Fix: honor `isPhysical` in the fragment.
 
 ### LSP4J
 
