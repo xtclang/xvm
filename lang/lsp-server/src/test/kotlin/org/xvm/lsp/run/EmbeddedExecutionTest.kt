@@ -1,5 +1,6 @@
 package org.xvm.lsp.run
 
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -20,11 +21,15 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuild
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.server.DebugMessageParams
+import org.xvm.lsp.server.DebugSessionParams
+import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns
 import org.xvm.lsp.server.RunExitedParams
 import org.xvm.lsp.server.RunInputParams
 import org.xvm.lsp.server.RunOutputParams
 import org.xvm.lsp.server.RunParams
+import org.xvm.lsp.server.StopRunParams
 import org.xvm.lsp.server.XtcLanguageClient
 import org.xvm.lsp.server.XtcLanguageServer
 import org.xvm.lsp.server.launchStdio
@@ -496,6 +501,102 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a run stopped while its module builds never starts, and reports that it was stopped`() {
+        CompilerTestSupport.configure()
+        val greeter = source("Late.x", "module Late { void run() { @Inject Console console; console.print(\"started\"); } }")
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Late", greeter)))
+            // on the class's worker, which is already started; closing these runs would close it
+            EmbeddedRuns(adapter, { client }, worker).let { runs ->
+                val started = runs.run(RunParams(module = "Late", runId = "stopped-early"))
+                assertThat(runs.stop(StopRunParams("stopped-early"))).isTrue()
+
+                assertThat(started.get(60, SECONDS).runId).isEqualTo("stopped-early")
+                val exit = client.exits.poll(60, SECONDS)!!
+                assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED_BEFORE_START)
+                assertThat(client.output.toString()).doesNotContain("started")
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    fun `a debug session over the server's connection builds and runs the module, and its exit ends the session`() {
+        CompilerTestSupport.configure()
+        val hello =
+            source("Hello.x", "module Hello { void run(String[] args) { @Inject Console console; console.print($\"hello {args[0]}\"); } }")
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Hello", hello)))
+            // on the class's worker, which is already started; closing these runs would close it
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Hello", "moduleUri": "$hello", "args": ["world"]}""")
+            sessions.request(id, 3, "configurationDone")
+            val messages = client.until(id) { it.event == "terminated" }
+
+            val initialize = messages.indexOfFirst { it.response == "initialize" }
+            assertThat(messages[initialize]["success"].asBoolean).isTrue()
+            assertThat(messages.indexOfFirst { it.event == "initialized" }).isGreaterThan(initialize)
+            assertThat(messages.single { it.response == "launch" }["success"].asBoolean).isTrue()
+            assertThat(messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("hello world")
+            assertThat(messages.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isZero()
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `a line a debug session's client sends from its console while the program runs is the program's input`() {
+        CompilerTestSupport.configure()
+        val asks = source("Asks.x", ONE_LINE.trimIndent())
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Asks", asks)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Asks", "noDebug": true}""")
+            sessions.request(id, 3, "configurationDone")
+            client.until(id) { it.event == "output" && "Name? " in it["body"].asJsonObject["output"].asString }
+            sessions.request(id, 4, "evaluate", """{"expression": "Ada", "context": "repl"}""")
+            val messages = client.until(id) { it.event == "terminated" }
+
+            assertThat(messages.single { it.response == "evaluate" }["success"].asBoolean).isTrue()
+            assertThat(messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("Hello, Ada!")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `terminating a debug session while its module builds keeps the program from starting`() {
+        CompilerTestSupport.configure()
+        val late = source("Waits.x", "module Waits { void run() { @Inject Console console; console.print(\"started\"); } }")
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Waits", late)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            // without configurationDone, the program would start only after a short wait
+            sessions.request(id, 2, "launch", """{"module": "Waits"}""")
+            sessions.request(id, 3, "terminate")
+            val messages = client.until(id) { it.event == "terminated" }
+
+            val output = messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains(EmbeddedRuns.STOPPED_BEFORE_START).doesNotContain("started\n")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `runs do not start the runner's HTTP endpoint`() {
         assertThat(run("Exit").output).doesNotContain("Runner is listening")
     }
@@ -849,6 +950,55 @@ class EmbeddedExecutionTest {
         }
     }
 
+    /** Records the DAP messages that debug sessions send their client. */
+    private class DebugClient :
+        XtcLanguageClient,
+        LanguageClient by mock(LanguageClient::class.java) {
+        private val messages = LinkedBlockingQueue<DebugMessageParams>()
+
+        override fun debugMessage(params: DebugMessageParams) {
+            messages.add(params)
+        }
+
+        // a debug session's program reports through DAP events, not the run notifications
+        override fun runOutput(params: RunOutputParams) = error("run output outside the debug session: $params")
+
+        override fun runExited(params: RunExitedParams) = error("run exit outside the debug session: $params")
+
+        /** The session's messages, in order, up to the first that satisfies [last]. */
+        fun until(
+            sessionId: String,
+            last: (JsonObject) -> Boolean,
+        ): List<JsonObject> {
+            val received = mutableListOf<JsonObject>()
+            while (received.none(last)) {
+                val next = messages.poll(60, SECONDS) ?: error("no DAP message within 60 s after $received")
+                if (next.sessionId == sessionId) received += next.message
+            }
+            return received
+        }
+    }
+
+    /** Sends a DAP request; without [arguments], it has none, as VS Code sends `configurationDone`. */
+    private fun DebugSessions.request(
+        sessionId: String,
+        seq: Int,
+        command: String,
+        arguments: String? = null,
+    ) = receive(
+        DebugMessageParams(
+            sessionId,
+            JsonParser
+                .parseString(
+                    """{"seq": $seq, "type": "request", "command": "$command"${arguments?.let { ", \"arguments\": $it" }.orEmpty()}}""",
+                ).asJsonObject,
+        ),
+    )
+
+    private val JsonObject.event get() = takeIf { it["type"]?.asString == "event" }?.get("event")?.asString
+
+    private val JsonObject.response get() = takeIf { it["type"]?.asString == "response" }?.get("command")?.asString
+
     private data class Outcome(
         val output: String,
         val code: Long?,
@@ -894,6 +1044,17 @@ class EmbeddedExecutionTest {
                     console.print("started");
                     // runs until stopped: an empty while (True) is rejected as non-terminating
                     for (Int count = 0; count >= 0; ++count) {}
+                }
+            }
+            """
+
+        const val ONE_LINE =
+            """
+            module Asks {
+                void run() {
+                    @Inject Console console;
+                    String name = console.readLine("Name? ");
+                    console.print($"Hello, {name}!");
                 }
             }
             """
