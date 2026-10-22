@@ -662,6 +662,16 @@ class EmbeddedExecutionTest {
             assertThat(n["value"].asString).isEqualTo("21")
             assertThat(n["type"].asString).isEqualTo("Int")
 
+            // a watch on the stopped frame evaluates a path there, and one that cannot be evaluated says why
+            val frameId = frames.first()["id"].asInt
+            sessions.request(id, 20, "evaluate", """{"expression": "n", "frameId": $frameId, "context": "watch"}""")
+            val watched = client.until(id) { it.response == "evaluate" }.last()
+            assertThat(watched["body"].asJsonObject["result"].asString).isEqualTo("21")
+            sessions.request(id, 21, "evaluate", """{"expression": "nope", "frameId": $frameId, "context": "watch"}""")
+            val refused = client.until(id) { it.response == "evaluate" }.last()
+            assertThat(refused["success"].asBoolean).isFalse()
+            assertThat(refused["message"].asString).isEqualTo("There is no variable \"nope\" in this frame.")
+
             sessions.request(id, 9, "continue", """{"threadId": $thread}""")
             val rest = client.until(id) { it.event == "terminated" }.also(seen::addAll)
             assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
