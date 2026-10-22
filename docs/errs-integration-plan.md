@@ -1598,6 +1598,10 @@ to the compiler-only PR:
   embedded build and run, and owns its program; VS Code uses it, and IntelliJ keeps DAP disabled
   ([below](#r6-debug-sessions-2026-10-22)).
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
+  *Partial (2026-10-22):* breakpoints stop the program in VS Code, with threads, stacks and
+  continue, through a runtime debugger in the execution worker
+  ([below](#r7-breakpoints-stops-and-stacks-2026-10-22)); variables, stepping, exception stops,
+  pause, evaluation, source revisions and IntelliJ remain.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
 
 Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Compiler-only operations must
@@ -1606,8 +1610,8 @@ child containers are the foundation; existing IDE shell commands and the DAP pla
 satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6); real breakpoint support
 needs the runtime bridge (R7).
 
-Current native automation inventory (2026-10-21): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **305 cases**: X1–X303 except the retired
+Current native automation inventory (2026-10-22): the shared catalog,
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **306 cases**: X1–X304 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
 added since, among them the embedded run cases above, have selected native receipts recorded with
@@ -2390,6 +2394,60 @@ Not covered: IntelliJ, which keeps DAP disabled and offers no Debug runner; typi
 Debug Console itself, which X285 replaces by the `evaluate` request it sends; and any runtime
 debugging, which is R7. Validation: `:lang:lsp-server:test` 2,379 tests, 0 failures, the 2 existing skips; `:lang:dap-server:test` 12,
 0 failures; ESLint, `tsc` and `spotlessCheck` pass.
+
+### R7: breakpoints, stops and stacks (2026-10-22)
+
+R7's first end-to-end case, on this branch only (not mirrored into #693), in three commits, each an
+integration burst of its own ([below](#r6r7-integration-bursts-2026-10-22)):
+
+- `41cb8b60c` (R7a, `javatools`): `SessionDebugger`, a runtime debugger that a host drives through
+  calls. Breakpoints by file and 1-based line, moved to the next line with code or refused with the
+  reason; a stop holds every fiber that reaches a line, with immutable stack snapshots; the runner's
+  own code is never debugged; closing a stopped run ends the program where it is.
+  `EmbeddingSupport.runMethod()` takes a run's debugger. `SessionDebuggerTest` 5 tests;
+  `:javatools:test` 642 tests, 0 failures, the 42 existing skips.
+- `e73878550` (R7b, `lang`): the execution worker runs a debugged program under a `SessionDebugger`
+  (worker protocol 3), and the DAP session installs breakpoints before the program's first line,
+  reports them with `breakpoint` events, forwards stops, and answers `threads`, `stackTrace`,
+  `scopes` (none) and `continue`. `XtcDebugServerTest` 15 tests; `EmbeddedExecutionTest` 37 on a real
+  worker; `:lang:lsp-server:test` 2,381 tests, 0 failures, the 2 existing skips.
+- `bb016ce17` (R7c): shared X304 checks a breakpoint, the stack VS Code asks for, and Continue to the
+  exit code; X285 keeps the run and console input. VS Code `run-iwSxfQ` passes X280–X285, X287,
+  X289 and X304, X304 on its first run. No VS Code client code changed.
+
+Found on the way: a stopped program that was terminated ran on to its end before the runner killed
+it (exit code 42 instead of none). Closing a run now terminates its debugger first, which ends the
+program's fibers without running more of it, and the debugger leaves the runner's own code alone.
+Not covered: variables, stepping, exception stops, pause, evaluation, source revisions, and
+IntelliJ, which needs the step 4 decision (LSP4IJ's DAP client over a process handler on the
+language server connection, with experimental API, or IntelliJ's own debugger API).
+
+### R6–R7 integration bursts (2026-10-22)
+
+R6 and R7's first part are seven commits on this branch, none mirrored into #693 yet. They fall
+into three bursts that integrate in this order; each lists what it needs and what its own
+validation is. The conflict previews were cherry-picks into throwaway worktrees on 2026-10-22,
+onto master `1c4efe422` and #693's tip `6386f609f`.
+
+| Burst | Commits, in order | Paths | Needs | Goes to | Validation |
+|-------|-------------------|-------|-------|---------|------------|
+| A: runtime | `6312fd242` (without its `EmbeddedExecutionTest` case, which is B's), `41cb8b60c` (R7a) | `javatools` only | master | A runtime pull request to master, as #703 was | `:javatools:test` (`EmbeddingSupportTest`, `SessionDebuggerTest`), `spotlessCheck` |
+| B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | #693, or a `lang` pull request, after A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
+| C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | With B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
+
+The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
+plans in `lang/doc`, whose changes travel with B and C.
+
+Conflict previews:
+- Onto master, `6312fd242`'s `javatools` part applies; its `lang` test file conflicts, since master
+  has no `lang` server, and is left out. `41cb8b60c` then conflicts once, in the signature of
+  `EmbeddingSupport.runMethod()`: master writes `ErrorListener errs` and `Objects.requireNonNull`.
+  The resolution keeps R7a's two methods in master's spelling.
+- Onto #693, all six code commits apply in order (`6312fd242`, `ccc0695d5`, `44d121779`,
+  `41cb8b60c`, `e73878550`, `bb016ce17`) apart from one conflict: `ccc0695d5` deletes
+  `lang/dap-server/.../XtcDebugServerLauncher.kt`, which #693 has in a slightly different form, and
+  the resolution is to delete it. #693 carries `javatools` as well, so A can go into it with B and C
+  if #693 is integrated before the runtime pull request.
 
 ### IntelliJ parity backlog (L60)
 

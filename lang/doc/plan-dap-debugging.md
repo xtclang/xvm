@@ -1,18 +1,20 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-**Status (2026-10-22):** debug sessions are real, but there is no runtime debugger yet. R6 is done:
-a session runs inside the language server and travels over its connection, so a `launch` builds and
+**Status (2026-10-22):** sessions are real and stop at breakpoints, in VS Code. R6 is done: a
+session runs inside the language server and travels over its connection, so a `launch` builds and
 runs the module with the same embedded build and execution workers as Run, reports the program's
-output and exit, and stops it on `terminate`, `disconnect` or the end of the session. VS Code uses
-it for `F5`, `Ctrl+F5` and `launch.json` configurations in embedded mode; IntelliJ keeps DAP
-registration disabled. Breakpoints are reported unverified with the reason, there are no threads,
-and only `configurationDone` and `terminate` are advertised. The session code is the `dap-server`
-library, hosted by the language server ([server README](../lsp-server/README.md#embedded-build-and-run));
-sections 1 and 11 still describe the earlier plan, in which the adapter was a process of its own.
-The runtime bridge below is R7 in the
-[execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance). Since the
-program runs in an execution worker JVM, R7's debugger has to live in that worker, and the session
-reaches it through the worker's channel instead of holding `Frame` objects itself.
+output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7's first
+part works too: the runtime debugger, `SessionDebugger`, runs in the execution worker beside the
+program, and the session installs breakpoints before the program's first line, reports how each
+was installed, forwards stops, and answers `threads`, `stackTrace` and `continue` (shared X304).
+Variables, stepping, exception breakpoints, pause and evaluation are not implemented, and only
+`configurationDone` and `terminate` are advertised. IntelliJ keeps DAP registration disabled.
+The session code is the `dap-server` library, hosted by the language server
+([server README](../lsp-server/README.md#embedded-build-and-run)); sections 1, 5 and 11 below still
+describe the earlier plan, in which the adapter was a process of its own that held runtime `Frame`
+objects. As built, the session holds only snapshots the worker sends, and the runtime half lives in
+the worker; the [execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance)
+has what R7 still needs.
 
 This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
