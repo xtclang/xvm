@@ -3,6 +3,11 @@ package org.xvm.lsp.server
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
+import org.xvm.debug.BreakpointState
+import org.xvm.debug.FrameState
+import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StopState
+import org.xvm.debug.ThreadState
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
@@ -145,13 +150,14 @@ internal class EmbeddedRuns(
 
     /**
      * Builds the module and, if the build succeeds, runs it once [ready] completes, as `xtc/run` does at once and a
-     * debug session does after its client's configuration. [events] receives the program's output and its single
-     * exit, also when the run is stopped before the program starts.
+     * debug session does after its client's configuration. [ready]'s value is the breakpoints to install before the
+     * program's first line, or null to run it without the debugger. [events] receives the program's output and its
+     * single exit, also when the run is stopped before the program starts, and a debugged run's breakpoints and stops.
      */
     internal fun launch(
         params: RunParams,
         events: RunWorkerProcess.Listener,
-        ready: CompletionStage<*> = CompletableFuture.completedFuture(Unit),
+        ready: CompletionStage<out List<SourceBreakpoints>?> = CompletableFuture.completedFuture(null),
     ): CompletableFuture<RunResponse> {
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
         val compiler = compiler() ?: return unsupported()
@@ -166,8 +172,8 @@ internal class EmbeddedRuns(
                     synchronized(inputLock) { waiting.remove(runId) }
                     return@thenCompose CompletableFuture.completedFuture(RunResponse(null, build))
                 }
-                ready.thenApply {
-                    start(runId, params, result, target.name, events)
+                ready.thenApply { breakpoints ->
+                    start(runId, params, result, target.name, breakpoints, events)
                     RunResponse(runId, build)
                 }
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
@@ -178,6 +184,7 @@ internal class EmbeddedRuns(
         params: RunParams,
         result: XdkBuildResult,
         module: String,
+        breakpoints: List<SourceBreakpoints>?,
         events: RunWorkerProcess.Listener,
     ) {
         val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
@@ -195,9 +202,17 @@ internal class EmbeddedRuns(
                     params.method ?: "run",
                     params.args.orEmpty(),
                     params.workingDirectory ?: result.workingDirectory,
+                    breakpoints,
                 ),
                 object : RunWorkerProcess.Listener {
                     override fun output(text: String) = events.output(text)
+
+                    override fun breakpoints(
+                        path: String,
+                        states: List<BreakpointState>,
+                    ) = events.breakpoints(path, states)
+
+                    override fun stopped(stop: StopState) = events.stopped(stop)
 
                     override fun exited(
                         code: Long?,
@@ -259,6 +274,34 @@ internal class EmbeddedRuns(
         worker.stop(id)
         return true
     }
+
+    /** Replaces one file's breakpoints in a running program under the debugger. */
+    internal fun setBreakpoints(
+        runId: String,
+        breakpoints: SourceBreakpoints,
+    ): CompletableFuture<List<BreakpointState>> = debugged(runId) { worker.setBreakpoints(it, breakpoints) }
+
+    /** The fibers of a stopped program under the debugger. */
+    internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
+
+    /** A stopped fiber's stack. */
+    internal fun stackTrace(
+        runId: String,
+        thread: Int,
+    ): CompletableFuture<List<FrameState>> = debugged(runId) { worker.stackTrace(it, thread) }
+
+    /** Resumes a stopped program under the debugger. False when no such run is active. */
+    internal fun resume(runId: String): Boolean {
+        val id = workerIds[runId] ?: return false
+        worker.resume(id)
+        return true
+    }
+
+    private fun <T> debugged(
+        runId: String,
+        request: (Long) -> CompletableFuture<T>,
+    ): CompletableFuture<T> =
+        workerIds[runId]?.let(request) ?: CompletableFuture.failedFuture(IllegalStateException("The program is not running"))
 
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
     internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + worker.tracked()

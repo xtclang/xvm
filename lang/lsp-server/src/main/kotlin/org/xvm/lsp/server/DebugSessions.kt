@@ -5,11 +5,14 @@ import com.google.gson.JsonParser
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
+import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
 import org.xvm.debug.LaunchResult
 import org.xvm.debug.LaunchTarget
 import org.xvm.debug.ProgramEvents
+import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StopState
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.run.RunWorkerProcess
 import java.io.Closeable
@@ -105,7 +108,7 @@ internal class DebugSessions(
             runId: String,
             target: LaunchTarget,
             events: ProgramEvents,
-            ready: CompletionStage<*>,
+            ready: CompletionStage<out List<SourceBreakpoints>?>,
         ): CompletableFuture<LaunchResult> =
             runs
                 .launch(
@@ -117,6 +120,13 @@ internal class DebugSessions(
                             code: Long?,
                             error: String?,
                         ) = events.exited(code, error)
+
+                        override fun breakpoints(
+                            path: String,
+                            states: List<BreakpointState>,
+                        ) = events.breakpoints(path, states)
+
+                        override fun stopped(stop: StopState) = events.stopped(stop)
                     },
                     ready,
                 ).thenApply { LaunchResult(it.runId, describe(it.build)) }
@@ -127,6 +137,20 @@ internal class DebugSessions(
         ) = runs.input(RunInputParams(runId, text))
 
         override fun stop(runId: String) = runs.stop(StopRunParams(runId))
+
+        override fun setBreakpoints(
+            runId: String,
+            breakpoints: SourceBreakpoints,
+        ) = runs.setBreakpoints(runId, breakpoints)
+
+        override fun threads(runId: String) = runs.threads(runId)
+
+        override fun stackTrace(
+            runId: String,
+            threadId: Int,
+        ) = runs.stackTrace(runId, threadId)
+
+        override fun resume(runId: String) = runs.resume(runId)
     }
 
     private companion object {
