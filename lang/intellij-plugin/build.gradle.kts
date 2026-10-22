@@ -255,10 +255,6 @@ val syncGradleWrapperResources =
 sourceSets.main {
     java.srcDir(syncedJavaSourceDir)
     resources.srcDir(syncedResourcesDir)
-    // TODO: Re-enable org/xtclang/idea/dap/** once DAP is implemented and user-visible.
-    // Exclude it from the published plugin for now so Plugin Verifier does not report
-    // experimental LSP4IJ DAP APIs that users cannot currently access.
-    kotlin.exclude("org/xtclang/idea/dap/**")
 }
 
 val compileJava =

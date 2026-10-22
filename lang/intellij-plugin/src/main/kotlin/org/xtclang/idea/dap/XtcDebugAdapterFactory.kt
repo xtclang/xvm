@@ -1,121 +1,88 @@
 package org.xtclang.idea.dap
 
-import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationOptions
-import com.intellij.execution.process.OSProcessHandler
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.dap.DebugMode
 import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
-import org.xtclang.idea.PluginPaths
-import java.io.File
+import org.xtclang.idea.run.EmbeddedExecution
+import org.xtclang.idea.run.XtcRunConfiguration
 
 /**
- * Factory for creating Ecstasy Debug Adapter (DAP) descriptors.
+ * The Ecstasy debug adapter for LSP4IJ's DAP client, registered with the `com.redhat.devtools.lsp4ij.debugAdapterServer`
+ * extension point. The adapter is a debug session in the Ecstasy language server, which builds and runs the module
+ * with its embedded compiler and execution worker, as Run does; see [LanguageServerDebugProcessHandler].
  *
- * Registered via the `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point. LSP4IJ uses
- * this factory to create DAP sessions when users launch debug configurations for `.x` files.
- *
- * The DAP server runs out-of-process (same as the LSP server) using IntelliJ's JBR, for classloader
- * isolation and crash safety.
+ * Debugging goes through the Ecstasy Application run configuration ([XtcRunConfiguration]), whose Debug this adapter
+ * serves; its Run stays with the configuration's own embedded, Gradle or command-line run. `.x` files are debuggable,
+ * which lets line breakpoints be set in them, but LSP4IJ's own DAP run configuration is not created for them.
  */
 class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
-    private val logger = logger<XtcDebugAdapterFactory>()
-
     override fun createDebugAdapterDescriptor(
         options: RunConfigurationOptions,
         environment: ExecutionEnvironment,
-    ): DebugAdapterDescriptor {
-        logger.info("Creating Ecstasy DAP descriptor")
-        return XtcDebugAdapterDescriptor(options, environment, serverDefinition)
-    }
+    ): DebugAdapterDescriptor = XtcDebugAdapterDescriptor(options, environment, serverDefinition)
 
     override fun isDebuggableFile(
         file: VirtualFile,
         project: Project,
     ): Boolean = file.extension == "x"
+
+    override fun canRun(executorId: String): Boolean = executorId == DefaultDebugExecutor.EXECUTOR_ID
+
+    override fun prepareConfiguration(
+        configuration: RunConfiguration,
+        file: VirtualFile,
+        project: Project,
+    ): Boolean = false
+
+    companion object {
+        /** The adapter's ID in `plugin.xml`. */
+        const val SERVER_ID = "xtcDebugAdapter"
+    }
 }
 
 /**
- * Descriptor that launches the Ecstasy DAP server as an out-of-process Java application.
- *
- * The DAP server communicates over stdio (JSON-RPC), matching the architecture of the LSP server.
- * Uses IntelliJ's JBR java binary to spawn the server process.
- *
- * ## LSP vs DAP process lifecycle
- *
- * The LSP and DAP servers use different LSP4IJ base classes with different process models:
- *
- * - **LSP** ([org.xtclang.idea.lsp.XtcLspConnectionProvider]): Extends
- *   `OSProcessStreamConnectionProvider`. Uses
- *   [com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder] to build the command line --
- *   LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed. LSP4IJ may auto-start
- *   the server concurrently when multiple `.x` files are opened, causing duplicate processes (see
- *   TODO in `XtcLspConnectionProvider` re: LSP4IJ issue #888). This requires an `AtomicBoolean`
- *   guard to suppress duplicate "server started" notifications.
- *
- * - **DAP** (this class): Extends `DebugAdapterDescriptor`. We override [startServer] and return an
- *   `OSProcessHandler` -- we create and own the process directly. DAP sessions are always
- *   user-initiated (one `startServer()` call per "Debug" action), so there is no concurrent spawn
- *   race condition and no `AtomicBoolean` guard is needed.
+ * One debug launch of an Ecstasy Application configuration: its "server" is a process that carries the session over
+ * the language server's connection, ready at once, and its launch arguments are the configuration's module, method
+ * and arguments, in the form the language server's `launch` takes them.
  */
 class XtcDebugAdapterDescriptor(
     options: RunConfigurationOptions,
     environment: ExecutionEnvironment,
     serverDefinition: DebugAdapterServerDefinition?,
 ) : DebugAdapterDescriptor(options, environment, serverDefinition) {
-    private val logger = logger<XtcDebugAdapterDescriptor>()
+    private val project = environment.project
 
-    override fun startServer(): ProcessHandler {
-        val javaPath =
-            File(
-                System.getProperty("java.home"),
-                "bin/java" + if (SystemInfo.isWindows) ".exe" else "",
-            ).absolutePath
-
-        val serverJar = findDapServerJar()
-        val logLevel =
-            System.getProperty("xtc.logLevel")?.uppercase()
-                ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
-                ?: "INFO"
-
-        val commandLine =
-            GeneralCommandLine(
-                javaPath,
-                "-Dapple.awt.UIElement=true",
-                "-Djava.awt.headless=true",
-                "-Dxtc.logLevel=$logLevel",
-                "-jar",
-                serverJar.toString(),
-            )
-
-        logger.info("Starting Ecstasy DAP server: ${commandLine.commandLineString}")
-        return OSProcessHandler(commandLine)
-    }
+    override fun startServer(): ProcessHandler =
+        LanguageServerDebugProcessHandler(DebugSessions.getInstance(project)) {
+            // the session builds the text the server holds, so the editor's edits must have reached it
+            EmbeddedExecution.server(project).thenCombine(EmbeddedExecution.editsSent(project)) { server, _ -> server }
+        }
 
     override fun getDapParameters(): Map<String, Any> {
-        val params =
-            mutableMapOf<String, Any>(
-                "type" to "xtc",
-                "request" to "launch",
-            )
-        // Pass the working directory if available from the run configuration
-        environment.project.basePath?.let { params["cwd"] = it }
-        return params
+        val parameters = mutableMapOf<String, Any>("type" to "xtc", "request" to "launch")
+        (environment.runProfile as? XtcRunConfiguration)?.let { configuration ->
+            configuration.moduleName.takeIf { it.isNotBlank() }?.let { parameters["module"] = it }
+            configuration.moduleUri.takeIf { it.isNotBlank() }?.let { parameters["moduleUri"] = it }
+            configuration.methodName.takeIf { it.isNotBlank() }?.let { parameters["method"] = it }
+            parameters["args"] = configuration.embeddedRequest().args
+        }
+        return parameters
     }
 
     override fun getDebugMode(): DebugMode = DebugMode.LAUNCH
 
-    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig("Ecstasy Debug Adapter")
+    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig(0)
 
     override fun getFileType(): FileType? = FileTypeManager.getInstance().getFileTypeByExtension("x")
 
@@ -123,10 +90,4 @@ class XtcDebugAdapterDescriptor(
         file: VirtualFile,
         project: Project,
     ): Boolean = file.extension == "x"
-
-    companion object {
-        private const val DAP_SERVER_JAR = "xtc-dap-server.jar"
-    }
-
-    private fun findDapServerJar() = PluginPaths.findServerJar(DAP_SERVER_JAR)
 }
