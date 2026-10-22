@@ -63,7 +63,7 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
    there is a "JIT Instance Class" JIC(T), such that:
     a) the JIT Instance Class indicates the Java name of the instantiable classfile;
     b) "NEW*" ops for type T produce an instance of the Java class JIC(T) by invoking a "$new"
-       static method on the JIC(T);
+       static method (an "instantiator") on the JIC(T);
     c) when dealing with parameterized types, JIC(T) and JCC(T) may differ; when they differ:
         1) JCC(T) is non-instantiable i.e. abstract, and is either a Java class or interface;
         2) JIC(T) extends or implements the JCC(T).
@@ -81,19 +81,30 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 
 7. For every instantiable-but-unresolved Ecstasy type T (as described in 6e above) that the JIT may
    need to implement "NEW*" ops for, the plan-of-record is as follows:
-    a) The JIT uses the JCC(T) to determine the approximate class to instantiate, which could in
+    a) an "instantiator interface" declares instance-method counterparts of the static instantiators,
+       with standard and optimized variants as applicable. Its implementations on the class-of-class
+       are called "instantiator routers";
+    b) the JIT uses the JCC(T) to determine the approximate class to instantiate, which could in
        theory be the same as the JIC(T), but is likely to point to a super-class (or interface) of
        the JIC(T) as it would be resolved at runtime;
-    b) To implement the "NEW*" ops, the JIT will produce code that resolves T at run time and
-       obtains the class-of-class for JIC(T), accessed through the class-of-class contract for
+    c) to implement the "NEW*" ops, the JIT will produce code that resolves T at run time and
+       obtains the class-of-class for JIC(T), accessed through the instantiator interface for
        JCC(T);
-    c) the JIT invokes a virtual method named "$dnew" on that object, passing the fully resolved T
-       followed by the same arguments that will be passed to JIC(T).$new; see also the doc on the
-       CommonBuilder.assembleNew method;
-    d) the "$dnew" implementation invokes the "$new" static method on JIC(T);
-    e) ideally, the resolution of T and runtime JIC(T) calculation (in step b) and the
-       indirect call to the JIC's "$new" static method (in step d) are emitted by this JIT in a
-       manner that optimizes for repeated use of the same resolved T, via caching or other means.
+    d) the JIT invokes an instantiator router named "$new" on that object, passing the fully
+       resolved T followed by the same arguments that will be passed to JIC(T).$new; see also the
+       doc on the CommonBuilder.assembleNew method;
+    e) the instantiator router on class-of-class invokes the "$new" static instantiator on JIC(T);
+    f) ideally, the resolution of T and runtime JIC(T) calculation (in step c) and the
+       indirect call to the JIC's "$new" static method (in step e) are emitted by this JIT in a
+       manner that optimizes for repeated use of the same resolved T, via caching or other means;
+    g) for virtual child construction, the JIT will first resolve the requested child type against
+       the runtime type of its outer object, preserving the parent's resolved parameters and the
+       child's own type arguments, then invoke the instantiator router for the resulting JIC(T),
+       passing the outer object along with the constructor arguments; JIT will generate standard
+       and optimized instantiator-interface methods and corresponding instantiator routers as
+       applicable, so primitive arguments remain unboxed on the optimized path; the instantiator
+       router will invoke the selected JIC's static "$new" directly, without runtime Java member
+       lookup.
 
 8. For an Ecstasy type T that is an interface, mixin, annotation or a pure type, there is no JIC(T)
    (since the type cannot be instantiated), and only a JCC(T) is generated, which is a Java
@@ -509,8 +520,8 @@ inheritance between differently named children.
 
 9. A missing child declaration does not imply an unchanged composition. If D overrides C0 but
    does not declare C1, D.C1 can still require different super-router routes, callable contracts,
-   and storage. The parent-side child factory must select an implementation of that effective
-   composition, not blindly instantiate the first ancestor with a declared C1.
+   and storage. Construction must select an implementation of that effective composition, not
+   blindly instantiate the first ancestor with a declared C1.
 
    An inherited implementation can be reused when its callable contracts, field layout, and
    method chains are equivalent. Otherwise a composition-specific JIC is required even without
@@ -579,15 +590,15 @@ class C {
     void bar(Ctx ctx, Range range) {...}            // or (Ctx ctx, iRange range) if Range extended
                                                     // Specializable
     Range baz(Ctx ctx, nType type, Orderable t1, Orderable t2) {
-        return ((cRange) type.$class()).$dnew(ctx, type, t1, t2);
+        return ((cRange) type.$class()).$new(ctx, type, t1, t2);
     }
 }
 
 class cRange {
     // ...
-    Range $dnew(Ctx ctx, nType type, Orderable t1, Orderable t2) {
-        // preferred
-        return type.$class().$new(ctx, type, t1, t2);
+    Range $new(Ctx ctx, nType type, Orderable t1, Orderable t2) {
+        // preferred: each class-of-class routes directly to its JIC, here Range<Orderable>
+        return Range<Orderable>.$new(ctx, type, t1, t2);
 
         // not desirable:
         case ... -> new Range<Orderable>(...)

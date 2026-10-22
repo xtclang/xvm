@@ -471,7 +471,7 @@ public class TypeSystem {
     public enum ClassfileShape {
         Class    ("" + CLASS ), // class of class
         Pure     ("" + PURE  ), // interface
-        Funky    ("" + FUNKY ), // the funky (static) part of an interface
+        Funky    ("" + FUNKY ), // static-function interface or virtual-child instantiator interface
         Proxy    ("" + PROXY ),
         Duck     ("" + DUCK  ),
         Enum     ("" + ENUM  ),
@@ -603,10 +603,10 @@ public class TypeSystem {
     }
 
     /**
-     * Build a name for the interface that holds only the static abstract functions of an Ecstasy
-     * funky interface as instance methods.
+     * Build a name for an interface that describes static abstract functions or virtual-child
+     * instantiators as instance methods on the class-of-class (an instantiator interface).
      *
-     * @param name  the JIT name of the interface
+     * @param name  the JIT name of the class or interface
      *
      * @return the JIT name of the `Funky` interface
      */

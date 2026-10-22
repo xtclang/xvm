@@ -31,10 +31,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -234,12 +233,14 @@ public class CommonBuilder
         //
         classBuilder.withSuperclass(CD_Class);
 
-        // the only reason we would build a class of Class is if the original class implements
-        // any funky interfaces, in which case we need to generate corresponding routing methods
+        // the class of class needs to declare funky interfaces and virtual-child instantiator
+        // interfaces and generate respective routing methods
 
         Set<ClassDesc>   interfaces = new HashSet<>();
         Set<MethodInfo>  virtCtors  = new HashSet<>();
         List<MethodInfo> funkyImpls = new ArrayList<>();
+        List<MethodInfo> childCtors = new ArrayList<>();
+
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.getVirtualConstructor() instanceof MethodBody virtCtor) {
                 // the cache contains both a capped declaration and its narrowing implementation
@@ -257,6 +258,17 @@ public class CommonBuilder
                 interfaces.add(ClassDesc.of(
                     TypeSystem.funkyInterface(getCCName(ifaceId.getType()))));
                 funkyImpls.add(method);
+            }
+        }
+
+        if (classStruct.isVirtualChild() && !typeInfo.isAbstract()) {
+            for (MethodConstant ctorId : typeInfo.findMethods("construct", -1, MethodKind.Constructor)) {
+                MethodInfo    ctor         = typeInfo.getMethodById(ctorId);
+                JitMethodDesc instorRouter = getChildConstructorDesc(ctor.getChildConstructorOrigin());
+                String        targetName   = getCCName(instorRouter.typeTarget);
+
+                interfaces.add(ClassDesc.of(TypeSystem.funkyInterface(targetName)));
+                childCtors.add(ctor);
             }
         }
 
@@ -332,6 +344,28 @@ public class CommonBuilder
                         classBuilder, ctorName + OPT, ctorJmd.optimizedMD, ctorJmd.optimizedParams,
                         targetCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
                         ctorJmd.optimizedCtx());
+            }
+        }
+
+        for (MethodInfo ctor : childCtors) {
+            MethodInfo    origin       = ctor.getChildConstructorOrigin();
+            JitMethodDesc instorRouter = getChildConstructorDesc(origin);
+            JitMethodDesc targetJmd    = convertConstructToNew(typeInfo, targetCD,
+                    (JitCtorDesc) ctor.getJitDesc(this, targetType));
+
+            String name       = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            String targetName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+
+            assembleVirtualConstructorRouting(classBuilder, name,
+                    instorRouter.standardMD, instorRouter.standardParams,
+                    targetCD, targetName, targetJmd.standardMD, targetJmd.standardParams,
+                    instorRouter.standardCtx());
+            if (instorRouter.isOptimized) {
+                assert targetJmd.isOptimized;
+                assembleVirtualConstructorRouting(classBuilder, name + OPT,
+                        instorRouter.optimizedMD, instorRouter.optimizedParams,
+                        targetCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
+                        instorRouter.optimizedCtx());
             }
         }
     }
@@ -421,7 +455,9 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble an instance method on the class-of-class that implements a virtual constructor.
+     * Assemble an instantiator router for a virtual constructor or a virtual-child constructor.
+     * This instance method on the class-of-class implements an instantiator-interface declaration
+     * by forwarding to the corresponding static instantiator.
      */
     private void assembleVirtualConstructorRouting(ClassBuilder classBuilder,
             String ctorName, MethodTypeDesc ctorMD, JitParamDesc[] ctorParams,
@@ -430,17 +466,30 @@ public class CommonBuilder
 
         int     ctorExtra = ctorMD.parameterCount() - ctorParams.length;
         boolean hasType   = typeInfo.hasGenericTypes();
+        boolean hasOuter  = classStruct.isInstanceChild();
 
         assert ctorParams.length == targetParams.length;
-        assert targetMD.parameterCount() - targetParams.length == (hasType ? 2 : 1);
+        assert targetMD.parameterCount() - targetParams.length ==
+                1 + (hasType ? 1 : 0) + (hasOuter ? 1 : 0);
 
         classBuilder.withMethodBody(ctorName, ctorMD, ClassFile.ACC_PUBLIC, code -> {
             int ctxSlot = code.parameterSlot(ctxIndex);
             code.aload(ctxSlot);
             if (hasType) {
-                // generic constructors receive the runtime target type held by the class-of-class
-                code.aload(0)
-                    .getfield(CD_Class, "$publicType", CD_TypeConstant);
+                if (hasOuter) {
+                    // virtual-child instantiator routers receive the resolved runtime type explicitly
+                    code.aload(code.parameterSlot(1));
+                } else {
+                    // generic virtual constructors use the type held by the class-of-class
+                    code.aload(0)
+                        .getfield(CD_Class, "$publicType", CD_TypeConstant);
+                }
+            }
+            if (hasOuter) {
+                // virtual-child instantiator routers receive (Ctx, TypeConstant, outer) before
+                // the explicit arguments
+                assert ctorExtra == 3;
+                code.aload(code.parameterSlot(2));
             }
 
             for (int i = 0, count = ctorParams.length; i < count; i++) {
@@ -461,16 +510,30 @@ public class CommonBuilder
 
     @Override
     public void buildFunkyInterface(ClassBuilder classBuilder) {
-        assert isInterface;
+        int flags = ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT;
 
-        classBuilder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_INTERFACE |
-                ClassFile.ACC_ABSTRACT);
+        classBuilder.withFlags(flags | ClassFile.ACC_INTERFACE);
+
+        if (classStruct.isVirtualChild() && !isInterface) {
+            for (MethodConstant ctorId : typeInfo.findMethods("construct", -1, MethodKind.Constructor)) {
+                MethodInfo    origin = typeInfo.getMethodById(ctorId).getChildConstructorOrigin();
+                JitMethodDesc jmd    = getChildConstructorDesc(origin);
+                String        name   = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
+
+                classBuilder.withMethod(name, jmd.standardMD, flags, _ -> {});
+                if (jmd.isOptimized) {
+                    classBuilder.withMethod(name + OPT, jmd.optimizedMD, flags, _ -> {});
+                }
+            }
+            return;
+        }
+
+        assert isInterface;
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
                 String        jitName = funkyBody.getIdentity().ensureJitMethodName(typeSystem);
                 JitMethodDesc jmd     = funkyBody.getJitDesc(this, null);
-                int           flags   = ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT;
 
                 classBuilder.withMethod(jitName, jmd.standardMD, flags, _ -> {});
                 if (jmd.isOptimized) {
@@ -1789,139 +1852,11 @@ public class CommonBuilder
 
         if (!isInterface) {
             assembleXvmType(classBuilder);
-            assembleVirtualChildFactory(classBuilder);
         }
 
         if (typeInfo.getFormat() == Format.CONST) {
             assembleConstMethods(classBuilder);
         }
-    }
-
-    /**
-     * Assemble virtual child factory methods on the virtual child parent. Consider the following
-     * example:
-     *  <pre>
-     *    class Base {
-     *         class Child {}
-     *    }
-     *    class Derived extends Base {
-     *         @Override class Child {}
-     *    }
-     *  </pre>
-     * In that case, we generate the factory method "Base.Child Child$new()" on Base class that
-     * returns a new instance of the Base.Child, and an identical method on Derived class that
-     * returns an instance of the Derived.Child instead.
-     */
-    protected void assembleVirtualChildFactory(ClassBuilder classBuilder) {
-        for (ChildInfo child : typeInfo.getChildInfosByName().values()) {
-            if (child == null || !child.isVirtualClass()) {
-                continue;
-            }
-
-            // a phantom child still needs this parent's type
-            TypeConstant   childType   = pool().ensureVirtualChildTypeConstant(jitType, child.getName());
-            ClassStructure childStruct = (ClassStructure) child.getComponent();
-            TypeConstant   childJIC    = childStruct.getFormalType().resolveGenerics(pool(), childType).
-                                            ensureVirtualParent(jitType, true).getJitICType();
-            TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            if (infoJIC.isAbstract()) {
-                continue;
-            }
-
-            ClassDesc childCD   = getCCDesc(childJIC);
-            String    childName = child.getName();
-
-            for (MethodConstant ctorId : infoJIC.findMethods("construct", -1, MethodKind.Constructor)) {
-                MethodInfo ctor     = infoJIC.getMethodById(ctorId);
-                MethodInfo baseCtor = ctor.getChildConstructorOrigin();
-                TypeInfo   baseInfo = baseCtor.getTypeInfo();
-                ClassDesc  baseCD   = baseInfo.getType().getJitCCDesc(typeSystem);
-
-                // Notes:
-                // 1) baseCD represents the compile-time return type for the factory methods
-                // 2) it's possible that while the parent is not generic, the child is
-
-                String factoryName = childName +
-                        baseCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-                String instorName  = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-
-                JitMethodDesc instorJmd = convertConstructToNew(infoJIC, childCD,
-                        (JitCtorDesc) ctor.getJitDesc(this, childJIC));
-
-                assembleChildConstructorRouting(classBuilder, factoryName,
-                        baseCD, baseInfo.hasGenericTypes(), childJIC, infoJIC.hasGenericTypes(),
-                        instorName, instorJmd.standardMD);
-                if (instorJmd.isOptimized) {
-                    assembleChildConstructorRouting(classBuilder, factoryName + OPT,
-                            baseCD, baseInfo.hasGenericTypes(), childJIC, infoJIC.hasGenericTypes(),
-                            instorName + OPT, instorJmd.optimizedMD);
-                }
-            }
-        }
-    }
-
-    /**
-     * Assemble one parent-side route, retaining the ancestor's name and return descriptor.
-     *
-     * For a generic Derived.Child overriding a non-generic Base.Child, the factory on Derived
-     * looks like this (CHILD_TYPE represents the Derived.Child TypeConstant):
-     *
-     *     Base.Child Child$new#17$p(Ctx ctx, long value) {
-     *         TypeConstant actualType = $childType(ctx, CHILD_TYPE);
-     *         return Derived.Child.$new#17$p(ctx, actualType, this, value);
-     *     }
-     *
-     * Here factoryHasType is false and hasType is true. If factoryHasType is true, the factory
-     * accepts a TypeConstant argument and resolves that instead of CHILD_TYPE. If hasType is
-     * false, both the type resolution and the instantiator's TypeConstant argument are omitted.
-     *
-     * @param factoryName      the factory name shared by all parent overrides
-     * @param baseCD           the original child declaration's return class, retained by every override
-     * @param isGenericParent  whether the factory contract includes a TypeConstant argument
-     * @param childType        the actual, non-phantom child implementation type
-     * @param isGenericChild   whether the actual child's instantiator requires a TypeConstant argument
-     * @param instorName       the child's instantiator method name
-     * @param instorMD         the child's instantiator descriptor
-     */
-    private void assembleChildConstructorRouting(
-            ClassBuilder   classBuilder,
-            String         factoryName,
-            ClassDesc      baseCD,
-            boolean        isGenericParent,
-            TypeConstant   childType,
-            boolean        isGenericChild,
-            String         instorName,
-            MethodTypeDesc instorMD) {
-        // the explicit parameters are identical; only the return and implicit arguments differ
-        MethodTypeDesc paramsMD = instorMD.dropParameterTypes(1, isGenericChild ? 3 : 2)
-                                          .changeReturnType(baseCD);
-        MethodTypeDesc factoryMD = isGenericParent
-                ? paramsMD.insertParameterTypes(1, CD_TypeConstant)
-                : paramsMD;
-
-        classBuilder.withMethodBody(factoryName, factoryMD, ClassFile.ACC_PUBLIC, code -> {
-            int ctxSlot = code.parameterSlot(0);
-            code.aload(ctxSlot);
-            if (isGenericChild) {
-                code.aload(0).aload(ctxSlot);
-                if (isGenericParent) {
-                    code.aload(code.parameterSlot(1));
-                } else {
-                    loadTypeConstant(code, childType);
-                }
-                code.invokevirtual(CD_nObject, "$childType", md(CD_TypeConstant, CD_Ctx, CD_TypeConstant));
-            } else {
-                // if the parent was generic, the child must've been too
-                assert !isGenericParent;
-            }
-            int paramStart = isGenericParent ? 2 : 1;
-            code.aload(0);
-            for (int i = paramStart; i < factoryMD.parameterCount(); i++) {
-                load(code, factoryMD.parameterType(i), code.parameterSlot(i));
-            }
-            code.invokestatic(instorMD.returnType(), instorName, instorMD)
-                .areturn();
-        });
     }
 
     /**
@@ -1954,8 +1889,7 @@ public class CommonBuilder
                         .getfield(CD_this, Outer, CD_nObject)
                         .aload(code.parameterSlot(0))
                         .getstatic(CD_this, sc0, CD_TypeConstant)
-                        .invokevirtual(CD_nObject, "$childType",
-                            md(CD_TypeConstant, CD_Ctx, CD_TypeConstant));
+                        .invokevirtual(CD_nObject, "$childType", MD_xvmChildType);
                 } else {
                     code.getstatic(CD_this, sc0, CD_TypeConstant);
                 }
