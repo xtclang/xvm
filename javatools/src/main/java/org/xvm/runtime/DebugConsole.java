@@ -1789,7 +1789,7 @@ public final class DebugConsole
      * Obtain fields to display for the specified composition. The keys are visualized names
      * (simple or composite in the case of collision).
      */
-    private ListMap<String, FieldInfo> getFieldLayout(TypeComposition clz) {
+    static ListMap<String, FieldInfo> getFieldLayout(TypeComposition clz) {
         // first, split colliding and non-colliding simple names
         Set<String> setSimple    = new HashSet<>();
         Set<String> setColliding = null;
