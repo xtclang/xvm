@@ -571,7 +571,8 @@ internal fun ParityScenarios.runEntryCases() {
                 val argument = data.strings("argument")
                 check(locals.any { it.string("name") == argument[0] && it.string("value") == argument[1] }) { "No ${argument[0]}: $locals" }
 
-                // LSP4IJ shows the exception in the editor a second after the stop; until then the editor must stay open
+                // TODO LSP4IJ: UP31 — LSP4IJ shows the exception a second after the stop, in the editor it found at the
+                // stop, without checking that the editor is still open; until the hint shows, the editor must stay open
                 awaitUi("LSP4IJ shows the exception where it was thrown", 30.seconds) { debugger.hintShown() }
 
                 debugger.resume(project, module)
