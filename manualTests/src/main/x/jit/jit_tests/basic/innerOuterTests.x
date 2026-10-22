@@ -10,6 +10,8 @@ package innerOuterTests {
 //        TODO: handle complex virtual child call chains
 //        simpleChild.testInheritedChild();
 //        derivedChild.testChildSuper();
+        genericChild.testChildParameter();
+        genericChild.testPrimitiveChildParameter();
     }
 
     void testSimple() {
@@ -133,13 +135,13 @@ package innerOuterTests {
             // the inherited method must construct the child belonging to the runtime parent
             assert new ParentDerived().childReport() == "Derived.Child";
 
-            // direct construction also uses the base factory signature, then narrows its result
+            // direct construction also uses the base constructor contract, then narrows its result
             ParentDerived.Child child = new ParentDerived().new Child();
             assert child.report() == "Derived.Child";
         }
 
         void testInheritedChild() {
-            // no Child declaration: the inherited factory must still create this parent's child
+            // no Child declaration: construction must still select this runtime parent's child
             ParentInherited parent = new ParentInherited();
             ParentBase base = parent;
             ParentBase.Child child = base.createChild();
@@ -161,7 +163,7 @@ package innerOuterTests {
             assert &outer == &further;
             assert child.report() == "Derived.Child";
 
-            // the parent introduces a generic parameter, but the base factory has no type argument
+            // the runtime parent introduces a generic parameter absent from the child's declaration
             GenericParent<String> genericParent = new GenericParent();
             base = genericParent;
             child = base.createChild();
@@ -293,6 +295,35 @@ package innerOuterTests {
             class C1 {
                 @Override
                 String trace01() = "PD.C1->" + super();
+            }
+        }
+    }
+
+    package genericChild {
+        void testChildParameter() {
+            // this parent has no type parameters; the child itself supplies the type argument
+            Holder parent = new Holder();
+            Holder.Child<String> child = parent.new Child<String>("first");
+            assert child.value == "first";
+            assert child.echo("next") == "next";
+
+            Outer outer = child.outer;
+            assert &outer == &parent;
+        }
+
+        void testPrimitiveChildParameter() {
+            Holder parent = new Holder();
+            Holder.Child<Int> child = parent.new Child<Int>(17);
+            assert child.value == 17;
+            assert child.echo(21) == 21;
+
+            Outer outer = child.outer;
+            assert &outer == &parent;
+        }
+
+        class Holder {
+            class Child<Element>(Element value) {
+                Element echo(Element value) = value;
             }
         }
     }

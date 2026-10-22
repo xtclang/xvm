@@ -84,8 +84,8 @@ public abstract class Builder {
     }
 
     /**
-     * Assemble the Java interface that represents the static abstract functions of an Ecstasy
-     * interface as instance methods.
+     * Assemble the Java interface that represents static abstract functions or virtual-child
+     * constructors as instance methods on the class-of-class.
      */
     public void buildFunkyInterface(ClassBuilder classBuilder) {
         throw new UnsupportedOperationException();
@@ -1921,6 +1921,20 @@ public abstract class Builder {
     }
 
     /**
+     * Obtain a virtual child's instantiator-router descriptor for class-of-class dispatch.
+     * The instantiator interface declares this router with the resolved type and outer object,
+     * even when the corresponding static instantiator does not need a TypeConstant argument.
+     */
+    public JitMethodDesc getChildConstructorDesc(MethodInfo constructor) {
+        TypeInfo      info = constructor.getTypeInfo();
+        TypeConstant  type = info.getType().getJitCCType();
+        JitMethodDesc jmd  = convertConstructToNew(info, getCCDesc(type),
+                (JitCtorDesc) constructor.getJitDesc(this, type));
+        return new JitCtorDesc(type, null, false, true, true,
+                jmd.standardReturns, jmd.standardParams, jmd.optimizedReturns, jmd.optimizedParams);
+    }
+
+    /**
      * Call the "new$" [static] method.
      *
      * @param argsLoader the function (consumer) that is responsible for loading the arguments
@@ -1934,8 +1948,11 @@ public abstract class Builder {
 
     /**
      * Call the "$new" (instantiator) static method, optionally supplying the outer (parent) object.
-     * Virtual children dispatch through a factory on the parent; other classes use the
+     * Virtual children resolve against their runtime parent and call an instantiator router on
+     * the child's class-of-class through its instantiator interface; other classes use the
      * instantiator directly.
+     *
+     * @see "doc/jit_class_names.txt"
      */
     public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
                                   MethodConstant ctorId, RegisterInfo outer,
@@ -1954,52 +1971,63 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     targetCD   = getCCDesc(targetType);
-        String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        ClassDesc     targetCD = getCCDesc(targetType);
         JitMethodDesc instorMD;
 
         if (targetJIC.isVirtualChild()) {
             assert outer != null : "Virtual child without an outer";
 
-            // dispatch to the parent's factory so inherited code constructs the overridden child
-            TypeInfo     baseInfo = ctor.getChildConstructorOrigin().getTypeInfo();
-            TypeConstant baseType = baseInfo.getType().getJitICType();
+            MethodInfo    origin       = ctor.getChildConstructorOrigin();
+            JitMethodDesc instorRouter = getChildConstructorDesc(origin);
+            String        targetName   = getCCName(instorRouter.typeTarget);
+            ClassDesc     instorIface  = ClassDesc.of(TypeSystem.funkyInterface(targetName));
+            String        name         = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
 
-            instorMD = convertConstructToNew(baseInfo, getCCDesc(baseType),
-                        (JitCtorDesc) ctor.getJitDesc(this, baseType));
+            instorMD = convertConstructToNew(targetInfo, targetCD,
+                    (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
             MethodTypeDesc md;
-            if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
-                instorName += Builder.OPT;
+            if (instorRouter.isOptimized) {
+                md    = instorRouter.optimizedMD;
+                name += OPT;
             } else {
-                md = instorMD.standardMD;
+                md = instorRouter.standardMD;
             }
 
-            TypeConstant parentType = targetJIC.getParentType();
-            ClassDesc    parentCD   = getCCDesc(parentType);
-
+            // evaluate the outer once; its runtime type selects both the child override and JIC
             RegisterInfo outerReg = outer.load(code);
-            if (!outerReg.type().isJitAssignableTo(parentType)) {
-                code.checkcast(parentCD);
+            if (outerReg.type().isJitInterface()) {
+                code.checkcast(CD_nObject);
             }
-            code.aload(ctxSlot);
-            if (baseInfo.hasGenericTypes()) {
-                loadTypeConstant(bctx, code, targetType);
-            }
-            argsLoader.accept(instorMD);
 
-            // the routing method can be extracted from the constructor's MethodDesc
-            int    outerIndex  = baseInfo.hasGenericTypes() ? 2 : 1;
-            String factoryName = targetJIC.getSingleUnderlyingClass(true).getName() + instorName;
+            // childType   = outer.$childType(ctx, targetType);
+            // instorIface = (InstorIface) nType.$ensureType(ctx, childType).$xvmClass(ctx);
+            // target      = (Target) instorIface.$new(ctx, childType, outer, args...); // or $new$p
+            int outerSlot = bctx.storeTempValue(code, CD_nObject);
+            code.aload(outerSlot)
+                .aload(ctxSlot);
+            loadTypeConstant(bctx, code, targetType);
+            code.invokevirtual(CD_nObject, "$childType", MD_xvmChildType);
 
-            code.invokevirtual(parentCD, factoryName, md.dropParameterTypes(outerIndex, outerIndex + 1));
+            int typeSlot = bctx.storeTempValue(code, CD_TypeConstant);
+            code.aload(ctxSlot)
+                .aload(typeSlot)
+                .invokestatic(CD_nType, "$ensureType", MD_EnsureType)
+                .aload(ctxSlot)
+                .invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+                .checkcast(instorIface)
+                .aload(ctxSlot)
+                .aload(typeSlot)
+                .aload(outerSlot);
+            argsLoader.accept(instorRouter);
+            code.invokeinterface(instorIface, name, md);
 
             if (!md.returnType().equals(targetCD)) {
                 // every override returns the base child type in its Java descriptor
                 code.checkcast(targetCD);
             }
         } else {
+            String instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
             instorMD = convertConstructToNew(targetInfo, targetCD,
                         (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
@@ -2017,7 +2045,7 @@ public abstract class Builder {
             }
             if (outer != null) {
                 outer.load(code);
-                if (!outer.cd().equals(CD_nObject)) {
+                if (outer.type().isJitInterface()) {
                     code.checkcast(CD_nObject);
                 }
             }
@@ -2466,8 +2494,10 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_L2D          = md(CD_double, CD_long);
     public static final MethodTypeDesc MD_F2I          = md(CD_int, CD_float);
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
+    public static final MethodTypeDesc MD_xvmClass     = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
     public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);
     public static final MethodTypeDesc MD_xvmInitType  = md(CD_void, CD_Ctx, CD_TypeConstant);
+    public static final MethodTypeDesc MD_xvmChildType = md(CD_TypeConstant, CD_Ctx, CD_TypeConstant);
 }
