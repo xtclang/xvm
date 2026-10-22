@@ -189,30 +189,19 @@ export function executionCases(): void {
         await noErrors(document.uri);
         await embedded(async () => {
             const sent: DapMessage[] = [];
-            const tracker = vscode.debug.registerDebugAdapterTrackerFactory('xtc', {
-                createDebugAdapterTracker: () => ({ onDidSendMessage: (message: DapMessage) => { sent.push(message); } }),
-            });
+            const tracker = trackDebugSessions(sent);
             let ended = false;
             const termination = vscode.debug.onDidTerminateDebugSession(session => {
                 if (session.type === 'xtc') ended = true;
             });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
             try {
                 const started = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
                     { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module });
                 assert.strictEqual(started, true, 'The launch starts a debug session in the language server');
                 await eventually(async () => ended, value => value, 'The debug session ends when the program exits');
-
-                const events = (name: string) => sent.filter(message => message.type === 'event' && message.event === name);
-                assert.strictEqual(events('exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.strictEqual(events('terminated').length, 1, JSON.stringify(sent));
-                const output = events('output').map(message => message.body?.output ?? '').join('');
-                assert.ok(output.includes(data.finished), output);
-                const breakpoints = sent.filter(message => message.type === 'response' && message.command === 'setBreakpoints')
-                    .flatMap(message => message.body?.breakpoints ?? []);
-                assert.ok(breakpoints.length > 0, 'VS Code sent the breakpoint');
-                assert.ok(breakpoints.every(item => !item.verified && item.message === data.notAvailable), JSON.stringify(breakpoints));
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.strictEqual(dapEvents(sent, 'terminated').length, 1, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.finished), dapOutput(sent));
 
                 // a line typed in the Debug Console while the program runs is its console input
                 sent.length = 0;
@@ -225,15 +214,58 @@ export function executionCases(): void {
                 try {
                     assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(ask.uri),
                         { type: 'xtc', request: 'launch', name: `Debug ${data.inputModule}`, module: data.inputModule }));
-                    await eventually(async () => events('output').map(message => message.body?.output ?? '').join(''),
-                        text => text.includes(data.prompt), 'The program prompts in the Debug Console');
+                    await eventually(async () => dapOutput(sent), text => text.includes(data.prompt), 'The program prompts in the Debug Console');
                     await session!.customRequest('evaluate', { expression: data.input, context: 'repl' });
                     await eventually(async () => ended, value => value, 'The program reads the line and ends');
-                    const asked = events('output').map(message => message.body?.output ?? '').join('');
-                    assert.ok(asked.includes(data.greeting), asked);
+                    assert.ok(dapOutput(sent).includes(data.greeting), dapOutput(sent));
                 } finally {
                     startedSession.dispose();
                 }
+            } finally {
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+}
+
+/** X304, registered after X303 in catalog order: a breakpoint in a debug session. */
+export function debugSessionCases(): void {
+    playbook('X304', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
+                assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
+                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
+
+                // VS Code asks for the stopped fiber's stack itself, to show where the program stopped
+                const frames = await eventually(
+                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                        .flatMap(message => message.body?.stackFrames ?? []),
+                    values => values.length >= data.frames.length, 'VS Code shows the call stack');
+                assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
+                assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(document.uri.fsPath));
+                assert.ok(dapOutput(sent).includes(data.before), dapOutput(sent));
+                assert.ok(!dapOutput(sent).includes(data.after), 'Nothing after the breakpoint has run');
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.after), dapOutput(sent));
             } finally {
                 vscode.debug.removeBreakpoints([breakpoint]);
                 termination.dispose();
@@ -243,12 +275,33 @@ export function executionCases(): void {
     });
 }
 
-/** The parts of a Debug Adapter Protocol message that X285 checks. */
+/** Records every DAP message that Ecstasy debug adapters send VS Code. */
+function trackDebugSessions(sent: DapMessage[]): vscode.Disposable {
+    return vscode.debug.registerDebugAdapterTrackerFactory('xtc', {
+        createDebugAdapterTracker: () => ({ onDidSendMessage: (message: DapMessage) => { sent.push(message); } }),
+    });
+}
+
+function dapEvents(sent: DapMessage[], name: string): DapMessage[] {
+    return sent.filter(message => message.type === 'event' && message.event === name);
+}
+
+function dapOutput(sent: DapMessage[]): string {
+    return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
+}
+
+/** The parts of a Debug Adapter Protocol message that X285 and X304 check. */
 interface DapMessage {
     type: string;
     event?: string;
     command?: string;
-    body?: { exitCode?: number; output?: string; breakpoints?: { verified: boolean; message?: string }[] };
+    body?: {
+        exitCode?: number;
+        output?: string;
+        reason?: string;
+        breakpoint?: { verified: boolean; line?: number };
+        stackFrames?: { name: string; line: number; source?: { path?: string } }[];
+    };
 }
 
 /** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */
