@@ -1,9 +1,11 @@
 package org.xtclang.idea.lsp
 
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageServer
 import java.util.concurrent.CompletableFuture
@@ -49,7 +51,35 @@ interface XtcLanguageServer : LanguageServer {
 
     @JsonRequest("xtc/runnableTargets")
     fun runnableTargets(): CompletableFuture<List<RunnableTarget>>
+
+    /** Starts a debug session in the server; its DAP messages travel as `xtc/debugMessage` notifications both ways. */
+    @JsonRequest("xtc/debugStart")
+    fun debugStart(): CompletableFuture<DebugSessionResponse>
+
+    /** One DAP message from the IDE to a debug session. */
+    @JsonNotification("xtc/debugMessage")
+    fun debugMessage(params: DebugMessageParams)
+
+    /** Ends a debug session, which stops the program it launched. */
+    @JsonNotification("xtc/debugEnd")
+    fun debugEnd(params: DebugSessionParams)
 }
+
+/** `xtc/debugStart` result: the ID of the new debug session. */
+data class DebugSessionResponse(
+    val sessionId: String,
+)
+
+/** `xtc/debugEnd` parameters. */
+data class DebugSessionParams(
+    val sessionId: String,
+)
+
+/** `xtc/debugMessage` parameters: one Debug Adapter Protocol message of a session, in either direction. */
+data class DebugMessageParams(
+    val sessionId: String,
+    val message: JsonObject,
+)
 
 /** `xtc/build` parameters: a module name or member URI, or every source module when [module] is absent. */
 data class BuildParams(

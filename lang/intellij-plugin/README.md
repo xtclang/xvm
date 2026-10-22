@@ -136,7 +136,15 @@ programs never run inside the language server. A failed build prints its diagnos
 linked to the sources, and runs nothing. A program that reads console input reads the lines typed
 into its Run console, including lines typed while it still builds; **Send EOF** ends the input. A
 module with a Run lens also has a Run icon in the gutter of that line, which runs it the same way.
-There is no Ecstasy debugger. Embedded mode needs the compiler language service.
+Embedded mode needs the compiler language service.
+
+With the embedded compiler, a configuration can also be debugged: **Debug** starts a debug session
+in the language server, which builds and runs the module as Run does, in the same execution worker,
+with LSP4IJ's DAP client as the debugger. Line breakpoints can be set in `.x` files; they are
+verified when the program starts, and a breakpoint or `assert:debug` stops the program, with its
+line, call stack and the other fibers that wait shown in the Debug tool window. **Resume Program**
+runs it on and **Stop** ends it where it is. Variables, stepping, exception breakpoints and Pause are
+not available yet. Debug is not offered for Gradle or command-line runs.
 
 ## Development
 
@@ -665,7 +673,8 @@ intellij-plugin/
 │   │   ├── XtcIntelliJLanguage.kt        # IntelliJ Language singleton (for Code Style, etc.)
 │   │   ├── XtcTextMateBundleProvider.kt  # TextMate grammar integration
 │   │   ├── dap/
-│   │   │   └── XtcDebugAdapterFactory.kt # DAP server integration
+│   │   │   ├── XtcDebugAdapterFactory.kt # Debug of Ecstasy Application configurations through LSP4IJ's DAP client
+│   │   │   └── LanguageServerDebugProcessHandler.kt # Carries a debug session over the language server connection
 │   │   ├── lsp/
 │   │   │   ├── XtcLanguageClient.kt            # Custom LSP client (forwards Code Style → server)
 │   │   │   └── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
