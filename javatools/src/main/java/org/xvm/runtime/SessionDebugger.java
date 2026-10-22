@@ -48,14 +48,20 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
  * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables}), and
- * resumes it ({@link #resume}). It debugs the runtime it is set on with
- * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
+ * resumes it ({@link #resume}) or steps one of its fibers ({@link #step}). It debugs the runtime it
+ * is set on with {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
  *
  * <p>A stop holds the whole runtime: the fiber that stops waits on its interpreter thread, and so
  * does every other fiber that reaches a line while the program is stopped. Each takes a snapshot
  * of its stack before it waits, so the host reads immutable copies and never a running frame. The
  * snapshots are discarded when the program resumes. Fibers keep yielding to each other as they do
- * without a debugger, since this debugger does not step.
+ * without a debugger, also while one of them steps.
+ *
+ * <p>A step resumes the whole program and stops it again at the next line the stepped fiber
+ * reaches: over a call, in the same frame; into one, in any frame of a fiber that the stepped one
+ * calls or is called by; out of one, once its frame returns. A frame that returns, or that an
+ * exception leaves, during a step over continues it as a step into, so it stops at its caller's
+ * next line. Any other stop, such as a breakpoint, ends the step.
  *
  * <p>Variables are read on the interpreter thread of the waiting fiber whose frame holds them,
  * which reads them while it waits, so a read never races the program; {@link #variables} answers
@@ -143,8 +149,28 @@ public final class SessionDebugger
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint"), what stopped it in words,
-     * the fiber that stopped, and the IDs of the breakpoints it stopped at.
+     * How the host steps a stopped fiber.
+     */
+    public enum Step {
+        /**
+         * To the next line of the same frame, or of its caller once it returns.
+         */
+        OVER,
+
+        /**
+         * To the next line the fiber reaches, also in a method that it calls.
+         */
+        IN,
+
+        /**
+         * To the next line of the frame's caller.
+         */
+        OUT
+    }
+
+    /**
+     * Why and where the program stopped: the reason ("breakpoint" or "step"), what stopped it in
+     * words, the fiber that stopped, and the IDs of the breakpoints it stopped at.
      */
     public record Stop(String reason, String description, int threadId, List<Integer> breakpointIds) {
     }
@@ -294,9 +320,38 @@ public final class SessionDebugger
     }
 
     /**
+     * Resume the stopped program, stepping the specified fiber: the program stops again, with the
+     * reason "step", at the line where the step ends.
+     *
+     * @param nThread  the ID of a fiber that {@link #threads} returned
+     * @param step     how to step it
+     *
+     * @return false if the program runs, or the fiber does not wait; then nothing changes
+     */
+    public synchronized boolean step(int nThread, Step step) {
+        Snapshot snapshot = m_fStopped ? f_mapStacks.get(nThread) : null;
+        if (snapshot == null) {
+            return false;
+        }
+
+        // set first, so lines stay checked as the fibers resume
+        Frame frame = snapshot.frame();
+        m_stepping = new Stepping(Objects.requireNonNull(step), frame, frame.f_fiber);
+        release();
+        return true;
+    }
+
+    /**
      * Resume the stopped program; does nothing while it runs.
      */
     public synchronized void resume() {
+        release();
+    }
+
+    /**
+     * Let the stopped program run on: the waiting fibers resume, and what they held is discarded.
+     */
+    private void release() {
         if (m_fStopped) {
             m_fStopped = false;
             ++m_cGeneration;
@@ -327,6 +382,7 @@ public final class SessionDebugger
     @Override
     public synchronized void terminate() {
         m_fTerminating = true;
+        m_stepping     = null;
         resume();
     }
 
@@ -335,6 +391,7 @@ public final class SessionDebugger
         m_fDetached = true;
         m_mapBreaks = Map.of();
         m_mapCache  = new ConcurrentHashMap<>();
+        m_stepping  = null;
         resume();
         m_runtime = null;
     }
@@ -351,7 +408,7 @@ public final class SessionDebugger
         }
 
         // assert:debug stops the program as a breakpoint does
-        stop(frame, "breakpoint", "assert:debug", List.of());
+        stop(frame, "breakpoint", "assert:debug", List.of(), null);
         return m_fTerminating ? end(frame) : iPC + 1;
     }
 
@@ -368,23 +425,26 @@ public final class SessionDebugger
             return end(frame);
         }
 
-        Integer[] anBreak = breaksOf(frame);
+        // a breakpoint on the line where a step ends is reported as the breakpoint
+        Integer[] anBreak  = breaksOf(frame);
+        Stepping  stepping = m_stepping;
         if (iPC < anBreak.length && anBreak[iPC] != null) {
-            stop(frame, "breakpoint", null, List.of(anBreak[iPC]));
-            if (m_fTerminating) {
-                return end(frame);
-            }
+            stop(frame, "breakpoint", null, List.of(anBreak[iPC]), null);
+        } else if (stepping != null && stepping.endsAt(frame) && startsLine(frame, iPC)) {
+            stop(frame, "step", null, List.of(), stepping);
         }
-        return iPC + 1;
+        return m_fTerminating ? end(frame) : iPC + 1;
     }
 
     @Override
     public void onReturn(Frame frame) {
+        leave(frame);
     }
 
     @Override
     public int checkBreakPoint(Frame frame, ExceptionHandle hEx) {
         // exceptions are not stopped at; unwind this one without asking again
+        leave(frame);
         return Op.R_EXCEPTION;
     }
 
@@ -408,10 +468,35 @@ public final class SessionDebugger
     }
 
     /**
-     * Stop the program at the specified frame, tell the listener, and wait until the host resumes
-     * it. If the program is already stopped, wait for that stop to end first.
+     * The frame returns, or an exception leaves it: a step over or out of it continues as a step
+     * into, to stop at the next line of its caller, which may run on the fiber that called this
+     * one.
      */
-    private void stop(Frame frame, String sReason, String sDescription, List<Integer> listIds) {
+    private void leave(Frame frame) {
+        Stepping stepping = m_stepping;
+        if (stepping != null && stepping.frame() == frame && stepping.step() != Step.IN) {
+            m_stepping = new Stepping(Step.IN, frame, frame.f_fiber);
+        }
+    }
+
+    /**
+     * @return true if the op at the specified index starts a line, as a step ends at
+     */
+    private static boolean startsLine(Frame frame, int iPC) {
+        Op[] aOp = frame.f_aOp;
+        return aOp != null && iPC < aOp.length
+                && aOp[iPC] instanceof Nop nop && nop.getLineCount() != 0;
+    }
+
+    /**
+     * Stop the program at the specified frame, tell the listener, and wait until the host resumes
+     * it. If the program is already stopped, wait for that stop to end first; a step's stop is then
+     * not made, unless the step still runs.
+     *
+     * @param stepping  the step that ends here, or null for any other stop
+     */
+    private void stop(Frame frame, String sReason, String sDescription, List<Integer> listIds,
+                      Stepping stepping) {
         Stop stop;
         long cGeneration;
         synchronized (this) {
@@ -422,10 +507,12 @@ public final class SessionDebugger
                     return;
                 }
             }
-            if (m_fDetached || m_fTerminating) {
+            if (m_fDetached || m_fTerminating || stepping != null && m_stepping != stepping) {
                 return;
             }
 
+            // any stop ends the step
+            m_stepping  = null;
             m_fStopped  = true;
             cGeneration = ++m_cGeneration;
             f_mapStacks.clear();
@@ -490,13 +577,13 @@ public final class SessionDebugger
     }
 
     /**
-     * Turn the runtime's "debugger is active" flag on while there are breakpoints or the program
-     * is stopped, so that every line is checked; otherwise lines run at full speed.
+     * Turn the runtime's "debugger is active" flag on while there are breakpoints, the program is
+     * stopped or a fiber steps, so that every line is checked; otherwise lines run at full speed.
      */
     private void updateActive() {
         Runtime runtime = m_runtime;
         if (runtime != null) {
-            runtime.setDebuggerActive(m_fStopped || !m_mapBreaks.isEmpty());
+            runtime.setDebuggerActive(m_fStopped || m_stepping != null || !m_mapBreaks.isEmpty());
         }
     }
 
@@ -847,6 +934,22 @@ public final class SessionDebugger
     }
 
     /**
+     * A step that runs: how, and the frame and fiber it started at.
+     */
+    private record Stepping(Step step, Frame frame, Fiber fiber) {
+        /**
+         * @return true if the step ends at a line of the specified frame
+         */
+        boolean endsAt(Frame frameAt) {
+            return switch (step) {
+                case OVER -> frameAt == frame;
+                case IN   -> !frameAt.isNative() && frameAt.f_fiber.isAssociated(fiber);
+                case OUT  -> false;
+            };
+        }
+    }
+
+    /**
      * A frame of a waiting fiber, by that fiber's ID.
      */
     private record FrameAt(int thread, Frame frame) {
@@ -955,6 +1058,11 @@ public final class SessionDebugger
      * The container of the host's own code, which this debugger leaves alone, or null.
      */
     private volatile Container m_containerHost;
+
+    /**
+     * The step that runs, or null.
+     */
+    private volatile Stepping m_stepping;
 
     /**
      * Counts the stops and resumes, so a waiting fiber knows which stop it waits for.

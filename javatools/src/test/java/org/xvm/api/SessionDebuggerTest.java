@@ -43,6 +43,7 @@ import org.xvm.runtime.SessionDebugger.Breakpoint;
 import org.xvm.runtime.SessionDebugger.Line;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
+import org.xvm.runtime.SessionDebugger.Step;
 import org.xvm.runtime.SessionDebugger.Stop;
 import org.xvm.runtime.SessionDebugger.Variable;
 
@@ -55,9 +56,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs modules compiled from source files under a {@link SessionDebugger}: breakpoints by file and
- * line, how they are verified, the stack of a stop, the variables of its frames, assert:debug,
- * other fibers waiting while the program is stopped, fibers yielding to each other while
- * breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test resources, as for
+ * line, how they are verified, the stack of a stop, the variables of its frames, stepping over,
+ * into and out of calls, assert:debug, other fibers waiting while the program is stopped, fibers
+ * yielding to each other while breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test resources, as for
  * {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
@@ -229,6 +230,84 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void stepsGoOverAndIntoCallsLineByLineAndOverAReturnToTheCallersNextLine()
+            throws Exception {
+        Path  source  = compile("Steps", STEPS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Steps"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 4)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Steps", output, session);
+        try (control) {
+            Stop stop = stops.next();
+            assertEquals("Steps.run:4", where(session, stop));
+
+            // over the call on line 4
+            stop = step(session, stops, stop, Step.OVER);
+            assertEquals("step", stop.reason());
+            assertEquals(List.of(), stop.breakpointIds());
+            assertEquals("Steps.run:5", where(session, stop));
+
+            // into the call on line 5, with its caller below
+            stop = step(session, stops, stop, Step.IN);
+            assertEquals("Steps.add:11", where(session, stop));
+            assertEquals("Steps.run", session.stackTrace(stop.threadId()).get(1).name());
+
+            stop = step(session, stops, stop, Step.OVER);
+            assertEquals("Steps.add:12", where(session, stop));
+
+            // over the return, to the caller's next line
+            stop = step(session, stops, stop, Step.OVER);
+            assertEquals("Steps.run:6", where(session, stop));
+            assertFalse(output.toString().contains("3 6"), output.toString());
+
+            // a fiber that does not wait cannot be stepped, and the program stays stopped
+            assertFalse(session.step(stop.threadId() + 1000, Step.OVER));
+            assertTrue(session.isStopped());
+
+            stop = step(session, stops, stop, Step.OVER);
+            assertEquals("Steps.run:7", where(session, stop));
+            assertTrue(output.toString().contains("3 6"), output.toString());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
+    public void aStepOutStopsAtTheCallersNextLineAndABreakpointOnTheWayEndsAStep() throws Exception {
+        Path  source  = compile("StepsOut", STEPS.replace("Steps", "StepsOut"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("StepsOut"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 11)));
+
+        Control control = run("StepsOut", new StringWriter(), session);
+        try (control) {
+            Stop stop = stops.next();
+            assertEquals("StepsOut.add:11", where(session, stop));
+
+            stop = step(session, stops, stop, Step.OUT);
+            assertEquals("step", stop.reason());
+            assertEquals("StepsOut.run:5", where(session, stop));
+
+            // stepping over line 5 runs its call into add, which stops at the breakpoint there
+            stop = step(session, stops, stop, Step.OVER);
+            assertEquals("breakpoint", stop.reason());
+            assertEquals(List.of(1), stop.breakpointIds());
+            assertEquals("StepsOut.add:11", where(session, stop));
+
+            // the step ended there: resuming runs the program to its end
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
     public void assertDebugStopsTheProgram() throws Exception {
         compile("Pauses", """
                 module Pauses {
@@ -353,6 +432,23 @@ public class SessionDebuggerTest {
         private final BlockingQueue<Stop> f_queue = new LinkedBlockingQueue<>();
     }
 
+    /**
+     * Step the stopped fiber and wait for the stop where the step ends.
+     */
+    private static Stop step(SessionDebugger session, Stops stops, Stop stop, Step step)
+            throws InterruptedException {
+        assertTrue(session.step(stop.threadId(), step));
+        return stops.next();
+    }
+
+    /**
+     * @return the method and line of the stopped fiber's innermost frame, as "Module.method:line"
+     */
+    private static String where(SessionDebugger session, Stop stop) {
+        StackFrameInfo frame = session.stackTrace(stop.threadId()).getFirst();
+        return frame.name() + ':' + frame.line();
+    }
+
     private static List<Variable> read(SessionDebugger session, int nReference) throws Exception {
         return session.variables(nReference).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
@@ -413,6 +509,27 @@ public class SessionDebuggerTest {
                     Int sum = point.x + point.y;
                     @Inject Console console;
                     console.print($"{sum} {ints.size} {text}");
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() calls add() on lines 4 and 5, prints "3 6" on line 6 and returns 6 on
+     * line 7; add()'s code is on lines 11 and 12.
+     */
+    private static final String STEPS = """
+            module Steps {
+                Int run() {
+                    @Inject Console console;
+                    Int a = add(1, 2);
+                    Int b = add(a, 3);
+                    console.print($"{a} {b}");
+                    return b;
+                }
+
+                Int add(Int x, Int y) {
+                    Int sum = x + y;
+                    return sum;
                 }
             }
             """;
