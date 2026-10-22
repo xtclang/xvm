@@ -25,6 +25,7 @@ import org.xvm.lsp.server.RunExitedParams
 import org.xvm.lsp.server.RunInputParams
 import org.xvm.lsp.server.RunOutputParams
 import org.xvm.lsp.server.RunParams
+import org.xvm.lsp.server.StopRunParams
 import org.xvm.lsp.server.XtcLanguageClient
 import org.xvm.lsp.server.XtcLanguageServer
 import org.xvm.lsp.server.launchStdio
@@ -491,6 +492,28 @@ class EmbeddedExecutionTest {
                 assertThat(runs.tracked()).isZero()
                 assertThat(runs.input(RunInputParams("typed-early", "late\n"))).isFalse()
                 assertThat(runs.input(RunInputParams("no-such-run", "text\n"))).isFalse()
+            }
+        }
+    }
+
+    @Test
+    fun `a run stopped while its module builds never starts, and reports that it was stopped`() {
+        CompilerTestSupport.configure()
+        val greeter = source("Late.x", "module Late { void run() { @Inject Console console; console.print(\"started\"); } }")
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Late", greeter)))
+            // on the class's worker, which is already started; closing these runs would close it
+            EmbeddedRuns(adapter, { client }, worker).let { runs ->
+                val started = runs.run(RunParams(module = "Late", runId = "stopped-early"))
+                assertThat(runs.stop(StopRunParams("stopped-early"))).isTrue()
+
+                assertThat(started.get(60, SECONDS).runId).isEqualTo("stopped-early")
+                val exit = client.exits.poll(60, SECONDS)!!
+                assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED_BEFORE_START)
+                assertThat(client.output.toString()).doesNotContain("started")
+                assertThat(runs.tracked()).isZero()
             }
         }
     }

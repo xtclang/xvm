@@ -111,6 +111,9 @@ internal class EmbeddedRuns(
     private class WaitingInput {
         val text = StringBuilder()
         var ended = false
+
+        /** Stopped before the program started, which it then never does. */
+        var stopped = false
     }
 
     fun build(params: BuildParams): CompletableFuture<BuildResponse> =
@@ -129,6 +132,11 @@ internal class EmbeddedRuns(
                 if (!result.succeeded || target == null) {
                     synchronized(inputLock) { waiting.remove(runId) }
                     return@thenApply RunResponse(null, build)
+                }
+                val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
+                if (stoppedEarly) {
+                    (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, null, STOPPED_BEFORE_START))
+                    return@thenApply RunResponse(runId, build)
                 }
                 // a run can end before start returns, e.g. while another program still runs
                 val ended = AtomicBoolean()
@@ -159,13 +167,18 @@ internal class EmbeddedRuns(
                             }
                         },
                     )
-                synchronized(inputLock) {
-                    if (!ended.get()) workerIds[runId] = id
-                    waiting.remove(runId)?.takeUnless { ended.get() }?.let { typed ->
-                        if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
-                        if (typed.ended) worker.endInput(id)
+                // input typed while the module built goes to the program, unless the run was stopped meanwhile
+                val stop =
+                    synchronized(inputLock) {
+                        if (!ended.get()) workerIds[runId] = id
+                        val typed = waiting.remove(runId)?.takeUnless { ended.get() } ?: return@synchronized false
+                        if (!typed.stopped) {
+                            if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
+                            if (typed.ended) worker.endInput(id)
+                        }
+                        typed.stopped
                     }
-                }
+                if (stop) worker.stop(id)
                 RunResponse(runId, build)
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
     }
@@ -187,9 +200,19 @@ internal class EmbeddedRuns(
         }
     }
 
-    /** Stops the run; the client still receives its `xtc/runExited`. False when no such run is active. */
+    /**
+     * Stops the run, or keeps it from starting while it still builds; the client still receives its `xtc/runExited`,
+     * unless the build fails. False when no such run is active.
+     */
     fun stop(params: StopRunParams): Boolean {
-        val id = params.runId?.let(workerIds::get) ?: return false
+        val runId = params.runId ?: return false
+        val id =
+            synchronized(inputLock) {
+                workerIds[runId] ?: waiting[runId]?.let { typed ->
+                    typed.stopped = true
+                    return true
+                }
+            } ?: return false
         worker.stop(id)
         return true
     }
@@ -220,4 +243,9 @@ internal class EmbeddedRuns(
                     .map { (uri, diagnostics) -> PublishDiagnosticsParams(uri, diagnostics.map { it.toLsp(uri) }) },
             outputDirectory = result.modulePath.firstOrNull(),
         )
+
+    companion object {
+        /** The exit of a run stopped while its module was still building. */
+        const val STOPPED_BEFORE_START = "Stopped before the program started."
+    }
 }

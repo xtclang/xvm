@@ -522,7 +522,7 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 |---------|-----------|---------|
 | `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
 | `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
-| `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
+| `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
 | `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
@@ -581,7 +581,8 @@ so a program printing faster than the client reads waits in its print rather tha
 `Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
 still building is held and delivered when the program starts. After `end`, or when the run is stopped,
 a program waiting for a line gets an empty one, as at the end of terminal input. Clients echo what the
-user types, so `readLine`'s `suppressEcho` is not honored.
+user types, so `readLine`'s `suppressEcho` is not honored. A run stopped while its module still builds
+never starts, and its exit says `Stopped before the program started.`
 
 ## Context-Aware Completion
 
