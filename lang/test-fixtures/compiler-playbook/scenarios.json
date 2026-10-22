@@ -8820,9 +8820,9 @@
       }
     },
     "X285": {
-      "title": "a VS Code debug launch builds and runs the module in a debug session, and a line typed in its Debug Console is the program's input; IntelliJ offers no Debug runner",
+      "title": "a debug launch builds and runs the module in a debug session in the language server, to its exit code; in VS Code a line typed in the Debug Console is the program's input",
       "manual": [
-        "VS Code sends a line typed into the Debug Console as an evaluate request in the repl context; the case sends that request itself, so typing into the Debug Console is checked manually."
+        "VS Code sends a line typed into the Debug Console as an evaluate request in the repl context; the case sends that request itself, so typing into the Debug Console is checked manually. IntelliJ's case does not send console input to a debug session."
       ],
       "values": {
         "file": "DebugRun.x",
@@ -9314,9 +9314,9 @@
       }
     },
     "X304": {
-      "title": "a breakpoint stops a VS Code debug session at its line, with the call stack, and Continue runs the program to its exit; IntelliJ has no debug sessions yet",
+      "title": "a breakpoint stops a debug session at its line, with the call stack, and Continue (IntelliJ: Resume) runs the program to its exit",
       "manual": [
-        "How VS Code shows the stopped line, the call stack and the verified breakpoint in its views is checked manually; the case checks the protocol messages VS Code receives and the stack it asks for."
+        "How each editor shows the stopped line, the call stack and the verified breakpoint in its views is checked manually; VS Code checks the protocol messages it receives and the stack it asks for, IntelliJ the paused session's position, frames and console."
       ],
       "values": {
         "file": "DebugStops.x",
@@ -9338,10 +9338,8 @@
         "exitCode": 42
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "IntelliJ keeps DAP disabled and offers no Debug runner (X285). Its debug sessions follow once LSP4IJ's DAP client or IntelliJ's own debugger API is chosen to drive them (R7 step 4 in the execution plan)."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "CFG1": {
