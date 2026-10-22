@@ -166,6 +166,9 @@ dependencies {
     // Substituted from the included build when lang is built inside the composite.
     implementation(libs.javatools)
 
+    // The Debug Adapter Protocol sessions the server hosts for its clients
+    implementation(project(":dap-server"))
+
     // LSP4J - Eclipse LSP implementation for Java
     // Bundled in fat JAR for out-of-process execution (not provided by IntelliJ)
     implementation(libs.lang.lsp4j)
