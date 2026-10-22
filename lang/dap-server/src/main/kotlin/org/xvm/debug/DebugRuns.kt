@@ -16,14 +16,69 @@ data class LaunchTarget(
     val workingDirectory: String? = null,
 )
 
-/** A launched program's output, and its single exit: the entry method's exit code, or the reason it failed. */
+/** A breakpoint a session asks for: its DAP ID, which the session chooses, and its 1-based line. */
+data class BreakpointRequest(
+    val id: Int,
+    val line: Int,
+)
+
+/** The breakpoints of one source file, by its path; none removes the file's breakpoints. */
+data class SourceBreakpoints(
+    val path: String,
+    val breakpoints: List<BreakpointRequest>,
+)
+
+/**
+ * A breakpoint as the program installed it: the line it is on, which may follow the requested line when that line
+ * has no code of its own, whether it is installed, and if not, why.
+ */
+data class BreakpointState(
+    val id: Int,
+    val line: Int,
+    val verified: Boolean,
+    val message: String? = null,
+)
+
+/** A fiber of the stopped program, by its ID and its service's name. */
+data class ThreadState(
+    val id: Int,
+    val name: String,
+)
+
+/** One frame of a stopped fiber's stack: its ID, the method's name, its source file if known, and its 1-based line. */
+data class FrameState(
+    val id: Int,
+    val name: String,
+    val path: String?,
+    val line: Int,
+)
+
+/** Why and where the program stopped: the reason, what stopped it in words, the fiber, and the breakpoints' IDs. */
+data class StopState(
+    val reason: String,
+    val description: String?,
+    val threadId: Int,
+    val breakpointIds: List<Int>,
+)
+
+/** A launched program's events. */
 interface ProgramEvents {
     fun output(text: String)
 
+    /** The single exit: the entry method's exit code, or the reason it failed. */
     fun exited(
         code: Long?,
         error: String?,
     )
+
+    /** The breakpoints of one file as installed when a debugged program starts. */
+    fun breakpoints(
+        path: String,
+        states: List<BreakpointState>,
+    ) {}
+
+    /** A debugged program stopped; it waits until it is resumed. */
+    fun stopped(stop: StopState) {}
 }
 
 /** A launch's outcome: the run's ID when the program was started, or what a failed build reported. */
@@ -38,14 +93,15 @@ data class LaunchResult(
  */
 interface DebugRuns {
     /**
-     * Builds [target] and, if the build succeeds, starts it once [ready] completes, under [runId]. [events] receives
-     * the program's output and its exit, also when it is stopped before it starts.
+     * Builds [target] and, if the build succeeds, starts it under [runId] once [ready] completes. [ready]'s value is
+     * the breakpoints to install before the program's first line, or null to run it without a debugger. [events]
+     * receives the program's output and its exit, also when it is stopped before it starts.
      */
     fun launch(
         runId: String,
         target: LaunchTarget,
         events: ProgramEvents,
-        ready: CompletionStage<*>,
+        ready: CompletionStage<out List<SourceBreakpoints>?>,
     ): CompletableFuture<LaunchResult>
 
     /** Console input for the run, with its line end. False when no such run is building or running. */
@@ -56,4 +112,22 @@ interface DebugRuns {
 
     /** Stops the run, or keeps it from starting if it is still building. False when no such run is active. */
     fun stop(runId: String): Boolean
+
+    /** Replaces one file's breakpoints in a debugged program that runs. */
+    fun setBreakpoints(
+        runId: String,
+        breakpoints: SourceBreakpoints,
+    ): CompletableFuture<List<BreakpointState>>
+
+    /** The fibers of the stopped program; none while it runs. */
+    fun threads(runId: String): CompletableFuture<List<ThreadState>>
+
+    /** A stopped fiber's stack, innermost frame first. */
+    fun stackTrace(
+        runId: String,
+        threadId: Int,
+    ): CompletableFuture<List<FrameState>>
+
+    /** Resumes the stopped program. False when no such run is active. */
+    fun resume(runId: String): Boolean
 }

@@ -575,6 +575,102 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a breakpoint stops a debugged program, which shows its threads and stack, and continue runs it to its exit`() {
+        CompilerTestSupport.configure()
+        val stops = source("Stops.x", STOPS.trimIndent())
+        val path = directory.resolve("Stops.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val untilStop = client.until(id) { it.event == "stopped" }
+
+            val pending =
+                untilStop
+                    .single { it.response == "setBreakpoints" }["body"]
+                    .asJsonObject["breakpoints"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject
+            assertThat(pending["verified"].asBoolean).isFalse()
+            val installed = untilStop.single { it.event == "breakpoint" }["body"].asJsonObject["breakpoint"].asJsonObject
+            assertThat(installed["id"].asInt).isEqualTo(pending["id"].asInt)
+            assertThat(installed["verified"].asBoolean).isTrue()
+            assertThat(installed["line"].asInt).isEqualTo(11)
+            val stopped = untilStop.last()["body"].asJsonObject
+            assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+            assertThat(stopped["hitBreakpointIds"].asJsonArray.map { it.asInt }).containsExactly(pending["id"].asInt)
+            val thread = stopped["threadId"].asInt
+
+            sessions.request(id, 5, "threads")
+            val threads =
+                client
+                    .until(id) { it.response == "threads" }
+                    .last()["body"]
+                    .asJsonObject["threads"]
+                    .asJsonArray
+            assertThat(threads.map { it.asJsonObject["id"].asInt }).contains(thread)
+            sessions.request(id, 6, "stackTrace", """{"threadId": $thread}""")
+            val frames =
+                client
+                    .until(
+                        id,
+                    ) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(
+                frames.map { it["name"].asString to it["line"].asInt }.take(2),
+            ).containsExactly("Stops.twice" to 11, "Stops.run" to 5)
+            assertThat(frames.first()["source"].asJsonObject["path"].asString).isEqualTo(path)
+
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains("before").contains("after 42")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `terminating a debug session while its program is stopped ends the program`() {
+        CompilerTestSupport.configure()
+        val halts = source("Halts.x", STOPS.trimIndent().replace("Stops", "Halts"))
+        val path = directory.resolve("Halts.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Halts", halts)))
+            val runs = EmbeddedRuns(adapter, { client }, worker)
+            val sessions = DebugSessions(runs, { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Halts"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val untilStop = client.until(id) { it.event == "stopped" }
+
+            sessions.request(id, 5, "terminate")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(1)
+            // the program ended where it stopped, without running on to its end
+            val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains("before").doesNotContain("after")
+            soon(30).until { runs.tracked() == 0 }
+            sessions.end(DebugSessionParams(id))
+        }
+        assertThat(run("Exit").code).isEqualTo(42)
+    }
+
+    @Test
     fun `terminating a debug session while its module builds keeps the program from starting`() {
         CompilerTestSupport.configure()
         val late = source("Waits.x", "module Waits { void run() { @Inject Console console; console.print(\"started\"); } }")
@@ -1044,6 +1140,25 @@ class EmbeddedExecutionTest {
                     console.print("started");
                     // runs until stopped: an empty while (True) is rejected as non-terminating
                     for (Int count = 0; count >= 0; ++count) {}
+                }
+            }
+            """
+
+        /** A module whose run() calls a method on line 5; the method's code is on lines 11 and 12. */
+        const val STOPS =
+            """
+            module Stops {
+                Int run() {
+                    @Inject Console console;
+                    console.print("before");
+                    Int n = twice(21);
+                    console.print($"after {n}");
+                    return n;
+                }
+
+                Int twice(Int n) {
+                    Int result = n * 2;
+                    return result;
                 }
             }
             """

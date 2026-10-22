@@ -596,10 +596,21 @@ started. Its output arrives as DAP `output` events and its exit as `exited` and 
 build reports its diagnostics as output and fails the launch. The session owns the program it
 launched: `terminate` and `disconnect` stop it, also while it still builds, and so do `xtc/debugEnd`
 and the server shutting down. A line the client sends as a `repl` `evaluate` while the program runs
-is its console input. There is no runtime debugger yet, so a session advertises only
-`configurationDone` and `terminate`, reports every breakpoint unverified with that reason, has no
-threads, and refuses `pause` and `attach`. In the worker, `assert:debug` continues, since an
-embedding host has no terminal for the command-line debugger.
+is its console input.
+
+A launch without `noDebug` runs the program under the runtime debugger (`SessionDebugger`), in the
+execution worker beside it. The breakpoints the client sets before the program starts are
+answered as pending and installed before its first line, and `breakpoint` events then report each
+as installed, on the line it was put on, or not installed, with the reason. A breakpoint on a line
+without code moves to the next line with code in its method. Breakpoints set later are installed
+at once. A breakpoint or `assert:debug` stops the program with every fiber stopped:
+`threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
+frame's file and line, and `continue` resumes it; `scopes` has none yet. Terminating or
+disconnecting a stopped program ends it where it is, without running more of it. The session
+advertises only `configurationDone` and `terminate`, and refuses `pause`, `attach` and evaluation;
+variables, stepping and exception breakpoints are not implemented yet. A run without the
+debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
+has no terminal for the command-line debugger.
 
 ## Context-Aware Completion
 
