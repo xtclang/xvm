@@ -8820,15 +8820,25 @@
       }
     },
     "X285": {
-      "title": "debug launches start no fake debugger: VS Code runs the module, IntelliJ offers no Debug runner",
+      "title": "a VS Code debug launch builds and runs the module in a debug session, with breakpoints unverified; IntelliJ offers no Debug runner",
       "manual": [
-        "The VS Code notice that Ecstasy debugging is not available is checked manually."
+        "How VS Code shows the unverified breakpoint in the editor's gutter is checked manually.",
+        "VS Code sends a line typed into the Debug Console as an evaluate request in the repl context; the case sends that request itself, so typing into the Debug Console is checked manually."
       ],
       "values": {
         "file": "DebugRun.x",
         "module": "DebugRun",
         "source": "module DebugRun {\n    Int run() = 4;\n}\n",
-        "exitCode": 4
+        "exitCode": 4,
+        "breakpointLine": 1,
+        "finished": "Process finished with exit code 4",
+        "notAvailable": "The Ecstasy debugger is not available yet, so a program runs without stopping at breakpoints.",
+        "inputFile": "DebugAsk.x",
+        "inputModule": "DebugAsk",
+        "inputSource": "module DebugAsk {\n    void run() {\n        @Inject Console console;\n        String name = console.readLine(\"Name? \");\n        console.print($\"Hello, {name}!\");\n    }\n}\n",
+        "prompt": "Name? ",
+        "input": "Ada",
+        "greeting": "Hello, Ada!"
       },
       "intellij": {
         "coverage": "full",
