@@ -612,10 +612,15 @@ reference lasts until the program resumes. A frame of a fiber that called the st
 scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
 over a call, into one, or out of its method, and the program stops again with the reason `step`;
 a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the
-way ends the step. What the program printed before it stopped is sent before the stop. Terminating
-or disconnecting a stopped program ends it where it is, without running more of it. The session
-advertises only `configurationDone` and `terminate`, and refuses `pause`, `attach` and evaluation;
-exception breakpoints are not implemented yet. A run without the
+way ends the step. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
+stop the program where such an exception is thrown, with the reason `exception` and the exception's
+type and text; it is the frame's first variable, `<exception>`. `pause` stops a running program at
+the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at the first line
+of its own modules, with the reason `entry`; while it runs and no fiber is stopped, `threads` shows
+one thread, named after the module, for an editor's Pause to act on. What the program printed
+before it stopped is sent before the stop. Terminating or disconnecting a stopped program ends it
+where it is, without running more of it. The session advertises `configurationDone`, `terminate`
+and its exception filters, and refuses `attach` and evaluation. A run without the
 debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
 has no terminal for the command-line debugger.
 
