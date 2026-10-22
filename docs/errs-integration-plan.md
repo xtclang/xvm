@@ -2365,7 +2365,7 @@ messages say so; `670954781` and `c553468d0`, which only record work here, are n
 
 ### R6 debug sessions (2026-10-22)
 
-R6, on this branch only (not mirrored into #693), in three commits:
+R6, on this branch only, in three commits; it does not go into #693, which takes no debugger work:
 
 - `6312fd242`: an embedded run passes `assert:debug`. Every service used the JVM-wide `DebugConsole`,
   which in the execution worker read its commands from standard input, the server's protocol pipe,
@@ -2397,7 +2397,7 @@ debugging, which is R7. Validation: `:lang:lsp-server:test` 2,379 tests, 0 failu
 
 ### R7: breakpoints, stops and stacks (2026-10-22)
 
-R7's first end-to-end case, on this branch only (not mirrored into #693), in four commits, each an
+R7's first end-to-end case, on this branch only and not for #693, in four commits, each an
 integration burst of its own ([below](#r6r7-integration-bursts-2026-10-22)):
 
 - `41cb8b60c` (R7a, `javatools`): `SessionDebugger`, a runtime debugger that a host drives through
@@ -2434,31 +2434,37 @@ reply retires"), and fails the same way on `ef1491a6c`, before this work
 
 ### R6–R7 integration bursts (2026-10-22)
 
-R6 and R7's first part are seven code commits on this branch, with their records, none mirrored
-into #693 yet. They fall into four bursts that integrate in this order; each lists what it needs
-and what its own validation is. The conflict previews were cherry-picks into throwaway worktrees on 2026-10-22,
-onto master `1c4efe422` and #693's tip `6386f609f`.
+R6 and R7's first part are seven code commits on this branch, with their records. They fall into
+four bursts that integrate in this order; each lists what it needs and what its own validation is.
+None of them goes into #693: #693 takes no debugger work, only unrelated bug fixes (decided
+2026-10-22). The conflict preview was a cherry-pick into a throwaway worktree on 2026-10-22, onto
+master `1c4efe422`.
 
 | Burst | Commits, in order | Paths | Needs | Goes to | Validation |
 |-------|-------------------|-------|-------|---------|------------|
 | A: runtime | `6312fd242` (without its `EmbeddedExecutionTest` case, which is B's), `41cb8b60c` (R7a) | `javatools` only | master | A runtime pull request to master, as #703 was | `:javatools:test` (`EmbeddingSupportTest`, `SessionDebuggerTest`), `spotlessCheck` |
-| B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | #693, or a `lang` pull request, after A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
+| B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | A `lang` pull request of its own, after A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
 | C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | With B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
 | D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | With B and C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
-plans in `lang/doc`, whose changes travel with B and C.
+plans in `lang/doc`, whose changes travel with B, C and D.
 
-Conflict previews:
-- Onto master, `6312fd242`'s `javatools` part applies; its `lang` test file conflicts, since master
-  has no `lang` server, and is left out. `41cb8b60c` then conflicts once, in the signature of
-  `EmbeddingSupport.runMethod()`: master writes `ErrorListener errs` and `Objects.requireNonNull`.
-  The resolution keeps R7a's two methods in master's spelling.
-- Onto #693, all seven code commits apply in order (`6312fd242`, `ccc0695d5`, `44d121779`,
-  `41cb8b60c`, `e73878550`, `bb016ce17`, `69c2ff2f8`) apart from one conflict: `ccc0695d5` deletes
-  `lang/dap-server/.../XtcDebugServerLauncher.kt`, which #693 has in a slightly different form, and
-  the resolution is to delete it. #693 carries `javatools` as well, so A can go into it with B and C
-  if #693 is integrated before the runtime pull request.
+Conflict preview onto master: `6312fd242`'s `javatools` part applies; its `lang` test file
+conflicts, since master has no `lang` server, and is left out. `41cb8b60c` then conflicts once, in
+the signature of `EmbeddingSupport.runMethod()`: master writes `ErrorListener errs` and
+`Objects.requireNonNull`. The resolution keeps R7a's two methods in master's spelling.
+
+Two fixes in these commits are bugs of the embedded Run that #693 also has, so they are the
+candidates for it, as fixes of their own:
+- `6312fd242`: a program that reaches `assert:debug` in an embedded run hangs, because the console
+  debugger reads its commands from the execution worker's protocol pipe. The whole commit is that
+  fix; a conflict preview onto #693's tip `6386f609f` applied it cleanly.
+- Stopping a run while its module still builds (`xtc/stopRun`, a VS Code task's Stop) answered
+  false and let the program start anyway, with nobody listening; now it never starts, and its exit
+  says `Stopped before the program started.` That fix is inside `ccc0695d5`, between the DAP
+  changes, so it would be written out on its own for #693 (`EmbeddedRuns.stop()` and its start
+  check, with the `EmbeddedExecutionTest` case for it).
 
 ### IntelliJ parity backlog (L60)
 
