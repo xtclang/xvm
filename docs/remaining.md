@@ -210,14 +210,14 @@ Planned in [the execution plan](../lang/doc/plans/plan-embedded-execution.md#add
 after the R8 gate unless one is chosen to gate the release. The console debugger's commands they
 come from are in parentheses.
 
-- [ ] R9: conditional breakpoints (`BC`), hit counts and logpoints.
+- [ ] R9: conditional breakpoints (`BC`), hit counts and logpoints. IntelliJ's logpoints: UP32.
 - [ ] R9: function breakpoints, which stop when a method is entered.
 - [ ] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
-  exception views.
+  exception views. IntelliJ: UP34 (filter conditions) and UP33 (`exceptionInfo`).
 - [ ] R9: data breakpoints, which stop when a property or field changes.
-- [ ] R10: value formats (`V`) and identity codes (`DI`).
+- [ ] R10: value formats (`V`) and identity codes (`DI`). IntelliJ's hexadecimal toggle: UP36.
 - [ ] R10: a value's `toString()` on demand (`DS`), through R7's evaluation.
-- [ ] R10: computed properties as lazy variables; only fields show now.
+- [ ] R10: computed properties as lazy variables; only fields show now. IntelliJ: UP35.
 - [ ] R10: paging of large arrays and collections, in place of the first 100 elements.
 - [ ] R10: changing a variable's value while stopped (`setVariable`).
 - [ ] R10: completions in the Debug Console.
@@ -314,6 +314,21 @@ passes with the workaround disabled. The gates are in
   the hint for a disposed editor; its test fails without the check, and natively an X307 that closes
   its file right after the stop reports the IDE error on `main` and none with the fix. Gate after a
   release: X307 without the wait, and no IDE errors.
+
+### LSP4IJ: DAP features ready locally, not filed
+
+IntelliJ's side of R9 and R10, each a local commit in `~/src/lsp4ij` on a branch off `main` (`ef2b18c3`),
+with tests ([details](errs-upstream-issues.md#lsp4ij-dap-features-prepared-2026-10-22)). UP32 and UP34 are
+filed; the others wait for their R9 or R10 adapter work, a native check, and the user's go-ahead to file them.
+
+- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` `82dbb3e9`): breakpoints that don't suspend as DAP logpoints; the
+  "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
+  program stopped while IntelliJ shows it running.
+- [ ] UP33 `feat/dap-exception-info` (`04164852`): the exception hint from `exceptionInfo`.
+- [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), `feat/dap-exception-filter-conditions` `a4f73d29`): conditions on exception filters, sent
+  as `filterOptions`.
+- [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.
+- [ ] UP36 `feat/dap-value-formats` (`b0a76151`): a "Show Values as Hexadecimal" toggle.
 
 ### LSP4J
 
