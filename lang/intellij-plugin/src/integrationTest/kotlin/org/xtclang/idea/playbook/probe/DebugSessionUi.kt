@@ -8,27 +8,39 @@ import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.impl.ConsoleViewImpl
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.SimpleColoredText
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import com.intellij.xdebugger.frame.XCompositeNode
+import com.intellij.xdebugger.frame.XDebuggerTreeNodeHyperlink
 import com.intellij.xdebugger.frame.XExecutionStack
+import com.intellij.xdebugger.frame.XFullValueEvaluator
 import com.intellij.xdebugger.frame.XStackFrame
+import com.intellij.xdebugger.frame.XValue
+import com.intellij.xdebugger.frame.XValueChildrenList
+import com.intellij.xdebugger.frame.XValueContainer
+import com.intellij.xdebugger.frame.XValueNode
+import com.intellij.xdebugger.frame.XValuePlace
+import com.intellij.xdebugger.frame.presentation.XValuePresentation
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import javax.swing.Icon
 
 /**
  * Drives Debug of an Ecstasy Application configuration, through LSP4IJ's DAP client and the debug session in the
- * language server, and reports the session as the IDE shows it: whether it is paused, where, its frames, its console
- * and its exit code.
+ * language server, and reports the session as the IDE shows it: whether it is paused, where, its frames and their
+ * variables, its console and its exit code.
  */
 object DebugSessionUi {
     /** Sessions by name as they start: the debugger manager lists a session only while it runs. */
@@ -111,6 +123,28 @@ object DebugSessionUi {
         return state.toString()
     }
 
+    /**
+     * The variables of the paused fiber's top frame as the Variables view gets them from LSP4IJ, in the frame's Locals
+     * group, or, along [path], names separated by `/` such as `point`, the fields or elements of one of them: each with
+     * its `name`, `value`, `type` and whether it `expands`.
+     */
+    @JvmStatic
+    fun variables(
+        project: Project,
+        module: String,
+        path: String,
+    ): String {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val frame = checkNotNull(session.currentStackFrame) { "The debug session of $module is not paused" }
+        val groups = children(frame).bottomGroups
+        var shown = children(checkNotNull(groups.firstOrNull { it.name == "Locals" }) { "No Locals in ${groups.map { it.name }}" })
+        path.split('/').filter { it.isNotEmpty() }.forEach { name ->
+            val index = (0 until shown.size()).firstOrNull { shown.getName(it) == name } ?: error("No variable $name along $path")
+            shown = children(shown.getValue(index))
+        }
+        return JsonArray().apply { (0 until shown.size()).forEach { add(presentation(shown.getName(it), shown.getValue(it))) } }.toString()
+    }
+
     /** Resumes the module's paused session, as the Resume Program action does. */
     @JvmStatic
     fun resume(
@@ -135,6 +169,141 @@ object DebugSessionUi {
     ): XDebugSession? = sessions[name(module)]
 
     private fun name(module: String) = "Playbook Debug $module"
+
+    /** The children of a frame, group or value, as the Variables view receives them. */
+    private fun children(container: XValueContainer): XValueChildrenList {
+        val done = CompletableFuture<XValueChildrenList>()
+        val collected = XValueChildrenList()
+        container.computeChildren(
+            object : XCompositeNode {
+                override fun addChildren(
+                    children: XValueChildrenList,
+                    last: Boolean,
+                ) {
+                    (0 until children.size()).forEach { collected.add(children.getName(it), children.getValue(it)) }
+                    children.topGroups.forEach(collected::addTopGroup)
+                    children.bottomGroups.forEach(collected::addBottomGroup)
+                    if (last) done.complete(collected)
+                }
+
+                override fun tooManyChildren(remaining: Int) {
+                    done.complete(collected)
+                }
+
+                override fun setAlreadySorted(alreadySorted: Boolean) {}
+
+                override fun setErrorMessage(errorMessage: String) {
+                    done.completeExceptionally(IllegalStateException(errorMessage))
+                }
+
+                override fun setErrorMessage(
+                    errorMessage: String,
+                    link: XDebuggerTreeNodeHyperlink?,
+                ) = setErrorMessage(errorMessage)
+
+                override fun setMessage(
+                    message: String,
+                    icon: Icon?,
+                    attributes: SimpleTextAttributes,
+                    link: XDebuggerTreeNodeHyperlink?,
+                ) {}
+            },
+        )
+        return done.get(30, TimeUnit.SECONDS)
+    }
+
+    /** A value's text, type and whether it expands, as the Variables view shows them. */
+    private fun presentation(
+        name: String,
+        value: XValue,
+    ): JsonObject {
+        val shown = CompletableFuture<JsonObject>()
+
+        fun complete(
+            text: String,
+            type: String?,
+            expands: Boolean,
+        ) = shown.complete(
+            JsonObject().apply {
+                addProperty("name", name)
+                addProperty("value", text)
+                type?.let { addProperty("type", it) }
+                addProperty("expands", expands)
+            },
+        )
+        value.computePresentation(
+            object : XValueNode {
+                override fun setPresentation(
+                    icon: Icon?,
+                    type: String?,
+                    value: String,
+                    hasChildren: Boolean,
+                ) {
+                    complete(value, type, hasChildren)
+                }
+
+                override fun setPresentation(
+                    icon: Icon?,
+                    presentation: XValuePresentation,
+                    hasChildren: Boolean,
+                ) {
+                    val text = StringBuilder()
+                    presentation.renderValue(TextOnly(text))
+                    complete(text.toString(), presentation.type, hasChildren)
+                }
+
+                override fun setFullValueEvaluator(fullValueEvaluator: XFullValueEvaluator) {}
+            },
+            XValuePlace.TREE,
+        )
+        return shown.get(30, TimeUnit.SECONDS)
+    }
+
+    /** Collects the text a value presentation renders, without its colors and comments; strings in quotes, as the view draws them. */
+    private class TextOnly(
+        private val text: StringBuilder,
+    ) : XValuePresentation.XValueTextRenderer {
+        override fun renderValue(value: String) {
+            text.append(value)
+        }
+
+        override fun renderStringValue(value: String) {
+            text.append('"').append(value).append('"')
+        }
+
+        override fun renderNumericValue(value: String) {
+            text.append(value)
+        }
+
+        override fun renderKeywordValue(value: String) {
+            text.append(value)
+        }
+
+        override fun renderValue(
+            value: String,
+            key: TextAttributesKey,
+        ) {
+            text.append(value)
+        }
+
+        override fun renderStringValue(
+            value: String,
+            additionalSpecialCharsToHighlight: String?,
+            maxLength: Int,
+        ) {
+            text.append('"').append(value).append('"')
+        }
+
+        override fun renderComment(comment: String) {}
+
+        override fun renderSpecialSymbol(symbol: String) {
+            text.append(symbol)
+        }
+
+        override fun renderError(error: String) {
+            text.append(error)
+        }
+    }
 
     private fun frames(stack: XExecutionStack): JsonArray {
         val frames = CompletableFuture<List<XStackFrame>>()

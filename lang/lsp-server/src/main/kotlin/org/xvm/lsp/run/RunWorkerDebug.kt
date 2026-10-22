@@ -5,9 +5,11 @@ import com.google.gson.JsonObject
 import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.FrameState
+import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
+import org.xvm.debug.VariableState
 
 /**
  * The JSON forms of the debug data that the worker protocol carries between [RunWorkerProcess] in the language
@@ -92,6 +94,43 @@ internal object RunWorkerDebug {
 
     fun framesOf(json: JsonArray): List<FrameState> =
         json.map { it.asJsonObject }.map { FrameState(it["id"].asInt, it["name"].asString, it["path"]?.asString, it["line"].asInt) }
+
+    fun scopes(scopes: List<ScopeState>) =
+        JsonArray().apply {
+            scopes.forEach { scope ->
+                add(
+                    JsonObject().apply {
+                        addProperty("name", scope.name)
+                        addProperty("reference", scope.variablesReference)
+                    },
+                )
+            }
+        }
+
+    fun scopesOf(json: JsonArray): List<ScopeState> =
+        json
+            .map {
+                it.asJsonObject
+            }.map { ScopeState(it["name"].asString, it["reference"].asInt) }
+
+    fun variables(variables: List<VariableState>) =
+        JsonArray().apply {
+            variables.forEach { variable ->
+                add(
+                    JsonObject().apply {
+                        addProperty("name", variable.name)
+                        addProperty("value", variable.value)
+                        addProperty("type", variable.type)
+                        addProperty("reference", variable.variablesReference)
+                    },
+                )
+            }
+        }
+
+    fun variablesOf(json: JsonArray): List<VariableState> =
+        json.map { it.asJsonObject }.map {
+            VariableState(it["name"].asString, it["value"].asString, it["type"].asString, it["reference"].asInt)
+        }
 
     fun stop(
         event: JsonObject,
