@@ -617,10 +617,17 @@ stop the program where such an exception is thrown, with the reason `exception` 
 type and text; it is the frame's first variable, `<exception>`. `pause` stops a running program at
 the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at the first line
 of its own modules, with the reason `entry`; while it runs and no fiber is stopped, `threads` shows
-one thread, named after the module, for an editor's Pause to act on. What the program printed
-before it stopped is sent before the stop. Terminating or disconnecting a stopped program ends it
-where it is, without running more of it. The session advertises `configurationDone`, `terminate`
-and its exception filters, and refuses `attach` and evaluation. A run without the
+one thread, named after the module, for an editor's Pause to act on. `evaluate` in a stopped frame,
+for a watch, a hover or a line typed in the debug console, evaluates a path to a value without
+running the program's code: a name (`this`, `<exception>`, the frame's innermost variable of that
+name, or else a field of `this`), then any fields (`.name`) and array elements (`[index]`), such as
+`point.x` or `ints[1]`. The value expands like a variable, and what cannot be evaluated fails with
+the reason, such as `There is no variable "nope" in this frame.`; operators, calls and literals are
+not evaluated yet. Without a frame, a line typed in the debug console is the program's input. What
+the program printed before it stopped is sent before the stop. Terminating or disconnecting a
+stopped program ends it where it is, without running more of it. The session advertises
+`configurationDone`, `terminate`, evaluation for hovers and its exception filters, and refuses
+`attach`. A run without the
 debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
 has no terminal for the command-line debugger.
 

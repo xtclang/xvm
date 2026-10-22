@@ -443,9 +443,14 @@ this bridge; they cannot be inferred from compiler type hints.
      modules (worker protocol 7). Shared X308 pauses in VS Code, and X309 stops on entry there;
      IntelliJ's Pause waits on LSP4IJ (UP30), and its configuration has no stop-on-entry option.
      `5a64247bd` rewrote `SessionDebugger` plainly, with less mutable state, without changing it.
+  9. *Watches and hover on paths (`2e4a81205` runtime, `c966674fc` editors).* `evaluate` in a
+     stopped frame reads a path, a name and then fields and array elements such as `point.x` or
+     `ints[1]`, without running code, on the waiting fiber's thread as variables are; what cannot
+     be evaluated fails with the reason (worker protocol 8). Shared X310 evaluates watches in both
+     editors, and VS Code's hover requests too.
 
-  Still open: watches and hover on variables and paths, bounded evaluation, and source revisions (a
-  breakpoint is matched by file and line, not by the revision that was built). The debugger is
+  Still open: bounded evaluation, and source revisions (a breakpoint is matched by file and line,
+  not by the revision that was built). The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
