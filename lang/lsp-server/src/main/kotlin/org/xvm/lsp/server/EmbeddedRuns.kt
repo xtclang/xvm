@@ -12,6 +12,7 @@ import org.xvm.lsp.run.RunWorkerProcess
 import java.io.Closeable
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -90,6 +91,10 @@ interface XtcLanguageClient : LanguageClient {
 
     @JsonNotification("xtc/runExited")
     fun runExited(params: RunExitedParams)
+
+    /** One DAP message from a debug session to the client; see [DebugSessions]. */
+    @JsonNotification("xtc/debugMessage")
+    fun debugMessage(params: DebugMessageParams) {}
 }
 
 /**
@@ -111,63 +116,114 @@ internal class EmbeddedRuns(
     private class WaitingInput {
         val text = StringBuilder()
         var ended = false
+
+        /** Stopped before the program started, which it then never does. */
+        var stopped = false
     }
 
     fun build(params: BuildParams): CompletableFuture<BuildResponse> =
         compiler()?.buildAsync(params.module, params.rebuild == true)?.thenApply(::response) ?: unsupported()
 
     fun run(params: RunParams): CompletableFuture<RunResponse> {
+        val runId = params.runId ?: UUID.randomUUID().toString()
+        return launch(
+            params.copy(runId = runId),
+            object : RunWorkerProcess.Listener {
+                override fun output(text: String) {
+                    (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
+                }
+
+                override fun exited(
+                    code: Long?,
+                    error: String?,
+                ) {
+                    (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
+                }
+            },
+        )
+    }
+
+    /**
+     * Builds the module and, if the build succeeds, runs it once [ready] completes, as `xtc/run` does at once and a
+     * debug session does after its client's configuration. [events] receives the program's output and its single
+     * exit, also when the run is stopped before the program starts.
+     */
+    internal fun launch(
+        params: RunParams,
+        events: RunWorkerProcess.Listener,
+        ready: CompletionStage<*> = CompletableFuture.completedFuture(Unit),
+    ): CompletableFuture<RunResponse> {
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
         val compiler = compiler() ?: return unsupported()
         val runId = params.runId ?: UUID.randomUUID().toString()
         synchronized(inputLock) { waiting[runId] = WaitingInput() }
         return compiler
             .buildAsync(module, false, params.moduleName)
-            .thenApply { result ->
+            .thenCompose { result ->
                 val build = response(result)
                 val target = result.modules.lastOrNull()
                 if (!result.succeeded || target == null) {
                     synchronized(inputLock) { waiting.remove(runId) }
-                    return@thenApply RunResponse(null, build)
+                    return@thenCompose CompletableFuture.completedFuture(RunResponse(null, build))
                 }
-                // a run can end before start returns, e.g. while another program still runs
-                val ended = AtomicBoolean()
-                val id =
-                    worker.start(
-                        RunWorkerProcess.Request(
-                            result.modulePath,
-                            target.name,
-                            params.method ?: "run",
-                            params.args.orEmpty(),
-                            params.workingDirectory ?: result.workingDirectory,
-                        ),
-                        object : RunWorkerProcess.Listener {
-                            override fun output(text: String) {
-                                (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
-                            }
-
-                            override fun exited(
-                                code: Long?,
-                                error: String?,
-                            ) {
-                                synchronized(inputLock) {
-                                    ended.set(true)
-                                    waiting.remove(runId)
-                                    workerIds.remove(runId)
-                                }
-                                (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
-                            }
-                        },
-                    )
-                synchronized(inputLock) {
-                    if (!ended.get()) workerIds[runId] = id
-                    waiting.remove(runId)?.takeUnless { ended.get() }?.let { typed ->
-                        if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
-                        if (typed.ended) worker.endInput(id)
-                    }
+                ready.thenApply {
+                    start(runId, params, result, target.name, events)
+                    RunResponse(runId, build)
                 }
-                RunResponse(runId, build)
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
+    }
+
+    private fun start(
+        runId: String,
+        params: RunParams,
+        result: XdkBuildResult,
+        module: String,
+        events: RunWorkerProcess.Listener,
+    ) {
+        val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
+        if (stoppedEarly) {
+            events.exited(null, STOPPED_BEFORE_START)
+            return
+        }
+        // a run can end before start returns, e.g. while another program still runs
+        val ended = AtomicBoolean()
+        val id =
+            worker.start(
+                RunWorkerProcess.Request(
+                    result.modulePath,
+                    module,
+                    params.method ?: "run",
+                    params.args.orEmpty(),
+                    params.workingDirectory ?: result.workingDirectory,
+                ),
+                object : RunWorkerProcess.Listener {
+                    override fun output(text: String) = events.output(text)
+
+                    override fun exited(
+                        code: Long?,
+                        error: String?,
+                    ) {
+                        synchronized(inputLock) {
+                            ended.set(true)
+                            waiting.remove(runId)
+                            workerIds.remove(runId)
+                        }
+                        events.exited(code, error)
+                    }
+                },
+            )
+        // input typed while the module built goes to the program, unless the run was stopped meanwhile
+        val stop =
+            synchronized(inputLock) {
+                if (!ended.get()) workerIds[runId] = id
+                val typed = waiting.remove(runId)?.takeUnless { ended.get() } ?: return@synchronized false
+                if (!typed.stopped) {
+                    if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
+                    if (typed.ended) worker.endInput(id)
+                }
+                typed.stopped
+            }
+        if (stop) worker.stop(id)
     }
 
     /** Forwards console input to the run, or holds it while the run is still building. */
@@ -187,9 +243,19 @@ internal class EmbeddedRuns(
         }
     }
 
-    /** Stops the run; the client still receives its `xtc/runExited`. False when no such run is active. */
+    /**
+     * Stops the run, or keeps it from starting while it still builds; the client still receives its `xtc/runExited`,
+     * unless the build fails. False when no such run is active.
+     */
     fun stop(params: StopRunParams): Boolean {
-        val id = params.runId?.let(workerIds::get) ?: return false
+        val runId = params.runId ?: return false
+        val id =
+            synchronized(inputLock) {
+                workerIds[runId] ?: waiting[runId]?.let { typed ->
+                    typed.stopped = true
+                    return true
+                }
+            } ?: return false
         worker.stop(id)
         return true
     }
@@ -220,4 +286,9 @@ internal class EmbeddedRuns(
                     .map { (uri, diagnostics) -> PublishDiagnosticsParams(uri, diagnostics.map { it.toLsp(uri) }) },
             outputDirectory = result.modulePath.firstOrNull(),
         )
+
+    companion object {
+        /** The exit of a run stopped while its module was still building. */
+        const val STOPPED_BEFORE_START = "Stopped before the program started."
+    }
 }
