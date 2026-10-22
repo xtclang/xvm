@@ -86,6 +86,10 @@ documented refusals, not open tasks; the few worth revisiting are under
   the UP07 equal-report bridge off (`run-1679585523095307991`), and with that bridge off and fixture
   files opened before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Not
   reproduced; the trigger is still unknown.
+- [ ] The opt-in IntelliJ `projectLifecycle` check fails: "closed project's pending reply retires"
+  times out after 15 s. It fails the same way on `ef1491a6c`, before the R6–R7 work
+  (`run-15132038242161374573`), so it predates it; its last recorded pass is
+  `run-8589502777162952560`, recorded with the 2026-10-05 rebase acceptance.
 
 ### Beyond the current scope
 
@@ -144,8 +148,8 @@ Only if a real need comes up; each is a documented refusal today.
 
 ### R6: DAP lifecycle on real run sessions
 
-Closed 2026-10-22 for VS Code (`6312fd242`, `ccc0695d5`, `44d121779`; shared X285 in VS Code `run-ZuRYb6`).
-IntelliJ keeps DAP disabled and offers no Debug runner; its parity is R8's.
+Closed 2026-10-22 for VS Code (`6312fd242`, `ccc0695d5`, `44d121779`; shared X285 in VS Code `run-ZuRYb6`),
+and for IntelliJ with R7's fourth step (`69c2ff2f8`).
 
 - [x] Placeholder half: no synthetic breakpoints or threads; launch and attach fail with the reason;
   only the configuration handshake is advertised (`XtcDebugServerTest`, `eba208bb3`).
@@ -184,8 +188,10 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
 - [ ] Tests: source revisions, stale handles, resume/stop races, multiple service contexts.
-- [ ] IntelliJ debug sessions (R7 step 4): decide between LSP4IJ's DAP client over a process
-  handler on the language server connection (experimental API) and IntelliJ's own debugger API.
+- [x] IntelliJ debug sessions (R7 step 4): LSP4IJ's DAP client, chosen 2026-10-22, through a process
+  handler that carries the session over the language server connection (`69c2ff2f8`; X304 in
+  IntelliJ `run-6846671860304618586`). LSP4IJ's DAP API is experimental, which Plugin Verifier reports
+  without failing the build.
 
 ### R8: runtime release gate
 
