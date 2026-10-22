@@ -37,6 +37,8 @@ import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.Thread
+import org.eclipse.lsp4j.debug.ThreadEventArguments
+import org.eclipse.lsp4j.debug.ThreadEventArgumentsReason
 import org.eclipse.lsp4j.debug.ThreadsResponse
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.VariablesArguments
@@ -68,8 +70,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * `variables` their values and the fields and elements of objects and arrays; `next`, `stepIn` and `stepOut` step a
  * fiber, and the program stops again with the reason `step`, and `continue` resumes it. The exception filters
  * stop the program where an exception that nothing catches, or any exception, is thrown, with the reason
- * `exception`; they are installed before the program's first line as breakpoints are. There is no pause or
- * evaluation yet (R7 in lang/doc/plans/plan-embedded-execution.md), so neither is advertised.
+ * `exception`; they are installed before the program's first line as breakpoints are. `pause` stops a running
+ * program at the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at its first line,
+ * with the reason `entry`. There is no evaluation yet (R7 in lang/doc/plans/plan-embedded-execution.md), so none is
+ * advertised.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -99,6 +103,10 @@ class XtcDebugServer(
     /** False for a launch without debugging. */
     @Volatile
     private var debugging = true
+
+    /** The launched module's name, which [RUNNING_THREAD] shows. */
+    @Volatile
+    private var programName = "program"
 
     /** True once the launched program has started. */
     @Volatile
@@ -147,8 +155,14 @@ class XtcDebugServer(
         /** Why a fiber cannot be stepped. */
         const val NOT_STOPPED = "That thread is not stopped, so it cannot be stepped."
 
-        /** Why a running program cannot be paused. */
-        const val NO_PAUSE = "Pausing a running program is not available yet."
+        /**
+         * The thread a debugged program shows while it runs and none of its fibers is stopped, named after its module:
+         * the one an editor's Pause acts on, which pauses the whole program. Fiber IDs count up from 0.
+         */
+        const val RUNNING_THREAD = Int.MAX_VALUE
+
+        /** Why a program that does not run under the debugger cannot be paused. */
+        const val NOT_PAUSABLE = "The program is not running under the debugger, so it cannot be paused."
 
         /** A launch whose build fails runs nothing. */
         const val BUILD_FAILED = "Build failed; nothing was run."
@@ -265,7 +279,8 @@ class XtcDebugServer(
      * Builds the module and starts it, with the breakpoints set by then, answering once it has started; a failed
      * build answers with an error after reporting the build's diagnostics as output. Arguments: `module` (a module
      * name), `moduleUri` (a source URI of the module, used in place of the name when given), `method`, `args` (an
-     * array, or a comma-separated string), `cwd` or `workingDirectory`, and `noDebug`.
+     * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, and `stopOnEntry`, which stops the
+     * program at its first line.
      */
     override fun launch(args: MutableMap<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
@@ -279,13 +294,15 @@ class XtcDebugServer(
             return failed("This debug session has already launched a program.")
         }
         debugging = args?.get("noDebug") != true
+        programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
+        val stopOnEntry = args?.get("stopOnEntry") == true
         console("Building and running ${target.moduleName ?: target.module} with the embedded compiler...")
         val ready =
             configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
                 if (debugging) {
                     installed = breakpoints.toMap()
                     installedExceptions = exceptionStops
-                    DebugSetup(installed.values.toList(), installedExceptions)
+                    DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry)
                 } else {
                     null
                 }
@@ -306,6 +323,14 @@ class XtcDebugServer(
                     throw error(BUILD_FAILED)
                 }
                 started = true
+                if (debugging) {
+                    client?.thread(
+                        ThreadEventArguments().apply {
+                            reason = ThreadEventArgumentsReason.STARTED
+                            threadId = RUNNING_THREAD
+                        },
+                    )
+                }
                 if (debugging) installChanged()
                 null
             }
@@ -317,7 +342,7 @@ class XtcDebugServer(
         return failed("Attaching is not available; launch the module instead.")
     }
 
-    /** DAP: threads. The fibers of the stopped program that wait; none while it runs. */
+    /** DAP: threads. The fibers of the stopped program that wait; while it runs, [RUNNING_THREAD]. */
     override fun threads(): CompletableFuture<ThreadsResponse> {
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(ThreadsResponse().apply { threads = emptyArray() })
@@ -325,7 +350,8 @@ class XtcDebugServer(
         return runs
             .threads(runId)
             .exceptionally { emptyList() }
-            .thenApply { fibers ->
+            .thenApply { waiting ->
+                val fibers = waiting.ifEmpty { listOf(ThreadState(RUNNING_THREAD, programName)) }
                 ThreadsResponse().apply {
                     threads =
                         fibers
@@ -430,8 +456,14 @@ class XtcDebugServer(
     /** DAP: stepOut. Steps the fiber until its method returns, to the caller's next line. */
     override fun stepOut(args: StepOutArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OUT)
 
-    /** DAP: pause. Not available yet; a program stops only at its breakpoints and at `assert:debug`. */
-    override fun pause(args: PauseArguments?): CompletableFuture<Void> = failed(NO_PAUSE)
+    /**
+     * DAP: pause. The program stops, with the reason `pause`, at the next line any of its fibers reaches; one whose
+     * fibers all wait, for input say, stops when one of them next runs. A stopped program stays as it is.
+     */
+    override fun pause(args: PauseArguments?): CompletableFuture<Void> {
+        if (!debuggedRunning() || !runs.pause(runId)) return failed(NOT_PAUSABLE)
+        return CompletableFuture.completedFuture(null)
+    }
 
     /**
      * DAP: evaluate
