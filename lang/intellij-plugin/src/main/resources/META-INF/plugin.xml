@@ -149,12 +149,6 @@
         <!-- Probe active editor delegates in the sandbox so we can verify registration -->
         <postStartupActivity implementation="org.xtclang.idea.editor.XtcEditorStartupActivity"/>
 
-        <!-- TODO: Re-enable DAP registration when the feature is implemented and stable enough
-             to ship without Plugin Verifier experimental API findings.
-        <debugAdapterServer id="xtcDebugAdapter"
-                            name="Ecstasy Debug Adapter"
-                            factoryClass="org.xtclang.idea.dap.XtcDebugAdapterFactory"/>
-        -->
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->
@@ -170,6 +164,11 @@
         <fileNamePatternMapping patterns="*.x"
                                  serverId="xtcLanguageServer"/>
 
+        <!-- Debug of an Ecstasy Application configuration, through a debug session in the language server.
+             LSP4IJ's DAP API is experimental, which Plugin Verifier reports. -->
+        <debugAdapterServer id="xtcDebugAdapter"
+                            name="Ecstasy Debug Adapter"
+                            factoryClass="org.xtclang.idea.dap.XtcDebugAdapterFactory"/>
     </extensions>
 
     <!-- TextMate grammar for syntax highlighting (via IntelliJ's TextMate plugin) -->
