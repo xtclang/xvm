@@ -190,10 +190,12 @@ that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty li
 the language server, which builds and runs the module as the Run button does in embedded mode, in the
 same execution workers. The Debug Console shows the build, the program's output and its exit code; the
 debug toolbar's Stop ends the program, also while it still builds, and a line typed in the Debug
-Console while the program runs is its console input. There is no Ecstasy debugger yet, so breakpoints
-are shown unverified with that reason and are not hit, and a program cannot be paused. In Gradle
-mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and says that debugging is
-not available.
+Console while the program runs is its console input. Breakpoints are verified when the program
+starts, and a breakpoint or `assert:debug` stops the program: the editor shows the line, and the
+Call Stack view the stopped fiber's frames and the other fibers that wait. Continue runs the program
+on, and Stop ends it where it is. Variables, stepping, exception breakpoints and Pause are not
+available yet. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
 
