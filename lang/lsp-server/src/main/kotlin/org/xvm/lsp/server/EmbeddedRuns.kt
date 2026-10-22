@@ -324,6 +324,13 @@ internal class EmbeddedRuns(
         kind: StepKind,
     ): CompletableFuture<Boolean> = debugged(runId) { worker.step(it, thread, kind) }
 
+    /** Pauses a running program under the debugger. False when no such run is active. */
+    internal fun pause(runId: String): Boolean {
+        val id = workerIds[runId] ?: return false
+        worker.pause(id)
+        return true
+    }
+
     /** Resumes a stopped program under the debugger. False when no such run is active. */
     internal fun resume(runId: String): Boolean {
         val id = workerIds[runId] ?: return false
