@@ -190,6 +190,16 @@ interface DebugRuns {
     ): CompletableFuture<List<VariableState>>
 
     /**
+     * Evaluates a path to a value, such as `point.x` or `ints[1]`, in a stopped frame, without running the program's
+     * code: the value as a variable named by the path. Fails, with the reason as its message, if it cannot.
+     */
+    fun evaluate(
+        runId: String,
+        frameId: Int,
+        expression: String,
+    ): CompletableFuture<VariableState>
+
+    /**
      * Resumes the stopped program, stepping one of its fibers: it stops again, with the reason `step`, where the step
      * ends. False when that fiber does not wait; the program then stays stopped.
      */
