@@ -72,6 +72,20 @@ public class InterpreterConnector
         f_runtime.setDebugger(debugger);
     }
 
+    /**
+     * Replace the debugger if it is the expected one, as a run does with its own when it ends.
+     *
+     * @param expected     the debugger to replace
+     * @param replacement  the debugger to use instead
+     */
+    public void replaceDebugger(Debugger expected, Debugger replacement) {
+        synchronized (f_runtime) {
+            if (f_runtime.getDebugger() == expected) {
+                f_runtime.setDebugger(replacement);
+            }
+        }
+    }
+
     @Override
     public void start(Map<String, List<String>> mapInjections) {
         if (!m_fStarted) {

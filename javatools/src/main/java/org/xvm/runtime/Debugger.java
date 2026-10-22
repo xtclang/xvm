@@ -70,4 +70,46 @@ public interface Debugger {
      *         exception needs to be continued to be traced (until caught)
      */
     int checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx);
+
+    /**
+     * Inform the debugger that it has become the debugger of the specified runtime, which turns
+     * the runtime's "debugger is active" flag off first.
+     *
+     * @param runtime  the runtime whose services this debugger now debugs
+     */
+    default void attach(Runtime runtime) {
+    }
+
+    /**
+     * Inform the debugger that another debugger has replaced it. A debugger that holds fibers
+     * releases them.
+     */
+    default void detach() {
+    }
+
+    /**
+     * Inform the debugger of the container that holds its host's own code, such as the runner
+     * that runs the program. That code is not the program being debugged: a debugger never stops
+     * it, holds it or ends it.
+     *
+     * @param container  the host's container
+     */
+    default void setHost(Container container) {
+    }
+
+    /**
+     * End the program's fibers that this debugger holds, or that reach a line from now on,
+     * without running more of the program, as when the program is being stopped. Called before
+     * the debugger is replaced.
+     */
+    default void terminate() {
+    }
+
+    /**
+     * @return true if, while this debugger is active, a fiber must not yield to other fibers, as
+     *         while it steps; the console debugger never lets a fiber yield while it is active
+     */
+    default boolean holdsFibers() {
+        return true;
+    }
 }
