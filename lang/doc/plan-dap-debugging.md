@@ -1,14 +1,15 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-**Status (2026-10-22):** sessions are real and stop at breakpoints, in VS Code and IntelliJ. R6 is done: a
+**Status (2026-10-22):** sessions are real, stop at breakpoints, show variables and step, in VS Code and IntelliJ. R6 is done: a
 session runs inside the language server and travels over its connection, so a `launch` builds and
 runs the module with the same embedded build and execution workers as Run, reports the program's
 output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7's first
 part works too: the runtime debugger, `SessionDebugger`, runs in the execution worker beside the
 program, and the session installs breakpoints before the program's first line, reports how each
-was installed, forwards stops, and answers `threads`, `stackTrace` and `continue` (shared X304).
-Variables, stepping, exception breakpoints, pause and evaluation are not implemented, and only
-`configurationDone` and `terminate` are advertised. IntelliJ debugs an Ecstasy Application
+was installed, forwards stops, and answers `threads`, `stackTrace` and `continue` (shared X304),
+`scopes` and `variables` (X305), and `next`, `stepIn` and `stepOut` (X306). Exception breakpoints,
+pause and evaluation are not implemented, and only `configurationDone` and `terminate` are
+advertised. IntelliJ debugs an Ecstasy Application
 configuration with LSP4IJ's DAP client, through a process handler that carries the same session
 over the language server connection (`XtcDebugAdapterFactory`, `LanguageServerDebugProcessHandler`);
 Phase 0 below describes its earlier, disabled, separate-process form.
