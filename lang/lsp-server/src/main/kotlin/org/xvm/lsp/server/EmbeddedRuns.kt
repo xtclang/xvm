@@ -4,6 +4,8 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.DebugSetup
+import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -153,14 +155,14 @@ internal class EmbeddedRuns(
 
     /**
      * Builds the module and, if the build succeeds, runs it once [ready] completes, as `xtc/run` does at once and a
-     * debug session does after its client's configuration. [ready]'s value is the breakpoints to install before the
+     * debug session does after its client's configuration. [ready]'s value is the debugger's setup before the
      * program's first line, or null to run it without the debugger. [events] receives the program's output and its
      * single exit, also when the run is stopped before the program starts, and a debugged run's breakpoints and stops.
      */
     internal fun launch(
         params: RunParams,
         events: RunWorkerProcess.Listener,
-        ready: CompletionStage<out List<SourceBreakpoints>?> = CompletableFuture.completedFuture(null),
+        ready: CompletionStage<out DebugSetup?> = CompletableFuture.completedFuture(null),
     ): CompletableFuture<RunResponse> {
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
         val compiler = compiler() ?: return unsupported()
@@ -175,8 +177,8 @@ internal class EmbeddedRuns(
                     synchronized(inputLock) { waiting.remove(runId) }
                     return@thenCompose CompletableFuture.completedFuture(RunResponse(null, build))
                 }
-                ready.thenApply { breakpoints ->
-                    start(runId, params, result, target.name, breakpoints, events)
+                ready.thenApply { setup ->
+                    start(runId, params, result, target.name, setup, events)
                     RunResponse(runId, build)
                 }
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
@@ -187,7 +189,7 @@ internal class EmbeddedRuns(
         params: RunParams,
         result: XdkBuildResult,
         module: String,
-        breakpoints: List<SourceBreakpoints>?,
+        setup: DebugSetup?,
         events: RunWorkerProcess.Listener,
     ) {
         val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
@@ -205,7 +207,7 @@ internal class EmbeddedRuns(
                     params.method ?: "run",
                     params.args.orEmpty(),
                     params.workingDirectory ?: result.workingDirectory,
-                    breakpoints,
+                    setup,
                 ),
                 object : RunWorkerProcess.Listener {
                     override fun output(text: String) = events.output(text)
@@ -275,6 +277,16 @@ internal class EmbeddedRuns(
                 }
             } ?: return false
         worker.stop(id)
+        return true
+    }
+
+    /** Replaces the exception stops of a running program under the debugger. False when no such run is active. */
+    internal fun setExceptionStops(
+        runId: String,
+        stops: ExceptionStops,
+    ): Boolean {
+        val id = workerIds[runId] ?: return false
+        worker.setExceptionStops(id, stops)
         return true
     }
 

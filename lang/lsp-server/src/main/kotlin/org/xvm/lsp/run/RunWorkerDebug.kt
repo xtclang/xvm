@@ -1,9 +1,11 @@
 package org.xvm.lsp.run
 
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -131,6 +133,18 @@ internal object RunWorkerDebug {
         json.map { it.asJsonObject }.map {
             VariableState(it["name"].asString, it["value"].asString, it["type"].asString, it["reference"].asInt)
         }
+
+    fun exceptions(stops: ExceptionStops) =
+        JsonObject().apply {
+            addProperty("all", stops.all)
+            addProperty("uncaught", stops.uncaught)
+        }
+
+    /** The exception stops of a command, none when it has none. */
+    fun exceptionsOf(json: JsonElement?): ExceptionStops =
+        json?.takeIf { it.isJsonObject }?.asJsonObject?.let {
+            ExceptionStops(all = it["all"]?.asBoolean == true, uncaught = it["uncaught"]?.asBoolean == true)
+        } ?: ExceptionStops()
 
     fun stop(
         event: JsonObject,
