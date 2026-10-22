@@ -7,6 +7,7 @@ import org.xvm.debug.BreakpointState
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -303,6 +304,13 @@ internal class EmbeddedRuns(
         runId: String,
         reference: Int,
     ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference) }
+
+    /** Steps a fiber of a stopped program under the debugger; false when that fiber does not wait. */
+    internal fun step(
+        runId: String,
+        thread: Int,
+        kind: StepKind,
+    ): CompletableFuture<Boolean> = debugged(runId) { worker.step(it, thread, kind) }
 
     /** Resumes a stopped program under the debugger. False when no such run is active. */
     internal fun resume(runId: String): Boolean {

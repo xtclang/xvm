@@ -9408,6 +9408,45 @@
         ]
       }
     },
+    "X306": {
+      "title": "Step Over, Step Into and Step Out move a stopped debug session line by line, into a call and back to its caller",
+      "manual": [
+        "How each editor marks the line where a step ends and updates its call stack is checked manually; VS Code checks the stops its debug session reports and the stack it asks for after each, IntelliJ the paused session's position and frames."
+      ],
+      "values": {
+        "file": "DebugSteps.x",
+        "module": "DebugSteps",
+        "source": "module DebugSteps {\n    Int run() {\n        @Inject Console console;\n        Int a = add(1, 2);\n        Int b = add(a, 3);\n        console.print($\"{a} {b}\");\n        return b;\n    }\n\n    Int add(Int x, Int y) {\n        Int sum = x + y;\n        return sum;\n    }\n}\n",
+        "breakpointLine": 4,
+        "steps": [
+          [
+            "over",
+            "DebugSteps.run",
+            5
+          ],
+          [
+            "into",
+            "DebugSteps.add",
+            11
+          ],
+          [
+            "out",
+            "DebugSteps.run",
+            6
+          ]
+        ],
+        "caller": [
+          "DebugSteps.run",
+          5
+        ],
+        "output": "3 6",
+        "exitCode": 6
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
