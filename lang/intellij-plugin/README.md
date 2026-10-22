@@ -142,8 +142,10 @@ With the embedded compiler, a configuration can also be debugged: **Debug** star
 in the language server, which builds and runs the module as Run does, in the same execution worker,
 with LSP4IJ's DAP client as the debugger. Line breakpoints can be set in `.x` files; they are
 verified when the program starts, and a breakpoint or `assert:debug` stops the program, with its
-line, call stack and the other fibers that wait shown in the Debug tool window. **Resume Program**
-runs it on and **Stop** ends it where it is. Variables, stepping, exception breakpoints and Pause are
+line, call stack and the other fibers that wait shown in the Debug tool window. Its Variables view
+shows the frame's locals and expands objects and arrays; LSP4IJ shows strings and numbers without
+their type. **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
+**Resume Program** runs it on and **Stop** ends it where it is. Exception breakpoints and Pause are
 not available yet. Debug is not offered for Gradle or command-line runs.
 
 ## Development
