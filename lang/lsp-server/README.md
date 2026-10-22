@@ -605,10 +605,17 @@ as installed, on the line it was put on, or not installed, with the reason. A br
 without code moves to the next line with code in its method. Breakpoints set later are installed
 at once. A breakpoint or `assert:debug` stops the program with every fiber stopped:
 `threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
-frame's file and line, and `continue` resumes it; `scopes` has none yet. Terminating or
-disconnecting a stopped program ends it where it is, without running more of it. The session
+frame's file and line, and `continue` resumes it. `scopes` gives a stopped frame's Locals, and
+`variables` its `this` and named variables, an object's fields and an array's elements (the first
+100), each with its value and type in words; they are read on the waiting fiber's own thread, and a
+reference lasts until the program resumes. A frame of a fiber that called the stopped one has no
+scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
+over a call, into one, or out of its method, and the program stops again with the reason `step`;
+a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the
+way ends the step. What the program printed before it stopped is sent before the stop. Terminating
+or disconnecting a stopped program ends it where it is, without running more of it. The session
 advertises only `configurationDone` and `terminate`, and refuses `pause`, `attach` and evaluation;
-variables, stepping and exception breakpoints are not implemented yet. A run without the
+exception breakpoints are not implemented yet. A run without the
 debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
 has no terminal for the command-line debugger.
 

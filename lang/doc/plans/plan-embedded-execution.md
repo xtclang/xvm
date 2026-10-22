@@ -405,8 +405,8 @@ this bridge; they cannot be inferred from compiler type hints.
      breakpoints on `run`, `setBreakpoints`, `threads`, `stackTrace` and `continue`, and the
      `breakpoints`, `stopped` and `reply` events. The DAP session installs the breakpoints set
      before `configurationDone` before the program's first line, reports how each was installed
-     with `breakpoint` events, forwards stops, and answers `threads`, `stackTrace`, `scopes` (empty)
-     and `continue`.
+     with `breakpoint` events, forwards stops, and answers `threads`, `stackTrace`, `scopes` (empty
+     until step 5) and `continue`.
   3. *VS Code.* No client code changed: the inline adapter carries the new messages. Shared X304
      sets a breakpoint, stops there, checks the stack VS Code asks for, and continues to the exit
      code; X285 keeps the run and console input. VS Code `run-iwSxfQ` passes both with the other
@@ -420,10 +420,21 @@ this bridge; they cannot be inferred from compiler type hints.
      (`run-6846671860304618586`), and X285 debugs DebugRun to its exit code. LSP4IJ's DAP API is
      experimental: Plugin Verifier reports it without failing the build.
 
-  Still open: variables and scopes, stepping, exception stops, pause, bounded evaluation, and
-  source revisions (a breakpoint is matched by file and line, not by the revision that was
-  built). The debugger is the runtime's, so it debugs every run of its `EmbeddingSupport`, which
-  the worker's one program at a time satisfies. Integration bursts are listed in the
+  5. *Variables (`51cccbfbf` runtime, `05e3ff076` editors).* `SessionDebugger` reads a stopped
+     frame's `this` and named variables, an object's fields and an array's elements on the waiting
+     fiber's own thread, and answers off its lock; the worker (protocol 4) and the session answer
+     `scopes` and `variables`. Shared X305 reads them in both editors (VS Code `run-SQPPVx`,
+     IntelliJ `run-7310647732030191697`). A stop now sends the program's waiting output first.
+  6. *Stepping (`769d6f34d` runtime, `a78d736f5` editors).* Steps over, into and out of calls, one
+     fiber at a time, stopping with the reason `step`; a return continues a step over or out to the
+     caller's next line, and a breakpoint ends a step. The worker (protocol 5) and the session
+     answer `next`, `stepIn` and `stepOut`. Shared X306 steps in both editors (VS Code `run-DLPFYQ`,
+     IntelliJ `run-6073636771825028984`).
+
+  Still open: exception stops, pause, stop on entry, bounded evaluation, and source revisions (a
+  breakpoint is matched by file and line, not by the revision that was built). The debugger is
+  the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
+  at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
 - [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
