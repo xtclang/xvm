@@ -229,7 +229,7 @@ export function executionCases(): void {
     });
 }
 
-/** X304-X306, registered after X303 in catalog order: a breakpoint in a debug session, the stopped frame's variables, and steps. */
+/** X304-X307, registered after X303 in catalog order: a breakpoint, the stopped frame's variables, steps, and an exception stop. */
 export function debugSessionCases(): void {
     playbook('X304', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
@@ -394,6 +394,60 @@ export function debugSessionCases(): void {
             }
         });
     });
+    playbook('X307', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            try {
+                // no breakpoint: VS Code turns the adapter's Uncaught Exceptions filter on, as it is by default
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the exception');
+                const stopped = dapEvents(sent, 'stopped')[0].body;
+                assert.strictEqual(stopped?.reason, 'exception');
+                assert.ok(stopped?.text?.startsWith(data.exception) && stopped.text.includes(data.message), JSON.stringify(stopped));
+
+                const frames = await eventually(
+                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                        .flatMap(message => message.body?.stackFrames ?? []),
+                    values => values.length >= data.frames.length, 'VS Code shows where the exception was thrown');
+                assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
+
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
+                const scopes: { variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
+                const variables: DapVariable[] = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables;
+                assert.strictEqual(variables[0].name, data.variable, JSON.stringify(variables));
+                assert.ok(variables[0].type?.includes(data.exception), JSON.stringify(variables[0]));
+                const [name, value] = data.argument as string[];
+                assert.strictEqual(variables.find(item => item.name === name)?.value, value, JSON.stringify(variables));
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue lets the program fail');
+                assert.strictEqual(dapEvents(sent, 'stopped').length, 1, 'The exception stops the program once');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.message), dapOutput(sent));
+            } finally {
+                // a case that fails while its program is stopped leaves no session for the next one
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -427,6 +481,7 @@ interface DapMessage {
         exitCode?: number;
         output?: string;
         reason?: string;
+        text?: string;
         threadId?: number;
         breakpoint?: { verified: boolean; line?: number };
         stackFrames?: { name: string; line: number; source?: { path?: string } }[];

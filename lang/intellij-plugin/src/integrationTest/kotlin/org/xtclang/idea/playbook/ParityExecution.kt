@@ -541,6 +541,45 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X307") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                // no breakpoint: LSP4IJ turns the adapter's Uncaught Exceptions filter on, as it is by default
+                debugger.debug(project, module, uri(data.string("file")), 0)
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops at the exception", 60.seconds) {
+                        it["suspended"]?.asBoolean == true
+                    }
+                val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
+                    val frame = frames.getOrNull(index)
+                    check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
+                        "Frame $index is not ${expected[0].asString} at ${expected[1].asInt}: $frames"
+                    }
+                }
+                val locals = JsonParser.parseString(debugger.variables(project, module, "")).asJsonArray.map { it.asJsonObject }
+                val exception = locals.first()
+                check(exception.string("name") == data.string("variable") && data.string("exception") in exception.string("type")) {
+                    "The exception is not the frame's first variable: $locals"
+                }
+                val argument = data.strings("argument")
+                check(locals.any { it.string("name") == argument[0] && it.string("value") == argument[1] }) { "No ${argument[0]}: $locals" }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume lets the program fail", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                check(data.string("message") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */

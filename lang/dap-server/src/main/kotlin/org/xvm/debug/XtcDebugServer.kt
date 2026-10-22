@@ -11,6 +11,7 @@ import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
 import org.eclipse.lsp4j.debug.EvaluateResponse
+import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.NextArguments
@@ -32,6 +33,7 @@ import org.eclipse.lsp4j.debug.StackTraceResponse
 import org.eclipse.lsp4j.debug.StepInArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
+import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.Thread
@@ -64,8 +66,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * as pending, and `breakpoint` events report how they were installed. A stop is reported with every fiber
  * stopped; `threads` lists the fibers that wait, `stackTrace` their stacks, `scopes` a frame's local variables,
  * `variables` their values and the fields and elements of objects and arrays; `next`, `stepIn` and `stepOut` step a
- * fiber, and the program stops again with the reason `step`, and `continue` resumes it. There are no exception
- * breakpoints, pause or evaluation yet (R7 in lang/doc/plans/plan-embedded-execution.md), so none is advertised.
+ * fiber, and the program stops again with the reason `step`, and `continue` resumes it. The exception filters
+ * stop the program where an exception that nothing catches, or any exception, is thrown, with the reason
+ * `exception`; they are installed before the program's first line as breakpoints are. There is no pause or
+ * evaluation yet (R7 in lang/doc/plans/plan-embedded-execution.md), so neither is advertised.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -106,6 +110,13 @@ class XtcDebugServer(
 
     @Volatile
     private var installed: Map<String, SourceBreakpoints> = emptyMap()
+
+    /** The client's exception filters, and those installed at start. */
+    @Volatile
+    private var exceptionStops = ExceptionStops()
+
+    @Volatile
+    private var installedExceptions = ExceptionStops()
     private val lastBreakpoint = AtomicInteger()
 
     /** 0 for a client that counts lines and columns from 1, as DAP does by default, -1 for one that counts from 0. */
@@ -117,6 +128,12 @@ class XtcDebugServer(
 
     companion object {
         private val logger = LoggerFactory.getLogger(XtcDebugServer::class.java)
+
+        /** The exception filter that stops where an exception that nothing catches is thrown; on by default. */
+        const val UNCAUGHT_EXCEPTIONS = "uncaught"
+
+        /** The exception filter that stops where any exception is thrown. */
+        const val ALL_EXCEPTIONS = "all"
 
         /** A breakpoint set before the program starts. */
         const val PENDING = "Installed when the program starts."
@@ -174,6 +191,21 @@ class XtcDebugServer(
             Capabilities().apply {
                 supportsConfigurationDoneRequest = true
                 supportsTerminateRequest = true
+                exceptionBreakpointFilters =
+                    arrayOf(
+                        ExceptionBreakpointsFilter().apply {
+                            filter = UNCAUGHT_EXCEPTIONS
+                            label = "Uncaught Exceptions"
+                            description = "Stop where an exception that nothing catches is thrown."
+                            default_ = true
+                        },
+                        ExceptionBreakpointsFilter().apply {
+                            filter = ALL_EXCEPTIONS
+                            label = "All Exceptions"
+                            description = "Stop where any exception is thrown, also one that is caught."
+                            default_ = false
+                        },
+                    )
             }
         return CompletableFuture.completedFuture(capabilities)
     }
@@ -209,10 +241,14 @@ class XtcDebugServer(
     /**
      * DAP: setExceptionBreakpoints
      *
-     * Accepted and ignored: the adapter advertises no exception filters.
+     * Chooses the exception filters: [UNCAUGHT_EXCEPTIONS] and [ALL_EXCEPTIONS]. While a debugged program runs they
+     * apply at once; before it starts, from its first line.
      */
     override fun setExceptionBreakpoints(args: SetExceptionBreakpointsArguments?): CompletableFuture<SetExceptionBreakpointsResponse> {
-        logger.info("setExceptionBreakpoints: filters={}", args?.filters?.toList())
+        val filters = args?.filters?.toSet().orEmpty()
+        logger.info("setExceptionBreakpoints: filters={}", filters)
+        exceptionStops = ExceptionStops(all = ALL_EXCEPTIONS in filters, uncaught = UNCAUGHT_EXCEPTIONS in filters)
+        if (debuggedRunning()) runs.setExceptionStops(runId, exceptionStops)
         return CompletableFuture.completedFuture(SetExceptionBreakpointsResponse())
     }
 
@@ -247,11 +283,9 @@ class XtcDebugServer(
         val ready =
             configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
                 if (debugging) {
-                    breakpoints
-                        .toMap()
-                        .also { installed = it }
-                        .values
-                        .toList()
+                    installed = breakpoints.toMap()
+                    installedExceptions = exceptionStops
+                    DebugSetup(installed.values.toList(), installedExceptions)
                 } else {
                     null
                 }
@@ -466,6 +500,8 @@ class XtcDebugServer(
                     StoppedEventArguments().apply {
                         reason = stop.reason
                         description = stop.description
+                        // the exception's type and text, which editors show beside the stop
+                        text = stop.description.takeIf { stop.reason == StoppedEventArgumentsReason.EXCEPTION }
                         threadId = stop.threadId
                         allThreadsStopped = true
                         hitBreakpointIds = stop.breakpointIds.takeIf { it.isNotEmpty() }?.toTypedArray()
@@ -486,13 +522,14 @@ class XtcDebugServer(
     /** True while a debugged program runs, stopped or not. */
     private fun debuggedRunning() = debugging && started && !ended.isDone
 
-    /** Installs the breakpoints the client changed after the program's were taken, before it started. */
+    /** Installs the breakpoints and exception filters the client changed after the program's were taken, before it started. */
     private fun installChanged() {
         breakpoints.forEach { (path, current) ->
             if (installed[path] !== current) {
                 runs.setBreakpoints(runId, current).thenAccept { states -> changed(path, states) }
             }
         }
+        if (exceptionStops != installedExceptions) runs.setExceptionStops(runId, exceptionStops)
     }
 
     /** Tells the client how a file's breakpoints were installed. */
