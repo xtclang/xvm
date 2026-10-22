@@ -145,8 +145,11 @@ verified when the program starts, and a breakpoint or `assert:debug` stops the p
 line, call stack and the other fibers that wait shown in the Debug tool window. Its Variables view
 shows the frame's locals and expands objects and arrays; LSP4IJ shows strings and numbers without
 their type. **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
-**Resume Program** runs it on and **Stop** ends it where it is. Exception breakpoints and Pause are
-not available yet. Debug is not offered for Gradle or command-line runs.
+**Resume Program** runs it on and **Stop** ends it where it is. An uncaught exception stops the
+program where it is thrown, by default, and the exception is the frame's first variable. **Pause
+Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/remaining.md`, fixed in
+LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration has no stop-on-entry option. Debug is not offered for
+Gradle or command-line runs.
 
 ## Development
 
