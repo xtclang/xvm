@@ -57,8 +57,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Runs modules compiled from source files under a {@link SessionDebugger}: breakpoints by file and
  * line, how they are verified, the stack of a stop, the variables of its frames, stepping over,
- * into and out of calls, assert:debug, other fibers waiting while the program is stopped, fibers
- * yielding to each other while breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test resources, as for
+ * into and out of calls, stops at thrown exceptions, assert:debug, other fibers waiting while the
+ * program is stopped, fibers yielding to each other while breakpoints are set, and closing a
+ * stopped run. The compiled XDK modules come from the test resources, as for
  * {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
@@ -308,6 +309,67 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void anUncaughtExceptionStopsWhereItIsThrownWithTheExceptionAmongTheVariables()
+            throws Exception {
+        compile("Throws", THROWS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Throws"));
+        session.setExceptionStops(false, true);
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Throws", output, session);
+        try (control) {
+            // the exception that run() catches does not stop the program
+            Stop stop = stops.next();
+            assertTrue(output.toString().contains("caught"), output.toString());
+            assertEquals("exception", stop.reason());
+            assertEquals("Throws.check:16", where(session, stop));
+            assertTrue(stop.description().startsWith("IllegalArgument"), stop.description());
+            assertTrue(stop.description().endsWith(": uncaught one"), stop.description());
+
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            List<Variable>       vars   = read(session, session.scopes(frames.getFirst().id()).getFirst().variablesReference());
+            assertEquals(SessionDebugger.EXCEPTION, vars.getFirst().name());
+            assertTrue(vars.getFirst().type().contains("IllegalArgument"), vars.getFirst().type());
+            assertEquals("1", byName(vars).get("n").value());
+
+            // it stops the program once, not again as it leaves run()
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(null, control.result());
+            assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
+    public void everyThrownExceptionStopsWhenAskedAlsoOneThatIsCaught() throws Exception {
+        compile("ThrowsAll", THROWS.replace("Throws", "ThrowsAll"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("ThrowsAll"));
+        session.setExceptionStops(true, false);
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("ThrowsAll", output, session);
+        try (control) {
+            Stop stop = stops.next();
+            assertEquals("ThrowsAll.check:14", where(session, stop));
+            assertTrue(stop.description().endsWith(": caught one"), stop.description());
+            assertFalse(output.toString().contains("caught"), output.toString());
+
+            session.resume();
+            stop = stops.next();
+            assertEquals("ThrowsAll.check:16", where(session, stop));
+            assertTrue(output.toString().contains("caught"), output.toString());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
     public void assertDebugStopsTheProgram() throws Exception {
         compile("Pauses", """
                 module Pauses {
@@ -423,6 +485,13 @@ public class SessionDebuggerTest {
             f_queue.add(stop);
         }
 
+        /**
+         * @return the next stop, if there is one already
+         */
+        Stop poll() {
+            return f_queue.poll();
+        }
+
         Stop next() throws InterruptedException {
             Stop stop = f_queue.poll(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
             assertNotNull(stop, "the program did not stop");
@@ -509,6 +578,32 @@ public class SessionDebuggerTest {
                     Int sum = point.x + point.y;
                     @Inject Console console;
                     console.print($"{sum} {ints.size} {text}");
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() catches the IllegalState that check() throws on line 14 and prints
+     * "caught", then calls check() again, which throws an IllegalArgument on line 16 that nothing
+     * catches.
+     */
+    private static final String THROWS = """
+            module Throws {
+                Int run() {
+                    @Inject Console console;
+                    try {
+                        check(0);
+                    } catch (IllegalState e) {
+                        console.print("caught");
+                    }
+                    return check(1);
+                }
+
+                Int check(Int n) {
+                    if (n == 0) {
+                        throw new IllegalState("caught one");
+                    }
+                    throw new IllegalArgument("uncaught one");
                 }
             }
             """;
