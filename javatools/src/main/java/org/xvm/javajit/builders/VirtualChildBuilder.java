@@ -59,11 +59,9 @@ public class VirtualChildBuilder extends CommonBuilder {
     public VirtualChildBuilder(TypeSystem typeSystem, Artifact art) {
         super(typeSystem, art);
 
-        this.isHardLeft    = isHardLeft(thisType);
         this.javaSuperType = computeJavaSuperType();
     }
 
-    private final boolean      isHardLeft;
     private final TypeConstant javaSuperType;
 
     private static final String SuperRouter = "super$";
@@ -241,7 +239,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         JitCallDesc callDesc   = resolveChildCall(body, targetType);
         String      methodName = callDesc.name().substring(DetachedBody.length());
 
-        if (isHardLeft) {
+        if (isHardLeft(thisType)) {
             // use the same-name hard-left child's signature so derived compositions override the
             // same Java method instead of overloading it with a more-specific receiver parameter
             TypeConstant baseType = findHardLeft(targetType);
@@ -467,11 +465,14 @@ public class VirtualChildBuilder extends CommonBuilder {
                                               ClassDesc targetCD, String name) {
         IdentityConstant ownerId      = constructor.getHead().getIdentity().getClassIdentity();
         TypeConstant     declaredType = resolveType(ownerId);
+
         if (!declaredType.isVirtualChildClass()) {
             return super.resolveConstructorCall(constructor, targetType, targetCD, name);
         }
 
-        if (isHardLeft && !ownerId.getName().equals(thisId.getName())) {
+        // a phantom re-emits its inherited constructor; use the declaring child's hard-left
+        // status rather than the phantom's to preserve runtime-parent dispatch
+        if (isHardLeft(thisId.getType()) && !ownerId.getName().equals(thisId.getName())) {
             // B.C1's constructor enters the C0 constructor selected by the actual parent, just
             // like a hard-left super call; D.C0 then calls its fixed B.C0 predecessor.
             MethodInfo   orig     = constructor.getChildConstructorOrigin();
@@ -633,7 +634,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         JitCallDesc targetCall    = resolveChildCall(body, targetType);
         String      targetName    = targetCall.name();
         String      ownerName     = body.getIdentity().getClassIdentity().getName();
-        boolean     isSuperRouter = isHardLeft && !ownerName.equals(thisId.getName());
+        boolean     isSuperRouter = isHardLeft(thisType) && !ownerName.equals(thisId.getName());
 
         JitCallDesc routeCall;
         if (isSuperRouter) {

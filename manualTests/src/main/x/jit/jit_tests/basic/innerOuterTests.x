@@ -444,9 +444,9 @@ package innerOuterTests {
             StructDerived.C0 child = new StructDerived().new C0(5);
             assert child.value == 6;
 
-            // TODO: phantom C1 construction bypasses the refined C0 constructor; value remains 5
-            // StructDerived.C1 inherited = new StructDerived().new C1(5);
-            // assert inherited.value == 6;
+            // inherited C1 construction must also enter the derived C0 constructor
+            StructDerived.C1 inherited = new StructDerived().new C1(5);
+            assert inherited.value == 6;
         }
 
         class Base {
