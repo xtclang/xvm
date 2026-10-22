@@ -9524,6 +9524,52 @@
         ]
       }
     },
+    "X310": {
+      "title": "watches and hovers on paths such as point.x and ints[1] show their values in a stopped frame, and one that names nothing says why",
+      "manual": [
+        "How each editor's Watches view and debug hover look is checked manually; VS Code checks the answers to the evaluate requests its Watch view and hover send, IntelliJ the values its frame evaluator gives the Watches view."
+      ],
+      "values": {
+        "file": "DebugWatch.x",
+        "module": "DebugWatch",
+        "source": "module DebugWatch {\n    const Point(Int x, Int y);\n\n    Int run() {\n        Point  point = new Point(3, 4);\n        Int[]  ints  = [1, 2, 3];\n        String text  = \"hi\";\n        return report(point, ints, text);\n    }\n\n    Int report(Point point, Int[] ints, String text) {\n        Int sum = point.x + point.y;\n        @Inject Console console;\n        console.print($\"{text} {sum} {ints.size}\");\n        return sum;\n    }\n}\n",
+        "breakpointLine": 14,
+        "watches": [
+          [
+            "point.x",
+            "3",
+            "Int"
+          ],
+          [
+            "ints[1]",
+            "2",
+            "Int"
+          ],
+          [
+            "text",
+            "\"hi\"",
+            "String"
+          ],
+          [
+            "sum",
+            "7",
+            "Int"
+          ]
+        ],
+        "expands": "point",
+        "refused": [
+          "nope",
+          "There is no variable \"nope\" in this frame."
+        ],
+        "exitCode": 7
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "LSP4IJ presents String and numeric values without their type, so the types of text, sum, point.x and ints[1] are checked in VS Code only."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
