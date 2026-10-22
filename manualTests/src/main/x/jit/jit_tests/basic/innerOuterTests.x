@@ -106,8 +106,7 @@ package innerOuterTests {
         assert child1.e == "hello";
         assert child2.e == "world";
         // the child interface reverses the outer Element type's natural ordering
-        // TODO: comparison inside FunkyInner still fails to resolve its outer's formal Element
-        // assert child1 > child2;
+        assert child1 > child2;
     }
 
     interface FunkyOuter<Element extends Orderable> {

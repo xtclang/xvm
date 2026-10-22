@@ -1473,20 +1473,19 @@ public class BuildContext {
             dataType = type.getParamType(0);
         }
 
-        if (dataType.isGenericType()) {
-            RegisterInfo regThis = loadThis(code);
-            if (regThis.type().isJitCCInterface()) {
-                code.checkcast(CD_nObject);
+        if (dataType.isFormalType()) {
+            if (dataType.isGenericType()) {
+                RegisterInfo regThis = loadThis(code);
+                if (regThis.type().isJitCCInterface()) {
+                    code.checkcast(CD_nObject);
+                }
+                loadCtx(code);
+                code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
+                    .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+                return new SingleSlot(type, Specific, CD_nType, "");
             }
-            loadCtx(code);
-            code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
-                .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
-            return new SingleSlot(type, Specific, CD_nType, "");
-        }
 
-        if (dataType.isTypeParameter()) {
-            int iReg = ((TypeParameterConstant) dataType.getDefiningConstant()).getRegister();
-            return loadArgument(code, iReg);
+            return loadFormalType(code, (FormalConstant) dataType.getDefiningConstant());
         }
 
         loadCtx(code);
@@ -1525,6 +1524,19 @@ public class BuildContext {
      */
     private RegisterInfo loadFormalType(CodeBuilder code, RegisterInfo targetReg,
                                         FormalConstant formalConst) {
+        if (formalConst instanceof FormalTypeChildConstant child) {
+            assert targetReg.type().isTypeOfType();
+
+            // consider a method with a formal type parameter:
+            //    <T extends Iterable> Type elementType(T iter) = T.Element;
+            // since T is supplied by the caller, we need to load T's runtime TypeConstant from the
+            // incoming nType's $dataType, and then resolve Element on that type
+            loadCtx(code);
+            code.ldc(child.getName())
+                .invokevirtual(CD_nType, "$dataTypeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+            return new SingleSlot(child.getFormalValueType(), Specific, CD_nType, "");
+        }
+
         if (targetReg.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }

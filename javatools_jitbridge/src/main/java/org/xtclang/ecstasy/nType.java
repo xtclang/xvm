@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy;
 
+import java.lang.classfile.CodeBuilder;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -24,6 +25,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ByteHashCollector;
@@ -79,6 +81,23 @@ public class nType
             }
         }
         return xvmClass;
+    }
+
+    /**
+     * Resolve a named generic parameter against the represented {@link #$dataType} rather than the
+     * {@link #$xvmType()}, which {@link #$typeForName} would do.
+     *
+     * @throws an {@link XvmError} if the represented type has no formal with the specified name
+     *
+     * @see org.xvm.javajit.BuildContext#loadFormalType
+     */
+    public nType $dataTypeForName(Ctx ctx, java.lang.String name) {
+        TypeConstant type = $dataType.resolveGenericType(name);
+        if (type == null) {
+            throw Exception.$xvmError(ctx, "Unresolvable formal type \"" + name + "\" in " +
+                    $dataType.getValueString(), null);
+        }
+        return $ensureType(ctx, type);
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
