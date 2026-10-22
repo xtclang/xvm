@@ -215,7 +215,8 @@ come from are in parentheses.
 - [ ] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
   exception views. IntelliJ: UP34 (filter conditions) and UP33 (`exceptionInfo`).
 - [ ] R9: data breakpoints, which stop when a property or field changes.
-- [ ] R10: value formats (`V`) and identity codes (`DI`). IntelliJ's hexadecimal toggle: UP36.
+- [ ] R10: value formats (`V`) and identity codes (`DI`). IntelliJ's hexadecimal toggle: UP36; in VS Code,
+  our extension contributes the menu item, by design (UP38).
 - [ ] R10: a value's `toString()` on demand (`DS`), through R7's evaluation.
 - [ ] R10: computed properties as lazy variables; only fields show now. IntelliJ: UP35.
 - [ ] R10: paging of large arrays and collections, in place of the first 100 elements.
@@ -229,7 +230,8 @@ come from are in parentheses.
 - [ ] R12: every service and fiber in Threads, with their containers (`VF`), and thread events.
 - [ ] R12: frames whose source file is not on the machine, such as library code, through the
   `source` request from the bundled XDK's sources.
-- [ ] R12: the loaded modules (`modules`, `loadedSources`).
+- [ ] R12: the loaded modules (`modules`, `loadedSources`). VS Code has no Modules view (UP39), only
+  Loaded Scripts for `loadedSources`.
 - [ ] R13: Debug for Gradle-mode and command-line runs.
 - [ ] R13: debugging tests.
 - [ ] R13: attaching to a program that already runs.
