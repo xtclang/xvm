@@ -672,6 +672,55 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a stopped program steps into a call and out of it, and continue runs it to its exit`() {
+        CompilerTestSupport.configure()
+        val stops = source("Stops.x", STOPS.trimIndent())
+        val path = directory.resolve("Stops.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 5}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            var request = 5
+
+            /** Steps the fiber and returns the reason of the stop where the step ends, and its stack. */
+            fun step(command: String): Pair<String, List<Pair<String, Int>>> {
+                sessions.request(id, request++, command, """{"threadId": $thread}""")
+                val stopped = client.until(id) { it.event == "stopped" }
+                assertThat(stopped.single { it.response == command }["success"].asBoolean).isTrue()
+                sessions.request(id, request++, "stackTrace", """{"threadId": $thread}""")
+                val frames =
+                    client
+                        .until(id) { it.response == "stackTrace" }
+                        .last()["body"]
+                        .asJsonObject["stackFrames"]
+                        .asJsonArray
+                        .map { it.asJsonObject["name"].asString to it.asJsonObject["line"].asInt }
+                return stopped.last()["body"].asJsonObject["reason"].asString to frames.take(2)
+            }
+
+            assertThat(step("stepIn")).isEqualTo("step" to listOf("Stops.twice" to 11, "Stops.run" to 5))
+            assertThat(step("stepOut").let { (reason, frames) -> reason to frames.first() }).isEqualTo("step" to ("Stops.run" to 6))
+
+            sessions.request(id, request, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `terminating a debug session while its program is stopped ends the program`() {
         CompilerTestSupport.configure()
         val halts = source("Halts.x", STOPS.trimIndent().replace("Stops", "Halts"))

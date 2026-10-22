@@ -145,6 +145,24 @@ object DebugSessionUi {
         return JsonArray().apply { (0 until shown.size()).forEach { add(presentation(shown.getName(it), shown.getValue(it))) } }.toString()
     }
 
+    /** Steps the module's paused session as Step Over (`over`), Step Into (`into`) or Step Out (`out`) does. */
+    @JvmStatic
+    fun step(
+        project: Project,
+        module: String,
+        kind: String,
+    ) {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        ApplicationManager.getApplication().invokeAndWait {
+            when (kind) {
+                "over" -> session.stepOver(false)
+                "into" -> session.stepInto()
+                "out" -> session.stepOut()
+                else -> error("No step $kind")
+            }
+        }
+    }
+
     /** Resumes the module's paused session, as the Resume Program action does. */
     @JvmStatic
     fun resume(
