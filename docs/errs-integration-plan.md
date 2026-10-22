@@ -1598,10 +1598,10 @@ to the compiler-only PR:
   embedded build and run, and owns its program; VS Code uses it, and IntelliJ keeps DAP disabled
   ([below](#r6-debug-sessions-2026-10-22)).
 - [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
-  *Partial (2026-10-22):* breakpoints stop the program in VS Code, with threads, stacks and
-  continue, through a runtime debugger in the execution worker
+  *Partial (2026-10-22):* breakpoints stop the program in VS Code and IntelliJ, with threads,
+  stacks and continue, through a runtime debugger in the execution worker
   ([below](#r7-breakpoints-stops-and-stacks-2026-10-22)); variables, stepping, exception stops,
-  pause, evaluation, source revisions and IntelliJ remain.
+  pause, evaluation and source revisions remain.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
 
 Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Compiler-only operations must
@@ -2397,7 +2397,7 @@ debugging, which is R7. Validation: `:lang:lsp-server:test` 2,379 tests, 0 failu
 
 ### R7: breakpoints, stops and stacks (2026-10-22)
 
-R7's first end-to-end case, on this branch only (not mirrored into #693), in three commits, each an
+R7's first end-to-end case, on this branch only (not mirrored into #693), in four commits, each an
 integration burst of its own ([below](#r6r7-integration-bursts-2026-10-22)):
 
 - `41cb8b60c` (R7a, `javatools`): `SessionDebugger`, a runtime debugger that a host drives through
@@ -2414,19 +2414,29 @@ integration burst of its own ([below](#r6r7-integration-bursts-2026-10-22)):
 - `bb016ce17` (R7c): shared X304 checks a breakpoint, the stack VS Code asks for, and Continue to the
   exit code; X285 keeps the run and console input. VS Code `run-iwSxfQ` passes X280–X285, X287,
   X289 and X304, X304 on its first run. No VS Code client code changed.
+- `69c2ff2f8` (R7d, IntelliJ, LSP4IJ's DAP client, chosen 2026-10-22): the Ecstasy Application
+  configuration extends LSP4IJ's `DAPRunConfigurationBase`, and its Debug, with the embedded
+  compiler only, goes to LSP4IJ's runner, while Run keeps its own paths. The adapter's "server" is
+  `LanguageServerDebugProcessHandler`, a process without an operating-system process that carries
+  the session's framed DAP messages over the language server connection. X304 passes natively in
+  IntelliJ IDEA 2026.2.3 and X285 debugs DebugRun to its exit code (`run-6846671860304618586`, no
+  IDE errors); `:lang:intellij-plugin:test` 148 tests, 0 failures; `verifyPlugin` compatible, with
+  no unreviewed internal APIs and new experimental-API findings for LSP4IJ's DAP classes, which do
+  not fail the build. The first native run found a probe bug, fixed there.
 
 Found on the way: a stopped program that was terminated ran on to its end before the runner killed
 it (exit code 42 instead of none). Closing a run now terminates its debugger first, which ends the
 program's fibers without running more of it, and the debugger leaves the runner's own code alone.
-Not covered: variables, stepping, exception stops, pause, evaluation, source revisions, and
-IntelliJ, which needs the step 4 decision (LSP4IJ's DAP client over a process handler on the
-language server connection, with experimental API, or IntelliJ's own debugger API).
+Not covered: variables, stepping, exception stops, pause, evaluation and source revisions. The
+opt-in IntelliJ `projectLifecycle` check of the same Gradle task fails ("closed project's pending
+reply retires"), and fails the same way on `ef1491a6c`, before this work
+(`run-15132038242161374573`); it is listed as open in `docs/remaining.md`.
 
 ### R6–R7 integration bursts (2026-10-22)
 
-R6 and R7's first part are seven commits on this branch, none mirrored into #693 yet. They fall
-into three bursts that integrate in this order; each lists what it needs and what its own
-validation is. The conflict previews were cherry-picks into throwaway worktrees on 2026-10-22,
+R6 and R7's first part are seven code commits on this branch, with their records, none mirrored
+into #693 yet. They fall into four bursts that integrate in this order; each lists what it needs
+and what its own validation is. The conflict previews were cherry-picks into throwaway worktrees on 2026-10-22,
 onto master `1c4efe422` and #693's tip `6386f609f`.
 
 | Burst | Commits, in order | Paths | Needs | Goes to | Validation |
@@ -2434,6 +2444,7 @@ onto master `1c4efe422` and #693's tip `6386f609f`.
 | A: runtime | `6312fd242` (without its `EmbeddedExecutionTest` case, which is B's), `41cb8b60c` (R7a) | `javatools` only | master | A runtime pull request to master, as #703 was | `:javatools:test` (`EmbeddingSupportTest`, `SessionDebuggerTest`), `spotlessCheck` |
 | B: server | the `EmbeddedExecutionTest` case of `6312fd242`, `ccc0695d5` (R6), `e73878550` (R7b) | `lang/dap-server`, `lang/lsp-server` | A | #693, or a `lang` pull request, after A | `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers) |
 | C: VS Code | `44d121779` (R6), `bb016ce17` (R7c) | `lang/vscode-extension`, the shared catalog, `lang/doc/manual-test-plan.md`, IntelliJ's catalog check | B | With B | VS Code playbook X280–X285, X287, X289, X304; ESLint and `tsc` |
+| D: IntelliJ | `69c2ff2f8` (R7d) | `lang/intellij-plugin`, the shared catalog's X285 and X304, `lang/doc/manual-test-plan.md` | B, C | With B and C | `:lang:intellij-plugin:test`; IntelliJ playbook X280–X285, X287, X289, X304; `verifyPlugin` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B and C.
@@ -2443,8 +2454,8 @@ Conflict previews:
   has no `lang` server, and is left out. `41cb8b60c` then conflicts once, in the signature of
   `EmbeddingSupport.runMethod()`: master writes `ErrorListener errs` and `Objects.requireNonNull`.
   The resolution keeps R7a's two methods in master's spelling.
-- Onto #693, all six code commits apply in order (`6312fd242`, `ccc0695d5`, `44d121779`,
-  `41cb8b60c`, `e73878550`, `bb016ce17`) apart from one conflict: `ccc0695d5` deletes
+- Onto #693, all seven code commits apply in order (`6312fd242`, `ccc0695d5`, `44d121779`,
+  `41cb8b60c`, `e73878550`, `bb016ce17`, `69c2ff2f8`) apart from one conflict: `ccc0695d5` deletes
   `lang/dap-server/.../XtcDebugServerLauncher.kt`, which #693 has in a slightly different form, and
   the resolution is to delete it. #693 carries `javatools` as well, so A can go into it with B and C
   if #693 is integrated before the runtime pull request.
