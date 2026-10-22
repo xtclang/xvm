@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
+import org.eclipse.lsp4j.debug.ThreadEventArguments
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -39,7 +40,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 /**
  * A debug session launches through the language server's runs, owns the program it launched, installs its
  * breakpoints and exception filters before the program's first line, reports stops, threads, stacks and variables
- * from the program, and steps it. What it cannot do yet, it says so and does not advertise.
+ * from the program, steps and pauses it. What it cannot do yet, it says so and does not advertise.
  */
 class XtcDebugServerTest {
     private val runs = Runs()
@@ -246,6 +247,32 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `pause pauses the debugged program, which shows a thread while it runs, and a launch can stop it on entry`() {
+        server.configurationDone(null)
+        runs.fibers = emptyList()
+        server.launch(mutableMapOf("module" to "App", "stopOnEntry" to true)).get(10, SECONDS)
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .get(10, SECONDS)
+                ?.stopOnEntry,
+        ).isTrue()
+
+        // an editor pauses a thread: while no fiber is stopped, the program shows one, announced as it starts
+        assertThat(client.events).contains("thread")
+        assertThat(
+            server
+                .threads()
+                .get(10, SECONDS)
+                .threads
+                .map { it.id to it.name },
+        ).containsExactly(XtcDebugServer.RUNNING_THREAD to "App")
+
+        server.pause(PauseArguments().apply { threadId = 12 }).get(10, SECONDS)
+        assertThat(runs.paused).isEqualTo(1)
+    }
+
+    @Test
     fun `a launch without debugging installs no breakpoints and says so`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App", "noDebug" to true)).get(10, SECONDS)
@@ -258,6 +285,8 @@ class XtcDebugServerTest {
         assertThat(server.variables(VariablesArguments().apply { variablesReference = 7 }).get(10, SECONDS).variables).isEmpty()
         assertFailsWith(XtcDebugServer.NOT_STOPPED) { server.next(NextArguments().apply { threadId = 12 }) }
         assertThat(runs.steps).isEmpty()
+        assertFailsWith(XtcDebugServer.NOT_PAUSABLE) { server.pause(PauseArguments()) }
+        assertThat(runs.ready.toCompletableFuture().get(10, SECONDS)).isNull()
     }
 
     @Test
@@ -368,9 +397,9 @@ class XtcDebugServerTest {
     }
 
     @Test
-    fun `attach and pause fail with the reason, and a breakpoint needs a file`() {
+    fun `attach and a pause before the launch fail with the reason, and a breakpoint needs a file`() {
         assertFailsWith("Attaching is not available; launch the module instead.") { server.attach(mutableMapOf()) }
-        assertFailsWith(XtcDebugServer.NO_PAUSE) { server.pause(PauseArguments()) }
+        assertFailsWith(XtcDebugServer.NOT_PAUSABLE) { server.pause(PauseArguments()) }
         val response =
             server
                 .setBreakpoints(
@@ -422,6 +451,7 @@ class XtcDebugServerTest {
         val steps = CopyOnWriteArrayList<Pair<Int, StepKind>>()
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
         var resumed = 0
+        var paused = 0
 
         override fun launch(
             runId: String,
@@ -459,7 +489,9 @@ class XtcDebugServerTest {
             return CompletableFuture.completedFuture(breakpoints.breakpoints.map { BreakpointState(it.id, it.line, true) })
         }
 
-        override fun threads(runId: String) = CompletableFuture.completedFuture(listOf(ThreadState(12, "App")))
+        var fibers = listOf(ThreadState(12, "App"))
+
+        override fun threads(runId: String) = CompletableFuture.completedFuture(fibers)
 
         override fun stackTrace(
             runId: String,
@@ -497,6 +529,8 @@ class XtcDebugServerTest {
             kind: StepKind,
         ): CompletableFuture<Boolean> = CompletableFuture.completedFuture((threadId == 12).also { if (it) steps.add(threadId to kind) })
 
+        override fun pause(runId: String) = (runId == this.runId).also { if (it) paused++ }
+
         override fun resume(runId: String) = true.also { resumed++ }
     }
 
@@ -531,6 +565,10 @@ class XtcDebugServerTest {
 
         override fun breakpoint(args: BreakpointEventArguments) {
             breakpoints.add(args)
+        }
+
+        override fun thread(args: ThreadEventArguments) {
+            events.add("thread")
         }
     }
 }

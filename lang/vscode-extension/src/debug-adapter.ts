@@ -88,8 +88,8 @@ export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDesc
 
 /**
  * Launches in embedded mode start a debug session in the language server, which builds and runs the module as the
- * Run button does; there is no Ecstasy debugger yet, so breakpoints are reported unverified. In Gradle mode, Run
- * and Debug launches run the module's Gradle task instead, without a debug session.
+ * Run button does, under the runtime debugger. In Gradle mode, Run and Debug launches run the module's Gradle task
+ * instead, without a debug session.
  */
 export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private readonly client: ClientAccess) {}

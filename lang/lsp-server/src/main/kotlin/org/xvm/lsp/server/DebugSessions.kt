@@ -174,6 +174,8 @@ internal class DebugSessions(
             kind: StepKind,
         ) = runs.step(runId, threadId, kind)
 
+        override fun pause(runId: String) = runs.pause(runId)
+
         override fun resume(runId: String) = runs.resume(runId)
     }
 
