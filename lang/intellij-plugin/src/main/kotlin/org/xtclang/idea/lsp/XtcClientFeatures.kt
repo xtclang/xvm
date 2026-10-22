@@ -14,9 +14,13 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.MessageIssueHandler
+import org.eclipse.lsp4j.jsonrpc.MessageProducer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
+import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
 import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.LanguageServer
+import java.io.InputStream
 import java.net.URI
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
@@ -114,10 +118,11 @@ class XtcClientFeatures : LSPClientFeatures() {
                     this@XtcClientFeatures.documents.set(it)
                 }
             private val diagnostics = DiagnosticResultMessages(::snapshot)
+            private val pending = PendingRequests()
 
             @Suppress("UNCHECKED_CAST") // LSP4J's multiple-interface proxy factory returns Object.
             override fun createProxy(remoteEndpoint: RemoteEndpoint): S {
-                val endpoint = preflightedRenames.endpoint(remoteEndpoint)
+                val endpoint = pending.endpoint(preflightedRenames.endpoint(remoteEndpoint))
                 // Match Launcher.Builder: the single-interface overload derives its loader from
                 // that interface. The optional builder classLoader is normally null in LSP4IJ.
                 return if (localServices.size == 1 && remoteInterfaces.size == 1) {
@@ -140,6 +145,12 @@ class XtcClientFeatures : LSPClientFeatures() {
                     document.immutableCharSequence.toString(),
                 )
             }
+
+            override fun createMessageProducer(
+                input: InputStream,
+                jsonHandler: MessageJsonHandler,
+                issueHandler: MessageIssueHandler,
+            ): MessageProducer = pending.producer(super.createMessageProducer(input, jsonHandler, issueHandler))
 
             override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
                 val wrapped = super.wrapMessageConsumer(consumer)
