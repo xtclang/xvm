@@ -187,22 +187,68 @@ export function executionCases(): void {
         const document = await workspace.open(data.file, data.source);
         await configureModules(workspace, [{ name: data.module, file: data.file }]);
         await noErrors(document.uri);
-        await embedded(async executions => {
-            let sessions = 0;
-            const subscription = vscode.debug.onDidStartDebugSession(() => sessions++);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = vscode.debug.registerDebugAdapterTrackerFactory('xtc', {
+                createDebugAdapterTracker: () => ({ onDidSendMessage: (message: DapMessage) => { sent.push(message); } }),
+            });
+            let ended = false;
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
             try {
-                const run = await executions.start('run', data.module, async () => {
-                    const started = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                        { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module });
-                    assert.strictEqual(started, false, 'A launch without a debugger must not start a debug session');
-                }, finished, 'Debug launch runs the module');
-                assert.strictEqual(run.exitCode, data.exitCode, run.text);
-                assert.strictEqual(sessions, 0, 'No debug session started');
+                const started = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module });
+                assert.strictEqual(started, true, 'The launch starts a debug session in the language server');
+                await eventually(async () => ended, value => value, 'The debug session ends when the program exits');
+
+                const events = (name: string) => sent.filter(message => message.type === 'event' && message.event === name);
+                assert.strictEqual(events('exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.strictEqual(events('terminated').length, 1, JSON.stringify(sent));
+                const output = events('output').map(message => message.body?.output ?? '').join('');
+                assert.ok(output.includes(data.finished), output);
+                const breakpoints = sent.filter(message => message.type === 'response' && message.command === 'setBreakpoints')
+                    .flatMap(message => message.body?.breakpoints ?? []);
+                assert.ok(breakpoints.length > 0, 'VS Code sent the breakpoint');
+                assert.ok(breakpoints.every(item => !item.verified && item.message === data.notAvailable), JSON.stringify(breakpoints));
+
+                // a line typed in the Debug Console while the program runs is its console input
+                sent.length = 0;
+                ended = false;
+                const ask = await workspace.open(data.inputFile, data.inputSource);
+                await configureModules(workspace, [{ name: data.module, file: data.file }, { name: data.inputModule, file: data.inputFile }]);
+                await noErrors(ask.uri);
+                let session: vscode.DebugSession | undefined;
+                const startedSession = vscode.debug.onDidStartDebugSession(item => { session = item; });
+                try {
+                    assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(ask.uri),
+                        { type: 'xtc', request: 'launch', name: `Debug ${data.inputModule}`, module: data.inputModule }));
+                    await eventually(async () => events('output').map(message => message.body?.output ?? '').join(''),
+                        text => text.includes(data.prompt), 'The program prompts in the Debug Console');
+                    await session!.customRequest('evaluate', { expression: data.input, context: 'repl' });
+                    await eventually(async () => ended, value => value, 'The program reads the line and ends');
+                    const asked = events('output').map(message => message.body?.output ?? '').join('');
+                    assert.ok(asked.includes(data.greeting), asked);
+                } finally {
+                    startedSession.dispose();
+                }
             } finally {
-                subscription.dispose();
+                vscode.debug.removeBreakpoints([breakpoint]);
+                termination.dispose();
+                tracker.dispose();
             }
         });
     });
+}
+
+/** The parts of a Debug Adapter Protocol message that X285 checks. */
+interface DapMessage {
+    type: string;
+    event?: string;
+    command?: string;
+    body?: { exitCode?: number; output?: string; breakpoints?: { verified: boolean; message?: string }[] };
 }
 
 /** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */
