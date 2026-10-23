@@ -981,7 +981,7 @@ public class MethodStructure
                 assert typeOfType.isTypeOfType();
 
                 TypeConstant type = typeOfType.getParamType(0);
-                if (type.containsAutoNarrowing(false)) {
+                if (type.containsAutoNarrowing(true)) {
                     type = type.resolveAutoNarrowing(pool, false, typeJit, null);
                 }
                 return type.isJitPrimitive() || type.isJitL2Specialized()

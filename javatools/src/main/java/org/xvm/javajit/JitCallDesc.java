@@ -4,6 +4,7 @@ import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import static org.xvm.javajit.Builder.OPT;
@@ -11,16 +12,19 @@ import static org.xvm.javajit.Builder.OPT;
 /**
  * Describes a Java call target, its calling convention, and its dispatch mode.
  *
- * <p>The owner declares the target method, while receiverCD describes an optional explicit
- * receiver argument, not Java's implicit "this". They can differ for virtual-child jump-in calls.
- * For example, for a parent B with children C0 and C1, the Java implementation B_C1 can declare:
+ * <p>The owner declares the target method, while receiverCD describes an optional explicit receiver
+ * argument, not Java's implicit "this". They can differ for virtual-child super-router calls.
+ *
+ * <p>For example, for a parent B with children C0 and C1, the Java implementation B_C1 can declare:
  *      class B_C1 {
- *          R jump$C0$foo(B_iC0 receiver, Ctx ctx, ...) { ... }
+ *          R super$C0$foo(B_iC0 receiver, Ctx ctx, ...) { ... }
  *      }
- * Here owner is B_C1, but receiverCD is B_iC0, the interface for child family C0. The implicit
- * receiver selects the composition-specific override; the explicit receiver is forwarded to the
- * selected s$foo body. Both receivers refer to the same object, but have different Java types.
- * For static s$foo methods, owner and receiverCD normally coincide.
+ * Here owner is B_C1, but receiverCD is B_iC0, the interface shared by B.C0 and its same-name
+ * derived children. The implicit receiver selects the composition-specific override; the explicit
+ * receiver is forwarded to the selected detached body. Both receivers refer to the same object,
+ * but have different Java types.
+ * A detached s$foo body also has an explicit receiver: its owner is the implementation class,
+ * while receiverCD is the callable type (a concrete hard-left class or a derived-child interface).
  *
  * @param owner        the class or interface declaring the target method
  * @param name         the standard target method name, without the optimized suffix
@@ -54,6 +58,21 @@ public record JitCallDesc(ClassDesc owner, String name, JitMethodDesc jmd,
     }
 
     /**
+     * Obtain a MethodHandle descriptor for this call target.
+     */
+    public DirectMethodHandleDesc toMethodHandle(boolean optimized) {
+        return MethodHandleDesc.ofMethod(toKind(), owner, name + (optimized ? OPT : ""),
+                methodType(optimized));
+    }
+
+    /**
+     * @return true iff this method requires a virtual dispatch
+     */
+    public boolean isVirtual() {
+        return kind == Kind.Virtual;
+    }
+
+    /**
      * Invoke the selected standard or optimized target method. Before calling this, all the
      * call arguments should already be on the Java stack.
      */
@@ -81,6 +100,13 @@ public record JitCallDesc(ClassDesc owner, String name, JitMethodDesc jmd,
      */
     public static JitCallDesc special(ClassDesc owner, String name, JitMethodDesc jmd, boolean isInterface) {
         return new JitCallDesc(owner, name, jmd, Kind.Special, isInterface, null);
+    }
+
+    /**
+     * Create a call to a specific implementation with the "invokestatic" dispatch.
+     */
+    public static JitCallDesc static_(ClassDesc owner, String name, JitMethodDesc jmd, boolean isInterface) {
+        return new JitCallDesc(owner, name, jmd, Kind.Static, isInterface, null);
     }
 
     /**

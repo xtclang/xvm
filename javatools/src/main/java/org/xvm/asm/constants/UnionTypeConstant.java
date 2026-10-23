@@ -998,7 +998,7 @@ public class UnionTypeConstant
                                 RegisterInfo regTest, TypeConstant typeTest) {
         // o1.$xvmType(ctx).isA(typeCompare)
         regTest.load(code);
-        if (regTest.type().isJitInterface()) {
+        if (regTest.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         bctx.loadCtx(code);

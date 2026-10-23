@@ -70,6 +70,8 @@ import org.xvm.asm.op.Nop;
 
 import org.xvm.javajit.Builder.Loader;
 
+import org.xvm.javajit.builders.VirtualChildBuilder;
+
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 import org.xvm.javajit.registers.Narrowed;
@@ -99,9 +101,9 @@ import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nRef;
 import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.DetachedBody;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.MD_EnsureType;
-import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
@@ -200,7 +202,7 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a synthetic function.
      */
-    private BuildContext(BuildContext bctx, String jitName, MethodBody body) {
+    private BuildContext(BuildContext bctx, String jitName, MethodBody body, JitMethodDesc jmd) {
         this.builder       = bctx.builder;
         this.typeSystem    = bctx.builder.typeSystem;
         this.className     = bctx.className;
@@ -210,7 +212,7 @@ public class BuildContext {
         this.callChain     = bctx.callChain;
         this.methodStruct  = body.getMethodStructure();
         this.callDepth     = 0;
-        this.methodDesc    = body.getJitDesc(builder, thisType);
+        this.methodDesc    = jmd;
         this.methodJitName = jitName;
         this.isStatic      = bctx.isStatic;
         this.isConstructor = bctx.isConstructor;
@@ -709,7 +711,7 @@ public class BuildContext {
         }
 
         int            extraArgs = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
-        ClassDesc      CD_this   = builder.art.CD();
+        ClassDesc      CD_this   = builder.getThisClassDesc(this);
         JitParamDesc[] params    = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
@@ -964,7 +966,7 @@ public class BuildContext {
                     // TODO: track the data change to prevent unnecessary copy
                     RegisterInfo origReg = narrowedReg.origReg();
                     if (narrowedReg.slot() != origReg.slot()) {
-                        moveRegister(code, narrowedReg.load(code), origReg, false);
+                        moveRegister(code, narrowedReg.load(code), origReg);
                     }
                     entry.setValue(origReg);
                 } else if (entry.getValue() instanceof Ref narrowedRef &&
@@ -1424,7 +1426,7 @@ public class BuildContext {
                 }
 
                 RegisterInfo narrowedReg = createTempRegister(type);
-                moveRegister(code, reg, narrowedReg, true);
+                moveRegister(code, reg, narrowedReg);
                 return narrowedReg.load(code);
             }
         }
@@ -1471,20 +1473,19 @@ public class BuildContext {
             dataType = type.getParamType(0);
         }
 
-        if (dataType.isGenericType()) {
-            RegisterInfo regThis = loadThis(code);
-            if (regThis.type().isJitInterface()) {
-                code.checkcast(CD_nObject);
+        if (dataType.isFormalType()) {
+            if (dataType.isGenericType()) {
+                RegisterInfo regThis = loadThis(code);
+                if (regThis.type().isJitCCInterface()) {
+                    code.checkcast(CD_nObject);
+                }
+                loadCtx(code);
+                code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
+                    .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+                return new SingleSlot(type, Specific, CD_nType, "");
             }
-            loadCtx(code);
-            code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
-                .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
-            return new SingleSlot(type, Specific, CD_nType, "");
-        }
 
-        if (dataType.isTypeParameter()) {
-            int iReg = ((TypeParameterConstant) dataType.getDefiningConstant()).getRegister();
-            return loadArgument(code, iReg);
+            return loadFormalType(code, (FormalConstant) dataType.getDefiningConstant());
         }
 
         loadCtx(code);
@@ -1523,7 +1524,20 @@ public class BuildContext {
      */
     private RegisterInfo loadFormalType(CodeBuilder code, RegisterInfo targetReg,
                                         FormalConstant formalConst) {
-        if (targetReg.type().isJitInterface()) {
+        if (formalConst instanceof FormalTypeChildConstant child) {
+            assert targetReg.type().isTypeOfType();
+
+            // consider a method with a formal type parameter:
+            //    <T extends Iterable> Type elementType(T iter) = T.Element;
+            // since T is supplied by the caller, we need to load T's runtime TypeConstant from the
+            // incoming nType's $dataType, and then resolve Element on that type
+            loadCtx(code);
+            code.ldc(child.getName())
+                .invokevirtual(CD_nType, "$dataTypeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+            return new SingleSlot(child.getFormalValueType(), Specific, CD_nType, "");
+        }
+
+        if (targetReg.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         loadCtx(code);
@@ -1586,14 +1600,9 @@ public class BuildContext {
         MethodBody  body     = callChain[nDepth];
         JitCallDesc callDesc = resolveSuperCall();
 
-        DirectMethodHandleDesc.Kind kind = callDesc.toKind();
-
-        DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
-                callDesc.owner(), callDesc.name(), callDesc.methodType(false));
+        DirectMethodHandleDesc stdMD = callDesc.toMethodHandle(false);
         DirectMethodHandleDesc optMD = isOptimized && callDesc.jmd().isOptimized
-                ? MethodHandleDesc.ofMethod(kind, callDesc.owner(), callDesc.name() + OPT,
-                        callDesc.methodType(true))
-                : null;
+                ? callDesc.toMethodHandle(true) : null;
 
         TypeConstant fnType = body.getIdentity().getType();
         assert fnType.isMethod();
@@ -1610,12 +1619,20 @@ public class BuildContext {
             .aload(0)
             .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
 
+        boolean hasReceiver = callDesc.receiverCD() != null && callDesc.isVirtual();
+        if (hasReceiver) {
+            // bind both the super-router method's Java receiver and its explicit body receiver
+            code.aload(0).invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
+        }
         if (optMD == null) {
             code.aconst_null();
         } else {
             code.ldc(optMD)
                 .aload(0)
                 .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
+            if (hasReceiver) {
+                code.aload(0).invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
+            }
         }
         code.iconst_1() // immutable = true
             .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
@@ -1630,6 +1647,12 @@ public class BuildContext {
         int        depth = callDepth + 1;
         MethodBody body  = callChain[depth];
 
+        if (builder instanceof VirtualChildBuilder childBuilder) {
+            JitCallDesc childCall = childBuilder.resolveChildSuperCall(this);
+            if (childCall != null) {
+                return childCall;
+            }
+        }
         if (body.getImplementation() == Implementation.Field) {
             return builder.ensureFieldAccessor(body);
         }
@@ -1649,7 +1672,7 @@ public class BuildContext {
                     ? owner.getFormalType().resolveGenerics(pool(), thisType)
                     : owner.getType();
             cd         = builder.getCCDesc(type);
-            isIface    = type.isJitInterface();
+            isIface    = type.isJitCCInterface();
             methodName = MethodInfo.getJitIdentity(callChain, depth).ensureJitMethodName(typeSystem);
         }
         return JitCallDesc.special(cd, methodName, body.getJitDesc(builder, thisType), isIface);
@@ -1840,16 +1863,12 @@ public class BuildContext {
 
     /**
      * Build the code that moves the value between the vars.
-     *
-     * @param allowUpcast  if true, the destination type is allowed to be narrower and the
-     *                     corresponding "checkcast" needs to be added, which can happen in some
-     *                     scenarios (e.g.: assignment of narrowed properties)
      */
-    public void moveRegister(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
+    public void moveRegister(CodeBuilder code, int fromVarId, int toVarId) {
         RegisterInfo regFrom = loadArgument(code, fromVarId);
         RegisterInfo regTo   = ensureRegister(code, toVarId, regFrom.type());
 
-        moveRegister(code, regFrom, regTo, allowUpcast);
+        moveRegister(code, regFrom, regTo);
     }
 
     /**
@@ -1857,44 +1876,42 @@ public class BuildContext {
      * registers.
      *
      * <p>Note: the value of the "regFrom" has already been loaded on Java stack.
-     *
-     * @param allowUpcast  if true, the destination type is allowed to be narrower and the
-     *                     corresponding "checkcast" needs to be added, which can happen in some
-     *                     scenarios (e.g.: assignment of narrowed properties)
      */
-    public void moveRegister(CodeBuilder code, RegisterInfo regFrom, RegisterInfo regTo,
-                             boolean allowUpcast) {
-        TypeConstant typeFrom = regFrom.type();
-        TypeConstant typeTo   = regTo.type();
-        ClassDesc    cdFrom   = regFrom.cd();
+    public void moveRegister(CodeBuilder code, RegisterInfo regFrom, RegisterInfo regTo) {
+        TypeConstant typeFrom  = regFrom.type();
+        TypeConstant typeTo    = regTo.type();
+        ClassDesc    cdFrom    = regFrom.cd();
+        JitFlavor    srcFlavor = regFrom.flavor();
 
         if (regTo instanceof Narrowed narrowedReg) {
             regTo  = resetRegister(narrowedReg);
             typeTo = regTo.type();
         }
 
-        if (!typeFrom.isA(typeTo)) {
-            if (!typeFrom.isJitAssignableTo(typeTo) && regFrom.flavor() != NullablePrimitive) {
-                assert allowUpcast;
-                if (cdFrom.isPrimitive()) {
-                    // this can only be caused by a dead/unreachable code
-                    ensureRegisterScope(code, regTo);
-                    Builder.throwTypeMismatch(code, "Unreconcilable types " +
-                            typeFrom.getValueString() + " -> " + typeTo.getValueString(), ctxSlot(code));
-                    // unfortunately, if generated for any reachable code, this will throw
-                    // during the verification phase without any useful information to debug
-                    System.err.println("*** Unreconcilable types " +
-                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
-                    return;
-                }
+        // an AlwaysNull register loads the Null singleton directly, regardless of its cd
+        if (srcFlavor != AlwaysNull && srcFlavor != NullablePrimitive &&
+                !typeFrom.isJitAssignableTo(typeTo)) {
+            if (cdFrom.isPrimitive()) {
+                // this can only be caused by a dead/unreachable code
+                ensureRegisterScope(code, regTo);
+                Builder.throwTypeMismatch(code, "Unreconcilable types " +
+                        typeFrom.getValueString() + " -> " + typeTo.getValueString(), ctxSlot(code));
+                // unfortunately, if generated for any reachable code, this will throw
+                // during the verification phase without any useful information to debug
+                System.err.println("*** Unreconcilable types " +
+                        typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                return;
+            }
 
-                // trust the compiler
+            // TODO: re-run the checkcast audit after long-arm specialization is implemented
+            if (!srcFlavor.isOptimized && !cdFrom.equals(regTo.cd())) {
+                // trust the compiler; Ecstasy assignability alone is not sufficient when the Java
+                // descriptors differ (e.g. D_iC1 needs a cast to its hard-left class B_C1)
                 generateCheckCast(code, typeTo);
             }
         }
 
         // a captured local stores a referent value; Ref.store() handles the backing nRef
-        JitFlavor srcFlavor = regFrom.flavor();
         JitFlavor dstFlavor = regTo instanceof Ref ref ? ref.referentFlavor() : regTo.flavor();
 
         if (srcFlavor == AlwaysNull) {
@@ -1953,7 +1970,6 @@ public class BuildContext {
 
             case "Widened->Specific":
                 // we must have added "checkcast" above already
-                assert allowUpcast;
                 break;
 
             case "NullablePrimitive->Specific",
@@ -2200,7 +2216,7 @@ public class BuildContext {
 
             case "Specific->Widened",
                  "Specific->WidenedWithDefault":
-                if (srcReg.type().isJitInterface()) {
+                if (srcReg.type().isJitCCInterface()) {
                     code.checkcast(CD_nObject);
                 }
                 continue;
@@ -2698,7 +2714,7 @@ public class BuildContext {
     private void loadPropertyAccessor(CodeBuilder code, RegisterInfo targetReg,
                                       PropertyInfo propInfo, String methodName, JitMethodDesc jmd) {
         TypeConstant ownerType   = propInfo.getOwnerType(builder, targetReg.type());
-        boolean      isInterface = !propInfo.isNative() && ownerType.isJitInterface();
+        boolean      isInterface = !propInfo.isNative() && ownerType.isJitCCInterface();
 
         assert !jmd.isStandardStatic;
         DirectMethodHandleDesc.Kind kind = isInterface
@@ -2740,13 +2756,16 @@ public class BuildContext {
         }
 
         TypeConstant ownerType = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.getCCDesc(ownerType);
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < returns.length; i++) {
             JitParamDesc ret = returns[i];
             if (i > 0) {
                 targetReg.load(code);
+            }
+            if (!targetReg.type().isJitAssignableTo(ownerType)) {
+                // may happen for a derived child's receiver
+                code.checkcast(builder.getCCDesc(ownerType));
             }
 
             String name = ret.extension
@@ -2755,11 +2774,13 @@ public class BuildContext {
                         ? fieldName + "$" + i
                         : fieldName;
             ClassDesc cd = i == 0 ? fieldCD : ret.cd;
-            code.getfield(cdOwner, name, cd);
+
+            builder.loadField(code, ownerType, name, cd);
+
             if (i == 0) {
                 Builder.normalizePrimitiveField(code, propInfo.getType());
             } else {
-                storeToContext(code, ret.cd, ret.altIndex);
+                storeToContext(code, cd, ret.altIndex);
             }
         }
     }
@@ -2966,6 +2987,9 @@ public class BuildContext {
             buildSetPropertyField(code, targetReg, propInfo, jmd);
         } else if (jmd.isOptimizedStatic) {
             code.invokestatic(builder.getCCDesc(jmd.typeTarget), setterName, md);
+        } else if (targetType.isJitCCInterface()) {
+            code.invokeinterface(targetType.isDerivedVirtualChildClass()
+                    ? targetType.getJitCCDesc(typeSystem) : targetReg.cd(), setterName, md);
         } else {
             code.invokevirtual(targetReg.cd(), setterName, md);
         }
@@ -2995,13 +3019,16 @@ public class BuildContext {
         }
 
         TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.getCCDesc(typeOwner);
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < params.length; i++) {
             JitParamDesc param = params[i];
             if (i > 0) {
                 targetReg.load(code);
+            }
+            if (!targetReg.type().isJitAssignableTo(typeOwner)) {
+                // may happen for a derived child's receiver
+                code.checkcast(builder.getCCDesc(typeOwner));
             }
             Builder.load(code, param.cd, slots[i]);
 
@@ -3011,7 +3038,8 @@ public class BuildContext {
                         ? fieldName + "$" + i
                         : fieldName;
             ClassDesc cd = i == 0 ? fieldCD : param.cd;
-            code.putfield(cdOwner, name, cd);
+
+            builder.storeField(code, typeOwner, name, cd);
         }
     }
 
@@ -3201,7 +3229,7 @@ public class BuildContext {
             } else {
                 loadFromContext(code, ret.cd, ret.altIndex);
             }
-            if (ret.type.isJitInterface()) {
+            if (ret.type.isJitCCInterface()) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();
@@ -3593,7 +3621,14 @@ public class BuildContext {
      * function that originates from a mixin, annotation or a lambda.
      */
     public void buildMethod(String jitName, MethodBody body) {
-        deferAssembly(new BuildContext(this, jitName, body));
+        JitMethodDesc jmd = body.getJitDesc(builder, thisType);
+        if (methodDesc instanceof JitDetachedBodyDesc detached &&
+                !body.getMethodStructure().isStatic()) {
+            // nested methods must accept the same interface receiver as their enclosing body
+            jmd     = new JitDetachedBodyDesc(jmd, detached.receiverCD);
+            jitName = DetachedBody + jitName;
+        }
+        deferAssembly(new BuildContext(this, jitName, body, jmd));
     }
 
     /**
@@ -3691,7 +3726,7 @@ public class BuildContext {
             .dup();
         loadCtx(code);
         referentLoader.run();
-        if (referentType.isJitInterface()) {
+        if (referentType.isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         loadTypeConstant(code, referentType);

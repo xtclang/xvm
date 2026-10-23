@@ -337,7 +337,7 @@ public abstract class OpIndex
             } else {
                 bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
             }
-            if (typeTarget.isJitInterface()) {
+            if (typeTarget.isJitCCInterface()) {
                 code.invokeinterface(reg.cd(), sJitName, jmd.optimizedMD);
             } else {
                 code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);

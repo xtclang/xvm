@@ -458,7 +458,7 @@ public class FBind
         code.iload(slotImm)
             .ifeq(labelEnd);
         regArg.load(code);
-        if (regArg.type().isJitInterface()) {
+        if (regArg.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean))

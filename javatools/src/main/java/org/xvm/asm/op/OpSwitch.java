@@ -447,7 +447,7 @@ public abstract class OpSwitch
             }
         } else {
             reg.load(code);
-            if (reg.type().isJitInterface()) {
+            if (reg.type().isJitCCInterface()) {
                 code.checkcast(CD_nObject);
             }
             bctx.loadCtx(code);
