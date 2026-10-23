@@ -1,12 +1,16 @@
 package org.xvm.compiler;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
  * TODO
@@ -72,6 +76,23 @@ public class LexerTest {
     @Test
     public void testOctNums() {
         lexit("{0o 0o0 0o123 0o01 0o7710 0o3 -0o771 -0o77 -0o00}");
+    }
+
+    @Test
+    public void anUnterminatedStringAtTheEndOfTheSourceIsReportedOnceAndEndsTheTokens() {
+        // the lexer used to report the same error for ever at the end of the source, and the
+        // error list dropped each report after the first as a duplicate, so it never stopped
+        for (String text : List.of("String s = \"abc", "String s = $\"abc", "String s = \\|abc")) {
+            ErrorList errs  = new ErrorList(5);
+            Lexer     lexer = new Lexer(new Source(text), errs);
+            assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+                while (lexer.hasNext()) {
+                    lexer.next();
+                }
+            }, text);
+            assertEquals(List.of(Lexer.STRING_NO_TERM), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(),
+                    text);
+        }
     }
 
     @Test
