@@ -13,6 +13,7 @@ import java.nio.file.Path;
 
 import java.time.Duration;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,8 +67,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * values in them, conditions, hit counts and logpoints, stepping over,
  * into and out of calls, stops at thrown exceptions, of all classes or some, and what they tell of
  * the exception, pausing and stopping on entry, assert:debug,
- * other fibers waiting while the program is stopped, fibers yielding to each other while
- * breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test
+ * other fibers waiting while the program is stopped, with their variables, fibers yielding to each
+ * other while breakpoints are set and while one steps, steps into and out of another service's
+ * calls, handles that last only until the program resumes, reads asked for as it resumes, and
+ * closing a stopped run. The compiled XDK modules come from the test
  * resources, as for {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
@@ -238,6 +241,75 @@ public class SessionDebuggerTest {
                 }
             }
             """;
+    /**
+     * A module whose run() makes a Point on line 7 and adds its y to the sum on line 8, three
+     * times, with y from 1 to 3, and returns 6.
+     */
+    private static final String STALE = """
+            module Stale {
+                const Point(Int x, Int y);
+
+                Int run() {
+                    Int sum = 0;
+                    for (Int i : 0 ..< 3) {
+                        Point point = new Point(i, i + 1);
+                        sum += point.y;
+                    }
+                    return sum;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() calls a service's add() on lines 13 and 14 and returns 7; add()'s code
+     * is on lines 6 and 7.
+     */
+    private static final String CALLS = """
+            module Calls {
+                service Counter {
+                    Int count;
+
+                    Int add(Int n) {
+                        count += n;
+                        return count;
+                    }
+                }
+
+                Int run() {
+                    Counter counter = new Counter();
+                    Int     first   = counter.add(2);
+                    Int     second  = counter.add(3);
+                    return first + second;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() starts a service that loops on lines 6 and 7 forever, then prints
+     * "spinning" on line 16 and "stepped" on line 17.
+     */
+    private static final String HOLDS = """
+            module Holds {
+                service Spinner {
+                    Int spins;
+
+                    void spin() {
+                        for (Int count = 0; count >= 0; ++count) {
+                            ++spins;
+                        }
+                    }
+                }
+
+                void run() {
+                    Spinner spinner = new Spinner();
+                    spinner.spin^();
+                    @Inject Console console;
+                    console.print("spinning");
+                    console.print("stepped");
+                }
+            }
+            """;
+
     private static final String LOOP = """
             module Loop {
                 Int run() {
@@ -969,26 +1041,7 @@ public class SessionDebuggerTest {
 
     @Test
     public void whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine() throws Exception {
-        Path source = compile("Holds", """
-                module Holds {
-                    service Spinner {
-                        Int spins;
-
-                        void spin() {
-                            for (Int count = 0; count >= 0; ++count) {
-                                ++spins;
-                            }
-                        }
-                    }
-
-                    void run() {
-                        Spinner spinner = new Spinner();
-                        spinner.spin^();
-                        @Inject Console console;
-                        console.print("spinning");
-                    }
-                }
-                """);
+        Path  source  = compile("Holds", HOLDS);
         Stops stops   = new Stops();
         var   session = new SessionDebugger(stops);
         session.addModule(input().loadModule("Holds"));
@@ -1011,6 +1064,166 @@ public class SessionDebuggerTest {
         // closing again after a close that timed out would wait without a limit
         assertTimeoutPreemptively(RUN_LIMIT, control::close);
         assertFalse(control.running());
+    }
+
+    @Test
+    public void anotherServicesWaitingFiberHasItsVariablesAndStandsStillAndAStepEndsInTheSteppedFiber()
+            throws Exception {
+        Path  source  = compile("Shares", HOLDS.replace("Holds", "Shares"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Shares"));
+        assertTrue(session.setBreakpoints(source.toString(), List.of(new Line(1, 16))).getFirst().verified());
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Shares", output, session);
+        Stop         stop    = stops.next();
+        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (session.threads().size() < 2) {
+                Thread.sleep(10);
+            }
+        });
+
+        // the spinner's frame has its variables, which its own thread reads, and its service's
+        // state stands still while the program is stopped
+        int                   spinner = session.threads().get(1).id();
+        int                   frame   = session.stackTrace(spinner).getFirst().id();
+        Map<String, Variable> spin    = byName(read(session, session.scopes(frame).getFirst().variablesReference()));
+        assertTrue(spin.containsKey("count"), spin.keySet().toString());
+        String spins = byName(read(session, spin.get("this").variablesReference())).get("spins").value();
+        Thread.sleep(200);
+        assertEquals(spins, evaluate(session, frame, "spins").value());
+
+        // the spinner runs on during a step over in run(), which ends at run()'s next line
+        Stop stepped = step(session, stops, stop, Step.OVER);
+        assertEquals("step", stepped.reason());
+        assertEquals("Shares.run:17", where(session, stepped));
+        assertTrue(output.toString().contains("spinning"), output.toString());
+        assertFalse(output.toString().contains("stepped"), output.toString());
+
+        session.resume();
+        // as above, the run is closed outside a try-with-resources
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        assertFalse(control.running());
+    }
+
+    @Test
+    public void aStepGoesIntoACallToAnotherServiceAndOutToItsCallerOnTheCallingFiber() throws Exception {
+        Path  source  = compile("Calls", CALLS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Calls"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 13)));
+
+        Control control = run("Calls", new StringWriter(), session);
+        try (control) {
+            Stop stop = stops.next();
+            assertEquals("Calls.run:13", where(session, stop));
+
+            // into the call: the service's own fiber stops, and its stack goes on with its caller's
+            Stop into = step(session, stops, stop, Step.IN);
+            assertEquals("Counter.add:6", where(session, into));
+            assertNotEquals(stop.threadId(), into.threadId());
+            List<StackFrameInfo> frames = session.stackTrace(into.threadId());
+            assertEquals("Calls.run", frames.get(1).name());
+            assertEquals(13, frames.get(1).line());
+
+            // the service's frame has its variables and its service's state; the caller's frame,
+            // of another fiber, has none
+            int                   add    = frames.get(0).id();
+            Map<String, Variable> locals = byName(read(session, session.scopes(add).getFirst().variablesReference()));
+            assertEquals("2", locals.get("n").value());
+            assertEquals("0", byName(read(session, locals.get("this").variablesReference())).get("count").value());
+            assertEquals("0", evaluate(session, add, "count").value());
+            assertTrue(session.scopes(frames.get(1).id()).isEmpty());
+
+            // out of it, to the caller's next line, on the calling fiber
+            Stop out = step(session, stops, into, Step.OUT);
+            assertEquals("Calls.run:14", where(session, out));
+            assertEquals(stop.threadId(), out.threadId());
+            assertEquals("2", evaluate(session, session.stackTrace(out.threadId()).getFirst().id(), "first").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(7L, control.result());
+        }
+    }
+
+    @Test
+    public void aStopsFrameIdsAndReferencesAreNotTheNextStopsAndReadNothingThere() throws Exception {
+        Path  source  = compile("Stale", STALE);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Stale"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 8)));
+
+        Control control = run("Stale", new StringWriter(), session);
+        try (control) {
+            Stop     first  = stops.next();
+            int      frame  = session.stackTrace(first.threadId()).getFirst().id();
+            int      locals = session.scopes(frame).getFirst().variablesReference();
+            Variable point  = byName(read(session, locals)).get("point");
+            assertEquals("1", byName(read(session, point.variablesReference())).get("y").value());
+
+            // the next stop, at the same line of the same frame, hands out handles of its own
+            session.resume();
+            Stop     second     = stops.next();
+            int      nextFrame  = session.stackTrace(second.threadId()).getFirst().id();
+            int      nextLocals = session.scopes(nextFrame).getFirst().variablesReference();
+            Variable nextPoint  = byName(read(session, nextLocals)).get("point");
+            assertEquals(first.threadId(), second.threadId());
+            assertEquals("2", byName(read(session, nextPoint.variablesReference())).get("y").value());
+            assertTrue(Collections.disjoint(List.of(frame, locals, point.variablesReference()),
+                    List.of(nextFrame, nextLocals, nextPoint.variablesReference())));
+
+            // the first stop's handles name nothing now, neither its values nor this stop's
+            assertTrue(session.scopes(frame).isEmpty());
+            assertTrue(read(session, locals).isEmpty());
+            assertTrue(read(session, point.variablesReference()).isEmpty());
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.", session,
+                    frame, "point.y");
+
+            // a step resumes the program too, which ends this stop's handles
+            step(session, stops, second, Step.OVER);
+            assertTrue(session.scopes(nextFrame).isEmpty());
+            assertTrue(read(session, nextLocals).isEmpty());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
+    public void aReadOrEvaluationAskedForAsTheProgramResumesIsAnsweredWithNothingOrWhy() throws Exception {
+        Path  source  = compile("Races", TWICE.replace("Twice", "Races"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Races"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 12)));
+
+        Control control = run("Races", new StringWriter(), session);
+        try (control) {
+            Stop stop   = stops.next();
+            int  frame  = session.stackTrace(stop.threadId()).getFirst().id();
+            int  locals = session.scopes(frame).getFirst().variablesReference();
+
+            // the stopped fiber makes reads while it holds the debugger's lock, which this thread
+            // holds until the program has resumed, so it never makes these
+            CompletableFuture<List<Variable>> vars;
+            CompletableFuture<Variable>       value;
+            synchronized (session) {
+                vars  = session.variables(locals);
+                value = session.evaluate(frame, "n");
+                session.resume();
+            }
+            assertTrue(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).isEmpty());
+            assertFails("The program resumed before the expression was evaluated.", value);
+
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(42L, control.result());
+        }
     }
 
     @Test
@@ -1107,8 +1320,15 @@ public class SessionDebuggerTest {
      * Assert that evaluating the path fails with the specified reason.
      */
     private static void assertFails(String reason, SessionDebugger session, int frame, String path) {
+        assertFails(reason, session.evaluate(frame, path));
+    }
+
+    /**
+     * Assert that the evaluation fails with the specified reason.
+     */
+    private static void assertFails(String reason, CompletableFuture<Variable> evaluation) {
         var failure = assertThrows(ExecutionException.class,
-                () -> session.evaluate(frame, path).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+                () -> evaluation.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
         Throwable cause = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
         assertEquals(reason, cause.getMessage());
     }
