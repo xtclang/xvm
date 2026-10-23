@@ -405,7 +405,9 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
-- [ ] Keep #693 in sync with new `lagergren/errs` commits (last synchronized 2026-10-21).
+- [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
+  2026-10-23: `eddd77ee9` as `c7fedbe53` and `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
+  change; the other commits since are debugger work and its records).
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
 - [ ] Submit, when authorized: compilation-owned syntax and semantic facts
@@ -428,7 +430,7 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   `ab9fbddeb`'s `ServiceContext` change and its `EmbeddingSupportTest` case, which master has unchanged
   (its `terminate()` and `shutdown()` assert the same, and the test uses only `EmbeddingSupport`).
   `Container.kill()` hangs, with assertions on, once a service has a fiber that ended with a call still
-  out. It suits #693 too, which takes such fixes. Whether to make it a master pull request, written
+  out. It is on #693 since 2026-10-23 (`e618f7a22`). Whether to make it a master pull request, written
   to stand alone on master, is to be discussed.
 - Reviewers when submitting: ggleyzer, cpurdy, thegridman.
 
