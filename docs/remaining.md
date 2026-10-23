@@ -459,6 +459,11 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   (`xString.invokeAdd`) calls `Utils.callToString()`, which runs Ecstasy code for these
   (`String.toString()`, `Stringable.toString()`), so every string join of every program pays an
   Ecstasy call; found by tier 1's refusal of `s + i` (`fda3dc3e8`). It would also let tier 1 join strings.
+  Written for master on `lagergren/native-to-string` (`12d691d3e`, 2026-10-23), pull request not
+  opened yet: `Int8` to `UInt64`, `Nibble`, `Char` and `String`, and `markNativeMethod()`, which found
+  no `toString()` to mark in a const class, since `Const` and its `Stringable` come with no
+  contribution. 200,000 iterations of five joins: about 16.3 s on master, 0.14 to 0.3 s with it. Not
+  on this branch.
 - [ ] Candidate for master on its own, apart from the debugger and the `toString()` one above:
   `ab9fbddeb`'s `ServiceContext` change and its `EmbeddingSupportTest` case, which master has unchanged
   (its `terminate()` and `shutdown()` assert the same, and the test uses only `EmbeddingSupport`).
@@ -489,17 +494,26 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   - Found by R7r (`d77fb9b51`, 2026-10-23), in `EvalCompiler`, which master's console debugger uses
     for `E`: a method's parameter is unresolvable until something has shown it, an `@Inject` variable
     is captured with its `Ref`'s type, so no method of it compiles, and a lambda that does not compile
-    stays in its class. The `@Inject` one reproduces on master's console: `E console.print("hi")`
-    fails with "Could not find a matching method or function "print" for type "@Inject
-    Ref<Console>"". The parameter one does not show there, since the console shows a frame's
-    variables before `E` runs; the third is not checked.
+    stays in its class. The `@Inject` one reproduces on master's console: `E random.int(1)` fails
+    with "Could not find a matching method or function "int" for type "@Inject Ref<Random>""; `E` of
+    a call without a value, such as `console.print("hi")`, fails there either way, since the console
+    compiles `E` as a lambda that returns a value. The parameter one does not show there, since the
+    console shows a frame's variables before `E` runs, and nothing showed what the lambdas left
+    behind break. Written for master, with a new `EvalCompilerTest` that drives the console in a JVM
+    of its own, on `lagergren/fix-debugger-eval-captures` (`71cd2d9d4`, 2026-10-23); pull request not
+    opened yet.
   - `7e475dc98`, found while validating R7s (2026-10-23): a weak map's key and entry sets leave
     collected keys out of their iterators but not out of `toArray()`, which returns null for them, so
     `Container.terminateServices()` fails with "Cannot invoke ServiceContext.requestShutdown() because
     services[i] is null" once one of its services is collected; an embedded run's close then fails, or
     its end is never reported. Master's `javatools_utils` files are the same, and the commit's new
-    `WeakHasherMapTest` case fails on master `7a79c6ef0` as it did here. Not on #693 or in a pull
-    request yet.
+    `WeakHasherMapTest` case fails on master `7a79c6ef0` as it did here. For master on
+    `lagergren/fix-weak-map-arrays` (`cd36314da`, 2026-10-23), pull request not opened yet; for #693
+    as `a5e25c725`, not pushed yet.
+  - Found by the native `toString()` test (2026-10-23), not fixed: `new Nibble(Bit[])` makes 0 for
+    every value, and so does `Nibble`'s table, and with it `Nibble.of()` and `IntLiteral.toNibble()`;
+    `xConstrainedInteger.constructFromBits()` packs the bits into a byte's high bits, and `Nibble`'s
+    mask drops them. A `Nibble` made from an `Int64` is right.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
