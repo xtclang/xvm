@@ -24,6 +24,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -64,7 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Runs modules compiled from source files under a {@link SessionDebugger}: breakpoints by file and
  * line, how they are verified, the stack of a stop, the variables of its frames and paths to
- * values in them, conditions, hit counts and logpoints, stepping over,
+ * values in them, code run on a stopped fiber, conditions, hit counts and logpoints, stepping over,
  * into and out of calls, stops at thrown exceptions, of all classes or some, and what they tell of
  * the exception, pausing and stopping on entry, assert:debug,
  * other fibers waiting while the program is stopped, with their variables, fibers yielding to each
@@ -306,6 +307,55 @@ public class SessionDebuggerTest {
                     @Inject Console console;
                     console.print("spinning");
                     console.print("stepped");
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() makes a Box and a Counter service and calls show(box, 5), which prints
+     * the box's count on line 37 and returns 5; run() returns that plus the box's count. A Box's
+     * bump() adds to its count on line 6, its fail() throws an IllegalState, and its toString()
+     * shows its count.
+     */
+    private static final String RUNS = """
+            module Runs {
+                class Box {
+                    Int count;
+
+                    Int bump(Int by) {
+                        count += by;
+                        return count;
+                    }
+
+                    Int fail() {
+                        throw new IllegalState("no");
+                    }
+
+                    @Override
+                    String toString() = $"Box({count})";
+                }
+
+                service Counter {
+                    Int count;
+
+                    Int add(Int n) {
+                        count += n;
+                        return count;
+                    }
+                }
+
+                Int run() {
+                    @Inject Console console;
+                    Box     box     = new Box();
+                    Counter counter = new Counter();
+                    Int     total   = show(box, 5);
+                    return total + box.count;
+                }
+
+                Int show(Box box, Int n) {
+                    @Inject Console console;
+                    console.print($"box {box.count}");
+                    return n;
                 }
             }
             """;
@@ -1227,6 +1277,178 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void runningCodeAnswersWithItsValuesToStringAndWhatItChangesStaysChanged() throws Exception {
+        Path  source  = compile("Runs", RUNS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Runs"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 37)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Runs", output, session);
+        try (control) {
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            int                  show   = frames.get(0).id();
+            int                  caller = frames.get(1).id();
+
+            // a call runs, and what it changes stays changed, also for what is read afterwards
+            Variable bumped = runCode(session, show, "box.bump(n)");
+            assertEquals("box.bump(n)", bumped.name());
+            assertEquals("5", bumped.value());
+            assertEquals("Int", bumped.type());
+            assertEquals("5", evaluate(session, show, "box.count").value());
+
+            // an object's value is its toString(), and it has its fields as a variable does
+            Variable box = runCode(session, show, "box");
+            assertEquals("Box(5)", box.value());
+            assertEquals("Runs:Box", box.type());
+            assertEquals("5", byName(read(session, box.variablesReference())).get("count").value());
+            assertEquals("15", runCode(session, show, "box.count * 2 + n").value());
+
+            // an expression without a value runs as a statement
+            Variable printed = runCode(session, show, "console.print(\"from the console\")");
+            assertEquals(SessionDebugger.NO_VALUE, printed.value());
+            assertTrue(output.toString().contains("from the console"), output.toString());
+
+            // in the caller's frame, a call into a service that is idle runs too
+            assertEquals("2", runCode(session, caller, "counter.add(2)").value());
+            assertEquals("2", runCode(session, caller, "counter.count").value());
+
+            // the program is stopped where it was, and goes on as before
+            assertTrue(session.isStopped());
+            assertEquals("Runs.show:37", where(session, stop));
+            assertFalse(output.toString().contains("box 5"), output.toString());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("box 5"), output.toString());
+            assertEquals(10L, control.result());
+            assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
+    public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
+        Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Unstopped"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 37), new Line(2, 6)));
+        session.setExceptionStops(true, true);
+
+        Control control = run("Unstopped", new StringWriter(), session);
+        try (control) {
+            Stop stop = stops.next();
+            int  show = session.stackTrace(stop.threadId()).getFirst().id();
+
+            // neither the breakpoint in bump() nor the exception stops stop the run's code
+            assertEquals("1", runCode(session, show, "box.bump(1)").value());
+            assertFails("box.fail() threw IllegalState: no.", session.run(show, "box.fail()"));
+            assertEquals(null, stops.poll());
+
+            var failure = assertThrows(ExecutionException.class,
+                    () -> session.run(show, "nope + 1").get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            Throwable cause  = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
+            String    reason = cause.getMessage();
+            assertTrue(reason.startsWith("nope + 1 does not compile: "), reason);
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
+                    session.run(show + 1000, "n"));
+
+            // the run's exception was its own: the program goes on from where it stopped
+            session.setBreakpoints(source.toString(), List.of());
+            session.setExceptionStops(false, false);
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
+    public void codeRunAtAnExceptionStopLeavesTheProgramsOwnExceptionToBeCaughtAsBefore() throws Exception {
+        compile("Rethrows", THROWS.replace("Throws", "Rethrows"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Rethrows"));
+        session.setExceptionStops(true, false);
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Rethrows", output, session);
+        try (control) {
+            // stopped at the IllegalState that run() catches
+            Stop stop = stops.next();
+            assertEquals("Rethrows.check:14", where(session, stop));
+            int check = session.stackTrace(stop.threadId()).getFirst().id();
+
+            // the run throws another exception, which is its answer and stops nothing
+            assertEquals("1", runCode(session, check, "n + 1").value());
+            assertFails("check(1) threw IllegalArgument: uncaught one.", session.run(check, "check(1)"));
+            assertEquals(null, stops.poll());
+
+            // the program's own exception goes on as it did: run() catches it and prints "caught"
+            session.setExceptionStops(false, false);
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("caught"), output.toString());
+            assertEquals(null, control.result());
+        }
+    }
+
+    @Test
+    public void readsAndOtherRunsWaitForARunWhichRunsToItsEndAlsoOnceTheProgramResumes() throws Exception {
+        Path                  source  = compile("Waits", TWICE.replace("Twice", "Waits"));
+        Stops                 stops   = new Stops();
+        var                   session = new SessionDebugger(stops);
+        BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
+        Semaphore             reading = new Semaphore(0);
+        session.addModule(input().loadModule("Waits"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 11)));
+
+        Control control = run("Waits", new StringWriter(), session, _ -> {
+            reading.release();
+            try {
+                return lines.poll(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        });
+        try (control) {
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            int                  twice  = frames.get(0).id();
+            int                  caller = frames.get(1).id();
+            int                  locals = session.scopes(twice).getFirst().variablesReference();
+
+            // the run waits for a line of input; a read of its fiber's frames and another run,
+            // asked for meanwhile, wait for it, one at a time
+            CompletableFuture<Variable> line = session.run(caller, "console.readLine()");
+            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(line));
+            CompletableFuture<List<Variable>> vars   = session.variables(locals);
+            CompletableFuture<Variable>       second = session.run(twice, "n + 1");
+            Thread.sleep(200);
+            assertFalse(line.isDone(), () -> "answered first: " + answer(line));
+            assertFalse(vars.isDone());
+            assertFalse(second.isDone(), () -> "answered first: " + answer(second));
+
+            lines.add("typed");
+            assertEquals("typed", line.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("21", byName(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS)).get("n").value());
+            assertEquals("22", second.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+
+            // a run that the program's resume finds in progress runs to its end, and the program
+            // then goes on
+            CompletableFuture<Variable> resumed = session.run(caller, "console.readLine()");
+            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(resumed));
+            session.resume();
+            assertFalse(resumed.isDone());
+            lines.add("later");
+            assertEquals("later", resumed.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(42L, control.result());
+        }
+    }
+
+    @Test
     public void closingAStoppedRunEndsItWhereItIsAndTheNextRunHasNoDebugger() throws Exception {
         Path source  = compile("Closes", TWICE.replace("Twice", "Closes"));
         var  stops   = new Stops();
@@ -1316,6 +1538,17 @@ public class SessionDebuggerTest {
         return session.evaluate(frame, path).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
 
+    private static Variable runCode(SessionDebugger session, int frame, String expression) throws Exception {
+        return session.run(frame, expression).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    /**
+     * @return the value of a run that has ended, or why it failed
+     */
+    private static String answer(CompletableFuture<Variable> run) {
+        return run.handle((value, failure) -> value != null ? value.value() : failure.toString()).join();
+    }
+
     /**
      * Assert that evaluating the path fails with the specified reason.
      */
@@ -1338,9 +1571,13 @@ public class SessionDebuggerTest {
     }
 
     private Control run(String moduleName, StringWriter output, SessionDebugger session) {
+        return run(moduleName, output, session, ConsoleInput.NONE);
+    }
+
+    private Control run(String moduleName, StringWriter output, SessionDebugger session, ConsoleInput consoleInput) {
         ErrorList errs    = new ErrorList(25);
         Control   control = support.runMethod(input(), moduleName, null, EntryPoint.RUN,
-                new PrintWriter(output, true), ConsoleInput.NONE, sourceDir.toFile(), session, errs);
+                new PrintWriter(output, true), consoleInput, sourceDir.toFile(), session, errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         return control;
     }
