@@ -125,7 +125,8 @@ For the Debug Console, and on demand for `toString()` and computed properties:
   An exception the evaluation throws is its answer: "threw IllegalState: ...", with its stack.
 - **Side effects are allowed, and visible.** What the expression changes stays changed. After it, the
   session sends DAP `invalidated` (areas `variables`), so the editors read the variables again. VS Code
-  supports it; LSP4IJ does not handle `invalidated` yet, which would be a new upstream entry.
+  supports it; LSP4IJ does not handle `invalidated` yet: UP40, fixed in LSP4IJ pull request
+  [#1766](https://github.com/redhat-developer/lsp4ij/pull/1766) (2026-10-23).
 - **One at a time.** A second evaluation while one runs waits for it; an evaluation from a frame of another
   fiber runs on that fiber.
 - **Compilation.** `EvalCompiler` adds the lambda to the method, and removes it afterwards, as `E` does; the

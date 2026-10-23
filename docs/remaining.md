@@ -342,6 +342,12 @@ passes with the workaround disabled. The gates are in
   its file right after the stop reports the IDE error on `main` and none with the fix. Gate after a
   release: X307 without the wait, and no IDE errors.
 
+- [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), `feat/dap-invalidated`, 2026-10-23): LSP4IJ neither announces
+  `supportsInvalidatedEvent` nor handles the DAP `invalidated` event, so after an evaluation that changes
+  the stopped program its views keep the old values. The pull request refreshes the threads, loads the
+  stopped stacks again and rebuilds the views. Not checked natively until tier 2 sends the event. Gate
+  after a release: a shared case whose console evaluation changes a variable shows it in IntelliJ.
+
 ### LSP4IJ: DAP features ready locally, not filed
 
 IntelliJ's side of R9 and R10, each a local commit in `~/src/lsp4ij` on a branch off `main` (`ef2b18c3`),
