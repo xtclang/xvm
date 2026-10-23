@@ -9628,6 +9628,54 @@
         ]
       }
     },
+    "X313": {
+      "title": "a condition, watches and a logpoint's values are expressions with Ecstasy's operators, which the debugger computes as the program does, without running its code",
+      "manual": [
+        "How each editor's breakpoint dialog, Watch view and debug console show expressions is checked manually; VS Code checks the stops its debug session reports, the watches' answers at the first, the refusal of one that would run code and the debug console's output, IntelliJ the paused session's stops and the watches' values at the first."
+      ],
+      "values": {
+        "file": "DebugExprs.x",
+        "module": "DebugExprs",
+        "source": "module DebugExprs {\n    Int run() {\n        Int sum = 0;\n        for (Int i : 0 ..< 5) {\n            sum += i;\n        }\n        return sum;\n    }\n}\n",
+        "breakpointLine": 5,
+        "condition": "i % 2 == 0 && i > 0",
+        "conditionStops": [
+          "2",
+          "4"
+        ],
+        "watches": [
+          [
+            "sum + i",
+            "3",
+            "Int"
+          ],
+          [
+            "sum + i * 2",
+            "5",
+            "Int"
+          ],
+          [
+            "i * 10 > sum",
+            "True",
+            "Boolean"
+          ]
+        ],
+        "refused": [
+          "\"sum=\" + sum",
+          "would run Stringable.toString()"
+        ],
+        "logLine": 7,
+        "logMessage": "twice={sum * 2}",
+        "logged": "twice=20",
+        "exitCode": 10
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ sends only a breakpoint's condition (0.21.0), not a log message (UP32 in docs/remaining.md), so IntelliJ checks the condition and the watches: the breakpoint stops where i is 2 and 4. The logpoint is checked in VS Code."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
