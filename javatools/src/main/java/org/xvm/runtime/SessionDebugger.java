@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import java.util.function.ToIntFunction;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,8 +39,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
 
+import org.xvm.compiler.EvalCompiler;
+
 import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.Frame.VarInfo;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
@@ -57,7 +64,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
  * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables},
- * {@link #evaluate}), and
+ * {@link #evaluate}), has a waiting fiber run code ({@link #run}), and
  * resumes it ({@link #resume}), steps one of its fibers ({@link #step}) or pauses it
  * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
  * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
@@ -95,6 +102,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * fields or elements, like a frame's ID, lasts until the program resumes. An expression, such as
  * {@code point.x + 1} or {@code ints[i] > 0}, is evaluated the same way, without running any of the
  * program's code: its operators run the runtime's own native operations ({@link PureExpression}).
+ * Any other expression, such as a call, runs as code on the waiting fiber ({@link #run}), which
+ * leaves its wait to run it and then waits again, while the program's other fibers stay where they
+ * wait.
  *
  * <p>A breakpoint is installed by file and line: it stops every fiber that reaches the first op of
  * that line in any method compiled from that file. A file is the module's source directory and
@@ -149,9 +159,47 @@ public final class SessionDebugger implements Debugger {
     public static final String NO_CODE = "There is no code on this line.";
 
     /**
+     * The value of an expression that {@link #run} runs as a statement, since it has no value, such
+     * as a call to a method that returns nothing.
+     */
+    public static final String NO_VALUE = "(no value)";
+
+    /**
      * The longest value text {@link #variables} returns; longer text is cut off.
      */
     private static final int MAX_TEXT = 1000;
+
+    /**
+     * Why nothing is evaluated or run in a frame that is not one of this stop's.
+     */
+    private static final String NOT_STOPPED =
+            "The frame is not one of the stopped program's, so nothing can be evaluated in it.";
+
+    /**
+     * Why an evaluation or a run that the program's resume abandoned has no answer.
+     */
+    private static final String RESUMED_FIRST = "The program resumed before the expression was evaluated.";
+
+    /**
+     * The register of a run's native frame that holds the expression's value.
+     */
+    private static final int VALUE = 0;
+
+    /**
+     * The register of a run's native frame that holds the text of the expression's value.
+     */
+    private static final int TEXT = 1;
+
+    /**
+     * The register of a run's native frame that holds the exception that the expression, or the
+     * {@code toString()} of its value, throws.
+     */
+    private static final int THROWN = 2;
+
+    /**
+     * The op of a run's native frame that returns from it, which ends the run.
+     */
+    private static final int END_RUN = 2;
 
     private static final Integer[] NO_BREAKS = new Integer[0];
 
@@ -233,6 +281,22 @@ public final class SessionDebugger implements Debugger {
      * True once the program is being stopped: its fibers end at their next line.
      */
     private volatile boolean terminating;
+
+    /**
+     * The run of a waiting fiber's code that is in progress, or null; there is one at a time.
+     */
+    private volatile Running running;
+
+    /**
+     * The ops of the native frame that a run's code runs in, on the waiting fiber, above the frame
+     * where it waits: call the compiled expression, make its value's text, and return, which ends the
+     * run.
+     */
+    private final Op[] runOps = {
+        nativeOp("RunExpression", this::callExpression),
+        nativeOp("ShowValue", this::showValue),
+        nativeOp("EndRun", _ -> Op.R_RETURN),
+    };
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -551,17 +615,71 @@ public final class SessionDebugger implements Debugger {
             Halt    current = halt;
             FrameAt at      = current == null ? null : current.frames.get(frameId);
             if (at == null || !request(current, new Evaluation(at.thread(), at.frame(), parsed), future)) {
-                return CompletableFuture.failedFuture(new IllegalArgumentException(
-                        "The frame is not one of the stopped program's, so nothing can be evaluated in it."));
+                return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
             }
         }
         return future.thenApply(vars -> {
             // a read that the resume abandoned has no variables
             if (vars.isEmpty()) {
-                throw new IllegalArgumentException("The program resumed before the expression was evaluated.");
+                throw new IllegalArgumentException(RESUMED_FIRST);
             }
             return vars.getFirst();
         });
+    }
+
+    /**
+     * Run an expression's code in a stopped frame, on the fiber that waits there: any expression the
+     * compiler compiles in the frame, such as {@code list.size}, {@code point.toString()} or
+     * {@code counter.add(1)}, which {@link #evaluate} refuses. The value is shown by its
+     * {@code toString()}, which runs too; an expression that has no value, such as a call to a
+     * method that returns nothing, runs as a statement, whose value is {@link #NO_VALUE}.
+     *
+     * <p>The fiber leaves its wait to run the code, as a call from the frame where it waits, and
+     * then waits there again, in the same stop, without a new one. What the code changes stays
+     * changed: the fields it assigns and the objects it changes. A variable of the frame that it
+     * assigns is a copy, so the frame's own keeps its value. Nothing in the code stops the program:
+     * no breakpoint, exception stop or pause; an exception it throws is its answer.
+     *
+     * <p>Which fibers run meanwhile, and why: the fiber that runs the code, and the fibers of other
+     * services that it calls, which began after the run did. Every other fiber stays where it waits,
+     * so what the user inspects does not change underneath. A Java debugger instead lets every thread
+     * run while it evaluates, by default: Java threads share memory and locks, so a method evaluated
+     * on one stopped thread can need a lock that another stopped thread holds, and only letting them
+     * all run avoids that deadlock. An Ecstasy service runs one fiber at a time and shares no mutable
+     * state with other services, so the code can only wait on another service by calling it, and the
+     * fibers that the call reaches run. What it cannot do, and such a run then waits until the program
+     * resumes: call into a service whose own fiber is stopped in the middle of a method, since that
+     * fiber holds the service's thread; wait for work that an unrelated fiber would do, such as a
+     * future that another service completes; and wait while its own service runs another of its
+     * fibers, which waits at its next line and holds the service's thread. The program's clocks stand
+     * still, as they do while it is stopped, so code that waits for a timer waits too.
+     *
+     * <p>One run at a time: another, from any frame, starts once this one ends, and reads of the
+     * running fiber's frames are made once it waits again; those of other fibers are not delayed. A
+     * run in progress when the program resumes or steps runs to its end, and terminating the program
+     * ends it at its next line.
+     *
+     * @param frameId     the ID of a frame that {@link #stackTrace} returned
+     * @param expression  the expression to run
+     *
+     * @return the value, as a variable named by the expression, whose value is the value's
+     *         {@code toString()}, with a reference to its fields or elements; fails, with the reason
+     *         in words, if the expression does not compile, it or its value's {@code toString()}
+     *         throws, the frame is not one of this stop's, or the program resumes or is terminated
+     *         before the run starts or ends
+     */
+    public CompletableFuture<Variable> run(int frameId, String expression) {
+        var answer = new CompletableFuture<Variable>();
+        synchronized (this) {
+            Halt    current = halt;
+            FrameAt at      = current == null ? null : current.frames.get(frameId);
+            if (at == null || !current.stacks.containsKey(at.thread())) {
+                return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
+            }
+            current.runs.computeIfAbsent(at.thread(), _ -> new ArrayDeque<>()).add(new Run(at.frame(), expression, answer));
+            notifyAll();
+        }
+        return answer;
     }
 
     /**
@@ -631,6 +749,12 @@ public final class SessionDebugger implements Debugger {
         terminating  = true;
         stepping     = null;
         pendingPause = null;
+
+        // a run's fiber ends at its next line, without coming back to answer
+        Running run = running;
+        if (run != null) {
+            fail(run.run().answer(), "The program was stopped before the expression ran to its end.");
+        }
         release();
     }
 
@@ -651,13 +775,12 @@ public final class SessionDebugger implements Debugger {
 
     @Override
     public int activate(Frame frame, int pc) {
-        if (isHost(frame)) {
+        if (isHost(frame) || runs(frame)) {
             return pc + 1;
         }
 
         // assert:debug stops the program as a breakpoint does
-        stop(frame, "breakpoint", "assert:debug", List.of(), null, null);
-        return terminating ? end(frame) : pc + 1;
+        return stop(frame, "breakpoint", "assert:debug", List.of(), null, null, f -> terminating ? end(f) : pc + 1);
     }
 
     @Override
@@ -665,29 +788,11 @@ public final class SessionDebugger implements Debugger {
         if (isHost(frame)) {
             return pc + 1;
         }
-
-        if (halt != null) {
-            park(frame);
+        if (runs(frame)) {
+            // nothing stops a run's code
+            return terminating ? end(frame) : pc + 1;
         }
-        if (terminating) {
-            return end(frame);
-        }
-
-        // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint; a
-        // logpoint, or a breakpoint whose condition or hit count does not hold, lets them stop
-        Integer[] breaks = breaksOf(frame);
-        Integer   id     = pc < breaks.length ? breaks[pc] : null;
-        Hit       hit    = id == null ? Hit.RUN : hit(frame, id);
-        Stepping  step   = stepping;
-        Pause     pause  = pendingPause;
-        if (hit.stops()) {
-            stop(frame, "breakpoint", hit.description(), List.of(id), null, null);
-        } else if (step != null && step.endsAt(frame) && startsLine(frame, pc)) {
-            stop(frame, "step", null, List.of(), step, null);
-        } else if (pause != null && startsLine(frame, pc) && (!pause.program() || isProgram(frame))) {
-            stop(frame, pause.reason(), null, List.of(), pause, null);
-        }
-        return terminating ? end(frame) : pc + 1;
+        return halt == null ? line(frame, pc) : park(frame, f -> line(f, pc));
     }
 
     @Override
@@ -697,12 +802,22 @@ public final class SessionDebugger implements Debugger {
 
     @Override
     public int checkBreakPoint(Frame frame, ExceptionHandle exception) {
+        Running run = running;
+        if (run != null && frame.f_framePrev == run.trampoline() && !frame.catches(exception)) {
+            // the run's code throws, or its value's toString() does: that is its answer, and the
+            // run's native frame returns
+            frame.clearException();
+            run.trampoline().f_ahVar[THROWN] = exception;
+            return END_RUN;
+        }
         leave(frame);
 
         // an exception stops the program once, at the first frame of the program that throws it
-        if (exception != stoppedException && !frame.isNative() && !isHost(frame) && stopsAt(exception, frame)) {
+        if (exception != stoppedException && !frame.isNative() && !isHost(frame) && !runs(frame)
+                && stopsAt(exception, frame)) {
             stoppedException = exception;
-            stop(frame, "exception", describe(exception), List.of(), null, infoOf(frame, exception, !isCaught(frame, exception)));
+            return stop(frame, "exception", describe(exception), List.of(), null,
+                    infoOf(frame, exception, !isCaught(frame, exception)), _ -> Op.R_NEXT);
         }
 
         // asked again at each frame the exception leaves, so a step learns that its frame is left;
@@ -711,6 +826,35 @@ public final class SessionDebugger implements Debugger {
     }
 
     // ----- stopping ------------------------------------------------------------------------------
+
+    /**
+     * Check a line that the frame reaches while the program runs: stop at a breakpoint, where a
+     * step ends, or for a pause.
+     */
+    private int line(Frame frame, int pc) {
+        if (terminating) {
+            return end(frame);
+        }
+
+        // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint; a
+        // logpoint, or a breakpoint whose condition or hit count does not hold, lets them stop
+        Integer[]            breaks = breaksOf(frame);
+        Integer              id     = pc < breaks.length ? breaks[pc] : null;
+        Hit                  hit    = id == null ? Hit.RUN : hit(frame, id);
+        Stepping             step   = stepping;
+        Pause                pause  = pendingPause;
+        ToIntFunction<Frame> next   = f -> terminating ? end(f) : pc + 1;
+        if (hit.stops()) {
+            return stop(frame, "breakpoint", hit.description(), List.of(id), null, null, next);
+        }
+        if (step != null && step.endsAt(frame) && startsLine(frame, pc)) {
+            return stop(frame, "step", null, List.of(), step, null, next);
+        }
+        if (pause != null && startsLine(frame, pc) && (!pause.program() || isProgram(frame))) {
+            return stop(frame, pause.reason(), null, List.of(), pause, null, next);
+        }
+        return next.applyAsInt(frame);
+    }
 
     /**
      * @return true if the frame runs the host's own code, which this debugger leaves alone
@@ -909,21 +1053,30 @@ public final class SessionDebugger implements Debugger {
      *
      * @param request    the step or pause that ends here, or null for any other stop
      * @param exception  the exception the program stops at, or null
+     * @param next       what the hook that stops returns once the stop ends
+     *
+     * @return {@link Op#R_CALL} if the fiber runs code first ({@link #run}), which the hook returns;
+     *         otherwise what next returns
      */
-    private void stop(Frame frame, String reason, String description, List<Integer> breakpointIds, Object request,
-                      ExceptionInfo exception) {
+    private int stop(Frame frame, String reason, String description, List<Integer> breakpointIds, Object request,
+                     ExceptionInfo exception, ToIntFunction<Frame> next) {
         Stop stop;
         Halt current;
         synchronized (this) {
             // another fiber's stop comes first; this one waits for it like any other fiber
             for (Halt other = halt; other != null && !detached; other = halt) {
                 waitAt(other, frame);
-                if (!waitWhile(other, frame)) {
-                    return;
+                Running run = waitWhile(other, frame);
+                if (run != null) {
+                    // once the run ends, the fiber waits for that stop again before it makes its own
+                    return start(run, frame, f -> stop(f, reason, description, breakpointIds, request, exception, next));
+                }
+                if (Thread.currentThread().isInterrupted()) {
+                    return next.applyAsInt(frame);
                 }
             }
             if (detached || terminating || request != null && request != stepping && request != pendingPause) {
-                return;
+                return next.applyAsInt(frame);
             }
 
             // any stop ends the step and the pause
@@ -937,30 +1090,58 @@ public final class SessionDebugger implements Debugger {
             stop = new Stop(reason, description, threadId, breakpointIds);
         }
 
-        // the program's clocks stand still while it is stopped
-        Container nativeContainer = frame.f_context.f_container.getNativeContainer();
-        boolean   unfreeze        = nativeContainer.freezeTime();
-        try {
-            listener.stopped(stop);
-            synchronized (this) {
-                waitWhile(current, frame);
-            }
-        } finally {
+        // the program's clocks stand still while it is stopped, also while a fiber runs code in it
+        Container            nativeContainer = frame.f_context.f_container.getNativeContainer();
+        boolean              unfreeze        = nativeContainer.freezeTime();
+        ToIntFunction<Frame> thaw            = f -> {
             if (unfreeze) {
                 nativeContainer.unfreezeTime();
             }
+            return next.applyAsInt(f);
+        };
+        try {
+            listener.stopped(stop);
+        } catch (RuntimeException | Error e) {
+            thaw.applyAsInt(frame);
+            throw e;
         }
+        return await(current, frame, thaw);
     }
 
     /**
      * Wait at a line while the program is stopped, as one of its fibers.
+     *
+     * @param next  what the hook returns once the stop ends
+     *
+     * @return {@link Op#R_CALL} if the fiber runs code first, which the hook returns; otherwise what
+     *         next returns
      */
-    private synchronized void park(Frame frame) {
-        Halt current = halt;
-        if (current != null) {
-            waitAt(current, frame);
-            waitWhile(current, frame);
+    private int park(Frame frame, ToIntFunction<Frame> next) {
+        Halt current;
+        synchronized (this) {
+            current = halt;
+            if (current != null) {
+                waitAt(current, frame);
+            }
         }
+        return current == null ? next.applyAsInt(frame) : await(current, frame, next);
+    }
+
+    /**
+     * Wait in the specified stop, as one of its fibers, until it ends. A run of code that the host
+     * asks of this fiber meanwhile starts at once, as the hook returns into it, and once it ends the
+     * fiber waits here again.
+     *
+     * @param next  what the hook returns once the stop ends
+     *
+     * @return {@link Op#R_CALL} if a run starts, which the hook returns; otherwise what next returns
+     */
+    private int await(Halt current, Frame frame, ToIntFunction<Frame> next) {
+        Running run;
+        synchronized (this) {
+            run = waitWhile(current, frame);
+        }
+        return run == null ? next.applyAsInt(frame) : start(run, frame, f -> await(current, f, next));
     }
 
     /**
@@ -972,17 +1153,30 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * Wait until the specified stop ends, reading the variables the host asks for meanwhile. Called
-     * while holding this debugger's monitor.
+     * Wait until the specified stop ends, reading the variables the host asks for meanwhile, or
+     * until the host asks this fiber to run code, when no other run is in progress. Called while
+     * holding this debugger's monitor.
      *
-     * @return false if the thread was interrupted, which lets it run on
+     * @return the run to start, or null once the stop ends or the thread is interrupted, which lets
+     *         it run on
      */
-    private boolean waitWhile(Halt current, Frame frame) {
+    private Running waitWhile(Halt current, Frame frame) {
         int threadId = threadId(frame.f_fiber);
         while (halt == current) {
             List<Read> reads = current.reads.remove(threadId);
             if (reads != null) {
                 reads.forEach(read -> read(current, frame, read.target(), read.future()));
+                continue;
+            }
+
+            Deque<Run> runs = current.runs.get(threadId);
+            if (running == null && runs != null && !runs.isEmpty()) {
+                Running run = prepare(current, frame, runs.poll());
+                if (run != null) {
+                    running = run;
+                    updateActive();
+                    return run;
+                }
                 continue;
             }
 
@@ -992,10 +1186,11 @@ public final class SessionDebugger implements Debugger {
                 Thread.currentThread().interrupt();
                 current.stacks.remove(threadId);
                 abandon(current.reads.remove(threadId));
-                return false;
+                abandonRuns(current.runs.remove(threadId));
+                return null;
             }
         }
-        return true;
+        return null;
     }
 
     /**
@@ -1007,6 +1202,7 @@ public final class SessionDebugger implements Debugger {
         if (current != null) {
             halt = null;
             current.reads.values().forEach(SessionDebugger::abandon);
+            current.runs.values().forEach(SessionDebugger::abandonRuns);
             updateActive();
             notifyAll();
         }
@@ -1042,13 +1238,14 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Turn the runtime's "debugger is active" flag on while there are breakpoints or exception
-     * stops, the program is stopped, a fiber steps or a pause is pending, so that every line and
-     * thrown exception is checked; otherwise lines run at full speed.
+     * stops, the program is stopped, a fiber runs code or steps, or a pause is pending, so that
+     * every line and thrown exception is checked; otherwise lines run at full speed. A run needs
+     * the exceptions its code throws, also once the program has resumed.
      */
     private void updateActive() {
         Runtime attached = runtime;
         if (attached != null) {
-            boolean stopping = halt != null || stepping != null || pendingPause != null;
+            boolean stopping = halt != null || running != null || stepping != null || pendingPause != null;
             boolean watching = !installed.idsByFile().isEmpty() || exceptionStops.any();
             attached.setDebuggerActive(stopping || watching);
         }
@@ -1267,6 +1464,13 @@ public final class SessionDebugger implements Debugger {
         if (text.isEmpty()) {
             return typeText(value);
         }
+        return cut(text);
+    }
+
+    /**
+     * @return the text, cut off after {@link #MAX_TEXT} characters
+     */
+    private static String cut(String text) {
         return text.length() > MAX_TEXT ? text.substring(0, MAX_TEXT) + "..." : text;
     }
 
@@ -1315,6 +1519,206 @@ public final class SessionDebugger implements Debugger {
     private static void abandon(List<Read> reads) {
         if (reads != null) {
             reads.forEach(read -> read.future().completeAsync(List::of));
+        }
+    }
+
+    // ----- running code --------------------------------------------------------------------------
+
+    /**
+     * Compile the run's expression in its frame, and make the native frame that runs it on the
+     * fiber waiting at the specified frame, above that frame; an expression that does not compile
+     * fails the run. Called on that fiber's thread, while holding this debugger's monitor.
+     *
+     * @return the run, ready to start, or null if the expression does not compile
+     */
+    private Running prepare(Halt current, Frame waitingFrame, Run run) {
+        long            firstFiber = Fiber.nextId();
+        Frame           frame      = run.frame();
+        TypeConstant    object     = frame.poolContext().typeObject();
+        EvalCompiler    value      = new EvalCompiler(frame, "{\nreturn " + run.expression() + ";\n}");
+        MethodStructure lambda     = value.createLambda(object);
+        if (lambda != null) {
+            return new Running(run, waitingFrame.f_fiber, firstFiber, current, lambda, value.getArgs(), false,
+                    waitingFrame.createNativeFrame(runOps, new ObjectHandle[3], Op.A_IGNORE, null));
+        }
+
+        // an expression that has no value runs as a statement
+        EvalCompiler statement = new EvalCompiler(frame, "{\n" + run.expression() + ";\nreturn Null;\n}");
+        lambda = statement.createLambda(object);
+        if (lambda != null) {
+            return new Running(run, waitingFrame.f_fiber, firstFiber, current, lambda, statement.getArgs(), true,
+                    waitingFrame.createNativeFrame(runOps, new ObjectHandle[3], Op.A_IGNORE, null));
+        }
+
+        List<String> errors = value.getErrors().stream().map(error -> error.getMessageText()).toList();
+        fail(run.answer(), run.expression() + " does not compile: " + String.join(" ", errors));
+        return null;
+    }
+
+    /**
+     * Start a run on the fiber whose hook waits at the specified frame: the hook returns
+     * {@link Op#R_CALL} into the run's native frame, which returns to the frame once the run ends,
+     * and the fiber then goes on as rest says, which waits where the fiber waited before. A frame
+     * that waits at an exception it throws goes on throwing it.
+     *
+     * @return {@link Op#R_CALL}
+     */
+    private int start(Running run, Frame frame, ToIntFunction<Frame> rest) {
+        ExceptionHandle throwing = frame.clearException();
+        run.trampoline().addContinuation(f -> {
+            finish(run);
+            f.m_hException = throwing;
+            int next = rest.applyAsInt(f);
+            return next == Op.R_NEXT && f.m_hException != null ? Op.R_EXCEPTION : next;
+        });
+        return frame.call(run.trampoline());
+    }
+
+    /**
+     * End the run: answer it, with the value or the exception that its native frame holds, and
+     * remove its compiled expression from the class it was added to. Called on the run's fiber's
+     * thread.
+     */
+    private void finish(Running run) {
+        run.lambda().getParent().removeChild(run.lambda());
+
+        ObjectHandle[]              registers  = run.trampoline().f_ahVar;
+        String                      expression = run.run().expression();
+        CompletableFuture<Variable> answer     = run.run().answer();
+        synchronized (this) {
+            if (running == run) {
+                running = null;
+                updateActive();
+            }
+            notifyAll();
+
+            if (registers[THROWN] instanceof ExceptionHandle thrown) {
+                String what = registers[VALUE] == null ? expression : expression + "'s toString()";
+                fail(answer, what + " threw " + describe(thrown) + '.');
+            } else if (run.statement()) {
+                answer.completeAsync(() -> new Variable(expression, NO_VALUE, "", 0));
+            } else {
+                Variable shown = variable(run.halt(), run.trampoline().f_framePrev, expression, registers[VALUE]);
+                String   text  = cut(((StringHandle) registers[TEXT]).getStringValue());
+                answer.completeAsync(() -> new Variable(shown.name(), text, shown.type(), shown.variablesReference()));
+            }
+        }
+    }
+
+    /**
+     * The first op of a run's native frame: call the compiled expression with the values of the
+     * frame's variables that it reads; its value goes on the native frame's stack.
+     */
+    private int callExpression(Frame trampoline) {
+        Running        run   = running;
+        Frame          frame = run.run().frame();
+        int[]          vars  = run.args();
+        ObjectHandle[] args  = new ObjectHandle[run.lambda().getMaxVars()];
+        for (int i = 0; i < vars.length; i++) {
+            try {
+                args[i] = frame.getArgument(vars[i]);
+            } catch (ExceptionHandle.WrapperException e) {
+                args[i] = new DeferredCallHandle(e.getExceptionHandle());
+            }
+        }
+
+        ObjectHandle self = frame.f_function.isFunction() ? null : frame.getThis();
+        return Op.anyDeferred(args)
+                ? new Utils.GetArguments(args, f -> call(f, run, self, args)).doNext(trampoline)
+                : call(trampoline, run, self, args);
+    }
+
+    /**
+     * Call the run's compiled expression from its native frame; a call that fails at once, as at a
+     * stack overflow, ends the run with that exception.
+     */
+    private static int call(Frame trampoline, Running run, ObjectHandle self, ObjectHandle[] args) {
+        int result = trampoline.call1(run.lambda(), self, args, Op.A_STACK);
+        if (result == Op.R_EXCEPTION) {
+            trampoline.f_ahVar[THROWN] = trampoline.clearException();
+            return END_RUN;
+        }
+        return result;
+    }
+
+    /**
+     * The second op of a run's native frame: the expression's value goes to the {@link #VALUE}
+     * register, and its {@code toString()} to the {@link #TEXT} register; a statement has no value
+     * to show.
+     */
+    private int showValue(Frame trampoline) {
+        ObjectHandle[] registers = trampoline.f_ahVar;
+        registers[VALUE] = trampoline.popStack();
+        if (running.statement()) {
+            return Op.R_NEXT;
+        }
+
+        return switch (Utils.callToString(trampoline, registers[VALUE])) {
+            case Op.R_NEXT -> {
+                registers[TEXT] = trampoline.popStack();
+                yield Op.R_NEXT;
+            }
+            case Op.R_CALL -> {
+                trampoline.m_frameNext.addContinuation(f -> {
+                    registers[TEXT] = f.popStack();
+                    return Op.R_NEXT;
+                });
+                yield Op.R_CALL;
+            }
+            default -> {
+                // a native toString() threw
+                registers[THROWN] = trampoline.clearException();
+                yield Op.R_NEXT;
+            }
+        };
+    }
+
+    /**
+     * @return true if the frame runs the code of the run in progress: on the run's fiber, or on a
+     *         fiber of another service that the run calls, which began after the run did
+     */
+    private boolean runs(Frame frame) {
+        Running run = running;
+        if (run == null) {
+            return false;
+        }
+
+        Fiber fiber = frame.f_fiber;
+        return fiber == run.fiber() || fiber.getId() >= run.firstFiber() && fiber.isAssociated(run.fiber());
+    }
+
+    /**
+     * @return an op of a native frame that does what the specified function does
+     */
+    private static Op nativeOp(String name, ToIntFunction<Frame> process) {
+        return new Op() {
+            @Override
+            public int process(Frame frame, int pc) {
+                return process.applyAsInt(frame);
+            }
+
+            @Override
+            public String toString() {
+                return name;
+            }
+        };
+    }
+
+    /**
+     * Fail the answer with the specified reason, on another thread.
+     */
+    private static void fail(CompletableFuture<Variable> answer, String reason) {
+        answer.completeAsync(() -> {
+            throw new IllegalArgumentException(reason);
+        });
+    }
+
+    /**
+     * Answer runs that will not start, since the program resumes first.
+     */
+    private static void abandonRuns(Deque<Run> runs) {
+        if (runs != null) {
+            runs.forEach(run -> fail(run.answer(), RESUMED_FIRST));
         }
     }
 
@@ -1451,8 +1855,8 @@ public final class SessionDebugger implements Debugger {
      * the exception it stopped at, if any; the stacks of the waiting
      * fibers, the stopping fiber first; the frames that have variables, by frame ID; the reference
      * to each frame's locals that {@link #scopes} handed out; what each reference reads; and the
-     * reads each waiting fiber has yet to make, by fiber ID. Guarded by the debugger's monitor,
-     * and dropped as a whole when the program resumes.
+     * reads each waiting fiber has yet to make and the code it has yet to run, by fiber ID. Guarded
+     * by the debugger's monitor, and dropped as a whole when the program resumes.
      */
     private static final class Halt {
         final int                      threadId;
@@ -1462,6 +1866,7 @@ public final class SessionDebugger implements Debugger {
         final Map<Integer, Integer>    localsReferences = new HashMap<>();
         final Map<Integer, Target>     targets          = new HashMap<>();
         final Map<Integer, List<Read>> reads            = new HashMap<>();
+        final Map<Integer, Deque<Run>> runs             = new HashMap<>();
 
         Halt(int threadId, ExceptionInfo exception) {
             this.threadId  = threadId;
@@ -1671,6 +2076,23 @@ public final class SessionDebugger implements Debugger {
      * A read the host asked for, which the waiting fiber makes on its thread.
      */
     private record Read(Target target, CompletableFuture<List<Variable>> future) {
+    }
+
+    /**
+     * Code the host asks a waiting fiber to run: the frame it runs in, the expression, and the
+     * answer.
+     */
+    private record Run(Frame frame, String expression, CompletableFuture<Variable> answer) {
+    }
+
+    /**
+     * A run in progress: what the host asked for; the fiber it runs on; the ID of the first fiber
+     * created after it started; the stop it runs in; its compiled expression, the registers of the
+     * frame that the expression reads, and whether it is a statement; and the native frame it runs
+     * in.
+     */
+    private record Running(Run run, Fiber fiber, long firstFiber, Halt halt, MethodStructure lambda, int[] args,
+                           boolean statement, Frame trampoline) {
     }
 
     /**
