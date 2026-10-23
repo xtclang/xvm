@@ -195,17 +195,18 @@ starts, and a breakpoint or `assert:debug` stops the program: the editor shows t
 Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
 the selected frame's locals, and expands objects into their fields and arrays into their elements.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
-caller. A breakpoint can have a condition, a path to a `Boolean` such as `done` or `point.valid`, and a
-hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with
-each `{path}` replaced by that value, without stopping. The Breakpoints view's exception filters stop
+caller. A breakpoint can have a condition, an expression such as `done` or `i % 2 == 0 && i > 0`, and
+a hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with
+each `{expression}` replaced by its value, without stopping. The Breakpoints view's exception filters stop
 the program where an uncaught exception, on by default, or any exception is thrown, with the exception
 shown first among the frame's variables and in the exception widget, its stack trace included. Edit
 Condition on a filter names the exception classes it stops at, such as `IllegalArgument, OutOfBounds`,
 which also stop the classes that extend them.
 Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
-first line. While the program is stopped, the Watch view, hovers and the Debug Console show paths
-such as `point.x` or `ints[1]` in the selected frame, and expand them like variables; what is not
-evaluated, such as `point.x + 1` or a name the frame does not have, shows why. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+first line. While the program is stopped, the Watch view, hovers and the Debug Console evaluate
+expressions such as `point.x + 1` or `ints[i] > 0` in the selected frame, without running the
+program's code, and expand their values like variables; what is not evaluated, such as a call or a
+name the frame does not have, shows why. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
 says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
