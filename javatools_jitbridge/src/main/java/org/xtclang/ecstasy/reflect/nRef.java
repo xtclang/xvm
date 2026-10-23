@@ -64,7 +64,7 @@ public class nRef
         $setter       = setter;
     }
 
-    public nObject $referent;
+    public       nObject      $referent;
     public final TypeConstant $referentType;
     public final boolean      $isVar;
     public final MethodHandle $getter;
@@ -72,6 +72,13 @@ public class nRef
 
     public nType Referent$get(Ctx ctx) {
         return nType.$ensureType(ctx, $referentType);
+    }
+
+    /**
+     * Native implementation of: "Type<Referent> type.get()".
+     */
+    public nType type$get(Ctx ctx) {
+        return nType.$ensureType(ctx, ((nObject) get(ctx)).$xvmType(ctx));
     }
 
     @Override
@@ -117,6 +124,13 @@ public class nRef
         } catch (Throwable e) {
             throw Exception.$typeMismatch(ctx, e.getMessage());
         }
+    }
+
+    @Override
+    public TypeConstant $xvmType(Ctx ctx) {
+        return $isVar
+                ? ctx.pool().ensureVarType($referentType)
+                : ctx.pool().ensureRefType($referentType);
     }
 
     @Override

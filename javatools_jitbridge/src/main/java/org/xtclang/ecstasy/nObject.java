@@ -73,13 +73,20 @@ public abstract class nObject
     }
 
     /**
-     * Helper method to resolve generic types.
+     * Resolve a named generic parameter against this object's runtime type.
+     *
+     * @throws {@link XvmError} if the runtime type has no formal with the specified name
      *
      * @see org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty
      */
     public nType $typeForName(Ctx ctx, java.lang.String name) {
-        TypeConstant type = $xvmType(ctx).resolveGenericType(name);
-        return type == null ? null : nType.$ensureType(ctx, type);
+        TypeConstant targetType = $xvmType(ctx);
+        TypeConstant type       = targetType.resolveGenericType(name);
+        if (type == null) {
+            throw Exception.$xvmError(ctx, "Unresolvable formal type \"" + name + "\" in " +
+                    targetType.getValueString(), null);
+        }
+        return nType.$ensureType(ctx, type);
     }
 
     /**

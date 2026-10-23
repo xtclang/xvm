@@ -734,6 +734,15 @@ public abstract class TypeInfo {
      */
     public abstract MethodInfo validateCapped();
 
+    /**
+     * Helper: determine whether an annotation array contains an annotation whose class matches
+     * the specified name.
+     *
+     * @param annotations  the annotations to search; may be null or empty
+     * @param sName        the unqualified implicitly imported annotation name, e.g. "Abstract"
+     *
+     * @return true iff a matching annotation class identity is present; false otherwise
+     */
     public static boolean containsAnnotation(Annotation[] annotations, String sName) {
         if (annotations == null || annotations.length == 0) {
             return false;

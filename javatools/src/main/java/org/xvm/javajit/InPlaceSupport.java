@@ -42,7 +42,7 @@ public interface InPlaceSupport
             // mutate the referent in a temporary, then write it back without replacing the nRef
             RegisterInfo valueReg = bctx.storeTempRegister(code, A_STACK, ref.load(code));
             buildLocalInPlace(bctx, code, valueReg, assign, resultId);
-            bctx.moveRegister(code, valueReg.load(code), ref, false);
+            bctx.moveRegister(code, valueReg.load(code), ref);
             return;
         }
 

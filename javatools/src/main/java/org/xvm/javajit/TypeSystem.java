@@ -28,6 +28,9 @@ import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
+import org.xvm.javajit.builders.PureBuilder;
+import org.xvm.javajit.builders.PureVirtualChildBuilder;
+import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
@@ -308,10 +311,8 @@ public class TypeSystem {
                 switch (art.shape) {
                 case Impl:
                     classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
-                    builder.build(classBuilder);
-                    break;
-
-                case Enum:
+                    // fall through
+                case Pure, Enum:
                     builder.build(classBuilder);
                     break;
 
@@ -398,8 +399,9 @@ public class TypeSystem {
             return null;
         }
 
+        // TODO: optimize "ensureBuilder(art).getSuperCD()" call
         return switch (art.shape()) {
-            case Impl -> art.type().isJitInterface()
+            case Impl -> art.type().isJitImplInterface()
                     ? ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
 
@@ -407,7 +409,7 @@ public class TypeSystem {
 
             case Class -> ClassHierarchyInfo.ofClass(CD_Class);
 
-            case Funky -> ClassHierarchyInfo.ofInterface();
+            case Funky, Pure -> ClassHierarchyInfo.ofInterface();
 
             case Exception -> ClassHierarchyInfo.ofClass(
                     ((ExceptionBuilder) ensureBuilder(art)).getJavaExceptionSuperCD());
@@ -417,11 +419,17 @@ public class TypeSystem {
     }
 
     /**
-     * @return a builder for the specified type
+     * @return a builder for the specified artifact
      */
     protected Builder ensureBuilder(Artifact art) {
         ConstantPool pool = pool();
-        TypeConstant type = art.type;
+        TypeConstant type = art.type();
+
+        if (art.shape() == ClassfileShape.Pure) {
+            return type.isVirtualChildClass()
+                    ? new PureVirtualChildBuilder(this, art)
+                    : new PureBuilder(this, art);
+        }
 
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module.x, since this is not the native TypeSystem
@@ -462,7 +470,10 @@ public class TypeSystem {
             }
         }
 
-        return new CommonBuilder(this, art);
+        // an Ecstasy virtual-child interface is already a Java interface and uses CommonBuilder
+        return type.isVirtualChildClass()
+                ? new VirtualChildBuilder(this, art)
+                : new CommonBuilder(this, art);
     }
 
     /**

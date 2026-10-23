@@ -29,6 +29,7 @@ I. Ecstasy composition specialization:
 4. It is worth stating: the resulting set of layer one specialized compositions is enumerable at
    Ecstasy compile-time, and thus is also enumerable at JIT time.
 
+
 II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 
 1. All Java interfaces produced by the JIT compiler extend "org.xtclang.ecstasy.Object"; all
@@ -242,9 +243,7 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
 14. Function are generated on the Central interface.
 
 
-===== Work pad =====
-
-Virtual child classes: hard-left implementations and composition-specific super
+III. Virtual child classes: hard-left implementations and composition-specific super
 
 A "base child" is a virtual child with no same-name super child inherited through its enclosing
 parent's hierarchy. Base children occupy the leftmost column in the diagrams below and are called
@@ -327,6 +326,15 @@ inheritance between differently named children.
    which is valid for a D_C1 object, so the super-router call can use ordinary Java class
    dispatch.
 
+   Functions remain static. Direct calls, function handles, and class-of-class funky routes select
+   the implementing child's Impl at compile time, even when it lies outside the target's Java
+   inheritance chain. For example, a call to D.C1.f() inherited from D.C0 targets D_C0.f(...).
+
+   Private instance methods are also bound to their exact declarations at compile time. Calls and
+   bound-method handles target the detached body on the declaring child's Impl directly. For example,
+   a body declared on D.C0 can execute on a D.C1 receiver and call its own private method D.C0.f()
+   through D_C0.s$f(D_iC0 receiver, ...); no private-method router is required.
+
 4. Each virtual child implementation generates virtual Java super-router methods for the
    applicable Ecstasy method entries that can be reached by a super call. The name concatenates the
    target child name and Java method name: super$<childName>$<JavaMethodName> (e.g. super$C0$foo).
@@ -358,8 +366,8 @@ inheritance between differently named children.
    receiver. On a D_C1 receiver, however, ordinary foo() selects D.C1.foo(), even when called
    through a D_iC0 interface reference, while super$C0$foo selects D.C0.foo(). The latter dispatches
    to D_C1.super$C0$foo, which calls D_C0.s$foo; Java cannot dispatch directly to D_C0.foo()
-   because D_C1 does not extend D_C0. Thus, a super-router method selects a particular child
-   family within the chain, not the head of the complete chain, and cannot generally replace the
+   because D_C1 does not extend D_C0. Thus, a super-router method selects a body for a particular
+   child name within the chain, not the head of the complete chain, and cannot generally replace the
    ordinary virtual entrance.
 
    A super-router method takes an explicit interface receiver, followed by the context and method
@@ -393,7 +401,9 @@ inheritance between differently named children.
    B.C1 has no declared Ecstasy body. This super() dispatch uses the caller's concrete receiver;
    it does not need interface dispatch or knowledge of derived parents.
 
-5. Derived-child bodies use interface-compatible receivers where cross-family execution requires it.
+5. Derived-child bodies use interface-compatible receivers so a child's body can execute on an
+   instance of a differently named child.
+
    For example, D.C0.foo() can execute on a D_C1 object through a D_iC0 receiver. Its super target
    is fixed at B.C0.foo(); it does not need a composition-specific super-router call. Likewise,
    the super target of D.C1.foo() is B.C1.foo(). With E extending D, E.C0.foo() has the fixed
@@ -514,9 +524,10 @@ inheritance between differently named children.
    for their concrete receiver types.
 
    Construction, field initialization, and validators must use the same actual object and obey
-   the same receiver rules. Struct writes still bypass ordinary setters. Private helper calls
-   remain lexical rather than becoming virtual super-router calls. Identity, outer, runtime type,
-   and mutable state belong to one object; no separate D_C0 delegate is constructed for D_C1.
+   the same receiver rules. Struct writes still bypass ordinary setters. Calls to private methods
+   target detached bodies on the declaring child's Impl class, without virtual dispatch. Identity,
+   the "outer" reference, runtime type, and mutable state belong to one object; no separate D_C0
+   delegate is constructed for D_C1.
 
 9. A missing child declaration does not imply an unchanged composition. If D overrides C0 but
    does not declare C1, D.C1 can still require different super-router routes, callable contracts,
@@ -524,7 +535,7 @@ inheritance between differently named children.
    blindly instantiate the first ancestor with a declared C1.
 
    An inherited implementation can be reused when its callable contracts, field layout, and
-   method chains are equivalent. Otherwise a composition-specific JIC is required even without
+   method chains are equivalent. Otherwise, a composition-specific JIC is required even without
    a new Ecstasy child declaration. Such an implementation contains the necessary routes and
    storage; it is not an unconditional empty phantom class.
 
@@ -534,10 +545,13 @@ inheritance between differently named children.
     Ecstasy op production: TypeInfo describes the composition, and the ops identify the operations
     and source contributions to compile.
 
-11. Validation must cover more than string traces:
+
+IV. Test coverage
+
+Regression tests should cover teh following scenarios:
     a) the same receiver passed as both B.C1 and D.C0, with identity preserved;
     b) declared and synthesized hard-left methods, including the inherited case in rule 6;
-    c) fields introduced by D.C0 and accessed on D.C1, private helpers, and returning this;
+    c) fields introduced by D.C0 and accessed on D.C1, private methods, and returning "this";
     d) ordinary virtual calls from inside a body versus direct and bound super calls;
     e) constructors, field initializers, and validators acting on that same storage;
     f) missing C0 or C1 declarations and additional parent and child inheritance levels;
@@ -573,7 +587,7 @@ class D<Object> implements iB<Object>                                class D<Int
 Generalized Column                           Central Column               Specialized Column
 
 
-===
+===== Work pad =====
 
 // Ecstasy
 class C {

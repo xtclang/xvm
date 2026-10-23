@@ -7,11 +7,19 @@ package innerOuterTests {
         testAnonInner();
         testFunky();
         simpleChild.testChildOverride();
-//        TODO: handle complex virtual child call chains
-//        simpleChild.testInheritedChild();
-//        derivedChild.testChildSuper();
+        simpleChild.testInheritedChild();
+        derivedChild.testChildSuper();
+        funkyChild.testInheritedFunction();
+        funkyChild.testInheritedFunctionHandle();
+        genericFunkyChild.testInheritedFunction();
+        composedState.testState();
+        composedState.testStructField();
+        composedProperties.testAccessors();
+        deeperChild.testComposition();
+        genericChild.testComposition();
         genericChild.testChildParameter();
         genericChild.testPrimitiveChildParameter();
+        abstractChild.testImplementation();
     }
 
     void testSimple() {
@@ -90,17 +98,15 @@ package innerOuterTests {
     }
 
     void testFunky() {
-        // TODO: child construction throws NoSuchMethodError for
-        // Child.$new(Ctx, TypeConstant, nObject, String)
-        // Parent<String> parent = new Parent("P1");
-        // Parent<String>.Child child1 = parent.new Child("hello");
-        // Parent<String>.Child child2 = parent.new Child("world");
-        //
-        // assert child1.outer.name == "P1";
-        // assert child1.e == "hello";
-        // assert child2.e == "world";
-        // // the child interface reverses the outer Element type's natural ordering
-        // assert child1 > child2;
+        Parent<String> parent = new Parent("P1");
+        Parent<String>.Child child1 = parent.new Child("hello");
+        Parent<String>.Child child2 = parent.new Child("world");
+
+        assert child1.outer.name == "P1";
+        assert child1.e == "hello";
+        assert child2.e == "world";
+        // the child interface reverses the outer Element type's natural ordering
+        assert child1 > child2;
     }
 
     interface FunkyOuter<Element extends Orderable> {
@@ -145,8 +151,8 @@ package innerOuterTests {
             ParentInherited parent = new ParentInherited();
             ParentBase base = parent;
             ParentBase.Child child = base.createChild();
-            // TODO: Ref.type is not yet implemented by nRef
-            // assert &child.type == ParentInherited.Child;
+            assert &child.type == ParentInherited.Child;
+
             Outer outer = child.outer;
             assert &outer == &parent;
             assert child.report() == "Derived.Child";
@@ -299,7 +305,402 @@ package innerOuterTests {
         }
     }
 
+    package funkyChild {
+        void testInheritedFunction() {
+            Derived parent = new Derived();
+            Derived.C1 child = parent.new C1();
+
+            // CompileType is Derived.C1, but measure() is declared on Derived.C0;
+            // Java Derived_C1 does not extend Derived_C0; the call must select Derived_C0 directly
+            assert Derived.C1.measure(child) == 2;
+            assert measureFormal(child) == 2;
+        }
+
+        void testInheritedFunctionHandle() {
+            function String() label = Derived.C1.label;
+            assert label() == "Base.C0";
+
+            function Int(Int) twice = Derived.C1.twice;
+            assert twice(21) == 42;
+
+            // a widened return uses the boxed entry point instead of the optimized long return
+            Object result = invokeBoxed(twice, 21);
+            assert result.is(Int);
+            assert result == 42;
+        }
+
+        <Value extends Measurable> Int measureFormal(Value value) = Value.measure(value);
+
+        Object invokeBoxed(function Object(Int) fn, Int value) = fn(value);
+
+        interface Measurable {
+            static <CompileType extends Measurable> Int measure(CompileType value);
+        }
+
+        class Base {
+            class C0 implements Measurable {
+                static String label() = "Base.C0";
+
+                static Int twice(Int value) = value * 2;
+
+                @Override
+                static <CompileType extends C0> Int measure(CompileType value) = 1;
+            }
+
+            class C1 extends C0 {}
+        }
+
+        class Derived extends Base {
+            @Override
+            class C0 {
+                @Override
+                static <CompileType extends C0> Int measure(CompileType value) {
+                    assert CompileType == Derived.C1;
+                    return 2;
+                }
+            }
+
+            @Override
+            class C1 {}
+        }
+    }
+
+    package genericFunkyChild {
+        void testInheritedFunction() {
+            // the inherited measure() call must preserve the enclosing parent's type argument
+            Derived<Int>    parent = new Derived();
+            Derived<Int>.C1 child  = parent.new C1();
+            assert Derived<Int>.C1.measure(child) == 2;
+
+            Derived<String>    textParent = new Derived();
+            Derived<String>.C1 textChild  = textParent.new C1();
+            assert Derived<String>.C1.measure(textChild) == 2;
+        }
+
+        interface Measurable {
+            static <CompileType extends Measurable> Int measure(CompileType value);
+        }
+
+        class Base<Element> {
+            class C0 implements Measurable {
+                @Override
+                static <CompileType extends C0> Int measure(CompileType value) = 1;
+            }
+
+            class C1 extends C0 {}
+        }
+
+        class Derived<Element> extends Base<Element> {
+            @Override
+            class C0 {
+                @Override
+                static <CompileType extends C0> Int measure(CompileType value) = 2;
+            }
+
+            @Override
+            class C1 {}
+        }
+    }
+
+    package composedState {
+        void testState() {
+            Derived parent = new Derived();
+            Derived.C1 child = parent.new C1(10);
+            Base.C1 baseView = child;
+            Derived.C0 refinedView = child;
+
+            // both views and a returned "this" must denote the very same object, not delegates
+            assert &baseView == &refinedView;
+            val self = child.self();
+            assert &child == &self;
+            Outer outer = child.outer;
+            assert &outer == &parent;
+
+            // D.C0 adds storage that D.C1 cannot inherit through its Java superclass B.C1
+            assert refinedView.extra == 8;
+            assert child.advance(2) == 20;
+            assert baseView.value == 12;
+            refinedView.extra = 20;
+            assert baseView.advance(3) == 35;
+            assert child.value == 15;
+            // an ordinary virtual call from a body restarts dispatch; private calls remain bound
+            // to their declarations on C0 and C1
+            assert refinedView.callAdvance(1) == 36;
+            assert child.localAdjustment() == -1000;
+
+            // construction and validators must also enter D.C0 on the same D.C1 object
+            Boolean rejected = False;
+            try {
+                parent.new C1(-1);
+            } catch (IllegalState e) {
+                rejected = True;
+            }
+            assert rejected as "Construction should fail";
+        }
+
+        void testStructField() {
+            // the refined C0 constructor accesses B.C0's field through an interface receiver
+            StructDerived.C0 child = new StructDerived().new C0(5);
+            assert child.value == 6;
+
+            // inherited C1 construction must also enter the derived C0 constructor
+            StructDerived.C1 inherited = new StructDerived().new C1(5);
+            assert inherited.value == 6;
+        }
+
+        class Base {
+            class C0 {
+                construct(Int seed) {
+                    value = seed;
+                }
+
+                Int value;
+
+                assert() {
+                    assert value >= 0;
+                }
+
+                Int advance(Int step) {
+                    value += step;
+                    return value;
+                }
+
+                C0 self() = this;
+            }
+
+            class C1 extends C0 {
+                construct(Int seed) {
+                    construct C0(seed);
+                }
+            }
+        }
+
+        class Derived extends Base {
+            @Override
+            class C0 {
+                construct(Int seed) {
+                    construct Base.C0(seed);
+                    ++extra;
+                }
+
+                Int extra = initialExtra();
+
+                assert() {
+                    assert extra > 0;
+                }
+
+                private static Int initialExtra() = 7;
+
+                @Override
+                Int advance(Int step) {
+                    // a child function handle targets its implementation class, not its interface
+                    function Int() initial = initialExtra;
+                    assert initial() == 7;
+
+                    // a refined body binds its fixed predecessor, not the virtual head
+                    function Int(Int) next   = super;
+                    function Int()    adjust = adjustment;
+
+                    // a nested lambda must accept this D.C1 object through the D.C0 interface
+                    function Int() readExtra = () -> extra;
+                    assert readExtra()  == adjust();
+                    assert adjustment() == adjust();
+
+                    // an ordinary bound method must still enter the callable interface
+                    function C0() readSelf = self;
+                    C0 viaMethod = readSelf();
+
+                    assert &viaMethod == &this;
+                    return next(step) + adjust();
+                }
+
+                Int callAdvance(Int step) = advance(step);
+
+                @Override
+                C0 self() = super();
+
+                private Int adjustment() = extra;
+            }
+
+            @Override
+            class C1 {
+                construct(Int seed) {
+                    construct Base.C1(seed);
+                }
+
+                Int localAdjustment() = adjustment();
+
+                private Int adjustment() = -1000;
+            }
+        }
+
+        class StructDerived extends Base {
+            @Override
+            class C0 {
+                construct(Int seed) {
+                    construct Base.C0(seed);
+
+                    Int initial = value;
+                    value = initial + 1;
+                }
+            }
+        }
+    }
+
+    package composedProperties {
+        void testAccessors() {
+            Derived.C1 child = new Derived().new C1();
+            Derived.C0 refined = child;
+
+            // a getter super call traverses the same composition as an ordinary method
+            assert child.score == 111;
+            refined.score = 20;
+            assert child.raw == 25;
+            assert child.score == 135;
+
+            // multi-slot values introduced by C0 are stored on the very same C1 receiver
+            refined.wide = 0x10000000000000000;
+            assert child.wide == 0x10000000000000000;
+            refined.optional = Null;
+            assert child.optional == Null;
+            refined.optional = 0x20000000000000000;
+            assert child.optional == 0x20000000000000000;
+
+            // optimized results use Ctx's extra return slots even in static bodies with a receiver
+            (Int128 wide, Int? optional) = child.measure(0x30000000000000000, Null);
+            assert wide == 0x30000000000000001;
+            assert optional == Null;
+            assert Int found := child.find(True);
+            assert found == 25;
+            assert !child.find(False);
+        }
+
+        class Base {
+            class C0 {
+                Int raw = 1;
+                Int score {
+                    Int get() = raw;
+                    void set(Int value) {
+                        raw = value;
+                    }
+                }
+                (Int128, Int?) measure(Int128 wide, Int? optional) = (wide, optional);
+                conditional Int find(Boolean present) {
+                    if (present) {
+                        return True, raw;
+                    }
+                    return False;
+                }
+            }
+            class C1 extends C0 {
+                @Override
+                Int score.get() = super() + 100;
+
+                @Override
+                (Int128, Int?) measure(Int128 wide, Int? optional) = super(wide, optional);
+
+                @Override
+                conditional Int find(Boolean present) = super(present);
+            }
+        }
+
+        class Derived extends Base {
+            @Override
+            class C0 {
+                @Override
+                Int score {
+                    Int get() = super() + 10;
+                    void set(Int value) {
+                        super(value + 5);
+                    }
+                }
+                Int128  wide     = 0;
+                Int128? optional = Null;
+
+                @Override
+                (Int128, Int?) measure(Int128 wide, Int? optional) = (wide + 1, optional);
+            }
+            @Override
+            class C1 {}
+        }
+    }
+
+    package deeperChild {
+        void testComposition() {
+            // the third child adds a hard-left boundary; the third parent adds fixed predecessors
+            Further parent = new Further();
+            Base.C2 child = parent.new C2();
+            assert child.foo() == "B.C2->E.C1->D.C1->B.C1->E.C0->D.C0->B.C0";
+
+            Outer outer = child.outer;
+            assert &outer == &parent;
+
+            // C2 is not declared on either refined parent; its inherited body must still compose
+            // C1 and C0 using the runtime parent's refinements
+            assert new Derived().new C2().foo() == "B.C2->D.C1->B.C1->D.C0->B.C0";
+        }
+
+        class Base {
+            class C0 {
+                String foo() = "B.C0";
+            }
+
+            class C1 extends C0 {
+                @Override
+                String foo() = "B.C1->" + super();
+            }
+
+            class C2 extends C1 {
+                @Override
+                String foo() = "B.C2->" + super();
+            }
+        }
+
+        class Derived extends Base {
+            @Override
+            class C0 {
+                @Override
+                String foo() = "D.C0->" + super();
+            }
+
+            @Override
+            class C1 {
+                @Override
+                String foo() = "D.C1->" + super();
+            }
+        }
+
+        class Further extends Derived {
+            @Override
+            class C0 {
+                @Override
+                String foo() = "E.C0->" + super();
+            }
+
+            @Override
+            class C1 {
+                @Override
+                String foo() = "E.C1->" + super();
+            }
+        }
+    }
+
     package genericChild {
+        void testComposition() {
+            Derived<String> strings = new Derived();
+            Derived<String>.C1 stringChild = strings.new C1("first");
+            assert stringChild.echo("next") == "next";
+            assert stringChild.last == "next";
+            assert stringChild.calls == 1;
+
+            // the same generic child topology is also compiled with optimized primitive signatures
+            Derived<Int> ints = new Derived();
+            Derived<Int>.C1 intChild = ints.new C1(1);
+            assert intChild.echo(7) == 7;
+            assert intChild.last == 7;
+            assert intChild.calls == 1;
+        }
+
         void testChildParameter() {
             // this parent has no type parameters; the child itself supplies the type argument
             Holder parent = new Holder();
@@ -325,6 +726,76 @@ package innerOuterTests {
             class Child<Element>(Element value) {
                 Element echo(Element value) = value;
             }
+        }
+
+        class Base<Element> {
+            class C0 {
+                construct(Element initial) {
+                    last = initial;
+                }
+                Element last;
+                Element echo(Element value) = value;
+            }
+            class C1 extends C0 {
+                construct(Element initial) {
+                    construct C0(initial);
+                }
+                @Override
+                Element echo(Element value) = super(value);
+            }
+        }
+
+        class Derived<Element> extends Base<Element> {
+            @Override
+            class C0 {
+                construct(Element initial) {
+                    construct Base.C0(initial);
+                }
+                Int calls = 0;
+                @Override
+                Element echo(Element value) {
+                    ++calls;
+                    return super(remember(value));
+                }
+
+                private Element remember(Element value) {
+                    last = value;
+                    return value;
+                }
+            }
+            @Override
+            class C1 {
+                construct(Element initial) {
+                    construct Base.C1(initial);
+                }
+                @Override
+                Element echo(Element value) = super(value);
+            }
+        }
+    }
+
+    package abstractChild {
+        void testImplementation() {
+            // the hard-left child contract remains abstract; a refined C0 supplies the body
+            assert new Derived().new C1().value() == 42;
+        }
+
+        @Abstract
+        class Base {
+            class C0 {
+                Int value();
+            }
+            class C1 extends C0 {}
+        }
+
+        class Derived extends Base {
+            @Override
+            class C0 {
+                @Override
+                Int value() = 42;
+            }
+            @Override
+            class C1 {}
         }
     }
 }

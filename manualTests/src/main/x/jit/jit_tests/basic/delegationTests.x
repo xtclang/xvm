@@ -6,6 +6,7 @@ package delegationTests {
     void run() {
         testSimpleDelegation();
         testSuperDelegation();
+        testDefaultDelegation();
     }
 
     void testSimpleDelegation() {
@@ -74,5 +75,20 @@ package delegationTests {
         assert wrapper.showText() == "text!";
         assert wrapper.showNullable(19) == 20;
         assert wrapper.showNullable(Null) == 0;
+    }
+
+    void testDefaultDelegation() {
+        interface Reportable {
+            String report() = "default";
+        }
+
+        class Report implements Reportable {}
+
+        class Wrapper(Reportable delegate)
+                delegates Reportable-Object(delegate) {}
+
+        // the delegate inherits the interface's default implementation
+        Wrapper wrapper = new Wrapper(new Report());
+        assert wrapper.report() == "default";
     }
 }

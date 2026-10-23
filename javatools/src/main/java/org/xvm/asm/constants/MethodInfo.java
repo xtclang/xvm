@@ -392,8 +392,7 @@ public class MethodInfo
         if (childInfo.getType().isPhantom()) {
             // an undeclared inherited child has no constructor contract of its own
             TypeConstant typeChild = childInfo.getType();
-            childInfo = childInfo.getClassStructure().getFormalType().
-                    resolveGenerics(typeChild.getConstantPool(), typeChild).
+            childInfo = typeChild.dropOriginParent(typeChild.getConstantPool()).
                     ensureAccess(Access.PRIVATE).ensureTypeInfo();
             ctor = childInfo.getMethodBySignature(getSignature());
             assert ctor != null;

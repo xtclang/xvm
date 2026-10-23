@@ -26,7 +26,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -52,6 +51,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.JitCallDesc;
 import org.xvm.javajit.JitCtorDesc;
+import org.xvm.javajit.JitDetachedBodyDesc;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
@@ -265,7 +265,7 @@ public class CommonBuilder
             for (MethodConstant ctorId : typeInfo.findMethods("construct", -1, MethodKind.Constructor)) {
                 MethodInfo    ctor         = typeInfo.getMethodById(ctorId);
                 JitMethodDesc instorRouter = getChildConstructorDesc(ctor.getChildConstructorOrigin());
-                String        targetName   = getCCName(instorRouter.typeTarget);
+                String        targetName   = instorRouter.typeTarget.getJitImplName(typeSystem);
 
                 interfaces.add(ClassDesc.of(TypeSystem.funkyInterface(targetName)));
                 childCtors.add(ctor);
@@ -286,7 +286,8 @@ public class CommonBuilder
                 .return_());
 
         TypeConstant targetType = typeInfo.getType();
-        ClassDesc    targetCD   = getCCDesc(targetType);
+        ClassDesc    targetCD   = getImplDesc(targetType);
+
         for (MethodInfo method : funkyImpls) {
             // method contains an implementation of an abstract static (funky) declaration;
             // the class of class needs to create a method with that declaration signature
@@ -300,17 +301,20 @@ public class CommonBuilder
 
             String        targetName = method.ensureJitMethodName(typeSystem);
             JitMethodDesc targetJmd  = method.getJitDesc(this, targetType);
+            ClassDesc     implCD     = targetType.isVirtualChildClass()
+                    ? getImplDesc(method.getHead().resolveDeclaringType(pool(), targetType))
+                    : targetCD;
 
             assembleFunkyRouting(
                     classBuilder, funkyName, funkyJmd.standardMD, funkyJmd.standardParams,
-                    targetCD, targetName, targetJmd.standardMD, targetJmd.standardParams,
+                    implCD, targetName, targetJmd.standardMD, targetJmd.standardParams,
                     targetJmd.standardReturns, funkyJmd.standardCtx());
 
             if (funkyJmd.isOptimized) {
                 assert targetJmd.isOptimized;
                 assembleFunkyRouting(
                         classBuilder, funkyName + OPT, funkyJmd.optimizedMD, funkyJmd.optimizedParams,
-                        targetCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
+                        implCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
                         targetJmd.optimizedReturns, funkyJmd.optimizedCtx());
             }
         }
@@ -435,7 +439,7 @@ public class CommonBuilder
                 }
             }
 
-            code.invokestatic(targetCD, targetName, targetMD, thisType.isJitInterface());
+            code.invokestatic(targetCD, targetName, targetMD, thisType.isJitImplInterface());
 
             ClassDesc funkyRetCD  = funkyMD.returnType();
             ClassDesc targetRetCD = targetMD.returnType();
@@ -549,11 +553,6 @@ public class CommonBuilder
     }
 
     @Override
-    public boolean isPrimitive() {
-        return isPrimitive;
-    }
-
-    @Override
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
         // see assembleCLInit()
         Integer index = constants.computeIfAbsent(type, _ -> constants.size());
@@ -653,7 +652,8 @@ public class CommonBuilder
      * @return false iff no more assembly required for this class
      */
     protected boolean assembleClass(ClassBuilder classBuilder) {
-        int flags = ClassFile.ACC_PUBLIC;
+        int     flags = ClassFile.ACC_PUBLIC;
+        boolean done  = false;
 
         switch (classStruct.getFormat()) {
             case CLASS, CONST, SERVICE, ENUMVALUE:
@@ -667,9 +667,10 @@ public class CommonBuilder
 
             case ANNOTATION, MIXIN:
                 // annotations and mixins are incorporated (copied) into every class that
-                // annotates the annotation or incorporates the mixin
-                classBuilder.withFlags(flags | ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT);
-                return false;
+                // annotates the annotation or incorporates the mixin; all naturally inherit Object
+                flags |= ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT;
+                done   = true;
+                break;
 
             default:
                 // TODO: support for mixin, annotations, etc
@@ -678,7 +679,7 @@ public class CommonBuilder
         classBuilder.withFlags(flags);
 
         assembleInterfaces(classBuilder);
-        return true;
+        return !done;
     }
 
     /**
@@ -700,30 +701,26 @@ public class CommonBuilder
             interfaces.add(getCCDesc(classStruct.getNormalizedType()));
         }
 
-        for (Contribution contrib : typeInfo.getContributionList()) {
-            switch (contrib.getComposition()) {
-                case Implements, Incorporates:
-                    TypeConstant contribType = contrib.getTypeConstant().removeAccess();
-                    if  (shouldAddInterface(contribType)) {
-                        interfaces.add(getCCDesc(contribType));
-                    }
-                    break;
+        addContributionInterfaces(typeInfo, interfaces);
+
+        boolean isJitInterface = this.isInterface;
+        if (isEmbedded(classStruct.getFormat())) {
+            // mixin inheritance is Java interface inheritance
+            TypeConstant superType = typeInfo.getExtends();
+            if (superType != null) {
+                interfaces.add(getCCDesc(superType));
             }
+            isJitInterface = true;
         }
 
-        if (!interfaces.isEmpty()) {
+        if (interfaces.isEmpty()) {
+            if (isJitInterface && !jitType.equals(pool().typeComparable())) {
+                // everything extends Object except Comparable, which is extended by Object
+                classBuilder.withInterfaceSymbols(CD_Object);
+            }
+        } else {
             classBuilder.withInterfaceSymbols(interfaces);
         }
-    }
-
-    /**
-     * @return true iff we should add the specified type to the list of interfaces
-     *         implemented/extended by this class
-     */
-    protected boolean shouldAddInterface(TypeConstant type) {
-        // ignore "implements Object" for classes and "implements Comparable" for everyone
-        return (this.isInterface || !type.equals(pool().typeObject())) &&
-            !type.equals(pool().typeComparable());
     }
 
     /**
@@ -2623,7 +2620,7 @@ public class CommonBuilder
                 TypeConstant  targetType = eqTarget.getNamespace().getType();
                 JitMethodDesc eqJmd      = eqMethod.getJitDesc(this, propType);
                 ClassDesc     cdProp     = getCCDesc(propType);
-                ClassDesc     cdTarget   = getCCDesc(targetType);
+                ClassDesc     cdTarget   = getImplDesc(targetType);
 
                 loadCtx(code);
 
@@ -2644,7 +2641,7 @@ public class CommonBuilder
                     code.checkcast(cdProp);
                 }
 
-                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitInterface())
+                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitImplInterface())
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -3991,22 +3988,14 @@ public class CommonBuilder
         classBuilder.withMethodBody(srcName, md, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0); // this
             loadProperty(code, thisType, propDelegate, /*don't unbox*/ false);
-
-            TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
-
-            boolean objectDelegation = dstType.isJitInterface() && dstType.equals(pool().typeObject());
-            if (objectDelegation) {
-                // we are delegating an nObject method for an interface; need a cast
-                code.checkcast(CD_nObject);
-            }
-
             loadCtx(code);
-
             for (int i = 0; i < params.length; i++) {
                 Builder.load(code, params[i].cd, code.parameterSlot(extraCount + i));
             }
 
-            if (dstType.isJitInterface() && dstMethod.isAbstract() && !objectDelegation) {
+            // abstract and default interface methods require invokeinterface
+            TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
+            if (dstType.isJitCCInterface()) {
                 code.invokeinterface(getCCDesc(dstType), dstName, md);
             } else {
                 code.invokevirtual(getCCDesc(dstType), dstName, md);
@@ -4305,20 +4294,22 @@ public class CommonBuilder
                     // mixin and annotation validator bodies are generated on the incorporating class
                     TypeConstant typeTarget = containerId.equals(thisId) || isEmbedded(format)
                             ? thisType
-                            : typeInfo.getClassChain().get(containerId).getType();
+                            : containerId.getFormalType().resolveGenerics(pool(), thisType);
 
                     assert !typeTarget.isXvmPrimitive();
-                    ClassDesc cdTarget = typeTarget == thisType
-                            ? CD_this
-                            : getCCDesc(typeTarget);
+                    ClassDesc cdReceiver = thisType.isVirtualChildClass() || typeTarget != thisType
+                            ? getCCDesc(typeTarget)
+                            : CD_this;
+                    ClassDesc cdTarget = typeTarget.isVirtualChildClass()
+                            ? getImplDesc(typeTarget)
+                            : cdReceiver;
                     String validatorName = depth > 0 && isEmbedded(format)
                             ? validator.ensureJitMethodName(typeSystem) + HASH + depth
                             : validatorId.ensureJitMethodName(typeSystem);
 
                     code.aload(ctxSlot)
                         .aload(thisSlot)
-                        .invokestatic(cdTarget, validatorName, md(CD_void, CD_Ctx, cdTarget),
-                                typeTarget.isJitInterface());
+                        .invokestatic(cdTarget, validatorName, md(CD_void, CD_Ctx, cdReceiver));
                 }
             }
 
@@ -4422,7 +4413,13 @@ public class CommonBuilder
             }
         }
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
+        assembleDeferredMethods(classBuilder, bctx, flags);
+    }
 
+    /**
+     * Assemble nested methods and other contexts discovered while generating a body.
+     */
+    protected void assembleDeferredMethods(ClassBuilder classBuilder, BuildContext bctx, int flags) {
         BuildContext bctxDeferred = bctx.getDeferred();
         while (bctxDeferred != null) {
             BuildContext    bctxNext     = bctxDeferred;
@@ -4434,12 +4431,16 @@ public class CommonBuilder
                 boolean        isOpt    = jmdNext.isOptimized;
                 MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
                 String         nameNext = bctxNext.methodJitName;
+
                 if (isOpt) {
-                    assembleMethodWrapper(classBuilder, nameNext, jmdNext);
+                    assembleMethodWrapper(classBuilder, nameNext,
+                            jmdNext instanceof JitDetachedBodyDesc detached
+                                    ? detached.staticWrapper() : jmdNext);
                     nameNext += OPT;
                 }
 
                 int flagsNext = fStatic || jmdNext.isOptimizedStatic
+                                        || jmdNext instanceof JitDetachedBodyDesc
                         ? flags | ClassFile.ACC_STATIC
                         : flags;
 

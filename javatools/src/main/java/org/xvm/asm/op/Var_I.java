@@ -108,7 +108,7 @@ public class Var_I
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceRegister(code, m_nVar, m_nType, 0);
-        bctx.moveRegister(code, m_nValueId, m_nVar, false);
+        bctx.moveRegister(code, m_nValueId, m_nVar);
         return -1;
     }
 
