@@ -2594,6 +2594,13 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   runs in a row; `:javatools:test` 677, the 42 existing skips, four runs in a row;
   `:javatools_utils:test` 122, 2 existing skips; `:lang:dap-server:test` 23 and
   `:lang:lsp-server:test` 2386, 2 skipped. The server does not call `run()` yet (R7t).
+- `68491020b` (R7t, `lang/dap-server`, `lang/lsp-server`): a console line in a stopped frame is read as
+  tier 1 reads it, and what that refuses runs as code through `run()`, for at most two seconds; DAP
+  `cancel` ends it by its request's `seq`, which `DebugMessageEndpoint` hands the server, also before
+  its code starts, and `invalidated` (`variables`) follows once code has run. The worker's
+  `runCode` and `cancel` commands, protocol 10. `XtcDebugServerTest` 26, three new; a real-worker
+  `EmbeddedExecutionTest` case: a call's effect, a cancelled loop, a loop at its limit, then the
+  program's exit with the change; `:lang:lsp-server:test` 2387, 2 skipped; `spotlessCheck`.
 
 ### R6–R7 integration bursts (2026-10-22)
 
@@ -2601,8 +2608,8 @@ R6 and R7's first part are seven code commits on this branch, with their records
 stepping add burst E, exception stops, pause and stop on entry burst F, watches and hover on paths
 burst G, R9's conditions, logpoints and exception classes burst H, expressions with operators
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
-races and services burst K, code run on a stopped fiber burst L, and its deadline, cancel and
-resume burst M. All the work
+races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
+resume burst M, and console lines run as code by the server burst N. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2624,6 +2631,7 @@ master `1c4efe422`.
 | K: stale handles, resume races and services | `550a4c01b` (R7q) | `javatools` only | J | `:javatools:test` (`SessionDebuggerTest`), `spotlessCheck` |
 | L: code run on a stopped fiber | `d77fb9b51` (R7r) | `javatools` only | K | `:javatools:test` (`SessionDebuggerTest`), `spotlessCheck`; `:lang:dap-server:test`, `:lang:lsp-server:test` |
 | M: a run's deadline, cancel and resume | `7e475dc98`, `72c7bdbbc` (R7s) | `7e475dc98` `javatools_utils` only, which master can also take on its own; R7s `javatools` only | L | `:javatools_utils:test` (`WeakHasherMapTest`), `:javatools:test` (`SessionDebuggerTest`, the whole suite several times, since the null showed once in five), `spotlessCheck`; `:lang:dap-server:test`, `:lang:lsp-server:test` |
+| N: console lines run as code | `68491020b` (R7t) | `lang/dap-server`, `lang/lsp-server` | M | `:lang:dap-server:test` (`XtcDebugServerTest`), `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers), `spotlessCheck` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.

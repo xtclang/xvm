@@ -208,7 +208,9 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
     `run()` takes the limit, its answer fails at once with the reason, and the code unwinds from every
     line it reaches, also through a `catch`; the stop's clock no longer stays frozen when the program
     is stopped for good during a run.
-  - [ ] R7t, the server and worker: the console's `repl` context to tier 2, `cancel`, `invalidated`.
+  - [x] R7t, the server and worker (`68491020b`): a console line that tier 1 refuses runs as code
+    for at most two seconds, DAP `cancel` ends it by its request's `seq`, also before it starts, and
+    `invalidated` follows once code has run; worker protocol 10.
   - [ ] R7u, the editors and shared X314.
   - [ ] R7v, the `evaluationRunsProgram` opt-in.
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
