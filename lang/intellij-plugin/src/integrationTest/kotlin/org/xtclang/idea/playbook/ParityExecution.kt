@@ -649,6 +649,47 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X313") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                // TODO LSP4IJ: UP32 — LSP4IJ sends a breakpoint's condition but not its log message, so the logpoint is
+                // checked in VS Code only; set it here too once a release sends log messages (#1759)
+                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"))
+
+                fun evaluate(expression: String) = JsonParser.parseString(debugger.evaluate(project, module, expression)).asJsonObject
+                data.strings("conditionStops").forEachIndexed { stop, expected ->
+                    // a stop is the next one once i has the value it stops at
+                    awaitUi("the program stops where i is $expected", 60.seconds) {
+                        runCatching { evaluate("i")["value"]?.asString }.getOrNull() == expected
+                    }
+                    if (stop == 0) {
+                        data.getAsJsonArray("watches").map { it.asJsonArray }.forEach { watch ->
+                            val shown = evaluate(watch[0].asString)
+                            // LSP4IJ shows strings and numbers without their type
+                            val type = shown["type"]?.asString.orEmpty()
+                            check(shown["value"]?.asString == watch[1].asString && type in listOf("", watch[2].asString)) {
+                                "${watch[0].asString} is not ${watch[1].asString}: $shown"
+                            }
+                        }
+                        val refused = data.strings("refused")
+                        val error = evaluate(refused[0])["error"]?.asString.orEmpty()
+                        check(refused[1] in error) { "${refused[0]} is not refused with the reason: $error" }
+                    }
+                    debugger.resume(project, module)
+                }
+                val ended = debugger.awaitState(project, module, "the program runs to its exit", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */

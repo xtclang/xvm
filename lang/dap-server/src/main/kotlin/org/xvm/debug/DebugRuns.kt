@@ -18,9 +18,9 @@ data class LaunchTarget(
 
 /**
  * A breakpoint a session asks for: its DAP ID, which the session chooses, its 1-based line, and how it stops, each
- * null when not given: a [condition], a path to a Boolean that must be True; a [hitCondition], `N` for the Nth hit,
- * or `>= N`, `> N` or `% N`; and a [logMessage], which makes it a logpoint that logs the message, with each `{path}`
- * in it replaced by that path's value, and does not stop.
+ * null when not given: a [condition], an expression whose Boolean value must be True; a [hitCondition], `N` for the
+ * Nth hit, or `>= N`, `> N` or `% N`; and a [logMessage], which makes it a logpoint that logs the message, with each
+ * `{expression}` in it replaced by that expression's value, and does not stop.
  */
 data class BreakpointRequest(
     val id: Int,
@@ -215,8 +215,9 @@ interface DebugRuns {
     ): CompletableFuture<List<VariableState>>
 
     /**
-     * Evaluates a path to a value, such as `point.x` or `ints[1]`, in a stopped frame, without running the program's
-     * code: the value as a variable named by the path. Fails, with the reason as its message, if it cannot.
+     * Evaluates an expression, such as `point.x + 1` or `ints[i] > 0`, in a stopped frame, without running the
+     * program's code: the value as a variable named by the expression. Fails, with the reason as its message, if it
+     * cannot.
      */
     fun evaluate(
         runId: String,
