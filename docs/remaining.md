@@ -459,8 +459,8 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   (`xString.invokeAdd`) calls `Utils.callToString()`, which runs Ecstasy code for these
   (`String.toString()`, `Stringable.toString()`), so every string join of every program pays an
   Ecstasy call; found by tier 1's refusal of `s + i` (`fda3dc3e8`). It would also let tier 1 join strings.
-  Written for master on `lagergren/native-to-string` (`12d691d3e`, 2026-10-23), pull request not
-  opened yet: `Int8` to `UInt64`, `Nibble`, `Char` and `String`, and `markNativeMethod()`, which found
+  In master pull request [#722](https://github.com/xtclang/xvm/pull/722) (2026-10-24,
+  `lagergren/native-to-string`, `12d691d3e`): `Int8` to `UInt64`, `Nibble`, `Char` and `String`, and `markNativeMethod()`, which found
   no `toString()` to mark in a const class, since `Const` and its `Stringable` come with no
   contribution. 200,000 iterations of five joins: about 16.3 s on master, 0.14 to 0.3 s with it. Not
   on this branch.
@@ -499,21 +499,32 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     a call without a value, such as `console.print("hi")`, fails there either way, since the console
     compiles `E` as a lambda that returns a value. The parameter one does not show there, since the
     console shows a frame's variables before `E` runs, and nothing showed what the lambdas left
-    behind break. Written for master, with a new `EvalCompilerTest` that drives the console in a JVM
-    of its own, on `lagergren/fix-debugger-eval-captures` (`71cd2d9d4`, 2026-10-23); pull request not
-    opened yet.
+    behind break. In master pull request [#721](https://github.com/xtclang/xvm/pull/721) (2026-10-24,
+    `lagergren/fix-debugger-eval-captures`), with a new `EvalCompilerTest` that drives the console
+    in a JVM of its own.
   - `7e475dc98`, found while validating R7s (2026-10-23): a weak map's key and entry sets leave
     collected keys out of their iterators but not out of `toArray()`, which returns null for them, so
     `Container.terminateServices()` fails with "Cannot invoke ServiceContext.requestShutdown() because
     services[i] is null" once one of its services is collected; an embedded run's close then fails, or
     its end is never reported. Master's `javatools_utils` files are the same, and the commit's new
-    `WeakHasherMapTest` case fails on master `7a79c6ef0` as it did here. For master on
-    `lagergren/fix-weak-map-arrays` (`cd36314da`, 2026-10-23), pull request not opened yet; for #693
-    as `a5e25c725`, not pushed yet.
-  - Found by the native `toString()` test (2026-10-23), not fixed: `new Nibble(Bit[])` makes 0 for
-    every value, and so does `Nibble`'s table, and with it `Nibble.of()` and `IntLiteral.toNibble()`;
-    `xConstrainedInteger.constructFromBits()` packs the bits into a byte's high bits, and `Nibble`'s
-    mask drops them. A `Nibble` made from an `Int64` is right.
+    `WeakHasherMapTest` case fails on master `7a79c6ef0` as it did here. In master pull request
+    [#720](https://github.com/xtclang/xvm/pull/720) (2026-10-24, `lagergren/fix-weak-map-arrays`),
+    and on #693 since 2026-10-24 (`a5e25c725`).
+  - Found by the native `toString()` test (2026-10-23): `new Nibble(Bit[])` makes 0 for every value,
+    and so does `Nibble`'s table, and with it `Nibble.of()`, `IntLiteral.toNibble()` and
+    `Char.isNibble()`; `xConstrainedInteger.constructFromBits()` packs the bits into a byte's high
+    bits, and `Nibble`'s mask drops them. Its `bits` failed and `Nibble(String)` overflowed for the
+    same reason, sizes counted in whole bytes. All three in master pull request
+    [#723](https://github.com/xtclang/xvm/pull/723) (2026-10-24, `lagergren/fix-nibble-from-bits`),
+    with a new `NibbleTest`. `Nibble(Byte[])` still fails: the library's own constructors disagree on
+    its size.
+  - Found through #723's callers (2026-10-24): `lib_json`'s `Lexer` dropped every `\u` escape, so it
+    could not read back the control characters its `Printer` writes. In master pull request
+    [#724](https://github.com/xtclang/xvm/pull/724) (`lagergren/fix-json-unicode-escape`), with
+    surrogate pairs read as one `Char`, and independent of #723.
+  - Found with #724, not fixed: `Char.appendEscaped()` writes the first three hexits of a `\u`
+    escape as 0 (`codepoint & 0xF000 >>> 24` is `codepoint & 0`); on master
+    `0x2028.toChar().quoted()` is `'\u0008'`.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
