@@ -623,6 +623,32 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X311") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                // LSP4IJ sends the breakpoint's condition, but not a hit condition or a log message (UP32)
+                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"))
+                for (expected in data.strings("conditionStops")) {
+                    // a stop is the next one once i has the value it stops at
+                    awaitUi("the program stops where i is $expected", 60.seconds) {
+                        runCatching { JsonParser.parseString(debugger.evaluate(project, module, "i")).asJsonObject["value"]?.asString }
+                            .getOrNull() == expected
+                    }
+                    debugger.resume(project, module)
+                }
+                val ended = debugger.awaitState(project, module, "the program runs to its exit", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -698,6 +724,14 @@ internal interface DebugSessionProbe {
     ): String
 
     fun hintShown(): Boolean
+
+    fun debugWhen(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+        condition: String,
+    )
 
     fun clearBreakpoints(project: Project)
 }
