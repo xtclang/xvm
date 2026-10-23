@@ -536,7 +536,7 @@ public final class SessionDebugger implements Debugger {
      *
      * @return the value, as a variable named by the expression, with a reference to its fields or
      *         elements; fails, with the reason in words, if the text is not such an expression, it
-     *         cannot be evaluated, or the frame is not one of this stop's
+     *         cannot be evaluated, the frame is not one of this stop's, or the program resumes first
      */
     public CompletableFuture<Variable> evaluate(int frameId, String expression) {
         PureExpression parsed;
@@ -555,7 +555,13 @@ public final class SessionDebugger implements Debugger {
                         "The frame is not one of the stopped program's, so nothing can be evaluated in it."));
             }
         }
-        return future.thenApply(List::getFirst);
+        return future.thenApply(vars -> {
+            // a read that the resume abandoned has no variables
+            if (vars.isEmpty()) {
+                throw new IllegalArgumentException("The program resumed before the expression was evaluated.");
+            }
+            return vars.getFirst();
+        });
     }
 
     /**
