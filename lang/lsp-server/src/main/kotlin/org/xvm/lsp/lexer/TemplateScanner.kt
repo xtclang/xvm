@@ -1,8 +1,6 @@
 package org.xvm.lsp.lexer
 
-/**
- * Scanner state as a sealed hierarchy - illegal states are unrepresentable.
- */
+/** Scanner state as a sealed hierarchy - illegal states are unrepresentable. */
 sealed interface ScanState {
     val pos: Int
 
@@ -25,9 +23,7 @@ sealed interface ScanState {
     ) : ScanState
 }
 
-/**
- * A single step result: optional token + next state.
- */
+/** A single step result: optional token + next state. */
 private data class Step(
     val token: TemplateScannerToken?,
     val next: ScanState,
@@ -261,14 +257,21 @@ class TemplateScanner {
                 skipComment(source, state)
             }
 
-            '\n', '\r' -> {
+            '\n',
+            '\r',
+            -> {
                 if (!state.multiline) {
                     Step(
                         TemplateScannerToken.error(pos, pos, "Newline in template expression"),
                         ScanState.Normal(pos),
                     )
                 } else {
-                    val skip = if (ch == '\r' && pos + 1 < source.length && source[pos + 1] == '\n') 2 else 1
+                    val skip =
+                        if (ch == '\r' && pos + 1 < source.length && source[pos + 1] == '\n') {
+                            2
+                        } else {
+                            1
+                        }
                     Step(null, state.copy(pos = pos + skip))
                 }
             }
@@ -325,9 +328,9 @@ class TemplateScanner {
             '/' -> {
                 // Single-line comment - find end of line
                 val end =
-                    (pos + 2 until source.length)
-                        .firstOrNull { source[it] == '\n' || source[it] == '\r' }
-                        ?: source.length
+                    (pos + 2 until source.length).firstOrNull {
+                        source[it] == '\n' || source[it] == '\r'
+                    } ?: source.length
                 Step(null, state.copy(pos = end))
             }
 

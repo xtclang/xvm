@@ -7,7 +7,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 
@@ -36,6 +38,14 @@ plugins {
 // Access version from xdkProperties (set by xdk.build.properties plugin)
 val xdkVersion: String = project.version.toString()
 val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.channel", "alpha")
+
+// Explicit development override; Marketplace remains the default for ordinary builds.
+val localLsp4ijPlugin =
+    providers.gradleProperty("lsp4ijPlugin").map { path ->
+        require(File(path).isAbsolute) { "lsp4ijPlugin must be an absolute path to a built plugin directory" }
+        require(File(path, "lib").isDirectory) { "lsp4ijPlugin must name a built plugin directory containing lib/: $path" }
+        File(path)
+    }
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
@@ -276,9 +286,10 @@ sourceSets.main {
 }
 
 val processResources =
-    tasks.named("processResources") {
+    tasks.named<ProcessResources>("processResources") {
         dependsOn(syncGradleWrapperResources)
         dependsOn(copyLspVersionProperties)
+        from(rootProject.layout.projectDirectory.file("gradle/compiler-model.init.gradle"))
     }
 
 // =============================================================================
@@ -325,6 +336,17 @@ val lspVersionProperties =
         }
     }
 
+val integrationTestSourceSet =
+    sourceSets.create("integrationTest") {
+        compileClasspath += sourceSets.main.get().output
+        // IDE-side probes compile against the same platform/plugin APIs as production.
+        compileClasspath += sourceSets.main.get().compileClasspath
+        runtimeClasspath += sourceSets.main.get().output
+    }
+
+configurations[integrationTestSourceSet.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[integrationTestSourceSet.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+
 dependencies {
     // Test dependencies
     testImplementation(platform(libs.junit.bom))
@@ -332,6 +354,16 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.lang.intellij.junit4.compat)
     testImplementation(libs.assertj)
+    add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.kodein)
+    add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.coroutines)
+    // The standalone Starter JVM has no IDE classloader to supply Kotlin's standard library.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, kotlin("stdlib"))
+    // Starter 262 reports run metadata through this API even for local, non-TeamCity runs.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.intellij.service.messages)
+    // Driver-side protocol assertions use named error codes outside the IDE/plugin classloader.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.lsp4j.jsonrpc)
+    // Protocol enums in the external playbook driver are not loaded through the IDE plugin loader.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.lsp4j)
 
     // LSP server fat JAR for out-of-process execution
     lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
@@ -351,12 +383,17 @@ dependencies {
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
-        plugin(
-            "com.redhat.devtools.lsp4ij",
-            libs.versions.lang.intellij.lsp4ij
-                .get(),
-        )
+        if (localLsp4ijPlugin.isPresent) {
+            localPlugin(localLsp4ijPlugin)
+        } else {
+            plugin(
+                "com.redhat.devtools.lsp4ij",
+                libs.versions.lang.intellij.lsp4ij
+                    .get(),
+            )
+        }
         pluginVerifier()
+        testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
     }
 
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
@@ -444,13 +481,10 @@ intellijPlatform {
     // cost ~1 GB and a verification per IDE. failureLevel is explicit so the build fails
     // on real breaks but not on every deprecated/experimental API touch.
     //
-    // INTERNAL_API_USAGES is included so the build fails if the plugin calls an
-    // IntelliJ API marked @ApiStatus.Internal. Such APIs are not meant for client
-    // plugins and can change without notice; gating on them here is what catches a
-    // regression like a switch to PluginManager.findEnabledPlugin (internal) over
-    // PluginManagerCore.getPlugin (public). Previously these were only logged as
-    // "Compatible. N usages of internal API" and silently passed CI while still
-    // generating a JetBrains verifier email on every Marketplace upload.
+    // Internal API reports are checked by verifyPluginInternalApis below. LSP4IJ marks
+    // several required integration points internal; a version-bound list names those
+    // exact signatures. Other internal APIs (including IntelliJ Platform internals)
+    // still fail, and the complete usage report remains available for review.
     pluginVerification {
         ides {
             latest {
@@ -464,7 +498,6 @@ intellijPlatform {
                 VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
                 VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
                 VerifyPluginTask.FailureLevel.MISSING_DEPENDENCIES,
-                VerifyPluginTask.FailureLevel.INTERNAL_API_USAGES,
             )
     }
 }
@@ -486,7 +519,18 @@ val summarizeSearchableOptions =
         manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
     }
 
-val verifyPlugin = tasks.named("verifyPlugin")
+val verifyPlugin = tasks.named<VerifyPluginTask>("verifyPlugin")
+val verifyPluginInternalApis =
+    tasks.register<VerifyPluginInternalApis>("verifyPluginInternalApis") {
+        group = "verification"
+        description = "Reject unreviewed internal APIs in the IntelliJ Plugin Verifier reports."
+        reportsDirectory.set(verifyPlugin.flatMap { it.verificationReportsDirectory })
+        acceptedApis.set(layout.projectDirectory.file("verifier-lsp4ij-apis.txt"))
+        lsp4ijVersion.set(libs.versions.lang.intellij.lsp4ij)
+    }
+
+// A direct verifyPlugin invocation must enforce the same policy as publishing.
+verifyPlugin.configure { finalizedBy(verifyPluginInternalApis) }
 
 val publishPlugin =
     tasks.named("publishPlugin") {
@@ -495,7 +539,7 @@ val publishPlugin =
         // Enforce binary-compat verification before publishing, regardless of who
         // invokes publishPlugin (CI, local, snapshot pipeline). Catches removed/
         // changed APIs and missing dependencies that would otherwise reach users.
-        dependsOn(verifyPlugin)
+        dependsOn(verifyPluginInternalApis)
     }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
@@ -557,6 +601,9 @@ val buildPlugin =
 
 // Get typed reference to IntelliJ Platform tasks
 val prepareSandbox = tasks.named<Sync>("prepareSandbox")
+prepareSandbox.configure {
+    from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("intellij-plugin/bin") }
+}
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
 // prepareSandbox.destinationDirectory is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
@@ -628,9 +675,21 @@ val prepareJarSearchableOptions =
 // Some bundled plugins have split frontend/backend architectures that fail to
 // load cleanly in the sandbox. Disable them to avoid spurious errors.
 
-// Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
-// prepareSandbox.destinationDirectory is the plugins/ directory, config/ is a sibling
-val sandboxConfigDir: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("../config") }
+// The platform plugin gives runIde its own sandbox. Add off-classpath assets to that producer
+// so its Sync task owns the complete plugin installation, including the server and grammar.
+val prepareRunIdeSandbox =
+    tasks.named<PrepareSandboxTask>("prepareSandbox_runIde") {
+        from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("intellij-plugin/bin") }
+        from(textMateGrammar) {
+            into("intellij-plugin/lib/textmate")
+        }
+        from(lspServerJar) {
+            into("intellij-plugin/bin")
+            rename { "xtc-lsp-server.jar" }
+        }
+    }
+
+val sandboxConfigDir: Provider<Directory> = prepareRunIdeSandbox.flatMap { it.sandboxConfigDirectory }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
 val disabledSandboxPlugins =
@@ -645,9 +704,7 @@ val configureDisabledPlugins =
         group = "intellij platform"
         description = "Disable Ultimate-only plugins in the sandbox IDE"
 
-        // Must run after prepareSandbox creates the directory structure
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir // Capture for configuration cache
         val pluginsList = disabledSandboxPlugins
@@ -669,8 +726,7 @@ val configureSandboxLogging =
         group = "intellij platform"
         description = "Configure INFO-level logging for XTC plugin in the sandbox IDE"
 
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir
         outputs.file(configDir.map { it.file("options/log-categories.xml") })
@@ -695,8 +751,7 @@ val configureSandboxAppearance =
         group = "intellij platform"
         description = "Remove broken user-derived color-scheme overrides from the sandbox IDE config"
 
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir
         doNotTrackState("Removes invalid overrides from user-managed sandbox settings on each IDE launch")
@@ -733,16 +788,21 @@ val parentPublishLocal =
 val runIdeCapturedIdeVersion = ideVersion
 val runIdeCapturedSinceBuild = intellijSinceBuild
 val runIdeCapturedLsp4ijVersion =
-    libs.versions.lang.intellij.lsp4ij
-        .get()
+    localLsp4ijPlugin.map { "local plugin: $it" }.orElse(
+        libs.versions.lang.intellij.lsp4ij
+            .get(),
+    )
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
+val runIdeLspLogDirectory =
+    providers
+        .environmentVariable("XTC_LSP_LOG_DIR")
+        .orElse(providers.systemProperty("user.home").map { "$it/.xtc/logs/lsp" })
 
 val runIdeInfo =
     tasks.register<RunIdeEnvironmentReportTask>("runIdeInfo") {
         dependsOn(
-            copyTextMateToSandbox,
-            copyLspServerToSandbox,
+            prepareRunIdeSandbox,
             configureDisabledPlugins,
             configureSandboxLogging,
             configureSandboxAppearance,
@@ -752,45 +812,45 @@ val runIdeInfo =
         lsp4ijVersion.set(runIdeCapturedLsp4ijVersion)
         pluginVersion.set(runIdeCapturedPluginVersion)
         semanticTokensEnabled.set(runIdeCapturedSemanticTokens)
-        sandboxDir.set(sandboxConfigDir.map { it.dir("..") })
+        sandboxDir.set(prepareRunIdeSandbox.flatMap { it.sandboxDirectory })
+        sandboxLogDir.set(prepareRunIdeSandbox.flatMap { it.sandboxLogDirectory })
+        sandboxSystemDir.set(prepareRunIdeSandbox.flatMap { it.sandboxSystemDirectory })
         val mavenLocalRoot =
             providers
                 .systemProperty("maven.repo.local")
                 .orElse(providers.systemProperty("user.home").map { "$it/.m2/repository" })
         this.mavenLocalRoot.set(layout.dir(mavenLocalRoot.map(::File)))
         pluginNames.set(
-            sandboxConfigDir.map { configDir ->
-                configDir
-                    .dir("../plugins")
+            prepareRunIdeSandbox.flatMap { it.sandboxPluginsDirectory }.map { pluginsDir ->
+                pluginsDir
                     .asFile
                     .listFiles()
                     ?.map { it.name }
                     ?.sorted() ?: emptyList()
             },
         )
-        lspLogFile.set(layout.file(providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }))
+        lspLogDirectory.set(runIdeLspLogDirectory)
     }
 
 val startLspLogTail =
     tasks.register<StartLogTailTask>("startLspLogTail") {
-        logFile.set(layout.file(providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }))
+        logDirectory.set(runIdeLspLogDirectory)
         threadName.set("lsp-log-tailer")
         linePrefix.set("[lsp-server] ")
     }
 
 val stopLspLogTail =
     tasks.register<StopLogTailTask>("stopLspLogTail") {
+        mustRunAfter(startLspLogTail)
         threadName.set("lsp-log-tailer")
     }
 
-// Ensure TextMate files, LSP server JAR, and mavenLocal artifacts are ready before IDE starts
-// NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
+// Prepare the interactive sandbox and publish its Gradle dependencies before starting the IDE.
 val runIde =
     tasks.named<JavaExec>("runIde") {
         parentPublishLocal.forEach { dependsOn(it) }
         dependsOn(
-            copyTextMateToSandbox,
-            copyLspServerToSandbox,
+            prepareRunIdeSandbox,
             configureDisabledPlugins,
             configureSandboxLogging,
             configureSandboxAppearance,
@@ -844,3 +904,70 @@ val test =
             events("failed")
         }
     }
+
+val pruneCompilerPlaybookReports =
+    tasks.register<PruneTestReportsTask>("pruneCompilerPlaybookReports") {
+        group = "verification"
+        description = "Retain five completed playbook payloads and all compact results"
+        reportsDirectory.set(layout.buildDirectory.dir("reports/compiler-playbook"))
+        retainedRuns.set(providers.gradleProperty("playbookRetainedRuns").map(String::toInt).orElse(5))
+    }
+
+// Launch the packaged plugin in an isolated IDE using JetBrains' Starter/Driver test task.
+// This suite is opt-in; ordinary plugin tests do not open an IDE window.
+intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
+    task {
+        description = "Run the compiler playbook's IntelliJ acceptance cases in an isolated IDE"
+        dependsOn(":lsp-server:prepareLibraryPlaybook")
+        finalizedBy(pruneCompilerPlaybookReports)
+        // Starter uses JNA for native process/window integration in this test JVM.
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
+        testClassesDirs = integrationTestSourceSet.output.classesDirs
+        classpath = integrationTestSourceSet.runtimeClasspath
+        // IDE-side probes load only inside the sandbox plugin classloader, not Starter's JVM.
+        include("**/*Test.class")
+        useJUnitPlatform()
+        systemProperty("xtc.playbook.ideVersion", ideVersion)
+        localLsp4ijPlugin.orNull?.let { pluginDirectory ->
+            inputs.dir(pluginDirectory).withPropertyName("localLsp4ijPlugin")
+            systemProperty("xtc.playbook.lsp4ijPlugin", pluginDirectory.absolutePath)
+        }
+        systemProperty(
+            "xtc.playbook.lsp4ijVersion",
+            libs.versions.lang.intellij.lsp4ij
+                .get(),
+        )
+        systemProperty("xtc.playbook.adapter", xdkProperties.stringValue("lsp.adapter", "compiler"))
+        systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
+        systemProperty("xtc.playbook.replacementGates", providers.gradleProperty("intellijPlaybookReplacementGates").getOrElse(""))
+        systemProperty(
+            "xtc.playbook.largeFileProbe",
+            providers.gradleProperty("intellijLargeFileProbe").getOrElse("false"),
+        )
+        systemProperty(
+            "allure.results.directory",
+            layout.buildDirectory
+                .dir("reports/compiler-playbook/allure-results")
+                .get()
+                .asFile.absolutePath,
+        )
+        val scenarios = rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
+        inputs.file(scenarios)
+        systemProperty("xtc.playbook.scenarios", scenarios.asFile.absolutePath)
+        inputs.file(rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"))
+        systemProperty(
+            "xtc.playbook.manual",
+            rootProject.layout.projectDirectory
+                .file("doc/manual-test-plan.md")
+                .asFile.absolutePath,
+        )
+        systemProperty(
+            "xtc.playbook.reports",
+            layout.buildDirectory
+                .dir("reports/compiler-playbook")
+                .get()
+                .asFile.absolutePath,
+        )
+        testLogging.events("passed", "skipped", "failed")
+    }
+}

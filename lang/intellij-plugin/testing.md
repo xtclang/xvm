@@ -26,45 +26,36 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 
 ## Current State
 
-The plugin has **two test files**, both pure unit tests with no IntelliJ platform dependencies:
+Headless unit and manifest tests live under `src/test/kotlin`; the native Starter/Driver harness
+lives under `src/integrationTest/kotlin`. They cover project configuration/import ownership,
+watchers, source graphs, lifecycle, edit guards, startup, diagnostics and packaged resources.
 
-### `LspServerJarResolutionTest.kt`
+The native suite uses the shared **284-scenario catalog**. It launches a disposable IntelliJ
+profile with Ultimate disabled and released LSP4IJ. Startup editing, focus recovery, settings
+persistence and project lifecycle are separate tests in the same task. The large-file diagnostic
+is opt-in. See the [manual playbook](../doc/manual-test-plan.md) for fixtures and
+[client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
-Tests `XtcLspConnectionProvider.resolveServerJar()` — a static method that locates
-`bin/xtc-lsp-server.jar` relative to a plugin directory path.
-
-- 5 tests: correct layout, missing bin dir, JAR in wrong directory, empty bin, wrong name
-- Uses: JUnit 5 + AssertJ + `@TempDir`
-- No IntelliJ API usage — tests a pure `Path` → `Path?` function
-
-### Build Configuration
-
-```kotlin
-// build.gradle.kts (dependencies)
-testImplementation(platform(libs.junit.bom))    // JUnit 6.0.2 BOM
-testImplementation(libs.junit.jupiter)
-testRuntimeOnly(libs.junit.platform.launcher)
-testRuntimeOnly(libs.lang.intellij.junit4.compat)  // JUnit 4.13.2 (required by IntelliJ test harness)
-testImplementation(libs.assertj)                     // AssertJ 3.27.7
-
-// build.gradle.kts (test task)
-val test by tasks.existing(Test::class) {
-    useJUnitPlatform()
-    jvmArgs("-Xlog:cds=off")  // Suppress CDS warning from IntelliJ's PathClassLoader
-    testLogging { events("passed", "skipped", "failed") }
-}
+```bash
+./gradlew :lang:intellij-plugin:test \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
 ```
 
-The IntelliJ Platform Gradle Plugin (2.10.5) automatically configures the test JVM with:
-- `-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader`
-- `idea.classpath.index.enabled=false`
-- `idea.force.use.core.classloader=true`
-- Sandbox directories (`config/`, `plugins/`, `system/`, `log/`) via `SandboxArgumentProvider`
+Use `--tests '*CompilerPlaybookTest.compilerPlaybook'` to select only feature tests, and
+`-PintellijPlaybookCases=X145,X146,X147,X259` for a bounded selection. Omit the case property for
+the full implemented catalog. Run native editors sequentially: the driver can restore desktop
+focus, and fixture modifications during a test fail explicitly. Completed mutations are not replayed.
 
-This means the IntelliJ classloading infrastructure is already available to tests — the
-missing piece is the test framework dependency and test base classes.
+JUnit XML is under `build/test-results/`; per-case results, IDE errors, traces and screenshots are
+under `build/reports/compiler-playbook/run-*`. Read the actual case statuses and `ideFailures`;
+a green task summary is insufficient. Partial and unselected cases do not count as full native
+acceptance. Test history from older builds does not substitute for running the current artifact.
 
----
+The compiler is the default adapter. Native tests reuse the cached signed IntelliJ distribution
+and JBR, with isolated configuration, plugins and indices. Report cleanup retains five completed
+payloads; `-PplaybookRetainedRuns=N` changes that count, and a `.keep-artifacts` marker preserves a run.
 
 ## Testing Approaches Overview
 
@@ -317,7 +308,7 @@ Logs **persist after the IDE exits** — you can always read them post-hoc.
 The LSP server writes to a separate log file:
 
 ```
-~/.xtc/logs/lsp-server.log
+~/.xtc/logs/lsp/server-*/server.log
 ```
 
 This is independent of the IDE sandbox and persists across IDE sessions.
@@ -339,7 +330,7 @@ After any Gradle test or IDE run, archive these paths as CI artifacts:
 | Artifact | Path | When |
 |---|---|---|
 | IDE log | `build/idea-sandbox/log/idea.log` | After `runIde` or `testIdeUi` |
-| LSP server log | `~/.xtc/logs/lsp-server.log` | After any LSP session |
+| LSP server log | `~/.xtc/logs/lsp/server-*/server.log` | After any LSP session |
 | Test results (XML) | `build/test-results/test/` | After `test` |
 | Test report (HTML) | `build/reports/tests/test/` | After `test` |
 | Test sandbox log | `build/idea-sandbox-test/log/idea.log` | After platform tests |
@@ -353,10 +344,10 @@ To watch logs while the IDE is running:
 tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log
 
 # LSP server log
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 
 # Both, interleaved
-tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log ~/.xtc/logs/lsp-server.log
+tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 ---
@@ -367,7 +358,7 @@ The plugin registers these extension points in `plugin.xml`:
 
 | Extension | Class | What to Test |
 |---|---|---|
-| `notificationGroup` | — | Notification group "XTC Language Server" exists |
+| `notificationGroup` | — | Notification group "Ecstasy Language Server" exists |
 | `newProjectWizard.generator` | `XtcNewProjectWizard` | Wizard registered, generates valid project structure |
 | `configurationType` | `XtcRunConfigurationType` | Type registered with ID `XtcRunConfiguration`, factory creates configs |
 | `runConfigurationProducer` | `XtcRunConfigurationProducer` | Produces config from `.x` file context |
@@ -729,6 +720,51 @@ The XTC plugin depends on three bundled/third-party plugins:
 
 ### LSP4IJ in Tests
 
+Ordinary builds, `runIde` and the native playbook use the Marketplace version pinned in the
+catalog (currently 0.21.0). To test an unpushed local repair, first run `prepareSandbox` in its checkout, then
+pass the same explicit override to the XVM task:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.compilerPlaybook' \
+  -Plsp4ijPlugin="$HOME/src/lsp4ij/build/idea-sandbox/IC-2024.2/plugins/lsp4ij" \
+  -PintellijPlaybookCases=X130,X138,X139,X146,X162,X181,X185,X259 \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+`lsp4ijPlugin` must be an absolute path to the built plugin directory containing `lib/`. Gradle's
+`localPlugin` dependency handles the compile/test sandbox; Starter copies that same directory
+instead of downloading the Marketplace release. The native report records its path, descriptor
+version and SHA-256 of sorted relative filenames and contents; startup verifies the loaded version.
+The directory contents are declared task inputs, including when the snapshot version stays the
+same. Omit the property to return to the released dependency. Using the built directory avoids
+the Gradle plugin's temporary ZIP metadata extraction invalidating configuration-cache reuse.
+No local path or snapshot is committed as a default, and no plugin is published by this task.
+
+The release build retains the Ecstasy compatibility bridges for LSP4IJ 0.21.0.
+An experiment against a locally repaired dependency does not justify removing them from the
+published plugin. Validate each bridge independently, then repeat native acceptance with the
+released dependency. Standalone formatting Undo/Redo and reconnection of closed dirty buffers
+are separate requirements. See the [client limits](../doc/manual-test-plan.md#client-compatibility-limits).
+
+Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
+Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement. `UiWaitsTest` covers this race, actual expiry, pending reads, cancellation and null values;
+`PlaybookFailureTest` retains fatal timeout/cancellation behavior. These tests run without opening
+an IDE through `testCompilerPlaybook --tests '*UiWaitsTest' --tests '*PlaybookFailureTest'`.
+The wrapper only retries observations; edit/refactoring actions remain outside polling loops.
+
+Multi-target navigation chooses the visible Show Usages table through its locally registered
+Enter callback, once. Driver's `popup.keyboard` sends a global key rather than addressing the
+popup, which left X36's visible chooser unsubmitted in a full run. The helper checks row/action
+validity, then native acceptance still requires closure and exact file/caret destinations.
+`NavigationChooserTest` covers the binding/selection guards without opening an IDE. This is a
+harness input correction, not a production LSP4IJ workaround or a replacement protocol request.
+
+X147's controlled asynchronous report probe selects **Build import** through the settings
+navigation list before reading `xtc.compiler.details`. Unselected pages are detached from the
+component tree. Keep its EDT publication barriers and stale-response assertions when changing
+settings layouts; selecting the page does not replace the production report implementation.
+
 LSP4IJ is the most complex dependency. For platform tests, you need it on the test
 classpath so that the `lsp4ij:server` and `lsp4ij:fileNamePatternMapping` extensions
 in `plugin.xml` resolve correctly.
@@ -822,3 +858,68 @@ All testing and development tasks for the IntelliJ plugin, runnable from the pro
 - [Integration Tests for Plugin Developers (Feb 2025)](https://blog.jetbrains.com/platform/2025/02/integration-tests-for-plugin-developers-intro-dependencies-and-first-integration-test/)
 - [Integration Tests: API Interaction (Mar 2025)](https://blog.jetbrains.com/platform/2025/03/integration-tests-for-plugin-developers-api-interaction/)
 - [IntelliJ Platform SDK — IDE Development Instance](https://plugins.jetbrains.com/docs/intellij/ide-development-instance.html)
+
+### Refresh and VFS regression selection
+
+X146 additionally keeps 16 extra documents connected and schedules 64 lens, hint and semantic-token
+refreshes each while a write action delays their read passes. The test temporarily raises the sandbox
+IDE tab limit and restores it afterward. The untouched consumer must still show Int, then String,
+then Int hints. X259 covers hint settings and connection retirement during restart. Hints stay enabled.
+
+The refresh and move selection is X103/X118/X130/X146/X161/X162/X163/X169/
+X173/X174/X175/X176/X216/X217/X218/X259. Keep the full-suite IDE-error gate;
+do not suppress upstream alerts. `PreflightedRenamesTest` also tests the production launcher
+with an unset optional class loader.
+
+Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
+aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
+Both clients preserve explicit settings and the last accepted inputs after failed refresh.
+Late daemon publication after
+cancellation is guarded by import identity; the configuration cache is reused across identities.
+Automatic exports require an initial imported report; VS Code uses public Gradle task events in
+trusted local workspaces.
+
+Ordered library settings add X266–X268. The driver operates the installed Compiler settings
+components, checks cancel/reset/apply and ordering, opens the compiler-selected read-only source
+snapshot, restarts the server, and checks invalid-input retention and library removal/restoration.
+The shared `prepareLibraryPlaybook` task produces two versions of a binary and matching sources;
+neither editor bundles test binaries in source control. Use
+`-PintellijPlaybookCases=X266,X267,X268` for this selection. The new URI round-trip regression
+keeps case-sensitive module names in the virtual URI path because hosts normalize URI authorities.
+See the [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
+for native results; a successful fallback-file check does not close LSP4IJ's virtual-library-editor gap.
+
+### Machine-local JVM tuning and log support
+
+Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+(e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
+button restarts running Ecstasy servers in this IDE using the saved settings.
+
+Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
+Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
+caps, active processes are protected and stopped sessions are pruned on the next server start.
+Legacy shared logs and the IDE's own protocol console are outside this policy.
+
+**Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
+the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
+logged diagnostics; it does not collect source files. When stopped, export uses only this project’s
+last recorded launch, including up to 64 KiB of launcher output. Its manifest identifies offline
+mode and truncation and lists included files; another project’s logs are never substituted. Shared
+X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
+launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
+layout and rollover stress remain manual checks. See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for
+how these checks are recorded.
+
+The UI completion gate includes `--tests '*CompilerPlaybookTest.settingsPersistence'` on
+`testCompilerPlaybook`, with the usual compiler adapter and both lang inclusion flags. It starts
+and completely exits two IDE processes using one disposable project/profile. See the
+[settings acceptance steps](../doc/manual-test-plan.md#settings-persistence-and-layout-acceptance-ui1ui7)
+for exact commands and layout checks.
+
+X276 checks compiler-resolved annotations, aliases, shadowing and bundled ownership, including
+installed decorator markup. X277 checks lexical string/escape/keyword styles against controls,
+absence of broad semantic overlays and exact damage/repair recovery. It explicitly requires
+TextMate token types, rejecting a plain-text lexical fallback. Select either by its stable
+X ID. Normal runs retain the current color scheme. Selected X41/X154/X276/X277 and the final X277
+regression run pass with zero IDE failures; see the
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).

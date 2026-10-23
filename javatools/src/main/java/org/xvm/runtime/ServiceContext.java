@@ -198,21 +198,21 @@ public class ServiceContext {
     public boolean isDebuggerActive() {
         // for now, we use a global flag, but should allow debugging of an individual
         // service/container.
-        return f_container.f_runtime.isDebuggerActive();
+        return getRuntime().isDebuggerActive();
     }
 
     /**
      * Set or clear a debugging session flag.
      */
     public void setDebuggerActive(boolean fActive) {
-        f_container.f_runtime.setDebuggerActive(fActive);
+        getRuntime().setDebuggerActive(fActive);
     }
 
     /**
      * @return the active debugger
      */
     public Debugger getDebugger() {
-        return DebugConsole.INSTANCE;
+        return getRuntime().getDebugger();
     }
 
     // ----- Op support ----------------------------------------------------------------------------
@@ -875,6 +875,10 @@ public class ServiceContext {
                 }
             }
 
+            // a fiber that has ended but still waits for the answer to a call it made, such as an
+            // asynchronous call that does not return, is in no queue; it has nothing left to run
+            setFibers.removeIf(fiber -> fiber != fiberThis && fiber.getStatus() == FiberStatus.Terminating);
+
             assert setFibers.isEmpty() ||
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
@@ -914,6 +918,10 @@ public class ServiceContext {
 
             setFibers.remove(fiber);
         }
+
+        // a fiber that has ended but still waits for the answer to a call it made, such as an
+        // asynchronous call that does not return, is in no queue; it has nothing left to run
+        setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
 
         assert setFibers.isEmpty();
 

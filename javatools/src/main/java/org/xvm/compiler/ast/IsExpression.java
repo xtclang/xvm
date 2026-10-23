@@ -93,7 +93,7 @@ public class IsExpression
 
         atypeActual[0] = pool.typeBoolean();
 
-        if (fit.isFit()) {
+        if (exprTarget != null && exprTest != null) {
             TypeConstant typeTarget = exprTarget.getType();
             TypeConstant typeTest   = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
 
@@ -178,6 +178,15 @@ public class IsExpression
         return true;
     }
 
+    /** Static type expressions need their represented type; dynamic expressions produce a type handle. */
+    private Argument generateTestType(Context ctx, Code code, ErrorListener errs) {
+        if (expr2.isConstant()) {
+            return expr2.getType().getParamType(0).resolveAutoNarrowingBase();
+        }
+        Argument argument = expr2.generateArgument(ctx, code, false, errs);
+        return argument instanceof TypeConstant type ? type.getParamType(0) : argument;
+    }
+
     @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         int cLVals = aLVal.length;
@@ -190,24 +199,9 @@ public class IsExpression
             return;
         }
 
-        Argument   argCond   = aLVal[0].getLocalArgument();
-        Argument   argTarget = expr1.generateArgument(ctx, code, true, errs);
-        Expression exprTest  = expr2;
-        Argument   argType;
-
-        // there is an asymmetry between processing of the static and dynamic exprTest type:
-        // - if the test type is static (e.g. "x.is(String)"), the type of exprTest is a
-        //     TypeConstant that "isTypeOfType" and we need to extract that underlying type;
-        // - in the test type is dynamic (e.g. "Null.is(Serializable))", the argument produced
-        //   by the exprTest would be a TypeHandle and the runtime should take care of the rest
-        if (exprTest.isConstant()) {
-            argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
-        } else {
-            argType = exprTest.generateArgument(ctx, code, false, errs);
-            if (argType instanceof TypeConstant type) {
-                argType = type.getParamType(0);
-            }
-        }
+        Argument argCond   = aLVal[0].getLocalArgument();
+        Argument argTarget = expr1.generateArgument(ctx, code, true, errs);
+        Argument argType   = generateTestType(ctx, code, errs);
 
         if (cLVals > 1) {
             Label lblCond  = getConditionFalseLabel();
@@ -238,19 +232,8 @@ public class IsExpression
             return;
         }
 
-        Argument   argTarget = expr1.generateArgument(ctx, code, true, errs);
-        Expression exprTest  = expr2;
-        Argument   argType;
-
-        // see the comment in "generateAssignments" regarding  static and dynamic types
-        if (exprTest.isConstant()) {
-            argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
-        } else {
-            argType = exprTest.generateArgument(ctx, code, false, errs);
-            if (argType instanceof TypeConstant type) {
-                argType = type.getParamType(0);
-            }
-        }
+        Argument argTarget = expr1.generateArgument(ctx, code, true, errs);
+        Argument argType   = generateTestType(ctx, code, errs);
 
         Label lblCond  = getConditionFalseLabel();
         Label lblIsNot = lblCond == null ? new Label("skip_assign") : lblCond;

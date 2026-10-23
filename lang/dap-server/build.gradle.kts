@@ -20,6 +20,15 @@ dependencies {
     // Logging - bundled for out-of-process execution
     implementation(libs.lang.slf4j.api)
     implementation(libs.lang.logback)
+
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(libs.assertj)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.withType<JavaCompile>().configureEach {

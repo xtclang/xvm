@@ -3,13 +3,14 @@
 package org.xvm.lsp.server
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
-import org.eclipse.lsp4j.launch.LSPLauncher
-import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.util.ServerLogs
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
@@ -25,14 +26,15 @@ import kotlin.system.exitProcess
  * - For socket communication: `java -jar xtc-lsp.jar --socket 5007`
  *
  * Adapter Selection:
- * - The adapter is selected at build time via: ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=treesitter
- * - Default is 'treesitter' (syntax-aware, requires native library bundled in JAR)
+ * - Select at startup with `java -Dxtc.lsp.adapter=treesitter -jar xtc-lsp.jar`.
+ * - Otherwise use the build default, configured with `-Plsp.adapter=compiler`.
+ * - The shipped default is 'compiler'; both real adapters are bundled in the same JAR.
+ * - Use 'compiler' for real diagnostics from the Ecstasy compiler and its bundled XDK libraries
  * - Use 'mock' for regex-based features (no native dependencies)
  *
- * Important: This LSP server uses stdio for communication. All logging goes to stderr
- * to keep stdout clean for the JSON-RPC protocol.
+ * Important: This LSP server uses stdio for communication. All logging goes to stderr to keep
+ * stdout clean for the JSON-RPC protocol.
  */
-
 private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
 // Static initializer runs before any SLF4J initialization to suppress
@@ -43,9 +45,7 @@ private val initBlock =
         System.setProperty("slf4j.internal.verbosity", "WARN")
     }
 
-/**
- * Load build properties from the embedded lsp-version.properties file.
- */
+/** Load build properties from the embedded lsp-version.properties file. */
 private fun loadBuildProperties(): Properties =
     Properties().apply {
         Thread
@@ -55,38 +55,66 @@ private fun loadBuildProperties(): Properties =
             ?.use { load(it) }
     }
 
-/**
- * Adapter backend types for the LSP server.
- */
-private enum class AdapterBackend(
+/** Adapter backend types for the LSP server. */
+internal enum class AdapterBackend(
     val displayName: String,
 ) {
     MOCK("Mock"),
     TREE_SITTER("Tree-sitter"),
-    COMPILER("XTC Compiler"),
+    COMPILER("Ecstasy Compiler"),
+    ;
+
+    companion object {
+        /** An IDE restart can override the bundled default without rebuilding the server. */
+        fun resolve(
+            buildSetting: String?,
+            startupSetting: String?,
+        ): AdapterBackend = fromSetting(startupSetting ?: buildSetting)
+
+        fun fromSetting(setting: String? = null): AdapterBackend =
+            when (setting?.lowercase()) {
+                "mock" -> MOCK
+
+                "treesitter",
+                "tree-sitter",
+                -> TREE_SITTER
+
+                null,
+                "compiler",
+                "xtc",
+                "full",
+                -> COMPILER
+
+                else -> {
+                    throw IllegalArgumentException(
+                        "Unknown lsp.adapter '$setting'; expected treesitter, compiler or mock",
+                    )
+                }
+            }
+    }
 }
 
 /**
- * Create the appropriate adapter based on build configuration.
+ * Create the appropriate adapter for this server process.
  *
- * @param adapterType The adapter type from build properties: "mock", "treesitter", or "compiler"
+ * @param requested The backend selected at startup or by the build default
  * @return The configured adapter and which backend is active
  */
-private fun createAdapter(adapterType: String): Pair<Adapter, AdapterBackend> =
-    when (adapterType.lowercase()) {
-        "compiler", "xtc", "full" -> {
-            // Stub adapter - all methods log warnings, no actual compiler integration yet
-            // TODO: Replace with real compiler adapter when parallel compiler integration is ready
-            // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
-            logger.info("using compiler stub adapter - all LSP calls will be logged but return empty results")
+private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBackend> =
+    when (requested) {
+        AdapterBackend.COMPILER -> {
+            logger.info("using the Ecstasy compiler for diagnostics and document symbols")
             XdkAdapter() to AdapterBackend.COMPILER
         }
 
-        "treesitter", "tree-sitter" -> {
+        AdapterBackend.TREE_SITTER -> {
             try {
                 TreeSitterAdapter() to AdapterBackend.TREE_SITTER
             } catch (e: UnsatisfiedLinkError) {
-                logger.error("tree-sitter native library not found, falling back to mock adapter", e)
+                logger.error(
+                    "tree-sitter native library not found, falling back to mock adapter",
+                    e,
+                )
                 logger.warn(
                     "to use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand",
                 )
@@ -97,9 +125,20 @@ private fun createAdapter(adapterType: String): Pair<Adapter, AdapterBackend> =
             }
         }
 
-        else -> {
-            MockAdapter() to AdapterBackend.MOCK
-        }
+        AdapterBackend.MOCK -> MockAdapter() to AdapterBackend.MOCK
+    }
+
+/** The Mock adapter answers when Tree-sitter could not start; the user is told, not only the log. */
+internal fun fallbackWarning(
+    requested: AdapterBackend,
+    backend: AdapterBackend,
+): String? =
+    if (requested == AdapterBackend.TREE_SITTER && backend == AdapterBackend.MOCK) {
+        "The Tree-sitter adapter could not start, so the Ecstasy language server is using the Mock adapter, " +
+            "which offers only basic pattern-based features. Switch to the Ecstasy Compiler adapter, or see the " +
+            "language server log for the cause."
+    } else {
+        null
     }
 
 fun main(
@@ -109,16 +148,17 @@ fun main(
     @Suppress("UNUSED_EXPRESSION")
     initBlock
 
-    // Load build properties to determine adapter type
+    // Read the process override before constructing any adapter or negotiating capabilities.
     val buildProps = loadBuildProperties()
-    val adapterType = buildProps.getProperty("lsp.adapter", "mock")
+    val requested = AdapterBackend.resolve(buildProps.getProperty("lsp.adapter"), System.getProperty("xtc.lsp.adapter"))
     val version = buildProps.getProperty("lsp.version", "unknown")
 
-    // Create adapter based on build configuration
-    val (adapter, backend) = createAdapter(adapterType)
+    // Each connection owns a single adapter for its lifetime.
+    val (adapter, backend) = createAdapter(requested)
 
     // Log startup banner prominently
-    val logFile = "${System.getProperty("user.home")}/.xtc/logs/lsp-server.log"
+    val logFile = ServerLogs.directory.resolve("server.log").toString()
+    runCatching { ServerLogs.prune() }.onFailure { logger.warn("Could not prune inactive Ecstasy log sessions", it) }
     logger.info("========================================")
     logger.info("Ecstasy Language Server v$version")
     logger.info("backend: ${backend.displayName}")
@@ -127,24 +167,28 @@ fun main(
 
     when (backend) {
         AdapterBackend.TREE_SITTER -> {
-            logger.info("tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition")
+            logger.info(
+                "tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition",
+            )
         }
 
         AdapterBackend.COMPILER -> {
-            logger.warn("XTC Compiler adapter is a STUB - all methods log but return empty results")
-            logger.info("when implemented, will provide: full semantic analysis, type inference, cross-file navigation")
+            logger.info("compiler features are negotiated with the connected editor during initialization")
+            logger.info("the compiler uses the XDK libraries bundled with this server")
         }
 
         AdapterBackend.MOCK -> {
             logger.info("mock backend provides: basic symbol detection (regex-based)")
-            if (adapterType.lowercase() in listOf("treesitter", "tree-sitter")) {
-                logger.warn("tree-sitter was requested but failed to initialize - check native library")
+            if (requested == AdapterBackend.TREE_SITTER) {
+                logger.warn(
+                    "tree-sitter was requested but failed to initialize - check native library",
+                )
             }
         }
     }
 
     // Create the server
-    val server = XtcLanguageServer(adapter, ::exitProcess)
+    val server = XtcLanguageServer(adapter, ::exitProcess, fallbackWarning(requested, backend))
 
     // Launch with stdio
     try {
@@ -155,10 +199,7 @@ fun main(
     }
 }
 
-/**
- * Launch the server using stdio for communication.
- * This is what VS Code and most editors use.
- */
+/** Launch the server using stdio for communication. This is what VS Code and most editors use. */
 fun launchStdio(
     server: XtcLanguageServer,
     input: InputStream,
@@ -167,9 +208,25 @@ fun launchStdio(
     // Own the dispatcher as well as the server: LSP4J's default cached platform-thread
     // executor survives EOF, and adapter workers can keep the JVM alive indefinitely.
     val executor = Executors.newVirtualThreadPerTaskExecutor()
+    val trace = ProtocolTrace(server.clientTrace)
+    val lifecycle = ProtocolLifecycle()
     try {
-        val launcher: Launcher<LanguageClient> =
-            LSPLauncher.createServerLauncher(server, input, output, executor) { it }
+        val launcher: Launcher<XtcLanguageClient> =
+            object : Launcher.Builder<XtcLanguageClient>() {
+                override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
+                    lifecycle.wrap(
+                        trace.wrap(
+                            super.wrapMessageConsumer(consumer),
+                            received = consumer is RemoteEndpoint,
+                        ),
+                        received = consumer is RemoteEndpoint,
+                    )
+            }.setLocalService(server)
+                .setRemoteInterface(XtcLanguageClient::class.java)
+                .setInput(input)
+                .setOutput(output)
+                .setExecutorService(executor)
+                .create()
         server.connect(launcher.remoteProxy)
         launcher.startListening().get()
     } catch (e: Exception) {
@@ -184,6 +241,7 @@ fun launchStdio(
             }
         }
     } finally {
+        trace.close()
         executor.shutdownNow()
         server.close()
     }

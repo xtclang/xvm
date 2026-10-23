@@ -1,33 +1,55 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import type { LanguageClient } from 'vscode-languageclient/node';
+
+import { buildMode, createEmbeddedBuildTask, createEmbeddedRunTask, type BuildMode } from './embedded-execution';
 
 export interface XtcTaskDefinition extends vscode.TaskDefinition {
     moduleName: string;
     methodName?: string;
+    /** Comma-separated arguments; prefer [args], which is passed exactly as given. */
     moduleArguments?: string;
+    args?: string[];
+    /** A source URI identifying the module for embedded runs; the module name is used otherwise. */
+    moduleUri?: string;
+    mode?: BuildMode;
+    /** Legacy switch: true runs with Gradle, false with the `xtc` command line. Absent follows [mode]. */
     useGradle?: boolean;
     quietMode?: boolean;
 }
 
+type ClientAccess = () => LanguageClient | undefined;
+
 export class XtcTaskProvider implements vscode.TaskProvider {
     static readonly type = 'xtc';
+
+    constructor(private readonly client: ClientAccess) {}
 
     provideTasks(): vscode.ProviderResult<vscode.Task[]> {
         const tasks: vscode.Task[] = [];
         const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 
-        const { workspaceFolders } = vscode.workspace;
-        if (workspaceFolders) {
-            for (const folder of workspaceFolders) {
-                const buildFile = path.join(folder.uri.fsPath, 'build.gradle.kts');
-                if (fs.existsSync(buildFile)) {
+        for (const folder of vscode.workspace.workspaceFolders ?? []) {
+            const gradle = fs.existsSync(path.join(folder.uri.fsPath, 'build.gradle.kts'));
+            if (buildMode(folder) === 'embedded') {
+                tasks.push(
+                    createEmbeddedBuildTask(this.client, folder, false),
+                    createEmbeddedBuildTask(this.client, folder, true)
+                );
+                // embedded mode has no tests or clean of its own, so a Gradle build keeps offering them
+                if (gradle) {
                     tasks.push(
-                        this.createLifecycleTask('Build', `${gradlew} build`, folder, vscode.TaskGroup.Build),
                         this.createLifecycleTask('Test', `${gradlew} test`, folder, vscode.TaskGroup.Test),
                         this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
                     );
                 }
+            } else if (gradle) {
+                tasks.push(
+                    this.createLifecycleTask('Build', `${gradlew} build`, folder, vscode.TaskGroup.Build),
+                    this.createLifecycleTask('Test', `${gradlew} test`, folder, vscode.TaskGroup.Test),
+                    this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
+                );
             }
         }
 
@@ -36,8 +58,8 @@ export class XtcTaskProvider implements vscode.TaskProvider {
 
     resolveTask(task: vscode.Task): vscode.ProviderResult<vscode.Task> {
         const definition = task.definition as XtcTaskDefinition;
-        if (definition.moduleName) {
-            return createXtcRunTask(definition);
+        if (definition.moduleName && !definition.moduleName.startsWith('_')) {
+            return createXtcRunTask(definition, this.client);
         }
         return undefined;
     }
@@ -49,7 +71,7 @@ export class XtcTaskProvider implements vscode.TaskProvider {
         group: vscode.TaskGroup
     ): vscode.Task {
         const task = new vscode.Task(
-            { type: XtcTaskProvider.type, moduleName: `_lifecycle_${name.toLowerCase()}` } as XtcTaskDefinition,
+            { type: XtcTaskProvider.type, moduleName: `_lifecycle_${name.toLowerCase()}`, mode: 'gradle' } as XtcTaskDefinition,
             folder,
             name,
             'xtc',
@@ -62,9 +84,38 @@ export class XtcTaskProvider implements vscode.TaskProvider {
     }
 }
 
-export function createXtcRunTask(definition: XtcTaskDefinition): vscode.Task {
-    const useGradle = definition.useGradle ?? true;
-    const command = useGradle
+/** The folder that owns the definition's module, or the first folder. */
+function runFolder(definition: XtcTaskDefinition): vscode.WorkspaceFolder | undefined {
+    const uri = definition.moduleUri ? vscode.Uri.parse(definition.moduleUri) : undefined;
+    return uri ? vscode.workspace.getWorkspaceFolder(uri) : vscode.workspace.workspaceFolders?.[0];
+}
+
+/** How a run definition executes: an explicit mode, the legacy switch, or the folder's build mode. */
+function runMode(definition: XtcTaskDefinition): BuildMode | 'cli' {
+    if (definition.mode) {
+        return definition.mode;
+    }
+    if (definition.useGradle !== undefined) {
+        return definition.useGradle ? 'gradle' : 'cli';
+    }
+    return buildMode(runFolder(definition));
+}
+
+export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAccess): vscode.Task {
+    const mode = runMode(definition);
+    if (mode === 'embedded') {
+        return createEmbeddedRunTask(client, definition, {
+            module: definition.moduleUri ?? definition.moduleName,
+            // a saved task keeps its root URI after the file is renamed or moved; the name still finds the module
+            moduleName: definition.moduleName,
+            label: definition.moduleName,
+            method: definition.methodName,
+            args: definition.args ?? splitModuleArguments(definition.moduleArguments),
+            folder: runFolder(definition),
+        });
+    }
+
+    const command = mode === 'gradle'
         ? buildGradleRunCommand(definition)
         : buildDirectRunCommand(definition);
 
@@ -76,7 +127,6 @@ export function createXtcRunTask(definition: XtcTaskDefinition): vscode.Task {
         new vscode.ShellExecution(command),
         []
     );
-    task.group = vscode.TaskGroup.Build;
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
     return task;
 }

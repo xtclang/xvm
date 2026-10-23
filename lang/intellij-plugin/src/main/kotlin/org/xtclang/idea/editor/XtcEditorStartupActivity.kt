@@ -45,9 +45,11 @@ class XtcEditorStartupActivity : ProjectActivity {
             FileEditorManagerListener.FILE_EDITOR_MANAGER,
             object : FileEditorManagerListener {
                 override fun selectionChanged(event: FileEditorManagerEvent) {
-                    event.newFile?.takeIf { it.extension == "x" }?.let {
-                        logXtcFile(project, it.path, "selectionChanged")
-                    }
+                    event.newFile
+                        ?.takeIf { it.extension == "x" }
+                        ?.let {
+                            logXtcFile(project, it.path, "selectionChanged")
+                        }
                 }
             },
         )

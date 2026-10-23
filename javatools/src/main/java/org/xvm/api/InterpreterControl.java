@@ -20,6 +20,7 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
 
+import org.xvm.runtime.Debugger;
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -37,12 +38,11 @@ import org.xvm.runtime.template._native.io.xExternalConsole;
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
+import static org.xvm.asm.ErrorListener.at;
+
 import static org.xvm.api.EmbeddingSupport.ERR_ENTRY_METHOD;
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
 import static org.xvm.api.EmbeddingSupport.WARN_ARGUMENTS_IGNORED;
-
-import static org.xvm.util.Severity.ERROR;
-import static org.xvm.util.Severity.WARNING;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.
@@ -54,6 +54,9 @@ class InterpreterControl
      */
     static Connector createConnector(ModuleRepository repository) {
         InterpreterConnector connector = new InterpreterConnector(repository);
+        // an embedding host has no terminal for the console debugger, which would read its
+        // commands from the host's standard input; assert:debug continues instead
+        connector.setDebugger(Debugger.NONE);
         connector.loadModule("runner.xtclang.org");
         connector.start(null);
         return connector;
@@ -87,14 +90,12 @@ class InterpreterControl
             } catch (IllegalArgumentException e) {
                 // the method is why the run does not start, as the command-line runner reports it;
                 // its container was never the problem
-                if (errs != null) {
-                    errs.log(ERROR, ERR_ENTRY_METHOD, new Object[] {e.getMessage()}, module);
-                }
+                errs.error(ERR_ENTRY_METHOD, at(module), e.getMessage());
                 return null;
             }
-            if (errs != null && !entry.args().isEmpty() && method.getParamCount() == 0) {
+            if (!entry.args().isEmpty() && method.getParamCount() == 0) {
                 // the arguments are dropped, with the command-line runner's warning
-                errs.log(WARNING, WARN_ARGUMENTS_IGNORED, new Object[] {entry.name()}, module);
+                errs.warn(WARN_ARGUMENTS_IGNORED, at(module), entry.name());
             }
 
             if (console != null) {
@@ -191,9 +192,7 @@ class InterpreterControl
                 this.result = result;
             } else {
                 this.result = null;
-                if (errs != null) {
-                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
-                }
+                errs.error(ERR_UNHANDLED_EXCEPTION, at(module), failure);
             }
         } finally {
             this.stopped = Instant.now();
