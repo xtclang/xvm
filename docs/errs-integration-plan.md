@@ -2608,6 +2608,12 @@ request of its own is to be discussed (docs/remaining.md). It went into #693 on 
 change, which #693 has no file for; `c7fedbe53` before it is `eddd77ee9`, the language server's test JVMs
 without class sharing. Both compile there; the commits were validated here.
 
+A fourth, `1473c7e89` (2026-10-23), also outside every burst: an embedded run now lasts, as `xtc run` does,
+until its services have nothing left to do, and its container is then killed; before, a service still at
+work when `run()` returned ran on in the worker, unreachable. It changes `lib_runner`, `Container`, the
+container control's status and `EmbeddingSupport`'s documentation, all of which master has (#703), and the
+server README's `xtc/runExited` line. A candidate for #693 and for master (docs/remaining.md).
+
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
 written out against #693's `EmbeddedRuns`, with the same test and the server README's `xtc/stopRun`
