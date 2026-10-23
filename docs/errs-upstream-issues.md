@@ -539,6 +539,9 @@ and `exceptionInfo`, so UP32, UP34 and UP33 were checked natively against it on 
   frames (`TaskRegistry`, `runner.x`), which `stackTrace` leaves out; `exceptionInfo` should too, an XVM
   follow-up in docs/remaining.md.
 
+The three pull requests' descriptions give these checks since 2026-10-23, in place of their "not checked
+natively" sentences; #1761's also describes `8bc5d28d`'s timeout and line breaks and `7f1a5224`'s test.
+
 Lazy variables (UP35) and value formats (UP36) are still not offered by the adapter (R10).
 
 | Entry | Branch and commit | Feature | Tests |
