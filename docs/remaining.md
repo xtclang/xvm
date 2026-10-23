@@ -499,10 +499,9 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     a call without a value, such as `console.print("hi")`, fails there either way, since the console
     compiles `E` as a lambda that returns a value. The parameter one does not show there, since the
     console shows a frame's variables before `E` runs, and nothing showed what the lambdas left
-    behind break. In master pull request [#721](https://github.com/xtclang/xvm/pull/721) (2026-10-24,
-    `lagergren/fix-debugger-eval-captures`), tested in `EmbeddingSupportTest` with a debugger of
-    its own that compiles in the stopped frame, which needs #718's runtime debugger: based on #718's
-    branch, to be rebased onto master once #718 lands.
+    behind break. Waiting for #718, see the item below: pull request
+    [#721](https://github.com/xtclang/xvm/pull/721) was closed on 2026-10-24, since its test needs
+    #718's runtime debugger, which master does not have yet.
   - `7e475dc98`, found while validating R7s (2026-10-23): a weak map's key and entry sets leave
     collected keys out of their iterators but not out of `toArray()`, which returns null for them, so
     `Container.terminateServices()` fails with "Cannot invoke ServiceContext.requestShutdown() because
@@ -527,6 +526,15 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     escape as 0 (`codepoint & 0xF000 >>> 24` is `codepoint & 0`); on master
     `0x2028.toChar().quoted()` is `'\u0008'`.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
+- [ ] Once #718 is on master, file the `EvalCompiler` fixes above again, as a new pull request or
+  by reopening [#721](https://github.com/xtclang/xvm/pull/721). The branch
+  `lagergren/fix-debugger-eval-captures` (`f3069b4fb`, 2026-10-24) has the fix and its test, and is
+  based on #718's branch: rebase it onto master, which leaves only its own commit. The test, an
+  `EmbeddingSupportTest` case, sets a debugger of its own on the run's connector with #718's
+  `InterpreterConnector.setDebugger()`, and compiles `n + 1`, `random.int(1)` and `nope` with
+  `EvalCompiler` where the run stopped at `assert:debug`; with master's `EvalCompiler` it fails all
+  three ways. The console cannot be driven from `manualTests` instead: the run task only inherits
+  Gradle's standard input, which is empty in CI.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
   `eatStringChars` and `eatCharLiteral`. Fixed here (`92d87bb08`), in master pull request #717, and on #693.
