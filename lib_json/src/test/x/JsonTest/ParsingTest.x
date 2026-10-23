@@ -1,7 +1,12 @@
+import ecstasy.io.IOException;
+
 import json.Mapping;
 import json.ObjectInputStream;
 import json.Parser;
+import json.Printer;
 import json.Schema;
+
+import xunit.assertions.assertThrows;
 
 class ParsingTest {
 
@@ -56,4 +61,42 @@ class ParsingTest {
             }
         }
     }
+
+    @Test
+    void shouldParseUnicodeEscapes() {
+        assert parse(quoted(u("0041") + u("00e9") + u("00C9") + u("2028")))
+                == "A" + 0xE9.toChar() + 0xC9.toChar() + 0x2028.toChar();
+    }
+
+    @Test
+    void shouldParseASurrogatePairAsOneCharacter() {
+        assert parse(quoted(u("D83D") + u("DE00"))) == "" + 0x1F600.toChar();
+    }
+
+    @Test
+    void shouldReadBackTheControlCharactersItWrites() {
+        String text = "a" + 0x01.toChar() + 0x1F.toChar() + "b";
+        String json = Printer.DEFAULT.render(text);
+        assert json == quoted("a" + u("0001") + u("001F") + "b");
+        assert parse(json) == text;
+    }
+
+    @Test
+    void shouldRejectABadUnicodeEscape() {
+        assertThrows(IOException, () -> parse(quoted(u("00G1"))));
+        assertThrows(IOException, () -> parse(quoted(u("DE00"))));
+        assertThrows(IOException, () -> parse(quoted(u("D83D") + "x")));
+        assertThrows(IOException, () -> parse(quoted(u("D83D") + u("0041"))));
+    }
+
+    private String parse(String text) = new Parser(text.toReader()).parseDoc().as(String);
+
+    private String quoted(String text) = "\"" + text + "\"";
+
+    /**
+     * @return the JSON escape of the UTF-16 unit that the hexits spell, made this way since the
+     *         compiler reads a backslash, a "u" and four hexits as that character, also in a
+     *         String literal
+     */
+    private String u(String hexits) = "\\" + "u" + hexits;
 }
