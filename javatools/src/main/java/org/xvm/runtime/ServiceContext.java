@@ -198,14 +198,14 @@ public class ServiceContext {
     public boolean isDebuggerActive() {
         // for now, we use a global flag, but should allow debugging of an individual
         // service/container.
-        return f_container.f_runtime.isDebuggerActive();
+        return getRuntime().isDebuggerActive();
     }
 
     /**
      * Set or clear a debugging session flag.
      */
     public void setDebuggerActive(boolean fActive) {
-        f_container.f_runtime.setDebuggerActive(fActive);
+        getRuntime().setDebuggerActive(fActive);
     }
 
     /**
