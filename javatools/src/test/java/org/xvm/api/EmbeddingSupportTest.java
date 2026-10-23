@@ -229,6 +229,79 @@ public class EmbeddingSupportTest {
     }
 
     @Test
+    public void aRunEndsWhenItsServicesHaveNothingLeftToDo() {
+        // as on the command line: run() returns with an alarm pending that keeps the container
+        // alive, so the run goes on until it has fired; one that does not keep it alive is dropped
+        ModuleStructure module = compile("""
+                module Lingers {
+                    void run() {
+                        @Inject Console console;
+                        @Inject Timer timer;
+                        timer.start();
+                        timer.schedule(Duration.ofMillis(300), () -> console.print("kept"), keepAlive=True);
+                        timer.schedule(Duration.ofMinutes(60), () -> console.print("dropped"));
+                        console.print("returned");
+                    }
+                }
+                """);
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Lingers did not start: " + errs.getErrors());
+
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertFalse(control.running());
+        }
+        assertTrue(output.toString().contains("returned"), output.toString());
+        assertTrue(output.toString().contains("kept"), output.toString());
+        assertFalse(output.toString().contains("dropped"), output.toString());
+    }
+
+    @Test
+    public void nothingOfARunStillRunsOnceItIsClosed() {
+        // run() returns with a service still spinning, as a program that starts a server does
+        ModuleStructure module = compile("""
+                module Leaves {
+                    service Spinner {
+                        Int spins;
+
+                        void spin() {
+                            for (Int count = 0; count >= 0; ++count) {
+                                ++spins;
+                            }
+                        }
+                    }
+
+                    void run() {
+                        new Spinner().spin^();
+                        @Inject Console console;
+                        console.print("started");
+                    }
+                }
+                """);
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Leaves did not start: " + errs.getErrors());
+
+        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (!output.toString().contains("started")) {
+                Thread.sleep(10);
+            }
+        });
+        // not in a try-with-resources: closing again after a close that timed out would wait without a limit
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+
+        var connector = (InterpreterConnector) support.ensureConnector();
+        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (!connector.isRuntimeIdle()) {
+                Thread.sleep(10);
+            }
+        }, "The closed run's spinner still runs");
+    }
+
+    @Test
     public void closingARunEndsAServiceWhoseFiberEndedWithACallStillPending() {
         // Helper's fiber returns while its asynchronous call to a spinner is still running, so the
         // fiber has ended and still waits for an answer; killing the container must end the
