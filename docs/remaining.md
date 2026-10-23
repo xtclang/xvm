@@ -500,8 +500,9 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     compiles `E` as a lambda that returns a value. The parameter one does not show there, since the
     console shows a frame's variables before `E` runs, and nothing showed what the lambdas left
     behind break. In master pull request [#721](https://github.com/xtclang/xvm/pull/721) (2026-10-24,
-    `lagergren/fix-debugger-eval-captures`), with a new `EvalCompilerTest` that drives the console
-    in a JVM of its own.
+    `lagergren/fix-debugger-eval-captures`), tested in `EmbeddingSupportTest` with a debugger of
+    its own that compiles in the stopped frame, which needs #718's runtime debugger: based on #718's
+    branch, to be rebased onto master once #718 lands.
   - `7e475dc98`, found while validating R7s (2026-10-23): a weak map's key and entry sets leave
     collected keys out of their iterators but not out of `toArray()`, which returns null for them, so
     `Container.terminateServices()` fails with "Cannot invoke ServiceContext.requestShutdown() because
