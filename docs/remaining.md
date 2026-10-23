@@ -282,6 +282,15 @@ breakpoint list, which the editors replace.
 
 - [ ] Repeated compile/run/stop/debug soak, with memory and process checks, on every supported
   platform.
+- [ ] A JVM that makes more than one runtime keeps up to two that are done with, about 115 MB each,
+  since the runtime holds a container's state in Java statics (heap dump, 2026-10-23). The static
+  templates (`xConst.INSTANCE` and the other `INSTANCE = this`, `xEnum.RANGE_TEMPLATE`) hold the
+  newest runtime's native container, and a static set once (`xRTSignature.PARAM_ARRAY`) the first
+  one's, which later runtimes then use too. A closed program's pending alarm stays in the shared
+  `xLocalClock.TIMER` until it is due, an hour for `EmbeddingSupportTest`'s, with its runtime.
+  Nothing calls `Runtime.shutdownXVM()`, so a runtime's worker threads stay as well. The servers make
+  one runtime per process (`EmbeddingSupport.instance()`), so it costs them little; the `javatools`
+  test JVM carries two, 190–240 MB of its 512 MB, and peaks at 275 MB.
 - [ ] Parity between IntelliJ and VS Code.
 - [ ] Logs that correlate build ID, queue job, artifact revision, worker PID and generation, and run
   ID.
