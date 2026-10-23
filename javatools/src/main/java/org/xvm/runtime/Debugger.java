@@ -1,9 +1,37 @@
 package org.xvm.runtime;
 
+import org.xvm.asm.Op;
+
 /**
  * Debugger interface.
  */
 public interface Debugger {
+    /**
+     * The debugger of a host that has none, such as an embedding host without a terminal for the
+     * {@link DebugConsole}: {@code assert:debug} continues with the next op, and since this
+     * debugger never becomes active, no breakpoint is checked.
+     */
+    Debugger NONE = new Debugger() {
+        @Override
+        public int activate(Frame ctx, int iPC) {
+            return iPC + 1;
+        }
+
+        @Override
+        public int checkBreakPoint(Frame frame, int iPC) {
+            return iPC + 1;
+        }
+
+        @Override
+        public void onReturn(Frame frame) {
+        }
+
+        @Override
+        public int checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx) {
+            return Op.R_EXCEPTION;
+        }
+    };
+
     /**
      * Activate the debugger.
      *

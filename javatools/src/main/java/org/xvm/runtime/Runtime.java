@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -123,6 +124,25 @@ public class Runtime {
         m_fDebugger = fActive;
     }
 
+    /**
+     * @return the debugger of this runtime's services: the one the host set, or the terminal
+     *         {@link DebugConsole}
+     */
+    public Debugger getDebugger() {
+        Debugger debugger = m_debugger;
+        return debugger == null ? DebugConsole.INSTANCE : debugger;
+    }
+
+    /**
+     * Set the debugger of this runtime's services; a host without a terminal for the
+     * {@link DebugConsole} sets {@link Debugger#NONE}.
+     *
+     * @param debugger  the debugger to use
+     */
+    public void setDebugger(Debugger debugger) {
+        m_debugger = Objects.requireNonNull(debugger);
+    }
+
     // ----- constants and fields ------------------------------------------------------------------
 
     /**
@@ -154,4 +174,10 @@ public class Runtime {
      * The "debugger is active" flag.
      */
     private boolean m_fDebugger;
+
+    /**
+     * The debugger the host set, or null for the {@link DebugConsole}, which is created on first
+     * use.
+     */
+    private volatile Debugger m_debugger;
 }
