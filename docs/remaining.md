@@ -203,7 +203,10 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
-- [ ] Tests: source revisions, stale handles, resume/stop races, multiple service contexts.
+- [ ] Tests: source revisions, with the source maps above.
+- [x] Tests: stale handles, reads and evaluations asked for as the program resumes, and multiple
+  service contexts (`550a4c01b`, four `SessionDebuggerTest` cases). An evaluation that the resume
+  abandoned failed without a reason, a `NoSuchElementException`; it now says the program resumed first.
 - [x] A resume/stop race: `SessionDebuggerTest.whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`
   hung once (2026-10-23) in `Control.close()`, in the runner's `killTask`. The cause was the runtime's:
   a service with a fiber that ended while a call it made was still out failed `terminate()`'s
@@ -415,7 +418,8 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
   2026-10-23: `eddd77ee9` as `c7fedbe53`, `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
   change, `1473c7e89` as `a6c3f519d`, `89e519d99` as `78e0a9deb`, and #717's three fixes as `076907bda`
-  (its test only, since #693 stopped at an unterminated string already), `3ce7fc147` and `18a8d910e`;
+  (its test only, since #693 stopped at an unterminated string already), `3ce7fc147` and `18a8d910e`,
+  and #718's `getRuntime()` review changes `dc12e9390` and `db624ebbc` as `d7701ed06` and `5a68503df`;
   the other commits since are debugger work and its records).
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
