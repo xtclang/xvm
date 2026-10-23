@@ -20,6 +20,7 @@ import java.io.Closeable
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintStream
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -320,6 +321,31 @@ internal class RunWorkerProcess(
             addProperty("expression", expression)
         }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
 
+    /**
+     * Runs code in a stopped frame, on the fiber that waits there, for at most [limit]; fails with the reason when it
+     * cannot. Cancelling the answer ends the run: the worker is told, and its late reply is dropped.
+     */
+    fun runCode(
+        id: Long,
+        frame: Int,
+        expression: String,
+        limit: Duration,
+    ): CompletableFuture<VariableState> {
+        val (number, reply) =
+            send("runCode", id) {
+                addProperty("frame", frame)
+                addProperty("expression", expression)
+                addProperty("limit", limit.inWholeMilliseconds)
+            }
+        val answer = reply.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+        answer.whenComplete { _, failure ->
+            if (failure is CancellationException && pending.remove(number) != null) {
+                command("cancel", id) { addProperty("request", number) }
+            }
+        }
+        return answer
+    }
+
     /** The exception a stopped run's fiber stopped it at; null when it stopped it for another reason. */
     fun exceptionInfo(
         id: Long,
@@ -353,7 +379,14 @@ internal class RunWorkerProcess(
         name: String,
         id: Long,
         fill: JsonObject.() -> Unit = {},
-    ): CompletableFuture<JsonObject> {
+    ): CompletableFuture<JsonObject> = send(name, id, fill).second
+
+    /** Sends a request as [request] does, and answers with its number too, by which a `cancel` names it. */
+    private fun send(
+        name: String,
+        id: Long,
+        fill: JsonObject.() -> Unit,
+    ): Pair<Long, CompletableFuture<JsonObject>> {
         val number = nextRequest.getAndIncrement()
         val reply = CompletableFuture<JsonObject>()
         pending[number] = Pending(id, reply)
@@ -371,7 +404,7 @@ internal class RunWorkerProcess(
                     )
             }
         if (!sent) pending.remove(number)?.reply?.completeExceptionally(IllegalStateException("The program is not running"))
-        return reply
+        return number to reply
     }
 
     /** Fails the requests still waiting for a reply from a run that has ended. */
