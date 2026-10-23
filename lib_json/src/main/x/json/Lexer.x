@@ -499,9 +499,12 @@ class Lexer
                     break;
 
                 case 'u':
-                    // 'u' hex hex hex hex; a character beyond the Basic Multilingual Plane is
-                    // written as two of them, a UTF-16 surrogate pair
+                    // 'u' hex hex hex hex
                     UInt32 codepoint = eatHexits();
+                    // UTF-16 keeps 0xD800..0xDFFF for surrogates, which are no character of their
+                    // own; a character above 0xFFFF is written as two of them: first a high
+                    // surrogate, 0xD800..0xDBFF, which holds the top 10 bits of the codepoint less
+                    // 0x10000, and then a low surrogate, 0xDC00..0xDFFF, which holds the bottom 10
                     if (0xD800 <= codepoint <= 0xDBFF) {
                         require("\\u");
                         UInt32 low = eatHexits();
@@ -510,6 +513,7 @@ class Lexer
                         }
                         codepoint = ((codepoint - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
                     } else if (0xDC00 <= codepoint <= 0xDFFF) {
+                        // a low surrogate with no high one before it
                         throw new IOException("unexpected low surrogate");
                     }
                     buf.add(new Char(codepoint));
