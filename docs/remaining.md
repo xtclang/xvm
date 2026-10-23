@@ -210,10 +210,13 @@ Planned in [the execution plan](../lang/doc/plans/plan-embedded-execution.md#add
 after the R8 gate unless one is chosen to gate the release. The console debugger's commands they
 come from are in parentheses.
 
-- [ ] R9: conditional breakpoints (`BC`), hit counts and logpoints. IntelliJ's logpoints: UP32.
+- [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
+  X311). Conditions are paths to a `Boolean` until bounded evaluation. IntelliJ checks the condition;
+  its hit counts and logpoints: UP32.
 - [ ] R9: function breakpoints, which stop when a method is entered.
-- [ ] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
-  exception views. IntelliJ: UP34 (filter conditions) and UP33 (`exceptionInfo`).
+- [x] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
+  exception views (`5b2686a2e`, `edeab8f5b`; shared X312 in VS Code). IntelliJ: UP34 (filter
+  conditions) and UP33 (`exceptionInfo`).
 - [ ] R9: data breakpoints, which stop when a property or field changes.
 - [ ] R10: value formats (`V`) and identity codes (`DI`). IntelliJ's hexadecimal toggle: UP36; in VS Code,
   our extension contributes the menu item, by design (UP38).
@@ -327,7 +330,7 @@ are filed; the others wait for their R9 or R10 adapter work, a native check, and
 - [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `f2a38e58`): breakpoints that don't suspend as DAP logpoints; the
   "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
   program stopped while IntelliJ shows it running.
-- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), `feat/dap-exception-info` `04164852`): the exception hint from `exceptionInfo`.
+- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), `feat/dap-exception-info` at `8bc5d28d`): the exception hint from `exceptionInfo`.
 - [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), `feat/dap-exception-filter-conditions` `a4f73d29`): conditions on exception filters, sent
   as `filterOptions`.
 - [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.

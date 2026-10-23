@@ -462,6 +462,12 @@ this bridge; they cannot be inferred from compiler type hints.
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
   for the editors' exception views; and data breakpoints, which stop when a property or field
   changes. Conditions and logpoint messages are expressions, so they build on R7's evaluation.
+  *First step (`5b2686a2e` runtime, `edeab8f5b` editors):* conditions, which are paths to a
+  `Boolean` until bounded evaluation, hit counts and logpoints, whose `{path}` parts are evaluated;
+  exception filters by class, with the classes that extend them; and `exceptionInfo`, with the
+  exception's stack trace (worker protocol 9). Shared X311 and X312 pass in VS Code; IntelliJ checks
+  X311's condition, and the rest waits on LSP4IJ (UP32-UP34). Still open in R9: function and data
+  breakpoints, and conditions beyond paths.
 - [ ] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
   tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
   R7's evaluation; computed properties as lazy variables, where only fields show now; paging of
