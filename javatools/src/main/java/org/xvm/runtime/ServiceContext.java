@@ -212,7 +212,7 @@ public class ServiceContext {
      * @return the active debugger
      */
     public Debugger getDebugger() {
-        return DebugConsole.INSTANCE;
+        return f_container.f_runtime.getDebugger();
     }
 
     // ----- Op support ----------------------------------------------------------------------------
