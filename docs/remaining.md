@@ -199,7 +199,15 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   (`fda3dc3e8`, `0540055e9`; shared X313, its logpoint VS Code only, UP32).
 - [ ] Bounded evaluation's tier 2: calls and properties on the stopped fiber, with the decided
   deadlines, cancellation, side effects announced by `invalidated`, and the opt-in to run the whole
-  program (the console's `E`, `EM` and `WE`; lang/doc/plans/plan-bounded-evaluation.md).
+  program (the console's `E`, `EM` and `WE`; lang/doc/plans/plan-bounded-evaluation.md). In five
+  steps, R7r to R7v:
+  - [x] R7r, the runtime runs code on the stopped fiber (`d77fb9b51`): `SessionDebugger.run()`, the
+    fiber waiting again in the same stop, exceptions and compile errors as answers, no stops inside,
+    the fibers it calls running, one run at a time.
+  - [ ] R7s, the runtime's deadline and cancel, and resume and terminate during a run.
+  - [ ] R7t, the server and worker: the console's `repl` context to tier 2, `cancel`, `invalidated`.
+  - [ ] R7u, the editors and shared X314.
+  - [ ] R7v, the `evaluationRunsProgram` opt-in.
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
@@ -466,6 +474,10 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     only third-party hosts reach it on master. In master pull request
     [#718](https://github.com/xtclang/xvm/pull/718) (2026-10-23, `lagergren/fix-embedded-assert-debug`),
     its `javatools` part with the `EmbeddingSupportTest` case.
+  - Found by R7r (`d77fb9b51`, 2026-10-23), in `EvalCompiler`, which master's console debugger uses
+    for `E`: a method's parameter is unresolvable until something has shown it, an `@Inject` variable
+    is captured with its `Ref`'s type, so no method of it compiles, and a lambda that does not compile
+    stays in its class. Not yet reproduced on master's console.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
