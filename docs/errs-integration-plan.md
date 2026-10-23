@@ -2623,7 +2623,15 @@ Both runtime fixes went to master as pull request [#716](https://github.com/xtcl
 without its `SessionDebuggerTest` change, and `2918acbd4` is `1473c7e89` without the server README's
 line, since master's README describes the tree-sitter server, and without the debugger's context in
 `InterpreterConnector`. Messages rewritten for master. On that branch, from a fresh build,
-`:javatools:test` passes 459 tests, the 42 existing skips, and `spotlessCheck` passes.
+`:javatools:test` passes 459 tests, the 42 existing skips, and `spotlessCheck` passes. A review request
+there put the container control's `statusIndicator` return on one line (`3bcb04025`, here `89e519d99`).
+
+Two compiler fixes the scan found went to master as pull request
+[#717](https://github.com/xtclang/xvm/pull/717) the same day, from
+`lagergren/fix-lexer-hang-and-false-duplicates` off master `7a79c6ef0`: `503bbe4c1`, the `break` from
+`7b9b5856a` that ends the lexer at a string the source ends in, and `2a036d998`, `814153a42`'s `genUID()`
+change, each with a test written for master's own API (`LexerTest`, a new `ErrorListTest`), which fails
+without its fix. There `:javatools:test` passes 458 tests, the 42 existing skips.
 
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
