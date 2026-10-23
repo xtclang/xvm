@@ -145,8 +145,13 @@ verified when the program starts, and a breakpoint or `assert:debug` stops the p
 line, call stack and the other fibers that wait shown in the Debug tool window. Its Variables view
 shows the frame's locals and expands objects and arrays; LSP4IJ shows strings and numbers without
 their type. **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
-**Resume Program** runs it on and **Stop** ends it where it is. An uncaught exception stops the
-program where it is thrown, by default, and the exception is the frame's first variable. The
+**Resume Program** runs it on and **Stop** ends it where it is. A breakpoint's condition, a path to a
+`Boolean` such as `done`, decides whether it stops. Its pass count and **Evaluate and log**, and a
+breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (UP32 in
+`docs/remaining.md`, LSP4IJ pull request [#1759](https://github.com/redhat-developer/lsp4ij/pull/1759)).
+An uncaught exception stops the program where it is thrown, by default, and the exception is the
+frame's first variable; exception filter conditions and the exception's stack in the hint wait on
+LSP4IJ too (UP34, UP33). The
 Watches view and **Evaluate Expression** show paths such as `point.x` or `ints[1]` in the selected
 frame, and what is not evaluated shows why; LSP4IJ's debugger hover evaluates the name under the
 mouse. **Pause

@@ -195,8 +195,13 @@ starts, and a breakpoint or `assert:debug` stops the program: the editor shows t
 Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
 the selected frame's locals, and expands objects into their fields and arrays into their elements.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
-caller. The Breakpoints view's exception filters stop the program where an uncaught exception, on by
-default, or any exception is thrown, with the exception shown first among the frame's variables.
+caller. A breakpoint can have a condition, a path to a `Boolean` such as `done` or `point.valid`, and a
+hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with
+each `{path}` replaced by that value, without stopping. The Breakpoints view's exception filters stop
+the program where an uncaught exception, on by default, or any exception is thrown, with the exception
+shown first among the frame's variables and in the exception widget, its stack trace included. Edit
+Condition on a filter names the exception classes it stops at, such as `IllegalArgument, OutOfBounds`,
+which also stop the classes that extend them.
 Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
 first line. While the program is stopped, the Watch view, hovers and the Debug Console show paths
 such as `point.x` or `ints[1]` in the selected frame, and expand them like variables; what is not
