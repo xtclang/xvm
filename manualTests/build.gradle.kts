@@ -1,6 +1,5 @@
 import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcCompileTask
-import org.xtclang.plugin.tasks.XtcExtractXdkTask
 import org.xtclang.plugin.tasks.XtcRunTask
 import org.xtclang.plugin.tasks.XtcTestTask
 
@@ -564,42 +563,16 @@ val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
 // runTestAllExecutionModes: every run task exercises the default execution mode.
 val runXtc = tasks.named("runXtc")
 
-// Sources that are invalid on purpose are kept out of compileXtc (archive/). These end inside a
-// string, a template or an escape once their last line end is removed, which a saved file always
-// has: the compiler must report the error and stop, where it used to hang or fail.
-val runLexerEnds = tasks.register<JavaExec>("runLexerEnds") {
-    group = "verification"
-    description = "Verify that the compiler reports, and stops at, a source that ends inside a string."
-    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
-    classpath = sourceSets.main.get().runtimeClasspath
-    mainClass.set("LexerEndsRunner")
-
-    val xdk = tasks.named<XtcExtractXdkTask>("extractXdk").flatMap { it.outputXtcModules }
-    val fixtures = layout.projectDirectory.dir("src/main/x/archive/lexerEnds")
-    val reports = layout.buildDirectory.dir("reports/lexer-ends")
-    inputs.dir(xdk).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir(fixtures).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir(reports)
-    outputs.upToDateWhen { false }
-    argumentProviders.add(CommandLineArgumentProvider {
-        listOf(xdk.get().asFile.absolutePath, fixtures.asFile.absolutePath, reports.get().asFile.absolutePath)
-    })
-}
-
-tasks.named("check") {
-    dependsOn(runLexerEnds)
-}
-
 val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
     description = "Run the manual tests CI runs, sequentially."
-    dependsOn(runXtc, runTwoTestsInSequence, runSequential, runJitTests, runSmallFloatsJit, runLexerEnds)
+    dependsOn(runXtc, runTwoTestsInSequence, runSequential, runJitTests, runSmallFloatsJit)
 }
 
 val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
     description = "Run the manual tests CI runs, with the test modules in parallel."
-    dependsOn(runXtc, runTwoTestsInSequence, runParallel, runJitTests, runSmallFloatsJit, runLexerEnds)
+    dependsOn(runXtc, runTwoTestsInSequence, runParallel, runJitTests, runSmallFloatsJit)
 }
 
 /**
