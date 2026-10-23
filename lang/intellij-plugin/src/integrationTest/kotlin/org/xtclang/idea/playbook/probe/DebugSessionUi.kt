@@ -19,6 +19,8 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import com.intellij.xdebugger.breakpoints.XBreakpointProperties
+import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
 import com.intellij.xdebugger.frame.XCompositeNode
 import com.intellij.xdebugger.frame.XDebuggerTreeNodeHyperlink
@@ -212,6 +214,34 @@ object DebugSessionUi {
         module: String,
     ) {
         checkNotNull(session(project, module)) { "No debug session of $module" }.resume()
+    }
+
+    /** Sets a line breakpoint with a [condition] on the 1-based [breakpointLine] of the module's source, and starts Debug. */
+    @JvmStatic
+    fun debugWhen(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+        condition: String,
+    ) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            val line = breakpointLine - 1
+
+            @Suppress("UNCHECKED_CAST")
+            val type =
+                XDebuggerUtil.getInstance().lineBreakpointTypes.first { it.canPutAt(file, line, project) }
+                    as XLineBreakpointType<XBreakpointProperties<*>>
+            ApplicationManager.getApplication().runWriteAction {
+                XDebuggerManager
+                    .getInstance(project)
+                    .breakpointManager
+                    .addLineBreakpoint(type, file.url, line, type.createBreakpointProperties(file, line))
+                    .setCondition(condition)
+            }
+        }
+        debug(project, module, uri, 0)
     }
 
     /** Removes every line breakpoint of the project. */

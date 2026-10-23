@@ -731,6 +731,78 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a conditional breakpoint, a logpoint, an exception class and exceptionInfo work on a real program`() {
+        CompilerTestSupport.configure()
+        val logs = source("Logs.x", LOGS.trimIndent())
+        val path = directory.resolve("Logs.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Logs", logs)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Logs", "moduleUri": "$logs"}""")
+            sessions.request(
+                id,
+                3,
+                "setBreakpoints",
+                """{"source": {"path": "$path"}, "breakpoints": [""" +
+                    """{"line": 6, "condition": "even", "hitCondition": "2"}, {"line": 8, "logMessage": "sum={sum}"}]}""",
+            )
+            sessions.request(
+                id,
+                4,
+                "setExceptionBreakpoints",
+                """{"filters": [], "filterOptions": [{"filterId": "uncaught", "condition": "IllegalArgument"}]}""",
+            )
+            sessions.request(id, 5, "configurationDone")
+
+            // the second hit where i is even
+            val stopped = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+            assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+            val thread = stopped["threadId"].asInt
+            sessions.request(id, 6, "stackTrace", """{"threadId": $thread}""")
+            val frame =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject["id"]
+                    .asInt
+            sessions.request(id, 7, "evaluate", """{"expression": "i", "frameId": $frame, "context": "watch"}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "evaluate" }
+                    .last()["body"]
+                    .asJsonObject["result"]
+                    .asString,
+            ).isEqualTo("2")
+
+            // the logpoint logs to the console, and the uncaught IllegalArgument stops the program
+            sessions.request(id, 8, "continue", """{"threadId": $thread}""")
+            val untilException = client.until(id) { it.event == "stopped" }
+            val logged = untilException.filter { it.event == "output" }.map { it["body"].asJsonObject }
+            assertThat(
+                logged.filter { it["category"].asString == "console" }.joinToString("") { it["output"].asString },
+            ).contains("sum=6\n")
+            val exception = untilException.last()["body"].asJsonObject
+            assertThat(exception["reason"].asString).isEqualTo("exception")
+            sessions.request(id, 9, "exceptionInfo", """{"threadId": ${exception["threadId"].asInt}}""")
+            val info = client.until(id) { it.response == "exceptionInfo" }.last()["body"].asJsonObject
+            assertThat(listOf(info["exceptionId"].asString, info["description"].asString, info["breakMode"].asString))
+                .containsExactly("IllegalArgument", "bad 6", "unhandled")
+            assertThat(info["details"].asJsonObject["stackTrace"].asString).contains("check")
+
+            sessions.request(id, 10, "continue", """{"threadId": ${exception["threadId"].asInt}}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(1)
+        }
+    }
+
+    @Test
     fun `an uncaught exception stops a debugged program where it is thrown, with the exception among the variables`() {
         CompilerTestSupport.configure()
         val throws = source("Throws.x", THROWS.trimIndent())
@@ -1377,6 +1449,27 @@ class EmbeddedExecutionTest {
                     while (True) {
                         ++count;
                     }
+                }
+            }
+            """
+
+        const val LOGS =
+            """
+            module Logs {
+                Int run() {
+                    Int sum = 0;
+                    for (Int i : 0 ..< 4) {
+                        Boolean even = i % 2 == 0;
+                        sum += i;
+                    }
+                    return check(sum);
+                }
+
+                Int check(Int n) {
+                    if (n == 0) {
+                        return 0;
+                    }
+                    throw new IllegalArgument($"bad {n}");
                 }
             }
             """
