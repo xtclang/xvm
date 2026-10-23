@@ -875,6 +875,10 @@ public class ServiceContext {
                 }
             }
 
+            // a fiber that has ended but still waits for the answer to a call it made, such as an
+            // asynchronous call that does not return, is in no queue; it has nothing left to run
+            setFibers.removeIf(fiber -> fiber != fiberThis && fiber.getStatus() == FiberStatus.Terminating);
+
             assert setFibers.isEmpty() ||
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
@@ -914,6 +918,10 @@ public class ServiceContext {
 
             setFibers.remove(fiber);
         }
+
+        // a fiber that has ended but still waits for the answer to a call it made, such as an
+        // asynchronous call that does not return, is in no queue; it has nothing left to run
+        setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
 
         assert setFibers.isEmpty();
 
