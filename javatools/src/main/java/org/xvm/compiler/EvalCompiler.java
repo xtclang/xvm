@@ -84,27 +84,27 @@ public class EvalCompiler {
 
             StageMgr mgr = new StageMgr(astMethod, Compiler.Stage.Registered, errs);
             if (!mgr.processComplete()) {
-                return null;
+                return discard(lambda);
             }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Loaded, errs);
             if (!mgr.processComplete()) {
-                return null;
+                return discard(lambda);
             }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Resolved, errs);
             if (!mgr.processComplete()) {
-                return null;
+                return discard(lambda);
             }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Validated, errs);
             if (!mgr.processComplete()) {
-                return null;
+                return discard(lambda);
             }
 
             mgr = new StageMgr(astMethod, Compiler.Stage.Emitted, errs);
             if (!mgr.processComplete() || errs.hasSeriousErrors()) {
-                return null;
+                return discard(lambda);
             }
 
             Map<String, Argument> mapCaptures = astMethod.getCaptures();
@@ -136,8 +136,18 @@ public class EvalCompiler {
                 errs.fatal(Parser.FATAL_ERROR, ErrorListener.in(
                     f_source, f_source.getPosition(), f_source.getPosition()));
             }
-            return null;
+            return discard(lambda);
         }
+    }
+
+    /**
+     * Remove a lambda that did not compile from the class it was added to.
+     *
+     * @return null
+     */
+    private static MethodStructure discard(MethodStructure lambda) {
+        lambda.getParent().removeChild(lambda);
+        return null;
     }
 
     /**
@@ -250,13 +260,16 @@ public class EvalCompiler {
                 return arg;
             }
 
-            Frame.VarInfo[] aInfo = f_frame.f_aInfo;
-            int             cVars = f_frame.getCurrentVarCount();
+            int cVars = f_frame.getCurrentVarCount();
 
             for (int iVar = 0; iVar < cVars; iVar++) {
-                Frame.VarInfo info = aInfo[iVar];
+                // a parameter's info is made when it is first asked for
+                Frame.VarInfo info = f_frame.getVarInfo(iVar);
                 if (info != null && info.getName().equals(sName)) {
-                    Register reg = new Register(info.getType(), null, f_listRegisters.size());
+                    // a variable held as a Ref, such as an injected one, is captured as its referent
+                    TypeConstant type     = info.getType();
+                    TypeConstant referent = info.isDynamicVar() ? type.resolveGenericType("Referent") : null;
+                    Register     reg      = new Register(referent == null ? type : referent, null, f_listRegisters.size());
 
                     f_mapCapture.put(sName, reg);
                     f_listRegisters.add(iVar);
