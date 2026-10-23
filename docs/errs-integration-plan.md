@@ -2509,11 +2509,27 @@ have closed (UP31); IntelliJ's X307 now waits for it. The IntelliJ probe read a 
 before its exit code, which once reported an ended session without its last output; it now reads
 the exit code first.
 
+### R9: conditions, hit counts, logpoints and exception classes (2026-10-23)
+
+R9's first step, runtime and editors, on this branch only:
+
+- `5b2686a2e` (R9a, `javatools`): a breakpoint's condition (a path to a `Boolean`), hit count (`N`,
+  `>= N`, `> N` or `% N`) and log message, evaluated by the fiber that reaches it on its own thread;
+  a logpoint logs through `Listener.logged()` and runs on. Exception stops by class, with the classes
+  that extend them, and `exceptionInfo()`. `SessionDebuggerTest` 21; `:javatools:test` 658.
+- `edeab8f5b` (R9b, `lang`): the DAP capabilities, the options in `setBreakpoints`, exception filter
+  conditions in `filterOptions`, `exceptionInfo`, logpoint messages as console output (worker
+  protocol 9). Shared X311 and X312 pass in VS Code (`run-7QKz2s`); IntelliJ checks X311's condition
+  (`run-6317108136164939884`), and the rest waits on LSP4IJ (UP32-UP34). `:lang:dap-server:test` 23,
+  `:lang:lsp-server:test` 2,386, `:lang:intellij-plugin:test` 151.
+
+Conditions beyond paths wait on bounded evaluation; function and data breakpoints are R9's rest.
+
 ### R6–R7 integration bursts (2026-10-22)
 
 R6 and R7's first part are seven code commits on this branch, with their records; variables and
-stepping add burst E, exception stops, pause and stop on entry burst F, and watches and hover on
-paths burst G. All the work
+stepping add burst E, exception stops, pause and stop on entry burst F, watches and hover on paths
+burst G, and R9's conditions, logpoints and exception classes burst H. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2529,6 +2545,7 @@ master `1c4efe422`.
 | E: variables and stepping | `51cccbfbf` (R7e), `05e3ff076` (R7f), `769d6f34d` (R7g), `a78d736f5` (R7h) | R7e and R7g `javatools` only; R7f and R7h `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | A–D | `:javatools:test` (`SessionDebuggerTest`); `:lang:dap-server:test`, `:lang:lsp-server:test`, `:lang:intellij-plugin:test`; both playbooks X280–X285, X287, X289, X304–X306 |
 | F: exceptions, pause and entry | `bf0b25af4` (R7i), `9d2c2f738` (R7j), `5a7bf8def` (R7k), `5a64247bd`, `48f00ef8c` (R7l) | R7i, R7k and the rewrite `javatools` only; R7j and R7l `lang` as E's | E | as E's, with both playbooks to X309 (X308 and X309 VS Code only) |
 | G: watches and hover | `2e4a81205` (R7m), `c966674fc` (R7n) | R7m `javatools` only; R7n `lang` as E's | F | as E's, with both playbooks to X310 (X308 and X309 VS Code only) |
+| H: conditions, logpoints and exception classes | `5b2686a2e` (R9a), `edeab8f5b` (R9b) | R9a `javatools` only; R9b `lang` as E's | G | as E's, with both playbooks to X312 (X308, X309 and X312 VS Code only, X311 partial in IntelliJ) |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
