@@ -1,10 +1,10 @@
 # Bounded evaluation in the debugger: design for review
 
-**Status (2026-10-23): decided, not started.** This is R7's last feature in the
+**Status (2026-10-23): decided; tier 1 is done (`fda3dc3e8` runtime, `0540055e9` editors, shared X313), tier 2 is
+next.** This is R7's last feature in the
 [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance): Debug Console expressions,
 watches and hovers on any expression, conditions and logpoint messages beyond paths, and, through them, R10's
-`toString()` on demand and computed properties. The questions at the end are decided, so the code can start with
-tier 1.
+`toString()` on demand and computed properties. The questions at the end are decided.
 
 ## What there is today
 
@@ -52,18 +52,28 @@ Running the program's code from a stop is what makes an evaluation useful (opera
 A small expression language that the debugger evaluates itself, over the values it reads as paths, with no
 Ecstasy code running:
 
-- Literals: integers, strings, characters, `True`, `False`, `Null`.
-- Operators: unary `-`, `!` and `~`; `*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `&`, `^`, `|`; the comparisons
-  `<`, `<=`, `>`, `>=`, `==` and `!=`; `&&`, `||`, `?:` and `? :`; and parentheses.
-- Types: every built-in numeric type, `Int8` to `Int128` and `UInt8` to `UInt128`, checked and unchecked,
-  `IntN` and `UIntN`, `Dec32` to `Dec128`, `Float8e4` to `Float64` and `BFloat16`, `Bit` and `Nibble`. Each
-  operator on them runs the runtime's own native operation for that type, the Java code the interpreter runs
-  for it, which runs no Ecstasy code, so overflow, division by zero and rounding are exactly the program's. A
-  literal takes the type of the other operand, as Ecstasy's literals do, and an operator between two
-  different types is refused, as Ecstasy's compiler refuses it. Also `String` concatenation with `String`,
-  `Char`, `Boolean` and numbers; equality of those types, of enum values, and of anything with `Null`.
-- Anything else, such as a call, `==` on two objects, or a computed property, fails with the reason, and
-  points at the Debug Console.
+- Literals: integers and decimals as the compiler's own lexer reads them (`0x1F`, `1_000`, `1.5`), strings,
+  characters, `True`, `False`, `Null`. A path's index may be any `Int` expression, such as `ints[i - 1]`.
+- Operators: unary `-`, `!` and `~`; `*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `>>>`, `&`, `^`, `|`; the
+  comparisons `<`, `<=`, `>`, `>=`, `==` and `!=`, chained as in Ecstasy (`0 <= i < n`); `&&`, `||`, `?:`
+  and `? :`; and parentheses, all with Ecstasy's precedence.
+- Types: every built-in numeric type, `Int8` to `Int128` and `UInt8` to `UInt128`, `IntN` and `UIntN`,
+  `Dec32` to `Dec128`, `Float8e4` to `Float64` and `BFloat16`, `Bit` and `Nibble`. Each operator on them runs
+  the runtime's own native operation for that type, the Java code the interpreter runs for it, which runs no
+  Ecstasy code, so overflow, division by zero and rounding are exactly the program's. A literal takes the
+  type of the other operand, as the compiler converts it, and between two literals an operator computes what
+  the compiler would; an operator between two different types is refused, as Ecstasy's compiler refuses it.
+  Also comparisons of `Char` and `String`; `==` and `!=` of enum values, `Boolean` among them, and of
+  anything with `Null`; and `&`, `|` and `^` on `Boolean`.
+- Anything else, such as a call, `==` on two objects, or a computed property, fails with the reason. An
+  operation that would run Ecstasy code is undone before that code runs, and its message names the method
+  it would have run.
+- Found while building it (2026-10-23): joining strings is not native in the runtime. A `String`'s `+`
+  calls `toString()` on its right side, and that is Ecstasy code even for `String`, `Char` and the numbers
+  (`String.toString()`, and for an `Int` the `Stringable.toString()` it inherits). Tier 1 therefore refuses
+  `s + i`: "s + i would run Stringable.toString(), which the debugger does not run here." It joins strings once those methods are native,
+  and tier 2 joins them by running them. Logpoints are not affected: a `{...}` part's value is shown as the
+  Variables view shows it.
 - Going through the runtime's native operations is also a test of the runtime's model of these types: a type
   whose operation is missing, or not native, shows up as an expression tier 1 cannot evaluate.
 
@@ -140,7 +150,8 @@ improvement, not part of this plan.
 
 1. **Tier 1** (runtime evaluator, then the editors): conditions, logpoints and watches with operators. Low
    risk: no code runs. Shared playbook cases for a comparison condition and an arithmetic logpoint, in both
-   editors, since IntelliJ sends conditions.
+   editors, since IntelliJ sends conditions. Done: `fda3dc3e8` (`PureExpression`) and `0540055e9`, shared X313, whose
+   logpoint IntelliJ checks once LSP4IJ sends log messages (UP32).
 2. **Tier 2 for the Debug Console**: the call on the stopped fiber, the deadline, `cancel`, `invalidated`,
    associated fibers, and the opt-in to running the whole program. The hard part, and where the tests go: an
    expression that loops, one that throws, one that calls an idle service, one that calls a stopped service,
