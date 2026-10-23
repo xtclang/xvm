@@ -229,7 +229,10 @@ export function executionCases(): void {
     });
 }
 
-/** X304-X310, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry and watches. */
+/**
+ * X304-X312, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry, watches,
+ * conditions and logpoints, and exception classes with exceptionInfo.
+ */
 export function debugSessionCases(): void {
     playbook('X304', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
@@ -573,6 +576,103 @@ export function debugSessionCases(): void {
                 assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
             } finally {
                 vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+    playbook('X311', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const at = (line: number) => new vscode.Location(document.uri, new vscode.Position(line - 1, 0));
+            const breakpoints = [
+                new vscode.SourceBreakpoint(at(data.breakpointLine), true, data.condition, data.hitCondition),
+                new vscode.SourceBreakpoint(at(data.logLine), true, undefined, undefined, data.logMessage),
+            ];
+            vscode.debug.addBreakpoints(breakpoints);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the hit its conditions name');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stopped = dapEvents(sent, 'stopped')[0].body;
+                assert.strictEqual(stopped?.reason, 'breakpoint');
+                const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
+                const i = await session.customRequest('evaluate', { expression: 'i', frameId: stack.stackFrames[0].id, context: 'watch' }) as { result: string };
+                assert.strictEqual(i.result, data.stopsAt);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'The logpoint lets the program run to its exit');
+                assert.strictEqual(dapEvents(sent, 'stopped').length, 1, 'Only the hit the conditions name stops the program');
+                assert.ok(dapOutput(sent).includes(data.logged), dapOutput(sent));
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+            } finally {
+                vscode.debug.removeBreakpoints(breakpoints);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+    playbook('X312', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, stopOnEntry: true }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops on entry');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+
+                // the filter's condition, as the Breakpoints view's Edit Condition sends it
+                const answer = await session.customRequest('setExceptionBreakpoints',
+                    { filters: [], filterOptions: [{ filterId: data.filter, condition: data.condition }] }) as { breakpoints?: { verified: boolean }[] };
+                assert.deepStrictEqual(answer.breakpoints?.map(breakpoint => breakpoint.verified), [true]);
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The program stops at the exception class the condition names');
+                const stopped = dapEvents(sent, 'stopped')[1].body;
+                assert.strictEqual(stopped?.reason, 'exception');
+                assert.ok(dapOutput(sent).includes(data.caught), `The caught exception did not stop the program: ${dapOutput(sent)}`);
+                const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
+                assert.deepStrictEqual([stack.stackFrames[0].name, stack.stackFrames[0].line], data.frame);
+
+                const info = await session.customRequest('exceptionInfo', { threadId: stopped?.threadId }) as
+                    { exceptionId: string; description?: string; breakMode: string; details?: { stackTrace?: string } };
+                assert.deepStrictEqual([info.exceptionId, info.description, info.breakMode], [data.exception, data.description, data.breakMode]);
+                assert.ok(info.details?.stackTrace?.includes(data.stackTrace), JSON.stringify(info));
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue lets the program fail');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+            } finally {
                 if (started && !ended) await vscode.debug.stopDebugging(started);
                 start.dispose();
                 termination.dispose();
