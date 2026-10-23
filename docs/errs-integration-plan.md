@@ -2602,7 +2602,11 @@ A third, `ab9fbddeb` (2026-10-23), is a runtime fix that master and #693 have to
 `Container.kill()` hung, with assertions on, on a service whose fiber had ended with a call still out.
 It is one `ServiceContext` change and an `EmbeddingSupportTest` case, both of which apply to master's
 code as it is, with a `SessionDebuggerTest` change that stays here. Whether it becomes a master pull
-request of its own is to be discussed (docs/remaining.md).
+request of its own is to be discussed (docs/remaining.md). It went into #693 on 2026-10-23
+(`5955362da..e618f7a22`) as `e618f7a22`, cherry-picked with the same `ServiceContext` and
+`EmbeddingSupportTest` changes, its message without the debugger, and without the `SessionDebuggerTest`
+change, which #693 has no file for; `c7fedbe53` before it is `eddd77ee9`, the language server's test JVMs
+without class sharing. Both compile there; the commits were validated here.
 
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
