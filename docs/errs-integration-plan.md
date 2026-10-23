@@ -2612,7 +2612,11 @@ A fourth, `1473c7e89` (2026-10-23), also outside every burst: an embedded run no
 until its services have nothing left to do, and its container is then killed; before, a service still at
 work when `run()` returned ran on in the worker, unreachable. It changes `lib_runner`, `Container`, the
 container control's status and `EmbeddingSupport`'s documentation, all of which master has (#703), and the
-server README's `xtc/runExited` line. A candidate for #693 and for master (docs/remaining.md).
+server README's `xtc/runExited` line. A candidate for master (docs/remaining.md). It went into #693 on
+2026-10-23 (`e618f7a22..a6c3f519d`) as `a6c3f519d`, with the same changes in all seven files; the
+cherry-pick conflicted only in context #693 does not have, the debugger's
+`InterpreterConnector.replaceDebugger()` and the README's `xtc/debug` rows, and kept none of it. There
+the XDK builds and `EmbeddingSupportTest` passes 28 tests.
 
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
