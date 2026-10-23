@@ -23,6 +23,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.util.PackedInteger;
 
@@ -58,6 +59,7 @@ public abstract class xConstrainedInteger
 
         markNativeProperty("leadingZeroCount");
 
+        markNativeMethod("toString"     , VOID, STRING);
         markNativeMethod("rotateLeft"   , INT , THIS);
         markNativeMethod("rotateRight"  , INT , THIS);
         markNativeMethod("retainLSBits" , INT , THIS);
@@ -565,6 +567,14 @@ public abstract class xConstrainedInteger
         long l = ((JavaLong) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeJavaLong(~l));
+    }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xString.makeHandle(
+                f_fSigned ? Long.toString(l) : Long.toUnsignedString(l)));
     }
 
     // ----- comparison support --------------------------------------------------------------------

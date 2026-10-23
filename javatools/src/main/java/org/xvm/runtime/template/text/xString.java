@@ -78,6 +78,7 @@ public class xString
         markNativeMethod("hashCode",  null, INT);
         markNativeMethod("equals",    null, BOOLEAN);
         markNativeMethod("compare",   null, null);
+        markNativeMethod("toString",  VOID, STRING);
 
         invalidateTypeInfo();
     }
@@ -179,6 +180,11 @@ public class xString
         }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+    }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
+        return frame.assignValue(iReturn, hTarget);
     }
 
     // ----- IndexSupport --------------------------------------------------------------------------

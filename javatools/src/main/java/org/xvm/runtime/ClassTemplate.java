@@ -7,12 +7,14 @@ import java.util.List;
 import java.util.Set;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -1988,7 +1990,7 @@ public abstract class ClassTemplate
         TypeConstant[] atypeParam  = getTypeConstants(this, asParamType);
         TypeConstant[] atypeReturn = getTypeConstants(this, asRetType);
 
-        MethodStructure method = getStructure().findMethodDeep(sName, m -> {
+        Predicate<MethodStructure> test = m -> {
                 if (atypeParam != null) {
                     TypeConstant[] atypeParamTest = m.getIdentityConstant().getRawParams();
                     int            cParams        = atypeParamTest.length;
@@ -2016,7 +2018,13 @@ public abstract class ClassTemplate
                     }
                 }
                 return true;
-            });
+            };
+
+        MethodStructure method = getStructure().findMethodDeep(sName, test);
+        if (method == null && f_struct.getFormat() == Format.CONST) {
+            // a const class implements Const, and through it Stringable, with no contribution for it
+            method = f_container.getClassStructure("Const").findMethodDeep(sName, test);
+        }
 
         if (method == null) {
             System.err.println("Missing method " + f_sName + '.' + sName + ' '
