@@ -29,6 +29,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.runtime.ServiceContext.ServiceStatus;
+
 import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -556,6 +558,48 @@ public abstract class Container
                f_callbackCount.get() == 0 &&
                m_contextMain.isIdle() &&
                (f_parent == null || f_parent.isIdle());
+    }
+
+    /**
+     * Determine how busy this container's own services are, taken together, which is what a
+     * container's "statusIndicator" reports: terminated once the container has been killed; busy
+     * while work is scheduled or any of its services is busy; waiting while any of them waits, or
+     * while a native callback that keeps the container alive, such as a "keepAlive" alarm or a
+     * server, is registered; otherwise idle. Unlike {@link #isIdle()}, the parent container does
+     * not count, and neither do the containers nested in this one.
+     *
+     * @return the status of this container's services
+     */
+    public ServiceStatus getStatus() {
+        CompletableFuture<Void> futureTermination = m_futureTermination;
+        if (futureTermination != null && futureTermination.isDone()) {
+            return ServiceStatus.Terminated;
+        }
+        if (f_pendingWorkCount.get() > 0) {
+            return ServiceStatus.Busy;
+        }
+
+        ServiceStatus status = f_callbackCount.get() > 0 ? ServiceStatus.BusyWaiting : ServiceStatus.Idle;
+        for (ServiceContext service : f_setServices) {
+            switch (service.getStatus()) {
+            case Busy:
+                return ServiceStatus.Busy;
+
+            case BusyWaiting:
+                status = ServiceStatus.BusyWaiting;
+                break;
+
+            case IdleWaiting:
+                if (status == ServiceStatus.Idle) {
+                    status = ServiceStatus.IdleWaiting;
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+        return status;
     }
 
     /**

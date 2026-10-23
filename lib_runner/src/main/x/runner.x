@@ -279,14 +279,19 @@ module runner.xtclang.org {
                         taskConsole.print($"Unhandled exception: {failure}");
                     }
 
-                    running    = False;
-                    container  = Null;
-                    completion = (result, failure);
-                    TaskRegistry.unregisterTask^(id);
+                    // as on the command line, the program ends once its services have nothing left
+                    // to do: a service still at work, or waiting to be called back, keeps it going
+                    // until it is killed
+                    endWhenQuiet(() -> {
+                        running    = False;
+                        container  = Null;
+                        completion = (result, failure);
+                        TaskRegistry.unregisterTask^(id);
 
-                    if (!retainStore) {
-                        TaskRegistry.deleteTaskDirectory^(id, template.name);
-                    }
+                        if (!retainStore) {
+                            TaskRegistry.deleteTaskDirectory^(id, template.name);
+                        }
+                    });
                 });
                 return completion;
             } catch (Exception e) {
@@ -302,9 +307,37 @@ module runner.xtclang.org {
 
         void kill() {
             if (Container container ?= this.container, running) {
-                container.kill();
+                // first, so that the end of the run does not kill the container again
                 running = False;
+                container.kill();
             }
+        }
+
+        /**
+         * Call the specified function once the task's container has nothing left to do: none of
+         * its services is at work or waits, and nothing that keeps it alive, such as a `keepAlive`
+         * alarm or a server, is pending. The container is killed then, so that nothing of the
+         * program runs after it has ended, not even a daemon alarm; one already killed has ended.
+         */
+        private void endWhenQuiet(function void () end) {
+            if (Container container ?= this.container, running) {
+                switch (container.statusIndicator) {
+                case Busy, BusyWaiting:
+                    // a clock's alarm needs no start, unlike a timer's
+                    @Inject Clock clock;
+                    clock.schedule(clock.now + Duration.ofMillis(10), () -> endWhenQuiet(end));
+                    return;
+
+                case Idle, IdleWaiting:
+                    running = False;
+                    container.kill();
+                    break;
+
+                default:
+                    break;
+                }
+            }
+            end();
         }
     }
 
