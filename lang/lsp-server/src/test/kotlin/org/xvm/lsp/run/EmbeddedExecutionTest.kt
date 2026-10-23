@@ -633,8 +633,9 @@ class EmbeddedExecutionTest {
                     .asJsonObject["stackFrames"]
                     .asJsonArray
                     .map { it.asJsonObject }
+            // the program's frames, without those of the runner that hosts it
             assertThat(
-                frames.map { it["name"].asString to it["line"].asInt }.take(2),
+                frames.map { it["name"].asString to it["line"].asInt },
             ).containsExactly("Stops.twice" to 11, "Stops.run" to 5)
             assertThat(frames.first()["source"].asJsonObject["path"].asString).isEqualTo(path)
 
@@ -798,7 +799,7 @@ class EmbeddedExecutionTest {
             val info = client.until(id) { it.response == "exceptionInfo" }.last()["body"].asJsonObject
             assertThat(listOf(info["exceptionId"].asString, info["description"].asString, info["breakMode"].asString))
                 .containsExactly("IllegalArgument", "bad 6", "unhandled")
-            assertThat(info["details"].asJsonObject["stackTrace"].asString).contains("check")
+            assertThat(info["details"].asJsonObject["stackTrace"].asString).contains("check").doesNotContain("runner.x")
 
             sessions.request(id, 10, "continue", """{"threadId": ${exception["threadId"].asInt}}""")
             val rest = client.until(id) { it.event == "terminated" }
