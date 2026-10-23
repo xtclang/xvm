@@ -3,7 +3,10 @@ package org.xvm.util;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -114,12 +117,22 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
     }
 
     /**
-     * KeySet which filters out cleared keys during iteration.
+     * KeySet which filters out cleared keys during iteration and from its arrays.
      */
     protected class KeySet extends HasherMap<K, V>.KeySet {
         @Override
         public Iterator<K> iterator() {
             return new FilterIterator<>(super.iterator(), Objects::nonNull);
+        }
+
+        @Override
+        public Object[] toArray() {
+            return live(this).toArray();
+        }
+
+        @Override
+        public <T> T[] toArray(T[] a) {
+            return live(this).toArray(a);
         }
     }
 
@@ -129,12 +142,33 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
     }
 
     /**
-     * EntrySet which filters out cleared keys during iteration.
+     * EntrySet which filters out cleared keys during iteration and from its arrays.
      */
     protected class EntrySet extends HasherMap<K, V>.EntrySet {
         @Override
         public Iterator<Entry<K, V>> iterator() {
             return new FilterIterator<>(super.iterator(), e -> e.getKey() != null);
         }
+
+        @Override
+        public Object[] toArray() {
+            return live(this).toArray();
+        }
+
+        @Override
+        public <T> T[] toArray(T[] a) {
+            return live(this).toArray(a);
+        }
+    }
+
+    /**
+     * @param view the key or entry set
+     * @return the elements that the view's iterator returns: the converting {@code toArray} it inherits would
+     *         convert a key that was collected, but not yet removed, to null
+     */
+    private static <E> List<E> live(Collection<E> view) {
+        List<E> elements = new ArrayList<>();
+        view.iterator().forEachRemaining(elements::add);
+        return elements;
     }
 }
