@@ -19,6 +19,7 @@ import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
@@ -75,6 +76,11 @@ public class xContainerControl
 
         case "innerTypeSystem":
             return getPropertyTypeSystem(frame, container, iReturn);
+
+        case "statusIndicator":
+            // the container's services taken together, not only its main service
+            return Utils.assignInitializedEnum(frame,
+                    SERVICE_STATUS.getEnumByName(container.getStatus().name()), iReturn);
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
