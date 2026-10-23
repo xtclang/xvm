@@ -2579,6 +2579,21 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   variables are captured as their referents, and a lambda that does not compile is removed.
   `SessionDebuggerTest` 31, four runs in a row; `:javatools:test` 673, the 42 existing skips;
   `:lang:dap-server:test` 23 and `:lang:lsp-server:test` 2386, 2 skipped. No deadline yet (R7s).
+- `7e475dc98` (`javatools_utils`): a weak map's key and entry sets make their arrays from their
+  iterators, which leave collected keys out; `toArray()` returned null for them, which failed
+  `Container.terminateServices()`. Found while validating R7s, once its runs no longer kept the
+  programs reachable; on master too, and a candidate for it and for #693 on its own, since it is
+  not debugger work. `WeakHasherMapTest` 7, its new case failing without the fix.
+- `72c7bdbbc` (R7s, `javatools`): `run()` takes a time limit, and a run ends before its code does at
+  that limit, on the host's cancel, and when the program resumes, steps or is stopped for good; its
+  answer fails at once with the reason, and its code unwinds from every line it reaches, an
+  `IllegalState` raised again at each, so a `catch` cannot keep it going. The deadline's timer is
+  cancelled once the run is answered, since it held the stopped program until the limit had
+  passed, and the stop's frozen clock is unfrozen by whichever thread ends the stop, since a fiber
+  that the program's end stops in a run never came back to do it. `SessionDebuggerTest` 35, three
+  runs in a row; `:javatools:test` 677, the 42 existing skips, four runs in a row;
+  `:javatools_utils:test` 122, 2 existing skips; `:lang:dap-server:test` 23 and
+  `:lang:lsp-server:test` 2386, 2 skipped. The server does not call `run()` yet (R7t).
 
 ### R6–R7 integration bursts (2026-10-22)
 
@@ -2586,7 +2601,8 @@ R6 and R7's first part are seven code commits on this branch, with their records
 stepping add burst E, exception stops, pause and stop on entry burst F, watches and hover on paths
 burst G, R9's conditions, logpoints and exception classes burst H, expressions with operators
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
-races and services burst K, and code run on a stopped fiber burst L. All the work
+races and services burst K, code run on a stopped fiber burst L, and its deadline, cancel and
+resume burst M. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2607,6 +2623,7 @@ master `1c4efe422`.
 | J: the runner's frames left out of stacks | `ad8268260` (R9c), `48dabb5a5` (R9d) | R9c `javatools` only; R9d `lang` tests and playbooks | I | as E's, with both playbooks to X313 (X308, X309 and X312 VS Code only, X311 and X313 partial in IntelliJ) |
 | K: stale handles, resume races and services | `550a4c01b` (R7q) | `javatools` only | J | `:javatools:test` (`SessionDebuggerTest`), `spotlessCheck` |
 | L: code run on a stopped fiber | `d77fb9b51` (R7r) | `javatools` only | K | `:javatools:test` (`SessionDebuggerTest`), `spotlessCheck`; `:lang:dap-server:test`, `:lang:lsp-server:test` |
+| M: a run's deadline, cancel and resume | `7e475dc98`, `72c7bdbbc` (R7s) | `7e475dc98` `javatools_utils` only, which master can also take on its own; R7s `javatools` only | L | `:javatools_utils:test` (`WeakHasherMapTest`), `:javatools:test` (`SessionDebuggerTest`, the whole suite several times, since the null showed once in five), `spotlessCheck`; `:lang:dap-server:test`, `:lang:lsp-server:test` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
