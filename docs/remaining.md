@@ -213,6 +213,8 @@ come from are in parentheses.
 - [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
   X311). Conditions are paths to a `Boolean` until bounded evaluation. IntelliJ checks the condition;
   its hit counts and logpoints: UP32.
+- [ ] R9: `exceptionInfo`'s stack trace without the embedding runner's frames (`TaskRegistry`, `runner.x`),
+  which `stackTrace` already leaves out; seen in IntelliJ's hint with #1761.
 - [ ] R9: function breakpoints, which stop when a method is entered.
 - [x] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
   exception views (`5b2686a2e`, `edeab8f5b`; shared X312 in VS Code). IntelliJ: UP34 (filter
@@ -325,12 +327,13 @@ passes with the workaround disabled. The gates are in
 
 IntelliJ's side of R9 and R10, each a local commit in `~/src/lsp4ij` on a branch off `main` (`ef2b18c3`),
 with tests ([details](errs-upstream-issues.md#lsp4ij-dap-features-prepared-2026-10-22)). UP32, UP33 and UP34
-are filed; the others wait for their R9 or R10 adapter work, a native check, and the user's go-ahead to file them.
+are filed, and pass natively against our adapter since R9 (2026-10-23); the others wait for their R10 adapter
+work, a native check, and the user's go-ahead to file them.
 
 - [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `f2a38e58`): breakpoints that don't suspend as DAP logpoints; the
   "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
   program stopped while IntelliJ shows it running.
-- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), `feat/dap-exception-info` at `8bc5d28d`): the exception hint from `exceptionInfo`.
+- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), `feat/dap-exception-info` at `7f1a5224`): the exception hint from `exceptionInfo`.
 - [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), `feat/dap-exception-filter-conditions` `a4f73d29`): conditions on exception filters, sent
   as `filterOptions`.
 - [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.
