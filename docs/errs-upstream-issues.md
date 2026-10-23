@@ -536,8 +536,7 @@ and `exceptionInfo`, so UP32, UP34 and UP33 were checked natively against it on 
   `at check(Int) (DebugThrows.x:12)` and the rest of the stack, a line each, `...` after ten
   (`run-14674276171465489822`, no IDE error). With `main` the hint had no stack (`run-9967040128816040351`),
   and UP31's "Editor is already disposed" occurred there too. The stack shows the embedding runner's own
-  frames (`TaskRegistry`, `runner.x`), which `stackTrace` leaves out; `exceptionInfo` should too, an XVM
-  follow-up in docs/remaining.md.
+  frames (`TaskRegistry`, `runner.x`), and the call stack had them too; since `ad8268260` neither has them.
 
 The three pull requests' descriptions give these checks since 2026-10-23, in place of their "not checked
 natively" sentences; #1761's also describes `8bc5d28d`'s timeout and line breaks and `7f1a5224`'s test.
