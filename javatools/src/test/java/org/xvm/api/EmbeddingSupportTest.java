@@ -229,6 +229,56 @@ public class EmbeddingSupportTest {
     }
 
     @Test
+    public void closingARunEndsAServiceWhoseFiberEndedWithACallStillPending() {
+        // Helper's fiber returns while its asynchronous call to a spinner is still running, so the
+        // fiber has ended and still waits for an answer; killing the container must end the
+        // service anyway, and not wait for that answer
+        ModuleStructure module = compile("""
+                module Pending {
+                    service Spinner {
+                        Int spins;
+
+                        void spin() {
+                            for (Int count = 0; count >= 0; ++count) {
+                                ++spins;
+                            }
+                        }
+                    }
+
+                    service Helper {
+                        void go(Spinner spinner) {
+                            spinner.spin^();
+                        }
+                    }
+
+                    void run() {
+                        Helper helper = new Helper();
+                        helper.go(new Spinner());
+                        @Inject Console console;
+                        console.print("started");
+                        new Spinner().spin();
+                    }
+                }
+                """);
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Pending did not start: " + errs.getErrors());
+
+        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (!output.toString().contains("started") && control.running()) {
+                Thread.sleep(10);
+            }
+        });
+        assertTrue(control.running(), () -> "Pending ended on its own: " + output);
+
+        // the run never ends on its own; closing it ends every service in its container. Not in a
+        // try-with-resources: closing again after a close that timed out would wait without a limit
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        assertFalse(control.running());
+    }
+
+    @Test
     public void entryMethodSelectionFollowsTheCommandLineRunner() {
         ModuleStructure module = compile("""
                 module Selection {
