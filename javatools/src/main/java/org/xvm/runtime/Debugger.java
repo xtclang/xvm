@@ -7,12 +7,12 @@ public interface Debugger {
     /**
      * Activate the debugger.
      *
-     * @param ctx the current frame
-     * @param iPC the current PC
+     * @param frame  the current frame
+     * @param iPC    the current PC
      *
      * @return the iPC for the next op or any of the Op.R_* values
      */
-    int activate(Frame ctx, int iPC);
+    int activate(Frame frame, int iPC);
 
     /**
      * Check for a breakpoint at the specified frame and program counter.
