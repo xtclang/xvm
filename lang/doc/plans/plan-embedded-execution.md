@@ -448,9 +448,16 @@ this bridge; they cannot be inferred from compiler type hints.
      `ints[1]`, without running code, on the waiting fiber's thread as variables are; what cannot
      be evaluated fails with the reason (worker protocol 8). Shared X310 evaluates watches in both
      editors, and VS Code's hover requests too.
+  10. *Expressions with operators (`fda3dc3e8` runtime, `0540055e9` editors).* Bounded evaluation's tier 1
+     ([design](plan-bounded-evaluation.md)): watches, hovers, the console, conditions and logpoint
+     parts take expressions with Ecstasy's literals and operators, which the runtime computes with
+     its own native operations, without running the program's code; an operation that would run
+     code is refused, naming the method. Shared X313 in both editors, its logpoint in VS Code only
+     (UP32).
 
-  Still open: bounded evaluation, and source revisions (a breakpoint is matched by file and line,
-  not by the revision that was built). The debugger is
+  Still open: bounded evaluation's tier 2, calls and properties run on the stopped fiber with a
+  deadline, and source revisions (a breakpoint is matched by file and line, not by the revision
+  that was built). The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
@@ -462,12 +469,12 @@ this bridge; they cannot be inferred from compiler type hints.
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
   for the editors' exception views; and data breakpoints, which stop when a property or field
   changes. Conditions and logpoint messages are expressions, so they build on R7's evaluation.
-  *First step (`5b2686a2e` runtime, `edeab8f5b` editors):* conditions, which are paths to a
-  `Boolean` until bounded evaluation, hit counts and logpoints, whose `{path}` parts are evaluated;
+  *First step (`5b2686a2e` runtime, `edeab8f5b` editors):* conditions, `Boolean` expressions since
+  R7's step 10, hit counts and logpoints, whose `{...}` parts are evaluated;
   exception filters by class, with the classes that extend them; and `exceptionInfo`, with the
   exception's stack trace (worker protocol 9). Shared X311 and X312 pass in VS Code; IntelliJ checks
   X311's condition, and the rest waits on LSP4IJ (UP32-UP34). Still open in R9: function and data
-  breakpoints, and conditions beyond paths.
+  breakpoints.
 - [ ] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
   tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
   R7's evaluation; computed properties as lazy variables, where only fields show now; paging of

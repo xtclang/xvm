@@ -2523,13 +2523,34 @@ R9's first step, runtime and editors, on this branch only:
   (`run-6317108136164939884`), and the rest waits on LSP4IJ (UP32-UP34). `:lang:dap-server:test` 23,
   `:lang:lsp-server:test` 2,386, `:lang:intellij-plugin:test` 151.
 
-Conditions beyond paths wait on bounded evaluation; function and data breakpoints are R9's rest.
+Conditions beyond paths came with bounded evaluation's tier 1 (below); function and data breakpoints
+are R9's rest.
+
+### R7: expressions with operators, bounded evaluation's tier 1 (2026-10-23)
+
+The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s first tier, runtime and editors, on this
+branch only:
+
+- `fda3dc3e8` (R7o, `javatools`): `PureExpression` reads an expression with the compiler's `Lexer` and
+  Ecstasy's precedence, and evaluates it on the waiting fiber's thread: each operator runs the
+  runtime's own operation for the value's type (`getOpSupport()`, `callEquals()`, `callCompare()`),
+  literals convert and fold as the compiler's `LiteralConstant` does, and an operation that answers
+  `R_CALL` is undone and refused, naming the method it would run. Paths move into it; conditions and
+  logpoint parts use it. `typeText()` names an enum value's enumeration. `SessionDebuggerTest` 23;
+  `:javatools:test` 660, the 42 existing skips.
+- `0540055e9` (R7p, `lang`): the documentation, a real worker's operator watch, and shared X313, whose
+  logpoint IntelliJ does not set yet (UP32).
+
+Found on the way: joining strings is not native in the runtime (a candidate for master on its own,
+in docs/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine` hung once in
+`Control.close()`, a resume/stop race recorded there too.
 
 ### R6–R7 integration bursts (2026-10-22)
 
 R6 and R7's first part are seven code commits on this branch, with their records; variables and
 stepping add burst E, exception stops, pause and stop on entry burst F, watches and hover on paths
-burst G, and R9's conditions, logpoints and exception classes burst H. All the work
+burst G, R9's conditions, logpoints and exception classes burst H, and expressions with operators
+burst I. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2546,6 +2567,7 @@ master `1c4efe422`.
 | F: exceptions, pause and entry | `bf0b25af4` (R7i), `9d2c2f738` (R7j), `5a7bf8def` (R7k), `5a64247bd`, `48f00ef8c` (R7l) | R7i, R7k and the rewrite `javatools` only; R7j and R7l `lang` as E's | E | as E's, with both playbooks to X309 (X308 and X309 VS Code only) |
 | G: watches and hover | `2e4a81205` (R7m), `c966674fc` (R7n) | R7m `javatools` only; R7n `lang` as E's | F | as E's, with both playbooks to X310 (X308 and X309 VS Code only) |
 | H: conditions, logpoints and exception classes | `5b2686a2e` (R9a), `edeab8f5b` (R9b) | R9a `javatools` only; R9b `lang` as E's | G | as E's, with both playbooks to X312 (X308, X309 and X312 VS Code only, X311 partial in IntelliJ) |
+| I: expressions with operators | `fda3dc3e8` (R7o), `0540055e9` (R7p) | R7o `javatools` only; R7p `lang` as E's | H | as E's, with both playbooks to X313 (X308, X309 and X312 VS Code only, X311 and X313 partial in IntelliJ) |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.

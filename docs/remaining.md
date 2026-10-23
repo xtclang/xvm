@@ -193,12 +193,22 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
 - [x] Watches and hover on variables and paths such as `point.x` or `ints[1]`, answered without
   running code (the console debugger's `WO` and `WR`; `2e4a81205`, `c966674fc`; shared X310).
   IntelliJ's debugger hover is checked by hand only (X310's manual row).
-- [ ] Bounded evaluation: Debug Console expressions, watches and hover on any expression, with side
-  effects, cancellation and timeouts defined (the console's `E`, `EM` and `WE`).
+- [x] Bounded evaluation's tier 1: watches, hovers, the console, conditions and logpoint parts on
+  expressions with Ecstasy's literals and operators, computed by the runtime's own native operations
+  without running code; an operation that would run code is refused, naming the method
+  (`fda3dc3e8`, `0540055e9`; shared X313, its logpoint VS Code only, UP32).
+- [ ] Bounded evaluation's tier 2: calls and properties on the stopped fiber, with the decided
+  deadlines, cancellation, side effects announced by `invalidated`, and the opt-in to run the whole
+  program (the console's `E`, `EM` and `WE`; lang/doc/plans/plan-bounded-evaluation.md).
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
 - [ ] Tests: source revisions, stale handles, resume/stop races, multiple service contexts.
+- [ ] A resume/stop race: `SessionDebuggerTest.whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`
+  hung once (2026-10-23, while `fda3dc3e8` was validated) in `Control.close()` after a resume, with every
+  interpreter worker idle, so the close's future was never completed; the class passed its four other
+  runs. The test's try-with-resources then closes again without a limit, so a failure hangs the run
+  instead of failing it.
 - [x] IntelliJ debug sessions (R7 step 4): LSP4IJ's DAP client, chosen 2026-10-22, through a process
   handler that carries the session over the language server connection (`69c2ff2f8`; X304 in
   IntelliJ `run-6846671860304618586`). LSP4IJ's DAP API is experimental, which Plugin Verifier reports
@@ -211,7 +221,7 @@ after the R8 gate unless one is chosen to gate the release. The console debugger
 come from are in parentheses.
 
 - [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
-  X311). Conditions are paths to a `Boolean` until bounded evaluation. IntelliJ checks the condition;
+  X311). Conditions are `Boolean` expressions since R7's tier 1 (X313). IntelliJ checks the condition;
   its hit counts and logpoints: UP32.
 - [ ] R9: `exceptionInfo`'s stack trace without the embedding runner's frames (`TaskRegistry`, `runner.x`),
   which `stackTrace` already leaves out; seen in IntelliJ's hint with #1761.
@@ -401,6 +411,11 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   and recompilation notes.
 - [ ] Settle the reconciliation inventory in the roadmap's
   [remaining work outside the prepared branches](../pr-roadmap.md#remaining-work-outside-the-five-prepared-branches).
+- [ ] Candidate for master on its own, apart from the debugger: native `toString()` for `String`,
+  `Char` and the integer types, or a native `String` `+` for them. A `String`'s `+`
+  (`xString.invokeAdd`) calls `Utils.callToString()`, which runs Ecstasy code for these
+  (`String.toString()`, `Stringable.toString()`), so every string join of every program pays an
+  Ecstasy call; found by tier 1's refusal of `s + i` (`fda3dc3e8`). It would also let tier 1 join strings.
 - Reviewers when submitting: ggleyzer, cpurdy, thegridman.
 
 ## 6. VS Code Marketplace
