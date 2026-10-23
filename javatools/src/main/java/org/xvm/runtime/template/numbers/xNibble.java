@@ -14,6 +14,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString;
 
 /**
  * Native Nibble (Byte) support.
@@ -75,6 +76,14 @@ public class xNibble
             return frame.assignValue(iReturn, xChar.makeHandle(cValue));
         }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+    }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
+        // a Nibble reads as its digit, as its toChar() makes it, not as a number
+        long lValue = ((JavaLong) hTarget).getValue();
+        char chValue = (char) (lValue <= 9 ? '0' + lValue : 'A' + lValue - 0xA);
+        return frame.assignValue(iReturn, xString.makeHandle(new char[] {chValue}));
     }
 
     private final JavaLong[] cache = new JavaLong[16];

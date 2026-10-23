@@ -54,6 +54,8 @@ public class xChar
 
         markNativeProperty("codepoint");
 
+        markNativeMethod("toString", VOID, STRING);
+
         invalidateTypeInfo();
 
         if (this == INSTANCE) {
@@ -146,6 +148,14 @@ public class xChar
         }
 
         return frame.assignValue(iReturn, makeHandle(l + 1));
+    }
+
+    @Override
+    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn) {
+        // the char that a Char[] holds for the Char, which a String is made of
+        char ch = (char) ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xString.makeHandle(new char[] {ch}));
     }
 
     // ----- comparison support --------------------------------------------------------------------
