@@ -431,14 +431,17 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   `ab9fbddeb`'s `ServiceContext` change and its `EmbeddingSupportTest` case, which master has unchanged
   (its `terminate()` and `shutdown()` assert the same, and the test uses only `EmbeddingSupport`).
   `Container.kill()` hangs, with assertions on, once a service has a fiber that ended with a call still
-  out. It is on #693 since 2026-10-23 (`e618f7a22`). Whether to make it a master pull request, written
-  to stand alone on master, is to be discussed.
+  out. It is on #693 since 2026-10-23 (`e618f7a22`), and in master pull request
+  [#716](https://github.com/xtclang/xvm/pull/716) (2026-10-23, `lagergren/fix-embedded-run-end`), with
+  `1473c7e89` below, written for master: without the `SessionDebuggerTest` change and the server
+  README's line, which master's README has no place for.
 - [ ] Candidates for master on their own, found by a scan of this branch's fixes outside `lang/` against
   master (2026-10-23), each reproduced on master:
   - `1473c7e89`: an embedded run ended when `run()` returned, and the services it left at work ran on
     with nothing able to stop them; now it lasts until they have nothing left to do, as `xtc run` does,
     and is then killed. Master has the runner and `EmbeddingSupport` (#703); the `xtc/runExited`
-    README line stays here. On #693 since 2026-10-23 (`a6c3f519d`).
+    README line stays here. On #693 since 2026-10-23 (`a6c3f519d`); in master pull request #716 with
+    `ab9fbddeb`.
   - One hunk of `7b9b5856a`, a `break` in `Lexer.eatStringChars()`: `xcc` hangs forever on a file that
     ends inside a string, template or `|` literal, since the repeated error is dropped as a duplicate
     and never reaches the error limit (master's `Lexer.java:1397`). The errs test uses errs-only APIs
