@@ -995,23 +995,22 @@ public class SessionDebuggerTest {
         assertTrue(session.setBreakpoints(source.toString(), List.of(new Line(1, 16))).getFirst().verified());
 
         Control control = run("Holds", new StringWriter(), session);
-        try (control) {
-            Stop stop = stops.next();
-            // the spinning fiber, on a thread of its own, reaches a line of its loop and waits there
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (session.threads().size() < 2) {
-                    Thread.sleep(10);
-                }
-            });
-            int spinner = session.threads().get(1).id();
-            assertEquals("Spinner.spin", session.stackTrace(spinner).getFirst().name());
-            assertEquals(stop.threadId(), session.threads().getFirst().id());
+        Stop    stop    = stops.next();
+        // the spinning fiber, on a thread of its own, reaches a line of its loop and waits there
+        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (session.threads().size() < 2) {
+                Thread.sleep(10);
+            }
+        });
+        int spinner = session.threads().get(1).id();
+        assertEquals("Spinner.spin", session.stackTrace(spinner).getFirst().name());
+        assertEquals(stop.threadId(), session.threads().getFirst().id());
 
-            session.resume();
-            // the spinner never ends on its own; closing the run ends it
-            assertTimeoutPreemptively(RUN_LIMIT, control::close);
-            assertFalse(control.running());
-        }
+        session.resume();
+        // the spinner never ends on its own; closing the run ends it. Not in a try-with-resources:
+        // closing again after a close that timed out would wait without a limit
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        assertFalse(control.running());
     }
 
     @Test
