@@ -44,7 +44,7 @@ Running the program's code from a stop is what makes an evaluation useful (opera
 | Tier | What it evaluates | Runs the program's code | Used for |
 |------|-------------------|-------------------------|----------|
 | 0, paths (done) | variables, `this`, fields and array elements | no | hovers; the Variables view |
-| 1, pure expressions | tier 0, plus literals and operators on `Int`, `String`, `Char`, `Boolean` and `Null` values | no | watches, conditions, hit-time logpoint parts |
+| 1, pure expressions | tier 0, plus literals and operators on numbers of every built-in numeric type, `String`, `Char`, `Boolean` and `Null` | no | watches, conditions, hit-time logpoint parts |
 | 2, code | any expression `EvalCompiler` compiles in the frame | yes, bounded | the Debug Console (`repl`); on demand: `toString()` and computed properties (R10) |
 
 ### Tier 1: pure expressions, evaluated in Java
@@ -55,17 +55,23 @@ Ecstasy code running:
 - Literals: integers, strings, characters, `True`, `False`, `Null`.
 - Operators: unary `-`, `!` and `~`; `*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `&`, `^`, `|`; the comparisons
   `<`, `<=`, `>`, `>=`, `==` and `!=`; `&&`, `||`, `?:` and `? :`; and parentheses.
-- Types: `Int` (Int64) arithmetic as Ecstasy does it, so an overflow or a division by zero is an error, not a
-  wrapped value; `String` concatenation with `String`, `Int`, `Char` and `Boolean`; equality of those types,
-  of enum values, and of anything with `Null`.
-- Anything else, such as a call, `==` on two objects, an operator on another numeric type, or a computed
-  property, fails with the reason, and points at the Debug Console.
+- Types: every built-in numeric type, `Int8` to `Int128` and `UInt8` to `UInt128`, checked and unchecked,
+  `IntN` and `UIntN`, `Dec32` to `Dec128`, `Float8e4` to `Float64` and `BFloat16`, `Bit` and `Nibble`. Each
+  operator on them runs the runtime's own native operation for that type, the Java code the interpreter runs
+  for it, which runs no Ecstasy code, so overflow, division by zero and rounding are exactly the program's. A
+  literal takes the type of the other operand, as Ecstasy's literals do, and an operator between two
+  different types is refused, as Ecstasy's compiler refuses it. Also `String` concatenation with `String`,
+  `Char`, `Boolean` and numbers; equality of those types, of enum values, and of anything with `Null`.
+- Anything else, such as a call, `==` on two objects, or a computed property, fails with the reason, and
+  points at the Debug Console.
+- Going through the runtime's native operations is also a test of the runtime's model of these types: a type
+  whose operation is missing, or not native, shows up as an expression tier 1 cannot evaluate.
 
 Why a separate evaluator, rather than compiling with `EvalCompiler` and running only "pure" code: deciding
 that compiled code is pure needs type information on every op, since an `Add` on a user type calls its
 method. A small evaluator of a fixed grammar is easier to make safe, costs microseconds at a breakpoint hit,
-needs no compilation per frame, and cannot change the program. The cost is a second implementation of a few
-operators' semantics, which tests pin against the runtime's.
+needs no compilation per frame, and cannot change the program. The cost is the parser and the dispatch to the runtime's operations; the
+operations themselves are the runtime's.
 
 This tier makes conditions such as `i > 2 && name == "x"` and logpoints such as `{n + 1}` work, safely, at
 every hit, in both editors (IntelliJ sends conditions today).
@@ -108,8 +114,9 @@ For the Debug Console, and on demand for `toString()` and computed properties:
 | breakpoint `condition`, logpoint `{...}` | 1 | At every hit; must be cheap and change nothing. |
 | a lazy computed property, `toString()` on demand (R10) | 2 | Only when the user clicks for it (`presentationHint.lazy`). |
 
-A watch or condition that needs code fails with the reason, rather than running it, until there is a reason to
-opt in, such as a setting.
+A watch or condition that needs code fails with the reason, rather than running it (decided 2026-10-23).
+Letting a watch run code when the user opts in, such as with a prefix or a setting, is a possible later
+improvement, not part of this plan.
 
 ## Delivery
 
@@ -125,10 +132,9 @@ opt in, such as a setting.
 
 ## Questions to decide
 
-1. **Tier 1's reach.** Is the grammar above enough for conditions and watches, or should tier 1 also cover
-   other numeric types (`Int8` to `UInt128`, `Dec`, `Float64`) from the start?
-2. **Watches and code.** Should a watch that needs code run it (tier 2) when the user asks, for example with a
-   `!` prefix, or never?
+1. ~~Tier 1's reach.~~ Decided 2026-10-23: every built-in numeric type from the start, through the runtime's
+   native operations, which also checks the runtime's model of them.
+2. ~~Watches and code.~~ Decided 2026-10-23: never, for now; opting in is a later improvement.
 3. **Deadlines.** 2 seconds for the console, and how long for an on-demand `toString()`? Should they be
    settings?
 4. **Other services during an evaluation.** Only associated fibers run (proposed), or should the whole program
