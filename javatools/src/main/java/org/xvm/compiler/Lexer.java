@@ -1396,6 +1396,7 @@ public class Lexer
             } else {
                 // log error: unterminated string
                 log(Severity.ERROR, STRING_NO_TERM, null, lInitPos);
+                break;
             }
         }
 
