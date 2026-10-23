@@ -19,6 +19,7 @@ module TestNumbers {
         testConverter();
         testAggregator();
         testDec28();
+        testToString();
         // testIntParsing();
     }
 
@@ -694,6 +695,50 @@ module TestNumbers {
                                              |expected "{expected[i]}"
                                             ;
         }
+    }
+
+    void testToString() {
+        console.print("\n** testToString()");
+
+        // the bounds of each integer type, Nibble's digits, and some Chars and Strings
+        checkText(Int8.MinValue.toInt8(),     "-128");
+        checkText(Int8.MaxValue.toInt8(),     "127");
+        checkText(Int16.MinValue.toInt16(),   "-32768");
+        checkText(Int16.MaxValue.toInt16(),   "32767");
+        checkText(Int32.MinValue.toInt32(),   "-2147483648");
+        checkText(Int32.MaxValue.toInt32(),   "2147483647");
+        checkText(Int64.MinValue.toInt64(),   "-9223372036854775808");
+        checkText(Int64.MaxValue.toInt64(),   "9223372036854775807");
+        checkText((-7).toInt64(),             "-7");
+        checkText(0.toInt64(),                "0");
+        checkText(UInt8.MaxValue.toUInt8(),   "255");
+        checkText(UInt16.MaxValue.toUInt16(), "65535");
+        checkText(UInt32.MaxValue.toUInt32(), "4294967295");
+        checkText(UInt64.MaxValue.toUInt64(), "18446744073709551615");
+        checkText(0.toUInt64(),               "0");
+        checkText(0.toInt64().toNibble(),     "0");
+        checkText(9.toInt64().toNibble(),     "9");
+        checkText(0xA.toInt64().toNibble(),   "A");
+        checkText(0xF.toInt64().toNibble(),   "F");
+        checkText('a',                        "a");
+        checkText(0xE9.toChar(),              "\u00E9");
+        checkText("text",                     "text");
+        checkText("",                         "");
+
+        // a Char beyond the Basic Multilingual Plane reads as its appendTo() writes it
+        Char beyond = 0x1F600.toChar();
+        checkText(beyond, beyond.appendTo(new StringBuffer()).toString());
+    }
+
+    /**
+     * Check that the value's toString(), and what a String's + makes of it, are the text, which
+     * is also what the value's own appendTo() writes: the Ecstasy code that a native toString()
+     * replaces.
+     */
+    void checkText(Stringable value, String text) {
+        assert value.toString() == text;
+        assert "" + value == text;
+        assert value.appendTo(new StringBuffer()).toString() == text;
     }
 
     void testIntParsing() {
