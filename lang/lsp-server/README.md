@@ -612,9 +612,17 @@ reference lasts until the program resumes. A frame of a fiber that called the st
 scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
 over a call, into one, or out of its method, and the program stops again with the reason `step`;
 a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the
-way ends the step. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
+way ends the step. A breakpoint may have a condition, a path to a `Boolean` that must be `True`; a
+hit condition, `N` to stop at the Nth hit or `>= N`, `> N` or `% N`, counting the hits whose
+condition holds; and a log message, which makes it a logpoint: the message, with each `{path}` in it
+replaced by that value, is console output, and the program runs on. A condition that cannot be
+evaluated stops the program and says why; one that is not a path leaves the breakpoint unverified,
+with the reason. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
 stop the program where such an exception is thrown, with the reason `exception` and the exception's
-type and text; it is the frame's first variable, `<exception>`. `pause` stops a running program at
+type and text; it is the frame's first variable, `<exception>`. Each filter takes exception classes,
+separated by commas, as its condition (`filterOptions`), and then stops only at them and the classes
+that extend them. `exceptionInfo` answers the exception's type, text and stack trace, `unhandled`
+when no frame catches it and `always` otherwise. `pause` stops a running program at
 the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at the first line
 of its own modules, with the reason `entry`; while it runs and no fiber is stopped, `threads` shows
 one thread, named after the module, for an editor's Pause to act on. `evaluate` in a stopped frame,
@@ -626,8 +634,8 @@ the reason, such as `There is no variable "nope" in this frame.`; operators, cal
 not evaluated yet. Without a frame, a line typed in the debug console is the program's input. What
 the program printed before it stopped is sent before the stop. Terminating or disconnecting a
 stopped program ends it where it is, without running more of it. The session advertises
-`configurationDone`, `terminate`, evaluation for hovers and its exception filters, and refuses
-`attach`. A run without the
+`configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
+logpoints, `exceptionInfo`, and its exception filters with their options, and refuses `attach`. A run without the
 debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
 has no terminal for the command-line debugger.
 
