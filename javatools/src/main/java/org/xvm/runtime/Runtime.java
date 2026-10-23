@@ -35,7 +35,10 @@ public class Runtime {
             return thread;
         };
 
-        // TODO: replace with a fair scheduling based ExecutorService
+        // users can turn off the debugger by setting the system property, for example:
+        //      JAVA_OPTS=-Dorg.xvm.runtime.Debugger=off xec TestSimple
+        m_fDebuggerAllowed = !"off".equals(System.getProperties().getProperty("org.xvm.runtime.Debugger"));
+
         f_executorXVM = new ThreadPoolExecutor(parallelism, parallelism, 0, TimeUnit.SECONDS,
                 new ConcurrentLinkedBlockingQueue<>(), factoryXVM);
 
@@ -115,12 +118,20 @@ public class Runtime {
             && f_executorXVM.getActiveCount() == 0;
     }
 
+    public boolean isDebuggerAllowed() {
+        return m_fDebuggerAllowed;
+    }
+
+    public void setDebuggerAllowed(boolean fAllowed) {
+        m_fDebuggerAllowed = fAllowed;
+    }
+
     public boolean isDebuggerActive() {
-        return m_fDebugger;
+        return m_fDebuggerActive;
     }
 
     public void setDebuggerActive(boolean fActive) {
-        m_fDebugger = fActive;
+        m_fDebuggerActive = fActive;
     }
 
     // ----- constants and fields ------------------------------------------------------------------
@@ -151,7 +162,12 @@ public class Runtime {
     private volatile long m_lastXvmSubmitNanos;
 
     /**
+     * The "debugger is allowed" flag.
+     */
+    private boolean m_fDebuggerAllowed;
+
+    /**
      * The "debugger is active" flag.
      */
-    private boolean m_fDebugger;
+    private boolean m_fDebuggerActive;
 }

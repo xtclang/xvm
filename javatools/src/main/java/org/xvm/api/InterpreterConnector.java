@@ -36,6 +36,13 @@ public class InterpreterConnector
         f_containerNative = new NativeContainer(f_runtime, repository);
     }
 
+    /**
+     * Set the debugger availability flag.
+     */
+    public void setDebuggerAllowed(boolean fAllowed) {
+        f_runtime.setDebuggerAllowed(fAllowed);
+    }
+
     @Override
     public void loadModule(String sAppName) {
         if (m_containerMain != null) {

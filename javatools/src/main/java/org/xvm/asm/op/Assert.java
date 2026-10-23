@@ -29,6 +29,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template.text.xString;
@@ -114,16 +115,19 @@ public class Assert
     }
 
     protected int complete(Frame frame, int iPC, String sMsg) {
+        ServiceContext ctx = frame.f_context;
         if (m_nConstructor == A_IGNORE) {
             // debugger break-point
-            return frame.f_context.getDebugger().activate(frame, iPC);
+            return ctx.f_container.f_runtime.isDebuggerAllowed()
+                    ? ctx.getDebugger().activate(frame, iPC)
+                    : iPC + 1;
         }
 
         MethodConstant   idConstruct = frame.getConstant(m_nConstructor, MethodConstant.class);
         MethodStructure  construct   = (MethodStructure) idConstruct.getComponent();
         ClassConstant    constClz    = (ClassConstant) idConstruct.getNamespace();
         ClassTemplate    template    = frame.ensureTemplate(constClz);
-        ClassComposition clzTarget   = template.getCanonicalClass(frame.f_context.f_container);
+        ClassComposition clzTarget   = template.getCanonicalClass(ctx.f_container);
         StringHandle     hMsg        = xString.makeHandle(sMsg);
         ObjectHandle[]   ahArg       = new ObjectHandle[construct.getMaxVars()];
 

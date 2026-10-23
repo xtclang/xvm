@@ -54,6 +54,7 @@ class InterpreterControl
      */
     static Connector createConnector(ModuleRepository repository) {
         InterpreterConnector connector = new InterpreterConnector(repository);
+        connector.setDebuggerAllowed(false);
         connector.loadModule("runner.xtclang.org");
         connector.start(null);
         return connector;
