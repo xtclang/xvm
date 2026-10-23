@@ -2618,6 +2618,13 @@ cherry-pick conflicted only in context #693 does not have, the debugger's
 `InterpreterConnector.replaceDebugger()` and the README's `xtc/debug` rows, and kept none of it. There
 the XDK builds and `EmbeddingSupportTest` passes 28 tests.
 
+Both runtime fixes went to master as pull request [#716](https://github.com/xtclang/xvm/pull/716) on
+2026-10-23, from `lagergren/fix-embedded-run-end` off master `7a79c6ef0`: `f14b28de6` is `ab9fbddeb`
+without its `SessionDebuggerTest` change, and `2918acbd4` is `1473c7e89` without the server README's
+line, since master's README describes the tree-sitter server, and without the debugger's context in
+`InterpreterConnector`. Messages rewritten for master. On that branch, from a fresh build,
+`:javatools:test` passes 459 tests, the 42 existing skips, and `spotlessCheck` passes.
+
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
 written out against #693's `EmbeddedRuns`, with the same test and the server README's `xtc/stopRun`
