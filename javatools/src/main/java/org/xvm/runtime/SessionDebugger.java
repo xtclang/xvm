@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -39,6 +40,7 @@ import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService.ServiceHandle;
@@ -97,7 +99,14 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  *
  * <p>A breakpoint is installed by file and line: it stops every fiber that reaches the first op of
  * that line in any method compiled from that file. A file is the module's source directory and
- * the class's source path, as the compiler records them, compared as real paths.
+ * the class's source path, as the compiler records them, compared as real paths. A breakpoint may
+ * have a condition, a path to a Boolean that must be True; a hit count, which counts the hits whose
+ * condition holds; and a log message, which makes it a logpoint that logs the message, with the
+ * values of the paths in braces in it, and does not stop. The fiber that reaches it evaluates
+ * them on its own thread, as it would variables; a condition that cannot be evaluated stops the
+ * program and says why. Thrown exceptions may stop the program only for some exception classes,
+ * those named and the classes that extend them, and the host can read the exception that stopped
+ * the program ({@link #exceptionInfo}).
  *
  * <p>The host's own code, in the container it names with {@link #setHost}, is not debugged. When
  * the program is stopped for good ({@link #terminate}), its waiting fibers end without running
@@ -184,7 +193,7 @@ public final class SessionDebugger implements Debugger {
     /**
      * The installed breakpoints, replaced as a whole when they change.
      */
-    private volatile Installed installed = new Installed(Map.of());
+    private volatile Installed installed = new Installed(Map.of(), Map.of());
 
     /**
      * The thrown exceptions that stop the program.
@@ -256,12 +265,29 @@ public final class SessionDebugger implements Debugger {
          * @param stop  where and why the program stopped
          */
         void stopped(Stop stop);
+
+        /**
+         * A logpoint logged a message. Called on the interpreter thread that reached the logpoint,
+         * which runs on once this returns.
+         *
+         * @param message  the message, with the values of the paths in it
+         */
+        default void logged(String message) {
+        }
     }
 
     /**
-     * A breakpoint the host requests: its ID, which the host chooses, and its 1-based line.
+     * A breakpoint the host requests: its ID, which the host chooses, its 1-based line, and how it
+     * stops, each null when not given: a condition, a path to a Boolean that must be True, such as
+     * {@code done} or {@code point.valid}; a hit count, "N" to stop at the Nth hit, or ">= N", "> N"
+     * or "% N", counting the hits whose condition holds; and a log message, which makes it a
+     * logpoint: it logs the message, with each {@code {path}} in it replaced by that path's value,
+     * and does not stop.
      */
-    public record Line(int id, int line) {
+    public record Line(int id, int line, String condition, String hitCount, String logMessage) {
+        public Line(int id, int line) {
+            this(id, line, null, null, null);
+        }
     }
 
     /**
@@ -329,6 +355,13 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * The exception the program stopped at: its type and its text, if it has one, the stack trace
+     * it carries, and whether no frame will catch it.
+     */
+    public record ExceptionInfo(String type, String text, String stackTrace, boolean uncaught) {
+    }
+
+    /**
      * Make the code of a module known, so that breakpoints in its source files can be verified.
      * The structures are only read; the runtime may run its own copy of the module.
      *
@@ -341,7 +374,8 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Replace the breakpoints of one source file. A line without code of its own is moved to the
-     * next line with code in the same method.
+     * next line with code in the same method. A breakpoint whose condition, hit count or log
+     * message cannot be understood is not installed. The hit counts start again.
      *
      * @param path   the source file
      * @param lines  the breakpoints of that file; none removes them all
@@ -352,24 +386,37 @@ public final class SessionDebugger implements Debugger {
         String            file      = canonical(path);
         List<MethodLines> methods   = methodsByFile.get(file);
         var               idsByLine = new HashMap<Integer, Integer>();
+        var               options   = new HashMap<Integer, Options>();
         var               result    = new ArrayList<Breakpoint>(lines.size());
         for (Line request : lines) {
             int line = methods == null ? -1 : breakableLine(methods, request.line());
             if (line < 0) {
                 result.add(new Breakpoint(request.id(), request.line(), false, methods == null ? NOT_IN_PROGRAM : NO_CODE));
-            } else {
-                idsByLine.putIfAbsent(line, request.id());
-                result.add(new Breakpoint(request.id(), line, true, null));
+                continue;
             }
+            try {
+                Options.of(request).ifPresent(given -> options.put(request.id(), given));
+            } catch (IllegalArgumentException e) {
+                result.add(new Breakpoint(request.id(), line, false, e.getMessage()));
+                continue;
+            }
+            idsByLine.putIfAbsent(line, request.id());
+            result.add(new Breakpoint(request.id(), line, true, null));
         }
 
-        var idsByFile = new HashMap<>(installed.idsByFile());
-        if (idsByLine.isEmpty()) {
-            idsByFile.remove(file);
-        } else {
-            idsByFile.put(file, Map.copyOf(idsByLine));
+        // the file's earlier breakpoints and their options are replaced
+        Installed current     = installed;
+        var       idsByFile   = new HashMap<>(current.idsByFile());
+        var       optionsById = new HashMap<>(current.optionsById());
+        Map<Integer, Integer> earlier = idsByFile.remove(file);
+        if (earlier != null) {
+            earlier.values().forEach(optionsById::remove);
         }
-        installed = new Installed(Map.copyOf(idsByFile));
+        if (!idsByLine.isEmpty()) {
+            idsByFile.put(file, Map.copyOf(idsByLine));
+            optionsById.putAll(options);
+        }
+        installed = new Installed(Map.copyOf(idsByFile), Map.copyOf(optionsById));
         updateActive();
         return result;
     }
@@ -381,8 +428,34 @@ public final class SessionDebugger implements Debugger {
      * @param uncaught  true to stop at the exceptions that no frame will catch
      */
     public synchronized void setExceptionStops(boolean all, boolean uncaught) {
-        exceptionStops = new ExceptionStops(all, uncaught);
+        setExceptionStops(all, List.of(), uncaught, List.of());
+    }
+
+    /**
+     * Choose which thrown exceptions stop the program, at the frame that throws them, and of which
+     * classes: one named, or a class that extends one, or any when none is named.
+     *
+     * @param all            true to stop at every thrown exception
+     * @param allTypes       the names of the exception classes that every thrown exception means,
+     *                       or none for all of them
+     * @param uncaught       true to stop at the exceptions that no frame will catch
+     * @param uncaughtTypes  the names of the exception classes that the uncaught exceptions mean, or
+     *                       none for all of them
+     */
+    public synchronized void setExceptionStops(boolean all, List<String> allTypes, boolean uncaught, List<String> uncaughtTypes) {
+        exceptionStops = new ExceptionStops(all, Set.copyOf(allTypes), uncaught, Set.copyOf(uncaughtTypes));
         updateActive();
+    }
+
+    /**
+     * @param threadId  the ID of a fiber that {@link #threads} returned
+     *
+     * @return the exception that the fiber stopped the program at, or null if it stopped it for
+     *         another reason, it is not the fiber that stopped it, or the program runs
+     */
+    public synchronized ExceptionInfo exceptionInfo(int threadId) {
+        Halt current = halt;
+        return current != null && current.threadId == threadId ? current.exception : null;
     }
 
     /**
@@ -561,7 +634,7 @@ public final class SessionDebugger implements Debugger {
     @Override
     public synchronized void detach() {
         detached     = true;
-        installed    = new Installed(Map.of());
+        installed    = new Installed(Map.of(), Map.of());
         stepping     = null;
         pendingPause = null;
         release();
@@ -580,7 +653,7 @@ public final class SessionDebugger implements Debugger {
         }
 
         // assert:debug stops the program as a breakpoint does
-        stop(frame, "breakpoint", "assert:debug", List.of(), null);
+        stop(frame, "breakpoint", "assert:debug", List.of(), null, null);
         return terminating ? end(frame) : pc + 1;
     }
 
@@ -597,16 +670,19 @@ public final class SessionDebugger implements Debugger {
             return end(frame);
         }
 
-        // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint
+        // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint; a
+        // logpoint, or a breakpoint whose condition or hit count does not hold, lets them stop
         Integer[] breaks = breaksOf(frame);
+        Integer   id     = pc < breaks.length ? breaks[pc] : null;
+        Hit       hit    = id == null ? Hit.RUN : hit(frame, id);
         Stepping  step   = stepping;
         Pause     pause  = pendingPause;
-        if (pc < breaks.length && breaks[pc] != null) {
-            stop(frame, "breakpoint", null, List.of(breaks[pc]), null);
+        if (hit.stops()) {
+            stop(frame, "breakpoint", hit.description(), List.of(id), null, null);
         } else if (step != null && step.endsAt(frame) && startsLine(frame, pc)) {
-            stop(frame, "step", null, List.of(), step);
+            stop(frame, "step", null, List.of(), step, null);
         } else if (pause != null && startsLine(frame, pc) && (!pause.program() || isProgram(frame))) {
-            stop(frame, pause.reason(), null, List.of(), pause);
+            stop(frame, pause.reason(), null, List.of(), pause, null);
         }
         return terminating ? end(frame) : pc + 1;
     }
@@ -623,7 +699,7 @@ public final class SessionDebugger implements Debugger {
         // an exception stops the program once, at the first frame of the program that throws it
         if (exception != stoppedException && !frame.isNative() && !isHost(frame) && stopsAt(exception, frame)) {
             stoppedException = exception;
-            stop(frame, "exception", describe(exception), List.of(), null);
+            stop(frame, "exception", describe(exception), List.of(), null, infoOf(exception, !isCaught(frame, exception)));
         }
 
         // asked again at each frame the exception leaves, so a step learns that its frame is left;
@@ -667,7 +743,100 @@ public final class SessionDebugger implements Debugger {
      */
     private boolean stopsAt(ExceptionHandle exception, Frame frame) {
         ExceptionStops stops = exceptionStops;
-        return stops.all() || stops.uncaught() && !isCaught(frame, exception);
+        return stops.all() && isOneOf(exception, stops.allTypes())
+                || stops.uncaught() && isOneOf(exception, stops.uncaughtTypes()) && !isCaught(frame, exception);
+    }
+
+    /**
+     * @return true if the exception's class, or a class it extends, has one of the specified names,
+     *         or if none is specified
+     */
+    private static boolean isOneOf(ExceptionHandle exception, Set<String> types) {
+        if (types.isEmpty()) {
+            return true;
+        }
+        for (ClassStructure clazz = exception.getTemplate().getStructure(); clazz != null; clazz = clazz.getSuper()) {
+            if (types.contains(clazz.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return what the host reads of the exception the program stops at
+     */
+    private static ExceptionInfo infoOf(ExceptionHandle exception, boolean uncaught) {
+        ObjectHandle text  = exception.getField(null, "text");
+        ObjectHandle stack = exception.getField(null, "stackTrace");
+        return new ExceptionInfo(exception.getType().getValueString(),
+                text instanceof StringHandle string ? string.getStringValue() : null,
+                stack instanceof StringHandle string ? string.getStringValue() : null,
+                uncaught);
+    }
+
+    /**
+     * @return what the breakpoint with the specified ID does as the frame reaches it: it stops,
+     *         saying why if its condition cannot be evaluated, unless its condition or its hit count
+     *         does not hold, or it is a logpoint, which logs its message and runs on
+     */
+    private Hit hit(Frame frame, int id) {
+        Options options = installed.optionsById().get(id);
+        if (options == null) {
+            return Hit.STOP;
+        }
+        if (options.condition() != null) {
+            try {
+                if (!isTrue(frame, options.condition())) {
+                    return Hit.RUN;
+                }
+            } catch (IllegalArgumentException e) {
+                return new Hit(true, "The condition cannot be evaluated: " + e.getMessage());
+            }
+        }
+        if (options.hitCount() != null && !options.hitCount().counts()) {
+            return Hit.RUN;
+        }
+        if (options.log() != null) {
+            listener.logged(message(frame, options.log()));
+            return Hit.RUN;
+        }
+        return Hit.STOP;
+    }
+
+    /**
+     * @return true if the path names a Boolean that is True in the frame
+     *
+     * @throws IllegalArgumentException if the path names no value, or a value that is not a Boolean
+     */
+    private static boolean isTrue(Frame frame, ValuePath path) {
+        ObjectHandle value = shown(valueOf(frame, frame, path));
+        if (value instanceof BooleanHandle bool) {
+            return bool.get();
+        }
+        String what = value == null ? "unassigned" : typeText(value);
+        throw new IllegalArgumentException(path.text() + " is " + what + ", not a Boolean.");
+    }
+
+    /**
+     * @return the log message with the value of each path in it, or why it cannot be evaluated
+     */
+    private static String message(Frame frame, List<LogPart> parts) {
+        var message = new StringBuilder();
+        for (LogPart part : parts) {
+            switch (part) {
+                case Text(String text) -> message.append(text);
+                case Value(ValuePath path) -> {
+                    try {
+                        ObjectHandle value = shown(valueOf(frame, frame, path));
+                        message.append(value == null ? UNASSIGNED : valueText(value));
+                    } catch (IllegalArgumentException e) {
+                        message.append('<').append(e.getMessage()).append('>');
+                    }
+                }
+            }
+        }
+        return message.toString();
     }
 
     /**
@@ -714,9 +883,11 @@ public final class SessionDebugger implements Debugger {
      * it. If the program is already stopped, wait for that stop to end first; the stop a step or a
      * pause asked for is then not made, unless that step or pause is still pending.
      *
-     * @param request  the step or pause that ends here, or null for any other stop
+     * @param request    the step or pause that ends here, or null for any other stop
+     * @param exception  the exception the program stops at, or null
      */
-    private void stop(Frame frame, String reason, String description, List<Integer> breakpointIds, Object request) {
+    private void stop(Frame frame, String reason, String description, List<Integer> breakpointIds, Object request,
+                      ExceptionInfo exception) {
         Stop stop;
         Halt current;
         synchronized (this) {
@@ -732,11 +903,11 @@ public final class SessionDebugger implements Debugger {
             }
 
             // any stop ends the step and the pause
+            int threadId = threadId(frame.f_fiber);
             stepping     = null;
             pendingPause = null;
-            current      = new Halt();
+            current      = new Halt(threadId, exception);
             halt         = current;
-            int threadId = threadId(frame.f_fiber);
             current.stacks.put(threadId, snapshot(current, frame));
             updateActive();
             stop = new Stop(reason, description, threadId, breakpointIds);
@@ -998,9 +1169,17 @@ public final class SessionDebugger implements Debugger {
      * @return the value the path names, as a variable named by the path
      */
     private Variable resolve(Halt current, Frame waitingFrame, Frame frame, ValuePath path) {
+        return variable(current, waitingFrame, path.text(), valueOf(waitingFrame, frame, path));
+    }
+
+    /**
+     * @return the value the path names in the frame, read through the waiting frame's stack, which
+     *         may be a reference
+     */
+    private static ObjectHandle valueOf(Frame waitingFrame, Frame frame, ValuePath path) {
         ObjectHandle value = root(frame, path.root());
         for (PathPart part : path.parts()) {
-            ObjectHandle shown = value instanceof RefHandle ref ? ref.getReferent() : value;
+            ObjectHandle shown = shown(value);
             if (shown == null) {
                 throw new IllegalArgumentException(path.text() + ": a value on the way is unassigned.");
             }
@@ -1009,7 +1188,14 @@ public final class SessionDebugger implements Debugger {
                 case Element(int index) -> element(waitingFrame, shown, index, path);
             };
         }
-        return variable(current, waitingFrame, path.text(), value);
+        return value;
+    }
+
+    /**
+     * @return the value a reference refers to, null if it is unassigned, or the value itself
+     */
+    private static ObjectHandle shown(ObjectHandle value) {
+        return value instanceof RefHandle ref ? ref.getReferent() : value;
     }
 
     /**
@@ -1095,7 +1281,7 @@ public final class SessionDebugger implements Debugger {
      *         it has any that the waiting fiber may read
      */
     private Variable variable(Halt current, Frame waitingFrame, String name, ObjectHandle value) {
-        ObjectHandle shown = value instanceof RefHandle ref ? ref.getReferent() : value;
+        ObjectHandle shown = shown(value);
         if (shown == null) {
             return new Variable(name, UNASSIGNED, "", 0);
         }
@@ -1313,35 +1499,160 @@ public final class SessionDebugger implements Debugger {
     // ----- inner types ---------------------------------------------------------------------------
 
     /**
-     * A stop of the program, and what the host reads while it lasts: the stacks of the waiting
+     * A stop of the program, and what the host reads while it lasts: the fiber that stopped it and
+     * the exception it stopped at, if any; the stacks of the waiting
      * fibers, the stopping fiber first; the frames that have variables, by frame ID; the reference
      * to each frame's locals that {@link #scopes} handed out; what each reference reads; and the
      * reads each waiting fiber has yet to make, by fiber ID. Guarded by the debugger's monitor,
      * and dropped as a whole when the program resumes.
      */
     private static final class Halt {
+        final int                      threadId;
+        final ExceptionInfo            exception;
         final Map<Integer, Snapshot>   stacks           = new LinkedHashMap<>();
         final Map<Integer, FrameAt>    frames           = new HashMap<>();
         final Map<Integer, Integer>    localsReferences = new HashMap<>();
         final Map<Integer, Target>     targets          = new HashMap<>();
         final Map<Integer, List<Read>> reads            = new HashMap<>();
-    }
 
-    /**
-     * The installed breakpoints: by real path, the ID of the breakpoint on each line; and the
-     * breakpoint IDs of each method seen, by op index, computed for these breakpoints.
-     */
-    private record Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<Op[], Integer[]> idsByOps) {
-        Installed(Map<String, Map<Integer, Integer>> idsByFile) {
-            this(idsByFile, new ConcurrentHashMap<>());
+        Halt(int threadId, ExceptionInfo exception) {
+            this.threadId  = threadId;
+            this.exception = exception;
         }
     }
 
     /**
-     * The thrown exceptions that stop the program: every one, or those that no frame will catch.
+     * The installed breakpoints: by real path, the ID of the breakpoint on each line; the options
+     * of the breakpoints that have any, by ID; and the breakpoint IDs of each method seen, by op
+     * index, computed for these breakpoints.
      */
-    private record ExceptionStops(boolean all, boolean uncaught) {
-        static final ExceptionStops NONE = new ExceptionStops(false, false);
+    private record Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<Integer, Options> optionsById,
+                             Map<Op[], Integer[]> idsByOps) {
+        Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<Integer, Options> optionsById) {
+            this(idsByFile, optionsById, new ConcurrentHashMap<>());
+        }
+    }
+
+    /**
+     * How a breakpoint stops, from what the host gave: its condition, its hit count, and the parts
+     * of its log message, each null when not given.
+     */
+    private record Options(ValuePath condition, HitCount hitCount, List<LogPart> log) {
+        /**
+         * @return the options of the requested breakpoint, if it has any
+         *
+         * @throws IllegalArgumentException if a condition, hit count or log message cannot be
+         *                                  understood, saying which and why
+         */
+        static Optional<Options> of(Line request) {
+            String condition = blankless(request.condition());
+            String hitCount  = blankless(request.hitCount());
+            String log       = request.logMessage() == null || request.logMessage().isEmpty() ? null : request.logMessage();
+            if (condition == null && hitCount == null && log == null) {
+                return Optional.empty();
+            }
+            ValuePath path = null;
+            if (condition != null) {
+                try {
+                    path = ValuePath.parse(condition);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("The condition " + e.getMessage(), e);
+                }
+            }
+            return Optional.of(new Options(path, hitCount == null ? null : HitCount.parse(hitCount),
+                    log == null ? null : LogPart.parse(log)));
+        }
+
+        private static String blankless(String text) {
+            return text == null || text.isBlank() ? null : text.strip();
+        }
+    }
+
+    /**
+     * A breakpoint's hit count: how it compares the hits whose condition holds with the count, and
+     * those hits so far, since its file's breakpoints were set.
+     */
+    private record HitCount(String comparison, int count, AtomicInteger hits) {
+        private static final Pattern FORM = Pattern.compile("(>=|>|==|%)?\\s*(\\d{1,9})");
+
+        static HitCount parse(String text) {
+            Matcher matcher = FORM.matcher(text);
+            if (!matcher.matches() || "%".equals(matcher.group(1)) && Integer.parseInt(matcher.group(2)) == 0) {
+                throw new IllegalArgumentException("The hit count \"" + text
+                        + "\" is not N, to stop at the Nth hit, or >= N, > N or % N, for a number N.");
+            }
+            return new HitCount(matcher.group(1) == null ? "==" : matcher.group(1), Integer.parseInt(matcher.group(2)),
+                    new AtomicInteger());
+        }
+
+        /**
+         * @return true if this hit stops the program, counting it
+         */
+        boolean counts() {
+            int hit = hits.incrementAndGet();
+            return switch (comparison) {
+                case ">=" -> hit >= count;
+                case ">"  -> hit > count;
+                case "%"  -> hit % count == 0;
+                default   -> hit == count;
+            };
+        }
+    }
+
+    /**
+     * A part of a log message: text, or a path whose value replaces it.
+     */
+    private sealed interface LogPart {
+        /**
+         * @return the parts of the log message: each {@code {path}} is a path, and the rest is
+         *         text, as is a brace without its pair
+         *
+         * @throws IllegalArgumentException if a part in braces is not a path
+         */
+        static List<LogPart> parse(String message) {
+            var parts = new ArrayList<LogPart>();
+            int at    = 0;
+            while (at < message.length()) {
+                int open  = message.indexOf('{', at);
+                int close = open < 0 ? -1 : message.indexOf('}', open + 1);
+                if (close < 0) {
+                    parts.add(new Text(message.substring(at)));
+                    break;
+                }
+                if (open > at) {
+                    parts.add(new Text(message.substring(at, open)));
+                }
+                try {
+                    parts.add(new Value(ValuePath.parse(message.substring(open + 1, close))));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("In the log message, " + e.getMessage(), e);
+                }
+                at = close + 1;
+            }
+            return List.copyOf(parts);
+        }
+    }
+
+    private record Text(String text) implements LogPart {
+    }
+
+    private record Value(ValuePath path) implements LogPart {
+    }
+
+    /**
+     * What a breakpoint does as a fiber reaches it: whether it stops, and what it says then.
+     */
+    private record Hit(boolean stops, String description) {
+        static final Hit STOP = new Hit(true, null);
+        static final Hit RUN  = new Hit(false, null);
+    }
+
+    /**
+     * The thrown exceptions that stop the program: every one, or those that no frame will catch,
+     * each of the classes named, and the classes that extend them, or of any when none is named.
+     */
+    private record ExceptionStops(boolean all, Set<String> allTypes, boolean uncaught, Set<String> uncaughtTypes) {
+        static final ExceptionStops NONE = new ExceptionStops(false, Set.of(), false, Set.of());
 
         boolean any() {
             return all || uncaught;
