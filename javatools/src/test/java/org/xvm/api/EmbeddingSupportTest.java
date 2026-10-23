@@ -22,6 +22,7 @@ import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -35,12 +36,22 @@ import org.xvm.api.EmbeddingSupport.ConsoleInput;
 import org.xvm.api.EmbeddingSupport.Control;
 import org.xvm.api.EmbeddingSupport.EntryPoint;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener.ErrorInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 
+import org.xvm.compiler.EvalCompiler;
+
+import org.xvm.runtime.Debugger;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -394,6 +405,90 @@ public class EmbeddingSupportTest {
         String output = run("Breaks", "run", List.of(), ConsoleInput.NONE);
 
         assertEquals(List.of("before", "after"), output.lines().filter(line -> !line.isEmpty()).toList());
+    }
+
+    @Test
+    public void codeCompiledWhereARunStoppedSeesItsParametersAndInjectedValuesAndLeavesNoFailure()
+            throws IOException {
+        compileAndStore("""
+                module Evals {
+                    void run() {
+                        show(5);
+                    }
+
+                    void show(Int n) {
+                        @Inject Random random;
+                        assert:debug;
+                        @Inject Console console;
+                        console.print($"{n} {random.int(1)}");
+                    }
+                }
+                """);
+
+        // what the console debugger's E compiles, at the assert:debug, before anything has asked
+        // for the frame's variables: a parameter, a method of an injected value, and a name that
+        // does not resolve, whose lambda must not stay in the class
+        var errors   = new ConcurrentHashMap<String, List<String>>();
+        var lambdas  = new CopyOnWriteArrayList<Integer>();
+        var evaluate = new Debugger() {
+            @Override
+            public int activate(Frame frame, int iPC) {
+                ClassStructure clz = frame.f_function.getContainingClass();
+                compile(frame, "n + 1");
+                compile(frame, "random.int(1)");
+                lambdas.add(lambdaCount(clz));
+                compile(frame, "nope");
+                lambdas.add(lambdaCount(clz));
+                return iPC + 1;
+            }
+
+            @Override
+            public int checkBreakPoint(Frame frame, int iPC) {
+                return Debugger.NONE.checkBreakPoint(frame, iPC);
+            }
+
+            @Override
+            public void onReturn(Frame frame) {
+            }
+
+            @Override
+            public int checkBreakPoint(Frame frame, ExceptionHandle hEx) {
+                return Debugger.NONE.checkBreakPoint(frame, hEx);
+            }
+
+            private void compile(Frame frame, String code) {
+                // as the console debugger's E wraps the code
+                String          eval     = "{\nreturn {Object r__ = {\nreturn " + code
+                                         + ";\n}; return r__.toString();};\n}";
+                EvalCompiler    compiler = new EvalCompiler(frame, eval);
+                MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
+                errors.put(code, lambda == null
+                        ? compiler.getErrors().stream().map(ErrorInfo::getMessageText).toList()
+                        : List.of());
+            }
+
+            private static int lambdaCount(ClassStructure clz) {
+                return clz.getChild("->") instanceof MultiMethodStructure lambdas
+                        ? lambdas.getChildrenCount()
+                        : 0;
+            }
+        };
+
+        var connector = (InterpreterConnector) support.ensureConnector();
+        connector.setDebugger(evaluate);
+        String output;
+        try {
+            output = run("Evals", "run", List.of(), ConsoleInput.NONE);
+        } finally {
+            connector.setDebugger(Debugger.NONE);
+        }
+
+        assertTrue(output.contains("5 0"), output);
+        assertAll(
+            () -> assertEquals(List.of(), errors.get("n + 1"), "a parameter"),
+            () -> assertEquals(List.of(), errors.get("random.int(1)"), "an injected value"),
+            () -> assertFalse(errors.get("nope").isEmpty(), "a name that does not resolve"),
+            () -> assertEquals(lambdas.get(0), lambdas.get(1), "the lambdas of the class"));
     }
 
     @Test
