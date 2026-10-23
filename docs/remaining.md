@@ -458,8 +458,10 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   - `814153a42`: two diagnostics with the same code and place whose parameters hash alike are taken for
     duplicates, and the second is dropped (master's `ErrorListener.java:318`); one line, and a test
     written again without errs' Site API. In #717 with the lexer fix, with a new `ErrorListTest`.
-  - Optional, `6312fd242`: an embedded run that reaches `assert:debug` reads the host's standard input;
-    only third-party hosts reach it on master.
+  - `6312fd242`: an embedded run that reaches `assert:debug` reads the host's standard input;
+    only third-party hosts reach it on master. In master pull request
+    [#718](https://github.com/xtclang/xvm/pull/718) (2026-10-23, `lagergren/fix-embedded-assert-debug`),
+    its `javatools` part with the `EmbeddingSupportTest` case.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
