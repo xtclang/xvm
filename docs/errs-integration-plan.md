@@ -2554,12 +2554,25 @@ in docs/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine
 - `48dabb5a5` (R9d, `lang`): `EmbeddedExecutionTest` and the playbook's X304 and X307, in both editors,
   check the whole stack, which they had checked only as a prefix.
 
+### R7: stale handles, resume races and services (2026-10-23)
+
+- `550a4c01b` (R7q, `javatools`): four `SessionDebuggerTest` cases. A stop's frame IDs and references
+  read nothing at the next stop, which hands out none of them again, and a step ends them too; a read
+  and an evaluation that the stopped fiber has not made when the program resumes are answered; a step
+  goes into a call to another service, on that service's fiber, whose caller's frame has no variables,
+  and out again on the calling fiber; another service's waiting fiber has its variables and stands
+  still while the program is stopped, and runs on during a step. An evaluation abandoned by the resume
+  failed with a bare `NoSuchElementException`; it now says the program resumed first.
+  `SessionDebuggerTest` 27, four runs in a row; `:javatools:test` 669, the 42 existing skips. Source
+  revisions are not tested: breakpoints still match by file and line.
+
 ### R6–R7 integration bursts (2026-10-22)
 
 R6 and R7's first part are seven code commits on this branch, with their records; variables and
 stepping add burst E, exception stops, pause and stop on entry burst F, watches and hover on paths
 burst G, R9's conditions, logpoints and exception classes burst H, expressions with operators
-burst I, and the runner's frames left out of stacks burst J. All the work
+burst I, the runner's frames left out of stacks burst J, and the tests of stale handles, resume
+races and services burst K. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2578,6 +2591,7 @@ master `1c4efe422`.
 | H: conditions, logpoints and exception classes | `5b2686a2e` (R9a), `edeab8f5b` (R9b) | R9a `javatools` only; R9b `lang` as E's | G | as E's, with both playbooks to X312 (X308, X309 and X312 VS Code only, X311 partial in IntelliJ) |
 | I: expressions with operators | `fda3dc3e8` (R7o), `0540055e9` (R7p) | R7o `javatools` only; R7p `lang` as E's | H | as E's, with both playbooks to X313 (X308, X309 and X312 VS Code only, X311 and X313 partial in IntelliJ) |
 | J: the runner's frames left out of stacks | `ad8268260` (R9c), `48dabb5a5` (R9d) | R9c `javatools` only; R9d `lang` tests and playbooks | I | as E's, with both playbooks to X313 (X308, X309 and X312 VS Code only, X311 and X313 partial in IntelliJ) |
+| K: stale handles, resume races and services | `550a4c01b` (R7q) | `javatools` only | J | `:javatools:test` (`SessionDebuggerTest`), `spotlessCheck` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
