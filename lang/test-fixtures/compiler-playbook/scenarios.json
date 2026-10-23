@@ -9570,6 +9570,64 @@
         ]
       }
     },
+    "X311": {
+      "title": "a breakpoint with a condition and a hit condition stops at the hit it names, and a logpoint logs its message with values and does not stop",
+      "manual": [
+        "How each editor's breakpoint dialog shows the condition, hit count and log message is checked manually; VS Code checks the stop its debug session reports, the value of i there and the debug console's output, IntelliJ the paused session's stops and the value of i at each."
+      ],
+      "values": {
+        "file": "DebugLogs.x",
+        "module": "DebugLogs",
+        "source": "module DebugLogs {\n    Int run() {\n        Int sum = 0;\n        for (Int i : 0 ..< 4) {\n            Boolean even = i % 2 == 0;\n            sum += i;\n        }\n        return sum;\n    }\n}\n",
+        "breakpointLine": 6,
+        "condition": "even",
+        "hitCondition": "2",
+        "stopsAt": "2",
+        "conditionStops": [
+          "0",
+          "2"
+        ],
+        "logLine": 8,
+        "logMessage": "sum={sum}",
+        "logged": "sum=6",
+        "exitCode": 6
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ sends only a breakpoint's condition (0.21.0), not its hit count, and a breakpoint whose Suspend is unchecked leaves the program stopped (UP32 in docs/remaining.md), so IntelliJ checks the condition alone: the breakpoint stops where i is 0 and 2. The hit condition and the logpoint are checked in VS Code."
+        ]
+      }
+    },
+    "X312": {
+      "title": "an exception filter with exception classes as its condition stops only at those classes, and exceptionInfo tells of the exception",
+      "manual": [
+        "How each editor shows the exception and lets an exception filter take a condition is checked manually; VS Code checks the stop its debug session reports after it sets the condition, and the exceptionInfo answer."
+      ],
+      "values": {
+        "file": "DebugTypes.x",
+        "module": "DebugTypes",
+        "source": "module DebugTypes {\n    Int run() {\n        @Inject Console console;\n        try {\n            check(0);\n        } catch (IllegalState e) {\n            console.print(\"caught\");\n        }\n        return check(1);\n    }\n\n    Int check(Int n) {\n        if (n == 0) {\n            throw new IllegalState(\"caught one\");\n        }\n        throw new IllegalArgument(\"uncaught one\");\n    }\n}\n",
+        "filter": "all",
+        "condition": "IllegalArgument",
+        "caught": "caught",
+        "frame": [
+          "DebugTypes.check",
+          16
+        ],
+        "exception": "IllegalArgument",
+        "description": "uncaught one",
+        "breakMode": "unhandled",
+        "stackTrace": "check",
+        "exitCode": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ sends an exception filter without its condition (UP34) and never asks for exceptionInfo (UP33), in 0.21.0 and on main on 2026-10-23."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
