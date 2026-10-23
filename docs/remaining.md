@@ -204,11 +204,18 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
 - [ ] Tests: source revisions, stale handles, resume/stop races, multiple service contexts.
-- [ ] A resume/stop race: `SessionDebuggerTest.whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`
-  hung once (2026-10-23, while `fda3dc3e8` was validated) in `Control.close()` after a resume, with every
-  interpreter worker idle, so the close's future was never completed; the class passed its four other
-  runs. The test's try-with-resources then closes again without a limit, so a failure hangs the run
-  instead of failing it.
+- [x] A resume/stop race: `SessionDebuggerTest.whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`
+  hung once (2026-10-23) in `Control.close()`, in the runner's `killTask`. The cause was the runtime's:
+  a service with a fiber that ended while a call it made was still out failed `terminate()`'s
+  assertion, with assertions on, and so never completed its shutdown, and `Container.kill()` waited
+  forever (`ab9fbddeb`, with `EmbeddingSupportTest`'s deterministic case). Tests that close with a time
+  limit no longer do it in try-with-resources, whose second close waited without one.
+- [ ] A closed run can leave its service fibers running: `close()` calls `debugger.terminate()` and
+  then replaces the debugger at once, so a fiber that reaches no line in between runs on; and a run
+  whose `run()` has returned is not killed, since the runner drops its container then. Seen once
+  (2026-10-23), with the lsp-server suite loading the machine, most likely this way: `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`'s
+  spinner still ran, and `pauseStopsARunningProgramAtTheNextLineItReaches`, three tests later in the
+  same runtime, paused in it. The class passed alone three times, and `:javatools:test` alone.
 - [x] IntelliJ debug sessions (R7 step 4): LSP4IJ's DAP client, chosen 2026-10-22, through a process
   handler that carries the session over the language server connection (`69c2ff2f8`; X304 in
   IntelliJ `run-6846671860304618586`). LSP4IJ's DAP API is experimental, which Plugin Verifier reports
@@ -417,6 +424,12 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   (`xString.invokeAdd`) calls `Utils.callToString()`, which runs Ecstasy code for these
   (`String.toString()`, `Stringable.toString()`), so every string join of every program pays an
   Ecstasy call; found by tier 1's refusal of `s + i` (`fda3dc3e8`). It would also let tier 1 join strings.
+- [ ] Candidate for master on its own, apart from the debugger and the `toString()` one above:
+  `ab9fbddeb`'s `ServiceContext` change and its `EmbeddingSupportTest` case, which master has unchanged
+  (its `terminate()` and `shutdown()` assert the same, and the test uses only `EmbeddingSupport`).
+  `Container.kill()` hangs, with assertions on, once a service has a fiber that ended with a call still
+  out. It suits #693 too, which takes such fixes. Whether to make it a master pull request, written
+  to stand alone on master, is to be discussed.
 - Reviewers when submitting: ggleyzer, cpurdy, thegridman.
 
 ## 6. VS Code Marketplace
