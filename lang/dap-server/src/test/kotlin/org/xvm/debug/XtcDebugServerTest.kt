@@ -1,6 +1,8 @@
 package org.xvm.debug
 
 import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.debug.BreakpointEventArguments
@@ -13,6 +15,7 @@ import org.eclipse.lsp4j.debug.ExceptionFilterOptions
 import org.eclipse.lsp4j.debug.ExceptionInfoArguments
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.InvalidatedEventArguments
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
@@ -39,6 +42,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.time.Duration
 
 /**
  * A debug session launches through the language server's runs, owns the program it launched, installs its
@@ -46,6 +50,11 @@ import java.util.concurrent.TimeUnit.SECONDS
  * from the program, steps and pauses it. What it cannot do yet, it says so and does not advertise.
  */
 class XtcDebugServerTest {
+    private companion object {
+        /** The event that tells a client to read the variables again. */
+        const val INVALIDATED = "invalidated variables"
+    }
+
     private val runs = Runs()
     private val client = Client()
 
@@ -67,6 +76,7 @@ class XtcDebugServerTest {
                 "supportsLogPoints",
                 "supportsExceptionInfoRequest",
                 "supportsExceptionFilterOptions",
+                "supportsCancelRequest",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -517,6 +527,77 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a console line that a read refuses runs as code, for at most the console's limit, and then the variables are invalidated`() {
+        server.initialize(
+            InitializeRequestArguments().apply {
+                adapterID = "xtc"
+                supportsInvalidatedEvent = true
+            },
+        )
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val answer = server.evaluate(evaluate("box.bump(n)", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
+        assertThat(runs.ran).containsExactly(Triple(1, "box.bump(n)", XtcDebugServer.CONSOLE_LIMIT))
+        assertThat(answer).isNotDone()
+        assertThat(client.events).doesNotContain(INVALIDATED)
+        runs.runAnswers.single().complete(VariableState("box.bump(n)", "5", "Int", 0))
+        assertThat(answer.get(10, SECONDS).result).isEqualTo("5")
+        assertThat(client.events).contains(INVALIDATED)
+
+        // a watch or a hover that a read refuses fails with the reason, and runs nothing
+        for (context in listOf(EvaluateArgumentsContext.WATCH, EvaluateArgumentsContext.HOVER)) {
+            assertFailsWith("There is no variable \"box.bump(n)\" in this frame.") {
+                server.evaluate(evaluate("box.bump(n)", context).apply { frameId = 1 })
+            }
+        }
+        assertThat(runs.ran).hasSize(1)
+    }
+
+    @Test
+    fun `what code run from the console throws, or why it does not compile, is its answer, and a client without invalidated gets none`() {
+        server.initialize(InitializeRequestArguments().apply { adapterID = "xtc" })
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val answer = server.evaluate(evaluate("nope()", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
+        runs.runAnswers.single().completeExceptionally(IllegalStateException("Could not find a matching method or function \"nope\""))
+        assertFailsWith("Could not find a matching method or function \"nope\"") { answer }
+        assertThat(client.events).doesNotContain(INVALIDATED)
+    }
+
+    @Test
+    fun `cancel ends a console line's run, named by its request's seq, which then answers cancelled, also before its code starts`() {
+        val messages = CopyOnWriteArrayList<JsonObject>()
+        val endpoint = DebugMessageEndpoint(server) { messages.add(JsonParser.parseString(it).asJsonObject) }
+        endpoint.receive(request(1, "initialize", """{"adapterID": "xtc"}"""))
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        endpoint.receive(request(7, "evaluate", """{"expression": "spin()", "frameId": 1, "context": "repl"}"""))
+        val run = runs.runAnswers.single()
+        assertThat(run).isNotDone()
+        endpoint.receive(request(8, "cancel", """{"requestId": 7}"""))
+        assertThat(run).isCancelled()
+        assertThat(answer(messages, 7)["message"].asString).isEqualTo(XtcDebugServer.CANCELLED)
+        assertThat(answer(messages, 8)["success"].asBoolean).isTrue()
+
+        // cancelled while the line is still read as a path, its code never runs
+        endpoint.receive(request(10, "evaluate", """{"expression": "slow()", "frameId": 1, "context": "repl"}"""))
+        endpoint.receive(request(11, "cancel", """{"requestId": 10}"""))
+        runs.slowRead.completeExceptionally(IllegalStateException("slow() is not evaluated"))
+        assertThat(answer(messages, 10)["message"].asString).isEqualTo(XtcDebugServer.CANCELLED)
+        assertThat(runs.ran.map { it.second }).containsExactly("spin()")
+
+        // a cancel of a request that is answered, or of none, does nothing
+        endpoint.receive(request(12, "cancel", """{"requestId": 1}"""))
+        assertThat(answer(messages, 12)["success"].asBoolean).isTrue()
+    }
+
+    @Test
     fun `attach and a pause before the launch fail with the reason, and a breakpoint needs a file`() {
         assertFailsWith("Attaching is not available; launch the module instead.") { server.attach(mutableMapOf()) }
         assertFailsWith(XtcDebugServer.NOT_PAUSABLE) { server.pause(PauseArguments()) }
@@ -565,6 +646,26 @@ class XtcDebugServerTest {
             .isInstanceOfSatisfying(ResponseErrorException::class.java) { assertThat(it.responseError.message).isEqualTo(message) }
     }
 
+    /** A DAP request as a client sends it. */
+    private fun request(
+        seq: Int,
+        command: String,
+        arguments: String = "{}",
+    ) = """{"seq": $seq, "type": "request", "command": "$command", "arguments": $arguments}"""
+
+    /** The answer to the request [seq], once the endpoint has sent it. */
+    private fun answer(
+        messages: List<JsonObject>,
+        seq: Int,
+    ): JsonObject {
+        val deadline = System.nanoTime() + SECONDS.toNanos(10)
+        while (System.nanoTime() < deadline) {
+            messages.firstOrNull { it["type"]?.asString == "response" && it["request_seq"]?.asInt == seq }?.let { return it }
+            Thread.sleep(10)
+        }
+        throw AssertionError("no answer to request $seq: $messages")
+    }
+
     /** Stands in for the language server's runs: records what the session asks, and starts once it is ready. */
     private class Runs : DebugRuns {
         lateinit var runId: String
@@ -579,6 +680,13 @@ class XtcDebugServerTest {
         val steps = CopyOnWriteArrayList<Pair<Int, StepKind>>()
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
         val evaluated = CopyOnWriteArrayList<Pair<Int, String>>()
+
+        /** The frame, code and limit of each run asked for, and its answer, which the test completes. */
+        val ran = CopyOnWriteArrayList<Triple<Int, String, Duration>>()
+        val runAnswers = CopyOnWriteArrayList<CompletableFuture<VariableState>>()
+
+        /** The read of `slow()`, which the test completes. */
+        val slowRead = CompletableFuture<VariableState>()
         var resumed = 0
         var paused = 0
 
@@ -614,8 +722,19 @@ class XtcDebugServerTest {
             return when (expression) {
                 "point.x" -> CompletableFuture.completedFuture(VariableState("point.x", "3", "Int", 0))
                 "point" -> CompletableFuture.completedFuture(VariableState("point", "Vars:Point", "Vars:Point", 8))
+                "slow()" -> slowRead
                 else -> CompletableFuture.failedFuture(IllegalStateException("There is no variable \"$expression\" in this frame."))
             }
+        }
+
+        override fun run(
+            runId: String,
+            frameId: Int,
+            expression: String,
+            limit: Duration,
+        ): CompletableFuture<VariableState> {
+            ran.add(Triple(frameId, expression, limit))
+            return CompletableFuture<VariableState>().also(runAnswers::add)
         }
 
         override fun setExceptionStops(
@@ -719,6 +838,10 @@ class XtcDebugServerTest {
 
         override fun thread(args: ThreadEventArguments) {
             events.add("thread")
+        }
+
+        override fun invalidated(args: InvalidatedEventArguments) {
+            events.add("invalidated ${args.areas.joinToString()}")
         }
     }
 }
