@@ -408,7 +408,8 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
   2026-10-23: `eddd77ee9` as `c7fedbe53`, `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
-  change, and `1473c7e89` as `a6c3f519d`; the other commits since are debugger work and its records).
+  change, `1473c7e89` as `a6c3f519d`, and `89e519d99` as `78e0a9deb`; the other commits since are
+  debugger work and its records).
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
 - [ ] Submit, when authorized: compilation-owned syntax and semantic facts
