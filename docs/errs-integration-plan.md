@@ -2631,7 +2631,13 @@ Two compiler fixes the scan found went to master as pull request
 `lagergren/fix-lexer-hang-and-false-duplicates` off master `7a79c6ef0`: `503bbe4c1`, the `break` from
 `7b9b5856a` that ends the lexer at a string the source ends in, and `2a036d998`, `814153a42`'s `genUID()`
 change, each with a test written for master's own API (`LexerTest`, a new `ErrorListTest`), which fails
-without its fix. There `:javatools:test` passes 458 tests, the 42 existing skips.
+without its fix. There `:javatools:test` passes 458 tests, the 42 existing skips. A third commit,
+`a1765b200`, adds the guards for a source that ends in an escape or a template expression, which
+failed with `NoSuchElementException` (here `92d87bb08`); 459 tests pass with it. `manualTests` sources that
+end inside a string, and a task that compiled them, were added and removed again (`38c23ec1d`,
+`d748543cd`), at the user's request: the `LexerTest` cases cover the fixes. #693 took all three fixes on
+2026-10-23 (`78e0a9deb..18a8d910e`), where #693 already stopped at an unterminated string, so the first
+is its test alone; `LexerTest` and `ErrorListTest` pass there.
 
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
