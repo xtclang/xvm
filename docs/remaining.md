@@ -223,8 +223,9 @@ come from are in parentheses.
 - [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
   X311). Conditions are `Boolean` expressions since R7's tier 1 (X313). IntelliJ checks the condition;
   its hit counts and logpoints: UP32.
-- [ ] R9: `exceptionInfo`'s stack trace without the embedding runner's frames (`TaskRegistry`, `runner.x`),
-  which `stackTrace` already leaves out; seen in IntelliJ's hint with #1761.
+- [x] R9: the call stack and `exceptionInfo`'s stack trace without the embedding runner's frames
+  (`TaskRegistry`, `runner.x`), seen in IntelliJ's hint with #1761; the call stack had them too, in both
+  editors, under the program's (`ad8268260`, `48dabb5a5`; X304 and X307 check the whole stack).
 - [ ] R9: function breakpoints, which stop when a method is entered.
 - [x] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
   exception views (`5b2686a2e`, `edeab8f5b`; shared X312 in VS Code). IntelliJ: UP34 (filter
