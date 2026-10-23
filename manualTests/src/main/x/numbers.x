@@ -5,6 +5,7 @@ module TestNumbers {
     void run() {
         testUInt64();
         testByte();
+        testNibble();
         testInt128();
         testUInt128();
         testFloat64();
@@ -53,6 +54,34 @@ module TestNumbers {
         UInt64 un3 = MaxValue;
         UInt64 un4 = ++un3;
         assert un4 == 0;
+    }
+
+    void testNibble() {
+        console.print("\n** testNibble()");
+
+        // from its bits, as Nibble's own table of values is made
+        assert new Nibble(Array<Bit>:[0, 0, 0, 1]).toInt64() == 1;
+        assert new Nibble(Array<Bit>:[1, 0, 0, 1]).toInt64() == 9;
+        assert new Nibble(Array<Bit>:[1, 1, 1, 1]).toInt64() == 0xF;
+
+        // through that table: Nibble.of(), IntLiteral.toNibble() and Char.isNibble()
+        String hexits = "0123456789ABCDEF";
+        for (Int n : 0..0xF) {
+            assert Nibble.of(n).toInt64() == n;
+            assert Nibble.of(hexits[n]).toInt64() == n;
+        }
+        assert 0xA.toNibble().toInt64() == 0xA;
+        assert Nibble nibble := 'c'.isNibble();
+        assert nibble.toInt64() == 0xC;
+
+        // from a String, and to its bits and back
+        assert new Nibble("7").toInt64() == 7;
+        assert new Nibble(Nibble.of(9).bits).toInt64() == 9;
+        assert Nibble.of(0xC).bits == Array<Bit>:[1, 1, 0, 0];
+        try {
+            Nibble tooBig = new Nibble("16");
+            assert;
+        } catch (OutOfBounds expected) {}
     }
 
     void testByte() {
