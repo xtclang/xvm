@@ -2598,7 +2598,13 @@ candidates for it, as fixes of their own:
   changes, so it would be written out on its own for #693 (`EmbeddedRuns.stop()` and its start
   check, with the `EmbeddedExecutionTest` case for it).
 
-Both went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
+A third, `ab9fbddeb` (2026-10-23), is a runtime fix that master and #693 have too, outside every burst:
+`Container.kill()` hung, with assertions on, on a service whose fiber had ended with a call still out.
+It is one `ServiceContext` change and an `EmbeddingSupportTest` case, both of which apply to master's
+code as it is, with a `SessionDebuggerTest` change that stays here. Whether it becomes a master pull
+request of its own is to be discussed (docs/remaining.md).
+
+Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
 written out against #693's `EmbeddedRuns`, with the same test and the server README's `xtc/stopRun`
 row. On #693, `EmbeddedExecutionTest` passes 32 tests with 0 failures, both new cases among them,
