@@ -204,7 +204,10 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   - [x] R7r, the runtime runs code on the stopped fiber (`d77fb9b51`): `SessionDebugger.run()`, the
     fiber waiting again in the same stop, exceptions and compile errors as answers, no stops inside,
     the fibers it calls running, one run at a time.
-  - [ ] R7s, the runtime's deadline and cancel, and resume and terminate during a run.
+  - [x] R7s, the runtime's deadline and cancel, and resume and terminate during a run (`72c7bdbbc`):
+    `run()` takes the limit, its answer fails at once with the reason, and the code unwinds from every
+    line it reaches, also through a `catch`; the stop's clock no longer stays frozen when the program
+    is stopped for good during a run.
   - [ ] R7t, the server and worker: the console's `repl` context to tier 2, `cancel`, `invalidated`.
   - [ ] R7u, the editors and shared X314.
   - [ ] R7v, the `evaluationRunsProgram` opt-in.
@@ -477,7 +480,17 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   - Found by R7r (`d77fb9b51`, 2026-10-23), in `EvalCompiler`, which master's console debugger uses
     for `E`: a method's parameter is unresolvable until something has shown it, an `@Inject` variable
     is captured with its `Ref`'s type, so no method of it compiles, and a lambda that does not compile
-    stays in its class. Not yet reproduced on master's console.
+    stays in its class. The `@Inject` one reproduces on master's console: `E console.print("hi")`
+    fails with "Could not find a matching method or function "print" for type "@Inject
+    Ref<Console>"". The parameter one does not show there, since the console shows a frame's
+    variables before `E` runs; the third is not checked.
+  - `7e475dc98`, found while validating R7s (2026-10-23): a weak map's key and entry sets leave
+    collected keys out of their iterators but not out of `toArray()`, which returns null for them, so
+    `Container.terminateServices()` fails with "Cannot invoke ServiceContext.requestShutdown() because
+    services[i] is null" once one of its services is collected; an embedded run's close then fails, or
+    its end is never reported. Master's `javatools_utils` files are the same, and the commit's new
+    `WeakHasherMapTest` case fails on master `7a79c6ef0` as it did here. Not on #693 or in a pull
+    request yet.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
