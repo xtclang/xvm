@@ -516,7 +516,7 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     bits, and `Nibble`'s mask drops them. Its `bits` failed and `Nibble(String)` overflowed for the
     same reason, sizes counted in whole bytes. All three in master pull request
     [#723](https://github.com/xtclang/xvm/pull/723) (2026-10-24, `lagergren/fix-nibble-from-bits`),
-    with a new `NibbleTest`. `Nibble(Byte[])` still fails: the library's own constructors disagree on
+    tested with asserts in `manualTests`' `numbers.x`, which CI runs. `Nibble(Byte[])` still fails: the library's own constructors disagree on
     its size.
   - Found through #723's callers (2026-10-24): `lib_json`'s `Lexer` dropped every `\u` escape, so it
     could not read back the control characters its `Printer` writes. In master pull request
