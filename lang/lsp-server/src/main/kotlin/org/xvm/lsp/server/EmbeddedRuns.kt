@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
 
 /** `xtc/build` parameters: a module name or root URI, or every source module when [module] is absent. */
 data class BuildParams(
@@ -326,6 +327,14 @@ internal class EmbeddedRuns(
         frame: Int,
         expression: String,
     ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression) }
+
+    /** Runs code in a frame of a stopped program under the debugger, for at most [limit]; cancelling it ends the run. */
+    internal fun runCode(
+        runId: String,
+        frame: Int,
+        expression: String,
+        limit: Duration,
+    ): CompletableFuture<VariableState> = debugged(runId) { worker.runCode(it, frame, expression, limit) }
 
     /** The exception a fiber of a stopped program under the debugger stopped it at; null for another stop. */
     internal fun exceptionInfo(

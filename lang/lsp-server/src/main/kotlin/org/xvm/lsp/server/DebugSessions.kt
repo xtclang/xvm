@@ -27,6 +27,7 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.time.Duration
 
 /** `xtc/debugStart` result: the ID of the new debug session. */
 data class DebugSessionResponse(
@@ -175,6 +176,13 @@ internal class DebugSessions(
             frameId: Int,
             expression: String,
         ) = runs.evaluate(runId, frameId, expression)
+
+        override fun run(
+            runId: String,
+            frameId: Int,
+            expression: String,
+            limit: Duration,
+        ) = runs.runCode(runId, frameId, expression, limit)
 
         override fun exceptionInfo(
             runId: String,
