@@ -7817,7 +7817,7 @@ public abstract class TypeConstant
             }
 
             if (isFormal) {
-                RegisterInfo regType  = bctx.loadType(code, typeFormal.getType());
+                RegisterInfo regType  = bctx.loadDataType(code, typeFormal.getType());
                 int          slotType = bctx.storeTempValue(code, regType.cd());
 
                 // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
@@ -7830,7 +7830,8 @@ public abstract class TypeConstant
                 Builder.load(code, regType.cd(), slotType);
             } else {
                 bctx.loadCtx(code);
-                bctx.loadType(code, getType()); // type of this type
+                bctx.loadType(code, this);
+
             }
             reg1.load(code);
             argLoader.load(code);

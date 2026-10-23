@@ -306,21 +306,20 @@ public abstract class Builder {
      * <p>Out: TypeConstant on Java stack
      */
     protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
-        loadTypeConstant(code, type);
-
-        if (bctx != null && !bctx.isStatic && type.containsFormalType(true)) {
-            code.dup()
-                .invokevirtual(CD_TypeConstant, "getConstantPool", md(CD_ConstantPool));
-
-            RegisterInfo regThis = bctx.loadThis(code);
-            if (regThis.type().isJitCCInterface()) {
-                code.checkcast(CD_nObject);
-            }
-            bctx.loadCtx(code);
-            code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType)
-                .invokevirtual(CD_TypeConstant, "resolveGenerics",
-                        md(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
+        if (bctx == null) {
+            loadTypeConstant(code, type);
+        } else {
+            bctx.loadTypeConstant(code, type);
         }
+    }
+
+    /**
+     * Load the {@code nType} for the specified represented type, with Ctx as parameter 0.
+     */
+    public CodeBuilder loadType(CodeBuilder code, TypeConstant type) {
+        loadCtx(code);
+        loadTypeConstant(code, type);
+        return code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
     }
 
     /**
@@ -554,7 +553,12 @@ public abstract class Builder {
 
         case TypeConstant type:
             assert type.isTypeOfType();
-            return bctx.loadType(code, type); // TODO move loadType here?
+            if (bctx == null) {
+                loadType(code, type.getParamType(0));
+                return new SingleSlot(type, Specific, CD_nType, "");
+            } else {
+                return bctx.loadDataType(code, type);
+            }
 
         case ClassConstant _:
         case DecoratedClassConstant _: {
@@ -573,11 +577,14 @@ public abstract class Builder {
 
             assert type.isA(pool.typeClass());
 
-            loadCtx(bctx, code);
-            loadTypeConstant(bctx, code, type.getParamType(0));
-            code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
-            loadCtx(bctx, code)
-                .invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx));
+            if (bctx == null) {
+                loadType(code, type.getParamType(0));
+                loadCtx(code);
+            } else {
+                bctx.loadType(code, type.getParamType(0));
+                loadCtx(bctx, code);
+            }
+            code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx));
             return new SingleSlot(type, Specific, CD_Class, "");
         }
 
@@ -1424,6 +1431,15 @@ public abstract class Builder {
     }
 
     /**
+     * Resolve a named generic parameter on the object already on the Java stack.
+     */
+    public static CodeBuilder loadTypeForName(CodeBuilder code, String name, int ctxSlot) {
+        return code.aload(ctxSlot)
+                   .ldc(name)
+                   .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+    }
+
+    /**
      * Invoke the specified method with the opcode required by the property's JVM owner
      * representation.
      */
@@ -2116,6 +2132,7 @@ public abstract class Builder {
 
         if (targetJIC.isVirtualChild()) {
             assert outer != null : "Virtual child without an outer";
+            assert bctx  != null : "Out of context";
 
             MethodInfo    origin       = ctor.getChildConstructorOrigin();
             JitMethodDesc instorRouter = getChildConstructorDesc(origin);

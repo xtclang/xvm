@@ -792,7 +792,7 @@ public abstract class OpCallable extends Op {
                 if (idFormal instanceof PropertyConstant) {
                     bctx.loadConstant(code, idFormal);
                 } else {
-                    bctx.loadType(code, idFormal.getType());
+                    bctx.loadDataType(code, idFormal.getType());
                 }
                 // generated class-of-class extends Class and implements the funky interface
                 bctx.loadCtx(code);

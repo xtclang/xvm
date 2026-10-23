@@ -1700,14 +1700,12 @@ public class CommonBuilder
      */
     protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
         classBuilder.withMethodBody(name + "$get", md(CD_nType, CD_Ctx),
-            ClassFile.ACC_PUBLIC, code ->
-                // return nObject.$typeForName(ctx, name);
-                code.aload(0)                     // this
-                    .aload(code.parameterSlot(0)) // ctx
-                    .ldc(name)
-                    .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString))
-                    .areturn()
-        );
+            ClassFile.ACC_PUBLIC, code -> {
+                // return this.$typeForName(ctx, name);
+                code.aload(0);
+                loadTypeForName(code, name, code.parameterSlot(0));
+                code.areturn();
+            });
     }
 
     private void generateInjected(ClassBuilder classBuilder, PropertyInfo prop) {
@@ -2625,9 +2623,7 @@ public class CommonBuilder
                 loadCtx(code);
 
                 // load nType for the property type: nType.$ensureType(Ctx, TypeConstant)
-                loadCtx(code);
-                loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+                loadType(code, propType);
 
                 // load the values
                 code.aload(value1Slot);
@@ -2850,9 +2846,7 @@ public class CommonBuilder
                 loadCtx(code);
 
                 // get and load the nType to the stack (compare param 1)
-                loadCtx(code);
-                loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+                loadType(code, propType);
 
                 // invoke the static compare method
                 IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
@@ -2972,9 +2966,7 @@ public class CommonBuilder
             // when the const type itself is a JIT primitive (Java primitive or XVM primitive),
             // we call nType.hashCode$p(ctx, value) to get the hash code (where nType) is the
             // type of the primitive and the value can take more than one slot
-            Builder.loadCtx(code);
-            loadTypeConstant(code, type);
-            code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+            loadType(code, type);
             Builder.loadCtx(code);
             for (int i = 2, count = mdOptimized.parameterCount(); i < count; i++) {
                 Builder.load(code, mdOptimized.parameterType(i), code.parameterSlot(i));
@@ -3068,9 +3060,7 @@ public class CommonBuilder
             code.labelBinding(doProp);
             if (propType.isJitPrimitive()) {
                 // generate the same code that used for primitive constant hashCode$p
-                Builder.loadCtx(code);
-                loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+                loadType(code, propType);
                 Builder.loadCtx(code);
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
@@ -3087,9 +3077,7 @@ public class CommonBuilder
                 loadCtx(code);
 
                 // nType for the property type: nType.$ensureType(Ctx, TypeConstant)
-                loadCtx(code);
-                loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+                loadType(code, propType);
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 
