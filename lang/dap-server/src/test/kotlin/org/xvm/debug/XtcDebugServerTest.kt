@@ -8,6 +8,9 @@ import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
+import org.eclipse.lsp4j.debug.ExceptionBreakMode
+import org.eclipse.lsp4j.debug.ExceptionFilterOptions
+import org.eclipse.lsp4j.debug.ExceptionInfoArguments
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.NextArguments
@@ -59,11 +62,19 @@ class XtcDebugServerTest {
                 "supportsConfigurationDoneRequest",
                 "supportsTerminateRequest",
                 "supportsEvaluateForHovers",
+                "supportsConditionalBreakpoints",
+                "supportsHitConditionalBreakpoints",
+                "supportsLogPoints",
+                "supportsExceptionInfoRequest",
+                "supportsExceptionFilterOptions",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
         assertThat(capabilities.exceptionBreakpointFilters.map { it.filter to it.default_ })
             .containsExactly(XtcDebugServer.UNCAUGHT_EXCEPTIONS to true, XtcDebugServer.ALL_EXCEPTIONS to false)
+        // each takes exception classes as its condition
+        assertThat(capabilities.exceptionBreakpointFilters.map { it.supportsCondition to it.conditionDescription })
+            .containsOnly(true to XtcDebugServer.EXCEPTION_TYPES)
         assertThat(client.events).isEmpty()
 
         afterResponse.forEach(Runnable::run)
@@ -249,6 +260,89 @@ class XtcDebugServerTest {
         runs.events.stopped(StopState("exception", "IllegalArgument: bad", 12, emptyList()))
         assertThat(client.stops.single().reason).isEqualTo("exception")
         assertThat(client.stops.single().text).isEqualTo("IllegalArgument: bad")
+    }
+
+    @Test
+    fun `a breakpoint's condition, hit condition and log message reach the program, and a logpoint's message is console output`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        server
+            .setBreakpoints(
+                SetBreakpointsArguments().apply {
+                    source = Source().apply { path = "/work/A.x" }
+                    breakpoints =
+                        arrayOf(
+                            SourceBreakpoint().apply {
+                                line = 7
+                                condition = "even"
+                                hitCondition = "2"
+                            },
+                            SourceBreakpoint().apply {
+                                line = 9
+                                logMessage = "sum is {sum}"
+                            },
+                        )
+                },
+            ).get(10, SECONDS)
+        assertThat(
+            runs.installed
+                .single()
+                .breakpoints
+                .map { listOf(it.line, it.condition, it.hitCondition, it.logMessage) },
+        ).containsExactly(listOf(7, "even", "2", null), listOf(9, null, null, "sum is {sum}"))
+
+        runs.events.logged("sum is 10")
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE)).endsWith("sum is 10\n")
+    }
+
+    @Test
+    fun `an exception filter's condition names the exception classes it stops at, and one that is not names leaves it off`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        val answer =
+            server
+                .setExceptionBreakpoints(
+                    SetExceptionBreakpointsArguments().apply {
+                        filters = arrayOf(XtcDebugServer.UNCAUGHT_EXCEPTIONS)
+                        filterOptions =
+                            arrayOf(
+                                filterOption(XtcDebugServer.ALL_EXCEPTIONS, " IllegalArgument, OutOfBounds "),
+                                filterOption(XtcDebugServer.UNCAUGHT_EXCEPTIONS, "Exception"),
+                            )
+                    },
+                ).get(10, SECONDS)
+        // the plain filter wins over the same filter with a condition
+        assertThat(runs.exceptionStops.last())
+            .isEqualTo(ExceptionStops(all = true, uncaught = true, allTypes = listOf("IllegalArgument", "OutOfBounds")))
+        assertThat(answer.breakpoints.map { it.isVerified }).containsExactly(true, true, true)
+
+        val refused =
+            server
+                .setExceptionBreakpoints(
+                    SetExceptionBreakpointsArguments().apply {
+                        filterOptions = arrayOf(filterOption(XtcDebugServer.ALL_EXCEPTIONS, "x > 1"))
+                    },
+                ).get(10, SECONDS)
+        assertThat(runs.exceptionStops.last()).isEqualTo(ExceptionStops())
+        assertThat(refused.breakpoints.single().isVerified).isFalse()
+        assertThat(refused.breakpoints.single().message).isEqualTo("\"x > 1\" is not exception classes. ${XtcDebugServer.EXCEPTION_TYPES}")
+    }
+
+    @Test
+    fun `exceptionInfo tells of the exception a fiber stopped the program at, and fails for a fiber that stopped at none`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("exception", "IllegalArgument: bad 5", 12, emptyList()))
+
+        val info = server.exceptionInfo(ExceptionInfoArguments().apply { threadId = 12 }).get(10, SECONDS)
+        assertThat(
+            listOf(info.exceptionId, info.description, info.breakMode),
+        ).containsExactly("IllegalArgument", "bad 5", ExceptionBreakMode.UNHANDLED)
+        assertThat(listOf(info.details.typeName, info.details.message, info.details.stackTrace))
+            .containsExactly("IllegalArgument", "bad 5", "at check() (Throws.x:12)")
+        assertFailsWith(XtcDebugServer.NO_EXCEPTION) { server.exceptionInfo(ExceptionInfoArguments().apply { threadId = 13 }) }
     }
 
     @Test
@@ -445,6 +539,14 @@ class XtcDebugServerTest {
         breakpoints = lines.map { line -> SourceBreakpoint().apply { this.line = line } }.toTypedArray()
     }
 
+    private fun filterOption(
+        filter: String,
+        types: String,
+    ) = ExceptionFilterOptions().apply {
+        filterId = filter
+        condition = types
+    }
+
     private fun evaluate(
         expression: String,
         context: String,
@@ -520,6 +622,14 @@ class XtcDebugServerTest {
             runId: String,
             stops: ExceptionStops,
         ) = (runId == this.runId).also { if (it) exceptionStops.add(stops) }
+
+        override fun exceptionInfo(
+            runId: String,
+            threadId: Int,
+        ): CompletableFuture<ExceptionInfoState?> =
+            CompletableFuture.completedFuture(
+                ExceptionInfoState("IllegalArgument", "bad 5", "at check() (Throws.x:12)", uncaught = true).takeIf { threadId == 12 },
+            )
 
         override fun setBreakpoints(
             runId: String,
