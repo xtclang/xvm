@@ -499,11 +499,20 @@ class Lexer
                     break;
 
                 case 'u':
-                    // 'u' hex hex hex hex
-                    UInt32 codepoint = Nibble.of(reader.take()).toUInt32() << 8
-                                     | Nibble.of(reader.take()).toUInt32() << 8
-                                     | Nibble.of(reader.take()).toUInt32() << 8
-                                     | Nibble.of(reader.take()).toUInt32();
+                    // 'u' hex hex hex hex; a character beyond the Basic Multilingual Plane is
+                    // written as two of them, a UTF-16 surrogate pair
+                    UInt32 codepoint = eatHexits();
+                    if (0xD800 <= codepoint <= 0xDBFF) {
+                        require("\\u");
+                        UInt32 low = eatHexits();
+                        if (!(0xDC00 <= low <= 0xDFFF)) {
+                            throw new IOException("expected the low surrogate of a surrogate pair");
+                        }
+                        codepoint = ((codepoint - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
+                    } else if (0xDC00 <= codepoint <= 0xDFFF) {
+                        throw new IOException("unexpected low surrogate");
+                    }
+                    buf.add(new Char(codepoint));
                     break;
                 }
                 break;
@@ -520,6 +529,26 @@ class Lexer
         }
 
         throw new EndOfFile();
+    }
+
+    /**
+     * Eat the four hexits of a `\u` escape.
+     *
+     * @return the value that the hexits spell
+     *
+     * @throws IOException if one of the characters is not a hexit
+     */
+    protected UInt32 eatHexits() {
+        UInt32 value = 0;
+        for (Int i : 0 ..< 4) {
+            Char ch = reader.take();
+            if (UInt8 hexit := ch.asciiHexit()) {
+                value = (value << 4) | hexit.toUInt32();
+            } else {
+                throw new IOException($"expected hexit; found '{ch}'");
+            }
+        }
+        return value;
     }
 
     /**
