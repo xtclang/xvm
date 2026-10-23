@@ -74,58 +74,119 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
  * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
  *
- * <p>A stop holds the whole runtime: the fiber that stops waits on its interpreter thread, and so
- * does every other fiber that reaches a line while the program is stopped. Each takes a snapshot
- * of its stack before it waits, so the host reads immutable copies and never a running frame. The
- * snapshots are discarded when the program resumes. Fibers keep yielding to each other as they do
- * without a debugger, also while one of them steps.
+ * <p><b>How a host uses it.</b>
+ * <ol>
+ * <li>Construct it with the {@link Listener} that learns of its stops and of what its logpoints
+ *     log.</li>
+ * <li>Make the program's modules known ({@link #addModule}): before setting breakpoints in their
+ *     files, which are verified against them, and before {@link #stopOnEntry}, which stops at the
+ *     first line of a known module.</li>
+ * <li>Set the breakpoints of each source file ({@link #setBreakpoints}), choose the thrown
+ *     exceptions that stop the program ({@link #setExceptionStops}), and, to stop at the program's
+ *     first line, call {@link #stopOnEntry}. Breakpoints and exception stops can change at any
+ *     time after, while the program runs or is stopped.</li>
+ * <li>Set it on the runtime that runs the program ({@link Runtime#setDebugger}, which attaches
+ *     it), and name the container of the host's own code ({@link #setHost}), before the program's
+ *     first op. {@code EmbeddingSupport.runMethod} with a debugger does both, and replaces it with
+ *     {@link Debugger#NONE} once the run ends or is closed.</li>
+ * <li>When the program stops, {@link Listener#stopped} says where and why. While it is stopped,
+ *     the host reads its waiting fibers ({@link #threads}), their stacks ({@link #stackTrace}), the
+ *     scopes and variables of their frames ({@link #scopes}, {@link #variables}) and the exception
+ *     it stopped at ({@link #exceptionInfo}); it evaluates expressions ({@link #evaluate}), and has
+ *     a waiting fiber run code ({@link #run}).</li>
+ * <li>The host ends the stop: {@link #resume} lets the program run on, and {@link #step} lets it
+ *     run until the stepped fiber reaches the line where the step ends, where it stops again. A
+ *     program that runs stops at its next line once the host asks for a {@link #pause}.</li>
+ * <li>To stop the program for good, the host calls {@link #terminate}, as closing an embedded
+ *     run does. Once another debugger replaces this one ({@link #detach}), it never stops the
+ *     program again.</li>
+ * </ol>
  *
- * <p>A step resumes the whole program and stops it again at the next line the stepped fiber
- * reaches: over a call, in the same frame; into one, in any frame of a fiber that the stepped one
- * calls or is called by; out of one, once its frame returns. A frame that returns, or that an
+ * <p><b>Threads and locks.</b> The host may call the methods above from any thread, the
+ * listener's included. The listener runs on the interpreter thread of the fiber that stopped, or
+ * that reached a logpoint, and never while this debugger holds its lock. A host call takes the
+ * lock only briefly, though it may wait for it while a waiting fiber reads variables or compiles
+ * code to run, and never waits for the program to run. Reads, evaluations and runs answer with a
+ * future, which another thread completes ({@link CompletableFuture#completeAsync}), never while
+ * the lock is held, so what the host does with an answer may call this debugger again. One rule
+ * follows from where the work is done: the fiber that stopped makes reads of its own frames at
+ * once, on the listener's thread, but starts a run in one of its frames only once
+ * {@link Listener#stopped} returns, so the listener must not wait for the answer of such a run.
+ * The hooks of the {@link Debugger} interface are the runtime's, called on the interpreter thread
+ * of the fiber they are about; the host does not call them.
+ *
+ * <p><b>Handles.</b> A thread ID is its fiber's ID, which stays the same while the fiber lives,
+ * from one stop to the next. A frame ID and a variables reference belong to one stop: each stop
+ * hands out new ones, and none is handed out twice, so a handle from an earlier stop finds nothing
+ * rather than something else. Once the stop ends, by a resume, a step or the program's end, a
+ * method given such a handle answers that there is nothing: no frames, scopes or variables, or a
+ * failure saying that the frame is not one of the stopped program's. Within a stop,
+ * {@link #scopes} answers with the same reference each time it is asked about a frame.
+ *
+ * <p><b>Failures.</b> An evaluation or a run that fails holds an {@link IllegalArgumentException}
+ * whose message is the reason in words, written to be shown to the user as it is, such as
+ * "box.fail() threw IllegalState: no." or "The program resumed before the expression was
+ * evaluated."; {@link CompletableFuture#join} wraps it in a {@code CompletionException}, and
+ * {@link CompletableFuture#get} in an {@code ExecutionException}. A read of variables fails only
+ * if a value cannot be read, as an evaluation can too, with the exception that reading it threw.
+ *
+ * <p><b>Speed.</b> While there is nothing to check, no breakpoint, exception stop, step, pause,
+ * stop or run, the runtime's "debugger is active" flag is off, and the program runs at full speed.
+ * Otherwise every line it reaches and every exception it throws call this debugger.
+ *
+ * <p><b>Stops.</b> A stop holds the whole runtime: the fiber that stops waits on its interpreter
+ * thread, and so does every other fiber that reaches a line while the program is stopped. Each
+ * takes a snapshot of its stack before it waits, so the host reads immutable copies and never a
+ * running frame. The snapshots are discarded when the program resumes. Fibers keep yielding to each
+ * other as they do without a debugger, also while one of them steps.
+ *
+ * <p><b>Steps.</b> A step resumes the whole program and stops it again at the next line the stepped
+ * fiber reaches: over a call, in the same frame; into one, in any frame of a fiber that the stepped
+ * one calls or is called by; out of one, once its frame returns. A frame that returns, or that an
  * exception leaves, during a step over continues it as a step into, so it stops at its caller's
  * next line. Any other stop, such as a breakpoint, ends the step.
  *
- * <p>A pause stops the program at the next line any of its fibers reaches, with the reason "pause",
- * or, asked for before the program starts, at its first line, with the reason "entry": the first
- * line of a module the host made known, not of the libraries that run before it, or of any code if
- * none is known. A program whose fibers all wait, for input or for each other, stops when one of
- * them next runs.
+ * <p><b>Pauses.</b> A pause stops the program at the next line any of its fibers reaches, with the
+ * reason "pause", or, asked for before the program starts, at its first line, with the reason
+ * "entry": the first line of a module the host made known, not of the libraries that run before it,
+ * or of any code if none is known. A program whose fibers all wait, for input or for each other,
+ * stops when one of them next runs.
  *
- * <p>A thrown exception stops the program, with the reason "exception", at the frame that throws
- * it, when the host asks for every thrown exception, or for those that no frame will catch: no
- * frame of the throwing fiber, nor of the fibers that called it, has a "catch" for it then. The
- * exception is that frame's first variable, {@link #EXCEPTION}, while the program is stopped
- * there; it stops the program once, not again as it leaves each frame.
+ * <p><b>Exceptions.</b> A thrown exception stops the program, with the reason "exception", at the
+ * frame that throws it, when the host asks for every thrown exception, or for those that no frame
+ * will catch: no frame of the throwing fiber, nor of the fibers that called it, has a "catch" for
+ * it then. The exception is that frame's first variable, {@link #EXCEPTION}, while the program is
+ * stopped there; it stops the program once, not again as it leaves each frame.
  *
- * <p>Variables are read on the interpreter thread of the waiting fiber whose frame holds them,
- * which reads them while it waits, so a read never races the program; {@link #variables} answers
- * once that thread has read them, on another thread, so what the host does with an answer never
- * runs while this debugger holds its lock. Only the waiting fiber's own frames have variables,
- * not those of the fiber that called it, and another service's state is not expanded: a read
- * touches only the waiting service's state and immutable values. A variable's reference to its
- * fields or elements, like a frame's ID, lasts until the program resumes. An expression, such as
- * {@code point.x + 1} or {@code ints[i] > 0}, is evaluated the same way, without running any of the
- * program's code: its operators run the runtime's own native operations ({@link PureExpression}).
- * Any other expression, such as a call, runs as code on the waiting fiber ({@link #run}), which
- * leaves its wait to run it and then waits again, while the program's other fibers stay where they
- * wait.
+ * <p><b>Variables, expressions and code.</b> Variables are read on the interpreter thread of the
+ * waiting fiber whose frame holds them, which reads them while it waits, so a read never races the
+ * program; {@link #variables} answers once that thread has read them, on another thread, so what
+ * the host does with an answer never runs while this debugger holds its lock. Only the waiting
+ * fiber's own frames have variables, not those of the fiber that called it, and another service's
+ * state is not expanded: a read touches only the waiting service's state and immutable values. A
+ * variable's reference to its fields or elements, like a frame's ID, lasts until the program
+ * resumes. An expression, such as {@code point.x + 1} or {@code ints[i] > 0}, is evaluated the same
+ * way, without running any of the program's code: its operators run the runtime's own native
+ * operations ({@link PureExpression}). Any other expression, such as a call, runs as code on the
+ * waiting fiber ({@link #run}), which leaves its wait to run it and then waits again, while the
+ * program's other fibers stay where they wait; a time limit, a cancel, or the program's resume or
+ * end ends such a run before its code does.
  *
- * <p>A breakpoint is installed by file and line: it stops every fiber that reaches the first op of
- * that line in any method compiled from that file. A file is the module's source directory and
- * the class's source path, as the compiler records them, compared as real paths. A breakpoint may
- * have a condition, an expression whose Boolean value must be True; a hit count, which counts the
- * hits whose condition holds; and a log message, which makes it a logpoint that logs the message,
- * with the values of the expressions in braces in it, and does not stop. The fiber that reaches it evaluates
- * them on its own thread, as it would variables; a condition that cannot be evaluated stops the
- * program and says why. Thrown exceptions may stop the program only for some exception classes,
- * those named and the classes that extend them, and the host can read the exception that stopped
- * the program ({@link #exceptionInfo}).
+ * <p><b>Breakpoints.</b> A breakpoint is installed by file and line: it stops every fiber that
+ * reaches the first op of that line in any method compiled from that file. A file is the module's
+ * source directory and the class's source path, as the compiler records them, compared as real
+ * paths. A breakpoint may have a condition, an expression whose Boolean value must be True; a hit
+ * count, which counts the hits whose condition holds; and a log message, which makes it a logpoint
+ * that logs the message, with the values of the expressions in braces in it, and does not stop. The
+ * fiber that reaches it evaluates them on its own thread, as it would variables; a condition that
+ * cannot be evaluated stops the program and says why. Thrown exceptions may stop the program only
+ * for some exception classes, those named and the classes that extend them, and the host can read
+ * the exception that stopped the program ({@link #exceptionInfo}).
  *
- * <p>The host's own code, in the container it names with {@link #setHost}, is not debugged, and
- * stacks, the exception's included, end where the host calls the program. When
- * the program is stopped for good ({@link #terminate}), its waiting fibers end without running
- * more of it, and so does any fiber that reaches a line afterwards.
+ * <p><b>The host's code, and the program's end.</b> The host's own code, in the container it names
+ * with {@link #setHost}, is not debugged, and stacks, the exception's included, end where the host
+ * calls the program. When the program is stopped for good ({@link #terminate}), its waiting fibers
+ * end without running more of it, and so does any fiber that reaches a line afterwards.
  */
 public final class SessionDebugger implements Debugger {
 
@@ -317,7 +378,9 @@ public final class SessionDebugger implements Debugger {
     // ----- host API ------------------------------------------------------------------------------
 
     /**
-     * The host's view of the debugger's events.
+     * The host's view of the debugger's events. Both are called on an interpreter thread, never
+     * while the debugger holds its lock, so they may call the debugger; what they do holds up the
+     * fiber that called them, and with a stop, the whole program.
      */
     public interface Listener {
         /**
@@ -325,15 +388,22 @@ public final class SessionDebugger implements Debugger {
          * once this returns, until the host calls {@link #resume}. The snapshots that
          * {@link #threads} and {@link #stackTrace} return are taken before this is called.
          *
+         * <p>The listener may read the stopped program here: the stopping fiber reads its own
+         * frames at once, on this thread, and the other waiting fibers on theirs. It must not wait
+         * for a {@link #run} in a frame of the stopping fiber, which starts only once this
+         * returns. If this throws, the program is not held: the stop ends as at a resume, and the
+         * exception goes on up the interpreter thread.
+         *
          * @param stop  where and why the program stopped
          */
         void stopped(Stop stop);
 
         /**
          * A logpoint logged a message. Called on the interpreter thread that reached the logpoint,
-         * which runs on once this returns.
+         * which runs on once this returns; the program does not stop.
          *
-         * @param message  the message, with the values of the expressions in it
+         * @param message  the message, with the values of the expressions in it, or why one cannot
+         *                 be evaluated, in angle brackets in its place
          */
         default void logged(String message) {
         }
@@ -345,9 +415,23 @@ public final class SessionDebugger implements Debugger {
      * such as {@code done} or {@code i % 2 == 0}; a hit count, "N" to stop at the Nth hit, or
      * ">= N", "> N" or "% N", counting the hits whose condition holds; and a log message, which
      * makes it a logpoint: it logs the message, with each {@code {expression}} in it replaced by
-     * that expression's value, and does not stop.
+     * that expression's value, and does not stop. The expressions are those that {@link #evaluate}
+     * takes, which run none of the program's code.
+     *
+     * @param id          the breakpoint's ID, which the host chooses, and which a stop at it
+     *                    reports ({@link Stop#breakpointIds})
+     * @param line        the 1-based line of the source file
+     * @param condition   the condition, or null for none
+     * @param hitCount    the hit count, or null for none
+     * @param logMessage  the log message, or null for a breakpoint that stops
      */
     public record Line(int id, int line, String condition, String hitCount, String logMessage) {
+        /**
+         * A breakpoint that stops every time a fiber reaches it.
+         *
+         * @param id    the breakpoint's ID, which the host chooses
+         * @param line  the 1-based line of the source file
+         */
         public Line(int id, int line) {
             this(id, line, null, null, null);
         }
@@ -357,12 +441,24 @@ public final class SessionDebugger implements Debugger {
      * A breakpoint as installed: its ID, the line it was installed on, which may follow the
      * requested line when that line has no code of its own, whether it was installed, and if not,
      * why.
+     *
+     * @param id        the requested breakpoint's ID
+     * @param line      the 1-based line it is installed on; for one that is not installed, the
+     *                  requested line, or the line it would be installed on if only its condition,
+     *                  hit count or log message cannot be understood
+     * @param verified  true if it is installed
+     * @param message   why it is not installed: {@link #NOT_IN_PROGRAM}, {@link #NO_CODE}, or what
+     *                  is wrong with its condition, hit count or log message; null if it is
      */
     public record Breakpoint(int id, int line, boolean verified, String message) {
     }
 
     /**
      * A stopped or waiting fiber: its ID, and its service's name.
+     *
+     * @param id    the fiber's ID, the thread ID that the other methods take; it stays the same
+     *              while the fiber lives
+     * @param name  the name of the fiber's service
      */
     public record ThreadInfo(int id, String name) {
     }
@@ -370,6 +466,15 @@ public final class SessionDebugger implements Debugger {
     /**
      * One frame of a stopped fiber's stack: an ID unique within the stop, the method's name, the
      * source file, or null when it is not known, and the 1-based line, or 0.
+     *
+     * @param id    the frame's ID, which {@link #scopes}, {@link #evaluate} and {@link #run} take,
+     *              until the stop ends; only the fiber's own frames have scopes, not those of the
+     *              fibers that called it
+     * @param name  the method's name after its class's, such as {@code "Point.toString"}, or after
+     *              its module's simple name for a method of a module
+     * @param path  the source file, as the compiler recorded it: the module's source directory and
+     *              the class's source path; null if it is not known
+     * @param line  the 1-based line where the frame is, or 0 if it is not known
      */
     public record StackFrameInfo(int id, String name, String path, int line) {
     }
@@ -377,6 +482,10 @@ public final class SessionDebugger implements Debugger {
     /**
      * A scope of a stopped frame: its name, and the reference that {@link #variables} reads its
      * variables by.
+     *
+     * @param name                the scope's name, {@link #LOCALS}
+     * @param variablesReference  the reference that {@link #variables} reads the scope's variables
+     *                            by, until the stop ends
      */
     public record Scope(String name, int variablesReference) {
     }
@@ -384,7 +493,18 @@ public final class SessionDebugger implements Debugger {
     /**
      * A variable of a scope, or a field or element of a value: its name, its value and its type in
      * words, and the reference that {@link #variables} reads its fields or elements by, or 0 if it
-     * has none.
+     * has none. An array of more than {@link #MAX_ELEMENTS} elements ends with a variable named
+     * "..." whose value says how many more there are.
+     *
+     * @param name                the variable's or field's name, an element's index in brackets,
+     *                            such as {@code "[0]"}, or the expression that was evaluated or run
+     * @param value               the value in words, cut off with "..." after 1000 characters;
+     *                            {@link #UNASSIGNED} for a variable that has no value yet, and
+     *                            {@link #NO_VALUE} for code that has none
+     * @param type                the value's type in words, or {@code ""} if it is not known
+     * @param variablesReference  the reference that {@link #variables} reads the value's fields or
+     *                            elements by, until the stop ends; 0 if it has none to show, as
+     *                            for an object of another service
      */
     public record Variable(String name, String value, String type, int variablesReference) {
     }
@@ -413,6 +533,15 @@ public final class SessionDebugger implements Debugger {
      * Why and where the program stopped: the reason ("breakpoint", "step", "exception", "pause" or
      * "entry"), what stopped it in words (an exception's type and text), the fiber that stopped,
      * and the IDs of the breakpoints it stopped at.
+     *
+     * @param reason         {@code "breakpoint"}, also for {@code assert:debug}, {@code "step"},
+     *                       {@code "exception"}, {@code "pause"} or {@code "entry"}
+     * @param description    what stopped it in words, or null: an exception's type and text,
+     *                       {@code "assert:debug"}, or why a breakpoint's condition cannot be
+     *                       evaluated
+     * @param threadId       the ID of the fiber that stopped
+     * @param breakpointIds  the IDs of the breakpoints it stopped at, which the host chose;
+     *                       none for {@code assert:debug} and for a stop of any other reason
      */
     public record Stop(String reason, String description, int threadId, List<Integer> breakpointIds) {
     }
@@ -421,6 +550,13 @@ public final class SessionDebugger implements Debugger {
      * The exception the program stopped at: its type and its text, if it has one, the stack where
      * it was thrown, as the runtime writes a stack trace but without the host's frames, and
      * whether no frame will catch it.
+     *
+     * @param type        the exception's type, such as {@code "IllegalState"}
+     * @param text        its text, or null if it has none
+     * @param stackTrace  the stack where it was thrown, a frame to a line, of its fiber and of the
+     *                    fibers that called it, down to where the host called the program
+     * @param uncaught    true if no frame of its fiber, nor of the fibers that called it, will
+     *                    catch it
      */
     public record ExceptionInfo(String type, String text, String stackTrace, boolean uncaught) {
     }
@@ -428,6 +564,12 @@ public final class SessionDebugger implements Debugger {
     /**
      * Make the code of a module known, so that breakpoints in its source files can be verified.
      * The structures are only read; the runtime may run its own copy of the module.
+     *
+     * <p>Call it for each module of the program, before setting breakpoints in its files and before
+     * {@link #stopOnEntry}. Breakpoints can only be set in the files of known modules, and a stop
+     * on entry stops in a known module. The code of other modules, such as libraries, runs under
+     * this debugger too: its frames are in the stacks, a step can go into it, and a pause can stop
+     * in it.
      *
      * @param module  a module of the program
      */
@@ -440,6 +582,13 @@ public final class SessionDebugger implements Debugger {
      * Replace the breakpoints of one source file. A line without code of its own is moved to the
      * next line with code in the same method. A breakpoint whose condition, hit count or log
      * message cannot be understood is not installed. The hit counts start again.
+     *
+     * <p>The host may call it at any time, while the program runs or is stopped; the breakpoints
+     * apply from the next line a fiber reaches. A file is matched by its real path: the path given,
+     * and each method's source file as the compiler recorded it, are resolved as the file system
+     * resolves them, so a link or a relative path finds the same file. Two breakpoints that end up
+     * on one line are both installed, and a stop there reports the first, whose condition, hit
+     * count and log message apply.
      *
      * @param path   the source file
      * @param lines  the breakpoints of that file; none removes them all
@@ -486,7 +635,8 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * Choose which thrown exceptions stop the program, at the frame that throws them.
+     * Choose which thrown exceptions stop the program, at the frame that throws them, of any
+     * class. The host may call it at any time; the choice replaces the one before.
      *
      * @param all       true to stop at every thrown exception
      * @param uncaught  true to stop at the exceptions that no frame will catch
@@ -497,7 +647,14 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Choose which thrown exceptions stop the program, at the frame that throws them, and of which
-     * classes: one named, or a class that extends one, or any when none is named.
+     * classes: one named, or a class that extends one, or any when none is named. The host may
+     * call it at any time; the choice replaces the one before.
+     *
+     * <p>A class is named by its simple name, such as {@code "IllegalState"} or
+     * {@code "OutOfBounds"}, which is matched against the thrown exception's class and the classes
+     * it extends; an interface or a mixin of the class does not count. An exception that stops
+     * the program does not stop it again as it leaves each frame. Both choices may be made: an
+     * exception that no frame will catch then stops the program if either takes it.
      *
      * @param all            true to stop at every thrown exception
      * @param allTypes       the names of the exception classes that every thrown exception means,
@@ -512,6 +669,10 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * The exception the program stopped at, as the host shows it for a stop with the reason
+     * "exception"; the exception is also the throwing frame's first variable,
+     * {@link #EXCEPTION}, with its fields.
+     *
      * @param threadId  the ID of a fiber that {@link #threads} returned
      *
      * @return the exception that the fiber stopped the program at, or null if it stopped it for
@@ -523,13 +684,18 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return true while the program is stopped
+     * @return true while the program is stopped: from just before {@link Listener#stopped} is
+     *         called until the stop ends; a run of code in the stop does not end it
      */
     public boolean isStopped() {
         return halt != null;
     }
 
     /**
+     * The fibers of the stopped program that the host can read. A fiber joins them when it
+     * reaches a line during the stop; one that waits for something else meanwhile, such as an
+     * answer from another service, a timer or input, is not among them until it does.
+     *
      * @return the fibers of the stopped program that wait: the one that stopped first, then those
      *         that reached a line since; none while the program runs
      */
@@ -542,6 +708,10 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * The stack of a waiting fiber, as it was when the fiber began to wait: its own frames, then
+     * those of the fibers that called it, in other services, down to where the host called the
+     * program. Native frames are left out, as are the host's.
+     *
      * @param threadId  the ID of a fiber that {@link #threads} returned
      *
      * @return the fiber's stack, innermost frame first; empty if the fiber is not waiting
@@ -552,6 +722,10 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * The scopes of a frame: one, {@link #LOCALS}, with its exception, if it throws one, its
+     * {@code this}, and its named variables. Asked again about the same frame in the same stop, it
+     * answers with the same reference.
+     *
      * @param frameId  the ID of a frame that {@link #stackTrace} returned
      *
      * @return the frame's scopes, which are its local variables; none if the frame is not one of
@@ -572,6 +746,12 @@ public final class SessionDebugger implements Debugger {
      * Read the variables of a scope, or the fields or elements of a value. The waiting fiber that
      * holds them reads them on its own thread; the listener may ask from there too. The answer
      * comes on another thread, never while this debugger holds its lock.
+     *
+     * <p>Reading runs none of the program's code: a value's text is the runtime's own, its fields
+     * are read as they are stored, and an array shows its first {@link #MAX_ELEMENTS} elements. A
+     * value has fields or elements to read if it belongs to the waiting fiber's service or is
+     * immutable; an object of another service is read only on that service's own thread, so its
+     * variable has no reference. Each value with fields or elements gets a new reference.
      *
      * @param reference  a reference that {@link #scopes} or an earlier read returned
      *
@@ -599,6 +779,11 @@ public final class SessionDebugger implements Debugger {
      * {@code point.x + 1} or {@code ints[i] > 0} ({@link PureExpression}). The innermost variable
      * of a name is the one meant. The waiting fiber that holds the frame evaluates it on its own
      * thread, as {@link #variables} reads variables.
+     *
+     * <p>Since it runs none of the program's code, an evaluation changes nothing and needs no time
+     * limit, which suits watches and hovers; breakpoints' conditions and log messages take the
+     * same expressions. An expression it refuses, such as a call, can be run instead
+     * ({@link #run}), so a host can try this first and run what it refuses.
      *
      * @param frameId     the ID of a frame that {@link #stackTrace} returned
      * @param expression  the expression to evaluate
@@ -672,9 +857,16 @@ public final class SessionDebugger implements Debugger {
      * <p>One run at a time: another, from any frame, starts once this one ends, and reads of the
      * running fiber's frames are made once it waits again; those of other fibers are not delayed.
      *
+     * <p>This method never waits: it asks the fiber that waits at the frame to run the code, and
+     * returns. The fiber starts it when no other run is in progress, and its time limit counts
+     * from then, not from the call; a run in a frame of the fiber that stopped the program starts
+     * only once {@link Listener#stopped} returns. While a run is in progress, {@link #isStopped}
+     * stays true and the program stays stopped.
+     *
      * @param frameId     the ID of a frame that {@link #stackTrace} returned
      * @param expression  the expression to run
-     * @param limit       how long the run may take once it starts
+     * @param limit       how long the run may take once it starts, such as two seconds for an
+     *                    expression typed into a debug console
      *
      * @return the value, as a variable named by the expression, whose value is the value's
      *         {@code toString()}, with a reference to its fields or elements; fails, with the reason
@@ -710,6 +902,10 @@ public final class SessionDebugger implements Debugger {
      * Resume the stopped program, stepping the specified fiber: the program stops again, with the
      * reason "step", at the line where the step ends.
      *
+     * <p>The stop ends as at a {@link #resume}, and all of the program's fibers run meanwhile, not
+     * only the stepped one. Any other stop before the step's end, such as at a breakpoint, ends the
+     * step; so does the program's end.
+     *
      * @param threadId  the ID of a fiber that {@link #threads} returned
      * @param step      how to step it
      *
@@ -730,7 +926,9 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Stop the program at the next line any of its fibers reaches, with the reason "pause"; does
-     * nothing while it is stopped.
+     * nothing while it is stopped. It returns at once; the stop comes through
+     * {@link Listener#stopped} once a fiber next reaches a line, which, while all of them wait, as
+     * for input, is when one of them next runs.
      */
     public synchronized void pause() {
         if (halt == null) {
@@ -741,7 +939,8 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Stop the program at its first line, with the reason "entry"; called before it starts, and
-     * after the program's modules are made known.
+     * after the program's modules are made known. The first line is that of a known module, not of
+     * a library that runs before it, or the first line of any code if no module is known.
      */
     public synchronized void stopOnEntry() {
         pendingPause = new Pause("entry", true);
@@ -750,6 +949,11 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Resume the stopped program; does nothing while it runs.
+     *
+     * <p>What the stop held goes: its waiting fibers run on, and its frame IDs and references find
+     * nothing from now on. Reads that a waiting fiber has not yet made answer with no variables,
+     * evaluations and runs that have not started fail, saying that the program resumed first, and
+     * a run in progress ends, as {@link #run} says. The program's clocks run again.
      */
     public synchronized void resume() {
         release();
@@ -757,17 +961,38 @@ public final class SessionDebugger implements Debugger {
 
     // ----- Debugger interface --------------------------------------------------------------------
 
+    /**
+     * Debug the specified runtime, which {@link Runtime#setDebugger} set this debugger on: its
+     * "debugger is active" flag is turned on while there is something to check, so that its
+     * services call this debugger at every line and thrown exception, and off again otherwise.
+     *
+     * @param runtime  the runtime whose services this debugger now debugs
+     */
     @Override
     public synchronized void attach(Runtime runtime) {
         this.runtime = runtime;
         updateActive();
     }
 
+    /**
+     * Leave the host's own code alone, such as the runner that calls the program: frames of the
+     * specified container are never stopped, held or ended, and the stacks, the exception's
+     * included, end where the host calls the program. Set before the program starts.
+     *
+     * @param container  the container of the host's own code
+     */
     @Override
     public void setHost(Container container) {
         hostContainer = container;
     }
 
+    /**
+     * Stop the program for good, as when the host closes it, before it replaces this debugger: a
+     * run in progress ends, saying so, the stop, if there is one, ends, and every fiber of the
+     * program ends where it is without running more of it: those that waited in the stop, a run's
+     * fiber at its next line, and any other fiber at the next line it reaches. No step or pause is
+     * made after, and the program does not stop again.
+     */
     @Override
     public synchronized void terminate() {
         terminating  = true;
@@ -782,6 +1007,11 @@ public final class SessionDebugger implements Debugger {
         release();
     }
 
+    /**
+     * Another debugger has replaced this one on the runtime: the breakpoints, the step and the
+     * pause are dropped, a stopped program runs on as at a {@link #resume}, and this debugger never
+     * stops the program again, nor turns the runtime's "debugger is active" flag on.
+     */
     @Override
     public synchronized void detach() {
         detached     = true;
@@ -792,11 +1022,28 @@ public final class SessionDebugger implements Debugger {
         runtime = null;
     }
 
+    /**
+     * @return false: while this debugger is active, a fiber yields to the other fibers of its
+     *         service as it does without a debugger, also while it steps, so that breakpoints and
+     *         steps do not change how the program's fibers take turns
+     */
     @Override
     public boolean holdsFibers() {
         return false;
     }
 
+    /**
+     * The program reached {@code assert:debug}: stop it there as at a breakpoint, with the reason
+     * "breakpoint" and the description "assert:debug", and no breakpoint ID. The host's code goes
+     * on, and so does a run's code, in which nothing stops; once the program is being stopped for
+     * good, the fiber ends there instead.
+     *
+     * @param frame  the frame that reached it
+     * @param pc     the index of the op
+     *
+     * @return the index of the next op, {@link Op#R_CALL} if the fiber runs code first, or
+     *         {@link Op#R_EXCEPTION} if the fiber ends or the run's code unwinds
+     */
     @Override
     public int activate(Frame frame, int pc) {
         if (isHost(frame)) {
@@ -811,6 +1058,20 @@ public final class SessionDebugger implements Debugger {
         return stop(frame, "breakpoint", "assert:debug", List.of(), null, null, f -> terminating ? end(f) : pc + 1);
     }
 
+    /**
+     * A fiber reached the op that marks a line of source, while this debugger is active. The host's
+     * code goes on. A run's code goes on too, since nothing stops it, unless the run has ended,
+     * when it unwinds. While the program is stopped, the fiber waits here, in the stop; otherwise
+     * it stops the program at a breakpoint on the line, where a step ends, or for a pause, logs a
+     * logpoint's message, or goes on. Once the program is being stopped for good, the fiber ends
+     * here.
+     *
+     * @param frame  the frame that reached the op
+     * @param pc     the index of the op
+     *
+     * @return the index of the next op, {@link Op#R_CALL} if the fiber runs code first, or
+     *         {@link Op#R_EXCEPTION} if the fiber ends or the run's code unwinds
+     */
     @Override
     public int checkBreakPoint(Frame frame, int pc) {
         if (isHost(frame)) {
@@ -823,11 +1084,34 @@ public final class SessionDebugger implements Debugger {
         return halt == null ? line(frame, pc) : park(frame, f -> line(f, pc));
     }
 
+    /**
+     * A frame returns, while this debugger is active: a step over or out of it goes on as a step
+     * into, so that it stops at the next line of the frame's caller.
+     *
+     * @param frame  the frame that returns
+     */
     @Override
     public void onReturn(Frame frame) {
         leave(frame);
     }
 
+    /**
+     * An exception is thrown, or leaves a frame, while this debugger is active and the fiber does
+     * not end; the runtime asks at each frame the exception leaves. An exception that a run's
+     * code throws, or its value's {@code toString()}, and that is not caught on the way out, is
+     * the run's answer: it is taken from the frame, and the run ends. Otherwise a step over or out
+     * of the frame goes on as a step into, as when the frame returns, and the exception stops the
+     * program at the program's first frame that throws it, if the choice made with
+     * {@link #setExceptionStops} takes it; it stops the program only once, and not in the host's
+     * code nor in a run's.
+     *
+     * @param frame      the frame that throws the exception, or that it leaves
+     * @param exception  the exception
+     *
+     * @return for a run's answer, the index of the op that ends the run in its native frame, the
+     *         frame's caller, which goes on there; {@link Op#R_CALL} if the fiber runs code first;
+     *         otherwise {@link Op#R_NEXT}, so that the runtime goes on with the exception
+     */
     @Override
     public int checkBreakPoint(Frame frame, ExceptionHandle exception) {
         Running run = running;
