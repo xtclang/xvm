@@ -445,10 +445,11 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   - One hunk of `7b9b5856a`, a `break` in `Lexer.eatStringChars()`: `xcc` hangs forever on a file that
     ends inside a string, template or `|` literal, since the repeated error is dropped as a duplicate
     and never reaches the error limit (master's `Lexer.java:1397`). The errs test uses errs-only APIs
-    and needs writing again.
+    and needs writing again. In master pull request [#717](https://github.com/xtclang/xvm/pull/717)
+    (2026-10-23), with a new `LexerTest` case.
   - `814153a42`: two diagnostics with the same code and place whose parameters hash alike are taken for
     duplicates, and the second is dropped (master's `ErrorListener.java:318`); one line, and a test
-    written again without errs' Site API. It could share a pull request with the lexer fix.
+    written again without errs' Site API. In #717 with the lexer fix, with a new `ErrorListTest`.
   - Optional, `6312fd242`: an embedded run that reaches `assert:debug` reads the host's standard input;
     only third-party hosts reach it on master.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
