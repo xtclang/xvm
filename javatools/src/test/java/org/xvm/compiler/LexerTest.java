@@ -3,6 +3,7 @@ package org.xvm.compiler;
 import java.io.File;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -93,6 +94,25 @@ public class LexerTest {
             assertEquals(List.of(Lexer.STRING_NO_TERM), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(),
                     text);
         }
+    }
+
+    @Test
+    public void aSourceThatEndsInAnEscapeOrATemplateExpressionIsReportedOnceAndEndsTheTokens() {
+        // the lexer used to read past the end of the source, and failed with NoSuchElementException
+        Map<String, String> endings = Map.of(
+                "String s = \"abc\\", Lexer.STRING_NO_TERM,
+                "String s = $\"abc{x", Lexer.STRING_NO_TERM,
+                "Char c = '\\", Lexer.CHAR_NO_TERM);
+        endings.forEach((text, code) -> {
+            ErrorList errs  = new ErrorList(5);
+            Lexer     lexer = new Lexer(new Source(text), errs);
+            assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+                while (lexer.hasNext()) {
+                    lexer.next();
+                }
+            }, text);
+            assertEquals(List.of(code), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(), text);
+        });
     }
 
     @Test

@@ -345,6 +345,11 @@ public class Lexer
         int              cDepth   = 1;
         ArrayList<Token> tokens   = new ArrayList<>();
         while (true) {
+            if (!hasNext()) {
+                // the source ends inside the expression; the string that holds it reports that
+                return tokens.toArray(new Token[0]);
+            }
+
             Token token = next();
             int   nLine = Source.calculateLine(token.getEndPosition());
             if (nLine != nPrevLine) {
@@ -1098,6 +1103,11 @@ public class Lexer
                 break;
 
             case '\\':
+                if (!source.hasNext()) {
+                    // the source ends in the escape, which is reported as unterminated below
+                    break;
+                }
+
                 // process escaped char
                 switch (ch = source.next()) {
                 case '\r':
@@ -1231,6 +1241,12 @@ public class Lexer
                             sb.append(ch);
                             break;
                         }
+                    }
+
+                    if (!source.hasNext()) {
+                        // the source ends in the escape; log error: unterminated string
+                        log(Severity.ERROR, STRING_NO_TERM, null, lInitPos);
+                        break Appending;
                     }
 
                     // process escaped char
