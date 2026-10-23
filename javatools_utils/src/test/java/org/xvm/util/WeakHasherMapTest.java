@@ -99,12 +99,12 @@ public class WeakHasherMapTest {
 
     @Test
     void shouldLeaveCollectedKeysOutOfArrays() throws InterruptedException {
-        Map<Object, String> map = new WeakHasherMap<>(Hasher.identity());
-        Set<Object> set = Collections.newSetFromMap(new ConcurrentWeakHasherMap<>(Hasher.identity()));
-        Object kept = new Object();
+        var map = new WeakHasherMap<Object, String>(Hasher.identity());
+        var set = Collections.newSetFromMap(new ConcurrentWeakHasherMap<Object, Boolean>(Hasher.identity()));
+        var kept = new Object();
         map.put(kept, "kept");
         set.add(kept);
-        WeakReference<Object> collected = putCollectable(map, set);
+        var collected = putCollectable(map, set);
         for (int i = 0; i < 100 && collected.get() != null; ++i) {
             System.gc();
             Thread.sleep(10);
@@ -114,7 +114,7 @@ public class WeakHasherMapTest {
         // a key that was collected, but not yet removed, is left out, as the iterators leave it out
         assertArrayEquals(new Object[] {kept}, map.keySet().toArray());
         assertArrayEquals(new Object[] {kept}, map.keySet().toArray(new Object[0]));
-        Object[] entries = map.entrySet().toArray();
+        var entries = map.entrySet().toArray();
         assertEquals(1, entries.length);
         assertSame(kept, ((Map.Entry<?, ?>) entries[0]).getKey());
         assertArrayEquals(new Object[] {kept}, set.toArray(Object[]::new));
@@ -126,7 +126,7 @@ public class WeakHasherMapTest {
      * @return a reference that is cleared once the key is collected
      */
     private static WeakReference<Object> putCollectable(Map<Object, String> map, Set<Object> set) {
-        Object key = new Object();
+        var key = new Object();
         map.put(key, "collected");
         set.add(key);
         return new WeakReference<>(key);
