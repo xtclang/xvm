@@ -13,6 +13,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Debugger;
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
@@ -59,6 +60,16 @@ public class InterpreterConnector
     @Override
     public ConstantPool getConstantPool() {
         return m_containerMain.getConstantPool();
+    }
+
+    /**
+     * Set the debugger that {@code assert:debug} and breakpoints use, which is the terminal's
+     * console debugger unless a host sets another.
+     *
+     * @param debugger  the debugger for this connector's runtime
+     */
+    public void setDebugger(Debugger debugger) {
+        f_runtime.setDebugger(debugger);
     }
 
     @Override
