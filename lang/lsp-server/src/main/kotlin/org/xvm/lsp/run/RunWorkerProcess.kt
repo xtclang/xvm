@@ -309,7 +309,7 @@ internal class RunWorkerProcess(
         json.keySet().forEach { add(it, json[it]) }
     }
 
-    /** Evaluates a path to a value in a stopped frame; fails with the reason when it cannot. */
+    /** Evaluates an expression in a stopped frame; fails with the reason when it cannot. */
     fun evaluate(
         id: Long,
         frame: Int,
