@@ -2639,6 +2639,12 @@ end inside a string, and a task that compiled them, were added and removed again
 2026-10-23 (`78e0a9deb..18a8d910e`), where #693 already stopped at an unterminated string, so the first
 is its test alone; `LexerTest` and `ErrorListTest` pass there.
 
+The `assert:debug` fix went to master as pull request [#718](https://github.com/xtclang/xvm/pull/718)
+the same day, from `lagergren/fix-embedded-assert-debug` off master `7a79c6ef0`: `8fb41cb13` is
+`6312fd242`'s `javatools` part with its `EmbeddingSupportTest` case, without the `EmbeddedExecutionTest`
+case, which master has no file for, and with its message rewritten for master. There, after
+`xdk:installDist`, `:javatools:test` passes 457 tests, the 42 existing skips, and `spotlessCheck` passes.
+
 Both earlier ones went into #693 on 2026-10-22 (`6386f609f..5a24c43d8`): `4018f256f` is `6312fd242` cherry-picked,
 with the same diff and its message's R6 and R7 references removed, and `5a24c43d8` is the stop fix
 written out against #693's `EmbeddedRuns`, with the same test and the server README's `xtc/stopRun`
