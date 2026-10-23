@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy;
 
-import java.lang.classfile.CodeBuilder;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -25,7 +24,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ByteHashCollector;

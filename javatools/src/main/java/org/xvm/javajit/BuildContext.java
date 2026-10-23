@@ -89,9 +89,11 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.Builder.CD_Class;
+import static org.xvm.javajit.Builder.CD_ConstantPool;
 import static org.xvm.javajit.Builder.CD_CtorCtx;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_GenericTypeResolver;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
@@ -104,6 +106,7 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DetachedBody;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.MD_EnsureType;
+import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
@@ -1446,20 +1449,46 @@ public class BuildContext {
      * Generate a load of the specified TypeConstant, resolving formal types against this build
      * context when possible.
      *
+     * <p>For example, a method on {@code List<Int>} loading {@code Array<Element>} loads
+     * {@code Array<Int>}.
+     *
      * <p>Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
-        builder.loadTypeConstant(this, code, type);
+        builder.loadTypeConstant(code, type);
+
+        if (!isStatic && type.containsFormalType(true)) {
+            code.dup()
+                .invokevirtual(CD_TypeConstant, "getConstantPool", md(CD_ConstantPool));
+
+            RegisterInfo regThis = loadThis(code);
+            if (regThis.type().isJitCCInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            loadCtx(code);
+            code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType)
+                .invokevirtual(CD_TypeConstant, "resolveGenerics",
+                        md(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
+        }
     }
 
     /**
-     * Generate a "load" for an nType object for the specified TypeConstant.
-     *
-     * <p>Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
+     * Load the {@code nType} for the specified represented type, resolving formal types against
+     * this build context.
+     */
+    public CodeBuilder loadType(CodeBuilder code, TypeConstant type) {
+        loadCtx(code);
+        loadTypeConstant(code, type);
+        return code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+    }
+
+    /**
+     * Generate a "load" for an nType object for the specified TypeConstant that must be a
+     * {@link TypeConstant#isTypeOfType() type-of-type}.
      *
      * <p>Out: nType object instance
      */
-    public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
+    public RegisterInfo loadDataType(CodeBuilder code, TypeConstant type) {
         TypeConstant dataType;
         if (type.isFormalType()) {
             if (type.isGenericType()) {
@@ -1475,22 +1504,19 @@ public class BuildContext {
 
         if (dataType.isFormalType()) {
             if (dataType.isGenericType()) {
+                String       name    = ((FormalConstant) dataType.getDefiningConstant()).getName();
                 RegisterInfo regThis = loadThis(code);
                 if (regThis.type().isJitCCInterface()) {
                     code.checkcast(CD_nObject);
                 }
-                loadCtx(code);
-                code.ldc(((FormalConstant) dataType.getDefiningConstant()).getName())
-                    .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+                Builder.loadTypeForName(code, name, ctxSlot(code));
                 return new SingleSlot(type, Specific, CD_nType, "");
             }
 
             return loadFormalType(code, (FormalConstant) dataType.getDefiningConstant());
         }
 
-        loadCtx(code);
-        loadTypeConstant(code, dataType);
-        code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
+        loadType(code, dataType);
         return new SingleSlot(type, Specific, CD_nType, "");
     }
 
@@ -1540,9 +1566,8 @@ public class BuildContext {
         if (targetReg.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
-        loadCtx(code);
-        code.ldc(formalConst.getName())
-            .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+        Builder.loadTypeForName(code, formalConst.getName(), ctxSlot(code));
+
         return new SingleSlot(formalConst.getType(), Specific, CD_nType, "");
     }
 
