@@ -210,12 +210,13 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   assertion, with assertions on, and so never completed its shutdown, and `Container.kill()` waited
   forever (`ab9fbddeb`, with `EmbeddingSupportTest`'s deterministic case). Tests that close with a time
   limit no longer do it in try-with-resources, whose second close waited without one.
-- [ ] A closed run can leave its service fibers running: `close()` calls `debugger.terminate()` and
-  then replaces the debugger at once, so a fiber that reaches no line in between runs on; and a run
-  whose `run()` has returned is not killed, since the runner drops its container then. Seen once
-  (2026-10-23), with the lsp-server suite loading the machine, most likely this way: `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`'s
-  spinner still ran, and `pauseStopsARunningProgramAtTheNextLineItReaches`, three tests later in the
-  same runtime, paused in it. The class passed alone three times, and `:javatools:test` alone.
+- [x] A closed run left its service fibers running: a run ended when `run()` returned, and the runner
+  then dropped its container, so a spinner, or a server that `run()` started, ran on in the worker,
+  where Stop could not reach it. Seen once (2026-10-23): `pauseStopsARunningProgramAtTheNextLineItReaches`
+  paused in another test's spinner. Now, as with `xtc run` (decided 2026-10-23), a run lasts until its
+  services have nothing left to do, and its container is then killed (`1473c7e89`;
+  `EmbeddingSupportTest`'s `nothingOfARunStillRunsOnceItIsClosed` and
+  `aRunEndsWhenItsServicesHaveNothingLeftToDo`).
 - [x] IntelliJ debug sessions (R7 step 4): LSP4IJ's DAP client, chosen 2026-10-22, through a process
   handler that carries the session over the language server connection (`69c2ff2f8`; X304 in
   IntelliJ `run-6846671860304618586`). LSP4IJ's DAP API is experimental, which Plugin Verifier reports
@@ -432,6 +433,25 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   `Container.kill()` hangs, with assertions on, once a service has a fiber that ended with a call still
   out. It is on #693 since 2026-10-23 (`e618f7a22`). Whether to make it a master pull request, written
   to stand alone on master, is to be discussed.
+- [ ] Candidates for master on their own, found by a scan of this branch's fixes outside `lang/` against
+  master (2026-10-23), each reproduced on master:
+  - `1473c7e89`: an embedded run ended when `run()` returned, and the services it left at work ran on
+    with nothing able to stop them; now it lasts until they have nothing left to do, as `xtc run` does,
+    and is then killed. Master has the runner and `EmbeddingSupport` (#703); the `xtc/runExited`
+    README line stays here. Also for #693.
+  - One hunk of `7b9b5856a`, a `break` in `Lexer.eatStringChars()`: `xcc` hangs forever on a file that
+    ends inside a string, template or `|` literal, since the repeated error is dropped as a duplicate
+    and never reaches the error limit (master's `Lexer.java:1397`). The errs test uses errs-only APIs
+    and needs writing again.
+  - `814153a42`: two diagnostics with the same code and place whose parameters hash alike are taken for
+    duplicates, and the second is dropped (master's `ErrorListener.java:318`); one line, and a test
+    written again without errs' Site API. It could share a pull request with the lexer fix.
+  - Optional, `6312fd242`: an embedded run that reaches `assert:debug` reads the host's standard input;
+    only third-party hosts reach it on master.
+  The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
+- [ ] A compiler crash on both master and this branch: a file that ends in `$"abc{x` or in `"abc\` fails
+  with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression` and
+  `eatStringChars`.
 - Reviewers when submitting: ggleyzer, cpurdy, thegridman.
 
 ## 6. VS Code Marketplace
