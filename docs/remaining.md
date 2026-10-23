@@ -414,8 +414,9 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
   2026-10-23: `eddd77ee9` as `c7fedbe53`, `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
-  change, `1473c7e89` as `a6c3f519d`, and `89e519d99` as `78e0a9deb`; the other commits since are
-  debugger work and its records).
+  change, `1473c7e89` as `a6c3f519d`, `89e519d99` as `78e0a9deb`, and #717's three fixes as `076907bda`
+  (its test only, since #693 stopped at an unterminated string already), `3ce7fc147` and `18a8d910e`;
+  the other commits since are debugger work and its records).
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
 - [ ] Submit, when authorized: compilation-owned syntax and semantic facts
@@ -460,9 +461,9 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   - Optional, `6312fd242`: an embedded run that reaches `assert:debug` reads the host's standard input;
     only third-party hosts reach it on master.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
-- [ ] A compiler crash on both master and this branch: a file that ends in `$"abc{x` or in `"abc\` fails
-  with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression` and
-  `eatStringChars`.
+- [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
+  failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
+  `eatStringChars` and `eatCharLiteral`. Fixed here (`92d87bb08`), in master pull request #717, and on #693.
 - Reviewers when submitting: ggleyzer, cpurdy, thegridman.
 
 ## 6. VS Code Marketplace
