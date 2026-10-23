@@ -407,8 +407,8 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-23: `eddd77ee9` as `c7fedbe53` and `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
-  change; the other commits since are debugger work and its records).
+  2026-10-23: `eddd77ee9` as `c7fedbe53`, `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
+  change, and `1473c7e89` as `a6c3f519d`; the other commits since are debugger work and its records).
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
 - [ ] Submit, when authorized: compilation-owned syntax and semantic facts
@@ -438,7 +438,7 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   - `1473c7e89`: an embedded run ended when `run()` returned, and the services it left at work ran on
     with nothing able to stop them; now it lasts until they have nothing left to do, as `xtc run` does,
     and is then killed. Master has the runner and `EmbeddingSupport` (#703); the `xtc/runExited`
-    README line stays here. Also for #693.
+    README line stays here. On #693 since 2026-10-23 (`a6c3f519d`).
   - One hunk of `7b9b5856a`, a `break` in `Lexer.eatStringChars()`: `xcc` hangs forever on a file that
     ends inside a string, template or `|` literal, since the repeated error is dropped as a duplicate
     and never reaches the error limit (master's `Lexer.java:1397`). The errs test uses errs-only APIs
