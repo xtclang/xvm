@@ -290,6 +290,11 @@ tasks.test {
     // Enable FFM native access for tree-sitter integration tests (suppresses JDK warning)
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 
+    // Mockito's inline mock maker appends its agent to the boot class path at run time, after which the JVM
+    // can share only boot classes and says so in a VM warning, once per test JVM; without class sharing
+    // there is nothing to warn about, and the JDK classes it would share load from the image instead
+    jvmArgs("-Xshare:off")
+
     // Pass log level to logback: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG
     systemProperty("xtc.logLevel", logLevel)
     environment("XTC_LOG_LEVEL", logLevel)
