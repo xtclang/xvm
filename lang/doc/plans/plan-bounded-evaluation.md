@@ -1,7 +1,8 @@
 # Bounded evaluation in the debugger: design for review
 
-**Status (2026-10-23): decided; tier 1 is done (`fda3dc3e8` runtime, `0540055e9` editors, shared X313), tier 2 is
-next.** This is R7's last feature in the
+**Status (2026-10-23): decided; tier 1 is done (`fda3dc3e8` runtime, `0540055e9` editors, shared X313); tier 2's
+first step, the runtime running code on the stopped fiber, is done (`d77fb9b51`), and its deadline is next.** This
+is R7's last feature in the
 [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance): Debug Console expressions,
 watches and hovers on any expression, conditions and logpoint messages beyond paths, and, through them, R10's
 `toString()` on demand and computed properties. The questions at the end are decided.
@@ -157,6 +158,16 @@ improvement, not part of this plan.
    associated fibers, and the opt-in to running the whole program. The hard part, and where the tests go: an
    expression that loops, one that throws, one that calls an idle service, one that calls a stopped service,
    one with a side effect, a breakpoint inside, terminating or resuming during an evaluation, and the opt-in.
+   In five steps, each its own commit:
+   1. R7r, the runtime (`d77fb9b51`): `SessionDebugger.run()` and the fiber waiting again in the same stop;
+      a thrown exception, a side effect, a breakpoint inside, an idle service and a resume during a run are
+      tested. A run's value shows as its `toString()`, an expression without one runs as a statement, and
+      only the run's fiber and the fibers of other services that it calls run.
+   2. R7s, the runtime: the deadline, cancel, and resume and terminate ending a run; the loop and the
+      stopped service.
+   3. R7t, the server and worker: the console's `repl` context to tier 2, `cancel`, `invalidated`.
+   4. R7u, the editors and shared X314.
+   5. R7v, the `evaluationRunsProgram` opt-in, last, since it lets waiting fibers run.
 3. **R10 on top of tier 2**: `toString()` on demand and computed properties as lazy variables, which also lets
    UP35 be checked in IntelliJ with our adapter.
 
