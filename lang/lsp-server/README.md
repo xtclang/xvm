@@ -634,11 +634,18 @@ precedence, such as `point.x + 1` or `0 < i && ints[i] > 0`, which run the runti
 operations, so they compute what the program would. The value expands like a variable, and what
 cannot be evaluated fails with the reason, such as `There is no variable "nope" in this frame.`, or,
 for an operation that would run the program's code, the method it would run: `s + i would run
-Stringable.toString(), which the debugger does not run here.` Calls are not evaluated yet. Without a frame, a line typed in the debug console is the program's input. What
+Stringable.toString(), which the debugger does not run here.` A line typed in the debug console
+that this refuses, such as a call, runs as code, compiled in the frame, on the fiber that waits
+there, for at most two seconds; only the fibers of the services it calls run meanwhile, and the
+program stays stopped. Its answer is its value's `toString()`, `(no value)` for a statement, or the
+reason it failed: a compile error, what it threw, or its time limit. `cancel` ends it sooner, and
+it answers `cancelled`. What the code changes stays changed, and once it has run, an `invalidated`
+event for the `variables` area tells a client that takes it to read the variables again. Without a
+frame, a line typed in the debug console is the program's input. What
 the program printed before it stopped is sent before the stop. Terminating or disconnecting a
 stopped program ends it where it is, without running more of it. The session advertises
 `configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
-logpoints, `exceptionInfo`, and its exception filters with their options, and refuses `attach`. A run without the
+logpoints, `exceptionInfo`, `cancel`, and its exception filters with their options, and refuses `attach`. A run without the
 debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
 has no terminal for the command-line debugger.
 
