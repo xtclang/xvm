@@ -360,6 +360,41 @@ public class SessionDebuggerTest {
             }
             """;
 
+    /**
+     * A module whose run() prints "stopped" on line 5 and returns 3; forever() loops forever, and
+     * so does stubborn(), which catches every exception that its loop throws.
+     */
+    private static final String ENDS = """
+            module Ends {
+                Int run() {
+                    @Inject Console console;
+                    Int n = 3;
+                    console.print("stopped");
+                    return n;
+                }
+
+                Int forever(Int n) {
+                    Int count = n;
+                    for (Int i = 0; i >= 0; ++i) {
+                        ++count;
+                    }
+                    return count;
+                }
+
+                Int stubborn(Int n) {
+                    Int count = n;
+                    for (Int i = 0; i >= 0; ++i) {
+                        try {
+                            ++count;
+                        } catch (Exception e) {
+                            ++count;
+                        }
+                    }
+                    return count;
+                }
+            }
+            """;
+
     private static final String LOOP = """
             module Loop {
                 Int run() {
@@ -1343,16 +1378,16 @@ public class SessionDebuggerTest {
 
             // neither the breakpoint in bump() nor the exception stops stop the run's code
             assertEquals("1", runCode(session, show, "box.bump(1)").value());
-            assertFails("box.fail() threw IllegalState: no.", session.run(show, "box.fail()"));
+            assertFails("box.fail() threw IllegalState: no.", session.run(show, "box.fail()", RUN_LIMIT));
             assertEquals(null, stops.poll());
 
             var failure = assertThrows(ExecutionException.class,
-                    () -> session.run(show, "nope + 1").get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+                    () -> session.run(show, "nope + 1", RUN_LIMIT).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
             Throwable cause  = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
             String    reason = cause.getMessage();
             assertTrue(reason.startsWith("nope + 1 does not compile: "), reason);
             assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
-                    session.run(show + 1000, "n"));
+                    session.run(show + 1000, "n", RUN_LIMIT));
 
             // the run's exception was its own: the program goes on from where it stopped
             session.setBreakpoints(source.toString(), List.of());
@@ -1381,7 +1416,7 @@ public class SessionDebuggerTest {
 
             // the run throws another exception, which is its answer and stops nothing
             assertEquals("1", runCode(session, check, "n + 1").value());
-            assertFails("check(1) threw IllegalArgument: uncaught one.", session.run(check, "check(1)"));
+            assertFails("check(1) threw IllegalArgument: uncaught one.", session.run(check, "check(1)", RUN_LIMIT));
             assertEquals(null, stops.poll());
 
             // the program's own exception goes on as it did: run() catches it and prints "caught"
@@ -1394,7 +1429,7 @@ public class SessionDebuggerTest {
     }
 
     @Test
-    public void readsAndOtherRunsWaitForARunWhichRunsToItsEndAlsoOnceTheProgramResumes() throws Exception {
+    public void readsAndOtherRunsWaitForARunAndTheProgramsResumeEndsOne() throws Exception {
         Path                  source  = compile("Waits", TWICE.replace("Twice", "Waits"));
         Stops                 stops   = new Stops();
         var                   session = new SessionDebugger(stops);
@@ -1421,10 +1456,10 @@ public class SessionDebuggerTest {
 
             // the run waits for a line of input; a read of its fiber's frames and another run,
             // asked for meanwhile, wait for it, one at a time
-            CompletableFuture<Variable> line = session.run(caller, "console.readLine()");
+            CompletableFuture<Variable> line = session.run(caller, "console.readLine()", RUN_LIMIT);
             assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(line));
             CompletableFuture<List<Variable>> vars   = session.variables(locals);
-            CompletableFuture<Variable>       second = session.run(twice, "n + 1");
+            CompletableFuture<Variable>       second = session.run(twice, "n + 1", RUN_LIMIT);
             Thread.sleep(200);
             assertFalse(line.isDone(), () -> "answered first: " + answer(line));
             assertFalse(vars.isDone());
@@ -1435,17 +1470,154 @@ public class SessionDebuggerTest {
             assertEquals("21", byName(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS)).get("n").value());
             assertEquals("22", second.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
 
-            // a run that the program's resume finds in progress runs to its end, and the program
-            // then goes on
-            CompletableFuture<Variable> resumed = session.run(caller, "console.readLine()");
+            // a run that the program's resume finds in progress ends at once; its code, which waits
+            // for input, unwinds once it has its line, and the program then goes on
+            CompletableFuture<Variable> resumed = session.run(caller, "console.readLine()", RUN_LIMIT);
             assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(resumed));
             session.resume();
-            assertFalse(resumed.isDone());
+            assertFails("The program resumed before the expression was evaluated.", resumed);
             lines.add("later");
-            assertEquals("later", resumed.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
             assertEquals(42L, control.result());
         }
+    }
+
+    @Test
+    public void aRunEndsAtItsTimeLimitAlsoWhenItsCodeCatchesExceptionsAndTheProgramStaysStopped()
+            throws Exception {
+        Path  source  = compile("Ends", ENDS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Ends"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
+
+        Control control = run("Ends", new StringWriter(), session);
+        try (control) {
+            Stop     stop  = stops.next();
+            int      frame = session.stackTrace(stop.threadId()).getFirst().id();
+            Duration limit = Duration.ofMillis(300);
+
+            // the code unwinds, so the next run starts at once
+            assertFails("forever(n) did not finish within 300 ms, so it was ended.",
+                    session.run(frame, "forever(n)", limit));
+            assertEquals("4", runCode(session, frame, "n + 1").value());
+
+            // also when it catches the exception that unwinds it, which is raised again at each line
+            assertFails("stubborn(n) did not finish within 300 ms, so it was ended.",
+                    session.run(frame, "stubborn(n)", limit));
+            assertEquals("4", runCode(session, frame, "n + 1").value());
+
+            // the program is stopped where it was, and goes on from there
+            assertTrue(session.isStopped());
+            assertEquals("Ends.run:5", where(session, stop));
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(3L, control.result());
+        }
+    }
+
+    @Test
+    public void cancellingARunOrResumingTheProgramEndsTheRunsCode() throws Exception {
+        Path  source  = compile("Cancels", ENDS.replace("Ends", "Cancels"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Cancels"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
+
+        Control control = run("Cancels", new StringWriter(), session);
+        try (control) {
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+
+            // a cancelled run's code unwinds, so the next run starts
+            CompletableFuture<Variable> cancelled = session.run(frame, "forever(n)", RUN_LIMIT);
+            Thread.sleep(200);
+            assertTrue(cancelled.cancel(true));
+            assertEquals("4", runCode(session, frame, "n + 1").value());
+
+            // the program's resume ends a run in progress, and the program goes on
+            CompletableFuture<Variable> resumed = session.run(frame, "forever(n)", RUN_LIMIT);
+            Thread.sleep(200);
+            session.resume();
+            assertFails("The program resumed before the expression was evaluated.", resumed);
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(3L, control.result());
+        }
+    }
+
+    @Test
+    public void closingTheProgramEndsARunInProgress() throws Exception {
+        Path  source  = compile("Terminates", ENDS.replace("Ends", "Terminates"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Terminates"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
+
+        Control control = run("Terminates", new StringWriter(), session);
+        Stop    stop    = stops.next();
+        int     frame   = session.stackTrace(stop.threadId()).getFirst().id();
+
+        CompletableFuture<Variable> running = session.run(frame, "forever(n)", RUN_LIMIT);
+        Thread.sleep(200);
+        // not in a try-with-resources: closing again after a close that timed out would wait without a limit
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        assertFails("The program was stopped before the expression ran to its end.", running);
+        assertFalse(control.running());
+
+        // the stop's clock runs again, although its fiber ended in the run: the next run, whose
+        // service is still at work when run() returns, ends, as the runner waits on that clock
+        // until its services have nothing left to do
+        compile("Afterwards", """
+                module Afterwards {
+                    service Worker {
+                        Int work() {
+                            Int sum = 0;
+                            for (Int i : 0 ..< 100_000) {
+                                sum += i;
+                            }
+                            return sum;
+                        }
+                    }
+
+                    void run() {
+                        Worker worker = new Worker();
+                        worker.work^();
+                    }
+                }
+                """);
+        Control after = run("Afterwards", new StringWriter(), null);
+        assertTimeoutPreemptively(RUN_LIMIT, after::join);
+        // the close is what waits on that clock, so it too has a limit, outside a try-with-resources
+        assertTimeoutPreemptively(RUN_LIMIT, after::close);
+    }
+
+    @Test
+    public void aRunThatCallsAServiceWhoseFiberIsStoppedEndsAtItsTimeLimitAndSaysWhy() throws Exception {
+        Path  source  = compile("Blocked", HOLDS.replace("Holds", "Blocked"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Blocked"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 16)));
+
+        Control control = run("Blocked", new StringWriter(), session);
+        Stop    stop    = stops.next();
+        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (session.threads().size() < 2) {
+                Thread.sleep(10);
+            }
+        });
+
+        // the spinner's fiber waits at a line in its service, which therefore cannot answer
+        int frame = session.stackTrace(stop.threadId()).getFirst().id();
+        assertFails("spinner.spins did not finish within 300 ms, so it was ended. It waits, perhaps for a service"
+                + " whose fiber is stopped, which does not run until the program resumes.",
+                session.run(frame, "spinner.spins", Duration.ofMillis(300)));
+
+        // once the program resumes, the call is answered and the run's code unwinds; the spinner
+        // never ends, so closing the run ends it, outside a try-with-resources as above
+        session.resume();
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        assertFalse(control.running());
     }
 
     @Test
@@ -1539,7 +1711,7 @@ public class SessionDebuggerTest {
     }
 
     private static Variable runCode(SessionDebugger session, int frame, String expression) throws Exception {
-        return session.run(frame, expression).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return session.run(frame, expression, RUN_LIMIT).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
 
     /**
