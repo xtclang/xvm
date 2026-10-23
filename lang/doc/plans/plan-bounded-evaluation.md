@@ -1,10 +1,10 @@
 # Bounded evaluation in the debugger: design for review
 
-**Status (2026-10-23): proposed, not started.** This is R7's last feature in the
+**Status (2026-10-23): decided, not started.** This is R7's last feature in the
 [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance): Debug Console expressions,
 watches and hovers on any expression, conditions and logpoint messages beyond paths, and, through them, R10's
-`toString()` on demand and computed properties. It needs a decision on the open questions at the end before any
-code is written.
+`toString()` on demand and computed properties. The questions at the end are decided, so the code can start with
+tier 1.
 
 ## What there is today
 
@@ -86,8 +86,26 @@ For the Debug Console, and on demand for `toString()` and computed properties:
   they wait, so the stopped program does not run on.
 - **Calls into other services.** Fibers associated with the evaluating one (`Fiber.isAssociated()`) do not
   wait at lines while it runs, so a call into an idle service works. A call into a service whose fiber is
-  stopped cannot work, and the deadline below ends it, with that reason.
-- **Deadline.** Each evaluation has a time limit, 2 seconds by default for the console. Every line the
+  stopped cannot work, and the deadline below ends it, with that reason. Every other fiber stays where it
+  waits, so what the user inspects does not change underneath (decided 2026-10-23).
+
+  Why this, and not letting the whole program run as Java debuggers do by default: Java threads share memory
+  and locks, so a method evaluated on a stopped thread can need a lock that another stopped thread holds, and
+  only letting every thread run avoids that deadlock. An Ecstasy service runs one fiber at a time and shares no
+  mutable state with others, so an evaluation can only wait on another service by calling it, and the fibers
+  that call reaches run. What it cannot do, and the deadline ends with the reason: call into a service whose
+  own fiber is stopped mid-method, and wait for work that an unrelated fiber would do, such as a future that
+  another service completes.
+- **Opt in to running the whole program.** A launch can let the whole program run while an evaluation does
+  (`evaluationRunsProgram` in VS Code's `launch.json`, an option of IntelliJ's Ecstasy Application
+  configuration, off by default), for programs that need it. Its fibers then run as without a debugger,
+  without stopping at breakpoints, and wait at their next line once the evaluation ends; the stop's frames
+  and variables may have changed by then, which `invalidated` tells the editors.
+- **Documented where it is built.** The implementation explains this model in a long comment where it lives,
+  in `SessionDebugger`: which fibers run during an evaluation and why, how the deadline and cancel end it,
+  and its known limits (a call into a stopped service, waiting on unrelated fibers, a native call that blocks).
+- **Deadline.** Each evaluation has a fixed time limit (decided 2026-10-23): 2 seconds for the console, and 1
+  second for a value the user opens on demand, `toString()` or a computed property (R10). Every line the
   evaluating fiber or its associated fibers reach checks the deadline, so loops end. Past it, the debugger
   raises an exception into the evaluation's frames, as it ends a terminated program's fibers, and they unwind
   to the lambda. A native call that blocks cannot be interrupted: the answer then fails at the deadline, the
@@ -123,10 +141,10 @@ improvement, not part of this plan.
 1. **Tier 1** (runtime evaluator, then the editors): conditions, logpoints and watches with operators. Low
    risk: no code runs. Shared playbook cases for a comparison condition and an arithmetic logpoint, in both
    editors, since IntelliJ sends conditions.
-2. **Tier 2 for the Debug Console**: the call on the stopped fiber, the deadline, `cancel`, `invalidated`, and
-   associated fibers. The hard part, and where the tests go: an expression that loops, one that throws, one
-   that calls an idle service, one that calls a stopped service, one with a side effect, a breakpoint inside,
-   and terminating or resuming during an evaluation.
+2. **Tier 2 for the Debug Console**: the call on the stopped fiber, the deadline, `cancel`, `invalidated`,
+   associated fibers, and the opt-in to running the whole program. The hard part, and where the tests go: an
+   expression that loops, one that throws, one that calls an idle service, one that calls a stopped service,
+   one with a side effect, a breakpoint inside, terminating or resuming during an evaluation, and the opt-in.
 3. **R10 on top of tier 2**: `toString()` on demand and computed properties as lazy variables, which also lets
    UP35 be checked in IntelliJ with our adapter.
 
@@ -135,10 +153,11 @@ improvement, not part of this plan.
 1. ~~Tier 1's reach.~~ Decided 2026-10-23: every built-in numeric type from the start, through the runtime's
    native operations, which also checks the runtime's model of them.
 2. ~~Watches and code.~~ Decided 2026-10-23: never, for now; opting in is a later improvement.
-3. **Deadlines.** 2 seconds for the console, and how long for an on-demand `toString()`? Should they be
-   settings?
-4. **Other services during an evaluation.** Only associated fibers run (proposed), or should the whole program
-   run while the console evaluates, as Java debuggers do by default, at the cost of the stop's state changing
-   underneath?
-5. **Side effects in the console.** Allowed and announced with `invalidated` (proposed), or refused for
-   expressions that assign?
+3. ~~Deadlines.~~ Decided 2026-10-23: fixed, 2 seconds for the console and 1 second for values opened on
+   demand; a setting only if a program needs one.
+4. ~~Other services during an evaluation.~~ Decided 2026-10-23: only the fibers the evaluation calls into
+   run, documented in the code with why and its limits, with a launch option to let the whole program run.
+5. ~~Side effects in the console.~~ Decided 2026-10-23: allowed, and announced with `invalidated`, as the first
+   implementation.
+
+All questions are decided; the plan is ready to start with tier 1.
