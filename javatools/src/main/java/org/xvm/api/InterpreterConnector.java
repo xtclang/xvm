@@ -86,6 +86,13 @@ public class InterpreterConnector
         }
     }
 
+    /**
+     * @return true if no service of this connector's runtime is running or about to
+     */
+    boolean isRuntimeIdle() {
+        return f_runtime.isIdle();
+    }
+
     @Override
     public void start(Map<String, List<String>> mapInjections) {
         if (!m_fStarted) {
