@@ -53,7 +53,7 @@ mockito = "5.24.0"
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
 lang-kotlin = "2.4.21"
-lang-kotlinx-serialization = "1.11.0"
+lang-kotlinx-serialization = "1.12.0"
 lang-ktlint = "1.8.0"
 
 # =============================================================================
@@ -103,7 +103,7 @@ lang-zig = "0.15.2"
 # Not a project dependency. The IntelliJ Platform and node-gradle Gradle plugins put
 # vulnerable Jackson versions on their build script classpaths, and both are already
 # at their latest release. The Jackson BOM raises that floor without pinning.
-lang-jackson = "2.22.3"
+lang-jackson = "2.22.4"
 
 [plugins]
 
