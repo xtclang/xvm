@@ -1162,7 +1162,7 @@ public class Compiler {
     /**
      * Construct target {0} is not in the inheritance chain.
      */
-    public static final String INVALID_CONSTRUCT_CALL              = "COMPILER-156";
+    public static final String INVALID_CONSTRUCT_TARGET            = "COMPILER-156";
     /**
      * Super class constructor is skipped.
      */
@@ -1379,6 +1379,10 @@ public class Compiler {
      * to enforce the desired precedence.
      */
     public static String EXPRESSION_UNREACHABLE                    = "COMPILER-208";
+    /**
+     * The "construct" call can only be made from within a constructor.
+     */
+    public static final String INVALID_CONSTRUCT_CALL              = "COMPILER-209";
     /**
      * {0} is not yet implemented.
      */
