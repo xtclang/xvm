@@ -382,10 +382,7 @@ public class InvocationExpression
 
             // handle method or function
             if (argMethod instanceof MethodConstant idMethod) {
-                MethodStructure method = m_method;
-                if (method == null) {
-                    int q=0;
-                }
+                MethodStructure     method      = m_method;
                 int                 cTypeParams = method.getTypeParamCount();
                 int                 cReturns    = method.getReturnCount();
                 GenericTypeResolver resolver    = null;
@@ -1833,6 +1830,12 @@ public class InvocationExpression
         boolean        fConstruct = "construct".equals(sName);
         boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
+
+        if (fConstruct && !ctx.isConstructor()) {
+            log(errs, Severity.ERROR, Compiler.INVALID_CONSTRUCT_CALL);
+            return null;
+        }
+
         if (exprLeft == null) {
             Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
 
@@ -2129,7 +2132,7 @@ public class InvocationExpression
                         ClassStructure clzThis = ctx.getThisClass();
                         Contribution   contrib = clzThis.findContribution(idLeft);
                         if (contrib == null) {
-                            log(errs, Severity.ERROR, Compiler.INVALID_CONSTRUCT_CALL,
+                            log(errs, Severity.ERROR, Compiler.INVALID_CONSTRUCT_TARGET,
                                     idLeft.getValueString());
                             return null;
                         }
