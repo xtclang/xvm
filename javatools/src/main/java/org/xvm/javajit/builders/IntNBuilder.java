@@ -9,6 +9,8 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
 
+import java.util.List;
+
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.MethodInfo;
@@ -37,8 +39,8 @@ public class IntNBuilder extends IntNumberBuilder {
     }
 
     @Override
-    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor,
-                               String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
 
         TypeConstant[] paramTypes = constructor.getSignature().getRawParams();
         if (paramTypes.length != 1) {

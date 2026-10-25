@@ -155,6 +155,16 @@ public class CommonBuilder
      */
     protected static final String CONST_PROP = "$sc";
 
+    /**
+     * Subclassing support.
+     *
+     * @return true iff the Java class can represent different Ecstasy types and each instance must
+     *         retain its actual Ecstasy type
+     */
+    protected boolean hasRuntimeType() {
+        return thisType.hasJitRuntimeType();
+    }
+
     @Override
     public void build(ClassBuilder classBuilder) {
         implSize = ShallowSizeOf.align(computeInstanceSize());
@@ -469,7 +479,7 @@ public class CommonBuilder
             JitParamDesc[] targetParams, int ctxIndex) {
 
         int     ctorExtra = ctorMD.parameterCount() - ctorParams.length;
-        boolean hasType   = typeInfo.hasGenericTypes();
+        boolean hasType   = hasRuntimeType();
         boolean hasOuter  = classStruct.isInstanceChild();
 
         assert ctorParams.length == targetParams.length;
@@ -673,7 +683,6 @@ public class CommonBuilder
                 break;
 
             default:
-                // TODO: support for mixin, annotations, etc
                 throw new RuntimeException("Not implemented " + thisType);
         }
         classBuilder.withFlags(flags);
@@ -789,7 +798,7 @@ public class CommonBuilder
             }
         }
 
-        if (format != Format.INTERFACE && typeInfo.hasGenericTypes()) {
+        if (format != Format.INTERFACE && hasRuntimeType()) {
             for (var entry : typeInfo.getTypeParams().entrySet()) {
                 if (entry.getKey() instanceof String name) {
                     assembleGenericProperty(classBuilder, name);
@@ -1854,7 +1863,7 @@ public class CommonBuilder
      *       to at least answer "is(struct)" question
      */
     protected void assembleXvmType(ClassBuilder classBuilder) {
-        boolean hasType = typeInfo.hasGenericTypes();
+        boolean hasType = hasRuntimeType();
 
         if (hasType && !isNativeField("$type")) {
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
@@ -1913,9 +1922,8 @@ public class CommonBuilder
 
             if (!typeInfo.isAbstract() && method.isConstructorOnly() ||
                     isInterface && method.isVirtualConstructor()) {
-                String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmDesc);
-                assembleNew(classBuilder, method, newName, newDesc);
+                String newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
+                assembleInstantiator(classBuilder, method, newName, (JitCtorDesc) jmDesc);
             }
         }
     }
@@ -3982,7 +3990,16 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble the "$new" method.
+     * Subclassing support. Assemble the instantiator methods for an Ecstasy constructor.
+     */
+    protected void assembleInstantiator(ClassBuilder classBuilder, MethodInfo constructor,
+                                        String jitName, JitCtorDesc ctorDesc) {
+        JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, art.CD(), ctorDesc);
+        assembleNew(classBuilder, constructor, jitName, newDesc, null);
+    }
+
+    /**
+     * Assemble the "$new" (instantiator) method.
      *
      * <pre><code>
      * Ecstasy:
@@ -4045,8 +4062,7 @@ public class CommonBuilder
      *    // step 4: a constructor context is required if a “finally” chain will exist
      *    CtorCtx cctx = ctx.ctorCtx();
      *
-     *    // step 5: annotation constructors are executed
-     *    // (TODO GG / to discuss)
+     *    // step 5: annotation constructors are called
      *
      *    // step 6: the constructor gets called
      *    // - we do NOT have to save off the arguments for the `finally()` call
@@ -4112,11 +4128,16 @@ public class CommonBuilder
      *    // ...
      * }
      * </code></pre>
+     *
+     * @param jitName           the constructor's JIT name
+     * @param jmd               the constructor's JitMethodDesc
+     * @param annoConstructors  (optional) the annotation constructors to invoke in order after
+     *                          instance initialization and before the base constructor
      */
     protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
-                               JitMethodDesc jmd) {
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         boolean   isSingleton = typeInfo.isSingleton();
-        boolean   hasType     = typeInfo.hasGenericTypes();
+        boolean   hasType     = hasRuntimeType();
         boolean   hasOuter    = classStruct.isInstanceChild();
         ClassDesc CD_this     = art.CD();
 
@@ -4204,9 +4225,10 @@ public class CommonBuilder
             // step 4: a constructor context is required if a “finally” chain will exist
             // CtorCtx cctx = ctx.ctorCtx();
 
-            JitCtorDesc ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this);
-            boolean     hasCtorCtx = ctorDesc.hasCtorCtx();
-            int         cctxSlot   = -1;
+            TypeConstant ownerType  = getConstructorOwnerType();
+            JitCtorDesc  ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this, ownerType);
+            boolean      hasCtorCtx = ctorDesc.hasCtorCtx();
+            int          cctxSlot   = -1;
             if (hasCtorCtx) {
                 cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
                 if (debugInfo) {
@@ -4217,22 +4239,16 @@ public class CommonBuilder
                     .astore(cctxSlot);
             }
 
-            // step 6: call the constructor
+            // step 5-6: call annotation constructors and the "main" constructor
             // construct$17(ctx, [cctx], thi$, x, y, z);
             String ctorName = constructor.ensureJitMethodName(typeSystem);
 
-            code.aload(ctxSlot);
-            if (hasCtorCtx) {
-                code.aload(cctxSlot);
-            }
-            code.aload(thisSlot);
-
-            // if this "new$" is optimized, the underlying constructor is optimized and vice versa
-            assert jmd.isOptimized == ctorDesc.isOptimized;
+            // annotation arguments can optimize "$new" while the base constructor stays standard
+            assert !ctorDesc.isOptimized || jmd.isOptimized;
 
             JitParamDesc[] ctorPds;
             MethodTypeDesc ctorMd;
-            if (jmd.isOptimized) {
+            if (ctorDesc.isOptimized) {
                 ctorName += OPT;
                 ctorPds   = ctorDesc.optimizedParams;
                 ctorMd    = ctorDesc.optimizedMD;
@@ -4241,12 +4257,24 @@ public class CommonBuilder
                 ctorMd  = ctorDesc.standardMD;
             }
 
-            for (int i = 0, c = ctorPds.length; i < c; i++) {
-                JitParamDesc pd = ctorPds[i];
-                load(code, pd.cd, code.parameterSlot(extraSlots + i));
+            // annotation constructors go first
+            if (annoConstructors != null) {
+                invokeAnnotationConstructors(code, annoConstructors, ctxSlot, cctxSlot, thisSlot,
+                        extraSlots + ctorPds.length);
             }
 
-            code.invokestatic(CD_this, ctorName, ctorMd);
+            // now call the "main" constructor:
+            // construct$17(ctx, [cctx], thi$, x, y, z);
+            code.aload(ctxSlot);
+            if (hasCtorCtx) {
+                code.aload(cctxSlot);
+            }
+            code.aload(thisSlot);
+
+            for (int i = 0, c = ctorPds.length; i < c; i++) {
+                load(code, ctorPds[i].cd, code.parameterSlot(extraSlots + i));
+            }
+            code.invokestatic(getImplDesc(ownerType), ctorName, ctorMd);
 
             // step 7: run each validator in the construction chain
             MethodInfo validator = typeInfo.getMethodBySignature(pool().sigValidator());
@@ -4258,15 +4286,21 @@ public class CommonBuilder
                     IdentityConstant containerId = validatorId.getNamespace();
                     Format           format      = containerId.getComponent().getFormat();
 
-                    // mixin and annotation validator bodies are generated on the incorporating class
-                    TypeConstant typeTarget = containerId.equals(thisId) || isEmbedded(format)
+                    // mixin and annotation validators are generated on this incorporating class;
+                    // this class's own validator is supplied by the constructor owner;
+                    // inherited class validators are supplied by their declaring types
+                    TypeConstant typeTarget = isEmbedded(format)
                             ? thisType
-                            : containerId.getFormalType().resolveGenerics(pool(), thisType);
+                            : containerId.equals(thisId)
+                                    ? ownerType
+                                    : containerId.getFormalType().resolveGenerics(pool(), thisType);
 
                     assert !typeTarget.isXvmPrimitive();
-                    ClassDesc cdReceiver = thisType.isVirtualChildClass() || typeTarget != thisType
-                            ? getCCDesc(typeTarget)
-                            : CD_this;
+                    ClassDesc cdReceiver = typeTarget.isAnnotated()
+                            ? getImplDesc(typeTarget)
+                            : thisType.isVirtualChildClass() || typeTarget != thisType
+                                    ? getCCDesc(typeTarget)
+                                    : CD_this;
                     ClassDesc cdTarget = typeTarget.isVirtualChildClass()
                             ? getImplDesc(typeTarget)
                             : cdReceiver;
@@ -4287,6 +4321,29 @@ public class CommonBuilder
                 .areturn();
         });
     }
+
+    /**
+     * @return the type whose Java implementation supplies the Ecstasy constructor body invoked by
+     *         the instantiator
+     */
+    protected TypeConstant getConstructorOwnerType() {
+        return thisType;
+    }
+
+    /**
+     * Emit annotation constructor calls before the base constructor and validators.
+     *
+     * @param constructors  the selected annotation constructors in invocation order
+     * @param paramIx       the parameter index of the first annotation argument
+     */
+    protected void invokeAnnotationConstructors(CodeBuilder code, List<AnnotationConstructor> constructors,
+                                                int ctxSlot, int cctxSlot, int thisSlot, int paramIx) {
+    }
+
+    /**
+     * An annotation constructor and its position in the annotated composition.
+     */
+    protected record AnnotationConstructor(int annoIndex, MethodInfo method, JitCtorDesc desc) {}
 
     /**
      * Assemble the property accessor (optimized if possible, standard otherwise).

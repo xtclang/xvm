@@ -112,7 +112,7 @@ public class JitTypeDesc {
      * @return the widening ClassDesc if the specified type needs to be widened; null otherwise
      */
     public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
-        return type.isSingleUnderlyingClass(true)
+        return type.isSingleUnderlyingClass(true) && !type.getJitCCType().isAnnotated()
                 ? null
                 : type.getJitCCDesc(builder.typeSystem);
     }

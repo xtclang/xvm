@@ -546,7 +546,7 @@ inheritance between differently named children.
     and source contributions to compile.
 
 
-IV. Test coverage
+IV. Test coverage for virtual classes
 
 Regression tests should cover teh following scenarios:
     a) the same receiver passed as both B.C1 and D.C0, with identity preserved;
@@ -557,6 +557,123 @@ Regression tests should cover teh following scenarios:
     f) missing C0 or C1 declarations and additional parent and child inheritance levels;
     g) generic children and the standard/optimized signatures required by their JIT shapes.
 
+
+V. Annotation classes
+
+1. Consider the following Ecstasy topology:
+        class B implements I {}
+        annotation A0 into I {}
+   and a composition "@A0 B".
+
+   The JIT compiler will create the following Java classes:
+        a) an interface JCC(I);
+        b) an interface JCC(A0) that extends JCC(I);
+        c) a class JIC(B) that implements JCC(I);
+        d) a class JIC(@A0 B), whose name may look like ""@A0$B#N" that extends JIC(B), implements
+           JCC(A0) (and JCC(I) by implication); N refers to the cannonical annotated type with
+           annotation parameters stripped
+
+2. Applying multiple annotations produces multiple implementation classes. For the composition of
+   "@A1 @A0 B" (where A1 is also "into I") JIT will additionally produce
+        a) an interface JCC(A1) that extends JCC(I);
+        b) a class JIC(@A1 @A0 B), whose name may look like ""@A1@A0$B#N" that extends JIC(B),
+           and implements JCC(A1) and JCC(A0)
+
+3. Consider now a derived "class D extends B" and a composition "@A0 D". In addition to (1), the JIT
+   will produce
+        a) a class JIC(D) that extends JIC(B);
+        b) a class JIC(@A0 D), whose name may look like ""@A0$D#N" that extends JIC(D), implements
+           JCC(A0)
+
+4. As indicated by above, JIC(@A0 D) extends JIC(D), not JIC(@A0 B). Nevertheless, @A0 D is an
+   Ecstasy subtype of @A0 B, so an @A0 B reference must accommodate objects of either implementation
+   class and its callable Java representation therefore cannot generally be JIC(@A0 B).
+
+   Instead, references to annotated compositions use the Widened flavor. As with long-arm
+   specialization, JCC(T) and JIC(T) need not be the same: the full Ecstasy type is retained, while
+   widened locals, fields, parameters, and returns use an existing common Java reference type.
+   Java casts use JCC(T), not JIC(T); the callable representation must accommodate all compatible
+   implementations. Moreover, no callable interface for each annotation combination is needed.
+   Before invoking a method or property accessor, the JIT casts the receiver to the existing class
+   or interface supplying the callable contract: JCC(B) for a B member, JCC(A0) for an A0 member
+   and so on.
+
+5. An annotated instantiator always accepts the exact TypeConstant immediately after Ctx, even
+   when the underlying class has no generic parameters. An outer object, when required, follows
+   the type. The remaining arguments concatenate the base constructor parameters with those of
+   each selected annotation constructor, in leading annotation order:
+
+       $new(Ctx ctx, TypeConstant type, [outer], baseArgs..., A1Args..., A0Args...)
+
+6. Construction follows the ordinary class construction lifecycle on a single receiver. The
+   Java initializer chain initializes base and annotation fields, and the exact runtime type is
+   retained on that receiver. Annotation constructor bodies then run in leading annotation order,
+   followed by the selected base constructor body. For @A1 @A2 C, the constructor-body order is
+   A1, A2, B (the base constructor runs last).
+
+   Annotation constructor bodies are generated as synthetic static methods on the incorporating
+   implementation.
+
+   Validators run after all constructor bodies, using the effective TypeInfo's validator chain,
+   including annotation validators. Field verification, post-construction work, and constructor
+   finalizers remain part of the ordinary construction lifecycle; annotations do not introduce
+   a separate object lifecycle or change which object owns identity and state.
+
+7. For an annotated virtual child, the runtime outer object selects the effective child before
+   the implementation class is chosen. Resolving the child preserves the requested annotations
+   and the resolved parent and child type parameters. The resolved type's JIC name identifies
+   the implementation class; Ctx.classForType(type) can obtain that Java class through its owning
+   module loader.
+
+   Every selected annotated child implementation must provide the corresponding instantiator
+   shape. Its constructor-specific name and base-child return descriptor remain stable across
+   runtime child overrides, while its parameters include the exact annotated type, outer object,
+   base arguments, and annotation arguments as described in (5).
+
+   The resulting reference follows the Widened rule in (4); member calls cast to the existing
+   child or annotation JCC as appropriate, not a new interface for the annotated composition.
+   The underlying child's inheritance and dispatch follow the ordinary virtual-child rules in
+   section III, with no additional annotation-specific distinction between hard-left and derived
+   children.
+
+
+VI. Test coverage for annotated classes
+
+Regression tests should cover the following scenarios, using assertions for observable behavior
+and generated-class inspection for Java naming, inheritance, and calling conventions:
+    a) a single annotation into a class or interface, multiple annotations in both orders, and
+       annotations that implement additional interfaces; calls through the base, annotation, and
+       contributed interfaces must reach the effective implementation;
+    b) class-declaration ("built-in") annotations, as used by @PeekAhead on ObjectInputStream's
+       ElementInputStream and ArrayInputStream classes in lib_json; ordinary construction must
+       include the annotation's overrides, and adding @CloseCap or @PointerAware at the new site
+       must preserve PeekAhead's behavior and access to the same outer ObjectInputStream;
+    c) widened locals, fields, parameters, and returns holding both @A B and @A D, where D extends
+       B; base and annotation methods, property accessors, and bound methods must work on the same
+       receiver without casting to a particular annotated implementation class;
+    d) positive and negative is/as checks through Object, the base type, and annotation types,
+       including differently annotated compositions with the same widened Java representation;
+       checks must validate the full Ecstasy type rather than only the erased Java descriptor;
+    e) every combination of base and annotation constructor overloads, including overloads whose
+       distinct Ecstasy parameter types share a Java descriptor, such as Int and UInt; test
+       constant and register arguments, omitted defaults, explicit Null, and no-op constructors;
+    f) standard and optimized constructor paths with reference, primitive, nullable primitive, and
+       multi-slot arguments, including a standard base constructor with an optimized annotation
+       constructor and the reverse; argument concatenation and slot offsets must remain correct;
+    g) field initializers, annotation constructor bodies in leading annotation order, the base
+       constructor body, validators, and finalizers; verify the order, rejection of invalid state,
+       and shared identity and storage throughout construction;
+    h) annotation overrides and super calls, including inherited base implementations, calls from
+       inside annotation bodies, and bound methods; additional annotations must participate in the
+       effective method chain without introducing a separate receiver;
+    i) generic base classes and annotations across generalized and specialized representations;
+       different annotation argument values must reuse the canonical JIC while each instance
+       retains its exact runtime type and values, and different annotation compositions must
+       receive the appropriate implementation classes;
+    j) annotated virtual children constructed inside and outside the outer class, including a
+       base-typed outer reference to a derived parent; preserve the annotations, resolved parent
+       and child type arguments, outer identity, and base-child return contract while selecting
+       the effective child implementation and dispatch described in section III.
 
 ----- Long-arm specialization examples -----
 

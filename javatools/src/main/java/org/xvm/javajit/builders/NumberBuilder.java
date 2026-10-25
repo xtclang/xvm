@@ -12,6 +12,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -273,10 +274,10 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor,
-                               String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         if (!thisType.isJitPrimitive()) {
-            super.assembleNew(classBuilder, constructor, jitName, jmd);
+            super.assembleNew(classBuilder, constructor, jitName, jmd, annoConstructors);
             return;
         }
 
