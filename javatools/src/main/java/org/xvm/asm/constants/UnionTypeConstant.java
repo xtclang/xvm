@@ -42,11 +42,6 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.util.ListMap;
 
-import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nObject;
-import static org.xvm.javajit.Builder.MD_TypeIsA;
-import static org.xvm.javajit.Builder.MD_xvmType;
-
 /**
  * Represent a constant that specifies the union ("|") of two types.
  */
@@ -922,7 +917,7 @@ public class UnionTypeConstant
                     typeA.buildCompare(bctx, code, nOp, reg1, reg2, null);
                     return;
                 } else {
-                    buildTypeCheck(bctx, code, reg2, typeA);
+                    bctx.generateIsA(code, reg2, typeA);
                     code.ifeq(fEq ? lblFalse : lblTrue);
                     reg2A = bctx.narrowRegister(code, reg2, typeA);
                     typeA.buildCompare(bctx, code, nOp, reg1, reg2A, lblTrue);
@@ -932,20 +927,20 @@ public class UnionTypeConstant
                     typeB.buildCompare(bctx, code, nOp, reg1, reg2, null);
                     return;
                 } else {
-                    buildTypeCheck(bctx, code, reg2, typeA);
+                    bctx.generateIsA(code, reg2, typeA);
                     code.ifeq(fEq ? lblFalse : lblTrue);
                     reg2B = bctx.narrowRegister(code, reg2, typeB);
                     typeB.buildCompare(bctx, code, nOp, reg1, reg2B, lblTrue);
                 }
             } else if (reg2.type().isA(typeA)) {
                 // we know that !reg1.type().isA(typeA)
-                buildTypeCheck(bctx, code, reg1, typeA);
+                bctx.generateIsA(code, reg1, typeA);
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg1A = bctx.narrowRegister(code, reg1, typeA);
                 typeA.buildCompare(bctx, code, nOp, reg1A, reg2, lblTrue);
             } else if (reg2.type().isA(typeB)) {
                 // we know that !reg1.type().isA(typeB)
-                buildTypeCheck(bctx, code, reg1, typeB);
+                bctx.generateIsA(code, reg1, typeB);
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg1B = bctx.narrowRegister(code, reg1, typeB);
                 typeB.buildCompare(bctx, code, nOp, reg1B, reg2, lblTrue);
@@ -953,11 +948,11 @@ public class UnionTypeConstant
                 // the compile types are not narrowed; perform the run-time type checks
                 Label lblO1IsB = code.newLabel();
 
-                buildTypeCheck(bctx, code, reg1, typeA);
+                bctx.generateIsA(code, reg1, typeA);
                 code.ifeq(lblO1IsB);
                 reg1A = bctx.narrowRegister(code, reg1, typeA);
 
-                buildTypeCheck(bctx, code, reg2, typeA);
+                bctx.generateIsA(code, reg2, typeA);
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg2A = bctx.narrowRegister(code, reg2, typeA);
 
@@ -967,7 +962,7 @@ public class UnionTypeConstant
                 code.labelBinding(lblO1IsB);
                 reg1B = bctx.narrowRegister(code, reg1, typeB);
 
-                buildTypeCheck(bctx, code, reg2, typeB);
+                bctx.generateIsA(code, reg2, typeB);
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg2B = bctx.narrowRegister(code, reg2, typeB);
 
@@ -987,24 +982,6 @@ public class UnionTypeConstant
                 .iconst_1();
         }
         code.labelBinding(lblEnd);
-    }
-
-    /**
-     * Assemble the runtime type check for the specified register.
-     *
-     * The result of "isA" is on the Java stack.
-     */
-    private void buildTypeCheck(BuildContext bctx, CodeBuilder code,
-                                RegisterInfo regTest, TypeConstant typeTest) {
-        // o1.$xvmType(ctx).isA(typeCompare)
-        regTest.load(code);
-        if (regTest.type().isJitCCInterface()) {
-            code.checkcast(CD_nObject);
-        }
-        bctx.loadCtx(code);
-        code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType);
-        bctx.loadTypeConstant(code, typeTest);
-        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
     }
 
     // ----- run-time support ----------------------------------------------------------------------

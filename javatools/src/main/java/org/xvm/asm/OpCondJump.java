@@ -29,11 +29,9 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
-import static org.xvm.javajit.Builder.MD_xvmType;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -650,17 +648,7 @@ public abstract class OpCondJump
                     fInvert = true;
                 }
             } else {
-                regTarget.load(code);
-                // cast to nObject because the target type may be an interface that will not have
-                // the $xvmType method, but that is fine because everything is nObject and nObject does
-                // have the $xvmType method
-                if (regTarget.type().isJitCCInterface()) {
-                    code.checkcast(CD_nObject);
-                }
-                bctx.loadCtx(code);
-                code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType); // target type
-                bctx.loadTypeConstant(code, typeTest);               // test type
-                code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+                bctx.generateIsA(code, regTarget, typeTest);
             }
 
             if (getOpCode() == OP_JMP_TYPE) {

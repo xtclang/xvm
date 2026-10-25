@@ -106,6 +106,7 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DetachedBody;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.MD_EnsureType;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.md;
 
@@ -3624,6 +3625,34 @@ public class BuildContext {
         }
         Builder.store(code, cd, slot);
         return slot;
+    }
+
+    /**
+     * Assemble the runtime type check for the specified register.
+     *
+     * <p>Loads the register and leaves the boolean result of "isA" on the Java stack.
+     */
+    public CodeBuilder generateIsA(CodeBuilder code, RegisterInfo targetReg, TypeConstant testType) {
+        targetReg.load(code);
+
+        return generateIsA(code, targetReg.type(), testType);
+    }
+
+    /**
+     * Assemble the runtime type check for a reference already on the Java stack.
+     *
+     * <p>Consumes the reference and leaves the boolean result of "isA" on the Java stack.
+     */
+    public CodeBuilder generateIsA(CodeBuilder code, TypeConstant targetType, TypeConstant testType) {
+        // target.$xvmType(ctx).isA(typeTest)
+        if (targetType.isJitCCInterface()) {
+            code.checkcast(CD_nObject);
+        }
+        loadCtx(code)
+            .invokevirtual(CD_nObject, "$xvmType", MD_xvmType); // target type
+        loadTypeConstant(code, testType);                       // test type
+
+        return code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
     }
 
     /**
