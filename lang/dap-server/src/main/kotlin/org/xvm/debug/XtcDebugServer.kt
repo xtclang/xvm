@@ -90,7 +90,9 @@ import kotlin.time.Duration.Companion.seconds
  * literals, and operators that the runtime computes natively. A line typed in the console is evaluated so too, and
  * what that refuses, such as a call, runs as code on the stopped fiber, for at most [CONSOLE_LIMIT]; `cancel` ends it
  * sooner, and once code has run, `invalidated` tells a client that takes it to read the variables again
- * (lang/doc/plans/plan-bounded-evaluation.md, tier 2).
+ * (lang/doc/plans/plan-bounded-evaluation.md, tier 2). A launch with `evaluationRunsProgram` lets the whole program run
+ * while such code does, for a program whose code waits on work that its other fibers do; they then wait at their next
+ * line once it ends, and `invalidated` asks for everything again, since the stop's threads and stacks may have moved.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -154,6 +156,10 @@ class XtcDebugServer(
     /** True for a client that takes the `invalidated` event. */
     @Volatile
     private var invalidates = false
+
+    /** True for a launch that lets the whole program run while code from the console does. */
+    @Volatile
+    private var evaluationRunsProgram = false
 
     /** The console evaluations in progress, by their request's `seq`, which `cancel` names. */
     private val evaluations = ConcurrentHashMap<Int, Evaluation>()
@@ -388,8 +394,9 @@ class XtcDebugServer(
      * Builds the module and starts it, with the breakpoints set by then, answering once it has started; a failed
      * build answers with an error after reporting the build's diagnostics as output. Arguments: `module` (a module
      * name), `moduleUri` (a source URI of the module, used in place of the name when given), `method`, `args` (an
-     * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, and `stopOnEntry`, which stops the
-     * program at its first line.
+     * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, `stopOnEntry`, which stops the
+     * program at its first line, and `evaluationRunsProgram`, which lets the whole program run while code from the
+     * console does.
      */
     override fun launch(args: Map<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
@@ -403,6 +410,7 @@ class XtcDebugServer(
             return failed("This debug session has already launched a program.")
         }
         debugging = args?.get("noDebug") != true
+        evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
         val stopOnEntry = args?.get("stopOnEntry") == true
         console("Building and running ${target.moduleName ?: target.module} with the embedded compiler...")
@@ -597,7 +605,10 @@ class XtcDebugServer(
                     read
                         .exceptionallyCompose {
                             evaluation.start {
-                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT).also { run -> run.whenComplete { _, _ -> ran() } }
+                                val program = evaluationRunsProgram
+                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program).also { run ->
+                                    run.whenComplete { _, _ -> ran(program) }
+                                }
                             }
                         }.whenComplete { _, _ -> seq?.let(evaluations::remove) }
                 } else {
@@ -723,9 +734,15 @@ class XtcDebugServer(
         return runs.step(runId, threadId, kind).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
     }
 
-    /** Code has run on a stopped fiber: what it changed may show in the variables, which the client reads again. */
-    private fun ran() {
-        if (invalidates) client?.invalidated(InvalidatedEventArguments().apply { areas = arrayOf(InvalidatedAreas.VARIABLES) })
+    /**
+     * Code has run on a stopped fiber: what it changed may show in the variables, which the client reads again, and
+     * after a run of the whole [program], also the threads and stacks, since its other fibers moved.
+     */
+    private fun ran(program: Boolean) {
+        if (invalidates) {
+            val area = if (program) InvalidatedAreas.ALL else InvalidatedAreas.VARIABLES
+            client?.invalidated(InvalidatedEventArguments().apply { areas = arrayOf(area) })
+        }
     }
 
     /** True while a debugged program runs, stopped or not. */

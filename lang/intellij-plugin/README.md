@@ -157,7 +157,10 @@ running the program's code, and what is not evaluated shows why; LSP4IJ's debugg
 the name under the mouse. **Evaluate Expression** evaluates them so too, and runs what that refuses,
 such as a call, as code on the stopped fiber, for at most two seconds, and what the code changed
 stays changed; the Variables view shows it the next time it reads the variables, since LSP4IJ does
-not handle the `invalidated` event yet (UP40). **Pause
+not handle the `invalidated` event yet (UP40). Only that code, and the services it calls, run
+meanwhile; the configuration's **Let the program run while Evaluate Expression runs code** lets the
+rest of the program run too, without stopping at breakpoints, for code that waits on work the
+program's other fibers do. **Pause
 Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/remaining.md`, fixed in
 LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration has no stop-on-entry option. Debug is not offered for
 Gradle or command-line runs.

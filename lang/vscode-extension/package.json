@@ -610,6 +610,11 @@
                                 "type": "boolean",
                                 "description": "Stop the program at its first line",
                                 "default": false
+                            },
+                            "evaluationRunsProgram": {
+                                "type": "boolean",
+                                "description": "While code typed in the Debug Console runs, let the rest of the program run too, without stopping at breakpoints; for code that waits on work the program's other fibers do. Their threads and stacks may then have moved.",
+                                "default": false
                             }
                         }
                     }
