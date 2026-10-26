@@ -30,6 +30,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.encoding.EncodingManager
 import com.intellij.task.ProjectTaskManager
+import com.intellij.xdebugger.XDebuggerManager
 import org.jetbrains.concurrency.Promise
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.run.XtcBuildMode
@@ -258,6 +259,15 @@ object EmbeddedExecutionUi {
         val handler = requireNotNull(runs[module]?.handler) { "No run of $module has started" }
         ApplicationManager.getApplication().invokeAndWait { handler.destroyProcess() }
     }
+
+    /** How many of the project's runs have not ended, and how many debug sessions are open. */
+    @JvmStatic
+    fun active(project: Project): String =
+        JsonObject()
+            .apply {
+                addProperty("runs", ExecutionManager.getInstance(project).getRunningProcesses().count { !it.isProcessTerminated })
+                addProperty("debugSessions", XDebuggerManager.getInstance(project).debugSessions.size)
+            }.toString()
 
     private fun watch(project: Project) {
         if (!watched.add(project)) return
