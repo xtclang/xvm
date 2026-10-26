@@ -480,7 +480,7 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   and recompilation notes.
 - [ ] Settle the reconciliation inventory in the roadmap's
   [remaining work outside the prepared branches](../pr-roadmap.md#remaining-work-outside-the-five-prepared-branches).
-- [ ] Candidate for master on its own, apart from the debugger: native `toString()` for `String`,
+- [x] Declined for master (2026-10-26): native `toString()` for `String`,
   `Char` and the integer types, or a native `String` `+` for them. A `String`'s `+`
   (`xString.invokeAdd`) calls `Utils.callToString()`, which runs Ecstasy code for these
   (`String.toString()`, `Stringable.toString()`), so every string join of every program pays an
@@ -489,7 +489,9 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
   `lagergren/native-to-string`, `12d691d3e`): `Int8` to `UInt64`, `Nibble`, `Char` and `String`, and `markNativeMethod()`, which found
   no `toString()` to mark in a const class, since `Const` and its `Stringable` come with no
   contribution. 200,000 iterations of five joins: about 16.3 s on master, 0.14 to 0.3 s with it. Not
-  on this branch.
+  on this branch. Closed on 2026-10-26 after review: the interpreter keeps natural Ecstasy code wherever
+  it can, and speed is the JIT's job. The closing comment notes `markNativeMethod()`'s gap through
+  `Const`, which nothing reaches today.
 - [ ] Candidate for master on its own, apart from the debugger and the `toString()` one above:
   `ab9fbddeb`'s `ServiceContext` change and its `EmbeddingSupportTest` case, which master has unchanged
   (its `terminate()` and `shutdown()` assert the same, and the test uses only `EmbeddingSupport`).
@@ -512,11 +514,22 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     (2026-10-23), with a new `LexerTest` case.
   - `814153a42`: two diagnostics with the same code and place whose parameters hash alike are taken for
     duplicates, and the second is dropped (master's `ErrorListener.java:318`); one line, and a test
-    written again without errs' Site API. In #717 with the lexer fix, with a new `ErrorListTest`.
+    written again without errs' Site API. Dropped from #717 on 2026-10-26, as decided on #677: the
+    compiler logs many errors it never reports, and a UID with the parameters as text would render
+    them for each, while a collision needs the same code, place and parameter hash. Stays on this
+    branch only.
   - `6312fd242`: an embedded run that reaches `assert:debug` reads the host's standard input;
     only third-party hosts reach it on master. In master pull request
     [#718](https://github.com/xtclang/xvm/pull/718) (2026-10-23, `lagergren/fix-embedded-assert-debug`),
-    its `javatools` part with the `EmbeddingSupportTest` case.
+    its `javatools` part with the `EmbeddingSupportTest` case. Its alternative,
+    [#719](https://github.com/xtclang/xvm/pull/719) (2026-10-23, from ggleyzer), turns the console
+    debugger off with a runtime flag that embedding connectors clear. Both fix the hang: a program run
+    through `EmbeddingSupport` with a standard input that stays open waits at `Enter command:` on
+    master and ends with either (2026-10-26). Neither PR's test catches it, since the Gradle test JVM's
+    standard input is at its end; master's console debugger then returns without clearing the
+    runtime's "debugger is active" flag, which stays true. The feedback on #719 says so, and that it has
+    no debugger a host supplies; #718 closes once #719 is merged, and `Runtime.setDebugger()` comes
+    with the DAP work.
   - Found by R7r (`d77fb9b51`, 2026-10-23), in `EvalCompiler`, which master's console debugger uses
     for `E`: a method's parameter is unresolvable until something has shown it, an `@Inject` variable
     is captured with its `Ref`'s type, so no method of it compiles, and a lambda that does not compile
@@ -535,24 +548,29 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     its end is never reported. Master's `javatools_utils` files are the same, and the commit's new
     `WeakHasherMapTest` case fails on master `7a79c6ef0` as it did here. In master pull request
     [#720](https://github.com/xtclang/xvm/pull/720) (2026-10-24, `lagergren/fix-weak-map-arrays`),
-    and on #693 since 2026-10-24 (`a5e25c725`).
+    and on #693 since 2026-10-24 (`a5e25c725`). After review (2026-10-26, `8c457fe25`, here
+    `7fe6450b8`): `toArray()` fills one array, copied only when collected keys were left out, and the
+    test clears the map's weak reference itself instead of waiting for `System.gc()`. Not yet on #693.
   - Found by the native `toString()` test (2026-10-23): `new Nibble(Bit[])` makes 0 for every value,
     and so does `Nibble`'s table, and with it `Nibble.of()`, `IntLiteral.toNibble()` and
     `Char.isNibble()`; `xConstrainedInteger.constructFromBits()` packs the bits into a byte's high
     bits, and `Nibble`'s mask drops them. Its `bits` failed and `Nibble(String)` overflowed for the
     same reason, sizes counted in whole bytes. All three in master pull request
     [#723](https://github.com/xtclang/xvm/pull/723) (2026-10-24, `lagergren/fix-nibble-from-bits`),
-    tested with asserts in `manualTests`' `numbers.x`, which CI runs. `Nibble(Byte[])` still fails: the library's own constructors disagree on
+    tested with asserts in `manualTests`' `numbers.x`, which CI runs. Merged on 2026-10-26 as
+    `80bf83f4d`, with the review's wording of its comments. `Nibble(Byte[])` still fails: the library's own constructors disagree on
     its size.
   - Found through #723's callers (2026-10-24): `lib_json`'s `Lexer` dropped every `\u` escape, so it
     could not read back the control characters its `Printer` writes. In master pull request
     [#724](https://github.com/xtclang/xvm/pull/724) (`lagergren/fix-json-unicode-escape`), with
-    surrogate pairs read as one `Char`, and independent of #723.
+    surrogate pairs read as one `Char`, and independent of #723. After review (2026-10-26,
+    `8a37676ac`): `eatHexits()` is a local function of `eatString()`, with shorter comments.
   - Found with #724, not fixed: `Char.appendEscaped()` writes the first three hexits of a `\u`
     escape as 0 (`codepoint & 0xF000 >>> 24` is `codepoint & 0`); on master
     `0x2028.toChar().quoted()` is `'\u0008'`.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
-- [ ] Once #718 is on master, file the `EvalCompiler` fixes above again, as a new pull request or
+- [ ] Once master lets a host set its own debugger, which #718's `setDebugger()` did and the DAP work
+  now brings (#719 replaces #718), file the `EvalCompiler` fixes above again, as a new pull request or
   by reopening [#721](https://github.com/xtclang/xvm/pull/721). The branch
   `lagergren/fix-debugger-eval-captures` (`f3069b4fb`, 2026-10-24) has the fix and its test, and is
   based on #718's branch: rebase it onto master, which leaves only its own commit. The test, an
