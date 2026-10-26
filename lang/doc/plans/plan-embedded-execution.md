@@ -484,7 +484,9 @@ this bridge; they cannot be inferred from compiler type hints.
   `toString()` on demand and computed properties, as lazy variables whose reads run their code for
   at most a second (`1d88e086d`, R10a, worker protocol 12, shared X316); and integers in
   hexadecimal, through DAP's `format` or the session's `xtc/valueFormat`, which VS Code's own menu
-  item sets, with mutable objects' identity codes (`cb551d4c2`, R10b, protocol 13, shared X317).
+  item sets, with mutable objects' identity codes (`cb551d4c2`, R10b, protocol 13, shared X317); and
+  large arrays read a page at a time, by a request's `filter`, `start` and `count` (`00dee9671`,
+  R10c, protocol 14, shared X318).
 - [ ] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
   temporary breakpoint, so it may already work and needs checking), choosing which call on a line
   to step into (`stepInTargets`), restarting a frame (the console's `T`), and continuing, stepping or
