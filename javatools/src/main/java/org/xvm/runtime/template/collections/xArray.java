@@ -937,12 +937,12 @@ public class xArray
      * @return the handle for an empty immutable array of Bytes.
      */
     public static ArrayHandle ensureEmptyByteArray() {
-        if (EMPTY_BYTE_ARRAY == null) {
+        if (INSTANCE.m_hEmptyByteArray == null) {
             DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(
                     Handy.EMPTY_BYTE_ARRAY, 0, Mutability.Constant);
-            EMPTY_BYTE_ARRAY = new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, Mutability.Constant);
+            INSTANCE.m_hEmptyByteArray = new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, Mutability.Constant);
         }
-        return EMPTY_BYTE_ARRAY;
+        return INSTANCE.m_hEmptyByteArray;
     }
 
     /**
@@ -1053,5 +1053,5 @@ public class xArray
 
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 
-    private static ArrayHandle EMPTY_BYTE_ARRAY;
+    private ArrayHandle m_hEmptyByteArray;
 }
