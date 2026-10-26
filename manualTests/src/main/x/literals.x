@@ -19,6 +19,7 @@ module TestLiterals {
 //        testLexer();
         testInterval();
         testLiteralText();
+        testEscapes();
     }
 
     void testFactors() {
@@ -446,5 +447,18 @@ module TestLiterals {
 
         assert plusHalf.toString()  == "+1.5";
         assert minusHalf.toString() == "-1.5";
+    }
+
+    void testEscapes() {
+        console.print("\n** testEscapes()");
+
+        // a character with no escape of its own is escaped as a backslash, a "u" and its four
+        // hexits; each expected text is two literals, since the compiler reads a backslash, a "u"
+        // and four hexits anywhere in the source as the character they name
+        assert new Char(0x01).quoted() == "'\\" + "u0001'";
+        assert new Char(0x1F).quoted() == "'\\" + "u001F'";
+        assert new Char(0x85).quoted() == "'\\" + "u0085'";
+        assert new Char(0x2028).quoted() == "'\\" + "u2028'";
+        assert $"a{new Char(0x2029)}b".quoted() == "\"a\\" + "u2029b\"";
     }
 }
