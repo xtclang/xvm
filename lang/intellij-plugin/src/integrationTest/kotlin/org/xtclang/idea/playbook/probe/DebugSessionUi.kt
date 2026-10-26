@@ -266,6 +266,92 @@ object DebugSessionUi {
     }
 
     /**
+     * The children of the value at the `/`-separated [path], as the Variables view shows them when it opens the value
+     * and then, up to [pages] times, the `...` node that a debugger adds for children it has not read yet: `children`,
+     * their presentations, `remaining`, how many more the debugger says there are, and `more`, true while it still
+     * shows a `...` node.
+     */
+    @JvmStatic
+    fun pagedVariables(
+        project: Project,
+        module: String,
+        path: String,
+        pages: Int,
+    ): String {
+        val names = path.split('/').filter { it.isNotEmpty() }
+        var shown = locals(project, module)
+        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
+        val collected = XValueChildrenList()
+        var left = 0
+        var next: Runnable? = null
+        var batch = CompletableFuture<Unit>()
+        val node =
+            object : XCompositeNode {
+                override fun addChildren(
+                    children: XValueChildrenList,
+                    last: Boolean,
+                ) {
+                    (0 until children.size()).forEach { collected.add(children.getName(it), children.getValue(it)) }
+                    if (last) {
+                        left = 0
+                        batch.complete(Unit)
+                    }
+                }
+
+                @Deprecated("Deprecated in Java")
+                override fun tooManyChildren(remaining: Int) = tooManyChildren(remaining, Runnable {})
+
+                override fun tooManyChildren(
+                    remaining: Int,
+                    addNextChildren: Runnable,
+                ) {
+                    left = remaining
+                    next = addNextChildren
+                    batch.complete(Unit)
+                }
+
+                override fun setAlreadySorted(alreadySorted: Boolean) {}
+
+                override fun setErrorMessage(errorMessage: String) {
+                    batch.completeExceptionally(IllegalStateException(errorMessage))
+                }
+
+                override fun setErrorMessage(
+                    errorMessage: String,
+                    link: XDebuggerTreeNodeHyperlink?,
+                ) = setErrorMessage(errorMessage)
+
+                override fun setMessage(
+                    message: String,
+                    icon: Icon?,
+                    attributes: SimpleTextAttributes,
+                    link: XDebuggerTreeNodeHyperlink?,
+                ) {}
+            }
+        named(shown, names.last(), path).computeChildren(node)
+        batch.get(30, TimeUnit.SECONDS)
+        repeat(pages) {
+            val open = next ?: return@repeat
+            next = null
+            batch = CompletableFuture()
+            // the node's action runs on the event thread, as when the user opens it
+            ApplicationManager.getApplication().invokeAndWait { open.run() }
+            batch.get(30, TimeUnit.SECONDS)
+        }
+        return JsonObject()
+            .apply {
+                add(
+                    "children",
+                    JsonArray().apply {
+                        (0 until collected.size()).forEach { add(presentation(collected.getName(it), collected.getValue(it))) }
+                    },
+                )
+                addProperty("remaining", left)
+                addProperty("more", next != null)
+            }.toString()
+    }
+
+    /**
      * Sets the value at the `/`-separated [path] to [expression], as the Variables view's Set Value does through the
      * value's modifier: "" once it is set, or the error the modifier reports.
      */

@@ -9860,7 +9860,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ asks for all of a variable's children at once and never pages by indexedVariables (UP42, not filed), so IntelliJ checks the first 100 elements and how many more there are."
+          "LSP4IJ 0.21.0 asks for all of a variable's children at once and never pages by indexedVariables (UP42, fixed by LSP4IJ #1770), so IntelliJ checks the first 100 elements and how many more there are; with #1770 it checks the first page and IntelliJ's own ... node, which it opens until the last element shows."
         ]
       }
     },
