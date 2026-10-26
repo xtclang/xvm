@@ -1342,7 +1342,7 @@ Before release acceptance, run the packaged server and both native editor paths.
 
 ## Deferred work
 
-Runtime execution/DAP, notebooks and a public color library remain deferred from the prepared branches. A first embedded build/run delivery exists only on `lagergren/errs` ([2026-10-15](#embedded-build-and-run--2026-10-15)); DAP remains unimplemented. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
+Runtime execution/DAP, notebooks and a public color library remain deferred from the prepared branches. A first embedded build/run delivery exists only on `lagergren/errs` ([2026-10-15](#embedded-build-and-run--2026-10-15)); DAP debugging (R6/R7) also exists on `lagergren/errs`, not in #693. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
 
 Unrelated runtime/JIT edits, broad modernization, documentation sweeps and historical review scripts are not implicitly included in the five prepared branches. The reconciliation inventory below preserves their visibility and identifies compiler follow-ups that still need a decision.
 

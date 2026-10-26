@@ -401,14 +401,19 @@ types are listed with good defaults and previews.
 
 ## 5. DAP (Debug Adapter Protocol) Fixes
 
-### Current State
+**Status:** **Done** (2026-10-22, R7d) — Debug of an Ecstasy Application configuration works
+through LSP4IJ's DAP client over the language server connection (`XtcDebugAdapterFactory`,
+`LanguageServerDebugProcessHandler`); no DAP server jar or process is used. The cases that are
+partial or not implemented in IntelliJ wait on LSP4IJ 0.21.0's limits, UP30–UP42.
 
-The DAP server is registered in `plugin.xml` but **does not work**:
-- `xtc-dap-server.jar` is not built or packaged into the plugin
-- `XtcDebugAdapterDescriptor` uses `System.getProperty("java.home")` instead of
-  `JavaProcessCommandBuilder` (will pick wrong JDK on some setups)
+### State before 2026-10-22
 
-### Fixes Needed
+The DAP server was registered in `plugin.xml` but **did not work**:
+- `xtc-dap-server.jar` was not built or packaged into the plugin
+- `XtcDebugAdapterDescriptor` used `System.getProperty("java.home")` instead of
+  `JavaProcessCommandBuilder` (would pick the wrong JDK on some setups)
+
+### Fixes Needed (original plan)
 
 1. **Build the DAP server JAR** -- add fatJar task to dap-server module
 2. **Package it** -- add copy task in intellij-plugin's build to put it in `bin/`
@@ -672,7 +677,7 @@ formatting, folding, references, etc.).
 |-------|-------|--------|--------|
 | **Phase 1: Essentials** | 3a Commenter, 3b BraceMatcher | Trivial | High -- basic editing |
 | **Phase 2: Productivity** | 3c LiveTemplates, 3d FileTemplates | Small | High -- everyday workflow |
-| **Phase 3: Run/Debug** | 1 XDK Run Mode, 5 DAP Fixes | Medium | High -- core IDE features |
+| **Phase 3: Run/Debug** | 1 XDK Run Mode, 5 DAP Fixes (done 2026-10-22) | Medium | High -- core IDE features |
 | **Phase 4: Visual** | 2a SemanticTokenColors, 4b ColorScheme | Medium | High -- professional look |
 | **Phase 5: XDK/Module** | 7a XDK SDK Type, 7b Module Path, 4a Settings | Medium-Large | High -- foundational |
 | **Phase 6: Navigation** | 3e LineMarkers (run), 7d Module Navigation | Medium | Medium |
@@ -683,7 +688,7 @@ formatting, folding, references, etc.).
 |-------|-------|--------|--------|
 | **Phase 1: Essentials** | 3a Commenter, 3b BraceMatcher | Trivial | High -- basic editing |
 | **Phase 2: Productivity** | 3c LiveTemplates, 3d FileTemplates | Small | High -- everyday workflow |
-| **Phase 3: Run/Debug** | 1 XDK Run Mode, 5 DAP Fixes | Medium | High -- core IDE features |
+| **Phase 3: Run/Debug** | 1 XDK Run Mode, 5 DAP Fixes (done 2026-10-22) | Medium | High -- core IDE features |
 | **Phase 4: Visual** | 2a SemanticTokenColors, 4b ColorScheme | Medium | High -- professional look |
 | **Phase 5: Navigation** | 3e LineMarkers (run), 4a XTC Settings | Medium | Medium |
 | **Phase 6: Advanced** | 6a-d InlayHints, Hierarchy, Postfix, SmartEnter | Large | Medium |
