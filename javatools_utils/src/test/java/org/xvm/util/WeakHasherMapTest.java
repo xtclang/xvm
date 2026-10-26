@@ -2,8 +2,14 @@ package org.xvm.util;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
+
+import java.lang.ref.Reference;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -90,5 +96,37 @@ public class WeakHasherMapTest {
             assertNotNull(e.getKey());
             assertEquals(Integer.toString(e.getKey()), e.getValue());
         }
+    }
+
+    @Test
+    void shouldLeaveCollectedKeysOutOfArrays() {
+        var storage = new HashMap<Supplier<Object>, String>();
+        var map = new WeakHasherMap<Object, String>(Hasher.identity(), () -> storage);
+        var concurrentStorage = new ConcurrentHashMap<Supplier<Object>, Boolean>();
+        var set = Collections.newSetFromMap(new ConcurrentWeakHasherMap<>(Hasher.identity(), () -> concurrentStorage));
+        var kept = new Object();
+        var collected = new Object();
+        map.put(kept, "kept");
+        map.put(collected, "collected");
+        set.add(kept);
+        set.add(collected);
+        clear(storage, collected);
+        clear(concurrentStorage, collected);
+
+        // a key that was collected, but not yet removed, is left out, as the iterators leave it out
+        assertArrayEquals(new Object[] {kept}, map.keySet().toArray());
+        assertArrayEquals(new Object[] {kept}, map.keySet().toArray(new Object[0]));
+        var entries = map.entrySet().toArray();
+        assertEquals(1, entries.length);
+        assertSame(kept, ((Map.Entry<?, ?>) entries[0]).getKey());
+        assertArrayEquals(new Object[] {kept}, set.toArray(Object[]::new));
+    }
+
+    /**
+     * Clear the weak reference to the key in a map's storage, as the collector clears it once the key is unreachable,
+     * without queueing it, as the collector does only later: the map still holds the key, which reads as null.
+     */
+    private static void clear(Map<Supplier<Object>, ?> storage, Object key) {
+        storage.keySet().stream().filter(ref -> ref.get() == key).forEach(ref -> ((Reference<?>) ref).clear());
     }
 }

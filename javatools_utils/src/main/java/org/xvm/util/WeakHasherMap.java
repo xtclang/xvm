@@ -3,6 +3,8 @@ package org.xvm.util;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -121,6 +123,11 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
         public Iterator<K> iterator() {
             return new FilterIterator<>(super.iterator(), Objects::nonNull);
         }
+
+        @Override
+        public Object[] toArray() {
+            return live(this);
+        }
     }
 
     @Override
@@ -136,5 +143,23 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
         public Iterator<Entry<K, V>> iterator() {
             return new FilterIterator<>(super.iterator(), e -> e.getKey() != null);
         }
+
+        @Override
+        public Object[] toArray() {
+            return live(this);
+        }
+    }
+
+    /**
+     * @param view the key or entry set
+     * @return the elements that the view's iterator returns, without the keys that were collected but not yet removed
+     */
+    private static Object[] live(Collection<?> view) {
+        Object[] elements = new Object[view.size()];
+        int count = 0;
+        for (Object element : view) {
+            elements[count++] = element;
+        }
+        return count == elements.length ? elements : Arrays.copyOf(elements, count);
     }
 }
