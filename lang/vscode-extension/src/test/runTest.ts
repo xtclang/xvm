@@ -8,7 +8,8 @@
 // Invoked by `npm run test:vscode` and by the
 // `:lang:vscode-extension:testVscodeExtension` Gradle task.
 
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { downloadAndUnzipVSCode, runTests } from '@vscode/test-electron';
 import {
@@ -52,17 +53,32 @@ async function main(): Promise<void> {
 
     for (const { version, executable } of builds) {
         console.log(`[vscode-test] Running the suite on VS Code ${version} (${executable})`);
-        await runTests({
-            vscodeExecutablePath: executable,
-            extensionDevelopmentPath,
-            extensionTestsPath,
-            // --disable-extensions stops third-party extensions (anything that
-            // claims `.x` — e.g. Logos parser-generator extensions) from
-            // preempting our language registration; that way the test asserts
-            // OUR behaviour, not the intersection of the user's installed
-            // extensions and ours.
-            launchArgs: [fixturesPath, '--disable-extensions'],
-        });
+        // A fresh profile for each build, in the system's temporary directory:
+        // VS Code's IPC socket lives in it, and macOS limits a socket's path to
+        // 103 characters. Its settings turn off VS Code's AI features, which
+        // otherwise look for a GitHub account the test instance does not have
+        // and log every miss ("[AgentHost] No signed-in session resolved ...").
+        const profile = mkdtempSync(path.join(os.tmpdir(), 'xtc-code-'));
+        try {
+            mkdirSync(path.join(profile, 'User'));
+            writeFileSync(
+                path.join(profile, 'User', 'settings.json'),
+                JSON.stringify({ 'chat.disableAIFeatures': true }, null, 4),
+            );
+            await runTests({
+                vscodeExecutablePath: executable,
+                extensionDevelopmentPath,
+                extensionTestsPath,
+                // --disable-extensions stops third-party extensions (anything that
+                // claims `.x` — e.g. Logos parser-generator extensions) from
+                // preempting our language registration; that way the test asserts
+                // OUR behaviour, not the intersection of the user's installed
+                // extensions and ours.
+                launchArgs: [fixturesPath, '--disable-extensions', `--user-data-dir=${profile}`],
+            });
+        } finally {
+            rmSync(profile, { recursive: true, force: true });
+        }
     }
 }
 
