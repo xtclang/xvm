@@ -203,10 +203,13 @@ shown first among the frame's variables and in the exception widget, its stack t
 Condition on a filter names the exception classes it stops at, such as `IllegalArgument, OutOfBounds`,
 which also stop the classes that extend them.
 Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
-first line. While the program is stopped, the Watch view, hovers and the Debug Console evaluate
-expressions such as `point.x + 1` or `ints[i] > 0` in the selected frame, without running the
-program's code, and expand their values like variables; what is not evaluated, such as a call or a
-name the frame does not have, shows why. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+first line. While the program is stopped, the Watch view and hovers evaluate expressions such as
+`point.x + 1` or `ints[i] > 0` in the selected frame, without running the program's code, and expand
+their values like variables; what is not evaluated, such as a call or a name the frame does not
+have, shows why. The Debug Console evaluates them so too, and runs what that refuses, such as
+`box.bump(n)`, as code on the stopped fiber, for at most two seconds: it answers with the value as
+its `toString()` makes it, or the reason it failed, and what the code changed stays changed, which
+the Variables view shows as it reads the variables again. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
 says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
