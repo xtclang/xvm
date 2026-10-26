@@ -517,10 +517,10 @@ const Char(UInt32 codepoint)
             case 0x2028..0x2029 :       // line and paragraph separator
                 buf.add('\\')
                    .add('u')
-                   .add((codepoint & 0xF000 >>> 24).toHexit())
-                   .add((codepoint & 0x0F00 >>> 16).toHexit())
-                   .add((codepoint & 0x00F0 >>>  8).toHexit())
-                   .add((codepoint & 0x000F >>>  0).toHexit());
+                   .add((codepoint >>> 12 & 0xF).toHexit())
+                   .add((codepoint >>>  8 & 0xF).toHexit())
+                   .add((codepoint >>>  4 & 0xF).toHexit())
+                   .add((codepoint        & 0xF).toHexit());
 
             default:
                 buf.add(this);
