@@ -100,12 +100,14 @@ documented refusals, not open tasks; the few worth revisiting are under
   it (VS Code's, the IntelliJ sandbox's, `runIde`'s) and the plugin zip's are checked, and one that
   fails is deleted and fails the build, which the next build makes again. Two builds at once can
   still fail, with that message; they do not wait for each other.
-- [ ] `:lang:intellij-plugin:testCompilerPlaybook` does not always run the cases asked for
-  (2026-10-24 to 26): with the configuration cache reused it ran an earlier selection with an earlier
-  catalog, and with `--no-configuration-cache` each run took the case list of the run before it, so
-  a selection ran once it was sent twice. Check `selectedCases` in the run's `results.json`. The
-  property is read as `providers.gradleProperty("intellijPlaybookCases")` in the included `lang`
-  build; the cause is not found.
+- [x] `:lang:intellij-plugin:testCompilerPlaybook` seemed not to run the cases asked for
+  (2026-10-24 to 26), a selection running only once it was sent twice. It always ran them. The
+  script that read each run's results took the run directory changed last, and
+  `pruneCompilerPlaybookReports`, which deletes older runs' payloads after each run, changes those
+  directories, so the script read an older run. The run's `results.json` dates it; the pruner ranks
+  runs by their `.completed` files, which it leaves alone. `8777c067c` recorded the fault as the
+  build's, and `70cdd636f`'s message says its run before selected an earlier list; both were this
+  misreading (found 2026-10-26).
 
 ### Beyond the current scope
 
@@ -191,7 +193,8 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   `EmbeddingSupport.runMethod()` before the program starts, with the runner's own code left alone
   (`41cb8b60c`).
 - [x] Initial suspension: a launch's `stopOnEntry` stops at the first line of the program's own
-  modules (`5a7bf8def`, `48f00ef8c`; shared X309 in VS Code; IntelliJ's configuration has no option).
+  modules (`5a7bf8def`, `48f00ef8c`; shared X309), and IntelliJ's configuration asks for it with its
+  checkbox "Stop at the program's first line" (`df6c1a873`).
 - [x] Real, verified breakpoints, installed before the program's first line (`41cb8b60c`, `e73878550`).
 - [x] Exception stops: every thrown exception, or those no frame will catch, at the frame that throws,
   with filters in both editors, Uncaught Exceptions on by default (`bf0b25af4`, `9d2c2f738`; shared
