@@ -9784,6 +9784,50 @@
         ]
       }
     },
+    "X317": {
+      "title": "integers show in hexadecimal when the Variables view asks, and two objects with the same fields have different identity codes",
+      "manual": [
+        "How each editor's menu item shows its check mark is checked manually; VS Code runs its Show Values as Hexadecimal and checks the request it sends, the invalidated event and the values, IntelliJ turns LSP4IJ's on (with #1769) and checks the values."
+      ],
+      "values": {
+        "file": "DebugFormats.x",
+        "module": "DebugFormats",
+        "source": "module DebugFormats {\n    class Box {\n        Int count;\n    }\n\n    Int run() {\n        Int  big   = 255;\n        Int8 small = -1;\n        Box  one   = new Box();\n        Box  two   = new Box();\n        @Inject Console console;\n        console.print($\"{big} {small} {one.count} {two.count}\");\n        return big;\n    }\n}\n",
+        "breakpointLine": 12,
+        "decimal": [
+          [
+            "big",
+            "255"
+          ],
+          [
+            "small",
+            "-1"
+          ]
+        ],
+        "hex": [
+          [
+            "big",
+            "0xFF"
+          ],
+          [
+            "small",
+            "0xFF"
+          ]
+        ],
+        "identities": [
+          "one",
+          "two"
+        ],
+        "output": "255 -1 0 0",
+        "exitCode": 255
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0 has no Show Values as Hexadecimal (UP36, fixed by LSP4IJ #1769): IntelliJ checks the decimal values and the identity codes, and the hexadecimal values only with #1769, whose item the case turns on."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

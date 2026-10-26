@@ -52,11 +52,11 @@ import kotlin.time.toJavaDuration
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions` and
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
  * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
- * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`), `runCode` (`id`, `request`, `frame`, `expression`,
- * `limit` in milliseconds, `program`), `cancel` (`id`, `request` of a `runCode`), `exceptionInfo` (`id`, `request`,
- * `thread`),
+ * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`, `hex`), `runCode` (`id`, `request`, `frame`,
+ * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
+ * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
- * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
+ * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
  * in [RunWorkerDebug].
  * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
@@ -310,7 +310,7 @@ object RunWorker {
          */
         fun variables(command: JsonObject) {
             val read =
-                debuggers[command["id"].asLong]?.variables(command["reference"].asInt)
+                debuggers[command["id"].asLong]?.variables(command["reference"].asInt, command["hex"].asBoolean)
                     ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
             read.whenComplete { variables, failure ->
                 answer(command) {
@@ -326,7 +326,11 @@ object RunWorker {
         /** Answers, as `variables` does, with an expression's value, or the reason it cannot be evaluated. */
         fun evaluate(command: JsonObject) {
             val read =
-                debuggers[command["id"].asLong]?.evaluate(command["frame"].asInt, command["expression"].asString)
+                debuggers[command["id"].asLong]?.evaluate(
+                    command["frame"].asInt,
+                    command["expression"].asString,
+                    command["hex"].asBoolean,
+                )
                     ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
             read.whenComplete { variable, failure ->
                 answer(command) {
@@ -350,7 +354,8 @@ object RunWorker {
                     command["frame"].asInt,
                     command["expression"].asString,
                     command["limit"].asLong.milliseconds.toJavaDuration(),
-                    command["program"]?.asBoolean == true,
+                    command["program"].asBoolean,
+                    command["hex"].asBoolean,
                 ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
             val request = command["request"].asLong
             running[request] = run
@@ -634,7 +639,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 12
+        const val PROTOCOL = 13
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
