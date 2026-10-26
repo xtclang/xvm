@@ -183,10 +183,10 @@ public class xRTSignature
      * @return the TypeConstant for a Return
      */
     public static TypeConstant ensureReturnType() {
-        TypeConstant type = RETURN_TYPE;
+        TypeConstant type = INSTANCE.m_typeReturn;
         if (type == null) {
             ConstantPool pool = INSTANCE.pool();
-            RETURN_TYPE = type = pool.ensureEcstasyTypeConstant("reflect.Return");
+            INSTANCE.m_typeReturn = type = pool.ensureEcstasyTypeConstant("reflect.Return");
         }
         return type;
     }
@@ -195,9 +195,9 @@ public class xRTSignature
      * @return the TypeConstant for an RTReturn
      */
     public static TypeConstant ensureRTReturnType() {
-        TypeConstant type = RTRETURN_TYPE;
+        TypeConstant type = INSTANCE.m_typeRTReturn;
         if (type == null) {
-            RTRETURN_TYPE = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTReturn").
+            INSTANCE.m_typeRTReturn = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTReturn").
                     getIdentityConstant().getType();
         }
         return type;
@@ -207,9 +207,9 @@ public class xRTSignature
      * @return the TypeConstant for a Parameter
      */
     public static TypeConstant ensureParamType() {
-        TypeConstant type = PARAM_TYPE;
+        TypeConstant type = INSTANCE.m_typeParam;
         if (type == null) {
-            PARAM_TYPE = type = INSTANCE.pool().typeParameter();
+            INSTANCE.m_typeParam = type = INSTANCE.pool().typeParameter();
         }
         return type;
     }
@@ -218,9 +218,9 @@ public class xRTSignature
      * @return the TypeConstant for an RTParameter
      */
     public static TypeConstant ensureRTParamType() {
-        TypeConstant type = RTPARAM_TYPE;
+        TypeConstant type = INSTANCE.m_typeRTParam;
         if (type == null) {
-            RTPARAM_TYPE = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTParameter").
+            INSTANCE.m_typeRTParam = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTParameter").
                     getIdentityConstant().getType();
         }
         return type;
@@ -230,9 +230,9 @@ public class xRTSignature
      * @return the ClassTemplate for an RTReturn
      */
     public static xConst ensureRTReturnTemplate() {
-        xConst template = RTRETURN_TEMPLATE;
+        xConst template = INSTANCE.m_templateRTReturn;
         if (template == null) {
-            RTRETURN_TEMPLATE = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTReturnType());
+            INSTANCE.m_templateRTReturn = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTReturnType());
         }
         return template;
     }
@@ -241,9 +241,9 @@ public class xRTSignature
      * @return the ClassTemplate for an RTParameter
      */
     public static xConst ensureRTParamTemplate() {
-        xConst template = RTPARAM_TEMPLATE;
+        xConst template = INSTANCE.m_templateRTParam;
         if (template == null) {
-            RTPARAM_TEMPLATE = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTParamType());
+            INSTANCE.m_templateRTParam = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTParamType());
         }
         return template;
     }
@@ -284,10 +284,10 @@ public class xRTSignature
      * @return the TypeComposition for an Array of Return
      */
     public static TypeComposition ensureReturnArray() {
-        TypeComposition clz = RETURN_ARRAY;
+        TypeComposition clz = INSTANCE.m_clzReturnArray;
         if (clz == null) {
             TypeConstant typeReturnArray = INSTANCE.pool().ensureArrayType(ensureReturnType());
-            RETURN_ARRAY = clz = INSTANCE.f_container.resolveClass(typeReturnArray);
+            INSTANCE.m_clzReturnArray = clz = INSTANCE.f_container.resolveClass(typeReturnArray);
         }
         return clz;
     }
@@ -296,24 +296,24 @@ public class xRTSignature
      * @return the TypeComposition for an Array of Parameter
      */
     public static TypeComposition ensureParamArray() {
-        TypeComposition clz = PARAM_ARRAY;
+        TypeComposition clz = INSTANCE.m_clzParamArray;
         if (clz == null) {
             TypeConstant typeParamArray = INSTANCE.pool().ensureArrayType(ensureParamType());
-            PARAM_ARRAY = clz = INSTANCE.f_container.resolveClass(typeParamArray);
+            INSTANCE.m_clzParamArray = clz = INSTANCE.f_container.resolveClass(typeParamArray);
         }
         return clz;
     }
 
-    private static TypeConstant RETURN_TYPE;
-    private static TypeConstant PARAM_TYPE;
-    private static TypeConstant RTRETURN_TYPE;
-    private static TypeConstant RTPARAM_TYPE;
+    private TypeConstant m_typeReturn;
+    private TypeConstant m_typeParam;
+    private TypeConstant m_typeRTReturn;
+    private TypeConstant m_typeRTParam;
 
-    private static xConst RTRETURN_TEMPLATE;
-    private static xConst RTPARAM_TEMPLATE;
+    private xConst m_templateRTReturn;
+    private xConst m_templateRTParam;
 
-    private static TypeComposition RETURN_ARRAY;
-    private static TypeComposition PARAM_ARRAY;
+    private TypeComposition m_clzReturnArray;
+    private TypeComposition m_clzParamArray;
 
     // ----- Object handle -------------------------------------------------------------------------
 

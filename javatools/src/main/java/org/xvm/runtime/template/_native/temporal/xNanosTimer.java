@@ -258,6 +258,19 @@ public class xNanosTimer
             });
         }
 
+        /**
+         * Cancel every pending alarm, as the runtime that would run them is shut down.
+         */
+        public void cancelAlarms() {
+            Alarm[] alarms;
+            synchronized (f_setAlarms) {
+                alarms = f_setAlarms.toArray(Alarm[]::new);
+            }
+            for (Alarm alarm : alarms) {
+                alarm.cancel();
+            }
+        }
+
         public void removeAlarm(Alarm alarm) {
             boolean fUnregistered;
             synchronized (f_setAlarms) {

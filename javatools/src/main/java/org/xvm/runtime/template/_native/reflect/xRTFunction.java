@@ -63,6 +63,8 @@ public class xRTFunction
         TO_ARRAY     = getStructure().findMethod("toArray", 1);
         NATIVE_NO_OP = new NativeFunctionHandle((_, _, _) -> Op.R_NEXT);
 
+        FullyBoundHandle.NO_OP = FullyBoundHandle.makeNoOp(f_container);
+
         FUNCTION_ARRAY_TYPE  = pool.ensureArrayType(pool.typeFunction());
         EMPTY_FUNCTION_ARRAY = pool.ensureArrayConstant(FUNCTION_ARRAY_TYPE, Constant.NO_CONSTS);
 
@@ -1007,23 +1009,33 @@ public class xRTFunction
             return frameThis;
         }
 
-        public static FullyBoundHandle NO_OP =
-                new FullyBoundHandle(INSTANCE.f_container, null, Utils.OBJECTS_NONE) {
-            @Override
-            public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation) {
-                return continuation.proceed(frame);
-            }
+        /**
+         * The handle that does nothing when it is chained or called, which {@link #initNative}
+         * makes for each runtime, from its native container.
+         */
+        public static FullyBoundHandle NO_OP;
 
-            @Override
-            public FullyBoundHandle chain(FullyBoundHandle handle) {
-                return handle;
-            }
+        /**
+         * @return a handle that does nothing when it is chained or called
+         */
+        static FullyBoundHandle makeNoOp(Container container) {
+            return new FullyBoundHandle(container, null, Utils.OBJECTS_NONE) {
+                @Override
+                public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation) {
+                    return continuation.proceed(frame);
+                }
 
-            @Override
-            public String toString() {
-                return "NO_OP";
-            }
-        };
+                @Override
+                public FullyBoundHandle chain(FullyBoundHandle handle) {
+                    return handle;
+                }
+
+                @Override
+                public String toString() {
+                    return "NO_OP";
+                }
+            };
+        }
     }
 
     /**
@@ -1537,10 +1549,10 @@ public class xRTFunction
      * @return the TypeConstant for a {@code ListMap<Parameter, Object>}
      */
     public static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
+        TypeConstant type = INSTANCE.m_typeListMap;
         if (type == null) {
             ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
+            INSTANCE.m_typeListMap = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeParameter(), pool.typeObject());
         }
@@ -1573,7 +1585,8 @@ public class xRTFunction
 
     private static TypeConstant  FUNCTION_ARRAY_TYPE;
     private static ArrayConstant EMPTY_FUNCTION_ARRAY;
-    private static TypeConstant  LISTMAP_TYPE;
+
+    private TypeConstant m_typeListMap;
 
     /**
      * RTFunction:

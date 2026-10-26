@@ -33,6 +33,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -610,6 +611,15 @@ public class SessionDebuggerTest {
         URL modules = SessionDebuggerTest.class.getResource("/xdk-modules");
         assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
         support = new EmbeddingSupport().configure(new DirRepository(new File(modules.toURI()), true), null);
+    }
+
+    /**
+     * The tests' interpreter ends with them, so that its runtime is not kept for the rest of the
+     * JVM's tests.
+     */
+    @AfterAll
+    static void shutdown() {
+        support.shutdownInterpreter();
     }
 
     @Test

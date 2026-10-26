@@ -177,12 +177,12 @@ public class xRTMethodTemplate
      * @return the TypeComposition for an RTMethodTemplate
      */
     public static TypeComposition ensureMethodTemplateComposition() { // TODO: use the container
-        TypeComposition clz = METHOD_TEMPLATE_COMP;
+        TypeComposition clz = INSTANCE.m_clzMethodTemplate;
         if (clz == null) {
             ClassTemplate templateRT   = INSTANCE;
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
+            INSTANCE.m_clzMethodTemplate = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
             assert clz != null;
         }
         return clz;
@@ -201,7 +201,7 @@ public class xRTMethodTemplate
         return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
     }
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data fields ---------------------------------------------------------------------------
 
-    private static TypeComposition METHOD_TEMPLATE_COMP;
+    private TypeComposition m_clzMethodTemplate;
 }
