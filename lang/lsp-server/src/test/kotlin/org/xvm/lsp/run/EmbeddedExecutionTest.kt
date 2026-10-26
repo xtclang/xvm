@@ -180,8 +180,8 @@ class EmbeddedExecutionTest {
         val limits = RunWorkerProcess.Limits()
         assertThat(worker.usage().values).allSatisfy { usage ->
             println("execution worker after a run: $usage")
-            // not against the heap limit: the heap in use is measured after System.gc(), which need not collect anything
-            assertThat(usage.heapUsed).isPositive()
+            // not against the heap limit: the heap in use is what the JVM left after its own collections, if any yet
+            assertThat(usage.heapUsed).isNotNegative()
             assertThat(usage.heapMax).isGreaterThanOrEqualTo(usage.heapUsed)
             assertThat(usage.threads).isPositive().isLessThan(limits.threads)
         }
@@ -189,9 +189,9 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `repeated runs reuse one worker and leave no run, console or pool thread behind`() {
-        // the heap a worker reports is what is in use after it calls System.gc(), which need not collect anything, so
-        // no heap use retires this worker; what the test checks is counted
-        RunWorkerProcess(limits = RunWorkerProcess.Limits(heap = Long.MAX_VALUE, growth = Long.MAX_VALUE)).use { workers ->
+        // the heap a worker reports is what the JVM left after collections it runs when it chooses to, so no heap use
+        // retires this worker; what the test checks is counted
+        RunWorkerProcess(limits = RunWorkerProcess.Limits(heap = Long.MAX_VALUE)).use { workers ->
             val reports = mutableListOf<RunWorkerProcess.Usage>()
             val pids = mutableSetOf<Long>()
 
@@ -1263,9 +1263,9 @@ class EmbeddedExecutionTest {
         val reports = mutableListOf<RunWorkerProcess.Usage>()
         val pids = mutableSetOf<Long>()
         val debugged = mutableListOf<String>()
-        // the heap a worker reports is what is in use after it calls System.gc(), which need not collect anything, so
-        // no heap use retires this worker; what the soak checks is counted
-        val counted = RunWorkerProcess.Limits(heap = Long.MAX_VALUE, growth = Long.MAX_VALUE)
+        // the heap a worker reports is what the JVM left after collections it runs when it chooses to, so no heap use
+        // retires this worker; what the soak checks is counted
+        val counted = RunWorkerProcess.Limits(heap = Long.MAX_VALUE)
         RunWorkerProcess(limits = counted).use { workers ->
             XdkAdapter().use { adapter ->
                 adapter.initializeWorkspace(listOf(directory.toString()))
