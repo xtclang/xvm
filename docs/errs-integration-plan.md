@@ -44,6 +44,15 @@ fix). The old tips are kept locally as `backup/errs-pre-rebase-20261026` (`ff0d4
 `backup/693-pre-rebase-20261026` (`e89299190`), and in a verified bundle of both,
 `~/src/xvm-rebase-backups-20261026/errs-and-693.bundle`.
 
+**errs rebased again onto master `ddaa3d0a4` (2026-10-26, later).** Master had moved by #733,
+which fixes `ClassComposition` caching and adds `testConstructionDispatch` to `manualTests`'
+`misc.x`. Commit references made between the entry above and this one are to that history:
+[the second commit map](errs-rebase-2026-10-26b.tsv) maps its 1025 commits to their replays, each
+with the same subject; master absorbed none. Two errs commits that change `misc.x` conflicted with
+#733's test; each keeps its own change and #733's test, and errs' tree differs from the old tip by
+exactly #733's diff. `TestMisc` passes. The old tip is kept locally as
+`backup/errs-pre-rebase-20261026-2` (`c2c55df10`).
+
 - Conflicts, resolved the same way on both branches:
   - `EMB-5`: both pass `{e, message}`. #727 made it print the exception, and this branch prints
     both (`Internal error: {1}. Cause: {0}`), which is kept.
