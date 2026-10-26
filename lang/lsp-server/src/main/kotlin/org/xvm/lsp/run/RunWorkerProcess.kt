@@ -320,6 +320,21 @@ internal class RunWorkerProcess(
         json.keySet().forEach { add(it, json[it]) }
     }
 
+    /** Changes a variable of the stopped program to an expression's value; fails with the reason when it cannot. */
+    fun setVariable(
+        id: Long,
+        reference: Int,
+        name: String,
+        expression: String,
+        hex: Boolean,
+    ): CompletableFuture<VariableState> =
+        request("setVariable", id) {
+            addProperty("reference", reference)
+            addProperty("name", name)
+            addProperty("expression", expression)
+            addProperty("hex", hex)
+        }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+
     /** Evaluates an expression in a stopped frame; fails with the reason when it cannot. */
     fun evaluate(
         id: Long,

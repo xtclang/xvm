@@ -496,6 +496,34 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module whose run() prints, on line 18, its locals, a Box's count, a mutable array and a
+     * const Point's x, and returns n + box.count + list[1].
+     */
+    private static final String SETS = """
+            module Sets {
+                class Box {
+                    Int count;
+                    Int twice.get() = count * 2;
+                }
+
+                const Point(Int x, Int y);
+
+                Int run() {
+                    Int    n     = 20;
+                    Int8   small = 1;
+                    String text  = "hi";
+                    Box    box   = new Box();
+                    Point  point = new Point(1, 2);
+                    Int[]  list  = new Int[3](i -> i);
+                    Int[]  fixed = [1, 2, 3];
+                    @Inject Console console;
+                    console.print($"{n} {small} {text} {box.count} {list} {point.x} {fixed}");
+                    return n + box.count + list[1];
+                }
+            }
+            """;
+
+    /**
      * A module whose run() prints "stopped" on line 5 and returns 3; forever() loops forever, and
      * so does stubborn(), which catches every exception that its loop throws.
      */
@@ -1642,6 +1670,54 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void aLocalAFieldOrAnElementTakesTheValueOfAnExpressionOfItsTypeAndTheProgramGoesOnWithIt() throws Exception {
+        Path  source  = compile("Sets", SETS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Sets"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 18)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Sets", output, session);
+        try (control) {
+            Stop stop   = stops.next();
+            int  frame  = session.stackTrace(stop.threadId()).getFirst().id();
+            int  scope  = session.scopes(frame).getFirst().variablesReference();
+            var  locals = byName(read(session, scope));
+
+            // a local takes the value of an expression, a literal of the local's type, such as an Int8's
+            assertEquals(new Variable("n", "41", "Int", 0), set(session, scope, "n", "n * 2 + 1"));
+            assertEquals("41", byName(read(session, scope)).get("n").value());
+            assertEquals(new Variable("small", "5", "Int8", 0), set(session, scope, "small", "5"));
+            assertEquals("\"bye\"", set(session, scope, "text", "\"bye\"").value());
+            assertFails("300: 300 is out of range for Int8.", session.setVariable(scope, "small", "300", false));
+            assertFails("\"text\" is String, not Int, so n cannot take it.", session.setVariable(scope, "n", "\"text\"", false));
+            assertFails("this cannot be changed.", session.setVariable(scope, "this", "n", false));
+            assertFails("There is no variable \"nope\" in this frame.", session.setVariable(scope, "nope", "1", false));
+
+            // a mutable object's field, and an element of a mutable array; not a computed property, nor what is immutable
+            int box = locals.get("box").variablesReference();
+            assertEquals("7", set(session, box, "count", "7").value());
+            assertFails("twice is computed by its getter, and has no field to change.", session.setVariable(box, "twice", "1", false));
+            assertFails("Sets:Box has no field nope.", session.setVariable(box, "nope", "1", false));
+            int list = locals.get("list").variablesReference();
+            assertEquals("9", set(session, list, "[1]", "9").value());
+            assertFails("[5] is not an element of the array, whose size is 3.", session.setVariable(list, "[5]", "9", false));
+            assertFails("x is a field of an immutable Sets:Point, which cannot be changed.",
+                    session.setVariable(locals.get("point").variablesReference(), "x", "5", false));
+            var refused = assertThrows(ExecutionException.class, () -> session.setVariable(locals.get("fixed").variablesReference(),
+                    "[0]", "5", false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            assertTrue(refused.getCause().getMessage().startsWith("[0] cannot be changed: "), refused.getCause().getMessage());
+
+            // the program goes on with the new values
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("41 5 bye 7 [0, 9, 2] 1 [1, 2, 3]"), output.toString());
+            assertEquals(57L, control.result());
+        }
+    }
+
+    @Test
     public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
         Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
         Stops stops   = new Stops();
@@ -2043,6 +2119,10 @@ public class SessionDebuggerTest {
     private static List<Variable> page(SessionDebugger session, int reference, Filter filter, int start, int count)
             throws Exception {
         return session.variables(reference, false, filter, start, count).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    private static Variable set(SessionDebugger session, int reference, String name, String expression) throws Exception {
+        return session.setVariable(reference, name, expression, false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
 
     private static Variable evaluate(SessionDebugger session, int frame, String path) throws Exception {
