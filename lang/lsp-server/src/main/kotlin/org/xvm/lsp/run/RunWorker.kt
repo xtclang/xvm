@@ -56,7 +56,8 @@ import kotlin.time.toJavaDuration
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
- * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`), `step`
+ * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`,
+ * `filter`: `ALL`, `NAMED` or `INDEXED`, `start`, `count`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
  * in [RunWorkerDebug].
  * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
@@ -310,7 +311,13 @@ object RunWorker {
          */
         fun variables(command: JsonObject) {
             val read =
-                debuggers[command["id"].asLong]?.variables(command["reference"].asInt, command["hex"].asBoolean)
+                debuggers[command["id"].asLong]?.variables(
+                    command["reference"].asInt,
+                    command["hex"].asBoolean,
+                    SessionDebugger.Filter.valueOf(command["filter"].asString),
+                    command["start"].asInt,
+                    command["count"].asInt,
+                )
                     ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
             read.whenComplete { variables, failure ->
                 answer(command) {
@@ -377,7 +384,14 @@ object RunWorker {
         }
 
         private fun state(variable: SessionDebugger.Variable) =
-            VariableState(variable.name(), variable.value(), variable.type(), variable.variablesReference(), variable.lazy())
+            VariableState(
+                variable.name(),
+                variable.value(),
+                variable.type(),
+                variable.variablesReference(),
+                variable.lazy(),
+                variable.elements(),
+            )
 
         /** A failed read's reason, as the runtime debugger put it. */
         private fun reason(failure: Throwable): String {
@@ -639,7 +653,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 13
+        const val PROTOCOL = 14
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
