@@ -282,6 +282,20 @@ public class EmbeddingSupport {
                 : 0;
     }
 
+    /**
+     * Diagnostics for a host that keeps the runtime across runs: the threads of the runtime's own
+     * pool, which runs share. The pool is fixed in size, so this is at most one thread per core.
+     * A thread that a pool thread starts, such as the JDK's for a CompletableFuture's timeout,
+     * joins the pool's thread group but is not one of these; JIT runs have no pool.
+     *
+     * @return the number of threads in the runtime's pool
+     */
+    public int poolThreads() {
+        return ensureConnector() instanceof InterpreterConnector interpreter
+                ? interpreter.getNativeContainer().f_runtime.f_executorXVM.getPoolSize()
+                : 0;
+    }
+
     // ----- API -----------------------------------------------------------------------------------
 
     /**

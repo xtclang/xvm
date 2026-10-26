@@ -107,6 +107,9 @@ internal class DebugSessions(
         sessions.clear()
     }
 
+    /** Sessions started and not yet ended, for tests. */
+    internal fun tracked(): Int = sessions.size
+
     /** A session's launches, as embedded runs. */
     private inner class Launches : DebugRuns {
         override fun launch(

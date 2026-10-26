@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -69,9 +70,10 @@ import static org.xvm.util.Severity.WARNING;
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
  * a file system, failures, closing a run, how the entry method is selected and what it is passed,
- * exact arguments, console input, changed modules and dependencies, and what repeated runs leave
- * in the runtime's constant pools. The compiled XDK modules come from the test resources, where
- * the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
+ * exact arguments, console input, changed modules and dependencies, what repeated runs leave in
+ * the runtime's constant pools, and which threads are its pool's. The compiled XDK modules come
+ * from the test resources, where the build puts them ({@code testXtcModules} in
+ * javatools/build.gradle.kts).
  */
 public class EmbeddingSupportTest {
     private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
@@ -523,6 +525,27 @@ public class EmbeddingSupportTest {
                 errs.getErrors().stream().map(ErrorInfo::getCode).toList());
         assertEquals("Missing method \"absent\" in module Refused", errs.getErrors().getFirst().getMessageText());
         assertEquals(consoles, support.registeredConsoles());
+    }
+
+    @Test
+    public void poolThreadsAreThoseOfTheRuntimesPoolAndNotAThreadOneOfThemStarts() throws Exception {
+        ThreadPoolExecutor pool = assertInstanceOf(InterpreterConnector.class, support.ensureConnector())
+                .getNativeContainer().f_runtime.f_executorXVM;
+        // with each of the pool's threads started, a task does not start another
+        pool.prestartAllCoreThreads();
+        assertEquals(pool.getCorePoolSize(), support.poolThreads());
+
+        // a thread that a pool thread starts joins the pool's thread group, as the JDK's for a
+        // CompletableFuture's timeout does when the debugger sets a time limit on a stopped fiber
+        CompletableFuture<Void> release = new CompletableFuture<>();
+        Thread started = pool.submit(() -> Thread.ofPlatform().start(release::join)).get();
+        try {
+            assertEquals("XVM", started.getThreadGroup().getName());
+            assertEquals(pool.getCorePoolSize(), support.poolThreads());
+        } finally {
+            release.complete(null);
+            started.join();
+        }
     }
 
     @Test
