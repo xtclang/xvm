@@ -372,7 +372,15 @@ passes with the workaround disabled. The gates are in
 - [ ] UP12 (#1707): narrow the `XtcFormattingService` override; gate: absent-editor, snapshot,
   cancellation and server-lifetime guards, X138 and X139. The UP24 command ownership stays.
 - [ ] UP14 (#1716): remove the semantic-result retirement in `XtcLanguageClient`; gate: X146.
-- [ ] UP14: decide whether to file the invalidation-on-diagnostics half, which isn't filed.
+- [ ] UP14's other half ([#1771](https://github.com/redhat-developer/lsp4ij/pull/1771), filed 2026-10-26,
+  `fix/feature-cache-other-file-changes` at `9675614f`): hover, definition, declaration, type
+  definition, implementation, references, completion, rename and the hierarchy prepares reuse a
+  completed answer for the same offset while the file's own stamp is unchanged, so another file's
+  edit leaves them stale until the file is edited or another offset is asked for. The pull request
+  also outdates them when the project's PSI modification count changes; its test fails without the
+  fix for hover and definition. Gate after a release: `XtcLanguageClient`'s retirement shrinks to
+  what #1771 leaves, answers that change after an analysis without any file changing, and the
+  features still on the file stamp; X146 passes.
 - [ ] UP18 (#1711): advertise `AsIs` again; gate: X150 keeps exact source, placeholders and Undo.
 - [ ] UP19 (#1708): remove `DirectoryDocumentMoves`; gate: X118, X161, X162, X163 and the
   connection lifecycle tests.
@@ -454,15 +462,15 @@ passes with the workaround disabled. The gates are in
   writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
   cancels no DAP request today, so no adapter gets that event.
 
-### LSP4IJ and VS Code: a DAP completion's `start` (UP43)
+### A DAP completion's `start` (UP43): not filed
 
-- [ ] UP43 (2026-10-26): DAP measures a completion item's `start` in the client's column base, but
-  LSP4IJ, which declares `columnsStartAt1`, inserts at it as a 0-based offset into the expression,
-  and VS Code's console filters by it as a 0-based index into the text. XVM's adapter sends no
-  `start`, and both clients then replace the item's `length` before the cursor (tagged TODO LSP4IJ:
-  UP43 in `XtcDebugServer.completions`). Whether to file depends on what other adapters send: a pull
-  request to LSP4IJ only if they follow the spec. Gate if LSP4IJ changes: the adapter sends `start`
-  in the client's base, and X320 passes in both editors.
+- UP43 (2026-10-26): DAP measures a completion item's `start` in the client's column base, but the
+  adapters send it 0-based and LSP4IJ and VS Code read it so, although both declare
+  `columnsStartAt1`: vscode-js-debug and CodeLLDB as an index into the text, debugpy as a column in
+  the request's line, java-debug always 0; lldb-dap sends only `length`, and Delve has no
+  completions (their sources, read 2026-10-26). Converting by the column base in LSP4IJ would move
+  their insertions one character to the left, so nothing is filed. XVM's adapter sends `length`
+  only, which both editors replace before the cursor (`0e0d7e2c4`).
 
 ### LSP4J
 
