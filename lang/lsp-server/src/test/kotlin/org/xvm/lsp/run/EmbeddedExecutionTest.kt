@@ -687,6 +687,85 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `once a debugged file is edited, a breakpoint is placed on the line the program was built from, or refused on a changed line`() {
+        CompilerTestSupport.configure()
+        val stops = source("Stops.x", STOPS.trimIndent())
+        val path = directory.resolve("Stops.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+            // once launch is handled, its build has taken the text it compiles
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            client.until(id) { it.response == "setBreakpoints" }
+
+            // two lines typed above n = twice(21), on line 5 as built and on line 7 now
+            val lines = STOPS.trimIndent().lines().toMutableList()
+            lines.addAll(3, listOf("    // one", "    // two"))
+            adapter.updateDocument(stops, lines.joinToString("\n"))
+            sessions.request(id, 4, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 7}, {"line": 4}]}""")
+            val pending =
+                client
+                    .until(id) { it.response == "setBreakpoints" }
+                    .last()["body"]
+                    .asJsonObject["breakpoints"]
+                    .asJsonArray
+                    .map { it.asJsonObject["id"].asInt }
+            sessions.request(id, 5, "configurationDone")
+            val untilStop = client.until(id) { it.event == "stopped" }
+
+            // the moved line's breakpoint is installed where it is now, the typed line's is refused with the reason
+            val changes =
+                untilStop
+                    .filter { it.event == "breakpoint" }
+                    .map { it["body"].asJsonObject["breakpoint"].asJsonObject }
+                    .associateBy { it["id"].asInt }
+            assertThat(changes.getValue(pending[0])["verified"].asBoolean).isTrue()
+            assertThat(changes.getValue(pending[0])["line"].asInt).isEqualTo(7)
+            assertThat(changes.getValue(pending[1])["verified"].asBoolean).isFalse()
+            assertThat(changes.getValue(pending[1])["message"].asString).isEqualTo(EmbeddedRuns.CHANGED_SINCE_BUILD)
+            val thread = untilStop.last()["body"].asJsonObject["threadId"].asInt
+
+            fun stack(seq: Int): List<Pair<String, Int>> {
+                sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
+                return client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .map { it["name"].asString to it["line"].asInt }
+            }
+            // the stop is shown on its line now
+            assertThat(stack(6)).containsExactly("Stops.run" to 7)
+
+            // while it runs, too: Int result = n * 2, line 11 as built, is line 13 now, and line 5 is one of those typed
+            sessions.request(id, 7, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 13}, {"line": 5}]}""")
+            val placed =
+                client
+                    .until(id) { it.response == "setBreakpoints" }
+                    .last()["body"]
+                    .asJsonObject["breakpoints"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(placed.map { it["verified"].asBoolean to it["line"].asInt }).containsExactly(true to 13, false to 5)
+            assertThat(placed[1]["message"].asString).isEqualTo(EmbeddedRuns.CHANGED_SINCE_BUILD)
+            sessions.request(id, 8, "continue", """{"threadId": $thread}""")
+            client.until(id) { it.event == "stopped" }
+            assertThat(stack(9)).containsExactly("Stops.twice" to 13, "Stops.run" to 7)
+
+            sessions.request(id, 10, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a console line in a stopped frame runs code there, whose effect stays, and cancel or the time limit ends a run that loops`() {
         CompilerTestSupport.configure()
         val module = source("Runs.x", RUNS.trimIndent())
