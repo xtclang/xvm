@@ -55,8 +55,6 @@ class InterpreterControl
      */
     static Connector createConnector(ModuleRepository repository) {
         InterpreterConnector connector = new InterpreterConnector(repository);
-        // an embedding host has no terminal for the console debugger, which would read its
-        // commands from the host's standard input; assert:debug continues instead
         connector.setDebugger(Debugger.NONE);
         connector.loadModule("runner.xtclang.org");
         connector.start(null);
