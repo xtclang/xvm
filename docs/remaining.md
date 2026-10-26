@@ -582,8 +582,12 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     master and ends with either (2026-10-26). Neither PR's test catches it, since the Gradle test JVM's
     standard input is at its end; master's console debugger then returns without clearing the
     runtime's "debugger is active" flag, which stays true. The feedback on #719 says so, and that it has
-    no debugger a host supplies; #718 closes once #719 is merged, and `Runtime.setDebugger()` comes
-    with the DAP work.
+    no debugger a host supplies. On 2026-10-26 Gene accepted #718's approach if it also turns the
+    debugger off globally, as #719 does: #718 now has the system property
+    `org.xvm.runtime.debugger=off` (`6de116655`, with `RuntimeDebuggerTest`), drops the comment he
+    asked about, keeps the console debugger once chosen, as Cam asked, and keeps `getRuntime()`, with
+    the reason (a point an instrumentation agent or test can intercept) in its thread. Rebased onto
+    master and re-requested; #719 closes once #718 is merged.
   - Found by R7r (`d77fb9b51`, 2026-10-23), in `EvalCompiler`, which master's console debugger uses
     for `E`: a method's parameter is unresolvable until something has shown it, an `@Inject` variable
     is captured with its `Ref`'s type, so no method of it compiles, and a lambda that does not compile
@@ -632,7 +636,7 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     [#729](https://github.com/xtclang/xvm/issues/729) asks whether that should change.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [ ] Once master lets a host set its own debugger, which #718's `setDebugger()` did and the DAP work
-  now brings (#719 replaces #718), file the `EvalCompiler` fixes above again, as a new pull request or
+  now brings (#718, once merged), file the `EvalCompiler` fixes above again, as a new pull request or
   by reopening [#721](https://github.com/xtclang/xvm/pull/721). The branch
   `lagergren/fix-debugger-eval-captures` (`f3069b4fb`, 2026-10-24) has the fix and its test, and is
   based on #718's branch: rebase it onto master, which leaves only its own commit. The test, an
