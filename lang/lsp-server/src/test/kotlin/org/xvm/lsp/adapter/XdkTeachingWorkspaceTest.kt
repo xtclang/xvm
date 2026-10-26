@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter
 
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -10,9 +9,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
-import java.lang.ref.WeakReference
+import org.xvm.lsp.util.Watched
 import java.nio.file.Path
-import java.time.Duration
 
 /**
  * The actual teaching sources, including companion files and all automatically discovered roots.
@@ -95,16 +93,16 @@ class XdkTeachingWorkspaceTest {
             }
         // The original 24-root workspace now also includes 7a.9's initially empty Broken module.
         assertThat(roots).hasSize(25)
-        val observed = mutableListOf<WeakReference<Any>>()
+        val watched = Watched()
         XdkAdapter(
             { source, repository, errors ->
                 EmbeddingSupport.instance().compileModule(source, repository, errors)
             },
             { sources, repository, errors ->
                 EmbeddingSupport.instance().compileModule(sources, repository, errors).also { compilation ->
-                    observed += WeakReference(compilation)
-                    compilation.pool()?.let { observed += WeakReference(it) }
-                    compilation.sourceTrees().forEach { observed += WeakReference(it) }
+                    watched.add(compilation)
+                    watched.add(compilation.pool())
+                    compilation.sourceTrees().forEach(watched::add)
                 }
             },
             { _, _, _, _, _ -> error("A complete rename proof must not use cursor recovery") },
@@ -138,7 +136,7 @@ class XdkTeachingWorkspaceTest {
             }
             val diagnostics =
                 buffers.keys.associateWith { adapter.getCachedResult(it)?.diagnostics }
-            observed.clear()
+            watched.clear()
             val edit =
                 requireNotNull(adapter.rename(uri(target), 0, text.indexOf("value"), "amount"))
             assertThat(edit.changes.keys).containsExactly(uri(target))
@@ -146,7 +144,7 @@ class XdkTeachingWorkspaceTest {
             assertThat(edit.renames).isEmpty()
             assertThat(buffers.keys.associateWith { adapter.getCachedResult(it)?.diagnostics })
                 .isEqualTo(diagnostics)
-            released(observed)
+            released(watched, adapter)
 
             val collision =
                 buffers
@@ -154,11 +152,11 @@ class XdkTeachingWorkspaceTest {
                     .replace("class Base {", "class Base { Int amount = 3;")
             assertThat(adapter.compile(uri(target), collision).success).isTrue()
             val beforeRefusal = adapter.getCachedResult(uri(target))
-            observed.clear()
+            watched.clear()
             assertThat(adapter.rename(uri(target), 0, collision.indexOf("value"), "amount"))
                 .isNull()
             assertThat(adapter.getCachedResult(uri(target))).isEqualTo(beforeRefusal)
-            released(observed)
+            released(watched, adapter)
             fixtures.forEach { (file, source) ->
                 assertThat(directory.resolve(file).toFile().readText()).isEqualTo(source)
             }
@@ -168,14 +166,15 @@ class XdkTeachingWorkspaceTest {
         }
     }
 
-    private fun released(observed: List<WeakReference<Any>>) {
-        assertThat(observed).isNotEmpty()
-        await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofMillis(100)).untilAsserted {
-            System.gc()
-            assertThat(observed.count { it.get() != null })
-                .describedAs("query-owned compiler objects")
-                .isZero()
-        }
+    /** Whether the adapter or the compiler still reaches what the query compiled, without waiting for a collection. */
+    private fun released(
+        watched: Watched,
+        adapter: XdkAdapter,
+    ) {
+        assertThat(watched.size).isPositive()
+        assertThat(watched.reachedFrom(adapter, EmbeddingSupport.instance()))
+            .describedAs("query-owned compiler objects still reached")
+            .isEmpty()
     }
 
     /** Mirror the native workspace inputs, reading the shared catalog instead of copying XTC. */
