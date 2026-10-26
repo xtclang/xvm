@@ -381,7 +381,7 @@ this bridge; they cannot be inferred from compiler type hints.
   the program, and a line sent as the Debug Console's `evaluate` request read by a second program.
   IntelliJ then kept DAP disabled and offered no Debug runner (X285); since R7's fourth step, its
   debug sessions are the same, through LSP4IJ's DAP client.
-- [ ] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
+- [x] **R7 — Runtime debugger bridge.** Implement session-scoped hooks, initial suspension, real
   breakpoints/exception stops, fibers/threads, stacks/scopes/variables, stepping, pause, watches and
   hover on variables and paths (which run no code), and bounded evaluation. Test source revisions,
   stale handles, resume/stop races and multiple service contexts. The debugger features beyond
@@ -456,9 +456,10 @@ this bridge; they cannot be inferred from compiler type hints.
      code is refused, naming the method. Shared X313 in both editors, its logpoint in VS Code only
      (UP32).
 
-  Still open: bounded evaluation's tier 2, calls and properties run on the stopped fiber with a
-  deadline, and source revisions (a breakpoint is matched by file and line, not by the revision
-  that was built). The debugger is
+  *Source revisions (2026-10-26, `f53883083`):* a debugged run keeps the text each file was built
+  from, so once a file is edited a breakpoint is placed on the line it was built with, one on a
+  changed line is unverified with the reason, and stack frames show on their lines now (shared
+  X321). With bounded evaluation's tier 2 done before it, R7 is complete. The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
