@@ -194,6 +194,8 @@ Console while the program runs is its console input. Breakpoints are verified wh
 starts, and a breakpoint or `assert:debug` stops the program: the editor shows the line, and the
 Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
 the selected frame's locals, and expands objects into their fields and arrays into their elements.
+An object's computed properties and its `toString()` follow its fields as lazy variables: their
+values run the program's code, for at most a second, so they show only once you click them.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
 caller. A breakpoint can have a condition, an expression such as `done` or `i % 2 == 0 && i > 0`, and
 a hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with

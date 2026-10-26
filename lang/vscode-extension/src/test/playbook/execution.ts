@@ -856,6 +856,60 @@ export function debugSessionCases(): void {
             }
         });
     });
+    playbook('X316', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+
+                // the requests the Variables view makes as it expands the object, and as each lazy variable is clicked
+                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
+                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
+                const variables = async (reference: number): Promise<DapVariable[]> =>
+                    (await session.customRequest('variables', { variablesReference: reference })).variables;
+                const locals = await variables(scopes[0].variablesReference);
+                const object = locals.find(item => item.name === data.expands);
+                assert.ok(object && object.variablesReference > 0, JSON.stringify(locals));
+                const fields = await variables(object.variablesReference);
+                assert.deepStrictEqual(fields.map(field => [field.name, field.value]), data.fields);
+                for (const [name, value] of data.lazy as string[][]) {
+                    const lazy = fields.find(field => field.name === name);
+                    assert.strictEqual(lazy?.presentationHint?.lazy, true, JSON.stringify(lazy));
+                    const shown = await variables(lazy.variablesReference);
+                    assert.deepStrictEqual(shown.map(item => [item.name, item.value]), [[name, value]]);
+                }
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -883,7 +937,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X314 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X316 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;
@@ -909,6 +963,7 @@ interface DapVariable {
     value: string;
     type?: string;
     variablesReference: number;
+    presentationHint?: { lazy?: boolean };
 }
 
 /** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */
