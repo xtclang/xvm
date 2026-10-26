@@ -365,6 +365,10 @@ val fatJar =
         manifest {
             attributes("Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt")
         }
+
+        // a jar that two builds wrote at once lists its entries but cannot read them; it must not be up to date
+        val jar = archiveFile
+        doLast { requireWholeArchive(jar.get().asFile, "The language server's fat jar") }
     }
 
 // Process lifecycle regressions launch the same packaged server that IDEs consume.
