@@ -263,28 +263,64 @@ tasks.test {
     serverTestSettings()
 }
 
-// The configured graph's query checks, which the manual test plan runs on their own (its section I): closed
-// members' inputs, version conversion, cancellation and the repeated retention workload
-tasks.register<Test>("graphQueryTest") {
+/** A task that runs some of the suite's classes, by their names under org.xvm.lsp, with the suite's settings. */
+fun focusedTest(
+    name: String,
+    description: String,
+    vararg classes: String,
+) = tasks.register<Test>(name) {
     group = "verification"
-    description = "Test the configured graph's queries: closed-member inputs, version conversion, cancellation and retention"
+    this.description = description
     testClassesDirs =
         sourceSets.test
             .get()
             .output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath
     serverTestSettings()
-    filter {
-        listOf(
-            "adapter.XdkRenameTest",
-            "adapter.XdkProjectQueryTest",
-            "adapter.XdkProjectQueryLifecycleTest",
-            "server.XdkRenameServerTest",
-            "server.XdkCursorServerTest",
-            "adapter.XdkRetentionTest",
-        ).forEach { includeTestsMatching("org.xvm.lsp.$it") }
-    }
+    filter { classes.forEach { includeTestsMatching("org.xvm.lsp.$it") } }
 }
+
+// The checks that the docs run on their own: lang/doc/manual-test-plan.md's compiler output checks, dependency and
+// source graph host checks, and configured graph queries (its section I), and javatools/lsp-compiler.md's
+// embedding consumers
+focusedTest(
+    "emissionTest",
+    "Test the compiler's output: atomic operations through each kind of receiver, diagnostics and dense switches",
+    "adapter.CompilerEmissionAuditTest",
+    "adapter.CompilerAtomicEmissionTest",
+)
+focusedTest(
+    "dependencyHostTest",
+    "Test the dependency host API: definitions in exported sources, and replaced libraries' consumers",
+    "adapter.XdkDependencyTest",
+    "server.XdkLanguageServerTest",
+)
+focusedTest(
+    "sourceGraphHostTest",
+    "Test the source graph host API: late compiler results, cursor cancellation, snapshots and binary replacement",
+    "adapter.XdkProjectTest",
+    "server.XdkProjectServerTest",
+)
+focusedTest(
+    "graphQueryTest",
+    "Test the configured graph's queries: closed-member inputs, version conversion, cancellation and retention",
+    "adapter.XdkRenameTest",
+    "adapter.XdkProjectQueryTest",
+    "adapter.XdkProjectQueryLifecycleTest",
+    "server.XdkRenameServerTest",
+    "server.XdkCursorServerTest",
+    "adapter.XdkRetentionTest",
+)
+focusedTest(
+    "embeddingConsumerTest",
+    "Test the compiler's embedding API through the server's use of it: diagnostics, snapshots, type info and facts",
+    "adapter.Embedding*Test",
+    "adapter.TypeInfoDiagnosticsTest",
+    "adapter.TypeInfoFinalCompositionTest",
+    "adapter.CompilerBindingFactsTest",
+    "adapter.CompilerDeclarationAnalysisTest",
+    "adapter.CompilerPartialFactsTest",
+)
 
 /** What every run of the server's own tests shares, the whole suite's or a part's. */
 fun Test.serverTestSettings() {
