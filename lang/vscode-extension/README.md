@@ -192,7 +192,9 @@ same execution workers. The Debug Console shows the build, the program's output 
 debug toolbar's Stop ends the program, also while it still builds, and a line typed in the Debug
 Console while the program runs is its console input. Breakpoints are verified when the program
 starts, and a breakpoint or `assert:debug` stops the program: the editor shows the line, and the
-Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
+Call Stack view the stopped fiber's frames and the other fibers that wait. The running program keeps
+the code it was built from, so once the file is edited a breakpoint is placed on the line it was
+built with, and one on a line changed since stays unverified, saying why. The Variables view shows
 the selected frame's locals, and expands objects into their fields and arrays into their elements;
 a large array's elements come in ranges of 100, such as `[200..249]`, each read when expanded.
 An object's computed properties and its `toString()` follow its fields as lazy variables: their

@@ -635,7 +635,10 @@ way ends the step. A breakpoint may have a condition, an expression whose `Boole
 whose condition holds; and a log message, which makes it a logpoint: the message, with each
 `{expression}` in it replaced by its value, is console output, and the program runs on. A condition
 that cannot be evaluated stops the program and says why; one that is not such an expression leaves
-the breakpoint unverified, with the reason. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
+the breakpoint unverified, with the reason. Breakpoints and stacks follow the text the program was
+built from: once a debugged file is edited, saved or not, a breakpoint's line is matched to that
+text, line by line, ignoring whitespace at a line's ends, and a frame's line to where it is now; a
+breakpoint on a line changed since the build is unverified, with the reason. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
 stop the program where such an exception is thrown, with the reason `exception` and the exception's
 type and text; it is the frame's first variable, `<exception>`. Each filter takes exception classes,
 separated by commas, as its condition (`filterOptions`), and then stops only at them and the classes
