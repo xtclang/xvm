@@ -330,15 +330,21 @@ breakpoint list, which the editors replace.
 
 - [ ] Repeated compile/run/stop/debug soak, with memory and process checks, on every supported
   platform.
-- [ ] A JVM that makes more than one runtime keeps up to two that are done with, about 115 MB each,
-  since the runtime holds a container's state in Java statics (heap dump, 2026-10-23). The static
-  templates (`xConst.INSTANCE` and the other `INSTANCE = this`, `xEnum.RANGE_TEMPLATE`) hold the
-  newest runtime's native container, and a static set once (`xRTSignature.PARAM_ARRAY`) the first
-  one's, which later runtimes then use too. A closed program's pending alarm stays in the shared
-  `xLocalClock.TIMER` until it is due, an hour for `EmbeddingSupportTest`'s, with its runtime.
-  Nothing calls `Runtime.shutdownXVM()`, so a runtime's worker threads stay as well. The servers make
-  one runtime per process (`EmbeddingSupport.instance()`), so it costs them little; the `javatools`
-  test JVM carries two, 190–240 MB of its 512 MB, and peaks at 275 MB.
+- [x] A JVM that makes more than one runtime kept up to two that it was done with, about 115 MB each
+  (`1ca73e922`, 2026-10-26). Three things held one:
+  - A pending alarm on the JVM-wide Java timer. The `Timer` service belongs to the native
+    container, so `xNanosTimer.TimerHandle.Alarm` kept the runtime until the alarm was due.
+  - 27 values that 13 templates cached in statics on first use, such as
+    `xRTSignature.PARAM_ARRAY`, from the first runtime, which every later runtime used too.
+  - `FullyBoundHandle.NO_OP`, made from the first runtime when its class was loaded.
+
+  `EmbeddingSupport.shutdownInterpreter()` (for tests) shuts a connector down: its timers' alarms
+  are cancelled and its executors end. The cached values are fields of each runtime's templates,
+  and `NO_OP` is made by each runtime; the embedding and debugger tests shut their interpreter down.
+  `RuntimeRetentionTest` checks both without waiting for the collector. The `javatools` test JVM now
+  holds one runtime at a time: its peak live heap is down from 275 to 226 MB, and from 242 to 193 MB
+  at the end. Kept: the about 130 statics a template sets when it is made, such as its `INSTANCE`,
+  still hold the newest runtime until another is made; the servers make one runtime per process.
 - [ ] Parity between IntelliJ and VS Code.
 - [ ] Logs that correlate build ID, queue job, artifact revision, worker PID and generation, and run
   ID.
