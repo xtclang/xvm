@@ -480,6 +480,9 @@ this bridge; they cannot be inferred from compiler type hints.
   *No forced collection (2026-10-26, `3a9112c31`):* the worker no longer calls `System.gc()` after a
   run. It reports the heap the JVM left after its own latest collections; the 512 MB limit applies to
   that, and the 128 MB growth rule of R4 is gone.
+  *Correlated logs (2026-10-26, `a87b63d9d`):* the build, run, debug session and worker lines share
+  `build=` (the compiler queue job's ID), `artifact=` (the module and its revision), `run=`,
+  `workerRun=`, and `worker=` with `generation=`.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
