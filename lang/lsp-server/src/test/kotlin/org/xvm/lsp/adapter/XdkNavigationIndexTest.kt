@@ -1,7 +1,6 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -11,10 +10,9 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkNavigationIndex
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceNavigation
-import java.lang.ref.WeakReference
+import org.xvm.lsp.util.Watched
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.TimeSource
@@ -164,36 +162,37 @@ class XdkNavigationIndexTest {
     @ValueSource(booleans = [false, true])
     fun `retained graph navigation releases all compilation pools and ASTs`(diagnosticsFirst: Boolean) {
         CompilerTestSupport.configure()
-        val observed = mutableListOf<WeakReference<Any>>()
+        val watched = Watched()
         val roots = (0 until 32).map { source("Node$it", "module Node$it { class Box {} }") }
-        XdkAdapter(
-            { source, repository, errors -> EmbeddingSupport.instance().compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                assertThat(repository?.moduleNames).isEmpty()
-                if (observed.size == 48) {
-                    System.gc()
-                    assertThat(observed.count { it.get() != null })
-                        .describedAs("earlier compiler attempts retained while the graph is still compiling")
-                        .isZero()
-                }
-                EmbeddingSupport.instance().compileModule(sources, repository, errors).also { result ->
-                    observed += WeakReference(result)
-                    result.pool()?.let { observed += WeakReference(it) }
-                    result.sourceTrees().forEach { observed += WeakReference(it) }
-                }
-            },
-            { _, _, _, _, _ -> error("No cursor analysis") },
-        ).use { adapter ->
+        lateinit var adapter: XdkAdapter
+        adapter =
+            XdkAdapter(
+                { source, repository, errors -> EmbeddingSupport.instance().compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    assertThat(repository?.moduleNames).isEmpty()
+                    if (watched.size == 48) {
+                        assertThat(watched.reachedFrom(adapter, EmbeddingSupport.instance()))
+                            .describedAs("earlier compiler attempts still reached while the graph is still compiling")
+                            .isEmpty()
+                    }
+                    EmbeddingSupport.instance().compileModule(sources, repository, errors).also { result ->
+                        watched.add(result)
+                        watched.add(result.pool())
+                        result.sourceTrees().forEach(watched::add)
+                    }
+                },
+                { _, _, _, _, _ -> error("No cursor analysis") },
+            )
+        adapter.use {
             adapter.replaceSourceModules(roots)
             if (diagnosticsFirst) assertThat(adapter.workspaceDiagnosticsAsync().join()).allMatch { it.success }
             assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
-            assertThat(observed).hasSizeGreaterThanOrEqualTo(96)
-            await().atMost(Duration.ofSeconds(20)).untilAsserted {
-                System.gc()
-                assertThat(observed.count { it.get() != null }).describedAs("compiler objects retained by detached index").isZero()
-            }
+            assertThat(watched.size).isGreaterThanOrEqualTo(96)
+            assertThat(watched.reachedFrom(adapter, EmbeddingSupport.instance()))
+                .describedAs("compiler objects still reached from the detached index")
+                .isEmpty()
             assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
-            assertThat(observed).hasSize(96)
+            assertThat(watched.size).isEqualTo(96)
         }
     }
 
