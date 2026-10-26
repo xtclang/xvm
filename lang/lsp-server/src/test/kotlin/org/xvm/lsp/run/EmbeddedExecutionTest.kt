@@ -779,6 +779,26 @@ class EmbeddedExecutionTest {
             assertThat(hex["n"]).isEqualTo("0x5")
             assertThat(hex["shown"]).isEqualTo("0x6")
 
+            // a request's filter, start and count reach the program: a frame's locals are named, a part at a time
+            val names = variables(37, locals).map { it["name"].asString }
+            sessions.request(id, 35, "variables", """{"variablesReference": $locals, "filter": "named", "start": 1, "count": 1}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject["name"].asString },
+            ).containsExactly(names[1])
+            sessions.request(id, 36, "variables", """{"variablesReference": $locals, "filter": "indexed"}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray,
+            ).isEmpty()
+
             // a run that loops ends when it is cancelled, and at the console's time limit when it is not
             sessions.request(id, 8, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             sessions.request(id, 9, "cancel", """{"requestId": 8}""")
