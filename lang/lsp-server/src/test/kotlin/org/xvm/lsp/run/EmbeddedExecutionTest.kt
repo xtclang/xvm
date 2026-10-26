@@ -303,13 +303,34 @@ class EmbeddedExecutionTest {
                             .toLong()
                     }.get(60, SECONDS)
             val worker = ProcessHandle.of(pid).orElseThrow()
-            // killed, as when the IDE or the operating system ends the server: nothing tells the worker
-            host.destroyForcibly()
-            assertThat(worker.onExit().get(30, SECONDS).isAlive).isFalse()
+            try {
+                // killed, as when the IDE or the operating system ends the server: nothing tells the worker
+                host.destroyForcibly()
+                val exited = runCatching { worker.onExit().get(30, SECONDS) }.isSuccess
+                assertThat(exited).describedAs { "The worker still runs 30 s after its server died:\n${threadDump(pid)}" }.isTrue()
+            } finally {
+                worker.destroyForcibly()
+            }
         } finally {
             host.destroyForcibly()
         }
     }
+
+    /** The threads of a JVM that should have ended, from the JDK's jcmd, or why there are none. */
+    private fun threadDump(pid: Long): String =
+        runCatching {
+            val jcmd =
+                Path
+                    .of(
+                        ProcessHandle
+                            .current()
+                            .info()
+                            .command()
+                            .orElseThrow(),
+                    ).resolveSibling("jcmd")
+            val dump = ProcessBuilder(jcmd.toString(), pid.toString(), "Thread.print").redirectErrorStream(true).start()
+            dump.inputReader().use { it.readText() }.also { dump.waitFor(30, SECONDS) }
+        }.getOrElse { "no thread dump: $it" }
 
     @Test
     fun `closing the editor ends the server's runs and their workers`() {
