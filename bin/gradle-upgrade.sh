@@ -525,20 +525,24 @@ check_repo_consistency() {
     fi
 }
 
+# Rewrites gradle-wrapper.properties for the resolved version with the wrapper's own policy, read
+# from a copy of the file taken before the wrapper task ran: that task writes its own defaults
+# for the policy, such as retries=0.
 rewrite_wrapper_properties() {
     local props="$1"
     local resolved_version="$2"
+    local policy="$3"
     local distribution_base distribution_path network_timeout retries retry_backoff validate_url
     local zip_store_base zip_store_path tmp_file
 
-    distribution_base=$(read_property_file "$props" distributionBase)
-    distribution_path=$(read_property_file "$props" distributionPath)
-    network_timeout=$(read_property_file "$props" networkTimeout)
-    retries=$(read_property_file "$props" retries)
-    retry_backoff=$(read_property_file "$props" retryBackOffMs)
-    validate_url=$(read_property_file "$props" validateDistributionUrl)
-    zip_store_base=$(read_property_file "$props" zipStoreBase)
-    zip_store_path=$(read_property_file "$props" zipStorePath)
+    distribution_base=$(read_property_file "$policy" distributionBase)
+    distribution_path=$(read_property_file "$policy" distributionPath)
+    network_timeout=$(read_property_file "$policy" networkTimeout)
+    retries=$(read_property_file "$policy" retries)
+    retry_backoff=$(read_property_file "$policy" retryBackOffMs)
+    validate_url=$(read_property_file "$policy" validateDistributionUrl)
+    zip_store_base=$(read_property_file "$policy" zipStoreBase)
+    zip_store_path=$(read_property_file "$policy" zipStorePath)
 
     distribution_base=${distribution_base:-GRADLE_USER_HOME}
     distribution_path=${distribution_path:-wrapper/dists}
@@ -613,7 +617,7 @@ upgrade_wrapper_root() {
     local repo="$1"
     local props="$2"
     local target="$3"
-    local gradle_root old_version resolved_version network_timeout comparison
+    local gradle_root old_version resolved_version network_timeout comparison policy
 
     old_version=$(wrapper_version_from_props "$props")
     comparison=$(compare_gradle_versions "$target" "$old_version")
@@ -627,13 +631,16 @@ upgrade_wrapper_root() {
     network_timeout=${network_timeout:-10000}
 
     info "[$(repo_name "$repo")] Upgrading $(repo_relative "$repo" "$gradle_root") from ${old_version} to ${target}"
+    policy=$(mktemp)
+    cp "$props" "$policy"
     run_wrapper_task_twice "$gradle_root" "$target" "$network_timeout"
 
     resolved_version=$(wrapper_version_from_props "$props")
     [[ "$resolved_version" == "$target" ]] ||
         fail "$(repo_relative "$repo" "$props") resolved to Gradle ${resolved_version}, expected ${target}"
 
-    rewrite_wrapper_properties "$props" "$resolved_version"
+    rewrite_wrapper_properties "$props" "$resolved_version" "$policy"
+    rm -f "$policy"
     refresh_daemon_jvm_properties "$repo" "$gradle_root"
 }
 
