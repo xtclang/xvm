@@ -8,6 +8,13 @@ import com.intellij.execution.RunManager
 import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.impl.ConsoleViewImpl
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.ToggleAction
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.project.Project
@@ -230,6 +237,30 @@ object DebugSessionUi {
             },
         )
         return value.get(30, TimeUnit.SECONDS)
+    }
+
+    /**
+     * Turns LSP4IJ's Show Values as Hexadecimal on or off for the module's session, as its item in the Variables
+     * view's menu does (LSP4IJ #1769), which shows the values again: false if this LSP4IJ has no such item.
+     */
+    @JvmStatic
+    fun showHex(
+        project: Project,
+        module: String,
+        on: Boolean,
+    ): Boolean {
+        val action = ActionManager.getInstance().getAction("DAP.HexadecimalValues") as? ToggleAction ?: return false
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        ApplicationManager.getApplication().invokeAndWait {
+            val context =
+                SimpleDataContext
+                    .builder()
+                    .add(CommonDataKeys.PROJECT, project)
+                    .add(XDebugSession.DATA_KEY, session)
+                    .build()
+            action.setSelected(AnActionEvent.createEvent(action, context, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null), on)
+        }
+        return true
     }
 
     /** The paused session's top frame's Locals, as the Variables view shows them. */

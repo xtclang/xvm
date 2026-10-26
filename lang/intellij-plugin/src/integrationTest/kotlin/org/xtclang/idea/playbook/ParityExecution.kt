@@ -835,6 +835,54 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X317") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                fun locals() =
+                    JsonParser
+                        .parseString(debugger.variables(project, module, ""))
+                        .asJsonArray
+                        .map { it.asJsonObject }
+                        .associate { it.string("name") to it.string("value") }
+
+                fun pairs(key: String) = data.getAsJsonArray(key).map { pair -> pair.asJsonArray.let { it[0].asString to it[1].asString } }
+                val decimal = locals()
+                pairs("decimal").forEach { (name, value) -> check(decimal[name] == value) { "$name is not $value: $decimal" } }
+                // two objects with the same fields have different identity codes
+                val identities = data.strings("identities").map { decimal.getValue(it) }
+                identities.forEach { check(Regex(".+ #\\d+").matches(it)) { "No identity code: $identities" } }
+                check(identities.distinct().size == identities.size) { "The identity codes are not different: $identities" }
+
+                // TODO LSP4IJ: UP36 — LSP4IJ 0.21.0 has no Show Values as Hexadecimal (#1769), so the hexadecimal values are
+                // checked only with a plugin that has it
+                if (debugger.showHex(project, module, true)) {
+                    val hex = pairs("hex").toMap()
+                    awaitUi("the values show in hexadecimal", 30.seconds) { locals().filterKeys { it in hex } == hex }
+                    debugger.showHex(project, module, false)
+                    val shown = pairs("decimal").toMap()
+                    awaitUi("the values show in decimal again", 30.seconds) { locals().filterKeys { it in shown } == shown }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -910,6 +958,12 @@ internal interface DebugSessionProbe {
         module: String,
         path: String,
     ): String
+
+    fun showHex(
+        project: Project,
+        module: String,
+        on: Boolean,
+    ): Boolean
 
     fun step(
         project: Project,

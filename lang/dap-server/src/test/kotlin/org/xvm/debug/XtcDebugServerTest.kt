@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.ThreadEventArguments
+import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -77,6 +78,7 @@ class XtcDebugServerTest {
                 "supportsExceptionInfoRequest",
                 "supportsExceptionFilterOptions",
                 "supportsCancelRequest",
+                "supportsValueFormattingOptions",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -227,6 +229,44 @@ class XtcDebugServerTest {
                     },
                 ).get(10, SECONDS)
         assertThat(fields.variables.map { it.name to it.value }).containsExactly("y" to "4")
+    }
+
+    @Test
+    fun `a request's hex format, or else the session's, which xtc valueFormat sets, shows integers in hexadecimal`() {
+        server.initialize(
+            InitializeRequestArguments().apply {
+                adapterID = "xtc"
+                supportsInvalidatedEvent = true
+            },
+        )
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        fun variables(format: Boolean?) =
+            server
+                .variables(
+                    VariablesArguments().apply {
+                        variablesReference = 7
+                        this.format = format?.let { hex -> ValueFormat().apply { this.hex = hex } }
+                    },
+                ).get(10, SECONDS)
+
+        // in decimal, unless a request asks for hexadecimal
+        variables(null)
+        variables(true)
+        assertThat(runs.hexes).containsExactly(false, true)
+
+        // the session's own choice applies to the requests that name no format, and the client reads them again
+        server.valueFormat(ValueFormat().apply { hex = true }).get(10, SECONDS)
+        assertThat(client.events).contains(INVALIDATED)
+        variables(null)
+        variables(false)
+        server.evaluate(evaluate("point.x", EvaluateArgumentsContext.WATCH).apply { frameId = 1 }).get(10, SECONDS)
+        assertThat(runs.hexes).containsExactly(false, true, true, false, true)
+        server.valueFormat(ValueFormat()).get(10, SECONDS)
+        variables(null)
+        assertThat(runs.hexes.last()).isFalse()
     }
 
     @Test
@@ -727,6 +767,9 @@ class XtcDebugServerTest {
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
         val evaluated = CopyOnWriteArrayList<Pair<Int, String>>()
 
+        /** Whether each read, evaluation and run asked for hexadecimal integers. */
+        val hexes = CopyOnWriteArrayList<Boolean>()
+
         /** Each run asked for, and its answer, which the test completes. */
         val ran = CopyOnWriteArrayList<Ran>()
         val runAnswers = CopyOnWriteArrayList<CompletableFuture<VariableState>>()
@@ -763,8 +806,10 @@ class XtcDebugServerTest {
             runId: String,
             frameId: Int,
             expression: String,
+            hex: Boolean,
         ): CompletableFuture<VariableState> {
             evaluated.add(frameId to expression)
+            hexes.add(hex)
             return when (expression) {
                 "point.x" -> CompletableFuture.completedFuture(VariableState("point.x", "3", "Int", 0))
                 "point" -> CompletableFuture.completedFuture(VariableState("point", "Vars:Point", "Vars:Point", 8))
@@ -779,8 +824,10 @@ class XtcDebugServerTest {
             expression: String,
             limit: Duration,
             program: Boolean,
+            hex: Boolean,
         ): CompletableFuture<VariableState> {
             ran.add(Ran(frameId, expression, limit, program))
+            hexes.add(hex)
             return CompletableFuture<VariableState>().also(runAnswers::add)
         }
 
@@ -824,28 +871,30 @@ class XtcDebugServerTest {
         override fun variables(
             runId: String,
             reference: Int,
-        ) = CompletableFuture.completedFuture(
-            when (reference) {
-                7 ->
-                    listOf(
-                        VariableState("n", "21", "Int", 0),
-                        VariableState("point", "Vars:Point", "Vars:Point", 8),
-                        VariableState("unset", "<unassigned>", "", 0),
-                    )
+            hex: Boolean,
+        ) = CompletableFuture
+            .completedFuture(
+                when (reference) {
+                    7 ->
+                        listOf(
+                            VariableState("n", "21", "Int", 0),
+                            VariableState("point", "Vars:Point", "Vars:Point", 8),
+                            VariableState("unset", "<unassigned>", "", 0),
+                        )
 
-                8 ->
-                    listOf(
-                        VariableState("x", "3", "Int", 0),
-                        VariableState("y", "4", "Int", 0),
-                        VariableState("sum", "(...)", "", 9, lazy = true),
-                        VariableState("toString()", "(...)", "", 10, lazy = true),
-                    )
+                    8 ->
+                        listOf(
+                            VariableState("x", "3", "Int", 0),
+                            VariableState("y", "4", "Int", 0),
+                            VariableState("sum", "(...)", "", 9, lazy = true),
+                            VariableState("toString()", "(...)", "", 10, lazy = true),
+                        )
 
-                9 -> listOf(VariableState("sum", "7", "Int", 0))
+                    9 -> listOf(VariableState("sum", "7", "Int", 0))
 
-                else -> emptyList()
-            },
-        )
+                    else -> emptyList()
+                },
+            ).also { hexes.add(hex) }
 
         override fun step(
             runId: String,

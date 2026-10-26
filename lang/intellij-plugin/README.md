@@ -151,7 +151,10 @@ shows the frame's locals and expands objects and arrays; LSP4IJ shows strings an
 their type. An object's computed properties and its `toString()` follow its fields as lazy
 variables, `(...)`, whose values run the program's code, for at most a second; expand one to show
 its value, since LSP4IJ does not show a Show value link for them yet (UP35, LSP4IJ pull request
-[#1768](https://github.com/redhat-developer/lsp4ij/pull/1768)). **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
+[#1768](https://github.com/redhat-developer/lsp4ij/pull/1768)). A mutable object's value ends with its
+identity code, such as `#1023456`, which tells two objects with the same fields apart. Integers in
+hexadecimal wait on LSP4IJ, whose Variables view has no Show Values as Hexadecimal yet (UP36, LSP4IJ
+pull request [#1769](https://github.com/redhat-developer/lsp4ij/pull/1769)). **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
 **Resume Program** runs it on and **Stop** ends it where it is. A breakpoint's condition, an
 expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. Its pass count and
 **Evaluate and log**, and a breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (UP32 in
