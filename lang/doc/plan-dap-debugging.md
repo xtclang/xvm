@@ -13,7 +13,7 @@ exception stops (X307), pause and stop on entry (X308, X309), `evaluate` on path
 computed by the runtime's own operations without running the program's code, for watches and
 conditions too (X313, bounded evaluation's tier 1). A console line that tier 1 refuses, such as a
 call, runs as code on the stopped fiber, for at most two seconds, with `cancel` and `invalidated`
-(its tier 2, in the server and worker; the editors are next). IntelliJ debugs an Ecstasy Application
+(its tier 2: VS Code's Debug Console and IntelliJ's Evaluate Expression, shared X314). IntelliJ debugs an Ecstasy Application
 configuration with LSP4IJ's DAP client, through a process handler that carries the same session
 over the language server connection (`XtcDebugAdapterFactory`, `LanguageServerDebugProcessHandler`);
 Phase 0 below describes its earlier, disabled, separate-process form.
