@@ -293,7 +293,8 @@ come from are in parentheses.
 - [x] R10: paging of large arrays, in place of the first 100 elements (`00dee9671`, R10c): an array's
   variable has `indexedVariables`, and a `variables` request's `filter`, `start` and `count` reach the
   program, which reads only that part (worker protocol 14); VS Code shows ranges of 100. Shared X318;
-  IntelliJ still shows the first 100 and how many more, since LSP4IJ does not page (UP42). Other
+  IntelliJ with LSP4IJ 0.21.0 shows the first 100 and how many more, and pages through IntelliJ's own
+  `...` node once LSP4IJ releases #1770 (UP42). Other
   collections, such as a `Map`, show their fields: their entries would take running their code.
 - [x] R10: changing a variable's value while stopped (`setVariable`) (`3a060bd39`, R10d): a local, a
   field or an array element takes the value of an expression that a watch evaluates, a literal of its
@@ -425,26 +426,17 @@ passes with the workaround disabled. The gates are in
 - [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), merged 2026-10-26): a "Show Values as Hexadecimal" toggle,
   checked natively with R10b (`run-5016431580533175464`). Gate: X317's hexadecimal check always on,
   its UP36 tag removed.
+- [ ] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), merged 2026-10-26, `42f1f16e`): lazy variables
+  behind a "Show value" link, checked natively with R10a. Gate: X316 in IntelliJ through the link
+  only, its 0.21.0 path and UP35 tag removed.
+- [ ] UP42 ([#1770](https://github.com/redhat-developer/lsp4ij/pull/1770), merged 2026-10-26, `642d0e9d`): a variable with more
+  than 100 indexed children read a page at a time behind IntelliJ's own `...` node, checked natively
+  with R10c (`run-9236570344305345016`). Gate: X318 through the `...` node only, its 0.21.0 path and
+  UP42 tag removed.
 - UP13 stays: the `createSettings` override is LSP4IJ's supported extension point.
 
 ### LSP4IJ: pull requests open
 
-- [ ] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), filed 2026-10-26, `feat/dap-lazy-variables` at `0f740223`): lazy
-  variables behind a "Show value" link. Checked natively on 2026-10-26 with R10a (`1d88e086d`): with
-  a plugin built from #1768, X316's lazy variables have a Show value link and no children, and
-  clicking them shows their values (`run-2879359689441688077`, `run-13880544694745259179`). Gate after
-  a release: X316 in IntelliJ through the link only, its 0.21.0 path and UP35 tag removed.
-- [ ] UP42 ([#1770](https://github.com/redhat-developer/lsp4ij/pull/1770), filed 2026-10-26, `feat/dap-paging` at `97504678`): LSP4IJ
-  asked for all of a variable's children at once, without `filter`, `start` or `count`, and ignored
-  `indexedVariables`, so a large array showed the adapter's first page and how many more there were,
-  with no way to see the rest. The pull request reads a variable with more than 100 indexed children
-  a page at a time, behind IntelliJ's own `...` node (`tooManyChildren(remaining, addNextChildren)`).
-  Found by R10c's X318, which IntelliJ checks as the first 100 elements, tagged TODO LSP4IJ: UP42.
-  Checked natively on 2026-10-26 (`2d85472dd`): with a plugin built from #1770 at `97504678`, X318
-  shows a page of 100, IntelliJ's own `...` node with 150 more, and, opened, all 250 elements
-  (`run-9236570344305345016`); its head is `5a065a46` since, which only announces
-  `supportsVariablePaging`, which this adapter does not read. Gate after a release: X318 through
-  the `...` node only, its 0.21.0 path and UP42 tag removed.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
