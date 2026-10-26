@@ -43,6 +43,7 @@ module TestMisc {
         testEnums();
         testCircularInitialization();
         testPotentiallyAmbiguous();
+        testConstructionDispatch();
     }
 
     void testInts() {
@@ -942,6 +943,49 @@ module TestMisc {
             String pick(Object first, String last) = "first widened";
             String pick(String first, Object last) = "last widened";
             String pick(String first, String last) = "exact";
+        }
+    }
+
+    void testConstructionDispatch() {
+        Derived value1 = new Derived();
+        assert value1.toString() == "Derived[a=a, b=b]";
+
+        DerivedConst value2 = new DerivedConst();
+        assert value2.toString() == "DerivedConst[a=a, b=b]";
+
+        class Base {
+            String a;
+            construct() {a = "a";}
+        }
+
+        class Derived extends Base {
+            String b;
+            construct() {
+                construct Base();
+                b = "b";
+                assert !toString().indexOf("[a=a, b=b]"); // struct.toString() is native
+            }
+
+            @Override
+            String toString() = $"Derived[a={a}, b={b}]";
+        }
+
+        const BaseConst {
+            String a;
+            construct() {a = "a";}
+        }
+
+        const DerivedConst
+                extends BaseConst {
+            String b;
+            construct() {
+                construct BaseConst();
+                b = "b";
+                assert !toString().indexOf("[a=a, b=b]");
+            }
+
+            @Override
+            String toString() = $"DerivedConst[a={a}, b={b}]";
         }
     }
 }

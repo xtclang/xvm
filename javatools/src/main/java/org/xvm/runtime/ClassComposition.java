@@ -80,25 +80,27 @@ public class ClassComposition
      * Construct a ClassComposition clone for the specified revealed type.
      */
     private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed) {
+        boolean fStruct     = typeRevealed.getAccess() == Access.STRUCT;
+        boolean fReuseCache = fStruct == clzInception.f_fStruct;
+
         f_clzInception    = clzInception;
         f_container       = clzInception.f_container;
         f_template        = clzInception.f_template;
         f_typeInception   = clzInception.f_typeInception;
         f_typeStructure   = clzInception.f_typeStructure;
         f_typeRevealed    = typeRevealed;
-        f_fStruct         = typeRevealed.getAccess() == Access.STRUCT;
+        f_fStruct         = fStruct;
         f_mapCompositions = f_clzInception.f_mapCompositions;
         f_mapProxies      = f_clzInception.f_mapProxies;
-        f_mapProperties   = f_clzInception.f_mapProperties;
-        f_mapMethods      = f_clzInception.f_mapMethods;
+        f_mapProperties   = fReuseCache ? f_clzInception.f_mapProperties : new ConcurrentHashMap<>();
+        f_mapMethods      = fReuseCache ? f_clzInception.f_mapMethods    : new ConcurrentHashMap<>();
         f_mapGetters      = f_clzInception.f_mapGetters;
         f_mapSetters      = f_clzInception.f_mapSetters;
-
-        m_mapFields      = f_clzInception.m_mapFields;
-        m_cRegularFields = f_clzInception.m_cRegularFields;
-        m_fHasOuter      = f_clzInception.m_fHasOuter;
-        m_fHasSpecial    = f_clzInception.m_fHasSpecial;
-        m_methodInit     = f_clzInception.m_methodInit;
+        m_mapFields       = f_clzInception.m_mapFields;
+        m_cRegularFields  = f_clzInception.m_cRegularFields;
+        m_fHasOuter       = f_clzInception.m_fHasOuter;
+        m_fHasSpecial     = f_clzInception.m_fHasSpecial;
+        m_methodInit      = f_clzInception.m_methodInit;
     }
 
     /**
