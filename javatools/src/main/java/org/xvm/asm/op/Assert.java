@@ -28,8 +28,8 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
 import org.xvm.runtime.ServiceContext;
+
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template.text.xString;
