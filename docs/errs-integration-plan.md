@@ -2652,6 +2652,12 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   `:lang:lsp-server:test` 2388 (2 skipped), `:lang:intellij-plugin:test` 151; shared X319, full in
   IntelliJ; VS Code `run-iKfxBB`, IntelliJ `run-15574345965028542847`; ESLint, `tsc`,
   `spotlessCheck`.
+- `8178cd03d` (R10e, as R10a's paths): Debug Console completions, `completions`, the frame's
+  names or, after a dot, the members of the value before it, without running code; worker protocol
+  16. `SessionDebuggerTest` 41; `:javatools:test` 683, 42 skips; `:lang:dap-server:test` 32,
+  `:lang:lsp-server:test` 2388 (2 skipped), `:lang:intellij-plugin:test` 151; shared X320, partial
+  in IntelliJ (UP37, checked fully with a plugin from LSP4IJ `main`); VS Code `run-jGGd5x`, IntelliJ
+  `run-11028250431102437643`; ESLint, `tsc`, `spotlessCheck`.
 
 ### R6–R7 integration bursts (2026-10-22)
 
@@ -2661,7 +2667,7 @@ burst G, R9's conditions, logpoints and exception classes burst H, expressions w
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
 races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
 resume burst M, console lines run as code by the server burst N, by the editors burst O, the
-whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, its paging burst T, and Set Value burst U. All the work
+whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, its paging burst T, Set Value burst U, and completions burst V. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2691,6 +2697,7 @@ master `1c4efe422`.
 | S: hexadecimal values and identity codes | `cb551d4c2` (R10b) | as R's | R | as R's, with both playbooks to X317 |
 | T: large arrays a page at a time | `00dee9671` (R10c) | as R's | S | as R's, with both playbooks to X318 |
 | U: Set Value | `3a060bd39` (R10d) | as R's | T | as R's, with both playbooks to X319 |
+| V: Debug Console completions | `8178cd03d` (R10e) | as R's | U | as R's, with both playbooks to X320 |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
