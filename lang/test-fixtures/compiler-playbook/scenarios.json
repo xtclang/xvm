@@ -9891,6 +9891,36 @@
         "limitations": []
       }
     },
+    "X320": {
+      "title": "The debug console completes a name typed in a stopped frame, after a dot with the members of the value before it",
+      "manual": [
+        "How each editor's console offers and inserts a completion is checked manually; VS Code checks the completions answers, IntelliJ what its expression editor's Basic Completion offers and inserts."
+      ],
+      "values": {
+        "file": "DebugComplete.x",
+        "module": "DebugComplete",
+        "source": "module DebugComplete {\n    class Box {\n        Int count;\n        void bump() {\n            ++count;\n        }\n    }\n\n    Int run() {\n        Box box = new Box();\n        box.count = 6;\n        @Inject Console console;\n        console.print($\"count {box.count}\");\n        return box.count;\n    }\n}\n",
+        "breakpointLine": 13,
+        "members": [
+          "box.",
+          "count",
+          "bump"
+        ],
+        "typed": [
+          "box.co",
+          "count",
+          "box.count"
+        ],
+        "output": "count 6",
+        "exitCode": 6
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has the event system on, so an edit of it, as typing or a chosen completion is, fails IntelliJ's Document/PSI check (UP37, fixed by LSP4IJ #1763): IntelliJ checks the names Evaluate Expression's Basic Completion offers, and with #1763 also the text a chosen one makes."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

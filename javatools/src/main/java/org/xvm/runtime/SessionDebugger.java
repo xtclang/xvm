@@ -43,10 +43,14 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Nop;
 
@@ -584,6 +588,28 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * A name that the text typed in a stopped frame can be completed with: its label, and what it
+     * names, {@code "variable"}, {@code "field"}, {@code "property"} or {@code "method"}.
+     *
+     * @param label  the name
+     * @param kind   what it names, as DAP's completion item types call them
+     */
+    public record Completion(String label, String kind) {
+    }
+
+    /**
+     * The completions of the name typed at an offset of a text: the part of the text they replace,
+     * from start, length characters long, which is the part of the name typed so far, and the names
+     * that start with it.
+     *
+     * @param start   the index in the text of the name's first character
+     * @param length  how many characters of the name are typed
+     * @param items   the names that start with what is typed
+     */
+    public record Completions(int start, int length, List<Completion> items) {
+    }
+
+    /**
      * How the host steps a stopped fiber.
      */
     public enum Step {
@@ -1035,6 +1061,39 @@ public final class SessionDebugger implements Debugger {
             }
             return vars.getFirst();
         });
+    }
+
+    /**
+     * The names that complete the name typed at an offset of a text in a stopped frame, as a debug
+     * console offers them: after a dot, the members of the value of the path before it, evaluated
+     * as {@link #evaluate} evaluates one, which are its type's fields, properties and methods;
+     * otherwise the frame's variables, {@code this}, and the members of {@code this}, its private
+     * ones too, which the frame's code can use. Only the names that start with what is typed of the
+     * name are given, and nothing of the program runs.
+     * The waiting fiber that holds the frame reads them on its own thread, as it reads variables.
+     *
+     * @param frameId  the ID of a frame that {@link #stackTrace} returned
+     * @param text     the text typed so far
+     * @param offset   the index in the text where the name being typed ends, such as its length
+     *
+     * @return the completions, which are none if the path before a dot cannot be evaluated; fails
+     *         if the frame is not one of this stop's
+     */
+    public CompletableFuture<Completions> completions(int frameId, String text, int offset) {
+        var answer = new CompletableFuture<Completions>();
+        var read   = new CompletableFuture<List<Variable>>();
+        synchronized (this) {
+            Halt    current = halt;
+            FrameAt at      = current == null ? null : current.frames.get(frameId);
+            if (at == null
+                    || !request(current, new Read(new Completing(at.thread(), at.frame(), text, offset, answer), false,
+                            Filter.ALL, 0, 0, read))) {
+                return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
+            }
+        }
+        // the read completes once the answer has been made; one that the resume abandoned has none
+        Completions none = new Completions(Math.max(0, Math.min(offset, text.length())), 0, List.of());
+        return read.thenApply(_ -> answer.getNow(none));
     }
 
     /**
@@ -1944,6 +2003,11 @@ public final class SessionDebugger implements Debugger {
                 case Children _ -> List.of();
                 case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e, hex));
                 case Assignment assignment -> List.of(assign(current, frame, assignment, hex));
+                case Completing completing -> {
+                    // nothing waits on the answer itself, so making it here runs none of the host's code
+                    completing.answer().complete(complete(frame, completing));
+                    yield List.of();
+                }
                 // a lazy variable's value is computed by a run, never read (variables())
                 case Lazy _ -> List.of();
             };
@@ -2103,6 +2167,109 @@ public final class SessionDebugger implements Debugger {
 
             default -> throw new IllegalArgumentException(name + " cannot be changed.");
         };
+    }
+
+    /**
+     * @return the completions of the name typed at the offset of the text, in the frame, on the
+     *         thread of the fiber waiting at the specified frame
+     */
+    private static Completions complete(Frame waitingFrame, Completing completing) {
+        String text  = completing.text();
+        int    end   = Math.max(0, Math.min(completing.offset(), text.length()));
+        int    start = end;
+        while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start - 1))) {
+            --start;
+        }
+
+        List<Completion> names;
+        if (start > 0 && text.charAt(start - 1) == '.') {
+            // the path before the dot: names, dots and indexes in brackets
+            int from  = start - 1;
+            int depth = 0;
+            while (from > 0) {
+                char ch = text.charAt(from - 1);
+                if (ch == ']') {
+                    ++depth;
+                } else if (ch == '[') {
+                    if (depth == 0) {
+                        break;
+                    }
+                    --depth;
+                } else if (depth == 0 && ch != '.' && !Character.isJavaIdentifierPart(ch)) {
+                    break;
+                }
+                --from;
+            }
+            names = membersOf(waitingFrame, completing.frame(), text.substring(from, start - 1).strip());
+        } else {
+            names = namesIn(completing.frame());
+        }
+
+        String typed = text.substring(start, end);
+        return new Completions(start, end - start, names.stream().filter(name -> name.label().startsWith(typed)).toList());
+    }
+
+    /**
+     * @return the names a frame's code can use: its variables, innermost first, {@code this}, and
+     *         all the members of {@code this}
+     */
+    private static List<Completion> namesIn(Frame frame) {
+        var names = new LinkedHashMap<String, Completion>();
+        for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
+            VarInfo info = frame.getVarInfo(i);
+            String  name = info == null ? "" : info.getName();
+            if (!name.isEmpty()) {
+                names.putIfAbsent(name, new Completion(name, "variable"));
+            }
+        }
+        ObjectHandle self = frame.f_hThis;
+        if (self != null) {
+            names.putIfAbsent("this", new Completion("this", "variable"));
+            members(self, true).forEach(member -> names.putIfAbsent(member.label(), member));
+        }
+        return List.copyOf(names.values());
+    }
+
+    /**
+     * @return the members of the value of the path, all of them for {@code this} and the public
+     *         ones otherwise, or none if it cannot be evaluated or is unassigned
+     */
+    private static List<Completion> membersOf(Frame waitingFrame, Frame frame, String path) {
+        ObjectHandle value;
+        try {
+            value = shown(PureExpression.parse(path).evaluate(waitingFrame, frame));
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
+        return value == null ? List.of() : members(value, path.equals("this"));
+    }
+
+    /**
+     * @return the members of the value's type, all of them or the public ones: its fields and
+     *         properties, other than constants and type parameters, in the type's order, then the
+     *         names of its methods, other than constructors and functions, sorted
+     */
+    private static List<Completion> members(ObjectHandle value, boolean all) {
+        TypeConstant type = all ? value.getType().ensureAccess(Constants.Access.PRIVATE) : value.getType();
+        TypeInfo     info = type.ensureTypeInfo();
+        var members = new LinkedHashMap<String, Completion>();
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : info.sortedProperties()) {
+            PropertyInfo property = entry.getValue();
+            if (!property.isConstant() && !property.isFormalType() && (all || property.getRefAccess() == Constants.Access.PUBLIC)) {
+                members.putIfAbsent(property.getName(), new Completion(property.getName(), property.hasField() ? "field" : "property"));
+            }
+        }
+        info.getMethods().entrySet().stream()
+                .filter(entry -> {
+                    MethodInfo method = entry.getValue();
+                    IdentityConstant owner = entry.getKey().getNamespace();
+                    return (all || method.getAccess() == Constants.Access.PUBLIC) && !method.isConstructor() && !method.isFunction()
+                            && !(owner instanceof PropertyConstant) && !(owner instanceof MethodConstant);
+                })
+                .map(entry -> entry.getKey().getName())
+                .sorted()
+                .forEach(name -> members.putIfAbsent(name, new Completion(name, "method")));
+        return List.copyOf(members.values());
     }
 
     /**
@@ -3065,6 +3232,14 @@ public final class SessionDebugger implements Debugger {
         public int thread() {
             return target.thread();
         }
+    }
+
+    /**
+     * The completions of the name typed at an offset of a text in a frame, which the waiting fiber
+     * that holds the frame answers.
+     */
+    private record Completing(int thread, Frame frame, String text, int offset, CompletableFuture<Completions> answer)
+            implements Target {
     }
 
     /**

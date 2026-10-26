@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
+import org.xvm.debug.CompletionsState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -334,6 +335,19 @@ internal class RunWorkerProcess(
             addProperty("expression", expression)
             addProperty("hex", hex)
         }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+
+    /** The names that complete the name typed at an offset of a text in a stopped frame; fails with the reason when it cannot. */
+    fun completions(
+        id: Long,
+        frame: Int,
+        text: String,
+        offset: Int,
+    ): CompletableFuture<CompletionsState> =
+        request("completions", id) {
+            addProperty("frame", frame)
+            addProperty("text", text)
+            addProperty("offset", offset)
+        }.thenApply { RunWorkerDebug.completionsOf(it.getAsJsonObject("completions")) }
 
     /** Evaluates an expression in a stopped frame; fails with the reason when it cannot. */
     fun evaluate(

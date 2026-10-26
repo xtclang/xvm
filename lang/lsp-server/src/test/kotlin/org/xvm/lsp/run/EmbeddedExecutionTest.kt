@@ -795,6 +795,17 @@ class EmbeddedExecutionTest {
             val changed = client.until(id) { it.response == "setVariable" }.last()
             assertThat(changed["success"].asBoolean).isTrue()
             assertThat(changed["body"].asJsonObject["value"].asString).isEqualTo("15")
+            // the console completes the name typed after a dot with the members of the value before it
+            sessions.request(id, 39, "completions", """{"frameId": $frameId, "text": "box.co", "column": 7}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "completions" }
+                    .last()["body"]
+                    .asJsonObject["targets"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .map { Triple(it["label"].asString, it["type"].asString, it["length"].asInt) },
+            ).containsExactly(Triple("count", "field", 2))
             sessions.request(id, 36, "variables", """{"variablesReference": $locals, "filter": "indexed"}""")
             assertThat(
                 client

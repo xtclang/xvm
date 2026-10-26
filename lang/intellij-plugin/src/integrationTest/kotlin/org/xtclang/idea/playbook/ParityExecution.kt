@@ -972,6 +972,46 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X320") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // Basic Completion in Evaluate Expression, which LSP4IJ answers with the adapter's completions: after a
+                // dot, the members of the value before it, those that start with what is typed of the name
+                val members = data.strings("members")
+                val (typed, name, completed) = data.strings("typed")
+                val offered = JsonParser.parseString(debugger.complete(project, module, members.first(), members[1])).asJsonObject
+                val names = offered.getAsJsonArray("items").map { it.asString }
+                check(names.containsAll(members.drop(1))) { "${members.first()} offers $names" }
+                val chosen = JsonParser.parseString(debugger.complete(project, module, typed, name)).asJsonObject
+                val filtered = chosen.getAsJsonArray("items").map { it.asString }
+                check(name in filtered && members.drop(1).filter { it != name }.none { it in filtered }) { "$typed offers $filtered" }
+                // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment fails IntelliJ's Document/PSI check once it is
+                //  edited, so the chosen name replaces what is typed only with LSP4IJ #1763, whose fragment is physical
+                if (chosen["inserted"].asBoolean) {
+                    check(offered.string("text") == members.first() + members[1]) { "Choosing ${members[1]}: $offered" }
+                    check(chosen.string("text") == completed) { "Completing $typed with $name: $chosen" }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1059,6 +1099,13 @@ internal interface DebugSessionProbe {
         module: String,
         path: String,
         expression: String,
+    ): String
+
+    fun complete(
+        project: Project,
+        module: String,
+        text: String,
+        pick: String,
     ): String
 
     fun pagedVariables(

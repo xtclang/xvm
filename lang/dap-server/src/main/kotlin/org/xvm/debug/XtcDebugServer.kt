@@ -5,6 +5,10 @@ import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.BreakpointEventArgumentsReason
 import org.eclipse.lsp4j.debug.CancelArguments
 import org.eclipse.lsp4j.debug.Capabilities
+import org.eclipse.lsp4j.debug.CompletionItem
+import org.eclipse.lsp4j.debug.CompletionItemType
+import org.eclipse.lsp4j.debug.CompletionsArguments
+import org.eclipse.lsp4j.debug.CompletionsResponse
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.ContinueResponse
@@ -281,6 +285,8 @@ class XtcDebugServer(
                 supportsCancelRequest = true
                 supportsValueFormattingOptions = true
                 supportsSetVariable = true
+                supportsCompletionsRequest = true
+                completionTriggerCharacters = arrayOf(".")
                 exceptionBreakpointFilters =
                     arrayOf(
                         ExceptionBreakpointsFilter().apply {
@@ -686,6 +692,48 @@ class XtcDebugServer(
                 type = state.type.ifEmpty { null }
                 variablesReference = state.variablesReference
                 indexedVariables = state.elements.takeIf { it > 0 }
+            }
+        }
+    }
+
+    /**
+     * DAP: completions
+     *
+     * Completes the name typed in the debug console where its cursor is, at `column` of `line` of `text`, in the
+     * stopped frame: after a dot, with the members of the value before it, which is evaluated without running the
+     * program's code, otherwise with the frame's variables, `this`, and the members of `this`. The items are the names
+     * that start with what is typed of the name, which they replace: `length` characters before the cursor. Without a
+     * frame, or one of the stopped program's, there are none.
+     */
+    override fun completions(args: CompletionsArguments): CompletableFuture<CompletionsResponse> {
+        val frameId = args.frameId
+        if (frameId == null ||
+            !debuggedRunning()
+        ) {
+            return CompletableFuture.completedFuture(CompletionsResponse().apply { targets = emptyArray() })
+        }
+        val text = args.text
+        val lines = text.split('\n')
+        val line = ((args.line ?: (1 + lineBase)) - lineBase - 1).coerceIn(0, lines.lastIndex)
+        val offset = lines.take(line).sumOf { it.length + 1 } + (args.column - columnBase - 1).coerceIn(0, lines[line].length)
+        return runs.completions(runId, frameId, text, offset).handle { state, failure ->
+            if (failure != null) logger.debug("completions: none, {}", failure.message)
+            // TODO LSP4IJ: UP43 — DAPLookupElementDecorator inserts at a completion's start as a 0-based offset into
+            //  the console's text, although LSP4IJ says columns start at 1, and VS Code's console filters by it as one,
+            //  so neither is given a start; both then replace the typed length before the cursor
+            val typed = state?.length?.takeIf { it > 0 }
+            CompletionsResponse().apply {
+                targets =
+                    state
+                        ?.items
+                        .orEmpty()
+                        .map { item ->
+                            CompletionItem().apply {
+                                label = item.label
+                                type = CompletionItemType.valueOf(item.kind.uppercase())
+                                length = typed
+                            }
+                        }.toTypedArray()
             }
         }
     }

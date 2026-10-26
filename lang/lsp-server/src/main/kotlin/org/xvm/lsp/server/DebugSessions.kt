@@ -191,6 +191,13 @@ internal class DebugSessions(
             hex: Boolean,
         ) = runs.setVariable(runId, reference, name, expression, hex)
 
+        override fun completions(
+            runId: String,
+            frameId: Int,
+            text: String,
+            offset: Int,
+        ) = runs.completions(runId, frameId, text, offset)
+
         override fun run(
             runId: String,
             frameId: Int,
