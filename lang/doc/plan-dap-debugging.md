@@ -1,6 +1,6 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-**Status (2026-10-24):** sessions are real, stop at breakpoints, conditional ones included, and at exceptions, of some classes if asked, log at logpoints, show variables and the exception, evaluate watches and hovers on expressions with operators, step and pause, in VS Code and IntelliJ (pause, hit counts, logpoints, exception classes and the exception's details in VS Code only, until LSP4IJ has them). R6 is done: a
+**Status (2026-10-26):** sessions are real, stop at breakpoints, conditional ones included, and at exceptions, of some classes if asked, log at logpoints, show variables and the exception, evaluate watches and hovers on expressions with operators, step and pause, in VS Code and IntelliJ (pause, hit counts, logpoints, exception classes and the exception's details in VS Code only, until LSP4IJ has them). R6 is done: a
 session runs inside the language server and travels over its connection, so a `launch` builds and
 runs the module with the same embedded build and execution workers as Run, reports the program's
 output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7's first
@@ -13,7 +13,8 @@ exception stops (X307), pause and stop on entry (X308, X309), `evaluate` on path
 computed by the runtime's own operations without running the program's code, for watches and
 conditions too (X313, bounded evaluation's tier 1). A console line that tier 1 refuses, such as a
 call, runs as code on the stopped fiber, for at most two seconds, with `cancel` and `invalidated`
-(its tier 2: VS Code's Debug Console and IntelliJ's Evaluate Expression, shared X314). IntelliJ debugs an Ecstasy Application
+(its tier 2: VS Code's Debug Console and IntelliJ's Evaluate Expression, shared X314), and a launch's
+`evaluationRunsProgram` lets the rest of the program run meanwhile (X315). IntelliJ debugs an Ecstasy Application
 configuration with LSP4IJ's DAP client, through a process handler that carries the same session
 over the language server connection (`XtcDebugAdapterFactory`, `LanguageServerDebugProcessHandler`);
 Phase 0 below describes its earlier, disabled, separate-process form.
