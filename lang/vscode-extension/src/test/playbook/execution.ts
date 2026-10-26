@@ -230,8 +230,9 @@ export function executionCases(): void {
 }
 
 /**
- * X304-X314, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry, watches,
- * conditions and logpoints, exception classes with exceptionInfo, expressions with operators, and code run from the Debug Console.
+ * X304-X315, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry, watches,
+ * conditions and logpoints, exception classes with exceptionInfo, expressions with operators, code run from the Debug Console, and
+ * code that runs with the whole program.
  */
 export function debugSessionCases(): void {
     playbook('X304', async (workspace, data) => {
@@ -795,6 +796,53 @@ export function debugSessionCases(): void {
                 await assert.rejects(Promise.resolve(evaluate(data.loop, 'repl')), (error: Error) => error.message.includes(data.limited));
 
                 // the program goes on from its stop, with the console's change
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+
+    playbook('X315', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, evaluationRunsProgram: true }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
+                assert.strictEqual(stack.stackFrames[0].name, data.frame);
+
+                // the worker's service answers once its fiber, which the stop holds otherwise, has done its work
+                const [call, value] = data.call as string[];
+                const answer: { result: string } = await session.customRequest('evaluate', { expression: call, frameId: stack.stackFrames[0].id, context: 'repl' });
+                assert.strictEqual(answer.result, value);
+                await eventually(async () => dapEvents(sent, 'invalidated'), events => events.length > 0, 'The run invalidates the threads, stacks and variables');
+                assert.deepStrictEqual(dapEvents(sent, 'invalidated')[0].body?.areas, ['all']);
+
                 await vscode.commands.executeCommand('workbench.action.debug.continue');
                 await eventually(async () => ended, done => done, 'The program runs to its exit');
                 assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));

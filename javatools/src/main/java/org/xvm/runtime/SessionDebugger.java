@@ -857,6 +857,9 @@ public final class SessionDebugger implements Debugger {
      * <p>One run at a time: another, from any frame, starts once this one ends, and reads of the
      * running fiber's frames are made once it waits again; those of other fibers are not delayed.
      *
+     * <p>For a program whose code waits on work that its other fibers do, a host can let the whole
+     * program run meanwhile instead ({@link #run(int, String, Duration, boolean)}).
+     *
      * <p>This method never waits: it asks the fiber that waits at the frame to run the code, and
      * returns. The fiber starts it when no other run is in progress, and its time limit counts
      * from then, not from the call; a run in a frame of the fiber that stopped the program starts
@@ -875,6 +878,28 @@ public final class SessionDebugger implements Debugger {
      *         Cancelling it ends the run.
      */
     public CompletableFuture<Variable> run(int frameId, String expression, Duration limit) {
+        return run(frameId, expression, limit, false);
+    }
+
+    /**
+     * Run an expression's code in a stopped frame as {@link #run(int, String, Duration)} does, and,
+     * if program is true, let the whole program run meanwhile, for a program whose code waits on
+     * work that its other fibers do, such as a future that another service completes.
+     *
+     * <p>Then every other fiber of the program runs too, as without a debugger: a fiber that waits
+     * in the stop leaves it, and none stops at a breakpoint, an exception, a pause or an
+     * {@code assert:debug}, nor makes a stop of its own; and the program's clocks run. Once the run
+     * ends, each of them waits in the same stop again, at the next line it reaches, so the threads
+     * and stacks of the stop, and the frames' variables, may have changed: the frame IDs and
+     * references of a fiber that left the stop no longer read anything, and {@link #threads} and
+     * {@link #stackTrace} give its new ones once it waits again. A fiber that leaves the stop drops
+     * the reads and runs asked of it, which fail.
+     *
+     * @param program  true to let the whole program run while the code does
+     *
+     * @return as {@link #run(int, String, Duration)} does
+     */
+    public CompletableFuture<Variable> run(int frameId, String expression, Duration limit, boolean program) {
         Objects.requireNonNull(limit);
         Run request;
         synchronized (this) {
@@ -883,7 +908,7 @@ public final class SessionDebugger implements Debugger {
             if (at == null || !current.stacks.containsKey(at.thread())) {
                 return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
             }
-            request = new Run(at.frame(), expression, limit, new CompletableFuture<>());
+            request = new Run(at.frame(), expression, limit, program, new CompletableFuture<>());
             current.runs.computeIfAbsent(at.thread(), _ -> new ArrayDeque<>()).add(request);
             notifyAll();
         }
@@ -1053,6 +1078,9 @@ public final class SessionDebugger implements Debugger {
         if (run != null) {
             return goOn(run, frame, pc);
         }
+        if (runsOn(frame)) {
+            return terminating ? end(frame) : pc + 1;
+        }
 
         // assert:debug stops the program as a breakpoint does
         return stop(frame, "breakpoint", "assert:debug", List.of(), null, null, f -> terminating ? end(f) : pc + 1);
@@ -1080,6 +1108,9 @@ public final class SessionDebugger implements Debugger {
         Running run = runOf(frame);
         if (run != null) {
             return goOn(run, frame, pc);
+        }
+        if (runsOn(frame)) {
+            return terminating ? end(frame) : pc + 1;
         }
         return halt == null ? line(frame, pc) : park(frame, f -> line(f, pc));
     }
@@ -1126,7 +1157,7 @@ public final class SessionDebugger implements Debugger {
 
         // an exception stops the program once, at the first frame of the program that throws it
         if (exception != stoppedException && !frame.isNative() && !isHost(frame) && runOf(frame) == null
-                && stopsAt(exception, frame)) {
+                && !runsOn(frame) && stopsAt(exception, frame)) {
             stoppedException = exception;
             return stop(frame, "exception", describe(exception), List.of(), null,
                     infoOf(frame, exception, !isCaught(frame, exception)), _ -> Op.R_NEXT);
@@ -1146,6 +1177,10 @@ public final class SessionDebugger implements Debugger {
     private int line(Frame frame, int pc) {
         if (terminating) {
             return end(frame);
+        }
+        if (runsOn(frame)) {
+            // as without a debugger: no breakpoint, logpoint, hit count, step or pause
+            return pc + 1;
         }
 
         // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint; a
@@ -1383,7 +1418,8 @@ public final class SessionDebugger implements Debugger {
                     // once the run ends, the fiber waits for that stop again before it makes its own
                     return start(run, frame, f -> stop(f, reason, description, breakpointIds, request, exception, next));
                 }
-                if (Thread.currentThread().isInterrupted()) {
+                if (Thread.currentThread().isInterrupted() || runsOn(frame)) {
+                    // a run of the whole program lets the fiber go on without its stop
                     return next.applyAsInt(frame);
                 }
             }
@@ -1473,6 +1509,13 @@ public final class SessionDebugger implements Debugger {
     private Running waitWhile(Halt current, Frame frame) {
         int threadId = threadId(frame.f_fiber);
         while (halt == current) {
+            if (runsOn(frame)) {
+                // the whole program runs while a run does: the fiber leaves the stop, and waits in
+                // it again at the next line it reaches once the run has ended
+                forget(current, threadId);
+                return null;
+            }
+
             List<Read> reads = current.reads.remove(threadId);
             if (reads != null) {
                 reads.forEach(read -> read(current, frame, read.target(), read.future()));
@@ -1485,6 +1528,13 @@ public final class SessionDebugger implements Debugger {
                 if (run != null) {
                     running = run;
                     updateActive();
+                    if (run.program()) {
+                        // the other fibers leave their waits, and the clocks run as without a stop
+                        if (current.frozen != null) {
+                            current.frozen.unfreezeTime();
+                        }
+                        notifyAll();
+                    }
                     // the deadline's timer is cancelled once the run is answered, so that it does
                     // not hold the run, and through it the program, until the limit has passed;
                     // expire() waits for this monitor, so not on the JDK's one timer thread
@@ -1920,6 +1970,9 @@ public final class SessionDebugger implements Debugger {
             if (running == run) {
                 running = null;
                 updateActive();
+                if (run.program() && halt == run.halt() && run.halt().frozen != null) {
+                    run.halt().frozen.freezeTime();
+                }
             }
             notifyAll();
 
@@ -2017,6 +2070,29 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * @return true if the frame's fiber runs on during a run of the whole program: a run that lets
+     *         the program run is in progress, and the fiber is not one of those that run its code
+     */
+    private boolean runsOn(Frame frame) {
+        Running run = running;
+        return run != null && run.program() && !run.includes(frame);
+    }
+
+    /**
+     * Take the specified fiber out of the stop, which it leaves to run on: its stack, its frames
+     * and the references that read them, and the reads and runs asked of it, which fail. Called
+     * while holding this debugger's monitor.
+     */
+    private void forget(Halt current, int threadId) {
+        current.stacks.remove(threadId);
+        current.frames.values().removeIf(at -> at.thread() == threadId);
+        current.localsReferences.keySet().retainAll(current.frames.keySet());
+        current.targets.values().removeIf(target -> target.thread() == threadId);
+        abandon(current.reads.remove(threadId));
+        abandonRuns(current.runs.remove(threadId));
+    }
+
+    /**
      * Let a run's code go on past a line or an {@code assert:debug}, since nothing stops it; code
      * that was ended, by its deadline, a cancel or the program's resume, unwinds instead, from every
      * line it reaches, so that a "catch" in it cannot keep it going; and once the program is being
@@ -2053,7 +2129,7 @@ public final class SessionDebugger implements Debugger {
         // a fiber that waits has called something that does not answer while the program is stopped
         String expression = run.run().expression();
         String reason     = expression + " did not finish within " + inWords(run.limit()) + ", so it was ended.";
-        if (run.fiber().getStatus() == Fiber.FiberStatus.Waiting) {
+        if (!run.program() && run.fiber().getStatus() == Fiber.FiberStatus.Waiting) {
             reason += " It waits, perhaps for a service whose fiber is stopped, which does not run until the"
                     + " program resumes.";
         }
@@ -2484,9 +2560,10 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Code the host asks a waiting fiber to run: the frame it runs in, the expression, how long it
-     * may run, and the answer.
+     * may run, whether the whole program runs meanwhile, and the answer.
      */
-    private record Run(Frame frame, String expression, Duration limit, CompletableFuture<Variable> answer) {
+    private record Run(Frame frame, String expression, Duration limit, boolean program,
+                       CompletableFuture<Variable> answer) {
     }
 
     /**
@@ -2511,6 +2588,13 @@ public final class SessionDebugger implements Debugger {
          */
         Duration limit() {
             return run.limit();
+        }
+
+        /**
+         * @return true if the whole program runs while the run does
+         */
+        boolean program() {
+            return run.program();
         }
     }
 

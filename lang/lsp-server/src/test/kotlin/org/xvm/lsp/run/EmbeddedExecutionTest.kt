@@ -757,6 +757,54 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a launch with evaluationRunsProgram lets a console line's code wait on work that another fiber does`() {
+        CompilerTestSupport.configure()
+        val module = source("Program.x", PROGRAM.trimIndent())
+        val path = directory.resolve("Program.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Program", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
+            sessions.request(id, 2, "launch", """{"module": "Program", "moduleUri": "$module", "evaluationRunsProgram": true}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 18}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+            val frameId =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject["id"]
+                    .asInt
+
+            // the worker's service answers once its own fiber, which the stop held, has done its work
+            sessions.request(id, 6, "evaluate", """{"expression": "worker.finished()", "frameId": $frameId, "context": "repl"}""")
+            val finished = client.until(id) { it.response == "evaluate" }
+            assertThat(finished.last()["body"].asJsonObject["result"].asString).isEqualTo("200000")
+            val invalidated = finished.firstOrNull { it.event == "invalidated" } ?: client.until(id) { it.event == "invalidated" }.last()
+            assertThat(invalidated["body"].asJsonObject["areas"].asJsonArray.map { it.asString }).containsExactly("all")
+
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(200_000 % 256)
+            assertThat(rest.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("done 200000")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a stopped program steps into a call and out of it, and continue runs it to its exit`() {
         CompilerTestSupport.configure()
         val stops = source("Stops.x", STOPS.trimIndent())
@@ -1510,6 +1558,34 @@ class EmbeddedExecutionTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """
+
+        /** Stops at line 18, in run(), while its Worker counts to 200,000; worker.finished() waits for the count. */
+        const val PROGRAM =
+            """
+            module Program {
+                service Worker {
+                    Int done;
+
+                    void work() {
+                        for (Int i : 0 ..< 200_000) {
+                            ++done;
+                        }
+                    }
+
+                    Int finished() = done;
+                }
+
+                Int run() {
+                    Worker worker = new Worker();
+                    worker.work^();
+                    @Inject Console console;
+                    console.print("working");
+                    Int done = worker.finished();
+                    console.print($"done {done}");
+                    return done % 256;
                 }
             }
             """
