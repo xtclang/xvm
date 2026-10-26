@@ -213,22 +213,25 @@ interface DebugRuns {
     /**
      * The variables of a scope, or the fields or elements of a variable, by its reference; none for a reference
      * from before the program last resumed. A lazy variable's reference runs its code, and fails, with the reason as
-     * its message, if the code throws or does not end within a second.
+     * its message, if the code throws or does not end within a second. With [hex], integers are in hexadecimal, such as
+     * `0x1F`, and a negative one of a type of fixed size in its two's complement.
      */
     fun variables(
         runId: String,
         reference: Int,
+        hex: Boolean,
     ): CompletableFuture<List<VariableState>>
 
     /**
      * Evaluates an expression, such as `point.x + 1` or `ints[i] > 0`, in a stopped frame, without running the
-     * program's code: the value as a variable named by the expression. Fails, with the reason as its message, if it
-     * cannot.
+     * program's code: the value as a variable named by the expression, an integer in hexadecimal with [hex]. Fails,
+     * with the reason as its message, if it cannot.
      */
     fun evaluate(
         runId: String,
         frameId: Int,
         expression: String,
+        hex: Boolean,
     ): CompletableFuture<VariableState>
 
     /**
@@ -237,7 +240,7 @@ interface DebugRuns {
      * changed, and the program stays stopped. Fails, with the reason as its message, if the code does not compile,
      * throws, or does not end within [limit]. Cancelling the answer ends the run. With [program], the program's other
      * fibers run meanwhile too, without stopping, and wait again at their next line once the run ends, so the stop's
-     * threads, stacks and variables may have changed.
+     * threads, stacks and variables may have changed. With [hex], an integer value is in hexadecimal instead.
      */
     fun run(
         runId: String,
@@ -245,6 +248,7 @@ interface DebugRuns {
         expression: String,
         limit: Duration,
         program: Boolean,
+        hex: Boolean,
     ): CompletableFuture<VariableState>
 
     /** The exception that the stopped fiber stopped the program at; null when it stopped it for another reason. */
