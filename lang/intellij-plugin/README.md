@@ -129,6 +129,10 @@ An Ecstasy Application configuration has:
   Configurations saved with the older *Use Gradle* checkbox become *Project default* (or *xtc
   command line* when it was cleared).
 - **Quiet mode** — adds `-q` to Gradle runs.
+- **Stop at the program's first line** — under Debug, stops the program before its module's own
+  code runs.
+- **Let the program run while Evaluate Expression runs code** — under Debug, the rest of the
+  program runs too while Evaluate Expression runs code.
 
 Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run gets a fresh
 application container in one worker JVM, which is reused across runs and restarted if it dies;
@@ -162,8 +166,9 @@ meanwhile; the configuration's **Let the program run while Evaluate Expression r
 rest of the program run too, without stopping at breakpoints, for code that waits on work the
 program's other fibers do. **Pause
 Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/remaining.md`, fixed in
-LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration has no stop-on-entry option. Debug is not offered for
-Gradle or command-line runs.
+LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration's **Stop at the
+program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code. Debug is
+not offered for Gradle or command-line runs.
 
 ## Development
 
