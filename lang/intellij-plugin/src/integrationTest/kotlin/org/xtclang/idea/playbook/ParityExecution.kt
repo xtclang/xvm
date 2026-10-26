@@ -897,14 +897,28 @@ internal fun ParityScenarios.runEntryCases() {
                     it["suspended"]?.asBoolean == true
                 }
 
-                // TODO LSP4IJ: UP42 — LSP4IJ asks for all of a variable's children at once, never a page by
-                // indexedVariables, so a large array shows its first elements and how many more there are
-                val elements =
-                    JsonParser.parseString(debugger.variables(project, module, data.string("expands"))).asJsonArray.map { it.asJsonObject }
-                check(elements.size == data.int("shown") + 1) { "${elements.size} elements shown: ${elements.takeLast(2)}" }
+                val expands = data.string("expands")
+                val first = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 0)).asJsonObject
+                val elements = first.getAsJsonArray("children").map { it.asJsonObject }
                 check(elements.first().string("name") == "[0]" && elements.first().string("value") == "0") { "First: ${elements.first()}" }
-                check(elements.last().string("name") == "..." && elements.last().string("value") == data.string("more")) {
-                    "Last: ${elements.last()}"
+                if (first["more"].asBoolean) {
+                    // with LSP4IJ #1770, a page of elements, then IntelliJ's own "..." node, which reads the next page
+                    val total = data.int("elements")
+                    check(elements.size == data.int("shown") && first.int("remaining") == total - data.int("shown")) {
+                        "${elements.size} elements and ${first.int("remaining")} more"
+                    }
+                    val all = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 10)).asJsonObject
+                    val every = all.getAsJsonArray("children").map { it.asJsonObject }
+                    val (name, value) = data.strings("last")
+                    check(every.size == total && !all["more"].asBoolean) { "${every.size} elements, more: ${all["more"]}" }
+                    check(every.last().string("name") == name && every.last().string("value") == value) { "Last: ${every.last()}" }
+                } else {
+                    // TODO LSP4IJ: UP42 — LSP4IJ asks for all of a variable's children at once, never a page by
+                    // indexedVariables (#1770), so a large array shows its first elements and how many more there are
+                    check(elements.size == data.int("shown") + 1) { "${elements.size} elements shown: ${elements.takeLast(2)}" }
+                    check(elements.last().string("name") == "..." && elements.last().string("value") == data.string("more")) {
+                        "Last: ${elements.last()}"
+                    }
                 }
 
                 debugger.resume(project, module)
@@ -1045,6 +1059,13 @@ internal interface DebugSessionProbe {
         module: String,
         path: String,
         expression: String,
+    ): String
+
+    fun pagedVariables(
+        project: Project,
+        module: String,
+        path: String,
+        pages: Int,
     ): String
 
     fun step(
