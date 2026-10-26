@@ -292,15 +292,16 @@ public class SessionDebuggerTest {
 
     /**
      * A module whose run() starts a service that loops on lines 6 and 7 forever, then prints
-     * "spinning" on line 16 and "stepped" on line 17.
+     * "spinning" on line 16 and "stepped" on line 17. The loop's count is the spinner's parameter,
+     * so its frame has it on every line, however soon the spinner is stopped.
      */
     private static final String HOLDS = """
             module Holds {
                 service Spinner {
                     Int spins;
 
-                    void spin() {
-                        for (Int count = 0; count >= 0; ++count) {
+                    void spin(Int count) {
+                        while (count++ >= 0) {
                             ++spins;
                         }
                     }
@@ -308,7 +309,7 @@ public class SessionDebuggerTest {
 
                 void run() {
                     Spinner spinner = new Spinner();
-                    spinner.spin^();
+                    spinner.spin^(0);
                     @Inject Console console;
                     console.print("spinning");
                     console.print("stepped");
