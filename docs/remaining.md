@@ -620,16 +620,24 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     same reason, sizes counted in whole bytes. All three in master pull request
     [#723](https://github.com/xtclang/xvm/pull/723) (2026-10-24, `lagergren/fix-nibble-from-bits`),
     tested with asserts in `manualTests`' `numbers.x`, which CI runs. Merged on 2026-10-26 as
-    `80bf83f4d`, with the review's wording of its comments. `Nibble(Byte[])` still fails: the library's own constructors disagree on
-    its size.
+    `80bf83f4d`, with the review's wording of its comments. `Nibble(Byte[])` still failed, and so did
+    a `Nibble`'s `toByteArray()`: a bit array makes bytes only from whole bytes, and the runtime took
+    `f_cNumBits / 8` bytes. In master pull request [#731](https://github.com/xtclang/xvm/pull/731)
+    (2026-10-26, `lagergren/fix-nibble-bytes`): one byte whose low four bits hold the value, both
+    ways, and a byte with a high bit set is out of bounds; asserts in `numbers.x`' `testNibble()`.
   - Found through #723's callers (2026-10-24): `lib_json`'s `Lexer` dropped every `\u` escape, so it
     could not read back the control characters its `Printer` writes. In master pull request
     [#724](https://github.com/xtclang/xvm/pull/724) (`lagergren/fix-json-unicode-escape`), with
     surrogate pairs read as one `Char`, and independent of #723. After review (2026-10-26,
     `8a37676ac`): `eatHexits()` is a local function of `eatString()`, with shorter comments.
-  - Found with #724, not fixed: `Char.appendEscaped()` writes the first three hexits of a `\u`
-    escape as 0 (`codepoint & 0xF000 >>> 24` is `codepoint & 0`); on master
-    `0x2028.toChar().quoted()` is `'\u0008'`.
+  - Found with #724: `Char.appendEscaped()` writes the first three hexits of a `\u` escape as 0.
+    Shifts and `&` share a precedence level, so `codepoint & 0xF000 >>> 24` is
+    `(codepoint & 0xF000) >>> 24`. On master `0x2028.toChar().quoted()` is `'\u0008'`. In master
+    pull request [#730](https://github.com/xtclang/xvm/pull/730) (2026-10-26,
+    `lagergren/fix-char-escape-hexits`), with a `testEscapes()` in `literals.x`. Its expected texts
+    are each two literals: the compiler reads a backslash, a `u` and four hexits as a character
+    anywhere in the source, also after an escaped backslash, as `doc/x.md` specifies. Issue
+    [#729](https://github.com/xtclang/xvm/issues/729) asks whether that should change.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
 - [ ] Once master lets a host set its own debugger, which #718's `setDebugger()` did and the DAP work
   now brings (#719 replaces #718), file the `EvalCompiler` fixes above again, as a new pull request or
