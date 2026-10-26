@@ -291,7 +291,11 @@ come from are in parentheses.
   program, which reads only that part (worker protocol 14); VS Code shows ranges of 100. Shared X318;
   IntelliJ still shows the first 100 and how many more, since LSP4IJ does not page (UP42). Other
   collections, such as a `Map`, show their fields: their entries would take running their code.
-- [ ] R10: changing a variable's value while stopped (`setVariable`).
+- [x] R10: changing a variable's value while stopped (`setVariable`) (`3a060bd39`, R10d): a local, a
+  field or an array element takes the value of an expression that a watch evaluates, a literal of its
+  type, so no code runs; a value of another type, `this`, a field of an immutable object, a computed
+  property and what a `Ref` holds are refused with the reason (worker protocol 15). Shared X319, full
+  in IntelliJ through LSP4IJ's own Set Value.
 - [ ] R10: completions in the Debug Console.
 - [ ] R11: Run to Cursor in both editors (`SL`); VS Code's sets a temporary breakpoint, so check
   whether it already works.
@@ -389,44 +393,36 @@ passes with the workaround disabled. The gates are in
 - [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), merged 2026-10-25): LSP4IJ announces `supportsInvalidatedEvent` and
   handles `invalidated`, refreshing the threads, the stopped stacks and the views. Gate: X314 and X315
   full in IntelliJ, their `invalidated` checks restored.
+- [ ] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758), merged 2026-10-26): an exception hint on an editor closed
+  since the stop no longer fails with `DisposalException`. Gate: X307 without its wait for the hint, and
+  no IDE errors.
+- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), merged 2026-10-26): breakpoints that don't suspend as DAP logpoints,
+  their "Evaluate and log" expression logged. Gate: X311's and X313's logpoints in IntelliJ, their UP32
+  tags removed.
+- [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), merged 2026-10-26): a "Show Values as Hexadecimal" toggle,
+  checked natively with R10b (`run-5016431580533175464`). Gate: X317's hexadecimal check always on,
+  its UP36 tag removed.
 - UP13 stays: the `createSettings` override is LSP4IJ's supported extension point.
 
 ### LSP4IJ: pull requests open
 
-- [ ] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758)): after an exception stop, LSP4IJ shows the exception in the editor one
-  second later, on the editor it found at the stop, without checking that it is still open; an
-  editor closed in that second fails with `DisposalException` "Editor is already disposed" (0.21.0
-  and `main`). X307 waits for the hint before it resumes and closes its file. The pull request skips
-  the hint for a disposed editor; its test fails without the check, and natively an X307 that closes
-  its file right after the stop reports the IDE error on `main` and none with the fix. Gate after a
-  release: X307 without the wait, and no IDE errors.
-- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `f2a38e58`): breakpoints that don't suspend as DAP logpoints; the
-  "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
-  program stopped while IntelliJ shows it running. Passes natively since R9 (2026-10-23).
 - [ ] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), filed 2026-10-26, `feat/dap-lazy-variables` at `0f740223`): lazy
   variables behind a "Show value" link. Checked natively on 2026-10-26 with R10a (`1d88e086d`): with
   a plugin built from #1768, X316's lazy variables have a Show value link and no children, and
   clicking them shows their values (`run-2879359689441688077`, `run-13880544694745259179`). Gate after
   a release: X316 in IntelliJ through the link only, its 0.21.0 path and UP35 tag removed.
-- [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), filed 2026-10-26, `feat/dap-value-formats` at `50575ca9`): a "Show
-  Values as Hexadecimal" toggle. Checked natively on 2026-10-26 with R10b (`cb551d4c2`): with a plugin
-  built from #1769's head `62acabd6`, X317 turns the toggle on and its integers show as `0xFF`, then
-  decimal again (`run-5016431580533175464`). Gate after a release: X317 in IntelliJ with its
-  hexadecimal check always on, and its UP36 tag removed.
+- [ ] UP42 ([#1770](https://github.com/redhat-developer/lsp4ij/pull/1770), filed 2026-10-26, `feat/dap-paging` at `97504678`): LSP4IJ
+  asked for all of a variable's children at once, without `filter`, `start` or `count`, and ignored
+  `indexedVariables`, so a large array showed the adapter's first page and how many more there were,
+  with no way to see the rest. The pull request reads a variable with more than 100 indexed children
+  a page at a time, behind IntelliJ's own `...` node (`tooManyChildren(remaining, addNextChildren)`).
+  Found by R10c's X318, which IntelliJ checks as the first 100 elements, tagged TODO LSP4IJ: UP42; not
+  yet checked natively. Gate after a release: X318 reads `[200..249]` in IntelliJ.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
-
-### LSP4IJ: gaps found, not filed
-
-- [ ] UP42 (2026-10-26): LSP4IJ asks for all of a variable's children at once, without `filter`,
-  `start` or `count`, and ignores `indexedVariables` (0.21.0 and `main`), so a large array shows the
-  adapter's first page and how many more there are, with no way to see the rest. IntelliJ's own
-  paging is `XCompositeNode.tooManyChildren(remaining, addNextChildren)`, a "show more" link that
-  could read the next page. Found by R10c's X318, which IntelliJ checks as the first 100 elements,
-  tagged TODO LSP4IJ: UP42. Gate after a fix and a release: X318 reads `[200..249]` in IntelliJ.
 
 ### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41)
 
