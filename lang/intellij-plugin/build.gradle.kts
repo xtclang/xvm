@@ -568,6 +568,14 @@ val buildPlugin =
     tasks.named("buildPlugin") {
         val distDir = layout.buildDirectory.dir("distributions")
         val rootDir = project.rootDir
+        // the zip is what an IDE installs, the playbook's among them: it must hold the server jar as it was built,
+        // since a sandbox copy that another build was writing would otherwise stay in it as up to date
+        val serverJar = layout.file(lspServerJar.elements.map { it.single().asFile })
+        doLastTask {
+            distDir.get().asFile.listFiles { f -> f.extension == "zip" }.orEmpty().forEach { zip ->
+                requireArchivedCopy(zip, "intellij-plugin/bin/xtc-lsp-server.jar", serverJar.get().asFile, "The plugin's distribution zip")
+            }
+        }
         doLastTask {
             val dir = distDir.get().asFile
             val zipFiles = dir.listFiles { f -> f.extension == "zip" }.orEmpty()
@@ -632,21 +640,17 @@ val copyTextMateToSandbox =
 val sandboxPluginBin: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("intellij-plugin/bin") }
 
 val copyLspServerToSandbox =
-    tasks.register<Copy>("copyLspServerToSandbox") {
+    tasks.register<CopyFileTask>("copyLspServerToSandbox") {
         group = "build"
-        description = "Copy LSP server fat JAR into plugin sandbox bin directory (off classpath)"
+        description = "Copy LSP server fat JAR into plugin sandbox bin directory (off classpath), checked against it"
 
-        from(lspServerJar) {
-            rename { "xtc-lsp-server.jar" }
-        }
-        into(sandboxPluginBin)
+        dependsOn(lspServerJar)
+        sourceFile.set(layout.file(lspServerJar.elements.map { it.single().asFile }))
+        outputFile.set(sandboxPluginBin.map { it.file("xtc-lsp-server.jar") })
 
         // Capture at configuration time for CC safety
         val binDir = sandboxPluginBin
         val rootDir = project.rootDir
-        doFirstTask {
-            binDir.get().asFile.mkdirs()
-        }
         doLastTask {
             logCopiedFiles("lsp", binDir.get().asFile, rootDir, "Adapter: tree-sitter (out-of-process, off classpath)")
         }
@@ -683,6 +687,10 @@ val prepareRunIdeSandbox =
             into("intellij-plugin/bin")
             rename { "xtc-lsp-server.jar" }
         }
+
+        // as copyLspServerToSandbox's copy, this one must be a whole jar
+        val server = destinationDirectory.file("intellij-plugin/bin/xtc-lsp-server.jar")
+        doLast { requireWholeArchive(server.get().asFile, "The runIde sandbox's language server") }
     }
 
 val sandboxConfigDir: Provider<Directory> = prepareRunIdeSandbox.flatMap { it.sandboxConfigDirectory }
