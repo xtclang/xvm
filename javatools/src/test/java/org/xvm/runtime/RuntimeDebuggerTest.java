@@ -2,9 +2,7 @@ package org.xvm.runtime;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for the choice of a runtime's debugger.
@@ -14,7 +12,6 @@ public class RuntimeDebuggerTest {
     public void theConsoleDebuggerIsTheDebuggerUntilAHostSetsAnother() {
         Runtime runtime = new Runtime();
         try {
-            assertTrue(runtime.isDebuggerAllowed());
             assertSame(DebugConsole.INSTANCE, runtime.getDebugger());
 
             runtime.setDebugger(Debugger.NONE);
@@ -25,7 +22,7 @@ public class RuntimeDebuggerTest {
     }
 
     @Test
-    public void theSystemPropertyTurnsTheDebuggerOffWhateverAHostSets() {
+    public void theSystemPropertyTurnsTheDebuggerOffUntilAHostSetsOne() {
         Runtime runtime;
         String  previous = System.setProperty("org.xvm.runtime.debugger", "off");
         try {
@@ -39,11 +36,10 @@ public class RuntimeDebuggerTest {
         }
 
         try {
-            assertFalse(runtime.isDebuggerAllowed());
             assertSame(Debugger.NONE, runtime.getDebugger());
 
             runtime.setDebugger(DebugConsole.INSTANCE);
-            assertSame(Debugger.NONE, runtime.getDebugger());
+            assertSame(DebugConsole.INSTANCE, runtime.getDebugger());
         } finally {
             runtime.shutdownXVM();
         }

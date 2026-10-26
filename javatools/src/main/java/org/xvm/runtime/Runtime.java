@@ -45,9 +45,12 @@ public class Runtime {
                 .factory();
         f_executorIO = Executors.newThreadPerTaskExecutor(factoryIO);
 
-        // the debugger can be turned off for the whole JVM by a system property, for example:
+        // the debugger can be turned off by a system property, unless a host sets one, for example:
         //      JAVA_OPTS=-Dorg.xvm.runtime.debugger=off xec TestSimple
-        f_fDebuggerAllowed = !"off".equals(System.getProperty("org.xvm.runtime.debugger"));
+        // the console debugger is not made here: it reads the user's preferences when it is made
+        if ("off".equals(System.getProperty("org.xvm.runtime.debugger"))) {
+            m_debugger = Debugger.NONE;
+        }
     }
 
     public void start() {
@@ -129,23 +132,11 @@ public class Runtime {
     }
 
     /**
-     * @return false iff the debugger is turned off for the whole JVM, by the system property
-     *         {@code org.xvm.runtime.debugger=off}
-     */
-    public boolean isDebuggerAllowed() {
-        return f_fDebuggerAllowed;
-    }
-
-    /**
-     * @return the debugger of this runtime's services: {@link Debugger#NONE} if the debugger is
-     *         turned off, else the one the host set, or the terminal {@link DebugConsole}, which
-     *         then stays the choice
+     * @return the debugger of this runtime's services: the one the host set, else
+     *         {@link Debugger#NONE} if the system property {@code org.xvm.runtime.debugger=off}
+     *         turned it off, else the terminal {@link DebugConsole}, which then stays the choice
      */
     public Debugger getDebugger() {
-        if (!f_fDebuggerAllowed) {
-            return Debugger.NONE;
-        }
-
         Debugger debugger = m_debugger;
         if (debugger == null) {
             m_debugger = debugger = DebugConsole.INSTANCE;
@@ -155,8 +146,7 @@ public class Runtime {
 
     /**
      * Set the debugger of this runtime's services; a host without a terminal for the
-     * {@link DebugConsole} sets {@link Debugger#NONE}. While the debugger is turned off for the
-     * whole JVM, there is none whatever is set.
+     * {@link DebugConsole} sets {@link Debugger#NONE}.
      *
      * @param debugger  the debugger to use
      */
@@ -197,12 +187,8 @@ public class Runtime {
     private boolean m_fDebugger;
 
     /**
-     * False iff the debugger is turned off for the whole JVM.
-     */
-    private final boolean f_fDebuggerAllowed;
-
-    /**
-     * The debugger the host set, or the {@link DebugConsole} once it is chosen; null until either.
+     * The debugger the host set, {@link Debugger#NONE} if the system property turned it off, or
+     * the {@link DebugConsole} once it is chosen; null until one of them.
      */
     private volatile Debugger m_debugger;
 }

@@ -13,7 +13,7 @@ public interface Debugger {
      */
     Debugger NONE = new Debugger() {
         @Override
-        public int activate(Frame ctx, int iPC) {
+        public int activate(Frame frame, int iPC) {
             return iPC + 1;
         }
 
