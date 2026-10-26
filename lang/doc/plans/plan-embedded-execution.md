@@ -1,11 +1,11 @@
-# Embedded compilation, Run and future debugging
+# Embedded compilation, Run and debugging
 
 Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of embedded build and
 Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
-2026-10-22, and so did R7's first part: breakpoints, stops, threads and stacks, in VS Code and
-IntelliJ. The rest of R7 and the release gate (R8) are not implemented. The audit in the next section describes the
-code before the first delivery.
+2026-10-22, and R7, the runtime debugger, was completed on 2026-10-26, both in VS Code and
+IntelliJ. The release gate (R8) is in progress, and parts of R9, and R10, are done. The audit in
+the next section describes the code before the first delivery.
 
 ## First delivery (2026-10-15)
 
@@ -18,7 +18,7 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 | Default mode | Embedded, also with a Gradle build, whose own settings embedded builds and runs say do not apply (2026-10-16; previously automatic, which remains selectable) |
 | Unsaved buffers | Builds and runs compile the editor's text, saved or not, and neither client saves files (R2, 2026-10-19; until then both saved first). VS Code saves before the task as `task.saveBeforeRun` says, and IntelliJ before a run, not a build |
 | Run host | Execution worker JVMs started by the language server, one per running program and up to four at once; one idle worker is kept for the next run (2026-10-16; previously one worker running one program at a time) |
-| Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled |
+| Debugging | Not now. VS Code debug launches run without the debugger; IntelliJ keeps DAP disabled. This held until 2026-10-22; since then, R6/R7 debug sessions in both editors |
 | Compiler queue | Builds reuse the server's serialized compile queue, not a second compiler |
 
 | Area | Delivered |
@@ -57,7 +57,7 @@ new *Module source* field. The commits and validation are recorded in the
 ## Recommended ownership and process model
 
 Use one compilation service contract and one execution service contract, shared by both IDEs and
-the future DAP adapter. The service contract is independent of the transport and IDE UI.
+the DAP adapter. The service contract is independent of the transport and IDE UI.
 
 ```mermaid
 flowchart LR
@@ -67,7 +67,7 @@ flowchart LR
     BUILD --> EXEC[Supervised persistent execution worker]
     EXEC --> VM[EmbeddingSupport / lib_runner]
     VM --> APP[Fresh application container per run]
-    DAP[Future DAP adapter] --> EXEC
+    DAP[DAP adapter] --> EXEC
     EXEC --> EVENTS[Run output, state and completion events]
     EVENTS --> IDE
 ```
@@ -142,7 +142,7 @@ debug console. Neither client reconstructs the compiler invocation. Keep an expl
 Gradle build/task path for generated inputs and user build automation; it is not the normal embedded
 Run implementation. Build-model integration must supply those inputs before compilation.
 
-First prove the service with embedded Run. A future DAP `launch` (including no-debug launch) uses
+First prove the service with embedded Run. A DAP `launch` (including no-debug launch) uses
 the same BuildResult and RunSession, then attaches runtime controls. The IDE transport may eventually
 route both Run and Debug through DAP; that should not change compilation or execution ownership.
 
@@ -483,6 +483,11 @@ this bridge; they cannot be inferred from compiler type hints.
   *Correlated logs (2026-10-26, `a87b63d9d`):* the build, run, debug session and worker lines share
   `build=` (the compiler queue job's ID), `artifact=` (the module and its revision), `run=`,
   `workerRun=`, and `worker=` with `generation=`.
+  *Focused test tasks (2026-10-26, `e91b5e58cb`, `30d9685ff3`):* `graphQueryTest`, `emissionTest`,
+  `dependencyHostTest`, `sourceGraphHostTest`, `embeddingConsumerTest` and
+  `:javatools:errorListenerTest` each run what a doc's command used to list with `--tests`.
+  *Editor cycles (2026-10-26, `718ddd656e`):* shared X322 repeats runs, stopped runs and debug
+  sessions of one module from both editors; each ends, and no run or debug session stays open.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
@@ -494,11 +499,11 @@ this bridge; they cannot be inferred from compiler type hints.
   exception's stack trace (worker protocol 9). Shared X311 and X312 pass in VS Code; IntelliJ checks
   X311's condition, and the rest waits on LSP4IJ (UP32-UP34). Still open in R9: function and data
   breakpoints.
-- [ ] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
+- [x] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
   tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
-  R7's evaluation; computed properties as lazy variables, where only fields show now; paging of
+  R7's evaluation; computed properties as lazy variables, where only fields showed before; paging of
   large arrays and collections in place of the first 100 elements; changing a variable's value
-  while stopped (`setVariable`); and completions in the Debug Console. Done so far:
+  while stopped (`setVariable`); and completions in the Debug Console. *Complete (2026-10-26):*
   `toString()` on demand and computed properties, as lazy variables whose reads run their code for
   at most a second (`1d88e086d`, R10a, worker protocol 12, shared X316); and integers in
   hexadecimal, through DAP's `format` or the session's `xtc/valueFormat`, which VS Code's own menu
@@ -507,7 +512,8 @@ this bridge; they cannot be inferred from compiler type hints.
   R10c, protocol 14, shared X318); and Set Value, a variable given an expression's value without
   running code (`3a060bd39`, R10d, protocol 15, shared X319); and Debug Console completions, the
   frame's names or the members of the value before a dot, without running code (`8178cd03d`,
-  R10e, protocol 16, shared X320).
+  R10e, protocol 16, shared X320). Other collections, such as a `Map`, show their fields, since
+  their entries would take running their code.
 - [ ] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
   temporary breakpoint, so it may already work and needs checking), choosing which call on a line
   to step into (`stepInTargets`), restarting a frame (the console's `T`), and continuing, stepping or
@@ -528,5 +534,7 @@ editors' views and breakpoint management replace.
 
 R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 precedes R4/R5;
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
-R8, unless one of them is chosen to gate the release, which moves it in front of R8. Current
-compiler-only tests and the LSP playbook do not establish any of these runtime gates.
+R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
+and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
+playbook's execution and debug cases, among X280–X322, cover the editor side of R5–R8; R8 also
+needs the server's soak and release evidence.

@@ -8741,7 +8741,7 @@
       }
     },
     "X281": {
-      "title": "embedded build saves edits, compiles the module graph and skips consumers of a failed dependency",
+      "title": "embedded build compiles the editor's unsaved text and the module graph, and skips consumers of a failed dependency",
       "manual": [
         "The Build tool window and terminal links to diagnostics are inspected manually; the drivers check the reported lines."
       ],
@@ -9503,7 +9503,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ's DAP debug process does not implement pausing (0.21.0, and main on 2026-10-22), so IntelliJ's Pause Program does nothing for a DAP session; UP30 in docs/remaining.md."
+          "LSP4IJ's DAP debug process does not implement pausing in 0.21.0, so IntelliJ's Pause Program does nothing for a DAP session; UP30 in docs/remaining.md, fixed by LSP4IJ #1757 (merged 2026-10-26, unreleased)."
         ]
       }
     },
@@ -9626,7 +9626,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ sends an exception filter without its condition (UP34) and never asks for exceptionInfo (UP33), in 0.21.0 and on main on 2026-10-23."
+          "LSP4IJ 0.21.0 sends an exception filter without its condition (UP34) and never asks for exceptionInfo (UP33); both are fixed by LSP4IJ #1760 and #1761 (merged 2026-10-26, unreleased)."
         ]
       }
     },

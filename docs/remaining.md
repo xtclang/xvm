@@ -1,6 +1,6 @@
 # Remaining work
 
-Everything still open on `lagergren/errs`, as one list to tick off. Checked on 2026-10-21
+Everything still open on `lagergren/errs`, as one list to tick off. Checked on 2026-10-26
 against [the integration plan](errs-integration-plan.md),
 [the execution plan](../lang/doc/plans/plan-embedded-execution.md),
 [the upstream register](errs-upstream-issues.md), [the PR roadmap](../pr-roadmap.md), and the live
@@ -8,9 +8,9 @@ state of every upstream issue and pull request named here. When you tick an item
 PR or run that closes it.
 
 Closed and not repeated here: L1–L72 (L61–L67 within their bounded scope), L74–L76, L80, L81,
-L83, UI1–UI7, AST1–AST5, PLAT1–PLAT3, R1–R5. Cases those closures refuse on purpose are
-documented refusals, not open tasks; the few worth revisiting are under
-[beyond the current scope](#beyond-the-current-scope).
+L83, UI1–UI7, AST1–AST5, PLAT1–PLAT3, R1–R5. R6 and R7 are closed too; their sections below
+stay as records. Cases those closures refuse on purpose are documented refusals, not open tasks;
+the few worth revisiting are under [beyond the current scope](#beyond-the-current-scope).
 
 ## 1. Stale documentation
 
@@ -184,6 +184,9 @@ and for IntelliJ with R7's fourth step (`69c2ff2f8`).
   the server's shutdown stop it, and its exit ends the session.
 
 ### R7: runtime debugger bridge
+
+Closed 2026-10-26 in both editors, with source revisions (`030f4255e0`). In IntelliJ, the cases
+that are partial or not implemented wait on LSP4IJ 0.21.0's limits, UP30–UP42.
 
 The first end-to-end case works in VS Code (`41cb8b60c`, `e73878550`, `bb016ce17`; shared X304 in VS Code
 `run-iwSxfQ`): a breakpoint stops the program, the call stack shows, and Continue runs it on. The
@@ -367,6 +370,9 @@ breakpoint list, which the editors replace.
   its generation, which counts the workers the server started; `lsp-server/README.md` says how to
   follow a run. `EmbeddedExecutionTest` checks one run's lines against each other and the trace.
   Kept: the editors' own logs do not give these IDs.
+- [x] Focused Gradle test tasks (`e91b5e58cb`, `30d9685ff3`, 2026-10-26): `graphQueryTest`,
+  `emissionTest`, `dependencyHostTest`, `sourceGraphHostTest`, `embeddingConsumerTest` and
+  `:javatools:errorListenerTest` each run what a doc's command used to list with `--tests`.
 - [ ] Playbook and capability docs brought up to date.
 - [ ] Each runtime PR validated on its own.
 - Known limit kept: JIT runs are unsupported.
