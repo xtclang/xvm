@@ -3,10 +3,9 @@ package org.xvm.util;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -117,7 +116,7 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
     }
 
     /**
-     * KeySet which filters out cleared keys during iteration and from its arrays.
+     * KeySet which filters out cleared keys during iteration.
      */
     protected class KeySet extends HasherMap<K, V>.KeySet {
         @Override
@@ -127,12 +126,7 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
 
         @Override
         public Object[] toArray() {
-            return live(this).toArray();
-        }
-
-        @Override
-        public <T> T[] toArray(T[] a) {
-            return live(this).toArray(a);
+            return live(this);
         }
     }
 
@@ -142,7 +136,7 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
     }
 
     /**
-     * EntrySet which filters out cleared keys during iteration and from its arrays.
+     * EntrySet which filters out cleared keys during iteration.
      */
     protected class EntrySet extends HasherMap<K, V>.EntrySet {
         @Override
@@ -152,23 +146,20 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
 
         @Override
         public Object[] toArray() {
-            return live(this).toArray();
-        }
-
-        @Override
-        public <T> T[] toArray(T[] a) {
-            return live(this).toArray(a);
+            return live(this);
         }
     }
 
     /**
      * @param view the key or entry set
-     * @return the elements that the view's iterator returns: the converting {@code toArray} it inherits would
-     *         convert a key that was collected, but not yet removed, to null
+     * @return the elements that the view's iterator returns, without the keys that were collected but not yet removed
      */
-    private static <E> List<E> live(Collection<E> view) {
-        List<E> elements = new ArrayList<>();
-        view.iterator().forEachRemaining(elements::add);
-        return elements;
+    private static Object[] live(Collection<?> view) {
+        Object[] elements = new Object[view.size()];
+        int count = 0;
+        for (Object element : view) {
+            elements[count++] = element;
+        }
+        return count == elements.length ? elements : Arrays.copyOf(elements, count);
     }
 }

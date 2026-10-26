@@ -4,11 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
-import java.lang.ref.WeakReference;
+import java.lang.ref.Reference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -98,18 +99,19 @@ public class WeakHasherMapTest {
     }
 
     @Test
-    void shouldLeaveCollectedKeysOutOfArrays() throws InterruptedException {
-        var map = new WeakHasherMap<Object, String>(Hasher.identity());
-        var set = Collections.newSetFromMap(new ConcurrentWeakHasherMap<Object, Boolean>(Hasher.identity()));
+    void shouldLeaveCollectedKeysOutOfArrays() {
+        var storage = new HashMap<Supplier<Object>, String>();
+        var map = new WeakHasherMap<Object, String>(Hasher.identity(), () -> storage);
+        var concurrentStorage = new ConcurrentHashMap<Supplier<Object>, Boolean>();
+        var set = Collections.newSetFromMap(new ConcurrentWeakHasherMap<>(Hasher.identity(), () -> concurrentStorage));
         var kept = new Object();
+        var collected = new Object();
         map.put(kept, "kept");
+        map.put(collected, "collected");
         set.add(kept);
-        var collected = putCollectable(map, set);
-        for (int i = 0; i < 100 && collected.get() != null; ++i) {
-            System.gc();
-            Thread.sleep(10);
-        }
-        assertNull(collected.get(), "the key was not collected");
+        set.add(collected);
+        clear(storage, collected);
+        clear(concurrentStorage, collected);
 
         // a key that was collected, but not yet removed, is left out, as the iterators leave it out
         assertArrayEquals(new Object[] {kept}, map.keySet().toArray());
@@ -121,14 +123,10 @@ public class WeakHasherMapTest {
     }
 
     /**
-     * Put a key that nothing else refers to into the map and the set.
-     *
-     * @return a reference that is cleared once the key is collected
+     * Clear the weak reference to the key in a map's storage, as the collector clears it once the key is unreachable,
+     * without queueing it, as the collector does only later: the map still holds the key, which reads as null.
      */
-    private static WeakReference<Object> putCollectable(Map<Object, String> map, Set<Object> set) {
-        var key = new Object();
-        map.put(key, "collected");
-        set.add(key);
-        return new WeakReference<>(key);
+    private static void clear(Map<Supplier<Object>, ?> storage, Object key) {
+        storage.keySet().stream().filter(ref -> ref.get() == key).forEach(ref -> ((Reference<?>) ref).clear());
     }
 }
