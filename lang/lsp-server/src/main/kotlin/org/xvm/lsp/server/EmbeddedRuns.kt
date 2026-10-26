@@ -471,7 +471,7 @@ internal class EmbeddedRuns(
         workerIds[runId]?.let(request) ?: CompletableFuture.failedFuture(IllegalStateException("The program is not running"))
 
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
-    internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + worker.tracked()
+    internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + worker.tracked()
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun workerPids(): List<Long> = worker.workerPids()
