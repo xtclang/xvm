@@ -134,8 +134,8 @@ public abstract class xConstrainedInteger
 
     @Override
     protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn) {
-        // the bits fill their bytes from the most significant bit down, so a value narrower than
-        // its bytes, such as a Nibble's 4 bits, sits above the unused low bits of the last byte
+        // bit arrays pack from the high end of each byte; for example, a Nibble value of 0xC
+        // is stored as 0xC0, so shift away the unused low bits to recover its value
         int cBytes = (cBits + 7) >>> 3;
         return cBits == f_cNumBits
             ? convertLong(frame, fromByteArray(ab, cBytes, f_fSigned) >>> (cBytes * 8 - cBits),
@@ -178,7 +178,8 @@ public abstract class xConstrainedInteger
         case "bits": {
             long l = ((JavaLong) hTarget).getValue();
 
-            // as constructFromBits() reads them, a value narrower than its bytes is in their high bits
+            // a bit array reads from the high end of each byte; left-align a partial byte
+            // so Nibble 0xC produces bits 1100 (stored as 0xC0)
             int cBytes = (f_cNumBits + 7) >>> 3;
             return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
                 toByteArray(l << (cBytes * 8 - f_cNumBits), cBytes), f_cNumBits, Mutability.Constant));
