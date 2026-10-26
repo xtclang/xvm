@@ -318,6 +318,8 @@ this bridge; they cannot be inferred from compiler type hints.
   healthy worker, so the next run waited about 2 s for a new one. The timer thread has a group of its
   own (`OutputBatchesTest`), and the pool count is the runtime's pool alone: one thread per core,
   started by the first run.
+  *2026-10-26:* the worker no longer calls `System.gc()` before it reports its heap, and the 128 MB
+  growth rule is gone (R8 below).
 - [x] **R5 — Both IDE Run integrations.** Route lens/gutter/context/shortcut/configuration actions
   through the same target and session API. Test arguments with spaces/Unicode, unsaved sources,
   missing entry points, compile errors, output, Stop, Rerun and repeated runs in shared scenarios.
@@ -475,6 +477,9 @@ this bridge; they cannot be inferred from compiler type hints.
   worker counted a JDK thread that joined the pool's thread group as pool growth and was retired;
   it now reports the pool's own size. Memory is checked by counts, not by the heap after
   `System.gc()`. Linux, Windows and the editors' side are still to do.
+  *No forced collection (2026-10-26, `3a9112c31`):* the worker no longer calls `System.gc()` after a
+  run. It reports the heap the JVM left after its own latest collections; the 512 MB limit applies to
+  that, and the 128 MB growth rule of R4 is gone.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
