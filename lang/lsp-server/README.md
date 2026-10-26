@@ -617,7 +617,10 @@ ends with its identity code, such as `#1023456`. With `supportsValueFormattingOp
 or `evaluate` request's `format` with `hex` shows integers in hexadecimal (`0xFF`, a negative one in
 its type's two's complement); the session's own request `xtc/valueFormat` (`{"hex": true}`) sets the
 format of the requests that name none, which VS Code's Variables view uses, since VS Code never sends
-a format, and is followed by `invalidated` for `variables`. A frame of a fiber that called the stopped one has no
+a format, and is followed by `invalidated` for `variables`. `setVariable` (`supportsSetVariable`)
+gives a local, a field or an array element the value of an expression, evaluated as a watch is, a
+literal of the variable's type; a value of another type, `this`, a field of an immutable object, a
+computed property or what a `Ref` holds is refused with the reason. A frame of a fiber that called the stopped one has no
 scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
 over a call, into one, or out of its method, and the program stops again with the reason `step`;
 a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the
