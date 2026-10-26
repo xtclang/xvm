@@ -9676,6 +9676,38 @@
         ]
       }
     },
+    "X314": {
+      "title": "a line typed in the debug console in a stopped frame runs code there, on the stopped fiber: a call's value, whose effect a watch then shows, and a loop that cancel or the time limit ends",
+      "manual": [
+        "How each editor's debug console shows a run's answer, and how its Variables view reads the variables again, is checked manually; VS Code checks the console's answers, the invalidated event, a watch after the run, cancel and the time limit, and the program's exit, IntelliJ the answers of the Evaluate Expression dialog, a watch after the run, the time limit and the program's exit."
+      ],
+      "values": {
+        "file": "DebugCalls.x",
+        "module": "DebugCalls",
+        "source": "module DebugCalls {\n    class Box {\n        Int count;\n\n        Int bump(Int by) {\n            count += by;\n            return count;\n        }\n    }\n\n    Int run() {\n        @Inject Console console;\n        Box box = new Box();\n        Int n = show(box, 5);\n        console.print($\"after {box.count}\");\n        return n;\n    }\n\n    Int show(Box box, Int n) {\n        Int shown = n + 1;\n        return shown + box.count;\n    }\n\n    void spin() {\n        Int count = 0;\n        while (True) {\n            ++count;\n        }\n    }\n}\n",
+        "breakpointLine": 21,
+        "frame": "DebugCalls.show",
+        "call": [
+          "box.bump(n)",
+          "5"
+        ],
+        "watch": [
+          "box.count",
+          "5"
+        ],
+        "loop": "spin()",
+        "cancelled": "cancelled",
+        "limited": "spin() did not finish within 2 seconds, so it was ended.",
+        "exitCode": 11,
+        "output": "after 5"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ never sends DAP cancel (UP41 in docs/remaining.md) and does not handle invalidated (UP40, LSP4IJ #1766), so IntelliJ checks the call's value through the Evaluate Expression dialog, the watch after it, the time limit and the exit; cancel and invalidated are checked in VS Code."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
