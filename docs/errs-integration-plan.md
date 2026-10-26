@@ -2646,6 +2646,12 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   39; `:javatools:test` 681, 42 skips; `:lang:dap-server:test` 30, `:lang:lsp-server:test` 2388 (2
   skipped), `:lang:intellij-plugin:test` 151; shared X318, partial in IntelliJ (UP42); VS Code
   `run-2VBUdC`, IntelliJ `run-10983628715195749118`; ESLint, `tsc`, `spotlessCheck`.
+- `3a060bd39` (R10d, as R10a's paths): Set Value, `setVariable`, a local, field or element given an
+  expression's value, a literal of its type, without running code; worker protocol 15.
+  `SessionDebuggerTest` 40; `:javatools:test` 682, 42 skips; `:lang:dap-server:test` 31,
+  `:lang:lsp-server:test` 2388 (2 skipped), `:lang:intellij-plugin:test` 151; shared X319, full in
+  IntelliJ; VS Code `run-iKfxBB`, IntelliJ `run-15574345965028542847`; ESLint, `tsc`,
+  `spotlessCheck`.
 
 ### R6–R7 integration bursts (2026-10-22)
 
@@ -2655,7 +2661,7 @@ burst G, R9's conditions, logpoints and exception classes burst H, expressions w
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
 races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
 resume burst M, console lines run as code by the server burst N, by the editors burst O, the
-whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, and its paging burst T. All the work
+whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, its paging burst T, and Set Value burst U. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2684,6 +2690,7 @@ master `1c4efe422`.
 | R: lazy computed properties and `toString()` | `1d88e086d` (R10a) | `javatools`, `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | P, Q | `:javatools:test` (`SessionDebuggerTest`), `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers), `:lang:intellij-plugin:test`; VS Code and IntelliJ playbooks to X316; ESLint and `tsc`; `spotlessCheck` |
 | S: hexadecimal values and identity codes | `cb551d4c2` (R10b) | as R's | R | as R's, with both playbooks to X317 |
 | T: large arrays a page at a time | `00dee9671` (R10c) | as R's | S | as R's, with both playbooks to X318 |
+| U: Set Value | `3a060bd39` (R10d) | as R's | T | as R's, with both playbooks to X319 |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
