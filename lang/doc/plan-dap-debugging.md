@@ -216,8 +216,8 @@ The existing console debugger is a full implementation of the `Debugger` interfa
 | Stack traces | Fully implemented | `stackTrace` |
 | Source display | Fully implemented | `source` |
 | `toString()` display (`DS`) | Fully implemented | `evaluate`, or an object's lazy `toString()` variable (R10a, `1d88e086d`) |
-| Identity code (`DI`) | Fully implemented | Variable presentation (R10) |
-| Value view mode (`V`) | Fully implemented | `variables`/`evaluate` with `format` (R10) |
+| Identity code (`DI`) | Fully implemented | A mutable object's value ends with it (R10b, `cb551d4c2`) |
+| Value view mode (`V`) | Not implemented in the console | `variables`/`evaluate` with `format`, and `xtc/valueFormat` (R10b, `cb551d4c2`) |
 | Multi-result evaluation (`EM`) | Fully implemented | `evaluate` (R7) |
 | Reset to a previous frame (`T`) | Fully implemented | `restartFrame` (R11) |
 | Services and fibers view (`VF`) | Fully implemented | `threads`, with every service and fiber (R12) |
