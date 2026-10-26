@@ -47,6 +47,7 @@ import org.eclipse.lsp4j.debug.Thread
 import org.eclipse.lsp4j.debug.ThreadEventArguments
 import org.eclipse.lsp4j.debug.ThreadEventArgumentsReason
 import org.eclipse.lsp4j.debug.ThreadsResponse
+import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.VariablePresentationHint
 import org.eclipse.lsp4j.debug.VariablesArguments
@@ -56,6 +57,7 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.UUID
@@ -162,6 +164,13 @@ class XtcDebugServer(
     @Volatile
     private var evaluationRunsProgram = false
 
+    /**
+     * True to show integers in hexadecimal for a `variables` or `evaluate` request that names no `format`: the session's
+     * own choice, which `xtc/valueFormat` sets, since VS Code never sends a format (UP38).
+     */
+    @Volatile
+    private var hexValues = false
+
     /** The console evaluations in progress, by their request's `seq`, which `cancel` names. */
     private val evaluations = ConcurrentHashMap<Int, Evaluation>()
 
@@ -267,6 +276,7 @@ class XtcDebugServer(
                 supportsExceptionInfoRequest = true
                 supportsExceptionFilterOptions = true
                 supportsCancelRequest = true
+                supportsValueFormattingOptions = true
                 exceptionBreakpointFilters =
                     arrayOf(
                         ExceptionBreakpointsFilter().apply {
@@ -537,7 +547,7 @@ class XtcDebugServer(
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(VariablesResponse().apply { variables = emptyArray() })
         }
-        return runs.variables(runId, args.variablesReference).thenApply { states ->
+        return runs.variables(runId, args.variablesReference, args.format?.hex ?: hexValues).thenApply { states ->
             val first = args.start ?: 0
             val count = args.count?.takeIf { it > 0 } ?: states.size
             VariablesResponse().apply {
@@ -599,7 +609,8 @@ class XtcDebugServer(
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
         val frameId = args.frameId
         if (frameId != null && debuggedRunning()) {
-            val read = runs.evaluate(runId, frameId, args.expression)
+            val hex = args.format?.hex ?: hexValues
+            val read = runs.evaluate(runId, frameId, args.expression, hex)
             val value =
                 if (args.context == EvaluateArgumentsContext.REPL) {
                     // a line typed in the console is code, which runs, unless reading it as a path does without
@@ -610,7 +621,7 @@ class XtcDebugServer(
                         .exceptionallyCompose {
                             evaluation.start {
                                 val program = evaluationRunsProgram
-                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program).also { run ->
+                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program, hex).also { run ->
                                     run.whenComplete { _, _ -> ran(program) }
                                 }
                             }
@@ -642,6 +653,21 @@ class XtcDebugServer(
                 variablesReference = 0
             },
         )
+    }
+
+    /**
+     * `xtc/valueFormat`, a request of this adapter's own: shows integers in hexadecimal ([ValueFormat.hex]), or in
+     * decimal, for the `variables` and `evaluate` requests that name no `format`, until it is set again. VS Code's
+     * Variables view sets it from the Ecstasy extension's "Show Values as Hexadecimal" item, since VS Code never sends a
+     * format itself (UP38); a client that takes `invalidated` is then told to read the variables again.
+     */
+    @JsonRequest("xtc/valueFormat")
+    fun valueFormat(args: ValueFormat?): CompletableFuture<Void> {
+        hexValues = args?.hex == true
+        if (invalidates && debuggedRunning()) {
+            client?.invalidated(InvalidatedEventArguments().apply { areas = arrayOf(InvalidatedAreas.VARIABLES) })
+        }
+        return CompletableFuture.completedFuture(null)
     }
 
     /**
