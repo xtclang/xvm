@@ -296,7 +296,13 @@ come from are in parentheses.
   type, so no code runs; a value of another type, `this`, a field of an immutable object, a computed
   property and what a `Ref` holds are refused with the reason (worker protocol 15). Shared X319, full
   in IntelliJ through LSP4IJ's own Set Value.
-- [ ] R10: completions in the Debug Console.
+- [x] R10: completions in the Debug Console (`8178cd03d`, R10e): the name typed at the cursor
+  completes to the frame's variables, `this` and its members, its private ones too, or, after a
+  dot, to the public fields, properties and methods of the value before it, evaluated as a watch is,
+  so no code runs (worker protocol 16). Items have no `start` (UP43). Shared X320, partial in
+  IntelliJ: with 0.21.0, editing Evaluate Expression's expression fails IntelliJ's Document/PSI
+  check (UP37), so it checks the names offered; with #1763 it also checks the text a chosen one
+  makes.
 - [ ] R11: Run to Cursor in both editors (`SL`); VS Code's sets a temporary breakpoint, so check
   whether it already works.
 - [ ] R11: choosing which call on a line to step into (`stepInTargets`).
@@ -389,7 +395,12 @@ passes with the workaround disabled. The gates are in
   `filterOptions`. Gate: X312 in IntelliJ.
 - [ ] UP37 ([#1763](https://github.com/redhat-developer/lsp4ij/pull/1763), merged 2026-10-26): `DAPExpressionCodeFragment` honors the `isPhysical`
   that IntelliJ asks for, so IntelliJ 2026.2's inline logpoint editor no longer fails its inspection
-  pass's assertion. Gate: a breakpoint with Suspend unchecked and a log expression, with no IDE error.
+  pass's assertion, and an edit of Evaluate Expression's expression, a typed character or a chosen
+  completion, no longer fails IntelliJ's Document/PSI check (found by R10e's X320). Checked natively
+  with R10e: with a plugin built from `main`, X320's chosen completions make `box.count`, with no IDE
+  error (`run-8742366318524741203`). Gate: a breakpoint with Suspend unchecked and a log expression,
+  with no IDE error; X320 in IntelliJ through the inserted text, its 0.21.0 path and UP37 tags
+  removed.
 - [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), merged 2026-10-25): LSP4IJ announces `supportsInvalidatedEvent` and
   handles `invalidated`, refreshing the threads, the stopped stacks and the views. Gate: X314 and X315
   full in IntelliJ, their `invalidated` checks restored.
@@ -442,6 +453,16 @@ passes with the workaround disabled. The gates are in
   `supportsCancelRequest` (LSP4J's sends LSP's `$/cancelRequest` notification, which a DAP endpoint
   writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
   cancels no DAP request today, so no adapter gets that event.
+
+### LSP4IJ and VS Code: a DAP completion's `start` (UP43)
+
+- [ ] UP43 (2026-10-26): DAP measures a completion item's `start` in the client's column base, but
+  LSP4IJ, which declares `columnsStartAt1`, inserts at it as a 0-based offset into the expression,
+  and VS Code's console filters by it as a 0-based index into the text. XVM's adapter sends no
+  `start`, and both clients then replace the item's `length` before the cursor (tagged TODO LSP4IJ:
+  UP43 in `XtcDebugServer.completions`). Whether to file depends on what other adapters send: a pull
+  request to LSP4IJ only if they follow the spec. Gate if LSP4IJ changes: the adapter sends `start`
+  in the client's base, and X320 passes in both editors.
 
 ### LSP4J
 
@@ -623,9 +644,14 @@ Cam; the publishing job is [#711](https://github.com/xtclang/xvm/pull/711).
 - [ ] Cam: find the trusted publishing setting (step 5), or set up the Azure identity (step 5b).
 - [ ] Marcus: move #711 to a vsce with microsoft/vscode-vsce#1337 (4.0.1-1 or later) for OIDC, or to
   `azure/login` with `--azure-credential`, whichever step 5 leads to.
-- [ ] Marcus: install #711's `vscode-marketplace-<sha>` VSIX in a fresh profile on macOS, Windows
-  and Linux, and review the Marketplace metadata in `package.json`.
-- [ ] Agree how the first upload happens (step 6), merge #711, set `VSCODE_MARKETPLACE_PUBLISH`, and
-  run the first-publish checks in #710.
+- [ ] Marcus: install the Marketplace pre-release VSIX in a fresh profile on macOS, Windows and
+  Linux, and review the Marketplace metadata in `package.json`. CI builds it, as the
+  `vscode-marketplace-<sha>` artifact, only while `VSCODE_MARKETPLACE_PUBLISH` is true; locally,
+  `:lang:vscode-extension:packageMarketplaceExtension` builds it.
+- [x] Merge #711 (2026-10-26, `5130e4211`): `commit.yml` packages and uploads the Marketplace
+  pre-release only when the repository variable `VSCODE_MARKETPLACE_PUBLISH` is true, so with it
+  unset CI runs as on master before. Its last CI run passed with those steps skipped.
+- [ ] Agree how the first upload happens (step 6), set `VSCODE_MARKETPLACE_PUBLISH`, and run the
+  first-publish checks in #710.
 - [ ] About six months after the first publish: check that `xtclang` shows as verified, and apply
   again if the request was turned down.
