@@ -416,8 +416,12 @@ passes with the workaround disabled. The gates are in
   `indexedVariables`, so a large array showed the adapter's first page and how many more there were,
   with no way to see the rest. The pull request reads a variable with more than 100 indexed children
   a page at a time, behind IntelliJ's own `...` node (`tooManyChildren(remaining, addNextChildren)`).
-  Found by R10c's X318, which IntelliJ checks as the first 100 elements, tagged TODO LSP4IJ: UP42; not
-  yet checked natively. Gate after a release: X318 reads `[200..249]` in IntelliJ.
+  Found by R10c's X318, which IntelliJ checks as the first 100 elements, tagged TODO LSP4IJ: UP42.
+  Checked natively on 2026-10-26 (`2d85472dd`): with a plugin built from #1770 at `97504678`, X318
+  shows a page of 100, IntelliJ's own `...` node with 150 more, and, opened, all 250 elements
+  (`run-9236570344305345016`); its head is `5a065a46` since, which only announces
+  `supportsVariablePaging`, which this adapter does not read. Gate after a release: X318 through
+  the `...` node only, its 0.21.0 path and UP42 tag removed.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
