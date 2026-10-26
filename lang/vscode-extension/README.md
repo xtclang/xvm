@@ -17,6 +17,7 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 - **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Resolved annotation uses are decorators; bundled ownership adds `defaultLibrary`. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Fine string/escape/keyword/literal scopes remain with the editor grammar. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
 - **Build and run** — build and run modules with the language server's embedded compiler, or with Gradle, per folder ([details](#building-and-running)); Run lens, editor Run button, `Cmd+F9`/`Ctrl+F9` build and Run shortcuts
+- **Debugging** — breakpoints, stepping, variables, watches and Debug Console evaluation in embedded runs, through a debug session in the language server ([details](#debugging))
 - **Tasks** — embedded Build / Rebuild tasks, or Gradle Build / Test / Clean tasks for a workspace that contains a `build.gradle.kts`
 - **Project scaffolding** — `Ecstasy: Create New Project` command to bootstrap a new Ecstasy application, library, or service
 - **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
@@ -178,11 +179,13 @@ adapter cannot build.
 The Run lens appears only on modules that declare a `run` method the runner can call: exactly one
 method of that name, with at most one required parameter. Arguments reach the method as a
 `String[]` when it requires one, or when arguments are given and it accepts a parameter. Each run
-gets a fresh application container in one worker JVM that is reused across runs and restarted if it
-dies; programs never run inside the language server. Output streams into a dedicated terminal and
-ends with the program's exit code. A program that reads console input reads what you type into
-that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty line ends the input and
-`Ctrl+C` stops the program. Lines typed while the module still builds reach it when it starts.
+gets a fresh application container. Each running program has an execution worker JVM of its own, so
+up to four programs run at once; one idle worker is kept for the next run, and after a worker dies
+the next run gets a new one. Programs never run inside the language server. Output streams into a
+dedicated terminal and ends with the program's exit code. A program that reads console input reads
+what you type into that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty
+line ends the input and `Ctrl+C` stops the program. Lines typed while the module still builds reach
+it when it starts.
 
 ### Debugging
 
@@ -422,7 +425,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 305 shared cases (X1–X303 except the retired X273–X275, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 324 shared cases (X1–X322 except the retired X273–X275, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -459,7 +462,7 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 305 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 324 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its

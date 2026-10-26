@@ -61,8 +61,8 @@ application containers per run. R1–R8 track that separate implementation. Sinc
 editors have an embedded build/run mode beside Gradle: Build, Rebuild, Run lenses, Run shortcuts and
 run configurations build with the server's compiler and run in its execution worker
 ([first delivery](plan-embedded-execution.md#first-delivery-2026-10-15)), covering parts of R1–R5.
-The DAP server remains a placeholder that refuses debugging requests with its reason, and VS Code
-debug launches run without a debugger.
+Since 2026-10-22, debug sessions in the language server (R6/R7) debug embedded runs in both
+editors.
 Compiler/LSP completion does not imply completion of either execution or debugging. Current compiler
 changes must retain artifact/source revisions and cancellation boundaries suitable for those future
 consumers.
@@ -549,6 +549,7 @@ An IntelliJ IDEA plugin providing XTC support:
 - **`XtcRunConfiguration`** / **`XtcRunConfigurationType`** / **`XtcRunConfigurationProducer`** - Run configurations (embedded, Gradle or `xtc` CLI)
 - **`XtcBuildSettings`** / **`XtcBuildConfigurable`** / **`XtcProjectTaskRunner`** - Build, Execution, Deployment › Ecstasy mode and embedded Build/Rebuild Project
 - **`EmbeddedRunProcessHandler`** / **`XtcRunModuleAction`** - Embedded runs as native processes; the Run lens command
+- **`XtcDebugAdapterFactory`** / **`LanguageServerDebugProcessHandler`** - Debug of an Ecstasy Application configuration through LSP4IJ's DAP client; a process handler that carries the session over the language server connection
 - **`XtcTextMateBundleProvider`** - TextMate grammar for syntax highlighting
 - **`XtcIconProvider`** - XTC file icons
 - **`XtcEnterHandlerDelegate`** - IntelliJ-local Enter repair for brace/empty-block indentation
@@ -574,7 +575,7 @@ A complete VS Code client (see its [README](../../vscode-extension/README.md)):
 - Extension manifest (`package.json`), language configuration and TextMate grammar
 - LSP client with adapter switching, status bar, output channels and settings
 - Embedded and Gradle build/run, tasks and project scaffolding
-- No debugger yet; debug launches run without one
+- Debugging through an inline debug adapter over the language client
 
 ### 5. Tree-sitter Integration ✅ COMPLETE
 
@@ -691,9 +692,10 @@ Full tree-sitter support for fast, incremental parsing:
    - Unvalidated computed/named defaults, unsupported constant kinds and annotated/unrenderable type spellings remain withheld; missing implementations use fresh declaration analysis, never failed-compilation TypeInfo. The current batch validation is recorded separately from previous X122 receipts
    - Broader semantic fixes and the remaining extraction/inline/safe-delete scope remain unimplemented (L63). Compiler doc generation is implemented: `XdkDocumentation` offers **Generate documentation comment** on written declaration headers (`XdkDocumentationTest`)
 
-9. **Debugging (DAP)**
+9. ~~**Debugging (DAP)**~~ ✅ COMPLETE (R6/R7)
    - Debug Adapter Protocol integration
    - Breakpoints, stepping, variable inspection
+   - The debugger features beyond these are R9–R13 in the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance)
 
 ## Architecture Principle
 
@@ -765,7 +767,7 @@ IDE independence is preserved either way. The shared, IDE-independent code is:
 
 ```
 lang/lsp-server/     -- LSP server (Eclipse LSP4J, stdio)
-lang/dap-server/  -- DAP server (Eclipse LSP4J debug, stdio)
+lang/dap-server/     -- DAP session library hosted by lsp-server (xtc/debug*)
 lang/dsl/            -- Language model, generates TextMate/tree-sitter/vim/emacs
 lang/tree-sitter/    -- Grammar + native libs
 ```
@@ -790,7 +792,12 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 
 ### DAP Integration (Blocking for Debug Support)
 
-1. **DAP server JAR not packaged into sandbox** -- The `plugin.xml` registers the
+*Resolved (2026-10-22, R6/R7d):* items 1 and 2 no longer apply. No DAP jar is used: IntelliJ
+debugs through LSP4IJ's DAP client over the language server connection
+(`XtcDebugAdapterFactory`, `LanguageServerDebugProcessHandler`), and the session runs in the
+language server.
+
+1. **DAP server JAR not packaged into sandbox** (resolved) -- The `plugin.xml` registers the
    `debugAdapterServer` extension point and the factory/descriptor classes compile, but
    `dap-server` has no fat JAR task, no consumable configuration, and no `copyDapServerToSandbox`
    task. At runtime, `PluginPaths.findServerJar("xtc-dap-server.jar")` will always throw
@@ -801,7 +808,7 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
    - Add a `copyDapServerToSandbox` task mirroring the LSP copy pattern
    - Wire `prepareSandbox` and `runIde` to depend on it
 
-2. **DAP server launch** -- The DAP descriptor's `startServer()` needs to use
+2. **DAP server launch** (resolved) -- The DAP descriptor's `startServer()` needs to use
    `JavaProcessCommandBuilder` (matching the LSP connection provider pattern) to launch
    the DAP server out-of-process with the IDE's JBR 25.
 
