@@ -1077,6 +1077,69 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X322") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val file = uri(data.string("file"))
+            val line = data.int("breakpointLine")
+            for (round in 1..data.int("rounds")) {
+                // a run to its exit
+                execution.run(project, module, file, "")
+                awaitUi("run $round finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                check(execution.exitCode(module) == 0 && data.string("done") in execution.output(module)) {
+                    "Run $round: exit code ${execution.exitCode(module)}: ${execution.output(module)}"
+                }
+
+                // a run that loops until Stop ends it
+                execution.run(project, module, file, data.string("spin"))
+                awaitUi("looping run $round starts", 60.seconds) { data.string("started") in execution.output(module) }
+                check(
+                    JsonParser.parseString(execution.active(project)).asJsonObject.int("runs") >= 1,
+                ) { "Looping run $round is not active" }
+                execution.stop(module)
+                awaitUi("stopped run $round reports its exit", 30.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                check(data.string("done") !in execution.output(module)) { "Stopped run $round: ${execution.output(module)}" }
+
+                // a debug session that stops at a breakpoint and resumes to its exit
+                try {
+                    debugger.debug(project, module, file, line)
+                    val stopped =
+                        debugger.awaitState(project, module, "debug session $round stops at the breakpoint", 60.seconds) {
+                            it["suspended"]?.asBoolean == true
+                        }
+                    check(stopped.int("line") == line) { "Debug session $round stopped at: $stopped" }
+                    check(JsonParser.parseString(execution.active(project)).asJsonObject.int("debugSessions") >= 1) {
+                        "Debug session $round is not open while it is stopped"
+                    }
+                    debugger.resume(project, module)
+                    val ended =
+                        debugger.awaitState(
+                            project,
+                            module,
+                            "debug session $round runs to its exit",
+                            60.seconds,
+                        ) { it.has("exitCode") }
+                    check(ended.int("exitCode") == 0 && data.string("done") in ended.string("console")) { "Debug session $round: $ended" }
+                } finally {
+                    debugger.clearBreakpoints(project)
+                }
+
+                // the round leaves no run and no debug session open
+                awaitUi("round $round leaves no run or debug session", 30.seconds) {
+                    JsonParser
+                        .parseString(
+                            execution.active(project),
+                        ).asJsonObject
+                        .let { it.int("runs") == 0 && it.int("debugSessions") == 0 }
+                }
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1299,4 +1362,6 @@ interface EmbeddedExecutionProbe {
     fun endInput(module: String)
 
     fun stop(module: String)
+
+    fun active(project: Project): String
 }

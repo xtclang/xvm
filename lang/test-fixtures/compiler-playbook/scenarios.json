@@ -9958,6 +9958,24 @@
         "limitations": []
       }
     },
+    "X322": {
+      "title": "repeated runs, stopped runs and debug sessions of one module each end, and leave no run or debug session open",
+      "manual": [],
+      "values": {
+        "file": "RunCycles.x",
+        "module": "RunCycles",
+        "source": "module RunCycles {\n    void run(String[] args) {\n        @Inject Console console;\n        console.print(\"cycle started\");\n        if (args.size > 0) {\n            for (Int count = 0; count >= 0; ++count) {}\n        }\n        Int n = twice(21);\n        console.print($\"cycle done {n}\");\n    }\n\n    Int twice(Int n) {\n        return n * 2;\n    }\n}\n",
+        "started": "cycle started",
+        "done": "cycle done 42",
+        "spin": "spin",
+        "breakpointLine": 13,
+        "rounds": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
