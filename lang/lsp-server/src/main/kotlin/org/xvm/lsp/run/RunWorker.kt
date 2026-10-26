@@ -33,6 +33,7 @@ import java.io.PrintWriter
 import java.io.Reader
 import java.io.Writer
 import java.lang.management.ManagementFactory
+import java.lang.management.MemoryType
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
@@ -786,19 +787,21 @@ internal class RunWorkerChannel(
     fun log(text: String) = send("log") { addProperty("text", text) }
 
     /**
-     * Reports what the worker holds once a run has ended: the heap in use after a collection, the live
-     * threads, and what the run [kept]. The server retires a worker whose runs leave too much behind.
+     * Reports what the worker holds once a run has ended: the heap the JVM left in use after its latest
+     * collection of each heap pool, the live threads, and what the run [kept]. No collection is forced here:
+     * the JVM collects when it needs to, so a pool it has not collected yet counts nothing, and the figure
+     * can be from before the run. The server retires a worker whose runs leave too much behind.
      */
     fun usage(
         id: Long,
         kept: Kept,
     ) {
-        System.gc()
-        val heap = ManagementFactory.getMemoryMXBean().heapMemoryUsage
+        val collected =
+            ManagementFactory.getMemoryPoolMXBeans().filter { it.type == MemoryType.HEAP }.sumOf { it.collectionUsage?.used ?: 0L }
         send("usage") {
             addProperty("id", id)
-            addProperty("heapUsed", heap.used)
-            addProperty("heapMax", heap.max)
+            addProperty("heapUsed", collected)
+            addProperty("heapMax", ManagementFactory.getMemoryMXBean().heapMemoryUsage.max)
             addProperty("threads", ManagementFactory.getThreadMXBean().threadCount)
             addProperty("poolThreads", kept.poolThreads)
             addProperty("consoles", kept.consoles)
