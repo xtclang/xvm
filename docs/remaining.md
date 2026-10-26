@@ -234,10 +234,14 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   - [x] R7v, the `evaluationRunsProgram` opt-in (`70cdd636f`): a launch option, a checkbox in IntelliJ's
     configuration, that lets the program's other fibers run, without stopping, while console code does,
     and wait again at their next line; `invalidated` is then for all areas. Shared X315.
-- [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
-  source revision.
+- [x] Source maps tied to source revisions (`f53883083`): a debugged run keeps the text each file was
+  built from, and once a file is edited, saved or not, a breakpoint is placed on the line it was
+  built with, matched line by line with whitespace at a line's ends ignored, and a frame shows on its
+  line now. A breakpoint on a line changed since is unverified with the reason. Shared X321, full in
+  IntelliJ.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).
-- [ ] Tests: source revisions, with the source maps above.
+- [x] Tests: source revisions, with the source maps above (`f53883083`: `CompiledSourcesTest`, and an
+  `EmbeddedExecutionTest` case that edits a debugged file and fails without the mapping).
 - [x] Tests: stale handles, reads and evaluations asked for as the program resumes, and multiple
   service contexts (`550a4c01b`, four `SessionDebuggerTest` cases). An evaluation that the resume
   abandoned failed without a reason, a `NoSuchElementException`; it now says the program resumed first.
