@@ -82,6 +82,15 @@ module TestNumbers {
             Nibble tooBig = new Nibble("16");
             assert;
         } catch (OutOfBounds expected) {}
+
+        // to its one byte, whose low four bits hold it, and back
+        assert Nibble.of(0xC).toByteArray() == Array<Byte>:[0x0C];
+        assert new Nibble(Array<Byte>:[0x09]).toInt64() == 9;
+        assert new Nibble(Nibble.of(0xA).toByteArray()) == Nibble.of(0xA);
+        try {
+            Nibble tooBig = new Nibble(Array<Byte>:[0x10]);
+            assert;
+        } catch (OutOfBounds expected) {}
     }
 
     void testByte() {
