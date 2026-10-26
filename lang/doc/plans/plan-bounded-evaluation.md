@@ -2,7 +2,8 @@
 
 **Status (2026-10-24): decided; tier 1 is done (`fda3dc3e8` runtime, `0540055e9` editors, shared X313); tier 2's
 runtime is done, running code on the stopped fiber (`d77fb9b51`) and ending it at its deadline, on cancel, resume
-and terminate (`72c7bdbbc`), and so are the server and worker (`68491020b`); the editors are next.** This
+and terminate (`72c7bdbbc`), the server and worker (`68491020b`) and the editors (`03a422f6c`, shared X314);
+the `evaluationRunsProgram` opt-in is next.** This
 is R7's last feature in the
 [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance): Debug Console expressions,
 watches and hovers on any expression, conditions and logpoint messages beyond paths, and, through them, R10's
@@ -174,7 +175,10 @@ improvement, not part of this plan.
       seconds; `cancel` ends it by the request's `seq`, which `DebugMessageEndpoint` hands the server, also
       before its code starts; `invalidated` (`variables`) follows once code has run, for a client that takes it.
       A call with an effect, a cancelled loop and a loop at its limit are tested with a real worker.
-   4. R7u, the editors and shared X314.
+   4. R7u, the editors and shared X314 (`03a422f6c`): VS Code's Debug Console and IntelliJ's Evaluate Expression,
+      whose origin LSP4IJ maps to `repl`, run code; X314 checks a call's effect, the time limit and the exit in both,
+      cancel and `invalidated` in VS Code, since LSP4IJ never sends `cancel` (UP41) nor handles `invalidated`
+      (UP40).
    5. R7v, the `evaluationRunsProgram` opt-in, last, since it lets waiting fibers run.
 3. **R10 on top of tier 2**: `toString()` on demand and computed properties as lazy variables, which also lets
    UP35 be checked in IntelliJ with our adapter.

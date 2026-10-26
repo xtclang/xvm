@@ -93,6 +93,18 @@ documented refusals, not open tasks; the few worth revisiting are under
   plugin's own `xtc/*` requests), and the check sends its edits before its requests. It passed five
   runs in a row afterwards, among them `run-13148533765814685610` and `run-9366023975714933137`.
 
+- [ ] Two playbook runs at once corrupt the language server's fat jar (2026-10-24): each rebuilt it
+  while the other copied it, and the IntelliJ sandbox's `xtc-lsp-server.jar` and the plugin zip kept
+  the broken copy ("bad zipfile offset"; the server fails with `NoClassDefFoundError`) as up to date,
+  since the jar's fingerprint matched the good one. Deleting the sandbox copy and running `buildPlugin`
+  again mended it. Run one playbook at a time until the copy is guarded.
+- [ ] `:lang:intellij-plugin:testCompilerPlaybook` does not always run the cases asked for
+  (2026-10-24 to 26): with the configuration cache reused it ran an earlier selection with an earlier
+  catalog, and with `--no-configuration-cache` each run took the case list of the run before it, so
+  a selection ran once it was sent twice. Check `selectedCases` in the run's `results.json`. The
+  property is read as `providers.gradleProperty("intellijPlaybookCases")` in the included `lang`
+  build; the cause is not found.
+
 ### Beyond the current scope
 
 Only if a real need comes up; each is a documented refusal today.
@@ -211,7 +223,9 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   - [x] R7t, the server and worker (`68491020b`): a console line that tier 1 refuses runs as code
     for at most two seconds, DAP `cancel` ends it by its request's `seq`, also before it starts, and
     `invalidated` follows once code has run; worker protocol 10.
-  - [ ] R7u, the editors and shared X314.
+  - [x] R7u, the editors and shared X314 (`03a422f6c`): VS Code's Debug Console and IntelliJ's Evaluate
+    Expression run code; X314 checks a call's effect, the time limit and the exit in both, and cancel
+    and `invalidated` in VS Code, as LSP4IJ has neither (UP40, UP41).
   - [ ] R7v, the `evaluationRunsProgram` opt-in.
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
   source revision.
@@ -387,6 +401,9 @@ work, a native check, and the user's go-ahead to file them.
 - [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), `feat/dap-exception-filter-conditions` `a4f73d29`): conditions on exception filters, sent
   as `filterOptions`.
 - [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.
+- [ ] UP41, no fix written yet (2026-10-24): LSP4IJ never sends DAP `cancel` (0.21.0, and `main`), so an
+  IntelliJ evaluation that runs code cannot be ended before its time limit. Found by X314, which
+  checks cancel in VS Code only.
 - [ ] UP36 `feat/dap-value-formats` (`b0a76151`): a "Show Values as Hexadecimal" toggle.
 - [ ] UP37 ([#1763](https://github.com/redhat-developer/lsp4ij/pull/1763), `fix/dap-physical-expression-fragment`
   `e869c476`): `DAPExpressionCodeFragment` ignored the `isPhysical` that IntelliJ asks for, so IntelliJ
