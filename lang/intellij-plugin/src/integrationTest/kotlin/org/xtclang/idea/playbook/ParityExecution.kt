@@ -732,6 +732,37 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X315") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debugRunningProgram(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(
+                    project,
+                    module,
+                    "the program stops at the breakpoint",
+                    60.seconds,
+                ) { it["suspended"]?.asBoolean == true }
+
+                // the worker's service answers once its fiber, which the stop holds otherwise, has done its work;
+                // TODO LSP4IJ: UP40 — LSP4IJ does not handle `invalidated` (#1766), so its event is checked in VS Code only
+                val (call, value) = data.strings("call")
+                val ran = JsonParser.parseString(debugger.evaluateFrom(project, module, call, "DIALOG")).asJsonObject
+                check(ran["value"]?.asString == value) { "$call is not $value: $ran" }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -772,6 +803,13 @@ private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> 
 @Remote("org.xtclang.idea.playbook.probe.DebugSessionUi", plugin = "org.xtclang.playbook.probe")
 internal interface DebugSessionProbe {
     fun debug(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+    )
+
+    fun debugRunningProgram(
         project: Project,
         module: String,
         uri: String,
