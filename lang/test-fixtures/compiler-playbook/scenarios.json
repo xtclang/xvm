@@ -9921,6 +9921,43 @@
         ]
       }
     },
+    "X321": {
+      "title": "Once a debugged file is edited, a breakpoint is placed on the line the program was built from, one on a changed line is refused with the reason, and stops show on their lines now",
+      "manual": [
+        "How each editor marks a refused breakpoint and moves its markers as the file is edited is checked manually; VS Code checks the setBreakpoints answer and the stack, IntelliJ its breakpoints' state and the stack."
+      ],
+      "values": {
+        "file": "DebugEdited.x",
+        "module": "DebugEdited",
+        "source": "module DebugEdited {\n    Int run() {\n        @Inject Console console;\n        console.print(\"before\");\n        Int n = twice(21);\n        console.print($\"after {n}\");\n        return n;\n    }\n\n    Int twice(Int n) {\n        Int result = n * 2;\n        return result;\n    }\n}\n",
+        "breakpointLine": 5,
+        "insertLine": 4,
+        "inserted": [
+          "        // one",
+          "        // two"
+        ],
+        "stoppedNow": 7,
+        "moved": 13,
+        "typed": 4,
+        "reason": "This line changed after the program was built, so the running program has no code for it. Debug again to stop here.",
+        "frames": [
+          [
+            "DebugEdited.twice",
+            13
+          ],
+          [
+            "DebugEdited.run",
+            7
+          ]
+        ],
+        "output": "after 42",
+        "exitCode": 42
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

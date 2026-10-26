@@ -123,6 +123,9 @@ internal class EmbeddedRuns(
 ) : Closeable {
     private val workerIds = ConcurrentHashMap<String, Long>()
 
+    /** The sources each run under the debugger was compiled from, by run ID, while it runs. */
+    private val compiled = ConcurrentHashMap<String, CompiledSources>()
+
     /** Input typed while a run is still building, forwarded in order when the program starts. */
     private val waiting = HashMap<String, WaitingInput>()
     private val inputLock = Any()
@@ -201,6 +204,24 @@ internal class EmbeddedRuns(
             events.exited(null, STOPPED_BEFORE_START)
             return
         }
+        // the debugger places breakpoints on the lines the program was compiled from, which the editor may have changed
+        // since; one on a line changed since has no code, and says so before the program starts
+        val sources =
+            setup
+                ?.let {
+                    CompiledSources(
+                        result.compiled,
+                    ) { file -> compiler()?.sourceText(file) }
+                }?.also { compiled[runId] = it }
+        val placed =
+            setup?.copy(
+                breakpoints =
+                    setup.breakpoints.map { file ->
+                        val lines = sources?.lines(file.path) ?: LineMap.SAME
+                        refused(file, lines).takeIf { it.isNotEmpty() }?.let { events.breakpoints(file.path, it) }
+                        placed(file, lines)
+                    },
+            )
         // a run can end before start returns, e.g. while another program still runs
         val ended = AtomicBoolean()
         val id =
@@ -211,7 +232,7 @@ internal class EmbeddedRuns(
                     params.method ?: "run",
                     params.args.orEmpty(),
                     params.workingDirectory ?: result.workingDirectory,
-                    setup,
+                    placed,
                 ),
                 object : RunWorkerProcess.Listener {
                     override fun output(text: String) = events.output(text)
@@ -219,7 +240,10 @@ internal class EmbeddedRuns(
                     override fun breakpoints(
                         path: String,
                         states: List<BreakpointState>,
-                    ) = events.breakpoints(path, states)
+                    ) {
+                        val lines = sources?.lines(path) ?: LineMap.SAME
+                        events.breakpoints(path, states.map { it.copy(line = lines.now(it.line)) })
+                    }
 
                     override fun stopped(stop: StopState) = events.stopped(stop)
 
@@ -234,6 +258,7 @@ internal class EmbeddedRuns(
                             waiting.remove(runId)
                             workerIds.remove(runId)
                         }
+                        compiled.remove(runId)
                         events.exited(code, error)
                     }
                 },
@@ -296,20 +321,64 @@ internal class EmbeddedRuns(
         return true
     }
 
-    /** Replaces one file's breakpoints in a running program under the debugger. */
+    /**
+     * Replaces one file's breakpoints in a running program under the debugger, on the lines the program was compiled
+     * from; one on a line changed since is not installed, and its state says why.
+     */
     internal fun setBreakpoints(
         runId: String,
         breakpoints: SourceBreakpoints,
-    ): CompletableFuture<List<BreakpointState>> = debugged(runId) { worker.setBreakpoints(it, breakpoints) }
+    ): CompletableFuture<List<BreakpointState>> {
+        val lines = lines(runId, breakpoints.path)
+        val refused = refused(breakpoints, lines).associateBy { it.id }
+        return debugged(runId) { worker.setBreakpoints(it, placed(breakpoints, lines)) }.thenApply { states ->
+            val installed = states.associateBy { it.id }
+            // in the order they were asked for, on their lines now
+            breakpoints.breakpoints.mapNotNull { request ->
+                refused[request.id] ?: installed[request.id]?.let { it.copy(line = lines.now(it.line)) }
+            }
+        }
+    }
 
     /** The fibers of a stopped program under the debugger. */
     internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
 
-    /** A stopped fiber's stack. */
+    /** A stopped fiber's stack, with each frame's line where it is now in its file, which may have changed since the build. */
     internal fun stackTrace(
         runId: String,
         thread: Int,
-    ): CompletableFuture<List<FrameState>> = debugged(runId) { worker.stackTrace(it, thread) }
+    ): CompletableFuture<List<FrameState>> =
+        debugged(runId) { worker.stackTrace(it, thread) }.thenApply { frames ->
+            val maps = HashMap<String?, LineMap>()
+            frames.map { frame -> frame.copy(line = maps.getOrPut(frame.path) { lines(runId, frame.path) }.now(frame.line)) }
+        }
+
+    /** The line map of a file of a run under the debugger, between the text it was compiled from and its text now. */
+    private fun lines(
+        runId: String,
+        path: String?,
+    ): LineMap = compiled[runId]?.lines(path) ?: LineMap.SAME
+
+    /** The file's breakpoints on their compiled lines, without those on lines changed since the build. */
+    private fun placed(
+        breakpoints: SourceBreakpoints,
+        lines: LineMap,
+    ): SourceBreakpoints =
+        breakpoints.copy(
+            breakpoints =
+                breakpoints.breakpoints.mapNotNull { request ->
+                    lines.compiled(request.line)?.let { request.copy(line = it) }
+                },
+        )
+
+    /** The states of the file's breakpoints on lines changed since the build, which the program has no code for. */
+    private fun refused(
+        breakpoints: SourceBreakpoints,
+        lines: LineMap,
+    ): List<BreakpointState> =
+        breakpoints.breakpoints
+            .filter { lines.compiled(it.line) == null }
+            .map { BreakpointState(it.id, it.line, false, CHANGED_SINCE_BUILD) }
 
     /** A stopped frame's scopes. */
     internal fun scopes(
@@ -431,5 +500,9 @@ internal class EmbeddedRuns(
     companion object {
         /** The exit of a run stopped while its module was still building. */
         const val STOPPED_BEFORE_START = "Stopped before the program started."
+
+        /** Why a breakpoint on a line changed since the program was built is not installed. */
+        const val CHANGED_SINCE_BUILD =
+            "This line changed after the program was built, so the running program has no code for it. Debug again to stop here."
     }
 }
