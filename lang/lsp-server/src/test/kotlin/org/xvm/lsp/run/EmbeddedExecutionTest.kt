@@ -1,5 +1,8 @@
 package org.xvm.lsp.run
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
+import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
@@ -42,6 +46,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
@@ -1379,6 +1384,62 @@ class EmbeddedExecutionTest {
         }
         // closing the workers ends the worker process
         soon(30).until { pids.none { pid -> ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false) } }
+    }
+
+    @Test
+    fun `a run's log lines name its build, its artifact's revision, its worker and generation, and its run ID`() {
+        CompilerTestSupport.configure()
+        val logged = source("Logged.x", "module Logged { Int run() = 7; }")
+        val client = SoakClient()
+        val lines = CopyOnWriteArrayList<String>()
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    lines += event.formattedMessage
+                }
+            }.apply { start() }
+        val loggers =
+            listOf(XdkAdapter::class.java.name, EmbeddedRuns::class.java.name, RunWorkerProcess::class.java.name, "org.xvm.lsp.trace")
+                .map { LoggerFactory.getLogger(it) as Logger }
+        loggers.forEach { it.addAppender(appender) }
+        val pid =
+            try {
+                RunWorkerProcess().use { workers ->
+                    XdkAdapter().use { adapter ->
+                        adapter.initializeWorkspace(listOf(directory.toString()))
+                        adapter.replaceSourceModules(listOf(XdkSourceModule("Logged", logged)))
+                        val runs = EmbeddedRuns(adapter, { client }, workers)
+                        assertThat(
+                            runs.run(RunParams(module = "Logged", runId = "correlated")).get(60, SECONDS).runId,
+                        ).isEqualTo("correlated")
+                        assertThat(client.exit("correlated").get(60, SECONDS).exitCode).isEqualTo(7)
+                        soon(30).until { lines.any { it.startsWith("execution worker after a run:") } }
+                        workers.workerPids().single()
+                    }
+                }
+            } finally {
+                loggers.forEach { it.detachAppender(appender) }
+                appender.stop()
+            }
+
+        // the build is its compiler queue job, which the trace gives by the same ID, and it names the artifact it wrote
+        val (build, artifact) =
+            Regex("""^embedded build: build=(\d+) .* outcome=succeeded modules=(Logged@[0-9a-f]{12})$""")
+                .find(lines.single { it.startsWith("embedded build:") })!!
+                .destructured
+        assertThat(lines).anyMatch { "\"id\":$build," in it && "\"operation\":\"embedded-build\"" in it }
+        // the run names that build and artifact, and the worker, the first this server started, names the run
+        val worker = "worker=$pid generation=1"
+        assertThat(
+            lines,
+        ).contains("execution worker started: $worker", "run starting: run=correlated build=$build artifact=$artifact debug=false")
+        val workerRun =
+            lines.firstNotNullOf {
+                Regex("""^run assigned: (workerRun=\d+) run=correlated $worker module=Logged method=run$""").find(it)?.groupValues?.get(1)
+            }
+        assertThat(lines)
+            .contains("run exited: $workerRun run=correlated $worker code=7")
+            .anyMatch { it.startsWith("execution worker after a run: $worker $workerRun run=correlated ") }
     }
 
     @Test
