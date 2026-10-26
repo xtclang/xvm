@@ -11,6 +11,9 @@ See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundari
 - **Build and Run** - Build/Rebuild Project and Ecstasy run configurations use the language
   server's embedded compiler or Gradle, chosen under Settings | Build, Execution, Deployment |
   Ecstasy ([details](#running-your-application)); `xtc run` remains available per configuration
+- **Debug** - With the embedded compiler, Debug of an Ecstasy run configuration goes through
+  LSP4IJ's DAP client to a debug session in the language server: breakpoints, stepping, variables,
+  watches and Evaluate Expression ([details](#running-your-application))
 - **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
   native file type through TextMate’s syntax factory and editor highlighter.
 - **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
@@ -135,15 +138,17 @@ An Ecstasy Application configuration has:
   program runs too while Evaluate Expression runs code.
 
 Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run gets a fresh
-application container in one worker JVM, which is reused across runs and restarted if it dies;
-programs never run inside the language server. A failed build prints its diagnostics in the console,
-linked to the sources, and runs nothing. A program that reads console input reads the lines typed
-into its Run console, including lines typed while it still builds; **Send EOF** ends the input. A
-module with a Run lens also has a Run icon in the gutter of that line, which runs it the same way.
+application container. Each running program has an execution worker JVM of its own, so up to four
+programs run at once; one idle worker is kept for the next run, and after a worker dies the next run
+gets a new one. Programs never run inside the language server. A failed build prints its
+diagnostics in the console, linked to the sources, and runs nothing. A program that reads console
+input reads the lines typed into its Run console, including lines typed while it still builds;
+**Send EOF** ends the input. A module with a Run lens also has a Run icon in the gutter of that
+line, which runs it the same way.
 Embedded mode needs the compiler language service.
 
 With the embedded compiler, a configuration can also be debugged: **Debug** starts a debug session
-in the language server, which builds and runs the module as Run does, in the same execution worker,
+in the language server, which builds and runs the module as Run does, in the same execution workers,
 with LSP4IJ's DAP client as the debugger. Line breakpoints can be set in `.x` files; they are
 verified when the program starts, and a breakpoint or `assert:debug` stops the program, with its
 line, call stack and the other fibers that wait shown in the Debug tool window. The running program
@@ -230,7 +235,7 @@ adopted. Publishing requires both checks.
 ```
 
 This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
-Ultimate features and automatic trials are disabled. The 305-case catalog is shared with VS Code;
+Ultimate features and automatic trials are disabled. The 324-case catalog is shared with VS Code;
 see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](testing.md).
 
 The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
