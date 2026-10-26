@@ -135,12 +135,19 @@ internal object RunWorkerDebug {
             addProperty("value", variable.value)
             addProperty("type", variable.type)
             addProperty("reference", variable.variablesReference)
+            addProperty("lazy", variable.lazy)
         }
 
     fun variablesOf(json: JsonArray): List<VariableState> = json.map { variableOf(it.asJsonObject) }
 
     fun variableOf(json: JsonObject) =
-        VariableState(json["name"].asString, json["value"].asString, json["type"].asString, json["reference"].asInt)
+        VariableState(
+            json["name"].asString,
+            json["value"].asString,
+            json["type"].asString,
+            json["reference"].asInt,
+            json["lazy"].asBoolean,
+        )
 
     fun exceptions(stops: ExceptionStops) =
         JsonObject().apply {

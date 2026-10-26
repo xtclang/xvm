@@ -230,6 +230,24 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `an object's computed properties and its toString() are lazy variables, whose reference runs their code`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val fields = server.variables(VariablesArguments().apply { variablesReference = 8 }).get(10, SECONDS).variables
+        assertThat(fields.map { it.name to (it.presentationHint?.lazy == true) })
+            .containsExactly("x" to false, "y" to false, "sum" to true, "toString()" to true)
+        val sum = fields.single { it.name == "sum" }
+        assertThat(sum.value).isEqualTo("(...)")
+        assertThat(sum.type).isNull()
+
+        val value = server.variables(VariablesArguments().apply { variablesReference = sum.variablesReference }).get(10, SECONDS)
+        assertThat(value.variables.map { listOf(it.name, it.value, it.type) }).containsExactly(listOf("sum", "7", "Int"))
+        assertThat(value.variables.single().presentationHint).isNull()
+    }
+
+    @Test
     fun `next, stepIn and stepOut step the stopped fiber, and a fiber that does not wait cannot be stepped`() {
         server.configurationDone(null)
         server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
@@ -815,7 +833,15 @@ class XtcDebugServerTest {
                         VariableState("unset", "<unassigned>", "", 0),
                     )
 
-                8 -> listOf(VariableState("x", "3", "Int", 0), VariableState("y", "4", "Int", 0))
+                8 ->
+                    listOf(
+                        VariableState("x", "3", "Int", 0),
+                        VariableState("y", "4", "Int", 0),
+                        VariableState("sum", "(...)", "", 9, lazy = true),
+                        VariableState("toString()", "(...)", "", 10, lazy = true),
+                    )
+
+                9 -> listOf(VariableState("sum", "7", "Int", 0))
 
                 else -> emptyList()
             },

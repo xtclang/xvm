@@ -372,7 +372,7 @@ object RunWorker {
         }
 
         private fun state(variable: SessionDebugger.Variable) =
-            VariableState(variable.name(), variable.value(), variable.type(), variable.variablesReference())
+            VariableState(variable.name(), variable.value(), variable.type(), variable.variablesReference(), variable.lazy())
 
         /** A failed read's reason, as the runtime debugger put it. */
         private fun reason(failure: Throwable): String {
@@ -634,7 +634,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 11
+        const val PROTOCOL = 12
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

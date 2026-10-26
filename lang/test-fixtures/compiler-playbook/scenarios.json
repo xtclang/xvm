@@ -8875,8 +8875,8 @@
         "module": "RunAsk",
         "source": "module RunAsk {\n    void run() {\n        @Inject Console console;\n        String name = console.readLine(\"Name? \");\n        console.print($\"Hello, {name}!\");\n        String next = console.readLine();\n        console.print($\"next=[{next}]\");\n    }\n}\n",
         "prompt": "Name? ",
-        "input": "Grace Hopper \u2713",
-        "greeting": "Hello, Grace Hopper \u2713!",
+        "input": "Grace Hopper ✓",
+        "greeting": "Hello, Grace Hopper ✓!",
         "ended": "next=[]",
         "exitCode": 0
       },
@@ -9019,7 +9019,7 @@
         "destinationFile": "RenamedRoot.x",
         "module": "MovedRoot",
         "source": "module MovedRoot {\n    void run() {\n        @Inject Console console;\n        console.print(\"moved root runs\");\n    }\n}\n",
-        "runTitle": "\u25b6 Run MovedRoot",
+        "runTitle": "▶ Run MovedRoot",
         "output": "moved root runs",
         "exitCode": 0
       },
@@ -9382,6 +9382,10 @@
           [
             "y",
             "4"
+          ],
+          [
+            "toString()",
+            "(...)"
           ]
         ],
         "elements": [
@@ -9728,6 +9732,55 @@
         "coverage": "partial",
         "limitations": [
           "LSP4IJ does not handle invalidated (UP40, LSP4IJ #1766), so IntelliJ checks the answer of the Evaluate Expression dialog and the exit; the invalidated event is checked in VS Code."
+        ]
+      }
+    },
+    "X316": {
+      "title": "an object's computed property and its toString() are lazy variables, which run the program's code to show their values when asked",
+      "manual": [
+        "How each editor shows a lazy variable, VS Code's button and IntelliJ's link, is checked manually; VS Code checks the lazy hint of each variable and the value its reference answers with, IntelliJ the value each lazy variable shows."
+      ],
+      "values": {
+        "file": "DebugLazy.x",
+        "module": "DebugLazy",
+        "source": "module DebugLazy {\n    const Point(Int x, Int y) {\n        Int sum.get() = x + y;\n\n        @Override\n        String toString() = $\"({x}, {y})\";\n    }\n\n    Int run() {\n        Point point = new Point(3, 4);\n        @Inject Console console;\n        console.print($\"sum {point.sum}\");\n        return point.sum;\n    }\n}\n",
+        "breakpointLine": 12,
+        "expands": "point",
+        "fields": [
+          [
+            "x",
+            "3"
+          ],
+          [
+            "y",
+            "4"
+          ],
+          [
+            "sum",
+            "(...)"
+          ],
+          [
+            "toString()",
+            "(...)"
+          ]
+        ],
+        "lazy": [
+          [
+            "sum",
+            "7"
+          ],
+          [
+            "toString()",
+            "\"(3, 4)\""
+          ]
+        ],
+        "output": "sum 7",
+        "exitCode": 7
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0 ignores presentationHint.lazy (UP35, fixed by LSP4IJ #1768): a lazy variable shows (...) and expands to one child that has its value, which the case reads; with #1768 it shows a Show value link, which the case clicks."
         ]
       }
     },

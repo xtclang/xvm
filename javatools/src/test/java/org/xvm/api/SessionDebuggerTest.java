@@ -401,6 +401,51 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module whose run() prints the sum of a Point and the count of a Box on line 34, and returns
+     * the count. Point's sum is computed, and its toString() is its own; of Box's computed
+     * properties, twice reads count, bumped adds one to it, spin never ends, and fail throws.
+     */
+    private static final String VALUES = """
+            module Values {
+                const Point(Int x, Int y) {
+                    Int sum.get() = x + y;
+
+                    @Override
+                    String toString() = $"({x}, {y})";
+                }
+
+                class Box {
+                    Int count;
+
+                    Int twice.get() = count * 2;
+
+                    Int spin.get() {
+                        Int i = 0;
+                        while (i >= 0) {
+                            ++i;
+                        }
+                        return i;
+                    }
+
+                    Int fail.get() {
+                        throw new IllegalState("no");
+                    }
+
+                    Int bumped.get() = ++count;
+                }
+
+                Int run() {
+                    @Inject Console console;
+                    Point point = new Point(3, 4);
+                    Box   box   = new Box();
+                    box.count = 5;
+                    console.print($"{point.sum} {box.count}");
+                    return box.count;
+                }
+            }
+            """;
+
+    /**
      * A module whose run() prints "stopped" on line 5 and returns 3; forever() loops forever, and
      * so does stubborn(), which catches every exception that its loop throws.
      */
@@ -1403,6 +1448,58 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void anObjectsComputedPropertiesAndToStringAreLazyVariablesWhoseReadRunsTheirCode() throws Exception {
+        Path  source  = compile("Values", VALUES);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Values"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 34)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Values", output, session);
+        try (control) {
+            Stop stop   = stops.next();
+            int  frame  = session.stackTrace(stop.threadId()).getFirst().id();
+            var  locals = byName(read(session, session.scopes(frame).getFirst().variablesReference()));
+
+            // a const's fields come first, then its computed property and its toString(), which are lazy
+            List<Variable> point = read(session, locals.get("point").variablesReference());
+            assertEquals(List.of("x", "y", "sum", SessionDebugger.TO_STRING), point.stream().map(Variable::name).toList());
+            assertFalse(point.get(0).lazy());
+            Variable sum = point.get(2);
+            assertTrue(sum.lazy());
+            assertEquals(SessionDebugger.LAZY, sum.value());
+            assertEquals("", sum.type());
+
+            // reading a lazy variable runs its code, the getter or toString(), and answers with its value
+            assertEquals(List.of(new Variable("sum", "7", "Int", 0)), read(session, sum.variablesReference()));
+            assertEquals(List.of(new Variable(SessionDebugger.TO_STRING, "\"(3, 4)\"", "String", 0)),
+                    read(session, point.get(3).variablesReference()));
+
+            // what a getter changes stays changed; one that throws, or does not end in time, says why
+            var box = byName(read(session, locals.get("box").variablesReference()));
+            assertEquals(List.of("count", "twice", "spin", "fail", "bumped", SessionDebugger.TO_STRING),
+                    read(session, locals.get("box").variablesReference()).stream().map(Variable::name).toList());
+            assertEquals("10", read(session, box.get("twice").variablesReference()).getFirst().value());
+            assertEquals("6", read(session, box.get("bumped").variablesReference()).getFirst().value());
+            assertEquals("6", evaluate(session, frame, "box.count").value());
+            assertFails("fail threw IllegalState: no.", session.variables(box.get("fail").variablesReference()));
+            assertFails("spin did not finish within 1 second, so it was ended.",
+                    session.variables(box.get("spin").variablesReference()));
+            assertEquals("\"Box\"", read(session, box.get(SessionDebugger.TO_STRING).variablesReference()).getFirst().value());
+
+            // the program is stopped where it was, and goes on with what the getters changed
+            assertTrue(session.isStopped());
+            session.resume();
+            assertEquals(List.of(), read(session, sum.variablesReference()));
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("7 6"), output.toString());
+            assertEquals(6L, control.result());
+            assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
     public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
         Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
         Stops stops   = new Stops();
@@ -1824,9 +1921,9 @@ public class SessionDebuggerTest {
     }
 
     /**
-     * Assert that the evaluation fails with the specified reason.
+     * Assert that the evaluation, run or read fails with the specified reason.
      */
-    private static void assertFails(String reason, CompletableFuture<Variable> evaluation) {
+    private static void assertFails(String reason, CompletableFuture<?> evaluation) {
         var failure = assertThrows(ExecutionException.class,
                 () -> evaluation.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
         Throwable cause = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
