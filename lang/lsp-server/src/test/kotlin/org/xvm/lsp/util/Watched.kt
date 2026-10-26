@@ -149,9 +149,7 @@ class Watched {
                         value.suppressed.forEach { reach(it, value) }
                     }
 
-                    else -> {
-                        Unit
-                    }
+                    else -> {}
                 }
             }
 

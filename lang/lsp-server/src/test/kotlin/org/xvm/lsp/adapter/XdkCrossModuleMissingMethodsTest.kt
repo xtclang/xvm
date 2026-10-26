@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -331,6 +332,10 @@ class XdkCrossModuleMissingMethodsTest {
                 Files.setPosixFilePermissions(
                     protectedFile.toPath(),
                     permissions - setOf(PosixFilePermission.OWNER_WRITE, PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE),
+                )
+                assumeFalse(
+                    Files.isWritable(protectedFile.toPath()),
+                    "a user who may write any file, such as root, can still write it, so there is nothing read-only to test",
                 )
             }
             XdkAdapter().use { adapter ->
