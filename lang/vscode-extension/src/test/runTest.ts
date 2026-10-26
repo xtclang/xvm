@@ -73,9 +73,12 @@ async function main(): Promise<void> {
     // Unix-domain sockets inside user-data-dir have a short OS path limit (103 on macOS).
     // Smoke tests also mutate settings; never reuse a profile or the repository fixtures.
     const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-code-'));
-    // Seed the profile before Electron creates the first workbench: no live theme transitions.
+    // Seed the profile before Electron creates the first workbench: no live theme transitions. VS Code's AI
+    // features are off, as master's test profile has them: they look for a GitHub account the test instance
+    // does not have and log every miss ("[AgentHost] No signed-in session resolved ...").
     await fs.mkdir(path.join(profile, 'User'), { recursive: true });
-    await fs.writeFile(path.join(profile, 'User', 'settings.json'), JSON.stringify({ 'workbench.colorTheme': theme }, null, 2));
+    await fs.writeFile(path.join(profile, 'User', 'settings.json'),
+        JSON.stringify({ 'workbench.colorTheme': theme, 'chat.disableAIFeatures': true }, null, 2));
     const fixturesPath = path.join(runDirectory, 'workspace');
     if (!playbook && !explorerProbe) {
         await fs.cp(path.join(extensionDevelopmentPath, 'src', 'test', 'fixtures'), fixturesPath, {
