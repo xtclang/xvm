@@ -469,6 +469,12 @@ this bridge; they cannot be inferred from compiler type hints.
   *Runtime retention (2026-10-26, `1ca73e922`):* a shut-down interpreter's runtime is no longer kept
   by a pending timer alarm, values its templates cached in statics, or `FullyBoundHandle.NO_OP`; the
   `javatools` test JVM holds one runtime at a time.
+  *Soak (2026-10-26, `ee8a0ae4d`):* rounds of an edited build and run, a stopped run, and debug
+  sessions continued or terminated from a breakpoint, on one worker, which keeps no run, console,
+  debugger, console code, session or compiled sources, and whose runtime pool keeps its size. The
+  worker counted a JDK thread that joined the pool's thread group as pool growth and was retired;
+  it now reports the pool's own size. Memory is checked by counts, not by the heap after
+  `System.gc()`. Linux, Windows and the editors' side are still to do.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`

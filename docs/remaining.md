@@ -330,6 +330,18 @@ breakpoint list, which the editors replace.
 
 - [ ] Repeated compile/run/stop/debug soak, with memory and process checks, on every supported
   platform.
+  *Partial (2026-10-26, `ee8a0ae4d`):* `EmbeddedExecutionTest`'s soak repeats rounds of four runs
+  on one worker: an edited module built and run to its exit, a run stopped while it runs, a debug
+  session continued from a breakpoint after a watch and a cancelled console run, and one
+  terminated while console code runs. One worker serves them all and keeps no run, console,
+  debugger, console code, session or compiled sources; the runtime's pool keeps its size, and
+  closing ends the worker process. The suite runs five rounds, `-Plsp.soakRounds` more; 50 passed
+  three times on macOS. It found that the worker counted a JDK thread started from a pool thread,
+  the common pool's delay scheduler, as runtime pool growth, which retired a healthy worker; the
+  worker now reports the pool's own size. Memory is checked by counts only: the heap a worker
+  reports is measured after `System.gc()`, which need not collect anything. Not done: Linux until
+  CI has run it, Windows, where nothing runs the `lsp-server` tests, and repeated cycles driven
+  from the editors.
 - [x] A JVM that makes more than one runtime kept up to two that it was done with, about 115 MB each
   (`1ca73e922`, 2026-10-26). Three things held one:
   - A pending alarm on the JVM-wide Java timer. The `Timer` service belongs to the native
