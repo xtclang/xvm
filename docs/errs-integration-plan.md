@@ -1305,7 +1305,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L76 inline completion | Compiler cursor projection, capability negotiation, cancellation and shared X255–X258 pass batched backend and selected editor validation. | Plain names/expected-type values only. LSP4IJ native invocation/selection constraints are UP26; no generative service is implied. |
 | L77 colors | None: the fixture-only document-color prototype and X273–X275 were removed on 2026-10-21. | Excluded until Ecstasy has a color type; highlighting is semantic tokens. See the [removal record](#l77-color-prototype-removed-2026-10-21). |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
-| L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
+| L79 debug inline values | Compiler inlay hints are not runtime values; DAP sessions are real (R6/R7), and inline values are not implemented. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
 | L81 progress/trace/refresh | Implemented and accepted for the current providers. Visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap pass both hosts. IntelliJ same-process projects and both VS Code window modes pass lifecycle checks. | UP15 still classifies typed-parameter failures as ParseError; reader recovery passes. Full-catalog, extended scale and cross-platform release evidence belong to L82. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
@@ -1404,8 +1404,9 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   compiler/file-editor completion gate.
 - [ ] **L79 — Debug inline values.** Define a debugger integration, then implement
   `textDocument/inlineValue` and `workspace/inlineValue/refresh`. Compiler type inlay hints do
-  not provide runtime values. DAP breakpoints, stepping and evaluation remain a separate project.
-  The accepted R6–R7 runtime/DAP bridge is the dependency for those values.
+  not provide runtime values. DAP breakpoints, stepping and evaluation are the R6–R7 track.
+  The R6–R7 runtime/DAP bridge is the dependency for those values, and it is met since R7 closed
+  on 2026-10-26.
 
 ### Protocol correctness and the completion gate
 
@@ -1545,7 +1546,7 @@ and [IntelliJ settings](https://plugins.jetbrains.com/docs/intellij/settings-gui
 | Diagnostics and analysis | Compiler diagnostics, push/pull negotiation and automatic reanalysis work; editor Problems filtering is available. | Prefer native severity/filter controls; expose analysis/status and refresh/rebuild commands. Any future debounce, excludes or on-save analysis option must define stale-diagnostic behavior and graph coverage. No switch may bypass rename/type proof or silently suppress internal failures. |
 | Refactoring, imports and file operations | Guarded rename/move/action paths and graph settings persistence exist. | Explain refusal reasons and relevant configuration; respect native preview/confirmation/Undo. Source-graph proposals need explicit persisted edits. Do not make unsafe operations available through a preference. |
 | Tracing, timing and notifications | VS Code `xtc.trace.server`; LSP4IJ logs; compile/API/queue timing and transient startup notifications. | Add discoverable log/queue/status views, trace level and bounded log retention/export, including human-readable queued jobs. Keep source content out of routine logs. Prefer IDE notification controls; advanced startup-notification preference only if needed. |
-| Run/debug and future providers | Run configuration scaffolding exists; persistent runtime/DAP and several LSP providers remain separate work. | R5 owns target/arguments/working directory/environment/Stop/Rerun UI; R6–R8 own debugger controls. Notebook, color and inline completion settings follow implemented capabilities, not placeholders advertised as working. |
+| Run/debug and future providers | Embedded Run and DAP debugging ship in both editors; R8 and R9–R13, and several LSP providers, remain separate work. | R5 owns target/arguments/working directory/environment/Stop/Rerun UI; R6–R8 own debugger controls. Notebook, color and inline completion settings follow implemented capabilities, not placeholders advertised as working. |
 
 Local desktop implementation and acceptance are complete as of October 6; the
 [completion receipt](#ui1ui7-completion-batch-2026-10-06) records combined runs and their limits.
@@ -1638,30 +1639,43 @@ to the compiler-only PR:
 - [x] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
   The placeholder reported breakpoints unverified and refused launch (`eba208bb3`). Since
   2026-10-22 a session lives in the language server, over its connection, launches through the
-  embedded build and run, and owns its program; VS Code uses it, and IntelliJ keeps DAP disabled
+  embedded build and run, and owns its program; both editors use it, VS Code through an inline
+  debug adapter over the language client, and IntelliJ, since R7d, through LSP4IJ's DAP client
   ([below](#r6-debug-sessions-2026-10-22)).
-- [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
+- [x] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
   *Partial (2026-10-22):* breakpoints stop the program in VS Code and IntelliJ, with threads,
   stacks and continue, through a runtime debugger in the execution worker
   ([below](#r7-breakpoints-stops-and-stacks-2026-10-22)); variables and stepping followed
   ([below](#r7-variables-and-stepping-2026-10-22)), and the runtime half of exception stops;
   the rest of exception stops, pause, watches and hover on paths, evaluation and source revisions
   remain.
+  *Complete (2026-10-26):* exception stops, pause, watches and hover on paths, console evaluation
+  and source revisions followed. Source revisions were the last part (X321, `030f4255e0`):
+  breakpoints are placed on the lines the program was built from, and refused on changed lines.
+  In IntelliJ, the cases that are partial or not implemented are so only because of LSP4IJ
+  0.21.0's limits, UP30–UP42.
 - [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
+  *In progress (2026-10-26):* the runtime retention fix (`474af84f08`), the soak in
+  `EmbeddedExecutionTest` (`0d6e890bad`), repeated runs, stops and debug sessions driven from both
+  editors as shared X322 (`718ddd656e`), logs correlated by their `build=`, `run=`, `worker=` and
+  `generation=` fields (`a87b63d9de`), an execution worker that does not call `System.gc()`
+  (`2668896b26`), tests that find retained objects by walking the object graph instead of waiting
+  for the collector (`77e3c4b7c5`), and focused Gradle test tasks (`e91b5e58cb`, `30d9685ff3`).
+  Linux validation of the soak and parity between the editors are in progress.
 - [ ] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
   debugger's commands: breakpoint kinds (R9), values (R10), execution control (R11), program
   structure and sources (R12), and debugging beyond embedded runs (R13), listed in the
   [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
 
-Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8; R9–R13 follow R8, unless one is
-chosen to gate the release. Compiler-only operations must
-continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and lib_runner
-child containers are the foundation; existing IDE shell commands and the DAP placeholder do not
-satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6); real breakpoint support
-needs the runtime bridge (R7).
+Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Parts of R9, and R10, landed
+before R8; the rest of R9–R13 follows R8, unless one is chosen to gate the release. Compiler-only
+operations must continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and
+lib_runner child containers are the foundation; existing IDE shell commands and the DAP placeholder
+do not satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6), and the runtime
+debugger (R7) stops, steps and evaluates in both editors.
 
-Current native automation inventory (2026-10-22): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **306 cases**: X1–X304 except the retired
+Current native automation inventory (2026-10-26): the shared catalog,
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **324 cases**: X1–X322 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
 added since, among them the embedded run cases above, have selected native receipts recorded with

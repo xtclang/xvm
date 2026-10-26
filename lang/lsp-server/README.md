@@ -121,9 +121,10 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 Compiler mode has implementations for all 27 capabilities in this project's adapter interface,
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
 bounded; the interface does not cover every LSP feature. Debug inline values, notebooks and broader
-refactorings remain incomplete. Color values have an opt-in, fixture-only constructor prototype;
-a public Ecstasy color-library contract remains deferred. See the [feature boundaries below](#supported-lsp-features)
-and [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
+refactorings remain incomplete. The fixture-only color constructor prototype was removed on
+2026-10-21; a public Ecstasy color-library contract remains deferred. See the
+[feature boundaries below](#supported-lsp-features) and
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
 Compiler code actions include expression/local extraction, private helper extraction for contiguous
 call statements and nested expressions, adjacent single-evaluation local inline, wider constant-local
@@ -525,6 +526,7 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
+| `xtc/runLenses` `{uri}` | request | The document's Run lenses, each its `module` and zero-based `line`; IntelliJ marks these lines with its gutter Run icons |
 | `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
 | `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. As with `xtc run`, a run ends once its entry method has returned and its services have nothing left to do: one still at work or waiting, or a server or `keepAlive` alarm, keeps it running until it is stopped, and then nothing of it runs on. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
 | `xtc/debugStart` | request | Starts a Debug Adapter Protocol (DAP) session carried by this connection, and returns its `sessionId` |
@@ -670,9 +672,10 @@ frame, a line typed in the debug console is the program's input. What
 the program printed before it stopped is sent before the stop. Terminating or disconnecting a
 stopped program ends it where it is, without running more of it. The session advertises
 `configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
-logpoints, `exceptionInfo`, `cancel`, and its exception filters with their options, and refuses `attach`. A run without the
-debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an embedding host
-has no terminal for the command-line debugger.
+logpoints, `exceptionInfo`, `cancel`, value formatting options, `setVariable`, `completions` with `.`
+as its trigger character, and its exception filters with their options, and refuses `attach`. A
+run without the debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an
+embedding host has no terminal for the command-line debugger.
 
 ## Context-Aware Completion
 

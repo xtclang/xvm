@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **305 scenarios**: X1–X303 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **324 scenarios**: X1–X322 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 305 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 324 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1240,7 +1240,8 @@ and VS Code render them automatically from the LSP server response — no plugin
 
 ### 18a. Embedded build and run
 
-**Requests:** `xtc/build`, `xtc/run`, `xtc/stopRun`; notifications `xtc/runOutput`, `xtc/runExited`
+**Requests:** `xtc/build`, `xtc/run`, `xtc/runInput`, `xtc/stopRun`, `xtc/runnableTargets`, `xtc/runLenses`,
+`xtc/debugStart`; notifications `xtc/runOutput`, `xtc/runExited`, `xtc/debugMessage` (both ways), `xtc/debugEnd`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
 **Mode:** VS Code `xtc.build.mode`, **Ecstasy: Select Build Mode** or the status bar's build mode (shown in a folder
 with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy
@@ -1277,6 +1278,7 @@ module Hello {
 | 18a.15 | Fresh program state | Run a module twice whose static service counts the calls made to it in a run | Each run counts from the start; nothing carries over from the run before (automated in X292) |
 | 18a.16 | No callable entry method | Run a module without a `run` method, or one whose `run` requires two parameters, from a run configuration or task | The build succeeds, the run is refused with the reason and exit code 1, and no user code runs (automated in X293) |
 | 18a.17 | Arguments a run method does not take | Run a module whose `run` has no parameters with the argument `ignored` | A warning that the method does not take any parameters and the arguments are ignored, then the program's output; it exits with code 0 (automated in X294) |
+| 18a.18 | Debug (IntelliJ) | Set a breakpoint in `Hello.x` and Debug its Ecstasy Application configuration (Shift+F9; macOS Ctrl+D) | The program stops at the breakpoint, with its call stack in the Debug tool window, and Resume Program runs it to its exit (automated in X304) |
 
 Known limits: up to four programs at a time per server, each in its own execution worker (a fifth run
 reports that four programs are already running); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
@@ -1365,7 +1367,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X294 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X322 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1392,7 +1394,7 @@ They do not drive every menu/key or inspect rendered pixels:
 popup/hierarchy layout, theme appearance, physical keyboard interaction and a prolonged interactive
 memory/GC soak remain manual. The report identifies those limits and maps 7a.1–7a.14 and the host-only
 API checks to their automated coverage. This command covers the **XdkAdapter** playbook, not the
-separate debugger, IntelliJ or Tree-sitter playbooks.
+separate IntelliJ or Tree-sitter playbooks.
 
 After assembling with the same compiler flag, `npm run test:playbook` from `lang/vscode-extension`
 reruns just the editor suite. It reports existing host-test evidence without rebuilding/rerunning it.
@@ -1513,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 305 scenarios: X1–X303 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 324 scenarios: X1–X322 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1528,7 +1530,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 305 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 324 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -2543,7 +2545,7 @@ This table maps every numbered feature from sections 1–19 to the exact VS Code
 | 15a | Extra source roots (`xtc.sourceRoots`) | Set the setting (string array), restart server, Cmd+Click into an imported external module | Definition jumps into the external tree | §15a subtests apply verbatim. **VS Code uses the `xtc.sourceRoots` setting key**, not env vars or system props (the env-var / sysprop paths are tested separately in §15a.1–.2). |
 | 16 | Comment toggling | `Cmd+/` (line) or `Shift+Opt+A` (block) | Lines / blocks comment-toggle | §16 in the IntelliJ-marked section also applies to VS Code via the language-configuration commentary mapping. |
 | 17 | Snippets | Type a prefix (`mod`, `cls`, `svc`, `mix`, `con`, `meth`, `run`, `if`, `ife` …) then `Tab` | Expansion appears with tab stops | §17 is IntelliJ-specific in framing, but every snippet in `lang/vscode-extension/snippets/xtc.json` is the VS Code counterpart. |
-| 18 | Code lens (run actions) | Open a module/class with a `void run()` | `Run` / `Debug` codelens above the method signature | §18. Powered by the LSP server, identical contract. |
+| 18 | Code lens (run actions) | Open a module/class with a `void run()` | A `▶ Run` lens on the `module` declaration | §18. Powered by the LSP server, identical contract. |
 | 19 | Semantic tokens | Open any `.x` file with `editor.semanticHighlighting.enabled: true` (default for `[xtc]`) | Types / methods / properties / annotations colored distinctly | §19. Subtests 19.1–19.11 apply verbatim. |
 
 ### VS Code-specific concerns (not covered by the IntelliJ sections)
@@ -2562,7 +2564,7 @@ These have no IntelliJ analogue (or are surfaced differently). They round out th
 | V8 | Tasks (Gradle build / test / clean / run) | In a workspace with a `build.gradle.kts`, open Terminal → Run Task… | "Build", "Test", "Clean" tasks listed under "xtc"; selecting runs `./gradlew build/test/clean` |
 | V9 | Custom task (`xtc.runModule`) | Add a `tasks.json` entry of type `"xtc"` with `moduleName: "TestModule"` → Terminal → Run Task → pick it | Follows `xtc.build.mode` (or the task's `mode`): embedded builds and runs in a dedicated terminal ([18a](#18a-embedded-build-and-run)); Gradle runs `./gradlew runXtc --module=TestModule`; legacy `useGradle: false` runs `xtc run TestModule` |
 | V10 | Debug launch from defaults | Open a `.x` with `void run()` → press `F5` | Starts the debug session "Run Ecstasy Module" for the open file's module, its name auto-detected from the `module Foo {}` declaration; the language server builds and runs it as Run does, and the session ends with the program (automated in X285). A line typed in the Debug Console while the program runs is its console input |
-| V11 | Debug launch from `launch.json` | Add a `"type": "xtc"` config → set breakpoint → `F5` | Same as V10 with the configured module, method and arguments; the breakpoint is verified when the program starts, the program stops there with its call stack shown, and Continue runs it on (X304). The Variables view shows the stopped frame's locals and expands objects and arrays (X305). Stepping and pause are not available yet ([DAP plan](plan-dap-debugging.md)) |
+| V11 | Debug launch from `launch.json` | Add a `"type": "xtc"` config → set breakpoint → `F5` | Same as V10 with the configured module, method and arguments; the breakpoint is verified when the program starts, the program stops there with its call stack shown, and Continue runs it on (X304). The Variables view shows the stopped frame's locals and expands objects and arrays (X305). Step Over, Step Into and Step Out (X306), Pause (X308), stopping on entry (X309) and watches (X310) work too |
 | V12 | Create-project command | Cmd Palette → "Ecstasy: Create New Project" → pick `class` / `library` / `service`, pick a folder, enter a name | Terminal labeled "XTC" opens and runs `xtc init <name> --type <kind> --dir <folder>`; new project skeleton appears |
 | V13 | Extension uninstall is clean | Uninstall via Extensions panel → reload | No leftover language association for `.x`; the LSP server JVM is terminated (visible in `jps` / Activity Monitor) |
 | V14 | `.vsix` re-install replaces cleanly | `code --install-extension xtc-language-*.vsix --force` from a session that already has the extension loaded | Extension reloads; status bar reconnects; no duplicate output channels |
@@ -2617,7 +2619,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Inlay hints | X42/X131 | Enable/disable through native controls, inspect tooltip rendering for locals/parameters/lambdas, verify no misleading names for unnamed function calls, named arguments or omitted defaults. A protocol tooltip does not prove the UI renders it. |
 | Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. X138 verifies live indent settings; X249/X250 verify continuation/comment margins and bounded width wrapping with native history. Backend regressions cover custom indentation and tabs. Not every variant is a shared-driver scenario. |
 | Document links | X131 plus lexical unit tests; section 15 | Click HTTP(S) URLs in comments/strings; verify exact ranges and absence of invented import/file/unsupported-scheme links. Malformed/partial literals must not create arbitrary targets. External browser launching is a manual action, separate from resolving a URI. |
-| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Lenses appear only on modules with a callable `run`. Shared X280–X285 drive embedded Run lenses, builds, arguments/exit codes, Stop, Rerun, failed builds and debug launches natively; [section 18a](#18a-embedded-build-and-run) adds Gradle mode and configuration migration as manual checks. R6's debug sessions run the module in VS Code, and R7 stops it at breakpoints (X304) and shows its variables (X305); the rest of R7 and the R8 soak gates remain **open**. A Run lens alone does not establish execution. |
+| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Lenses appear only on modules with a callable `run`. Shared X280–X285 drive embedded Run lenses, builds, arguments/exit codes, Stop, Rerun, failed builds and debug launches natively; [section 18a](#18a-embedded-build-and-run) adds Gradle mode and configuration migration as manual checks. R6's debug sessions and R7's debugger pass in both editors (X285, X304–X321; IntelliJ's gaps are LSP4IJ limits UP30–UP42), and X322 repeats runs, stops and debug sessions for R8. A Run lens alone does not establish execution. |
 | Semantic tokens | X41/X126, existing token tests; section 19 | Inspect theme fallback, enable/disable behavior, UTF-16/range clipping, edits/close/restart with old result IDs and refresh. Audit per-token claims (e.g. deprecated tags) against actual modifiers rather than claiming every row for every adapter. |
 | Rename, actions and resource edits | X53–X63/X102–X105/X109–X122/X127–X130 | Collision/capture refusals, cancellation, stale documents, graph persistence, closed consumers, one Undo/Redo and source text plus filesystem bytes; see the batch matrix. Explorer drag/drop and arbitrary third-party edit application are separate host paths. |
 | Discovery, paths and build settings | CFG1–CFG3/X99/X100/X124/X129/X134 | Multiple roots, Unicode/space-containing paths, symlinks, project close/reopen and external shared watch leases. Gradle-import failure, missing generated resources and no-Gradle projects must retain usable last-valid inputs and show actionable status. |
@@ -3867,6 +3869,11 @@ last published to mavenLocal.
 | ID | Actions | Expected result |
 |---|---|---|
 | X303 | Make the application project `GradleBuilt` with `xtc init` (what VS Code's **Ecstasy: Create Project** runs) or the IntelliJ New Project wizard's creator, put it at the root and choose the Gradle build mode. Build and Run it (IntelliJ: Run with the argument `World`). Then save a type error in `GradleBuilt.x` and Build (IntelliJ: Run) again. | The build ends with exit code 0 and writes `build/xtc/main/lib/GradleBuilt.xtc` and the test module `GradleBuiltTest.xtc`; the run ends with exit code 0, and IntelliJ's Run console shows `Hello, World!`. The broken module fails the build: VS Code shows `COMPILER-43` on line 3 of `GradleBuilt.x` in Problems, and IntelliJ's run fails with `GradleBuilt.x:3` and `COMPILER-43` in its console. IntelliJ's Build Project in Gradle mode is the IDE's own builder and is not driven. |
+
+### Debugging and repeated runs (X304–X322)
+
+| ID | Actions | Expected result |
+|---|---|---|
 | X304 | Set a breakpoint on line 11 of DebugStops.x, in `twice`, and start debugging DebugStops (IntelliJ: Debug its Ecstasy Application configuration). Then Continue (IntelliJ: Resume Program). | The breakpoint is verified on line 11, and the program stops there with `before` printed but not `after 42`. The call stack shows `DebugStops.twice` at line 11 above `DebugStops.run` at line 5. Continuing runs the program on to `after 42` and exit code 42, and the session ends. |
 | X305 | Set a breakpoint on line 14 of DebugVars.x, in `report`, and start debugging DebugVars (IntelliJ: Debug its Ecstasy Application configuration). In the Variables view, expand `point` and `ints`. Then Continue (IntelliJ: Resume Program). | The program stops on line 14. The frame's locals show `point` as `DebugVars:Point`, `ints` as `Int[3]` of type `immutable Array<Int>`, `text` as `"hi"` and `sum` as `7` of type `Int`, which does not expand. `point` expands to `x` = `3`, `y` = `4` and a lazy `toString()` (`(...)`, see X316), and `ints` to `[0]` = `1`, `[1]` = `2` and `[2]` = `3`. Continuing prints `hi 7 3` and ends with exit code 7. |
 | X306 | Set a breakpoint on line 4 of DebugSteps.x, in `run`, and start debugging DebugSteps (IntelliJ: Debug its Ecstasy Application configuration). Step Over, then Step Into, then Step Out, then Continue (IntelliJ: Resume Program). | The program stops on line 4. Step Over stops it on line 5 of `run`; Step Into stops it on line 11, in `DebugSteps.add`, with `DebugSteps.run` at line 5 below it; Step Out stops it on line 6 of `run`. Each step's stop has the reason `step`. Continuing prints `3 6` and ends with exit code 6. |

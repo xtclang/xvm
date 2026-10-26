@@ -3,8 +3,8 @@
 **Status (2026-10-26):** sessions are real, stop at breakpoints, conditional ones included, and at exceptions, of some classes if asked, log at logpoints, show variables and the exception, evaluate watches and hovers on expressions with operators, step and pause, in VS Code and IntelliJ (pause, hit counts, logpoints, exception classes and the exception's details in VS Code only, until LSP4IJ has them). R6 is done: a
 session runs inside the language server and travels over its connection, so a `launch` builds and
 runs the module with the same embedded build and execution workers as Run, reports the program's
-output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7's first
-part works too: the runtime debugger, `SessionDebugger`, runs in the execution worker beside the
+output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7 is
+complete: the runtime debugger, `SessionDebugger`, runs in the execution worker beside the
 program, and the session installs breakpoints before the program's first line, reports how each
 was installed, forwards stops, and answers `threads`, `stackTrace` and `continue` (shared X304),
 `scopes` and `variables` (X305), and `next`, `stepIn` and `stepOut` (X306). Its later steps add
@@ -14,7 +14,10 @@ computed by the runtime's own operations without running the program's code, for
 conditions too (X313, bounded evaluation's tier 1). A console line that tier 1 refuses, such as a
 call, runs as code on the stopped fiber, for at most two seconds, with `cancel` and `invalidated`
 (its tier 2: VS Code's Debug Console and IntelliJ's Evaluate Expression, shared X314), and a launch's
-`evaluationRunsProgram` lets the rest of the program run meanwhile (X315). IntelliJ debugs an Ecstasy Application
+`evaluationRunsProgram` lets the rest of the program run meanwhile (X315). Breakpoints are placed
+on the lines the program was built from, and refused on changed lines (source revisions, X321).
+R10a–e add lazy variables, hexadecimal, paging of large arrays, Set Value and Debug Console
+completions (X316–X320). IntelliJ debugs an Ecstasy Application
 configuration with LSP4IJ's DAP client, through a process handler that carries the same session
 over the language server connection (`XtcDebugAdapterFactory`, `LanguageServerDebugProcessHandler`);
 Phase 0 below describes its earlier, disabled, separate-process form.
@@ -23,9 +26,9 @@ The session code is the `dap-server` library, hosted by the language server
 describe the earlier plan, in which the adapter was a process of its own that held runtime `Frame`
 objects. As built, the session holds only snapshots the worker sends, and the runtime half lives in
 the worker; the [execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance)
-has what R7 still needs.
+has R7's steps and what R8–R13 still need.
 
-This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
+This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the `dap-server` library, hosted by the language server, to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
 ---
 
@@ -315,29 +318,40 @@ IDE → DAP:  configurationDone
 
 ### 4.2 Capabilities to Advertise
 
+What the session advertises, from `XtcDebugServer.initialize()`
+([XtcDebugServer.kt](../dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt)):
+
 ```kotlin
 Capabilities().apply {
     supportsConfigurationDoneRequest = true
-    supportsConditionalBreakpoints = true        // DebugConsole BC command
-    supportsEvaluateForHovers = true             // EvalCompiler
-    supportsSetVariable = false                  // not yet (runtime is immutable-heavy)
-    supportsStepBack = false
-    supportsRestartRequest = false
-    supportsExceptionInfoRequest = true          // DebugConsole has full exception info
-    supportsExceptionFilterOptions = true
     supportsTerminateRequest = true
-    supportsSingleThreadExecutionRequests = true // XTC services are single-threaded
-
+    supportsEvaluateForHovers = true
+    supportsConditionalBreakpoints = true
+    supportsHitConditionalBreakpoints = true
+    supportsLogPoints = true
+    supportsExceptionInfoRequest = true
+    supportsExceptionFilterOptions = true
+    supportsCancelRequest = true
+    supportsValueFormattingOptions = true
+    supportsSetVariable = true
+    supportsCompletionsRequest = true
+    completionTriggerCharacters = arrayOf(".")
     exceptionBreakpointFilters = arrayOf(
         ExceptionBreakpointsFilter().apply {
-            filter = "all"
-            label = "All Exceptions"
-            default_ = false
+            filter = UNCAUGHT_EXCEPTIONS             // "uncaught"
+            label = "Uncaught Exceptions"
+            description = "Stop where an exception that nothing catches is thrown."
+            default_ = true
+            supportsCondition = true
+            conditionDescription = EXCEPTION_TYPES   // exception classes, separated by commas
         },
         ExceptionBreakpointsFilter().apply {
-            filter = "uncaught"
-            label = "Uncaught Exceptions"
-            default_ = true
+            filter = ALL_EXCEPTIONS                  // "all"
+            label = "All Exceptions"
+            description = "Stop where any exception is thrown, also one that is caught."
+            default_ = false
+            supportsCondition = true
+            conditionDescription = EXCEPTION_TYPES
         }
     )
 }
