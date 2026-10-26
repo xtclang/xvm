@@ -718,9 +718,9 @@ class XtcDebugServer(
         val offset = lines.take(line).sumOf { it.length + 1 } + (args.column - columnBase - 1).coerceIn(0, lines[line].length)
         return runs.completions(runId, frameId, text, offset).handle { state, failure ->
             if (failure != null) logger.debug("completions: none, {}", failure.message)
-            // TODO LSP4IJ: UP43 — DAPLookupElementDecorator inserts at a completion's start as a 0-based offset into
-            //  the console's text, although LSP4IJ says columns start at 1, and VS Code's console filters by it as one,
-            //  so neither is given a start; both then replace the typed length before the cursor
+            // no start: DAP measures it in the client's column base, but adapters send it 0-based and LSP4IJ and VS
+            // Code read it so, although both say columns start at 1 (UP43); with the length alone, both replace the
+            // typed part before the cursor
             val typed = state?.length?.takeIf { it > 0 }
             CompletionsResponse().apply {
                 targets =
