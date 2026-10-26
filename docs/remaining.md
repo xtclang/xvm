@@ -286,7 +286,11 @@ come from are in parentheses.
   properties and its `toString()`, `(...)`, whose reads run the getter or `toString()` on the stopped
   fiber for at most a second (worker protocol 12, `presentationHint.lazy`). Shared X316; IntelliJ
   clicks LSP4IJ's Show value link (UP35, #1768), or with 0.21.0 expands the variable to its value.
-- [ ] R10: paging of large arrays and collections, in place of the first 100 elements.
+- [x] R10: paging of large arrays, in place of the first 100 elements (`00dee9671`, R10c): an array's
+  variable has `indexedVariables`, and a `variables` request's `filter`, `start` and `count` reach the
+  program, which reads only that part (worker protocol 14); VS Code shows ranges of 100. Shared X318;
+  IntelliJ still shows the first 100 and how many more, since LSP4IJ does not page (UP42). Other
+  collections, such as a `Map`, show their fields: their entries would take running their code.
 - [ ] R10: changing a variable's value while stopped (`setVariable`).
 - [ ] R10: completions in the Debug Console.
 - [ ] R11: Run to Cursor in both editors (`SL`); VS Code's sets a temporary breakpoint, so check
@@ -414,6 +418,15 @@ passes with the workaround disabled. The gates are in
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
+
+### LSP4IJ: gaps found, not filed
+
+- [ ] UP42 (2026-10-26): LSP4IJ asks for all of a variable's children at once, without `filter`,
+  `start` or `count`, and ignores `indexedVariables` (0.21.0 and `main`), so a large array shows the
+  adapter's first page and how many more there are, with no way to see the rest. IntelliJ's own
+  paging is `XCompositeNode.tooManyChildren(remaining, addNextChildren)`, a "show more" link that
+  could read the next page. Found by R10c's X318, which IntelliJ checks as the first 100 elements,
+  tagged TODO LSP4IJ: UP42. Gate after a fix and a release: X318 reads `[200..249]` in IntelliJ.
 
 ### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41)
 
