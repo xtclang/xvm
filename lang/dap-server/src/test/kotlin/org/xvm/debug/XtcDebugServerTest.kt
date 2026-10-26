@@ -539,7 +539,7 @@ class XtcDebugServerTest {
         runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
 
         val answer = server.evaluate(evaluate("box.bump(n)", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
-        assertThat(runs.ran).containsExactly(Triple(1, "box.bump(n)", XtcDebugServer.CONSOLE_LIMIT))
+        assertThat(runs.ran).containsExactly(Ran(1, "box.bump(n)", XtcDebugServer.CONSOLE_LIMIT, program = false))
         assertThat(answer).isNotDone()
         assertThat(client.events).doesNotContain(INVALIDATED)
         runs.runAnswers.single().complete(VariableState("box.bump(n)", "5", "Int", 0))
@@ -553,6 +553,26 @@ class XtcDebugServerTest {
             }
         }
         assertThat(runs.ran).hasSize(1)
+    }
+
+    @Test
+    fun `a launch with evaluationRunsProgram lets the whole program run while console code does, and then everything is invalidated`() {
+        server.initialize(
+            InitializeRequestArguments().apply {
+                adapterID = "xtc"
+                supportsInvalidatedEvent = true
+            },
+        )
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App", "evaluationRunsProgram" to true)).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val answer = server.evaluate(evaluate("worker.finished()", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
+        assertThat(runs.ran).containsExactly(Ran(1, "worker.finished()", XtcDebugServer.CONSOLE_LIMIT, program = true))
+        runs.runAnswers.single().complete(VariableState("worker.finished()", "300000", "Int", 0))
+        assertThat(answer.get(10, SECONDS).result).isEqualTo("300000")
+        // the program's other fibers moved, so the threads and stacks are read again too
+        assertThat(client.events).contains("invalidated all").doesNotContain(INVALIDATED)
     }
 
     @Test
@@ -590,7 +610,7 @@ class XtcDebugServerTest {
         endpoint.receive(request(11, "cancel", """{"requestId": 10}"""))
         runs.slowRead.completeExceptionally(IllegalStateException("slow() is not evaluated"))
         assertThat(answer(messages, 10)["message"].asString).isEqualTo(XtcDebugServer.CANCELLED)
-        assertThat(runs.ran.map { it.second }).containsExactly("spin()")
+        assertThat(runs.ran.map { it.expression }).containsExactly("spin()")
 
         // a cancel of a request that is answered, or of none, does nothing
         endpoint.receive(request(12, "cancel", """{"requestId": 1}"""))
@@ -666,6 +686,14 @@ class XtcDebugServerTest {
         throw AssertionError("no answer to request $seq: $messages")
     }
 
+    /** A run of code that the session asked for: in which frame, the code, its time limit, and whether the program runs too. */
+    private data class Ran(
+        val frame: Int,
+        val expression: String,
+        val limit: Duration,
+        val program: Boolean,
+    )
+
     /** Stands in for the language server's runs: records what the session asks, and starts once it is ready. */
     private class Runs : DebugRuns {
         lateinit var runId: String
@@ -681,8 +709,8 @@ class XtcDebugServerTest {
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
         val evaluated = CopyOnWriteArrayList<Pair<Int, String>>()
 
-        /** The frame, code and limit of each run asked for, and its answer, which the test completes. */
-        val ran = CopyOnWriteArrayList<Triple<Int, String, Duration>>()
+        /** Each run asked for, and its answer, which the test completes. */
+        val ran = CopyOnWriteArrayList<Ran>()
         val runAnswers = CopyOnWriteArrayList<CompletableFuture<VariableState>>()
 
         /** The read of `slow()`, which the test completes. */
@@ -732,8 +760,9 @@ class XtcDebugServerTest {
             frameId: Int,
             expression: String,
             limit: Duration,
+            program: Boolean,
         ): CompletableFuture<VariableState> {
-            ran.add(Triple(frameId, expression, limit))
+            ran.add(Ran(frameId, expression, limit, program))
             return CompletableFuture<VariableState>().also(runAnswers::add)
         }
 
