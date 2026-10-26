@@ -486,7 +486,8 @@ this bridge; they cannot be inferred from compiler type hints.
   hexadecimal, through DAP's `format` or the session's `xtc/valueFormat`, which VS Code's own menu
   item sets, with mutable objects' identity codes (`cb551d4c2`, R10b, protocol 13, shared X317); and
   large arrays read a page at a time, by a request's `filter`, `start` and `count` (`00dee9671`,
-  R10c, protocol 14, shared X318).
+  R10c, protocol 14, shared X318); and Set Value, a variable given an expression's value without
+  running code (`3a060bd39`, R10d, protocol 15, shared X319).
 - [ ] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
   temporary breakpoint, so it may already work and needs checking), choosing which call on a line
   to step into (`stepInTargets`), restarting a frame (the console's `T`), and continuing, stepping or
