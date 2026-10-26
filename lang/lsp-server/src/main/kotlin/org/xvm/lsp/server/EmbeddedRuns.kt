@@ -315,22 +315,24 @@ internal class EmbeddedRuns(
         frame: Int,
     ): CompletableFuture<List<ScopeState>> = debugged(runId) { worker.scopes(it, frame) }
 
-    /** The variables of a scope, or the fields or elements of a variable. */
+    /** The variables of a scope, or the fields or elements of a variable, with integers in hexadecimal if [hex]. */
     internal fun variables(
         runId: String,
         reference: Int,
-    ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference) }
+        hex: Boolean,
+    ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference, hex) }
 
-    /** Evaluates an expression in a frame of a stopped program under the debugger. */
+    /** Evaluates an expression in a frame of a stopped program under the debugger, an integer in hexadecimal if [hex]. */
     internal fun evaluate(
         runId: String,
         frame: Int,
         expression: String,
-    ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression) }
+        hex: Boolean,
+    ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression, hex) }
 
     /**
      * Runs code in a frame of a stopped program under the debugger, for at most [limit], and with [program], the whole
-     * program meanwhile; cancelling it ends the run.
+     * program meanwhile, its integer value in hexadecimal if [hex]; cancelling it ends the run.
      */
     internal fun runCode(
         runId: String,
@@ -338,7 +340,8 @@ internal class EmbeddedRuns(
         expression: String,
         limit: Duration,
         program: Boolean,
-    ): CompletableFuture<VariableState> = debugged(runId) { worker.runCode(it, frame, expression, limit, program) }
+        hex: Boolean,
+    ): CompletableFuture<VariableState> = debugged(runId) { worker.runCode(it, frame, expression, limit, program, hex) }
 
     /** The exception a fiber of a stopped program under the debugger stopped it at; null for another stop. */
     internal fun exceptionInfo(

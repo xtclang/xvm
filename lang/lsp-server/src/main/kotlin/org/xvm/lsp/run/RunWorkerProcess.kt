@@ -297,9 +297,12 @@ internal class RunWorkerProcess(
     fun variables(
         id: Long,
         reference: Int,
+        hex: Boolean,
     ): CompletableFuture<List<VariableState>> =
-        request("variables", id) { addProperty("reference", reference) }
-            .thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
+        request("variables", id) {
+            addProperty("reference", reference)
+            addProperty("hex", hex)
+        }.thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
 
     /** Replaces a debugged run's exception stops. */
     fun setExceptionStops(
@@ -315,10 +318,12 @@ internal class RunWorkerProcess(
         id: Long,
         frame: Int,
         expression: String,
+        hex: Boolean,
     ): CompletableFuture<VariableState> =
         request("evaluate", id) {
             addProperty("frame", frame)
             addProperty("expression", expression)
+            addProperty("hex", hex)
         }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
 
     /**
@@ -332,6 +337,7 @@ internal class RunWorkerProcess(
         expression: String,
         limit: Duration,
         program: Boolean,
+        hex: Boolean,
     ): CompletableFuture<VariableState> {
         val (number, reply) =
             send("runCode", id) {
@@ -339,6 +345,7 @@ internal class RunWorkerProcess(
                 addProperty("expression", expression)
                 addProperty("limit", limit.inWholeMilliseconds)
                 addProperty("program", program)
+                addProperty("hex", hex)
             }
         val answer = reply.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
         answer.whenComplete { _, failure ->
