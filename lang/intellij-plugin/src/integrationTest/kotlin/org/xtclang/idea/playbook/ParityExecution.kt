@@ -787,6 +787,54 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X316") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // the object's fields, then its lazy variables, whose values run code only when asked for
+                val expands = data.string("expands")
+                val fields = JsonParser.parseString(debugger.variables(project, module, expands)).asJsonArray.map { it.asJsonObject }
+                val expected = data.getAsJsonArray("fields").map { pair -> pair.asJsonArray.map { it.asString } }
+                check(fields.map { listOf(it.string("name"), it.string("value")) } == expected) { "$expands shows $fields" }
+                data.getAsJsonArray("lazy").map { it.asJsonArray }.forEach { pair ->
+                    val (name, value) = pair[0].asString to pair[1].asString
+                    val lazy = fields.single { it.string("name") == name }
+                    val shown =
+                        if (lazy.has("link")) {
+                            // with LSP4IJ #1768, a lazy variable has a Show value link
+                            debugger.showValue(project, module, "$expands/$name")
+                        } else {
+                            // TODO LSP4IJ: UP35 — LSP4IJ 0.21.0 ignores presentationHint.lazy (#1768), so a lazy variable
+                            // expands to one child that has its value
+                            JsonParser
+                                .parseString(debugger.variables(project, module, "$expands/$name"))
+                                .asJsonArray
+                                .single()
+                                .asJsonObject
+                                .string("value")
+                        }
+                    check(shown == value) { "$name shows $shown, not $value" }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -852,6 +900,12 @@ internal interface DebugSessionProbe {
     ): String
 
     fun variables(
+        project: Project,
+        module: String,
+        path: String,
+    ): String
+
+    fun showValue(
         project: Project,
         module: String,
         path: String,
