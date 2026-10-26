@@ -8,6 +8,8 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.CompletionState
+import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
@@ -53,7 +55,7 @@ import kotlin.time.toJavaDuration
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
  * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
  * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`, `hex`), `setVariable` (`id`, `request`, `reference`,
- * `name`, `expression`, `hex`), `runCode` (`id`, `request`, `frame`,
+ * `name`, `expression`, `hex`), `completions` (`id`, `request`, `frame`, `text`, `offset`), `runCode` (`id`, `request`, `frame`,
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
@@ -100,6 +102,7 @@ object RunWorker {
                     "variables" -> runs.variables(command)
                     "evaluate" -> runs.evaluate(command)
                     "setVariable" -> runs.setVariable(command)
+                    "completions" -> runs.completions(command)
                     "runCode" -> runs.runCode(command)
                     "cancel" -> runs.cancel(command)
                     "exceptionInfo" -> runs.exceptionInfo(command)
@@ -367,6 +370,34 @@ object RunWorker {
                         addProperty("error", reason(failure))
                     } else {
                         add("variable", RunWorkerDebug.variable(state(variable)))
+                    }
+                }
+            }
+        }
+
+        /** Answers, as `evaluate` does, with the names that complete the name typed at the offset of the text in the frame. */
+        fun completions(command: JsonObject) {
+            val completion =
+                debuggers[command["id"].asLong]?.completions(
+                    command["frame"].asInt,
+                    command["text"].asString,
+                    command["offset"].asInt,
+                ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
+            completion.whenComplete { completions, failure ->
+                answer(command) {
+                    if (failure != null) {
+                        addProperty("error", reason(failure))
+                    } else {
+                        add(
+                            "completions",
+                            RunWorkerDebug.completions(
+                                CompletionsState(
+                                    completions.start(),
+                                    completions.length(),
+                                    completions.items().map { CompletionState(it.label(), it.kind()) },
+                                ),
+                            ),
+                        )
                     }
                 }
             }
@@ -675,7 +706,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 15
+        const val PROTOCOL = 16
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
