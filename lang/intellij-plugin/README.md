@@ -152,9 +152,12 @@ expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. It
 An uncaught exception stops the program where it is thrown, by default, and the exception is the
 frame's first variable; exception filter conditions and the exception's stack in the hint wait on
 LSP4IJ too (UP34, UP33). The
-Watches view and **Evaluate Expression** show expressions such as `point.x + 1` or `ints[i] > 0` in
-the selected frame, without running the program's code, and what is not evaluated shows why;
-LSP4IJ's debugger hover evaluates the name under the mouse. **Pause
+Watches view shows expressions such as `point.x + 1` or `ints[i] > 0` in the selected frame, without
+running the program's code, and what is not evaluated shows why; LSP4IJ's debugger hover evaluates
+the name under the mouse. **Evaluate Expression** evaluates them so too, and runs what that refuses,
+such as a call, as code on the stopped fiber, for at most two seconds, and what the code changed
+stays changed; the Variables view shows it the next time it reads the variables, since LSP4IJ does
+not handle the `invalidated` event yet (UP40). **Pause
 Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/remaining.md`, fixed in
 LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration has no stop-on-entry option. Debug is not offered for
 Gradle or command-line runs.

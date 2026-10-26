@@ -230,8 +230,8 @@ export function executionCases(): void {
 }
 
 /**
- * X304-X313, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry, watches,
- * conditions and logpoints, exception classes with exceptionInfo, and expressions with operators.
+ * X304-X314, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry, watches,
+ * conditions and logpoints, exception classes with exceptionInfo, expressions with operators, and code run from the Debug Console.
  */
 export function debugSessionCases(): void {
     playbook('X304', async (workspace, data) => {
@@ -745,6 +745,69 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X314', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const received: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent, received);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
+                assert.strictEqual(stack.stackFrames[0].name, data.frame);
+                const frameId: number = stack.stackFrames[0].id;
+                const evaluate = (expression: string, context: string): Thenable<{ result: string }> =>
+                    session.customRequest('evaluate', { expression, frameId, context });
+
+                // a call typed in the Debug Console runs on the stopped fiber, and VS Code is told to read the variables again
+                const [call, value] = data.call as string[];
+                assert.strictEqual((await evaluate(call, 'repl')).result, value);
+                await eventually(async () => dapEvents(sent, 'invalidated'), events => events.length > 0, 'The run invalidates the variables');
+                assert.deepStrictEqual(dapEvents(sent, 'invalidated')[0].body?.areas, ['variables']);
+                const [watch, watched] = data.watch as string[];
+                assert.strictEqual((await evaluate(watch, 'watch')).result, watched, 'What the call changed stays changed');
+
+                // a run that loops ends when it is cancelled, by its request's seq, and at the console's time limit when it is not
+                // the expected rejection is attached first, since the answer can come before the cancel's own
+                const looping = assert.rejects(Promise.resolve(evaluate(data.loop, 'repl')), (error: Error) => error.message.includes(data.cancelled));
+                const request = await eventually(async () => received.find(message =>
+                    message.command === 'evaluate' && message.arguments?.expression === data.loop), message => message !== undefined,
+                    'VS Code sends the loop to the debug adapter');
+                await session.customRequest('cancel', { requestId: request!.seq });
+                await looping;
+                await assert.rejects(Promise.resolve(evaluate(data.loop, 'repl')), (error: Error) => error.message.includes(data.limited));
+
+                // the program goes on from its stop, with the console's change
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -754,10 +817,13 @@ const stepCommands: Record<string, string> = {
     out: 'workbench.action.debug.stepOut',
 };
 
-/** Records every DAP message that Ecstasy debug adapters send VS Code. */
-function trackDebugSessions(sent: DapMessage[]): vscode.Disposable {
+/** Records every DAP message that Ecstasy debug adapters send VS Code, and, given [received], those VS Code sends them. */
+function trackDebugSessions(sent: DapMessage[], received?: DapMessage[]): vscode.Disposable {
     return vscode.debug.registerDebugAdapterTrackerFactory('xtc', {
-        createDebugAdapterTracker: () => ({ onDidSendMessage: (message: DapMessage) => { sent.push(message); } }),
+        createDebugAdapterTracker: () => ({
+            onDidSendMessage: (message: DapMessage) => { sent.push(message); },
+            onWillReceiveMessage: (message: DapMessage) => { received?.push(message); },
+        }),
     });
 }
 
@@ -769,12 +835,15 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that X285, X304 and X305 check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X314 cases check. */
 interface DapMessage {
+    seq?: number;
     type: string;
     event?: string;
     command?: string;
+    arguments?: { expression?: string };
     body?: {
+        areas?: string[];
         exitCode?: number;
         output?: string;
         reason?: string;

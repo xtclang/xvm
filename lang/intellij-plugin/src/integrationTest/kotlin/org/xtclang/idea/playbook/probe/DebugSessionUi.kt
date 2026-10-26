@@ -33,6 +33,8 @@ import com.intellij.xdebugger.frame.XValueContainer
 import com.intellij.xdebugger.frame.XValueNode
 import com.intellij.xdebugger.frame.XValuePlace
 import com.intellij.xdebugger.frame.presentation.XValuePresentation
+import com.intellij.xdebugger.impl.evaluate.XEvaluationOrigin
+import com.intellij.xdebugger.impl.ui.tree.nodes.XEvaluationCallbackWithOrigin
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
@@ -179,12 +181,31 @@ object DebugSessionUi {
         project: Project,
         module: String,
         expression: String,
+    ): String = evaluate(project, module, expression, null)
+
+    /**
+     * Evaluates an expression as [evaluate] does, as the evaluation's [origin] asks for it, such as `DIALOG` for the
+     * Evaluate Expression dialog: an evaluator learns the origin from the callback, as LSP4IJ's does, which sends it
+     * as DAP's context.
+     */
+    @JvmStatic
+    fun evaluateFrom(
+        project: Project,
+        module: String,
+        expression: String,
+        origin: String,
+    ): String = evaluate(project, module, expression, XEvaluationOrigin.valueOf(origin))
+
+    private fun evaluate(
+        project: Project,
+        module: String,
+        expression: String,
+        origin: XEvaluationOrigin?,
     ): String {
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
         val evaluator = checkNotNull(session.currentStackFrame?.evaluator) { "The debug session of $module has no frame evaluator" }
         val result = CompletableFuture<JsonObject>()
-        evaluator.evaluate(
-            expression,
+        val callback =
             object : XDebuggerEvaluator.XEvaluationCallback {
                 override fun evaluated(value: XValue) {
                     result.complete(presentation(expression, value))
@@ -192,6 +213,15 @@ object DebugSessionUi {
 
                 override fun errorOccurred(errorMessage: String) {
                     result.complete(JsonObject().apply { addProperty("error", errorMessage) })
+                }
+            }
+        evaluator.evaluate(
+            expression,
+            if (origin == null) {
+                callback
+            } else {
+                object : XDebuggerEvaluator.XEvaluationCallback by callback, XEvaluationCallbackWithOrigin {
+                    override fun getOrigin() = origin
                 }
             },
             null,
