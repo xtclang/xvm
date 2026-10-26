@@ -93,11 +93,13 @@ documented refusals, not open tasks; the few worth revisiting are under
   plugin's own `xtc/*` requests), and the check sends its edits before its requests. It passed five
   runs in a row afterwards, among them `run-13148533765814685610` and `run-9366023975714933137`.
 
-- [ ] Two playbook runs at once corrupt the language server's fat jar (2026-10-24): each rebuilt it
+- [x] Two playbook runs at once corrupted the language server's fat jar (2026-10-24): each rebuilt it
   while the other copied it, and the IntelliJ sandbox's `xtc-lsp-server.jar` and the plugin zip kept
   the broken copy ("bad zipfile offset"; the server fails with `NoClassDefFoundError`) as up to date,
-  since the jar's fingerprint matched the good one. Deleting the sandbox copy and running `buildPlugin`
-  again mended it. Run one playbook at a time until the copy is guarded.
+  since the jar's fingerprint matched the good one. Fixed in `05b538e55`: the fat jar, every copy of
+  it (VS Code's, the IntelliJ sandbox's, `runIde`'s) and the plugin zip's are checked, and one that
+  fails is deleted and fails the build, which the next build makes again. Two builds at once can
+  still fail, with that message; they do not wait for each other.
 - [ ] `:lang:intellij-plugin:testCompilerPlaybook` does not always run the cases asked for
   (2026-10-24 to 26): with the configuration cache reused it ran an earlier selection with an earlier
   catalog, and with `--no-configuration-cache` each run took the case list of the run before it, so
