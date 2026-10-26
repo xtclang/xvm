@@ -360,8 +360,13 @@ breakpoint list, which the editors replace.
   at the end. Kept: the about 130 statics a template sets when it is made, such as its `INSTANCE`,
   still hold the newest runtime until another is made; the servers make one runtime per process.
 - [ ] Parity between IntelliJ and VS Code.
-- [ ] Logs that correlate build ID, queue job, artifact revision, worker PID and generation, and run
-  ID.
+- [x] Logs that correlate build ID, queue job, artifact revision, worker PID and generation, and run
+  ID (`a87b63d9d`, 2026-10-26). A build's ID is its compiler queue job's, which the trace gives as
+  `id`; the build line gives each module with the start of its artifact's revision. The run's
+  start names its build and artifact, and the worker's lines name the run, the worker's PID and
+  its generation, which counts the workers the server started; `lsp-server/README.md` says how to
+  follow a run. `EmbeddedExecutionTest` checks one run's lines against each other and the trace.
+  Kept: the editors' own logs do not give these IDs.
 - [ ] Playbook and capability docs brought up to date.
 - [ ] Each runtime PR validated on its own.
 - Known limit kept: JIT runs are unsupported.
