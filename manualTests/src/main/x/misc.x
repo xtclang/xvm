@@ -967,7 +967,7 @@ module TestMisc {
             }
 
             @Override
-            String toString() = $"Derived[a={a}, b={b}]";
+            String toString() = $"Derived[{a=}, {b=}]";
         }
 
         const BaseConst {
@@ -985,7 +985,7 @@ module TestMisc {
             }
 
             @Override
-            String toString() = $"DerivedConst[a={a}, b={b}]";
+            String toString() = $"DerivedConst[{a=}, {b=}]";
         }
     }
 }
