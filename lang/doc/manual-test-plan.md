@@ -2137,17 +2137,11 @@ Controlled regressions in `XdkProjectQueryLifecycleTest` and `XdkCursorServerTes
 another module, close/reopen, configuration/dependency replacement, canceled/superseded queries and
 late disk changes before returning results. These races are hard to trigger reliably by hand.
 
-For closed-member input checks, version conversion, cancellation and the repeated retention workload:
+For closed-member input checks, version conversion, cancellation and the repeated retention
+workload, `graphQueryTest` runs those test classes of the server:
 
 ```bash
-./gradlew :lang:lsp-server:test \
-    --tests 'org.xvm.lsp.adapter.XdkRenameTest' \
-    --tests 'org.xvm.lsp.adapter.XdkProjectQueryTest' \
-    --tests 'org.xvm.lsp.adapter.XdkProjectQueryLifecycleTest' \
-    --tests 'org.xvm.lsp.server.XdkRenameServerTest' \
-    --tests 'org.xvm.lsp.server.XdkCursorServerTest' \
-    --tests 'org.xvm.lsp.adapter.XdkRetentionTest' \
-    --rerun --no-build-cache \
+./gradlew :lang:lsp-server:graphQueryTest --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 

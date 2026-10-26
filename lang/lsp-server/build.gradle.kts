@@ -260,6 +260,34 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.test {
+    serverTestSettings()
+}
+
+// The configured graph's query checks, which the manual test plan runs on their own (its section I): closed
+// members' inputs, version conversion, cancellation and the repeated retention workload
+tasks.register<Test>("graphQueryTest") {
+    group = "verification"
+    description = "Test the configured graph's queries: closed-member inputs, version conversion, cancellation and retention"
+    testClassesDirs =
+        sourceSets.test
+            .get()
+            .output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    serverTestSettings()
+    filter {
+        listOf(
+            "adapter.XdkRenameTest",
+            "adapter.XdkProjectQueryTest",
+            "adapter.XdkProjectQueryLifecycleTest",
+            "server.XdkRenameServerTest",
+            "server.XdkCursorServerTest",
+            "adapter.XdkRetentionTest",
+        ).forEach { includeTestsMatching("org.xvm.lsp.$it") }
+    }
+}
+
+/** What every run of the server's own tests shares, the whole suite's or a part's. */
+fun Test.serverTestSettings() {
     // Separate JVMs isolate compiler globals while each worker reuses its bundled XDK repository.
     // Do not enable JUnit method concurrency: several regressions deliberately alter compiler state.
     // Default to half the cores, capped because each worker holds its own XDK; -PlspTestForks overrides.
@@ -318,6 +346,12 @@ tasks.test {
         rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"),
         rootProject.layout.projectDirectory.file("test-fixtures/semantic-highlighting/SemanticColors.x"),
     )
+
+    // Process lifecycle regressions launch the same packaged server that IDEs consume.
+    val serverJar = fatJar.flatMap { it.archiveFile }
+    inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
+    dependsOn(fatJar)
+    systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
 }
 
 tasks.jar {
@@ -374,14 +408,6 @@ val fatJar =
         val jar = archiveFile
         doLast { requireWholeArchive(jar.get().asFile, "The language server's fat jar") }
     }
-
-// Process lifecycle regressions launch the same packaged server that IDEs consume.
-tasks.test {
-    val serverJar = fatJar.flatMap { it.archiveFile }
-    inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
-    dependsOn(fatJar)
-    systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
-}
 
 // Exercise the distributed artifact through the production launcher, separately from unit tests.
 val compilerStdioTest =
