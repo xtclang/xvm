@@ -1666,12 +1666,12 @@ public class xRTType
     }
 
     private ObjectHandle makeRegisterHandle(Frame frame, int nRegister) {
-        TypeComposition clz  = REGISTER_CLZCOMP;
-        MethodStructure ctor = REGISTER_CONSTRUCT;
+        TypeComposition clz  = m_clzRegister;
+        MethodStructure ctor = m_constructRegister;
         if (clz == null) {
             TypeConstant typeReg = pool().ensureEcstasyTypeConstant("reflect.Register");
-            REGISTER_CLZCOMP = clz = typeReg.ensureClass(frame);
-            REGISTER_CONSTRUCT = ctor = REGISTER_CLZCOMP.getTemplate().getStructure().findMethod("construct", 1);
+            m_clzRegister = clz = typeReg.ensureClass(frame);
+            m_constructRegister = ctor = m_clzRegister.getTemplate().getStructure().findMethod("construct", 1);
         }
 
         ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
@@ -1685,7 +1685,7 @@ public class xRTType
             DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
             hDeferred.addContinuation(frameCaller ->
                  Utils.constructArgument(
-                     frameCaller, REGISTER_CLZCOMP.getType(), frameCaller.popStack(), null));
+                     frameCaller, m_clzRegister.getType(), frameCaller.popStack(), null));
             return hDeferred;
         }
 
@@ -1752,13 +1752,13 @@ public class xRTType
      * @return the TypeConstant for {@code immutable ListMap<String, Type>}
      */
     public static TypeConstant ensureListMapType(Container container) {
-        TypeConstant type = LISTMAP_TYPE;
+        TypeConstant type = INSTANCE.m_typeListMap;
         if (type == null) {
             ConstantPool pool = container.getConstantPool();
 
             type = pool.ensureParameterizedTypeConstant(
                     pool.typeListMap(), pool.typeString(), pool.typeType());
-            LISTMAP_TYPE = type = pool.ensureImmutableTypeConstant(type);
+            INSTANCE.m_typeListMap = type = pool.ensureImmutableTypeConstant(type);
         }
         return type;
     }
@@ -1919,10 +1919,10 @@ public class xRTType
 
     private static TypeConstant  TYPE_ARRAY_TYPE;
     private static ArrayConstant EMPTY_TYPE_ARRAY;
-    private static TypeConstant  LISTMAP_TYPE;
 
-    private static TypeComposition REGISTER_CLZCOMP;
-    private static MethodStructure REGISTER_CONSTRUCT;
+    private TypeConstant    m_typeListMap;
+    private TypeComposition m_clzRegister;
+    private MethodStructure m_constructRegister;
 
     private static PropertyConstant PROP_CALCULATE;
     private static PropertyConstant PROP_HASHER;

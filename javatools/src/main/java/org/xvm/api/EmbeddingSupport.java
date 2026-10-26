@@ -256,6 +256,20 @@ public class EmbeddingSupport {
     }
 
     /**
+     * Shut down this instance's interpreter, if it has one, so that its runtime can be collected;
+     * a later run starts another. The singleton's interpreter lasts as long as the JVM; this is for
+     * the tests, which make instances of their own.
+     */
+    void shutdownInterpreter() {
+        synchronized (LOCK) {
+            if (connector != null) {
+                connector.shutdown();
+                connector = null;
+            }
+        }
+    }
+
+    /**
      * Diagnostics for a host that keeps the runtime across runs: the external consoles that runs
      * registered and that are still registered. A run releases its console when it ends, so this is
      * zero between runs; JIT runs register none.
