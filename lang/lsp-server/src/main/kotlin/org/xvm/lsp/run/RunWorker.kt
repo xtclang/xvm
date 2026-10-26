@@ -53,7 +53,8 @@ import kotlin.time.toJavaDuration
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
  * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
  * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`), `runCode` (`id`, `request`, `frame`, `expression`,
- * `limit` in milliseconds), `cancel` (`id`, `request` of a `runCode`), `exceptionInfo` (`id`, `request`, `thread`),
+ * `limit` in milliseconds, `program`), `cancel` (`id`, `request` of a `runCode`), `exceptionInfo` (`id`, `request`,
+ * `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -340,7 +341,8 @@ object RunWorker {
 
         /**
          * Answers, as `evaluate` does, with the value of code run on the fiber that waits at the frame, for at most
-         * the request's `limit` in milliseconds, which the server chooses.
+         * the request's `limit` in milliseconds, which the server chooses, and with `program`, the whole program
+         * meanwhile.
          */
         fun runCode(command: JsonObject) {
             val run =
@@ -348,6 +350,7 @@ object RunWorker {
                     command["frame"].asInt,
                     command["expression"].asString,
                     command["limit"].asLong.milliseconds.toJavaDuration(),
+                    command["program"]?.asBoolean == true,
                 ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
             val request = command["request"].asLong
             running[request] = run
@@ -631,7 +634,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 10
+        const val PROTOCOL = 11
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

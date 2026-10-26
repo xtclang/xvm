@@ -322,20 +322,23 @@ internal class RunWorkerProcess(
         }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
 
     /**
-     * Runs code in a stopped frame, on the fiber that waits there, for at most [limit]; fails with the reason when it
-     * cannot. Cancelling the answer ends the run: the worker is told, and its late reply is dropped.
+     * Runs code in a stopped frame, on the fiber that waits there, for at most [limit], and with [program], the whole
+     * program meanwhile; fails with the reason when it cannot. Cancelling the answer ends the run: the worker is told,
+     * and its late reply is dropped.
      */
     fun runCode(
         id: Long,
         frame: Int,
         expression: String,
         limit: Duration,
+        program: Boolean,
     ): CompletableFuture<VariableState> {
         val (number, reply) =
             send("runCode", id) {
                 addProperty("frame", frame)
                 addProperty("expression", expression)
                 addProperty("limit", limit.inWholeMilliseconds)
+                addProperty("program", program)
             }
         val answer = reply.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
         answer.whenComplete { _, failure ->

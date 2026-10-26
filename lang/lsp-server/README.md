@@ -640,7 +640,11 @@ there, for at most two seconds; only the fibers of the services it calls run mea
 program stays stopped. Its answer is its value's `toString()`, `(no value)` for a statement, or the
 reason it failed: a compile error, what it threw, or its time limit. `cancel` ends it sooner, and
 it answers `cancelled`. What the code changes stays changed, and once it has run, an `invalidated`
-event for the `variables` area tells a client that takes it to read the variables again. Without a
+event for the `variables` area tells a client that takes it to read the variables again. A launch
+with `evaluationRunsProgram` lets the whole program run while such code does, for code that waits
+on work that the program's other fibers do: they run without stopping at breakpoints, exceptions or
+pauses, its clocks run, and once the code has run they wait again at their next line, so the
+`invalidated` event is then for `all` areas. Without a
 frame, a line typed in the debug console is the program's input. What
 the program printed before it stopped is sent before the stop. Terminating or disconnecting a
 stopped program ends it where it is, without running more of it. The session advertises

@@ -9708,6 +9708,31 @@
         ]
       }
     },
+    "X315": {
+      "title": "a debug launch that lets the program run while console code does answers code that waits on another fiber's work, which a stop otherwise holds",
+      "manual": [
+        "How each editor's launch configuration shows the option is checked manually; VS Code checks the console's answer, the invalidated event for all areas and the program's exit, IntelliJ the answer of the Evaluate Expression dialog and the program's exit."
+      ],
+      "values": {
+        "file": "DebugWaits.x",
+        "module": "DebugWaits",
+        "source": "module DebugWaits {\n    service Worker {\n        Int done;\n\n        void work() {\n            for (Int i : 0 ..< 200_000) {\n                ++done;\n            }\n        }\n\n        Int finished() = done;\n    }\n\n    Int run() {\n        Worker worker = new Worker();\n        worker.work^();\n        @Inject Console console;\n        console.print(\"working\");\n        Int done = worker.finished();\n        console.print($\"done {done}\");\n        return done % 256;\n    }\n}\n",
+        "breakpointLine": 18,
+        "frame": "DebugWaits.run",
+        "call": [
+          "worker.finished()",
+          "200000"
+        ],
+        "exitCode": 64,
+        "output": "done 200000"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ does not handle invalidated (UP40, LSP4IJ #1766), so IntelliJ checks the answer of the Evaluate Expression dialog and the exit; the invalidated event is checked in VS Code."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

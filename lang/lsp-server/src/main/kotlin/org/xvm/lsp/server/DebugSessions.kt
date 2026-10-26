@@ -182,7 +182,8 @@ internal class DebugSessions(
             frameId: Int,
             expression: String,
             limit: Duration,
-        ) = runs.runCode(runId, frameId, expression, limit)
+            program: Boolean,
+        ) = runs.runCode(runId, frameId, expression, limit, program)
 
         override fun exceptionInfo(
             runId: String,
