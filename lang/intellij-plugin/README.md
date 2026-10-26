@@ -146,7 +146,9 @@ With the embedded compiler, a configuration can also be debugged: **Debug** star
 in the language server, which builds and runs the module as Run does, in the same execution worker,
 with LSP4IJ's DAP client as the debugger. Line breakpoints can be set in `.x` files; they are
 verified when the program starts, and a breakpoint or `assert:debug` stops the program, with its
-line, call stack and the other fibers that wait shown in the Debug tool window. Its Variables view
+line, call stack and the other fibers that wait shown in the Debug tool window. The running program
+keeps the code it was built from, so once the file is edited a breakpoint is placed on the line it
+was built with, and one on a line changed since is marked invalid, saying why. Its Variables view
 shows the frame's locals and expands objects and arrays, a large array to its first 100 elements and
 how many more there are, since LSP4IJ does not read a variable's children a page at a time (UP42 in
 `docs/remaining.md`); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy

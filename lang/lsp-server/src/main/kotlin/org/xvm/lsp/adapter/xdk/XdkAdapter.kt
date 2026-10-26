@@ -508,6 +508,7 @@ class XdkAdapter
                                     ?.entries
                                     ?.associate { (file, text) -> sources.uri(file) to XdkBuild.sha256(text) }
                                     .orEmpty(),
+                            texts = sources?.inputs?.text.orEmpty(),
                             dependencies = analysis.inputs.modules.mapValues { (_, artifact) -> artifact.revision },
                         )
                 }
@@ -516,6 +517,14 @@ class XdkAdapter
                 XdkBuild.cancelled(folder)
             }
         }
+
+        /**
+         * The text of the source file [file], a canonical file, as the editor has it now, saved or not, or as it is on
+         * disk when it is not open; null when it can be read neither way.
+         */
+        fun sourceText(file: File): String? =
+            synchronized(lifecycle) { overlays.entries.firstOrNull { XdkSources.file(it.key) == file }?.value }
+                ?: runCatching { file.readText() }.getOrNull()
 
         /** Source modules whose latest compilation declares a callable entry point. */
         fun runnableTargets(): List<XdkRunnableTarget> =
