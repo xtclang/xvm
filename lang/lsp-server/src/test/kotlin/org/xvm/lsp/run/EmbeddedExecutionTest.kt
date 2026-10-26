@@ -10,6 +10,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
@@ -40,6 +41,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
@@ -1251,6 +1253,134 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    @Tag("heavy")
+    fun `repeated builds, runs, stops and debug sessions on one worker leave no run, session, thread or process behind`() {
+        CompilerTestSupport.configure()
+        val soak = source("Soak.x", soak(0))
+        val path = directory.resolve("Soak.x").toString()
+        val client = SoakClient()
+        val reports = mutableListOf<RunWorkerProcess.Usage>()
+        val pids = mutableSetOf<Long>()
+        val debugged = mutableListOf<String>()
+        // the heap a worker reports is what is in use after it calls System.gc(), which need not collect anything, so
+        // no heap use retires this worker; what the soak checks is counted
+        val counted = RunWorkerProcess.Limits(heap = Long.MAX_VALUE, growth = Long.MAX_VALUE)
+        RunWorkerProcess(limits = counted).use { workers ->
+            XdkAdapter().use { adapter ->
+                adapter.initializeWorkspace(listOf(directory.toString()))
+                adapter.replaceSourceModules(listOf(XdkSourceModule("Soak", soak)))
+                val runs = EmbeddedRuns(adapter, { client }, workers)
+                val sessions = DebugSessions(runs, { client })
+
+                // what the worker kept after the run that just ended, which it reports after the run's exit
+                fun measured() {
+                    soon(30).until {
+                        workers
+                            .usage()
+                            .values
+                            .singleOrNull()
+                            ?.run
+                            .let { it != null && it != reports.lastOrNull()?.run }
+                    }
+                    reports += workers.usage().values.single()
+                    pids += workers.workerPids()
+                }
+
+                // a debug session of the module, stopped at its breakpoint in twice(): its session ID, thread and frame
+                fun stopped(round: Int): Triple<String, Int, Int> {
+                    val id = sessions.start().sessionId.also(debugged::add)
+                    sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                    sessions.request(id, 2, "launch", """{"module": "Soak", "moduleUri": "$soak"}""")
+                    sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 14}]}""")
+                    sessions.request(id, 4, "configurationDone")
+                    val stop = client.until(id) { it.event == "stopped" }
+                    assertThat(stop.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                        .contains("round $round\n")
+                    val thread = stop.last()["body"].asJsonObject["threadId"].asInt
+                    sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+                    val frame =
+                        client
+                            .until(id) { it.response == "stackTrace" }
+                            .last()["body"]
+                            .asJsonObject["stackFrames"]
+                            .asJsonArray
+                            .first()
+                            .asJsonObject
+                    assertThat(frame["name"].asString to frame["line"].asInt).isEqualTo("Soak.twice" to 14)
+                    return Triple(id, thread, frame["id"].asInt)
+                }
+
+                for (round in 1..SOAK_ROUNDS) {
+                    // an edit, which the build compiles as the editor's unsaved text, and a run of it to its exit
+                    adapter.compile(soak, soak(round))
+                    assertThat(runs.run(RunParams(module = "Soak", runId = "exits-$round")).get(60, SECONDS).runId).isNotNull()
+                    assertThat(client.exit("exits-$round").get(60, SECONDS).exitCode).isEqualTo(42)
+                    assertThat(client.output("exits-$round")).contains("round $round\n", "after 42")
+                    measured()
+
+                    // a run stopped while it runs
+                    runs.run(RunParams(module = "Soak", args = listOf("spin"), runId = "stops-$round")).get(60, SECONDS)
+                    soon(60).until { "round $round\n" in client.output("stops-$round") }
+                    assertThat(runs.stop(StopRunParams("stops-$round"))).isTrue()
+                    client.exit("stops-$round").get(60, SECONDS)
+                    assertThat(client.output("stops-$round")).doesNotContain("after")
+                    measured()
+
+                    // a debug session: a watch and a cancelled console run where it stops, then on to its exit
+                    stopped(round).let { (id, thread, frame) ->
+                        sessions.request(id, 6, "evaluate", """{"expression": "n * 2 + 1", "frameId": $frame, "context": "watch"}""")
+                        assertThat(
+                            client
+                                .until(id) { it.response == "evaluate" }
+                                .last()["body"]
+                                .asJsonObject["result"]
+                                .asString,
+                        ).isEqualTo("43")
+                        sessions.request(id, 7, "evaluate", """{"expression": "spin()", "frameId": $frame, "context": "repl"}""")
+                        sessions.request(id, 8, "cancel", """{"requestId": 7}""")
+                        assertThat(client.until(id) { it.response == "evaluate" }.last()["message"].asString).isEqualTo("cancelled")
+                        sessions.request(id, 9, "continue", """{"threadId": $thread}""")
+                        val rest = client.until(id) { it.event == "terminated" }
+                        assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+                        sessions.end(DebugSessionParams(id))
+                    }
+                    measured()
+
+                    // a debug session terminated while console code runs where it stopped, whose answer then fails
+                    stopped(round).let { (id, _, frame) ->
+                        sessions.request(id, 6, "evaluate", """{"expression": "spin()", "frameId": $frame, "context": "repl"}""")
+                        sessions.request(id, 7, "terminate")
+                        val rest = client.until(id) { it.event == "terminated" }
+                        assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(1)
+                        val answer =
+                            rest.singleOrNull { it.response == "evaluate" } ?: client.until(id) { it.response == "evaluate" }.last()
+                        assertThat(answer["success"].asBoolean).isFalse()
+                        sessions.end(DebugSessionParams(id))
+                    }
+                    measured()
+                }
+                println("soak of $SOAK_ROUNDS rounds, the worker's threads after each run: ${reports.map { it.threads }}")
+
+                // the JDK's own pools, such as the common pool's, start threads as they are needed and are not counted
+                assertThat(pids).describedAs("one worker served every run").hasSize(1)
+                assertThat(reports).hasSize(4 * SOAK_ROUNDS).allSatisfy {
+                    assertThat(it.consoles).isZero()
+                    assertThat(it.runs).isZero()
+                    assertThat(it.poolThreads).isPositive().isEqualTo(reports.first().poolThreads)
+                    assertThat(it.threads).isLessThan(counted.threads)
+                }
+                assertThat(runs.tracked()).isZero()
+                assertThat(sessions.tracked()).isZero()
+                // each session's message thread ends with its session
+                val threads = debugged.map { "xtc-debug-$it" }
+                soon(30).until { Thread.getAllStackTraces().keys.none { it.name in threads } }
+            }
+        }
+        // closing the workers ends the worker process
+        soon(30).until { pids.none { pid -> ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false) } }
+    }
+
+    @Test
     fun `runs do not start the runner's HTTP endpoint`() {
         assertThat(run("Exit").output).doesNotContain("Runner is listening")
     }
@@ -1633,6 +1763,31 @@ class EmbeddedExecutionTest {
         }
     }
 
+    /** Records each run's output and exit by run ID, and the debug sessions' messages, as [DebugClient] does. */
+    private class SoakClient(
+        private val debug: DebugClient = DebugClient(),
+    ) : XtcLanguageClient by debug {
+        private val outputs = ConcurrentHashMap<String, StringBuffer>()
+        private val exits = ConcurrentHashMap<String, CompletableFuture<RunExitedParams>>()
+
+        override fun runOutput(params: RunOutputParams) {
+            outputs.computeIfAbsent(params.runId) { StringBuffer() }.append(params.text)
+        }
+
+        override fun runExited(params: RunExitedParams) {
+            exit(params.runId).complete(params)
+        }
+
+        fun output(runId: String) = outputs[runId]?.toString().orEmpty()
+
+        fun exit(runId: String): CompletableFuture<RunExitedParams> = exits.computeIfAbsent(runId) { CompletableFuture() }
+
+        fun until(
+            sessionId: String,
+            last: (JsonObject) -> Boolean,
+        ) = debug.until(sessionId, last)
+    }
+
     /** Sends a DAP request; without [arguments], it has none, as VS Code sends `configurationDone`. */
     private fun DebugSessions.request(
         sessionId: String,
@@ -1690,6 +1845,44 @@ class EmbeddedExecutionTest {
     }
 
     private companion object {
+        /** Rounds of the soak, each with four runs: five, or `-Plsp.soakRounds` for a longer soak. */
+        val SOAK_ROUNDS =
+            System.getProperty("xtc.lsp.soakRounds", "5").toInt().also {
+                require(it >= 1) { "The soak requires at least one round" }
+            }
+
+        /**
+         * The soak's module as a round edits it, printing the round: twice() is on lines 13 to 16, and run() runs until it
+         * is stopped when it has an argument.
+         */
+        fun soak(round: Int) =
+            """
+            module Soak {
+                Int run(String[] args) {
+                    @Inject Console console;
+                    console.print("round $round");
+                    Int n = twice(21);
+                    if (args.size > 0) {
+                        spin();
+                    }
+                    console.print($"after {n}");
+                    return n;
+                }
+
+                Int twice(Int n) {
+                    Int result = n * 2;
+                    return result;
+                }
+
+                void spin() {
+                    Int count = 0;
+                    while (True) {
+                        ++count;
+                    }
+                }
+            }
+            """.trimIndent()
+
         const val FOREVER =
             """
             module Forever {
