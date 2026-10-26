@@ -35,6 +35,40 @@ below remain unchanged; [the rebase commit map](errs-rebase-2026-10-05.tsv) maps
 commits to the 588 replayed commits and two changes absorbed upstream. See
 [the rebase checkpoint](#master-rebase-checkpoint-2026-10-05) for integration and validation.
 
+**errs and #693 rebased onto master `5130e4211` (2026-10-26).** Master had moved by #713, #727,
+#725, #723, #728, #720 and #711. Commit references in these records made before this entry are to
+the old history: [the rebase commit map](errs-rebase-2026-10-26.tsv) maps errs' 1014 old commits to
+1009 replayed ones and five that master absorbed. Those five are the AGENTS.md rule (#713), the
+typescript-eslint bump (#725's is newer) and the three weak-map commits (#720 is their reviewed
+fix). The old tips are kept locally as `backup/errs-pre-rebase-20261026` (`ff0d4509e`) and
+`backup/693-pre-rebase-20261026` (`e89299190`), and in a verified bundle of both,
+`~/src/xvm-rebase-backups-20261026/errs-and-693.bundle`.
+
+- Conflicts, resolved the same way on both branches:
+  - `EMB-5`: both pass `{e, message}`. #727 made it print the exception, and this branch prints
+    both (`Internal error: {1}. Cause: {0}`), which is kept.
+  - `package.json` and its lock file: #725's typescript-eslint `^8.72.0` and this branch's `yauzl`
+    are both kept.
+  - `runTest.ts` and `lang/vscode-extension/build.gradle.kts`: this branch's own versions are kept,
+    since 20 and 6 of its commits change them after master's changes. #728's
+    `chat.disableAIFeatures` (`a34da1fd4`) and #711's Marketplace packaging (`2db3347c9`) are
+    ported onto them as two commits at the end; on #693 those are `5dd049477` and `bbb7fcdba`, the
+    latter keeping #693's separate `dap-server.jar`.
+- The rebased trees differ from the old ones only by master's changes, and on #693 also by #713's
+  AGENTS.md and #720's reviewed weak map.
+- Validation:
+  - errs: `:javatools:test` 683, 42 skips; `:javatools_utils:test` 122; `:lang:dap-server:test` 32;
+    `:lang:lsp-server:test` 2395 (2 skipped); `:lang:intellij-plugin:test` 151; spotlessCheck.
+    Both VSIXes build, 0.4.4 and a 0.4.999 Marketplace pre-release, with the configuration cache.
+  - #693: `:javatools:test` 607, 42 skips; `:javatools_utils:test` 122; `:lang:dap-server:test` 3;
+    `:lang:lsp-server:test` 2376 (2 skipped); `:lang:intellij-plugin:test` 146; both VSIXes, with
+    `dap-server.jar`.
+  - The first errs run, with five suites at once, failed
+    `SessionDebuggerTest.anotherServicesWaitingFiberHasItsVariablesAndStandsStillAndAStepEndsInTheSteppedFiber`
+    once. The spinner was caught at its `for` line before `count` exists, and the test does not
+    control that. It passed 8 times alone, and the whole suite passed.
+- Pushed with leases: errs `ff0d4509e..2db3347c9`, #693 `e89299190..f863ffabd`.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
