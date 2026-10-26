@@ -209,7 +209,10 @@ their values like variables; what is not evaluated, such as a call or a name the
 have, shows why. The Debug Console evaluates them so too, and runs what that refuses, such as
 `box.bump(n)`, as code on the stopped fiber, for at most two seconds: it answers with the value as
 its `toString()` makes it, or the reason it failed, and what the code changed stays changed, which
-the Variables view shows as it reads the variables again. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+the Variables view shows as it reads the variables again. Only that code, and the services it calls, run
+meanwhile, so code that waits on work the program's other fibers do waits out its time; with a
+configuration's `evaluationRunsProgram`, the rest of the program runs too while it does, without
+stopping at breakpoints, and its threads and stacks may then have moved. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
 says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
@@ -223,7 +226,8 @@ A launch configuration in `.vscode/launch.json` selects the module, entry method
     "method": "run",          // optional, defaults to "run"
     "args": "arg1,arg2",      // optional: comma-separated, or an array passed exactly as given
     "cwd": "${workspaceFolder}",  // optional: the program's root directory; the folder that owns the module by default
-    "stopOnEntry": false        // optional: stop at the program's first line
+    "stopOnEntry": false,       // optional: stop at the program's first line
+    "evaluationRunsProgram": false  // optional: let the program run while Debug Console code does
 }
 ```
 

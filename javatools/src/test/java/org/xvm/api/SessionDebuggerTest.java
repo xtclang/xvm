@@ -57,6 +57,7 @@ import org.xvm.runtime.SessionDebugger.Variable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
@@ -307,6 +308,45 @@ public class SessionDebuggerTest {
                     @Inject Console console;
                     console.print("spinning");
                     console.print("stepped");
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() starts a Worker service counting to 3,000,000, one line at a time, and
+     * stops at line 18, while it counts, then asks it for its count, prints it and returns it;
+     * the count is on line 7. busy() adds up 0 to 19,999, which is 199,990,000.
+     */
+    private static final String PROGRAM = """
+            module Program {
+                service Worker {
+                    Int done;
+
+                    void work() {
+                        for (Int i : 0 ..< 3_000_000) {
+                            ++done;
+                        }
+                    }
+
+                    Int finished() = done;
+                }
+
+                Int run() {
+                    Worker worker = new Worker();
+                    worker.work^();
+                    @Inject Console console;
+                    console.print("working");
+                    Int done = worker.finished();
+                    console.print($"done {done}");
+                    return done;
+                }
+
+                Int busy() {
+                    Int sum = 0;
+                    for (Int i : 0 ..< 20_000) {
+                        sum += i;
+                    }
+                    return sum;
                 }
             }
             """;
@@ -1618,6 +1658,61 @@ public class SessionDebuggerTest {
         session.resume();
         assertTimeoutPreemptively(RUN_LIMIT, control::close);
         assertFalse(control.running());
+    }
+
+    @Test
+    public void aRunOfTheWholeProgramLetsItsOtherFibersRunPastTheirBreakpointsAndThenWaitAgainFurtherOn()
+            throws Exception {
+        Path  source  = compile("Program", PROGRAM);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Program"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 18)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Program", output, session);
+        try (control) {
+            Stop stop = stops.next();
+            // the worker's fiber waits at a line of its loop, part of the way through it
+            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+                while (session.threads().size() < 2) {
+                    Thread.sleep(10);
+                }
+            });
+            int main   = session.stackTrace(stop.threadId()).getFirst().id();
+            int worker = session.threads().stream().filter(t -> t.id() != stop.threadId()).findFirst().orElseThrow().id();
+            int frame  = session.stackTrace(worker).getFirst().id();
+            long count = Long.parseLong(evaluate(session, frame, "done").value());
+
+            // while the whole program runs, the worker counts on, past a breakpoint on its count,
+            // which does not stop it; once the run ends, it waits again, further on, with frames
+            // of its own, and its old ones no longer read anything
+            session.setBreakpoints(source.toString(), List.of(new Line(1, 18), new Line(2, 7)));
+            assertEquals("199990000", session.run(main, "busy()", RUN_LIMIT, true)
+                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+                while (session.threads().size() < 2) {
+                    Thread.sleep(10);
+                }
+            });
+            int again = session.stackTrace(worker).getFirst().id();
+            assertNotEquals(frame, again);
+            assertTrue(Long.parseLong(evaluate(session, again, "done").value()) > count);
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.", session,
+                    frame, "done");
+
+            // code that waits on the worker's work gets its answer, once the worker is done
+            assertEquals("3000000", session.run(main, "worker.finished()", RUN_LIMIT, true)
+                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertTrue(session.isStopped());
+
+            // the program goes on from its stop, which the worker's breakpoint never added to
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(3_000_000L, control.result());
+            assertTrue(output.toString().contains("done 3000000"), output.toString());
+            assertNull(stops.poll());
+        }
     }
 
     @Test

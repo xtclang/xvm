@@ -328,13 +328,17 @@ internal class EmbeddedRuns(
         expression: String,
     ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression) }
 
-    /** Runs code in a frame of a stopped program under the debugger, for at most [limit]; cancelling it ends the run. */
+    /**
+     * Runs code in a frame of a stopped program under the debugger, for at most [limit], and with [program], the whole
+     * program meanwhile; cancelling it ends the run.
+     */
     internal fun runCode(
         runId: String,
         frame: Int,
         expression: String,
         limit: Duration,
-    ): CompletableFuture<VariableState> = debugged(runId) { worker.runCode(it, frame, expression, limit) }
+        program: Boolean,
+    ): CompletableFuture<VariableState> = debugged(runId) { worker.runCode(it, frame, expression, limit, program) }
 
     /** The exception a fiber of a stopped program under the debugger stopped it at; null for another stop. */
     internal fun exceptionInfo(

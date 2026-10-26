@@ -73,6 +73,23 @@ object DebugSessionUi {
         module: String,
         uri: String,
         breakpointLine: Int,
+    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = false)
+
+    /** Starts Debug as [debug] does, with a configuration that lets the program run while Evaluate Expression runs code. */
+    @JvmStatic
+    fun debugRunningProgram(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = true)
+
+    private fun debug(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+        evaluationRunsProgram: Boolean,
     ) {
         watch(project)
         sessions.remove(name(module))
@@ -88,6 +105,7 @@ object DebugSessionUi {
                 moduleName = module
                 moduleUri = uri
                 runWith = XtcRunMode.PROJECT
+                this.evaluationRunsProgram = evaluationRunsProgram
             }
             runManager.setTemporaryConfiguration(settings)
             ProgramRunnerUtil.executeConfiguration(settings, DefaultDebugExecutor.getDebugExecutorInstance())
