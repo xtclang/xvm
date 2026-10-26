@@ -812,6 +812,20 @@ public abstract class xConstrainedInteger
         return l1 % l2;
     }
 
+    /**
+     * @return the number of bits of this type's values
+     */
+    public int getNumBits() {
+        return f_cNumBits;
+    }
+
+    /**
+     * @return true if this type's values are signed
+     */
+    public boolean isSigned() {
+        return f_fSigned;
+    }
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected final long f_cMinValue;

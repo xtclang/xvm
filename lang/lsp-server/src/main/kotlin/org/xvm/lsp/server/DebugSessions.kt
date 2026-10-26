@@ -169,13 +169,15 @@ internal class DebugSessions(
         override fun variables(
             runId: String,
             reference: Int,
-        ) = runs.variables(runId, reference)
+            hex: Boolean,
+        ) = runs.variables(runId, reference, hex)
 
         override fun evaluate(
             runId: String,
             frameId: Int,
             expression: String,
-        ) = runs.evaluate(runId, frameId, expression)
+            hex: Boolean,
+        ) = runs.evaluate(runId, frameId, expression, hex)
 
         override fun run(
             runId: String,
@@ -183,7 +185,8 @@ internal class DebugSessions(
             expression: String,
             limit: Duration,
             program: Boolean,
-        ) = runs.runCode(runId, frameId, expression, limit, program)
+            hex: Boolean,
+        ) = runs.runCode(runId, frameId, expression, limit, program, hex)
 
         override fun exceptionInfo(
             runId: String,

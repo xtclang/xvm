@@ -76,6 +76,12 @@
                 "title": "Ecstasy: Configure Compiler Paths"
             },
             {
+                "command": "xtc.debug.toggleHexValues",
+                "title": "Show Values as Hexadecimal",
+                "category": "Ecstasy",
+                "toggled": "xtc.debug.hexValues"
+            },
+            {
                 "command": "xtc.showCompilerPaths",
                 "title": "Ecstasy: Show Effective Compiler Paths"
             },
@@ -173,6 +179,20 @@
             }
         ],
         "menus": {
+            "debug/variables/context": [
+                {
+                    "command": "xtc.debug.toggleHexValues",
+                    "when": "debugType == 'xtc'",
+                    "group": "z_commands@1"
+                }
+            ],
+            "debug/watch/context": [
+                {
+                    "command": "xtc.debug.toggleHexValues",
+                    "when": "debugType == 'xtc'",
+                    "group": "z_commands@1"
+                }
+            ],
             "editor/title/run": [
                 {
                     "command": "xtc.runModule",

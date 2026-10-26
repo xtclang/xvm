@@ -195,7 +195,11 @@ starts, and a breakpoint or `assert:debug` stops the program: the editor shows t
 Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
 the selected frame's locals, and expands objects into their fields and arrays into their elements.
 An object's computed properties and its `toString()` follow its fields as lazy variables: their
-values run the program's code, for at most a second, so they show only once you click them.
+values run the program's code, for at most a second, so they show only once you click them. A
+mutable object's value ends with its identity code, such as `#1023456`, which tells two objects with
+the same fields apart. Right-click in the Variables or Watch view and choose **Show Values as
+Hexadecimal** to see integers as `0xFF`, a negative one in its type's two's complement; choose it
+again for decimals.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
 caller. A breakpoint can have a condition, an expression such as `done` or `i % 2 == 0 && i > 0`, and
 a hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with

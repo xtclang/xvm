@@ -766,6 +766,19 @@ class EmbeddedExecutionTest {
             assertThat(variables(33, fields.last()["variablesReference"].asInt).map { it["name"].asString to it["value"].asString })
                 .containsExactly("toString()" to "\"Box\"")
 
+            // a request's hex format shows the integers in hexadecimal
+            sessions.request(id, 34, "variables", """{"variablesReference": $locals, "format": {"hex": true}}""")
+            val hex =
+                client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .associate { it["name"].asString to it["value"].asString }
+            assertThat(hex["n"]).isEqualTo("0x5")
+            assertThat(hex["shown"]).isEqualTo("0x6")
+
             // a run that loops ends when it is cancelled, and at the console's time limit when it is not
             sessions.request(id, 8, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             sessions.request(id, 9, "cancel", """{"requestId": 8}""")

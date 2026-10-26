@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -441,6 +442,39 @@ public class SessionDebuggerTest {
                     box.count = 5;
                     console.print($"{point.sum} {box.count}");
                     return box.count;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints, on line 23, integers of several sizes and signs, two Boxes with
+     * the same fields, a const Pair, and an array it adds to.
+     */
+    private static final String FORMATS = """
+            module Formats {
+                class Box {
+                    Int count;
+                    Int twice.get() = count * 2;
+                }
+
+                const Pair(Int a, Int b);
+
+                Int run() {
+                    Int    big   = 255;
+                    Int    minus = -1;
+                    Int8   small = -1;
+                    UInt8  octet = 200;
+                    Int128 wide  = -2;
+                    UInt64 top   = UInt64.MaxValue;
+                    Box    one   = new Box();
+                    Box    two   = new Box();
+                    Pair   pair  = new Pair(1, 2);
+                    Int[]  list  = new Int[];
+                    one.count = 8;
+                    list.add(1);
+                    @Inject Console console;
+                    console.print($"{big} {minus} {small} {octet} {wide} {top} {one.count} {two.count} {pair} {list}");
+                    return 0;
                 }
             }
             """;
@@ -1496,6 +1530,57 @@ public class SessionDebuggerTest {
             assertTrue(output.toString().contains("7 6"), output.toString());
             assertEquals(6L, control.result());
             assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
+    public void integersShowInHexadecimalWhenAskedAndMutableObjectsHaveIdentityCodes() throws Exception {
+        Path  source  = compile("Formats", FORMATS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Formats"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 23)));
+
+        Control control = run("Formats", new StringWriter(), session);
+        try (control) {
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+            int  scope = session.scopes(frame).getFirst().variablesReference();
+            var  plain = byName(read(session, scope));
+            var  hex   = byName(session.variables(scope, true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+
+            // in decimal by default, and in hexadecimal when asked: a negative value of a type of fixed size in its
+            // two's complement
+            assertEquals(List.of("255", "-1", "-1", "200", "-2", "18446744073709551615"),
+                    Stream.of("big", "minus", "small", "octet", "wide", "top").map(name -> plain.get(name).value()).toList());
+            assertEquals(List.of("0xFF", "0xFFFFFFFFFFFFFFFF", "0xFF", "0xC8", "0x" + "F".repeat(31) + "E", "0xFFFFFFFFFFFFFFFF"),
+                    Stream.of("big", "minus", "small", "octet", "wide", "top").map(name -> hex.get(name).value()).toList());
+            assertEquals("Int8", hex.get("small").type());
+
+            // an evaluation, a run, a field and a lazy variable's value too
+            assertEquals("0x100", session.evaluate(frame, "big + 1", true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("0x1FE", session.run(frame, "big * 2", RUN_LIMIT, false, true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("510", runCode(session, frame, "big * 2").value());
+            var one = byName(session.variables(plain.get("one").variablesReference(), true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            assertEquals("0x8", one.get("count").value());
+            assertEquals("0x10", session.variables(one.get("twice").variablesReference(), true)
+                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).getFirst().value());
+
+            // a mutable object or array has an identity code that tells it from another with the same fields, the
+            // same at each read; a const has none
+            String first  = plain.get("one").value();
+            String second = plain.get("two").value();
+            assertTrue(first.matches(".+ #\\d+"), first);
+            assertTrue(second.matches(".+ #\\d+"), second);
+            assertNotEquals(first, second);
+            assertEquals(first, byName(read(session, scope)).get("one").value());
+            assertTrue(plain.get("list").value().matches("Int\\[1] #\\d+"), plain.get("list").value());
+            assertFalse(plain.get("pair").value().contains("#"), plain.get("pair").value());
+            assertFalse(plain.get("big").value().contains("#"), plain.get("big").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(0L, control.result());
         }
     }
 
