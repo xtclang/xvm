@@ -48,6 +48,7 @@ import org.eclipse.lsp4j.debug.ThreadEventArguments
 import org.eclipse.lsp4j.debug.ThreadEventArgumentsReason
 import org.eclipse.lsp4j.debug.ThreadsResponse
 import org.eclipse.lsp4j.debug.Variable
+import org.eclipse.lsp4j.debug.VariablePresentationHint
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
@@ -550,6 +551,9 @@ class XtcDebugServer(
                                 value = state.value
                                 type = state.type.ifEmpty { null }
                                 variablesReference = state.variablesReference
+                                if (state.lazy) {
+                                    presentationHint = VariablePresentationHint().apply { lazy = true }
+                                }
                             }
                         }.toTypedArray()
             }
