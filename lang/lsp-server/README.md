@@ -607,7 +607,8 @@ at once. A breakpoint or `assert:debug` stops the program with every fiber stopp
 `threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
 frame's file and line, and `continue` resumes it. `scopes` gives a stopped frame's Locals, and
 `variables` its `this` and named variables, an object's fields and an array's elements (the first
-100), each with its value and type in words; they are read on the waiting fiber's own thread, and a
+100, or the part a request's `start` and `count` name, as its `filter` of `named` or `indexed`
+takes them; an array's variable has `indexedVariables`, its size), each with its value and type in words; they are read on the waiting fiber's own thread, and a
 reference lasts until the program resumes. An object's fields are followed by lazy variables
 (`presentationHint.lazy`), its computed properties and its `toString()`, valued `(...)`: `variables`
 of a lazy variable's reference runs its code on the waiting fiber, for at most a second, and answers

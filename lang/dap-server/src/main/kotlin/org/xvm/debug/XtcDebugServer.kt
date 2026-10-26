@@ -51,6 +51,7 @@ import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.Variable
 import org.eclipse.lsp4j.debug.VariablePresentationHint
 import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.debug.VariablesResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
@@ -547,20 +548,25 @@ class XtcDebugServer(
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(VariablesResponse().apply { variables = emptyArray() })
         }
-        return runs.variables(runId, args.variablesReference, args.format?.hex ?: hexValues).thenApply { states ->
-            val first = args.start ?: 0
-            val count = args.count?.takeIf { it > 0 } ?: states.size
+        val filter =
+            when (args.filter) {
+                VariablesArgumentsFilter.NAMED -> ChildFilter.NAMED
+                VariablesArgumentsFilter.INDEXED -> ChildFilter.INDEXED
+                else -> ChildFilter.ALL
+            }
+        val hex = args.format?.hex ?: hexValues
+        return runs.variables(runId, args.variablesReference, hex, filter, args.start ?: 0, args.count ?: 0).thenApply { states ->
             VariablesResponse().apply {
                 variables =
                     states
-                        .drop(first)
-                        .take(count)
                         .map { state ->
                             Variable().apply {
                                 name = state.name
                                 value = state.value
                                 type = state.type.ifEmpty { null }
                                 variablesReference = state.variablesReference
+                                // a client that pages, such as VS Code, reads a large array's elements a part at a time
+                                indexedVariables = state.elements.takeIf { it > 0 }
                                 if (state.lazy) {
                                     presentationHint = VariablePresentationHint().apply { lazy = true }
                                 }
@@ -638,6 +644,7 @@ class XtcDebugServer(
                     result = state.value
                     type = state.type.ifEmpty { null }
                     variablesReference = state.variablesReference
+                    indexedVariables = state.elements.takeIf { it > 0 }
                 }
             }
         }

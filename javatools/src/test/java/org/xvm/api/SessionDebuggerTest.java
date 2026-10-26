@@ -48,6 +48,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
+import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
@@ -475,6 +476,21 @@ public class SessionDebuggerTest {
                     @Inject Console console;
                     console.print($"{big} {minus} {small} {octet} {wide} {top} {one.count} {two.count} {pair} {list}");
                     return 0;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints, on line 5, the size of an array of the squares of 0 to 249, and
+     * returns the last one.
+     */
+    private static final String PAGES = """
+            module Pages {
+                Int run() {
+                    Int[] squares = new Int[250](i -> i * i);
+                    @Inject Console console;
+                    console.print(squares.size);
+                    return squares[249];
                 }
             }
             """;
@@ -1585,6 +1601,47 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void aLargeArrayIsReadAPageAtATimeAndAFilterTakesTheNamedOrIndexedChildren() throws Exception {
+        Path  source  = compile("Pages", PAGES);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Pages"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
+
+        Control control = run("Pages", new StringWriter(), session);
+        try (control) {
+            Stop     stop    = stops.next();
+            int      frame   = session.stackTrace(stop.threadId()).getFirst().id();
+            int      scope   = session.scopes(frame).getFirst().variablesReference();
+            Variable squares = byName(read(session, scope)).get("squares");
+            assertEquals(250, squares.elements());
+            assertEquals(0, byName(read(session, scope)).get("console").elements());
+
+            // all of them, as before: the first 100, then how many more
+            List<Variable> first = read(session, squares.variablesReference());
+            assertEquals(101, first.size());
+            assertEquals(new Variable("...", "150 more", "", 0), first.getLast());
+
+            // a page, which may end at the array's end, and the elements are its indexed children only
+            List<Variable> page = page(session, squares.variablesReference(), Filter.INDEXED, 200, 50);
+            assertEquals(50, page.size());
+            assertEquals(List.of("[200]", "40000"), List.of(page.getFirst().name(), page.getFirst().value()));
+            assertEquals(List.of("[249]", "62001"), List.of(page.getLast().name(), page.getLast().value()));
+            assertEquals(10, page(session, squares.variablesReference(), Filter.ALL, 240, 100).size());
+            assertEquals(List.of(), page(session, squares.variablesReference(), Filter.NAMED, 0, 0));
+
+            // a frame's locals are its named children, a part of them at a time too
+            assertEquals(List.of(), page(session, scope, Filter.INDEXED, 0, 0));
+            assertEquals(read(session, scope).stream().map(Variable::name).toList().subList(1, 2),
+                    page(session, scope, Filter.NAMED, 1, 1).stream().map(Variable::name).toList());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(62001L, control.result());
+        }
+    }
+
+    @Test
     public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
         Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
         Stops stops   = new Stops();
@@ -1981,6 +2038,11 @@ public class SessionDebuggerTest {
 
     private static List<Variable> read(SessionDebugger session, int reference) throws Exception {
         return session.variables(reference).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    private static List<Variable> page(SessionDebugger session, int reference, Filter filter, int start, int count)
+            throws Exception {
+        return session.variables(reference, false, filter, start, count).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
 
     private static Variable evaluate(SessionDebugger session, int frame, String path) throws Exception {

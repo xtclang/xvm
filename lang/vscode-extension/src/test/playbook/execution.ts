@@ -978,6 +978,57 @@ export function debugSessionCases(): void {
             }
         });
     });
+    playbook('X318', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
+                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
+                const locals: DapVariable[] = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables;
+
+                // the array says how many elements it has, so VS Code groups them in ranges, and reads a range when it is expanded
+                const array = locals.find(variable => variable.name === data.expands);
+                assert.ok(array, JSON.stringify(locals));
+                assert.strictEqual(array.indexedVariables, data.elements, JSON.stringify(array));
+                const [first, count] = data.page as number[];
+                const page: DapVariable[] = (await session.customRequest('variables',
+                    { variablesReference: array.variablesReference, filter: 'indexed', start: first, count })).variables;
+                assert.strictEqual(page.length, count);
+                assert.deepStrictEqual([page[0].name, page[0].value], data.first);
+                assert.deepStrictEqual([page[count - 1].name, page[count - 1].value], data.last);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1005,7 +1056,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X317 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X318 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;
@@ -1032,6 +1083,7 @@ interface DapVariable {
     type?: string;
     variablesReference: number;
     presentationHint?: { lazy?: boolean };
+    indexedVariables?: number;
 }
 
 /** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */

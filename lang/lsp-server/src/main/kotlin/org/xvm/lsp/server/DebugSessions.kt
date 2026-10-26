@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ChildFilter
 import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
 import org.xvm.debug.DebugSetup
@@ -170,7 +171,10 @@ internal class DebugSessions(
             runId: String,
             reference: Int,
             hex: Boolean,
-        ) = runs.variables(runId, reference, hex)
+            filter: ChildFilter,
+            start: Int,
+            count: Int,
+        ) = runs.variables(runId, reference, hex, filter, start, count)
 
         override fun evaluate(
             runId: String,

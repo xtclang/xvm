@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ChildFilter
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -315,12 +316,18 @@ internal class EmbeddedRuns(
         frame: Int,
     ): CompletableFuture<List<ScopeState>> = debugged(runId) { worker.scopes(it, frame) }
 
-    /** The variables of a scope, or the fields or elements of a variable, with integers in hexadecimal if [hex]. */
+    /**
+     * The variables of a scope, or the fields or elements of a variable, with integers in hexadecimal if [hex]: those
+     * [filter] takes, from [start], [count] of them, or all from there for 0.
+     */
     internal fun variables(
         runId: String,
         reference: Int,
         hex: Boolean,
-    ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference, hex) }
+        filter: ChildFilter,
+        start: Int,
+        count: Int,
+    ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference, hex, filter, start, count) }
 
     /** Evaluates an expression in a frame of a stopped program under the debugger, an integer in hexadecimal if [hex]. */
     internal fun evaluate(
