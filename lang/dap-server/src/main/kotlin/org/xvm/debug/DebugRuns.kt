@@ -71,12 +71,16 @@ data class ScopeState(
 /**
  * A variable of a stopped program, or a field or element of one: its name, its value and type in words (the type
  * is empty when it is not known), and the reference its own fields or elements are read by, or 0 when it has none.
+ * A [lazy] one, an object's computed property or its `toString()`, has a placeholder for its value and no type, and
+ * reading its reference runs the code that computes the value, for at most a second, which answers with one variable
+ * that has the value and its type.
  */
 data class VariableState(
     val name: String,
     val value: String,
     val type: String,
     val variablesReference: Int,
+    val lazy: Boolean = false,
 )
 
 /**
@@ -208,7 +212,8 @@ interface DebugRuns {
 
     /**
      * The variables of a scope, or the fields or elements of a variable, by its reference; none for a reference
-     * from before the program last resumed.
+     * from before the program last resumed. A lazy variable's reference runs its code, and fails, with the reason as
+     * its message, if the code throws or does not end within a second.
      */
     fun variables(
         runId: String,

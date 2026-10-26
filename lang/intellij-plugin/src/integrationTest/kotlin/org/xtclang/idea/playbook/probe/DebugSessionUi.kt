@@ -41,6 +41,7 @@ import org.xtclang.idea.run.XtcRunMode
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.Icon
 
 /**
@@ -143,9 +144,12 @@ object DebugSessionUi {
         }
         session.suspendContext?.activeExecutionStack?.let { stack -> state.add("frames", frames(stack)) }
         // the exit code is read before the console, so a process that ended has printed everything the console shows;
-        // a session that is still starting has no process yet
+        // a session that is still starting has no process, nor its handler, yet: XDebugSessionImpl.getDebugProcess()
+        // fails with a NullPointerException until it has one
         val exitCode =
-            session.debugProcess.processHandler
+            runCatching { session.debugProcess }
+                .getOrNull()
+                ?.processHandler
                 ?.takeIf { it.isProcessTerminated }
                 ?.exitCode
         ApplicationManager.getApplication().invokeAndWait {
@@ -171,15 +175,81 @@ object DebugSessionUi {
         module: String,
         path: String,
     ): String {
+        var shown = locals(project, module)
+        path.split('/').filter { it.isNotEmpty() }.forEach { name -> shown = children(named(shown, name, path)) }
+        return JsonArray().apply { (0 until shown.size()).forEach { add(presentation(shown.getName(it), shown.getValue(it))) } }.toString()
+    }
+
+    /**
+     * Clicks the link that the Variables view shows beside the value at the `/`-separated [path], such as LSP4IJ's
+     * Show value of a lazy variable, and returns the value it shows, or fails with the error it reports.
+     */
+    @JvmStatic
+    fun showValue(
+        project: Project,
+        module: String,
+        path: String,
+    ): String {
+        val names = path.split('/').filter { it.isNotEmpty() }
+        var shown = locals(project, module)
+        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
+        val link = CompletableFuture<XFullValueEvaluator>()
+        named(shown, names.last(), path).computePresentation(
+            object : XValueNode {
+                override fun setPresentation(
+                    icon: Icon?,
+                    type: String?,
+                    value: String,
+                    hasChildren: Boolean,
+                ) {}
+
+                override fun setPresentation(
+                    icon: Icon?,
+                    presentation: XValuePresentation,
+                    hasChildren: Boolean,
+                ) {}
+
+                override fun setFullValueEvaluator(fullValueEvaluator: XFullValueEvaluator) {
+                    link.complete(fullValueEvaluator)
+                }
+            },
+            XValuePlace.TREE,
+        )
+        val value = CompletableFuture<String>()
+        link.get(30, TimeUnit.SECONDS).startEvaluation(
+            object : XFullValueEvaluator.XFullValueEvaluationCallback {
+                override fun evaluated(fullValue: String) {
+                    value.complete(fullValue)
+                }
+
+                override fun errorOccurred(errorMessage: String) {
+                    value.completeExceptionally(IllegalStateException(errorMessage))
+                }
+
+                override fun isObsolete() = false
+            },
+        )
+        return value.get(30, TimeUnit.SECONDS)
+    }
+
+    /** The paused session's top frame's Locals, as the Variables view shows them. */
+    private fun locals(
+        project: Project,
+        module: String,
+    ): XValueChildrenList {
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
         val frame = checkNotNull(session.currentStackFrame) { "The debug session of $module is not paused" }
         val groups = children(frame).bottomGroups
-        var shown = children(checkNotNull(groups.firstOrNull { it.name == "Locals" }) { "No Locals in ${groups.map { it.name }}" })
-        path.split('/').filter { it.isNotEmpty() }.forEach { name ->
-            val index = (0 until shown.size()).firstOrNull { shown.getName(it) == name } ?: error("No variable $name along $path")
-            shown = children(shown.getValue(index))
-        }
-        return JsonArray().apply { (0 until shown.size()).forEach { add(presentation(shown.getName(it), shown.getValue(it))) } }.toString()
+        return children(checkNotNull(groups.firstOrNull { it.name == "Locals" }) { "No Locals in ${groups.map { it.name }}" })
+    }
+
+    private fun named(
+        shown: XValueChildrenList,
+        name: String,
+        path: String,
+    ): XValue {
+        val index = (0 until shown.size()).firstOrNull { shown.getName(it) == name } ?: error("No variable $name along $path")
+        return shown.getValue(index)
     }
 
     /** Steps the module's paused session as Step Over (`over`), Step Into (`into`) or Step Out (`out`) does. */
@@ -360,12 +430,13 @@ object DebugSessionUi {
         return done.get(30, TimeUnit.SECONDS)
     }
 
-    /** A value's text, type and whether it expands, as the Variables view shows them. */
+    /** A value's text, type, whether it expands, and the text of the link beside it, as the Variables view shows them. */
     private fun presentation(
         name: String,
         value: XValue,
     ): JsonObject {
         val shown = CompletableFuture<JsonObject>()
+        val link = AtomicReference<XFullValueEvaluator>()
 
         fun complete(
             text: String,
@@ -400,11 +471,14 @@ object DebugSessionUi {
                     complete(text.toString(), presentation.type, hasChildren)
                 }
 
-                override fun setFullValueEvaluator(fullValueEvaluator: XFullValueEvaluator) {}
+                override fun setFullValueEvaluator(fullValueEvaluator: XFullValueEvaluator) {
+                    link.set(fullValueEvaluator)
+                }
             },
             XValuePlace.TREE,
         )
-        return shown.get(30, TimeUnit.SECONDS)
+        // a link is set right after the presentation, as computePresentation returns
+        return shown.get(30, TimeUnit.SECONDS).apply { link.get()?.let { addProperty("link", it.linkText) } }
     }
 
     /** Collects the text a value presentation renders, without its colors and comments; strings in quotes, as the view draws them. */

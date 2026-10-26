@@ -735,6 +735,37 @@ class EmbeddedExecutionTest {
                     .asString,
             ).isEqualTo("5")
 
+            // an object's toString() is a lazy variable, and reading its reference runs it on the stopped fiber
+            fun variables(
+                seq: Int,
+                reference: Int,
+            ): List<JsonObject> {
+                sessions.request(id, seq, "variables", """{"variablesReference": $reference}""")
+                return client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            }
+            sessions.request(id, 30, "scopes", """{"frameId": $frameId}""")
+            val locals =
+                client
+                    .until(id) { it.response == "scopes" }
+                    .last()["body"]
+                    .asJsonObject["scopes"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject["variablesReference"]
+                    .asInt
+            val box = variables(31, locals).single { it["name"].asString == "box" }
+            val fields = variables(32, box["variablesReference"].asInt)
+            assertThat(fields.map { it["name"].asString to (it["presentationHint"]?.asJsonObject?.get("lazy")?.asBoolean == true) })
+                .containsExactly("count" to false, "toString()" to true)
+            assertThat(fields.last()["value"].asString).isEqualTo("(...)")
+            assertThat(variables(33, fields.last()["variablesReference"].asInt).map { it["name"].asString to it["value"].asString })
+                .containsExactly("toString()" to "\"Box\"")
+
             // a run that loops ends when it is cancelled, and at the console's time limit when it is not
             sessions.request(id, 8, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             sessions.request(id, 9, "cancel", """{"requestId": 8}""")

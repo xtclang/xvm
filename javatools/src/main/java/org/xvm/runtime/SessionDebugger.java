@@ -9,6 +9,7 @@ import java.time.Duration;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -35,11 +36,14 @@ import java.util.regex.Pattern;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
@@ -170,7 +174,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * operations ({@link PureExpression}). Any other expression, such as a call, runs as code on the
  * waiting fiber ({@link #run}), which leaves its wait to run it and then waits again, while the
  * program's other fibers stay where they wait; a time limit, a cancel, or the program's resume or
- * end ends such a run before its code does.
+ * end ends such a run before its code does. An object's fields are followed by lazy variables, its
+ * computed properties and its {@code toString()}, whose values take running its code: reading a
+ * lazy variable's reference runs that code as such a run, for at most {@link #ON_DEMAND}.
  *
  * <p><b>Breakpoints.</b> A breakpoint is installed by file and line: it stops every fiber that
  * reaches the first op of that line in any method compiled from that file. A file is the module's
@@ -229,6 +235,22 @@ public final class SessionDebugger implements Debugger {
      * as a call to a method that returns nothing.
      */
     public static final String NO_VALUE = "(no value)";
+
+    /**
+     * The value of a lazy variable, whose value is computed only when the host reads its
+     * reference.
+     */
+    public static final String LAZY = "(...)";
+
+    /**
+     * The name of an object's lazy variable that shows its {@code toString()}.
+     */
+    public static final String TO_STRING = "toString()";
+
+    /**
+     * How long the code that computes a lazy variable's value may run (decided 2026-10-23).
+     */
+    public static final Duration ON_DEMAND = Duration.ofSeconds(1);
 
     /**
      * The longest value text {@link #variables} returns; longer text is cut off.
@@ -492,21 +514,34 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * A variable of a scope, or a field or element of a value: its name, its value and its type in
-     * words, and the reference that {@link #variables} reads its fields or elements by, or 0 if it
-     * has none. An array of more than {@link #MAX_ELEMENTS} elements ends with a variable named
-     * "..." whose value says how many more there are.
+     * words, the reference that {@link #variables} reads its fields or elements by, or 0 if it has
+     * none, and whether it is lazy. An array of more than {@link #MAX_ELEMENTS} elements ends with a
+     * variable named "..." whose value says how many more there are.
+     *
+     * <p>A lazy variable is one whose value takes running the program's code: an object's computed
+     * property, or its {@code toString()} ({@link #TO_STRING}). Its value is {@link #LAZY}, its type
+     * {@code ""}, since it has no value yet, and reading its reference runs the code and answers with
+     * one variable, of the same name, that has the value and its type.
      *
      * @param name                the variable's or field's name, an element's index in brackets,
      *                            such as {@code "[0]"}, or the expression that was evaluated or run
      * @param value               the value in words, cut off with "..." after 1000 characters;
-     *                            {@link #UNASSIGNED} for a variable that has no value yet, and
-     *                            {@link #NO_VALUE} for code that has none
+     *                            {@link #UNASSIGNED} for a variable that has no value yet,
+     *                            {@link #NO_VALUE} for code that has none, and {@link #LAZY} for a
+     *                            lazy variable
      * @param type                the value's type in words, or {@code ""} if it is not known
      * @param variablesReference  the reference that {@link #variables} reads the value's fields or
-     *                            elements by, until the stop ends; 0 if it has none to show, as
-     *                            for an object of another service
+     *                            elements by, or a lazy variable's value, until the stop ends; 0 if
+     *                            it has none to show, as for an object of another service
+     * @param lazy                true if reading the reference runs code to compute the value
      */
-    public record Variable(String name, String value, String type, int variablesReference) {
+    public record Variable(String name, String value, String type, int variablesReference, boolean lazy) {
+        /**
+         * A variable that is not lazy.
+         */
+        public Variable(String name, String value, String type, int variablesReference) {
+            this(name, value, type, variablesReference, false);
+        }
     }
 
     /**
@@ -753,22 +788,66 @@ public final class SessionDebugger implements Debugger {
      * immutable; an object of another service is read only on that service's own thread, so its
      * variable has no reference. Each value with fields or elements gets a new reference.
      *
+     * <p>An object's fields are followed by its lazy variables ({@link Variable#lazy}): one for each
+     * computed property, a property without a field whose getter computes its value, and one for its
+     * {@code toString()} ({@link #TO_STRING}). Reading a lazy variable's reference runs its code, the
+     * getter or {@code toString()}, on the waiting fiber, as {@link #run} runs code, so what it
+     * changes stays changed and nothing in it stops the program; it may take at most
+     * {@link #ON_DEMAND}. The answer is one variable, named as the lazy one, with the value: a
+     * property's value as {@link #run} shows it, or the String that {@code toString()} returned, in
+     * quotes as other strings are shown. A run
+     * that throws, or that does not end in time, fails the read with the reason, such as
+     * "fail threw IllegalState: no." Cancelling the answer ends the run.
+     *
      * @param reference  a reference that {@link #scopes} or an earlier read returned
      *
-     * @return the variables, in order: a frame's {@code this} and its named registers, a value's
-     *         fields, or an array's elements; none if the reference is not one of this stop's, or
-     *         the program resumes first. Fails if a value cannot be read.
+     * @return the variables, in order: a frame's {@code this} and its named registers, an object's
+     *         fields and then its lazy variables, an array's elements, or a lazy variable's value;
+     *         none if the reference is not one of this stop's, or the program resumes first. Fails
+     *         if a value cannot be read, or a lazy variable's code throws or does not end in time.
      */
     public CompletableFuture<List<Variable>> variables(int reference) {
         var future = new CompletableFuture<List<Variable>>();
         synchronized (this) {
             Halt   current = halt;
             Target target  = current == null ? null : current.targets.get(reference);
+            if (target instanceof Lazy lazy) {
+                return compute(current, lazy);
+            }
             if (target == null || !request(current, target, future)) {
                 future.complete(List.of());
             }
         }
         return future;
+    }
+
+    /**
+     * Run the code that computes a lazy variable's value, on the waiting fiber the variable belongs
+     * to, as {@link #run} runs code, for at most {@link #ON_DEMAND}. Called while holding this
+     * debugger's monitor.
+     *
+     * @return the variable with the value, or none if its fiber no longer waits; fails, with the
+     *         reason in words, if the code throws or does not end in time. Cancelling it ends the run.
+     */
+    private CompletableFuture<List<Variable>> compute(Halt current, Lazy lazy) {
+        if (!current.stacks.containsKey(lazy.thread())) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+
+        Computed computed = lazy.computed();
+        String   name     = computed.property() == null ? TO_STRING : computed.property().getName();
+        Run      request  = new Run(current.stacks.get(lazy.thread()).frame(), name, computed, ON_DEMAND, false,
+                new CompletableFuture<>());
+        queue(current, lazy.thread(), request);
+
+        CompletableFuture<Variable>       answer = answer(request);
+        CompletableFuture<List<Variable>> value  = answer.thenApply(List::of);
+        value.whenComplete((_, _) -> {
+            if (value.isCancelled()) {
+                answer.cancel(false);
+            }
+        });
+        return value;
     }
 
     /**
@@ -908,12 +987,25 @@ public final class SessionDebugger implements Debugger {
             if (at == null || !current.stacks.containsKey(at.thread())) {
                 return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
             }
-            request = new Run(at.frame(), expression, limit, program, new CompletableFuture<>());
-            current.runs.computeIfAbsent(at.thread(), _ -> new ArrayDeque<>()).add(request);
-            notifyAll();
+            request = new Run(at.frame(), expression, null, limit, program, new CompletableFuture<>());
+            queue(current, at.thread(), request);
         }
+        return answer(request);
+    }
 
-        // cancelling the answer ends the run
+    /**
+     * Queue a run for the waiting fiber with the specified ID, which starts it once no other run is
+     * in progress. Called while holding this debugger's monitor.
+     */
+    private void queue(Halt current, int threadId, Run request) {
+        current.runs.computeIfAbsent(threadId, _ -> new ArrayDeque<>()).add(request);
+        notifyAll();
+    }
+
+    /**
+     * @return the run's answer, whose cancelling ends the run
+     */
+    private CompletableFuture<Variable> answer(Run request) {
         CompletableFuture<Variable> answer = request.answer();
         answer.whenComplete((_, _) -> {
             if (answer.isCancelled()) {
@@ -1685,6 +1777,8 @@ public final class SessionDebugger implements Debugger {
                 case Locals(int _, Frame scope)                  -> locals(current, frame, scope);
                 case Children(int _, ObjectHandle value)         -> children(current, frame, value);
                 case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e));
+                // a lazy variable's value is computed by a run, never read (variables())
+                case Lazy _                                      -> List.of();
             };
         } catch (RuntimeException e) {
             // a value the debugger cannot read fails the read, not the program
@@ -1784,14 +1878,36 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return the object's fields
+     * @return the object's fields, then a lazy variable for each of its computed properties, and one
+     *         for its {@code toString()}
      */
     private List<Variable> fields(Halt current, Frame waitingFrame, GenericHandle object) {
         var vars = new ArrayList<Variable>();
         for (Map.Entry<String, FieldInfo> entry : DebugConsole.getFieldLayout(object.getComposition()).entrySet()) {
             vars.add(variable(current, waitingFrame, entry.getKey(), object.getField(entry.getValue().getIndex())));
         }
+
+        int thread = threadId(waitingFrame.f_fiber);
+        for (PropertyInfo property : computedProperties(object)) {
+            int reference = reference(current, new Lazy(thread, new Computed(object, property.getIdentity())));
+            vars.add(new Variable(property.getName(), LAZY, "", reference, true));
+        }
+        int reference = reference(current, new Lazy(thread, new Computed(object, null)));
+        vars.add(new Variable(TO_STRING, LAZY, "", reference, true));
         return vars;
+    }
+
+    /**
+     * @return the object's computed properties, in the order they are declared: those that have no
+     *         field, so that a getter computes their value, and that any code may read; constants
+     *         and type parameters are left out
+     */
+    static List<PropertyInfo> computedProperties(ObjectHandle object) {
+        return Arrays.stream(object.getType().ensureTypeInfo().sortedProperties())
+                .map(Map.Entry::getValue)
+                .filter(property -> !property.hasField() && !property.isConstant() && !property.isFormalType()
+                        && property.getRefAccess() == Constants.Access.PUBLIC)
+                .toList();
     }
 
     /**
@@ -1823,7 +1939,8 @@ public final class SessionDebugger implements Debugger {
             case EnumHandle _ -> false;
             case ServiceHandle service when service.f_context != waitingFrame.f_context -> false;
             case ArrayHandle array -> array.m_hDelegate.m_cSize > 0;
-            case GenericHandle _ -> !DebugConsole.getFieldLayout(composition).isEmpty();
+            // an object without fields still has its toString(), and perhaps computed properties
+            case GenericHandle _ -> true;
             default -> false;
         };
     }
@@ -1911,11 +2028,18 @@ public final class SessionDebugger implements Debugger {
      * @return the run, ready to start, or null if the expression does not compile
      */
     private Running prepare(Halt current, Frame waitingFrame, Run run) {
-        long            firstFiber = Fiber.nextId();
-        Frame           frame      = run.frame();
-        TypeConstant    object     = frame.poolContext().typeObject();
-        EvalCompiler    value      = new EvalCompiler(frame, "{\nreturn " + run.expression() + ";\n}");
-        MethodStructure lambda     = value.createLambda(object);
+        long firstFiber = Fiber.nextId();
+        if (run.computed() != null) {
+            // a lazy variable's code is the value's getter or toString(), which needs no compiling
+            return new Running(run, waitingFrame.f_fiber, firstFiber, current, null, new int[0], false,
+                    waitingFrame.createNativeFrame(runOps, new ObjectHandle[3], Op.A_IGNORE, null),
+                    new AtomicReference<>());
+        }
+
+        Frame           frame  = run.frame();
+        TypeConstant    object = frame.poolContext().typeObject();
+        EvalCompiler    value  = new EvalCompiler(frame, "{\nreturn " + run.expression() + ";\n}");
+        MethodStructure lambda = value.createLambda(object);
         if (lambda != null) {
             return new Running(run, waitingFrame.f_fiber, firstFiber, current, lambda, value.getArgs(), false,
                     waitingFrame.createNativeFrame(runOps, new ObjectHandle[3], Op.A_IGNORE, null),
@@ -1961,11 +2085,15 @@ public final class SessionDebugger implements Debugger {
      * thread.
      */
     private void finish(Running run) {
-        run.lambda().getParent().removeChild(run.lambda());
+        if (run.lambda() != null) {
+            run.lambda().getParent().removeChild(run.lambda());
+        }
 
         ObjectHandle[]              registers  = run.trampoline().f_ahVar;
         String                      expression = run.run().expression();
         CompletableFuture<Variable> answer     = run.run().answer();
+        Computed                    computed   = run.run().computed();
+        boolean                     toString   = computed != null && computed.property() == null;
         synchronized (this) {
             if (running == run) {
                 running = null;
@@ -1981,10 +2109,14 @@ public final class SessionDebugger implements Debugger {
                 return;
             }
             if (registers[THROWN] instanceof ExceptionHandle thrown) {
-                String what = registers[VALUE] == null ? expression : expression + "'s toString()";
+                String what = registers[VALUE] == null || toString ? expression : expression + "'s toString()";
                 fail(answer, what + " threw " + describe(thrown) + '.');
             } else if (run.statement()) {
                 answer.completeAsync(() -> new Variable(expression, NO_VALUE, "", 0));
+            } else if (toString) {
+                // what toString() returns is a String, shown as other strings are
+                String text = valueText(registers[TEXT]);
+                answer.completeAsync(() -> new Variable(expression, text, "String", 0));
             } else {
                 Variable shown = variable(run.halt(), run.trampoline().f_framePrev, expression, registers[VALUE]);
                 String   text  = cut(((StringHandle) registers[TEXT]).getStringValue());
@@ -1998,7 +2130,11 @@ public final class SessionDebugger implements Debugger {
      * frame's variables that it reads; its value goes on the native frame's stack.
      */
     private int callExpression(Frame trampoline) {
-        Running        run   = running;
+        Running run = running;
+        if (run.run().computed() instanceof Computed(ObjectHandle value, PropertyConstant property)) {
+            return computeValue(trampoline, value, property);
+        }
+
         Frame          frame = run.run().frame();
         int[]          vars  = run.args();
         ObjectHandle[] args  = new ObjectHandle[run.lambda().getMaxVars()];
@@ -2014,6 +2150,25 @@ public final class SessionDebugger implements Debugger {
         return Op.anyDeferred(args)
                 ? new Utils.GetArguments(args, f -> call(f, run, self, args)).doNext(trampoline)
                 : call(trampoline, run, self, args);
+    }
+
+    /**
+     * The first op of a lazy variable's run: the value of the object's computed property, through
+     * its getter, goes on the native frame's stack, or the object itself for its {@code toString()};
+     * a getter that fails at once ends the run with that exception.
+     */
+    private static int computeValue(Frame trampoline, ObjectHandle object, PropertyConstant property) {
+        if (property == null) {
+            trampoline.pushStack(object);
+            return Op.R_NEXT;
+        }
+
+        int result = object.getTemplate().getPropertyValue(trampoline, object, property, Op.A_STACK);
+        if (result == Op.R_EXCEPTION) {
+            trampoline.f_ahVar[THROWN] = trampoline.clearException();
+            return END_RUN;
+        }
+        return result;
     }
 
     /**
@@ -2553,24 +2708,39 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * A lazy variable's value, which a run computes on the waiting fiber.
+     */
+    private record Lazy(int thread, Computed computed) implements Target {
+    }
+
+    /**
+     * What a lazy variable's run shows of a value: one of its computed properties, or its
+     * {@code toString()} if the property is null.
+     */
+    private record Computed(ObjectHandle value, PropertyConstant property) {
+    }
+
+    /**
      * A read the host asked for, which the waiting fiber makes on its thread.
      */
     private record Read(Target target, CompletableFuture<List<Variable>> future) {
     }
 
     /**
-     * Code the host asks a waiting fiber to run: the frame it runs in, the expression, how long it
-     * may run, whether the whole program runs meanwhile, and the answer.
+     * Code the host asks a waiting fiber to run: the frame it runs in, the expression, or the
+     * value's property or {@code toString()} that a lazy variable shows, which the expression then
+     * names, how long it may run, whether the whole program runs meanwhile, and the answer.
      */
-    private record Run(Frame frame, String expression, Duration limit, boolean program,
+    private record Run(Frame frame, String expression, Computed computed, Duration limit, boolean program,
                        CompletableFuture<Variable> answer) {
     }
 
     /**
      * A run in progress: what the host asked for; the fiber it runs on; the ID of the first fiber
-     * created after it started; the stop it runs in; its compiled expression, the registers of the
-     * frame that the expression reads, and whether it is a statement; the native frame it runs in;
-     * and why it was ended before its code finished, if it was.
+     * created after it started; the stop it runs in; its compiled expression, or null for a lazy
+     * variable's run, the registers of the frame that the expression reads, and whether it is a
+     * statement; the native frame it runs in; and why it was ended before its code finished, if it
+     * was.
      */
     private record Running(Run run, Fiber fiber, long firstFiber, Halt halt, MethodStructure lambda, int[] args,
                            boolean statement, Frame trampoline, AtomicReference<String> ended) {
