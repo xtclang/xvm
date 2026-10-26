@@ -883,6 +883,39 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X318") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // TODO LSP4IJ: UP42 — LSP4IJ asks for all of a variable's children at once, never a page by
+                // indexedVariables, so a large array shows its first elements and how many more there are
+                val elements =
+                    JsonParser.parseString(debugger.variables(project, module, data.string("expands"))).asJsonArray.map { it.asJsonObject }
+                check(elements.size == data.int("shown") + 1) { "${elements.size} elements shown: ${elements.takeLast(2)}" }
+                check(elements.first().string("name") == "[0]" && elements.first().string("value") == "0") { "First: ${elements.first()}" }
+                check(elements.last().string("name") == "..." && elements.last().string("value") == data.string("more")) {
+                    "Last: ${elements.last()}"
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */

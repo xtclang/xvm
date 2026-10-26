@@ -147,8 +147,9 @@ in the language server, which builds and runs the module as Run does, in the sam
 with LSP4IJ's DAP client as the debugger. Line breakpoints can be set in `.x` files; they are
 verified when the program starts, and a breakpoint or `assert:debug` stops the program, with its
 line, call stack and the other fibers that wait shown in the Debug tool window. Its Variables view
-shows the frame's locals and expands objects and arrays; LSP4IJ shows strings and numbers without
-their type. An object's computed properties and its `toString()` follow its fields as lazy
+shows the frame's locals and expands objects and arrays, a large array to its first 100 elements and
+how many more there are, since LSP4IJ does not read a variable's children a page at a time (UP42 in
+`docs/remaining.md`); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy
 variables, `(...)`, whose values run the program's code, for at most a second; expand one to show
 its value, since LSP4IJ does not show a Show value link for them yet (UP35, LSP4IJ pull request
 [#1768](https://github.com/redhat-developer/lsp4ij/pull/1768)). A mutable object's value ends with its

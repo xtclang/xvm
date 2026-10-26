@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ChildFilter
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -298,10 +299,16 @@ internal class RunWorkerProcess(
         id: Long,
         reference: Int,
         hex: Boolean,
+        filter: ChildFilter,
+        start: Int,
+        count: Int,
     ): CompletableFuture<List<VariableState>> =
         request("variables", id) {
             addProperty("reference", reference)
             addProperty("hex", hex)
+            addProperty("filter", filter.name)
+            addProperty("start", start)
+            addProperty("count", count)
         }.thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
 
     /** Replaces a debugged run's exception stops. */

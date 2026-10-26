@@ -222,8 +222,9 @@ public final class SessionDebugger implements Debugger {
     public static final String UNASSIGNED = "<unassigned>";
 
     /**
-     * The most elements of an array that {@link #variables} reads; a last entry says how many more
-     * there are.
+     * The most elements of an array that a read of all of them reads; a last entry says how many
+     * more there are. A read of a part of them, from a start for a count, reads that part
+     * ({@link #variables(int, boolean, Filter, int, int)}).
      */
     public static final int MAX_ELEMENTS = 100;
 
@@ -543,14 +544,36 @@ public final class SessionDebugger implements Debugger {
      *                            elements by, or a lazy variable's value, until the stop ends; 0 if
      *                            it has none to show, as for an object of another service
      * @param lazy                true if reading the reference runs code to compute the value
+     * @param elements            the number of an array's elements, which the host can read a part
+     *                            at a time ({@link #variables(int, boolean, Filter, int, int)}); 0
+     *                            for any other value
      */
-    public record Variable(String name, String value, String type, int variablesReference, boolean lazy) {
+    public record Variable(String name, String value, String type, int variablesReference, boolean lazy,
+                           int elements) {
         /**
-         * A variable that is not lazy.
+         * A variable that is not lazy, and not of an array.
          */
         public Variable(String name, String value, String type, int variablesReference) {
-            this(name, value, type, variablesReference, false);
+            this(name, value, type, variablesReference, false, 0);
         }
+
+        /**
+         * A variable that is not of an array.
+         */
+        public Variable(String name, String value, String type, int variablesReference, boolean lazy) {
+            this(name, value, type, variablesReference, lazy, 0);
+        }
+    }
+
+    /**
+     * Which of a value's children a read gives, as a host asks with DAP's filter: all of them, the
+     * named ones, which are a frame's locals and an object's fields and lazy variables, or the
+     * indexed ones, which are an array's elements.
+     */
+    public enum Filter {
+        ALL,
+        NAMED,
+        INDEXED
     }
 
     /**
@@ -833,6 +856,24 @@ public final class SessionDebugger implements Debugger {
      * @return as {@link #variables(int)} does
      */
     public CompletableFuture<List<Variable>> variables(int reference, boolean hex) {
+        return variables(reference, hex, Filter.ALL, 0, 0);
+    }
+
+    /**
+     * Read a part of the variables of a scope, or of the fields or elements of a value, as
+     * {@link #variables(int, boolean)} does: those the filter takes, from the one at start, count of
+     * them, or all from there if count is 0. An array's elements are read only for that part, so a
+     * host can read a large array a page at a time, as {@link Variable#elements} tells it is one; a
+     * read of all of them from start reads its first {@link #MAX_ELEMENTS}, then says how many more
+     * there are. A lazy variable's value is not filtered.
+     *
+     * @param filter  which children to read
+     * @param start   the index of the first one to read
+     * @param count   how many to read, or 0 for all from start
+     *
+     * @return as {@link #variables(int)} does, but only the part asked for
+     */
+    public CompletableFuture<List<Variable>> variables(int reference, boolean hex, Filter filter, int start, int count) {
         var future = new CompletableFuture<List<Variable>>();
         synchronized (this) {
             Halt   current = halt;
@@ -840,7 +881,8 @@ public final class SessionDebugger implements Debugger {
             if (target instanceof Lazy lazy) {
                 return compute(current, lazy, hex);
             }
-            if (target == null || !request(current, target, hex, future)) {
+            Read read = new Read(target, hex, filter, Math.max(start, 0), Math.max(count, 0), future);
+            if (target == null || !request(current, read)) {
                 future.complete(List.of());
             }
         }
@@ -921,7 +963,8 @@ public final class SessionDebugger implements Debugger {
         synchronized (this) {
             Halt    current = halt;
             FrameAt at      = current == null ? null : current.frames.get(frameId);
-            if (at == null || !request(current, new Evaluation(at.thread(), at.frame(), parsed), hex, future)) {
+            if (at == null || !request(current, new Read(new Evaluation(at.thread(), at.frame(), parsed), hex, Filter.ALL, 0, 0,
+                    future))) {
                 return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
             }
         }
@@ -1662,7 +1705,7 @@ public final class SessionDebugger implements Debugger {
 
             List<Read> reads = current.reads.remove(threadId);
             if (reads != null) {
-                reads.forEach(read -> read(current, frame, read.target(), read.hex(), read.future()));
+                reads.forEach(read -> read(current, frame, read));
                 continue;
             }
 
@@ -1737,15 +1780,15 @@ public final class SessionDebugger implements Debugger {
      *
      * @return false if that fiber does not wait
      */
-    private boolean request(Halt current, Target target, boolean hex, CompletableFuture<List<Variable>> future) {
-        Snapshot snapshot = current.stacks.get(target.thread());
+    private boolean request(Halt current, Read read) {
+        Snapshot snapshot = current.stacks.get(read.target().thread());
         if (snapshot == null) {
             return false;
         }
         if (snapshot.thread() == Thread.currentThread()) {
-            read(current, snapshot.frame(), target, hex, future);
+            read(current, snapshot.frame(), read);
         } else {
-            current.reads.computeIfAbsent(target.thread(), _ -> new ArrayList<>()).add(new Read(target, hex, future));
+            current.reads.computeIfAbsent(read.target().thread(), _ -> new ArrayList<>()).add(read);
             notifyAll();
         }
         return true;
@@ -1822,15 +1865,26 @@ public final class SessionDebugger implements Debugger {
      * host's actions on the answer must not run while this debugger's monitor is held. Called
      * while holding this debugger's monitor.
      */
-    private void read(Halt current, Frame frame, Target target, boolean hex, CompletableFuture<List<Variable>> future) {
-        List<Variable> vars;
+    private void read(Halt current, Frame frame, Read read) {
+        boolean                           hex    = read.hex();
+        Filter                            filter = read.filter();
+        CompletableFuture<List<Variable>> future = read.future();
+        List<Variable>                    vars;
         try {
-            vars = switch (target) {
-                case Locals(int _, Frame scope)                  -> locals(current, frame, scope, hex);
-                case Children(int _, ObjectHandle value)         -> children(current, frame, value, hex);
+            vars = switch (read.target()) {
+                case Locals(int _, Frame scope) -> filter == Filter.INDEXED
+                        ? List.of()
+                        : part(locals(current, frame, scope, hex), read);
+                case Children(int _, ArrayHandle array) -> filter == Filter.NAMED
+                        ? List.of()
+                        : elements(current, frame, array, hex, read.start(), read.count());
+                case Children(int _, GenericHandle object) -> filter == Filter.INDEXED
+                        ? List.of()
+                        : part(fields(current, frame, object, hex), read);
+                case Children _ -> List.of();
                 case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e, hex));
                 // a lazy variable's value is computed by a run, never read (variables())
-                case Lazy _                                      -> List.of();
+                case Lazy _ -> List.of();
             };
         } catch (RuntimeException e) {
             // a value the debugger cannot read fails the read, not the program
@@ -1869,32 +1923,33 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return an array's elements, or an object's fields
+     * @return the part of the variables that the read asks for: from its start, as many as its
+     *         count, or all from there if its count is 0
      */
-    private List<Variable> children(Halt current, Frame waitingFrame, ObjectHandle value, boolean hex) {
-        return switch (value) {
-            case ArrayHandle array    -> elements(current, waitingFrame, array, hex);
-            case GenericHandle object -> fields(current, waitingFrame, object, hex);
-            default                   -> List.of();
-        };
+    private static List<Variable> part(List<Variable> vars, Read read) {
+        int from = Math.min(read.start(), vars.size());
+        int to   = read.count() == 0 ? vars.size() : (int) Math.min(vars.size(), (long) from + read.count());
+        return List.copyOf(vars.subList(from, to));
     }
 
     /**
-     * @return the array's elements, at most {@link #MAX_ELEMENTS} of them, then how many more
-     *         there are
+     * @return the array's elements from start, count of them, or, if count is 0, at most
+     *         {@link #MAX_ELEMENTS} of them, then how many more there are
      */
-    private List<Variable> elements(Halt current, Frame waitingFrame, ArrayHandle array, boolean hex) {
+    private List<Variable> elements(Halt current, Frame waitingFrame, ArrayHandle array, boolean hex, long start,
+                                    int count) {
         var  vars = new ArrayList<Variable>();
         long size = array.m_hDelegate.m_cSize;
-        for (int i = 0, count = (int) Math.min(size, MAX_ELEMENTS); i < count; i++) {
+        long end  = Math.min(size, start + (count == 0 ? MAX_ELEMENTS : count));
+        for (long i = start; i < end; i++) {
             ObjectHandle element = element(waitingFrame, array, i);
             if (element == null) {
                 break;
             }
             vars.add(variable(current, waitingFrame, "[" + i + "]", element, hex));
         }
-        if (size > MAX_ELEMENTS) {
-            vars.add(new Variable("...", (size - MAX_ELEMENTS) + " more", "", 0));
+        if (count == 0 && end < size) {
+            vars.add(new Variable("...", (size - end) + " more", "", 0));
         }
         return vars;
     }
@@ -1974,7 +2029,8 @@ public final class SessionDebugger implements Debugger {
 
         int thread   = threadId(waitingFrame.f_fiber);
         int children = hasChildren(waitingFrame, shown) ? reference(current, new Children(thread, shown)) : 0;
-        return new Variable(name, valueText(shown, hex), typeText(shown), children);
+        int elements = shown instanceof ArrayHandle array ? (int) Math.min(array.m_hDelegate.m_cSize, Integer.MAX_VALUE) : 0;
+        return new Variable(name, valueText(shown, hex), typeText(shown), children, false, children == 0 ? 0 : elements);
     }
 
     /**
@@ -2230,7 +2286,8 @@ public final class SessionDebugger implements Debugger {
                         run.run().hex());
                 String   hexText = run.run().hex() ? hexText(registers[VALUE]) : null;
                 String   text    = hexText != null ? hexText : cut(((StringHandle) registers[TEXT]).getStringValue());
-                answer.completeAsync(() -> new Variable(shown.name(), text, shown.type(), shown.variablesReference()));
+                answer.completeAsync(() -> new Variable(shown.name(), text, shown.type(), shown.variablesReference(), false,
+                        shown.elements()));
             }
         }
     }
@@ -2831,10 +2888,12 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A read the host asked for, which the waiting fiber makes on its thread, and whether it shows
-     * integers in hexadecimal.
+     * A read the host asked for, which the waiting fiber makes on its thread: what it reads, whether
+     * it shows integers in hexadecimal, which children it takes, from which one and how many of
+     * them, 0 for all from there, and its answer.
      */
-    private record Read(Target target, boolean hex, CompletableFuture<List<Variable>> future) {
+    private record Read(Target target, boolean hex, Filter filter, int start, int count,
+                        CompletableFuture<List<Variable>> future) {
     }
 
     /**

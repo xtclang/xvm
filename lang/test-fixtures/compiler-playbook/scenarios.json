@@ -9828,6 +9828,42 @@
         ]
       }
     },
+    "X318": {
+      "title": "a large array says how many elements it has, and the Variables view reads them a page at a time",
+      "manual": [
+        "How VS Code groups a large array's elements in ranges of 100 is checked manually; VS Code checks the element count and the page it reads, IntelliJ the first 100 elements and how many more there are."
+      ],
+      "values": {
+        "file": "DebugPages.x",
+        "module": "DebugPages",
+        "source": "module DebugPages {\n    Int run() {\n        Int[] squares = new Int[250](i -> i * i);\n        @Inject Console console;\n        console.print(squares.size);\n        return squares[249] % 256;\n    }\n}\n",
+        "breakpointLine": 5,
+        "expands": "squares",
+        "elements": 250,
+        "page": [
+          200,
+          50
+        ],
+        "first": [
+          "[200]",
+          "40000"
+        ],
+        "last": [
+          "[249]",
+          "62001"
+        ],
+        "shown": 100,
+        "more": "150 more",
+        "output": "250",
+        "exitCode": 49
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ asks for all of a variable's children at once and never pages by indexedVariables (UP42, not filed), so IntelliJ checks the first 100 elements and how many more there are."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
