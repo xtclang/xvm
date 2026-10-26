@@ -3,6 +3,7 @@
     "displayName": "Ecstasy Language Support",
     "description": "Visual Studio Code support for the Ecstasy programming language (also known by its file extension and informal short-form, XTC). Source files use the .x extension. Includes syntax highlighting, LSP-based language features (hover, completion, go-to-definition), debugging via DAP, snippets, and project scaffolding.",
     "version": "0.4.4",
+    "preview": true,
     "publisher": "xtclang",
     "license": "Apache-2.0",
     "repository": {

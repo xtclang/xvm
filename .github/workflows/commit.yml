@@ -683,6 +683,7 @@ jobs:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   VALIDATE_CORE: ${{ steps.publish-flags.outputs.validate-core }}
                   VALIDATE_VSCODE: ${{ steps.publish-flags.outputs.validate-vscode }}
+                  VSCODE_MARKETPLACE_PUBLISH: ${{ vars.VSCODE_MARKETPLACE_PUBLISH }}
               run: |
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
                   # Enable the lang composite build only for these lang/LSP-targeted invocations.
@@ -697,7 +698,9 @@ jobs:
                   #   XDK corpus, native libraries build for all platforms (cached by content
                   #   hash); LSP adapter tests with the tree-sitter adapter; DSL tests, which also
                   #   read the XDK corpus
-                  # - VS Code extension: headless integration tests, then bundle and package the VSIX
+                  # - VS Code extension: headless integration tests, then bundle and package the VSIX, and,
+                  #   only when the repository variable VSCODE_MARKETPLACE_PUBLISH is true, the
+                  #   Marketplace pre-release VSIX, whose patch is this workflow's run number
                   LANG_TASKS=""
                   if [ "$VALIDATE_CORE" = "true" ]; then
                       LANG_TASKS="$LANG_TASKS :lang:tree-sitter:validateTreeSitterGrammar :lang:tree-sitter:testTreeSitterParse"
@@ -717,6 +720,9 @@ jobs:
                           sudo apt-get install -y -qq xvfb
                       fi
                       LANG_TASKS="$LANG_TASKS :lang:vscode-extension:testVscodeExtension :lang:vscode-extension:packageExtension"
+                      if [ "$VSCODE_MARKETPLACE_PUBLISH" = "true" ]; then
+                          LANG_TASKS="$LANG_TASKS :lang:vscode-extension:packageMarketplaceExtension -Pvscode.marketplace.build=${{ github.run_number }}"
+                      fi
                   fi
 
                   echo ""
@@ -736,6 +742,9 @@ jobs:
                   if [ "$VALIDATE_VSCODE" = "true" ]; then
                       echo "✅ VS Code extension tests: PASSED"
                       echo "✅ VS Code extension packaged: $(ls lang/vscode-extension/build/distributions/*.vsix)"
+                      if [ "$VSCODE_MARKETPLACE_PUBLISH" = "true" ]; then
+                          echo "✅ VS Code Marketplace pre-release packaged: $(ls lang/vscode-extension/build/marketplace/*.vsix)"
+                      fi
                   fi
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
@@ -787,6 +796,19 @@ jobs:
               with:
                   name: vscode-extension-${{ env.ARTIFACT_SHA }}
                   path: lang/vscode-extension/build/distributions/*.vsix
+                  if-no-files-found: error
+                  retention-days: 14
+
+            - name: Upload VS Code Marketplace pre-release
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  steps.publish-flags.outputs.validate-vscode == 'true' &&
+                  vars.VSCODE_MARKETPLACE_PUBLISH == 'true'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: vscode-marketplace-${{ env.ARTIFACT_SHA }}
+                  path: lang/vscode-extension/build/marketplace/*.vsix
                   if-no-files-found: error
                   retention-days: 14
 
@@ -1386,7 +1408,8 @@ jobs:
                       echo "⏭️ IntelliJ plugin publish lane: DISABLED (effective-publish-intellij=false from build-and-test)"
                   fi
                   # Whenever the VS Code extension lane is effective, its checks ran and uploaded the
-                  # vscode-extension-<sha> VSIX.
+                  # vscode-extension-<sha> VSIX, and the vscode-marketplace-<sha> VSIX only when the
+                  # repository variable VSCODE_MARKETPLACE_PUBLISH is true.
                   if [ "${{ needs.build-and-test.outputs.effective-publish-vscode }}" = "true" ]; then
                       PUBLISH_VSCODE_EXTENSION=true
                       echo "🧩 VS Code extension publish lane: ENABLED (effective-publish-vscode=true from build-and-test)"

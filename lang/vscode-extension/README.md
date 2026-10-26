@@ -4,7 +4,7 @@ Official Visual Studio Code extension for the **[Ecstasy programming language](h
 
 Ecstasy is a modular, object-oriented language designed for secure, multi-tenant cloud computing. The language is statically typed, uses a verifiable bytecode format, and ships with first-class support for services, fibers, and immutability. This extension brings rich IDE tooling for Ecstasy directly into VS Code: syntax highlighting, semantic tokens, hover, completion, navigation, debugging, project scaffolding, and Gradle task integration.
 
-![Ecstasy](icons/xtc.png)
+![Ecstasy](https://raw.githubusercontent.com/xtclang/xvm/master/doc/logo/x.jpg)
 
 ## Features
 
