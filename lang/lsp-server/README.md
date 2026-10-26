@@ -888,6 +888,29 @@ place each child server's trace in their report's `server-trace/` directory, pre
 separate files.
 The IntelliJ provider forwards the trace directory/level JVM properties to its child server.
 
+### Following a run through the logs
+
+Embedded builds, runs and the execution workers log lines with the same `key=value` fields, so one
+run can be followed from its build to the worker that ran it:
+
+- `XdkAdapter`: `embedded build: build=28 scope=... outcome=succeeded modules=Logged@614fdb35d3c9`.
+  A build's ID is that of its compiler queue job, the `id` of the trace's `embedded-build` events.
+  Each module is given with the start of its artifact's revision (SHA-256), and `(reused)` when an
+  earlier compile supplied it.
+- `DebugSessions`: `debug session launches a run: session=... run=...`, for a debug session's run.
+- `EmbeddedRuns`: `run starting: run=correlated build=28 artifact=Logged@614fdb35d3c9 debug=false`;
+  instead `run not started` when the build failed, or `run stopped before it started`.
+- `RunWorkerProcess`: `run assigned: workerRun=1 run=correlated worker=87623 generation=1 module=Logged
+  method=run`, then `run exited: ... code=7` (or `error=...`) and `execution worker after a run:` with
+  what the worker kept. `worker` is the worker's process ID, `generation` counts the workers this
+  server started, from 1, and `workerRun` is the worker's own number for the run. A worker's
+  `started`, `ready`, `serves no further run` and `exited` lines give the same `worker` and
+  `generation`.
+
+```bash
+grep -E 'run=correlated|build=28 |worker=87623 ' ~/.xtc/logs/lsp/server-*/server.log
+```
+
 ### Tailing Logs
 
 ```bash

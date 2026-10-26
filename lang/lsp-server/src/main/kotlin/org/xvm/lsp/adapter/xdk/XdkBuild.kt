@@ -19,14 +19,18 @@ data class XdkBuiltModule(
     val reused: Boolean = false,
     /** SHA-256 identity of the written artifact. */
     val revision: String? = null,
-)
+) {
+    /** The module as the logs give it: its name and the start of its artifact's revision, if it has one. */
+    val logged: String get() = "$name@${revision?.take(12) ?: "none"}"
+}
 
 /**
  * Outcome of compiling source modules to disk. [modulePath] lists the directories that together
  * hold the built modules and their binary dependencies, which is what a run needs, and
  * [workingDirectory] is the workspace folder that owns them. [compiled] is the text of each source
  * file of the built modules exactly as compiled, by its canonical file, which a debugger matches to
- * the editor's text once the file is edited.
+ * the editor's text once the file is edited. [id] is the build's ID, which is that of the compiler queue job that ran
+ * it, as the trace and the logs give it.
  */
 data class XdkBuildResult(
     val succeeded: Boolean,
@@ -36,6 +40,7 @@ data class XdkBuildResult(
     val modulePath: List<String>,
     val workingDirectory: String,
     val compiled: Map<File, String> = emptyMap(),
+    val id: Long? = null,
 )
 
 /** What an embedded build keeps of one module from the closure compile. */
