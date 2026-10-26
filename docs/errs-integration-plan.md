@@ -2601,6 +2601,12 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   `runCode` and `cancel` commands, protocol 10. `XtcDebugServerTest` 26, three new; a real-worker
   `EmbeddedExecutionTest` case: a call's effect, a cancelled loop, a loop at its limit, then the
   program's exit with the change; `:lang:lsp-server:test` 2387, 2 skipped; `spotlessCheck`.
+- `03a422f6c` (R7u, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog,
+  `lang/doc/manual-test-plan.md`): the editors' READMEs say that the console, or Evaluate
+  Expression, runs code; the IntelliJ probe evaluates with an origin, as LSP4IJ reads it; shared
+  X314, partial in IntelliJ, which lacks cancel and `invalidated` (UP40, UP41). VS Code playbook
+  X280-X314's execution and debug cases (`run-PG7V0w`), IntelliJ's (`run-12149108322701144914`);
+  ESLint, `tsc`, `spotlessCheck`.
 
 ### R6–R7 integration bursts (2026-10-22)
 
@@ -2609,7 +2615,7 @@ stepping add burst E, exception stops, pause and stop on entry burst F, watches 
 burst G, R9's conditions, logpoints and exception classes burst H, expressions with operators
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
 races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
-resume burst M, and console lines run as code by the server burst N. All the work
+resume burst M, console lines run as code by the server burst N, and by the editors burst O. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2632,6 +2638,7 @@ master `1c4efe422`.
 | L: code run on a stopped fiber | `d77fb9b51` (R7r) | `javatools` only | K | `:javatools:test` (`SessionDebuggerTest`), `spotlessCheck`; `:lang:dap-server:test`, `:lang:lsp-server:test` |
 | M: a run's deadline, cancel and resume | `7e475dc98`, `72c7bdbbc` (R7s) | `7e475dc98` `javatools_utils` only, which master can also take on its own; R7s `javatools` only | L | `:javatools_utils:test` (`WeakHasherMapTest`), `:javatools:test` (`SessionDebuggerTest`, the whole suite several times, since the null showed once in five), `spotlessCheck`; `:lang:dap-server:test`, `:lang:lsp-server:test` |
 | N: console lines run as code | `68491020b` (R7t) | `lang/dap-server`, `lang/lsp-server` | M | `:lang:dap-server:test` (`XtcDebugServerTest`), `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers), `spotlessCheck` |
+| O: the editors' consoles run code | `03a422f6c` (R7u) | `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | N | VS Code and IntelliJ playbooks to X314 (X308, X309 and X312 VS Code only; X311, X313 and X314 partial in IntelliJ); ESLint and `tsc`; `spotlessCheck` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
