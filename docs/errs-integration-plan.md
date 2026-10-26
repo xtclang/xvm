@@ -2658,6 +2658,15 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   `:lang:lsp-server:test` 2388 (2 skipped), `:lang:intellij-plugin:test` 151; shared X320, partial
   in IntelliJ (UP37, checked fully with a plugin from LSP4IJ `main`); VS Code `run-jGGd5x`, IntelliJ
   `run-11028250431102437643`; ESLint, `tsc`, `spotlessCheck`.
+- `0e0d7e2c4` (as R10e's server path): `XtcDebugServer.completions` says why its items have no
+  `start`, without a TODO tag, since the adapters send it 0-based as both editors read it (UP43).
+  `:lang:dap-server:test` 32, `spotlessCheck`.
+- `f53883083` (R7's source revisions, `lang/lsp-server`, both playbooks, the shared catalog,
+  `lang/doc/manual-test-plan.md`): breakpoints placed on the lines a debugged program was built
+  from, one on a changed line refused with the reason, frames on their lines now. `CompiledSourcesTest`
+  6, `EmbeddedExecutionTest` 44; `:lang:lsp-server:test` 2395 (2 skipped), `:lang:dap-server:test`
+  32, `:lang:intellij-plugin:test` 151; shared X321, full in IntelliJ; VS Code `run-1fsMru`, IntelliJ
+  `run-14029307754082988329`; ESLint, `tsc`, `spotlessCheck`.
 
 ### R6–R7 integration bursts (2026-10-22)
 
@@ -2667,7 +2676,7 @@ burst G, R9's conditions, logpoints and exception classes burst H, expressions w
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
 races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
 resume burst M, console lines run as code by the server burst N, by the editors burst O, the
-whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, its paging burst T, Set Value burst U, and completions burst V. All the work
+whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, its paging burst T, Set Value burst U, completions burst V, and source revisions burst W. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2697,7 +2706,8 @@ master `1c4efe422`.
 | S: hexadecimal values and identity codes | `cb551d4c2` (R10b) | as R's | R | as R's, with both playbooks to X317 |
 | T: large arrays a page at a time | `00dee9671` (R10c) | as R's | S | as R's, with both playbooks to X318 |
 | U: Set Value | `3a060bd39` (R10d) | as R's | T | as R's, with both playbooks to X319 |
-| V: Debug Console completions | `8178cd03d` (R10e) | as R's | U | as R's, with both playbooks to X320 |
+| V: Debug Console completions | `8178cd03d` (R10e), `0e0d7e2c4` | as R's | U | as R's, with both playbooks to X320 |
+| W: source revisions | `f53883083` (R7) | `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | V | `:lang:lsp-server:test` (`CompiledSourcesTest`, `EmbeddedExecutionTest`), `:lang:dap-server:test`, `:lang:intellij-plugin:test`; both playbooks to X321; ESLint and `tsc`; `spotlessCheck` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
