@@ -620,7 +620,13 @@ format of the requests that name none, which VS Code's Variables view uses, sinc
 a format, and is followed by `invalidated` for `variables`. `setVariable` (`supportsSetVariable`)
 gives a local, a field or an array element the value of an expression, evaluated as a watch is, a
 literal of the variable's type; a value of another type, `this`, a field of an immutable object, a
-computed property or what a `Ref` holds is refused with the reason. A frame of a fiber that called the stopped one has no
+computed property or what a `Ref` holds is refused with the reason. `completions`
+(`supportsCompletionsRequest`, triggered by `.`) completes the name that ends at the request's
+column: after a dot, with the public fields, properties and methods of the value of the path before
+it, evaluated as a watch is; otherwise with the frame's variables, innermost first, `this` and its
+members; only the names that start with what is typed of it. Each replaces what is typed, its
+`length` before the cursor, and has no `start`, which LSP4IJ and VS Code read as a 0-based index
+although `columnsStartAt1` says otherwise (UP43). A frame of a fiber that called the stopped one has no
 scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
 over a call, into one, or out of its method, and the program stops again with the reason `step`;
 a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the

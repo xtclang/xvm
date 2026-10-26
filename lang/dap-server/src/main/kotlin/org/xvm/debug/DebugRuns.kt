@@ -84,6 +84,22 @@ data class VariableState(
     val elements: Int = 0,
 )
 
+/** A name that what is typed in a stopped frame can be completed with, and what it names: a variable, field, property or method. */
+data class CompletionState(
+    val label: String,
+    val kind: String,
+)
+
+/**
+ * The names that complete the name typed in a stopped frame: those that start with the [length] characters of it that
+ * are typed, from the 0-based index [start] in the text, which they replace.
+ */
+data class CompletionsState(
+    val start: Int,
+    val length: Int,
+    val items: List<CompletionState>,
+)
+
 /**
  * Which of a value's children a read gives, as DAP's `filter` names them: all, the named ones (a frame's locals, an
  * object's fields and lazy variables), or the indexed ones (an array's elements).
@@ -264,6 +280,19 @@ interface DebugRuns {
         expression: String,
         hex: Boolean,
     ): CompletableFuture<VariableState>
+
+    /**
+     * The names that complete the name typed in a stopped frame, which ends at the 0-based [offset] in [text]: after a
+     * dot, the members of the value before it, which is evaluated without running the program's code, otherwise the
+     * frame's variables, `this`, and the members of `this`; none if what is before the dot cannot be evaluated. Fails,
+     * with the reason as its message, if the frame is not one of the stopped program's.
+     */
+    fun completions(
+        runId: String,
+        frameId: Int,
+        text: String,
+        offset: Int,
+    ): CompletableFuture<CompletionsState>
 
     /**
      * Runs code, such as a call, in a stopped frame, on the fiber that waits there, for at most [limit]: the value as

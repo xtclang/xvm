@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
+import org.xvm.debug.CompletionsState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -345,6 +346,14 @@ internal class EmbeddedRuns(
         expression: String,
         hex: Boolean,
     ): CompletableFuture<VariableState> = debugged(runId) { worker.setVariable(it, reference, name, expression, hex) }
+
+    /** The names that complete the name typed at [offset] in [text], in a frame of a stopped program under the debugger. */
+    internal fun completions(
+        runId: String,
+        frame: Int,
+        text: String,
+        offset: Int,
+    ): CompletableFuture<CompletionsState> = debugged(runId) { worker.completions(it, frame, text, offset) }
 
     /**
      * Runs code in a frame of a stopped program under the debugger, for at most [limit], and with [program], the whole

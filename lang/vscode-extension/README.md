@@ -202,7 +202,10 @@ the same fields apart. Right-click in the Variables or Watch view and choose **S
 Hexadecimal** to see integers as `0xFF`, a negative one in its type's two's complement; choose it
 again for decimals. **Set Value** on a local, a field or an array element gives it the value of an
 expression such as `5`, `n * 2` or `"text"`, computed without running the program's code; one of
-another type, or a field of an immutable object, is refused with the reason.
+another type, or a field of an immutable object, is refused with the reason. As you type in the
+Debug Console, it completes the name: after a dot, with the fields, properties and methods of the
+value before it, otherwise with the frame's variables and the members of `this`; nothing of the
+program runs to find them.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
 caller. A breakpoint can have a condition, an expression such as `done` or `i % 2 == 0 && i > 0`, and
 a hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with

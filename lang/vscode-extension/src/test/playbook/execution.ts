@@ -1077,6 +1077,59 @@ export function debugSessionCases(): void {
             }
         });
     });
+    playbook('X320', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
+                const frameId: number = stack.stackFrames[0].id;
+                type Target = { label: string; type?: string; start?: number; length?: number };
+                const complete = async (text: string): Promise<Target[]> =>
+                    (await session.customRequest('completions', { frameId, text, column: text.length + 1 })).targets;
+
+                // the request the console makes as a name is typed: after a dot, the members of the value before it
+                const [members, ...names] = data.members as string[];
+                const offered = (await complete(members)).map(target => target.label);
+                for (const name of names) assert.ok(offered.includes(name), `${members} offers ${JSON.stringify(offered)}`);
+                // the typed part of the name is replaced, the length before the cursor, as the console replaces it
+                const [typed, name, completed] = data.typed as string[];
+                const target = (await complete(typed)).find(candidate => candidate.label === name);
+                assert.ok(target, `${typed} offers no ${name}`);
+                assert.strictEqual(target.start, undefined, JSON.stringify(target));
+                assert.strictEqual(typed.slice(0, typed.length - (target.length ?? 0)) + target.label, completed);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1104,7 +1157,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X319 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X320 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;

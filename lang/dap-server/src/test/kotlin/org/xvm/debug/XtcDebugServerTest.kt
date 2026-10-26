@@ -6,6 +6,8 @@ import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.debug.BreakpointEventArguments
+import org.eclipse.lsp4j.debug.CompletionItemType
+import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
@@ -82,6 +84,8 @@ class XtcDebugServerTest {
                 "supportsCancelRequest",
                 "supportsValueFormattingOptions",
                 "supportsSetVariable",
+                "supportsCompletionsRequest",
+                "completionTriggerCharacters",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -290,6 +294,43 @@ class XtcDebugServerTest {
         assertThat(listOf(changed.value, changed.type)).containsExactly("41", "Int")
         assertThat(runs.sets).containsExactly(listOf(7, "n", "n * 2 + 1", false))
         assertFailsWith("\"text\" is String, not Int, so n cannot take it.") { set("\"text\"") }
+    }
+
+    @Test
+    fun `completions are asked for at the offset of the console's line and column, and replace what is typed of the name`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        fun complete(
+            text: String,
+            column: Int,
+            line: Int? = null,
+            frame: Int? = 3,
+        ) = server
+            .completions(
+                CompletionsArguments().apply {
+                    frameId = frame
+                    this.text = text
+                    this.column = column
+                    this.line = line
+                },
+            ).get(10, SECONDS)
+            .targets
+            .map { listOf(it.label, it.type, it.start, it.length) }
+
+        // the typed part of the name is replaced, the length before the cursor, with no start (UP43)
+        assertThat(complete("box.cou", 8)).containsExactly(listOf("count", CompletionItemType.FIELD, null, 3))
+        assertThat(runs.completed.last()).isEqualTo(Triple(3, "box.cou", 7))
+        assertThat(complete("box.", 5))
+            .containsExactly(listOf("count", CompletionItemType.FIELD, null, null), listOf("bump", CompletionItemType.METHOD, null, null))
+        // a later line's offset counts the lines before it and their newlines
+        complete("n\nbox.cou", 8, 2)
+        assertThat(runs.completed.last()).isEqualTo(Triple(3, "n\nbox.cou", 9))
+        // a frame that is not one of the stop's, or none, has nothing to complete
+        assertThat(complete("gone.", 6)).isEmpty()
+        assertThat(complete("box.", 5, frame = null)).isEmpty()
+        assertThat(runs.completed).hasSize(4)
     }
 
     @Test
@@ -834,6 +875,7 @@ class XtcDebugServerTest {
 
         /** Each change's reference, name, expression and hex. */
         val sets = CopyOnWriteArrayList<List<Any>>()
+        val completed = CopyOnWriteArrayList<Triple<Int, String, Int>>()
 
         /** Each run asked for, and its answer, which the test completes. */
         val ran = CopyOnWriteArrayList<Ran>()
@@ -896,6 +938,25 @@ class XtcDebugServerTest {
             } else {
                 CompletableFuture.completedFuture(VariableState(name, "41", "Int", 0))
             }
+        }
+
+        override fun completions(
+            runId: String,
+            frameId: Int,
+            text: String,
+            offset: Int,
+        ): CompletableFuture<CompletionsState> {
+            completed.add(Triple(frameId, text, offset))
+            if (text.startsWith("gone")) {
+                return CompletableFuture.failedFuture(
+                    IllegalArgumentException("The frame is not one of the stopped program's, so nothing can be evaluated in it."),
+                )
+            }
+            val typed = text.substring(0, offset).takeLastWhile(Char::isLetterOrDigit)
+            val names = listOf(CompletionState("count", "field"), CompletionState("bump", "method"))
+            return CompletableFuture.completedFuture(
+                CompletionsState(offset - typed.length, typed.length, names.filter { it.label.startsWith(typed) }),
+            )
         }
 
         override fun run(

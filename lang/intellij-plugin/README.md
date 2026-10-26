@@ -158,7 +158,11 @@ hexadecimal wait on LSP4IJ, whose Variables view has no Show Values as Hexadecim
 pull request [#1769](https://github.com/redhat-developer/lsp4ij/pull/1769)). **Set Value** on a local, a
 field or an array element gives it the value of an expression such as `5`, `n * 2` or `"text"`,
 computed without running the program's code; one of another type, or a field of an immutable object,
-is refused with the reason. **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
+is refused with the reason. In **Evaluate Expression**, **Basic Completion** completes the name
+typed: after a dot, with the fields, properties and methods of the value before it, otherwise with
+the frame's variables and the members of `this`; nothing of the program runs to find them. LSP4IJ
+0.21.0 reports an IDE error, `Document/PSI mismatch`, as the expression there is edited (UP37, fixed
+by LSP4IJ pull request [#1763](https://github.com/redhat-developer/lsp4ij/pull/1763)). **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
 **Resume Program** runs it on and **Stop** ends it where it is. A breakpoint's condition, an
 expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. Its pass count and
 **Evaluate and log**, and a breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (UP32 in
