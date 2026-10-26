@@ -109,28 +109,28 @@ public class xListMap
                 ? new DeferredArrayHandle(clzValArray, ahVal)
                 : xArray.createImmutableArray(clzValArray, ahVal);
 
-        ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[m_constructor.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
 
         if (fDeferredKey || fDeferredVal) {
             Frame.Continuation stepNext = frameCaller ->
-                construct(frameCaller, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+                construct(frameCaller, m_constructor, clzMap, null, ahArg, iReturn);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
         }
 
-        return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+        return construct(frame, m_constructor, clzMap, null, ahArg, iReturn);
     }
 
     /**
      * @return structure for "construct(Key[] keys, Value[] vals)"
      */
     public MethodStructure ensureConstructor() {
-        if (CONSTRUCTOR == null) {
-            CONSTRUCTOR = getStructure().findMethod("construct", m -> m.getParamCount() == 3);
+        if (m_constructor == null) {
+            m_constructor = getStructure().findMethod("construct", m -> m.getParamCount() == 3);
         }
-        return CONSTRUCTOR;
+        return m_constructor;
     }
-    private static MethodStructure CONSTRUCTOR;
+    private MethodStructure m_constructor;
 }
