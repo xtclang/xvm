@@ -338,10 +338,12 @@ breakpoint list, which the editors replace.
   closing ends the worker process. The suite runs five rounds, `-Plsp.soakRounds` more; 50 passed
   three times on macOS. It found that the worker counted a JDK thread started from a pool thread,
   the common pool's delay scheduler, as runtime pool growth, which retired a healthy worker; the
-  worker now reports the pool's own size. Memory is checked by counts only: the heap a worker
-  reports is measured after `System.gc()`, which need not collect anything. Not done: Linux until
-  CI has run it, Windows, where nothing runs the `lsp-server` tests, and repeated cycles driven
-  from the editors.
+  worker now reports the pool's own size. Memory is checked by counts only. The worker no longer
+  calls `System.gc()` (`3a9112c31`): it reports the heap the JVM left after its own latest
+  collections, and the server keeps its 512 MB limit on that but dropped the 128 MB growth rule,
+  since two such figures say nothing about what runs retain. The tests that waited for the
+  collector walk the object graph instead (`aa94f23b5`). Not done: Linux until CI has run it,
+  Windows, where nothing runs the `lsp-server` tests, and repeated cycles driven from the editors.
 - [x] A JVM that makes more than one runtime kept up to two that it was done with, about 115 MB each
   (`1ca73e922`, 2026-10-26). Three things held one:
   - A pending alarm on the JVM-wide Java timer. The `Timer` service belongs to the native
