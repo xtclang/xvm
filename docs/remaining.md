@@ -211,7 +211,7 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   expressions with Ecstasy's literals and operators, computed by the runtime's own native operations
   without running code; an operation that would run code is refused, naming the method
   (`fda3dc3e8`, `0540055e9`; shared X313, its logpoint VS Code only, UP32).
-- [ ] Bounded evaluation's tier 2: calls and properties on the stopped fiber, with the decided
+- [x] Bounded evaluation's tier 2: calls and properties on the stopped fiber, with the decided
   deadlines, cancellation, side effects announced by `invalidated`, and the opt-in to run the whole
   program (the console's `E`, `EM` and `WE`; lang/doc/plans/plan-bounded-evaluation.md). In five
   steps, R7r to R7v:
@@ -228,7 +228,9 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   - [x] R7u, the editors and shared X314 (`03a422f6c`): VS Code's Debug Console and IntelliJ's Evaluate
     Expression run code; X314 checks a call's effect, the time limit and the exit in both, and cancel
     and `invalidated` in VS Code, as LSP4IJ has neither (UP40, UP41).
-  - [ ] R7v, the `evaluationRunsProgram` opt-in.
+  - [x] R7v, the `evaluationRunsProgram` opt-in (`70cdd636f`): a launch option, a checkbox in IntelliJ's
+    configuration, that lets the program's other fibers run, without stopping, while console code does,
+    and wait again at their next line; `invalidated` is then for all areas. Shared X315.
 - [ ] Source maps tied to source revisions: breakpoints match by file and line, not by the build's
   source revision.
 - [x] Terminating a stopped program ends it where it is (`41cb8b60c`).

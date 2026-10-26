@@ -1,9 +1,9 @@
 # Bounded evaluation in the debugger: design for review
 
-**Status (2026-10-24): decided; tier 1 is done (`fda3dc3e8` runtime, `0540055e9` editors, shared X313); tier 2's
-runtime is done, running code on the stopped fiber (`d77fb9b51`) and ending it at its deadline, on cancel, resume
-and terminate (`72c7bdbbc`), the server and worker (`68491020b`) and the editors (`03a422f6c`, shared X314);
-the `evaluationRunsProgram` opt-in is next.** This
+**Status (2026-10-26): decided and done. Tier 1 (`fda3dc3e8` runtime, `0540055e9` editors, shared X313), and
+tier 2: running code on the stopped fiber (`d77fb9b51`), ending it at its deadline, on cancel, resume and terminate
+(`72c7bdbbc`), the server and worker (`68491020b`), the editors (`03a422f6c`, shared X314), and the
+`evaluationRunsProgram` opt-in (`70cdd636f`, shared X315). R10's on-demand values on top of tier 2 are next.** This
 is R7's last feature in the
 [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance): Debug Console expressions,
 watches and hovers on any expression, conditions and logpoint messages beyond paths, and, through them, R10's
@@ -179,7 +179,12 @@ improvement, not part of this plan.
       whose origin LSP4IJ maps to `repl`, run code; X314 checks a call's effect, the time limit and the exit in both,
       cancel and `invalidated` in VS Code, since LSP4IJ never sends `cancel` (UP41) nor handles `invalidated`
       (UP40).
-   5. R7v, the `evaluationRunsProgram` opt-in, last, since it lets waiting fibers run.
+   5. R7v, the `evaluationRunsProgram` opt-in (`70cdd636f`): a launch argument, in VS Code's `launch.json` and as
+      a checkbox of IntelliJ's Ecstasy Application configuration, that makes a console line's run one of the
+      whole program (`SessionDebugger.run(..., program)`): every other fiber leaves its wait and runs as without
+      a debugger, with no breakpoint, logpoint, step, pause or exception stop and the clock running, and waits
+      in the same stop again at its next line once the run ends, its old frame IDs reading nothing; `invalidated`
+      is then for `all` areas. Shared X315 calls into a service whose fiber the stop held mid-method.
 3. **R10 on top of tier 2**: `toString()` on demand and computed properties as lazy variables, which also lets
    UP35 be checked in IntelliJ with our adapter.
 
