@@ -193,7 +193,8 @@ debug toolbar's Stop ends the program, also while it still builds, and a line ty
 Console while the program runs is its console input. Breakpoints are verified when the program
 starts, and a breakpoint or `assert:debug` stops the program: the editor shows the line, and the
 Call Stack view the stopped fiber's frames and the other fibers that wait. The Variables view shows
-the selected frame's locals, and expands objects into their fields and arrays into their elements.
+the selected frame's locals, and expands objects into their fields and arrays into their elements;
+a large array's elements come in ranges of 100, such as `[200..249]`, each read when expanded.
 An object's computed properties and its `toString()` follow its fields as lazy variables: their
 values run the program's code, for at most a second, so they show only once you click them. A
 mutable object's value ends with its identity code, such as `#1023456`, which tells two objects with
