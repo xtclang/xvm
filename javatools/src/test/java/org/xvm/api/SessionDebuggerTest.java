@@ -47,6 +47,8 @@ import org.xvm.asm.ModuleRepository;
 
 import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
+import org.xvm.runtime.SessionDebugger.Completion;
+import org.xvm.runtime.SessionDebugger.Completions;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
 import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
@@ -519,6 +521,35 @@ public class SessionDebuggerTest {
                     @Inject Console console;
                     console.print($"{n} {small} {text} {box.count} {list} {point.x} {fixed}");
                     return n + box.count + list[1];
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() bumps a Box, on line 7, and prints, on line 18, its count, the Box's
+     * count, the size of an array of the Box and a text, and returns the count; a Box has a field,
+     * a private one, a computed property and a method.
+     */
+    private static final String COMPLETES = """
+            module Completes {
+                class Box {
+                    Int count;
+                    private Int hidden = 1;
+                    Int twice.get() = count * 2;
+                    void bump() {
+                        count += hidden;
+                    }
+                }
+
+                Int run() {
+                    Int    count = 3;
+                    Box    box   = new Box();
+                    Box[]  boxes = [box];
+                    String text  = "hi";
+                    box.bump();
+                    @Inject Console console;
+                    console.print($"{count} {box.count} {boxes.size} {text}");
+                    return count;
                 }
             }
             """;
@@ -1718,6 +1749,66 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void aNameTypedInAStoppedFrameCompletesToItsVariablesOrToTheMembersOfTheValueBeforeADot() throws Exception {
+        Path  source  = compile("Completes", COMPLETES);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Completes"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7), new Line(2, 18)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Completes", output, session);
+        try (control) {
+            // in a Box's own method, the members of this are all of its own, the private ones too
+            Stop bumps  = stops.next();
+            int  inside = session.stackTrace(bumps.threadId()).getFirst().id();
+            var  hidden = new Completions(0, 2, List.of(new Completion("hidden", "field")));
+            assertEquals(hidden, complete(session, inside, "hi", 2));
+            assertEquals(new Completions(5, 2, hidden.items()), complete(session, inside, "this.hi", 7));
+            assertEquals(new Completions(0, 2, List.of(new Completion("count", "field"))), complete(session, inside, "co", 2));
+            session.resume();
+
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+            var  box   = new Completion("box", "variable");
+            var  boxes = new Completion("boxes", "variable");
+
+            // the frame's variables, innermost first, and the members of this, which is the module
+            assertEquals(new Completions(0, 2, List.of(boxes, box)), complete(session, frame, "bo", 2));
+            assertEquals(new Completions(0, 2, List.of(new Completion("text", "variable"))), complete(session, frame, "te", 2));
+            assertEquals(new Completions(0, 2, List.of(new Completion("run", "method"))), complete(session, frame, "ru", 2));
+
+            // after a dot, the public members of the value before it: fields, properties, then methods,
+            // and not the private field
+            assertEquals(new Completions(4, 0, List.of(new Completion("count", "field"), new Completion("twice", "property"),
+                    new Completion("bump", "method"), new Completion("equals", "method"),
+                    new Completion("makeImmutable", "method"), new Completion("toString", "method"))),
+                    complete(session, frame, "box.", 4));
+            assertEquals(new Completions(17, 2, List.of(new Completion("twice", "property"))),
+                    complete(session, frame, "count + boxes[0].tw", 19));
+            assertEquals(new Completions(5, 3, List.of(new Completion("toUppercase", "method"))),
+                    complete(session, frame, "text.toU", 8));
+            assertEquals(new Completions(5, 2, List.of(new Completion("run", "method"))), complete(session, frame, "this.ru", 7));
+
+            // the name ends at the offset, wherever that is in the text, and a path that cannot be
+            // evaluated has no members
+            assertEquals(new Completions(4, 3, List.of(new Completion("count", "field"))),
+                    complete(session, frame, "box.cou + 1", 7));
+            assertEquals(new Completions(5, 1, List.of()), complete(session, frame, "nope.x", 6));
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
+                    session.completions(frame + 1000, "bo", 2));
+
+            // nothing of the program ran, and once it resumes, its frames are not stopped ones
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("3 1 1 hi"), output.toString());
+            assertEquals(3L, control.result());
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
+                    session.completions(frame, "bo", 2));
+        }
+    }
+
+    @Test
     public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
         Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
         Stops stops   = new Stops();
@@ -2123,6 +2214,10 @@ public class SessionDebuggerTest {
 
     private static Variable set(SessionDebugger session, int reference, String name, String expression) throws Exception {
         return session.setVariable(reference, name, expression, false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    private static Completions complete(SessionDebugger session, int frame, String text, int offset) throws Exception {
+        return session.completions(frame, text, offset).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
 
     private static Variable evaluate(SessionDebugger session, int frame, String path) throws Exception {

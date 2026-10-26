@@ -2,7 +2,13 @@ package org.xtclang.idea.playbook.probe
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.intellij.codeInsight.CodeInsightSettings
+import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
+import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.hint.HintManager
+import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupManager
+import com.intellij.codeInsight.lookup.impl.LookupImpl
 import com.intellij.execution.ProgramRunnerUtil
 import com.intellij.execution.RunManager
 import com.intellij.execution.configurations.ConfigurationTypeUtil
@@ -16,9 +22,13 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.SimpleColoredText
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.xdebugger.XDebugProcess
@@ -42,6 +52,7 @@ import com.intellij.xdebugger.frame.XValueNode
 import com.intellij.xdebugger.frame.XValuePlace
 import com.intellij.xdebugger.frame.presentation.XValuePresentation
 import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl
+import com.intellij.xdebugger.impl.evaluate.XDebuggerEvaluationDialog
 import com.intellij.xdebugger.impl.evaluate.XEvaluationOrigin
 import com.intellij.xdebugger.impl.ui.tree.nodes.XEvaluationCallbackWithOrigin
 import org.xtclang.idea.run.XtcRunConfiguration
@@ -52,6 +63,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.Icon
+import javax.swing.SwingUtilities
 
 /**
  * Drives Debug of an Ecstasy Application configuration, through LSP4IJ's DAP client and the debug session in the
@@ -380,6 +392,123 @@ object DebugSessionUi {
             },
         )
         return result.get(30, TimeUnit.SECONDS)
+    }
+
+    /**
+     * Completes [text] in Evaluate Expression, which opens on the paused fiber's top frame as its action opens it:
+     * Basic Completion at the end of the text, then [pick] chosen from the lookup, which always shows, even for one
+     * completion. Answers the lookup's `items`, whether the pick was `inserted`, and the expression's `text` after it.
+     * With an expression fragment that is not physical, the lookup closes without a pick, which would edit it.
+     */
+    @JvmStatic
+    fun complete(
+        project: Project,
+        module: String,
+        text: String,
+        pick: String,
+    ): String {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val position = checkNotNull(session.currentStackFrame?.sourcePosition) { "The debug session of $module has no frame position" }
+        val settings = CodeInsightSettings.getInstance()
+        val insertsAtOnce = settings.AUTOCOMPLETE_ON_CODE_COMPLETION
+        lateinit var dialog: XDebuggerEvaluationDialog
+        // the dialog is not modal, so it shows and this goes on
+        ApplicationManager.getApplication().invokeAndWait {
+            dialog =
+                XDebuggerEvaluationDialog(session, session.debugProcess.editorsProvider, XExpressionImpl.fromText(text), position, false)
+            dialog.show()
+        }
+        try {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            val editor = expressionEditor(project, dialog, deadline)
+            // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has
+            //  the event system on, so an edit of it fails IntelliJ's Document/PSI check; the pick is inserted only
+            //  into a physical one, as #1763 makes it
+            var physical = false
+            ApplicationManager.getApplication().invokeAndWait {
+                physical = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)?.isPhysical == true
+                settings.AUTOCOMPLETE_ON_CODE_COMPLETION = false
+                editor.selectionModel.removeSelection()
+                editor.caretModel.moveToOffset(editor.document.textLength)
+            }
+            // Basic Completion once the expression has the focus, as when it is typed there; a lookup that shows
+            // before the dialog takes the focus closes, so completion starts again if none has shown for a while
+            var focused = false
+            while (!focused && System.nanoTime() < deadline) {
+                ApplicationManager.getApplication().invokeAndWait { focused = editor.contentComponent.isFocusOwner }
+                if (!focused) Thread.sleep(100)
+            }
+
+            fun invoke() =
+                ApplicationManager.getApplication().invokeAndWait {
+                    CodeCompletionHandlerBase(CompletionType.BASIC).invokeCompletion(project, editor)
+                }
+            invoke()
+            var invoked = System.nanoTime()
+
+            val items = JsonArray()
+            var inserted = false
+            var done = false
+            while (!done) {
+                check(System.nanoTime() < deadline) { "No completion $pick of $text: \"${editor.document.text}\"" }
+                Thread.sleep(100)
+                var shown = false
+                ApplicationManager.getApplication().invokeAndWait {
+                    val lookup = LookupManager.getActiveLookup(editor) as LookupImpl?
+                    shown = lookup != null
+                    val item = lookup?.items?.firstOrNull { it.lookupString == pick }
+                    if (lookup != null && item != null) {
+                        lookup.items.forEach { items.add(it.lookupString) }
+                        if (physical) {
+                            lookup.currentItem = item
+                            lookup.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+                            inserted = true
+                        } else {
+                            lookup.hideLookup(true)
+                        }
+                        done = true
+                    }
+                }
+                if (!done && !shown && System.nanoTime() - invoked > TimeUnit.SECONDS.toNanos(5)) {
+                    invoke()
+                    invoked = System.nanoTime()
+                }
+            }
+            var completed = ""
+            ApplicationManager.getApplication().invokeAndWait { completed = editor.document.text }
+            return JsonObject()
+                .apply {
+                    add("items", items)
+                    addProperty("inserted", inserted)
+                    addProperty("text", completed)
+                }.toString()
+        } finally {
+            ApplicationManager.getApplication().invokeAndWait {
+                settings.AUTOCOMPLETE_ON_CODE_COMPLETION = insertsAtOnce
+                dialog.close(DialogWrapper.CANCEL_EXIT_CODE)
+            }
+        }
+    }
+
+    /** The dialog's expression editor, whose document is the debugger's code fragment, once it shows. */
+    private fun expressionEditor(
+        project: Project,
+        dialog: XDebuggerEvaluationDialog,
+        deadline: Long,
+    ): Editor {
+        while (true) {
+            var editor: Editor? = null
+            var shown = emptyList<String>()
+            ApplicationManager.getApplication().invokeAndWait {
+                val editors = EditorFactory.getInstance().allEditors.filter { SwingUtilities.isDescendingFrom(it.component, dialog.window) }
+                val files = PsiDocumentManager.getInstance(project)
+                editor = editors.firstOrNull { files.getPsiFile(it.document) != null }
+                shown = editors.map { "\"${it.document.text}\" ${files.getPsiFile(it.document)}" }
+            }
+            editor?.let { return it }
+            check(System.nanoTime() < deadline) { "Evaluate Expression has no expression editor: $shown" }
+            Thread.sleep(100)
+        }
     }
 
     /** The paused session's top frame's Locals, as the Variables view shows them. */
