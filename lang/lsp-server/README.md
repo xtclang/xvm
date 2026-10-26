@@ -571,10 +571,10 @@ Shutting down the server shuts down every worker and ends active runs.
 A worker receives nothing until it reports its protocol version and the bundled XDK it runs, and
 these must be the server's own. They differ when the server's files are replaced while it runs, as
 by a plugin update; such a worker is ended, and its run says to restart the language server. After
-each run a worker reports the heap it still uses after a collection, its live threads, the threads
-of the runtime's own pool, and the consoles and runs it still holds for ended programs, which the
-server logs. A worker is not used again when it keeps more than 512 MB or 200 threads, when its heap
-grew more than 128 MB since its first run, when its runtime pool grew, or when it still holds a
+each run a worker reports the heap the JVM left in use after its own latest collections (the worker
+forces none), its live threads, the threads of the runtime's own pool, and the consoles and runs it
+still holds for ended programs, which the server logs. A worker is not used again when it keeps more
+than 512 MB after a collection or 200 threads, when its runtime pool grew, or when it still holds a
 console or run of an ended program. A worker exits when the server's pipe closes, also when the
 server process is killed. A program's output
 is sent in batches: text goes out 20 ms after it is printed, or as soon as 16,384 characters wait,
