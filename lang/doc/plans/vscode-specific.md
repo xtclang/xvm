@@ -1,7 +1,7 @@
 # VS Code Extension Enhancement Plan
 
 > **Created**: 2026-04-03
-> **Status**: Implemented except runtime debugging and Marketplace publishing (2026-10-16)
+> **Status**: Implemented except Marketplace publishing (2026-10-16); runtime debugging since 2026-10-22 (R6/R7)
 > **Scope**: Making the VS Code extension feel mature and production-ready
 
 > **Status review, 2026-09-23:** The baseline, counts and proposed changes below describe the April
@@ -16,7 +16,7 @@
 > the `workspace/configuration` bridge (`xtc.formatting`, `xtc.compiler`, `xtc.codeLens`), snippets, the
 > `xtc` task provider and an adapter status-bar item. Editor project configuration also ships:
 > source-module discovery, `xtc.compiler.libraries` and **Ecstasy: Configure Libraries and Sources**.
-> Open: runtime debugging (§5) and Marketplace publishing (§7; no publish step in CI).
+> Open: Marketplace publishing (§7; no publish step in CI).
 
 ## Guiding Principle
 
@@ -45,7 +45,7 @@ The original plan counted 136 lines in `extension.ts` and proposed keeping it un
 - Semantic tokens not enabled (commented out in extension.ts) — done
 - No VS Code settings exposed — done
 - No task provider (build/run/test) — done
-- No debug adapter (DAP) integration — debug type contributed; no runtime debugger (§5)
+- No debug adapter (DAP) integration — done (inline debug adapter over the language client, §5)
 - No snippets — done
 - No workspace/configuration bridge (IntelliJ has this, VS Code doesn't) — done
 - Not published to VS Code Marketplace — still open
@@ -393,15 +393,15 @@ This mirrors the XDK run mode proposed for IntelliJ in `idea-specific.md`.
 
 ## 5. Debug Adapter (DAP) Integration
 
-**Status (2026-10-15):** the `xtc` debug type is contributed, but there is no runtime debugger. Launch
-configurations and `F5` run the module without debugging, following `xtc.build.mode`, and the DAP stub
-is not started. Real debugging is R6/R7 in the
-[execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance).
+**Status (2026-10-26):** done since 2026-10-22 (R6/R7). `F5` and launch configurations debug
+embedded runs through an inline debug adapter over the language client, with the session in the
+language server; see the [README](../../vscode-extension/README.md#debugging). The problem and
+solution below are the original plan, with a separate DAP server process.
 
 ### Problem
 
-The DAP server exists (`lang/dap-server/`) but is not wired to the VS Code
-extension. Users cannot set breakpoints or debug XTC code.
+The DAP server existed (`lang/dap-server/`) but was not wired to the VS Code
+extension. Users could not set breakpoints or debug XTC code.
 
 ### Solution
 
@@ -567,4 +567,4 @@ can't discover or install it from the VS Code Marketplace.
 | `lang/vscode-extension/snippets/xtc.json` | Code snippets (new) |
 | `lang/vscode-extension/build.gradle.kts` | Build orchestration |
 | `lang/lsp-server/` | All intelligence lives here (Kotlin) |
-| `lang/dap-server/` | Debug adapter (Kotlin, needs work) |
+| `lang/dap-server/` | DAP session library hosted by `lang/lsp-server/` (Kotlin) |

@@ -68,7 +68,7 @@ Paths below are relative to platform. Open these three files:
 | Inlay hints | In **G**, inspect `readLine(..., "xtclang")`, `new Uri(...)` and calls in `send`. Enable LSP inlay hints in editor settings if hidden. | Parameter labels; inferred-type hints appear where inference supplies a type. The packaged request returns 26 hints in this file. |
 | URLs and source links | In **O**, follow the RFC 6749 comment's HTTPS link. Follow `import json.JsonObject;` at the top of **R**. | Opens the RFC or the resolved read-only library source. Compiler-backed module/type/alias and wildcard-container links require current, resolved source facts. |
 | Expand selection | In **G**, put the caret inside `createRequest(method, group, path, content)`; invoke **Extend Selection** repeatedly, then **Shrink Selection**. | Expression, enclosing call and larger AST ranges. |
-| Run entry point | Open the module declaration at the top of **G** and inspect its **Run** lens. | Existing client run integration. Do not execute this example during the tour: it asks for credentials and contacts GitHub. Reusable embedded execution and DAP are still planned. |
+| Run entry point | Open the module declaration at the top of **G** and inspect its **Run** lens. | Existing client run integration. Do not execute this example during the tour: it asks for credentials and contacts GitHub. Reusable embedded execution and DAP debugging exist on `lagergren/errs`; this tour does not run them. |
 
 Definition, references, subtype/property targets, incoming calls, bundled type navigation, highlights,
 inlay hints, links, outline and folds above were checked through the packaged server. This platform
