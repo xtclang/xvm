@@ -44,6 +44,8 @@ import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 /**
@@ -74,6 +76,9 @@ import kotlin.time.toJavaDuration
 object RunWorker {
     /** The error of a request for the debugger of a run without one, or of one that ended. */
     private const val NOT_DEBUGGED = "The program is not running under the debugger"
+
+    /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
+    private val STOP_LIMIT = 5.seconds
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -116,7 +121,8 @@ object RunWorker {
                 }
             }
         }
-        runs.stopAll()
+        // nothing waits for the programs any more: they get a while to end, and the worker exits after it in any case
+        runs.stopAll(STOP_LIMIT)
         // runtime service threads are not daemons, so a finished worker exits explicitly
         exitProcess(0)
     }
@@ -527,9 +533,10 @@ object RunWorker {
          */
         private fun poolThreads(): Int = EmbeddingSupport.instance().poolThreads()
 
-        fun stopAll() {
+        /** Ends each run's input and closes the runs, waiting at most [limit] for them to end. */
+        fun stopAll(limit: Duration) {
             inputs.values.forEach(ConsoleInput::end)
-            active.values.forEach { runCatching { it.close() } }
+            closeAll(active.values.toList(), limit)
         }
 
         private fun ErrorList.failure(): String? =
@@ -740,6 +747,22 @@ private class RunErrors(
         if (err.severity == Severity.WARNING) console.println("Warning: ${err.messageText}")
         super.log(err)
     }
+}
+
+/**
+ * Closes each of [closeables] on a thread of its own and waits at most [limit] for all of them, for a worker that
+ * exits after it: a run whose close waits for a program that does not end must not keep the worker alive.
+ *
+ * @return whether every one of them was closed in time
+ */
+internal fun closeAll(
+    closeables: Collection<AutoCloseable>,
+    limit: Duration,
+): Boolean {
+    val closing = closeables.map { closeable -> Thread.ofVirtual().start { runCatching { closeable.close() } } }
+    val deadline = System.nanoTime() + limit.inWholeNanoseconds
+    closing.forEach { it.join((deadline - System.nanoTime()).coerceAtLeast(0).nanoseconds.toJavaDuration()) }
+    return closing.none(Thread::isAlive)
 }
 
 /**
