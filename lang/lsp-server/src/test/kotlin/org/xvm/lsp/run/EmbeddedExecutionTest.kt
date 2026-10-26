@@ -790,6 +790,11 @@ class EmbeddedExecutionTest {
                     .asJsonArray
                     .map { it.asJsonObject["name"].asString },
             ).containsExactly(names[1])
+            // a local takes an expression's value, which the program goes on with; show() has used n already
+            sessions.request(id, 38, "setVariable", """{"variablesReference": $locals, "name": "n", "value": "n * 3"}""")
+            val changed = client.until(id) { it.response == "setVariable" }.last()
+            assertThat(changed["success"].asBoolean).isTrue()
+            assertThat(changed["body"].asJsonObject["value"].asString).isEqualTo("15")
             sessions.request(id, 36, "variables", """{"variablesReference": $locals, "filter": "indexed"}""")
             assertThat(
                 client

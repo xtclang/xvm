@@ -116,6 +116,23 @@ record PureExpression(String text, Node root) {
     }
 
     /**
+     * Evaluate the expression for a variable of the specified type, as an assignment to it does: a
+     * literal takes that type, as the compiler converts it, such as {@code 5} for an {@code Int8}.
+     *
+     * @param type  the type of the variable that the value is for
+     *
+     * @return the expression's value in the frame, which may be a reference
+     *
+     * @throws IllegalArgumentException if it cannot be evaluated, or a literal is not of the type
+     */
+    ObjectHandle evaluate(Frame waitingFrame, Frame frame, TypeConstant type) {
+        Operand operand = operand(waitingFrame, frame, root);
+        return operand instanceof Literal(LiteralConstant literal)
+                ? converted(waitingFrame, literal, type, root)
+                : value(waitingFrame, operand, root);
+    }
+
+    /**
      * @return true if the expression's value in the frame is the Boolean True
      *
      * @throws IllegalArgumentException if it cannot be evaluated, or is not a Boolean

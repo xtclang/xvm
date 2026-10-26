@@ -251,6 +251,21 @@ interface DebugRuns {
     ): CompletableFuture<VariableState>
 
     /**
+     * Changes a variable of the stopped program, a frame's local, an object's field or an array's element, by the
+     * [reference] that read it and its [name], to the value of [expression], which is evaluated without running the
+     * program's code; a literal takes the variable's type. Answers with the variable and its new value, an integer
+     * in hexadecimal with [hex]; fails, with the reason as its message, if the variable cannot take the value, as one
+     * of another type, or a field of an immutable object.
+     */
+    fun setVariable(
+        runId: String,
+        reference: Int,
+        name: String,
+        expression: String,
+        hex: Boolean,
+    ): CompletableFuture<VariableState>
+
+    /**
      * Runs code, such as a call, in a stopped frame, on the fiber that waits there, for at most [limit]: the value as
      * a variable named by the expression, whose value is the value's `toString()`. What the code changes stays
      * changed, and the program stays stopped. Fails, with the reason as its message, if the code does not compile,
