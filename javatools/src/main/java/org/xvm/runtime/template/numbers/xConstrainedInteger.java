@@ -115,8 +115,9 @@ public abstract class xConstrainedInteger
             return overflow(frame);
         }
 
+        // a value narrower than a byte, such as a Nibble's 4 bits, is checked against its range
         int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-        if (cBytes * 8 > f_cNumBits) {
+        if (f_cNumBits < 8 ? pi.isBig() || pi.getLong() > f_cMaxValue : cBytes * 8 > f_cNumBits) {
             return overflow(frame);
         }
 
@@ -133,8 +134,12 @@ public abstract class xConstrainedInteger
 
     @Override
     protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn) {
+        // bit arrays pack from the high end of each byte; for example, a Nibble value of 0xC
+        // is stored as 0xC0, so shift away the unused low bits to recover its value
+        int cBytes = (cBits + 7) >>> 3;
         return cBits == f_cNumBits
-            ? convertLong(frame, fromByteArray(ab, (cBits + 7) >>> 3, f_fSigned), iReturn, f_fChecked)
+            ? convertLong(frame, fromByteArray(ab, cBytes, f_fSigned) >>> (cBytes * 8 - cBits),
+                    iReturn, f_fChecked)
             : frame.raiseException(
                 xException.illegalArgument(frame, "Invalid bit count: " + cBits));
     }
@@ -173,8 +178,11 @@ public abstract class xConstrainedInteger
         case "bits": {
             long l = ((JavaLong) hTarget).getValue();
 
+            // a bit array reads from the high end of each byte; left-align a partial byte
+            // so Nibble 0xC produces bits 1100 (stored as 0xC0)
+            int cBytes = (f_cNumBits + 7) >>> 3;
             return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
-                toByteArray(l, f_cNumBits >>> 3), f_cNumBits, Mutability.Constant));
+                toByteArray(l << (cBytes * 8 - f_cNumBits), cBytes), f_cNumBits, Mutability.Constant));
         }
 
         case "bitCount": {
