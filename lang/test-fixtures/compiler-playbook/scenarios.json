@@ -9864,6 +9864,33 @@
         ]
       }
     },
+    "X319": {
+      "title": "Set Value gives a stopped frame's variable an expression's value, which the program goes on with, and refuses a value of another type with the reason",
+      "manual": [
+        "How each editor's Set Value edits a value is checked manually; VS Code checks the setVariable answers, IntelliJ what its Set Value reports and the variable's new value."
+      ],
+      "values": {
+        "file": "DebugSet.x",
+        "module": "DebugSet",
+        "source": "module DebugSet {\n    Int run() {\n        Int n = 20;\n        @Inject Console console;\n        console.print($\"n {n}\");\n        return n;\n    }\n}\n",
+        "breakpointLine": 5,
+        "set": [
+          "n",
+          "n * 2 + 1",
+          "41"
+        ],
+        "refused": [
+          "\"text\"",
+          "\"text\" is String, not Int, so n cannot take it."
+        ],
+        "output": "n 41",
+        "exitCode": 41
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

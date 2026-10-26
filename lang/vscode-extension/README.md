@@ -200,7 +200,9 @@ values run the program's code, for at most a second, so they show only once you 
 mutable object's value ends with its identity code, such as `#1023456`, which tells two objects with
 the same fields apart. Right-click in the Variables or Watch view and choose **Show Values as
 Hexadecimal** to see integers as `0xFF`, a negative one in its type's two's complement; choose it
-again for decimals.
+again for decimals. **Set Value** on a local, a field or an array element gives it the value of an
+expression such as `5`, `n * 2` or `"text"`, computed without running the program's code; one of
+another type, or a field of an immutable object, is refused with the reason.
 Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
 caller. A breakpoint can have a condition, an expression such as `done` or `i % 2 == 0 && i > 0`, and
 a hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with

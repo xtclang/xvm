@@ -183,6 +183,14 @@ internal class DebugSessions(
             hex: Boolean,
         ) = runs.evaluate(runId, frameId, expression, hex)
 
+        override fun setVariable(
+            runId: String,
+            reference: Int,
+            name: String,
+            expression: String,
+            hex: Boolean,
+        ) = runs.setVariable(runId, reference, name, expression, hex)
+
         override fun run(
             runId: String,
             frameId: Int,

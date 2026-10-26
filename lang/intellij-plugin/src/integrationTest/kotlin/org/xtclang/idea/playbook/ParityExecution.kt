@@ -916,6 +916,48 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X319") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // the Variables view's Set Value: a value of another type is refused with the reason, and the variable
+                // keeps its value; an expression of its type is its new value
+                val (name, expression, value) = data.strings("set")
+                val (other, reason) = data.strings("refused")
+
+                fun shown() =
+                    JsonParser
+                        .parseString(debugger.variables(project, module, ""))
+                        .asJsonArray
+                        .map { it.asJsonObject }
+                        .single { it.string("name") == name }
+                        .string("value")
+                val before = shown()
+                val refused = debugger.setValue(project, module, name, other)
+                check(reason in refused) { "Set Value of $other says $refused" }
+                check(shown() == before) { "$name changed to ${shown()}" }
+                check(debugger.setValue(project, module, name, expression).isEmpty()) { "Set Value of $expression failed" }
+                check(shown() == value) { "$name is ${shown()}, not $value" }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -997,6 +1039,13 @@ internal interface DebugSessionProbe {
         module: String,
         on: Boolean,
     ): Boolean
+
+    fun setValue(
+        project: Project,
+        module: String,
+        path: String,
+        expression: String,
+    ): String
 
     fun step(
         project: Project,

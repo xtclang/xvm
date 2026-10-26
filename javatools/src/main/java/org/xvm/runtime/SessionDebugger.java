@@ -81,7 +81,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
  * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables},
- * {@link #evaluate}), has a waiting fiber run code ({@link #run}), and
+ * {@link #evaluate}), changes them ({@link #setVariable}), has a waiting fiber run code
+ * ({@link #run}), and
  * resumes it ({@link #resume}), steps one of its fibers ({@link #step}) or pauses it
  * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
  * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
@@ -104,8 +105,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * <li>When the program stops, {@link Listener#stopped} says where and why. While it is stopped,
  *     the host reads its waiting fibers ({@link #threads}), their stacks ({@link #stackTrace}), the
  *     scopes and variables of their frames ({@link #scopes}, {@link #variables}) and the exception
- *     it stopped at ({@link #exceptionInfo}); it evaluates expressions ({@link #evaluate}), and has
- *     a waiting fiber run code ({@link #run}).</li>
+ *     it stopped at ({@link #exceptionInfo}); it evaluates expressions ({@link #evaluate}), changes
+ *     variables ({@link #setVariable}), and has a waiting fiber run code ({@link #run}).</li>
  * <li>The host ends the stop: {@link #resume} lets the program run on, and {@link #step} lets it
  *     run until the stepped fiber reaches the line where the step ends, where it stops again. A
  *     program that runs stops at its next line once the host asks for a {@link #pause}.</li>
@@ -271,6 +272,12 @@ public final class SessionDebugger implements Debugger {
      */
     private static final String NOT_STOPPED =
             "The frame is not one of the stopped program's, so nothing can be evaluated in it.";
+
+    /**
+     * Why nothing is changed by a reference that is not one of this stop's frames or values.
+     */
+    private static final String NOT_CHANGED =
+            "The variable is not one of the stopped program's, so it cannot be changed.";
 
     /**
      * Why an evaluation or a run that the program's resume abandoned has no answer.
@@ -970,6 +977,59 @@ public final class SessionDebugger implements Debugger {
         }
         return future.thenApply(vars -> {
             // a read that the resume abandoned has no variables
+            if (vars.isEmpty()) {
+                throw new IllegalArgumentException(RESUMED_FIRST);
+            }
+            return vars.getFirst();
+        });
+    }
+
+    /**
+     * Change a variable of the stopped program: a frame's local, an object's field or an array's
+     * element, named as a read by its reference gave it, to the value of an expression, which is
+     * evaluated as {@link #evaluate} evaluates one, without running any of the program's code; a
+     * literal takes the variable's type, as the compiler converts it, such as {@code 5} for an
+     * {@code Int8}. The names in the expression are those of the frame that the local is in, or of
+     * the frame where the fiber that holds the object or array waits. The waiting fiber changes it
+     * on its own thread, as it reads variables, and the program goes on with the new value once it
+     * resumes.
+     *
+     * <p>What it refuses, saying why: a value that is not of the variable's type; {@code this} and
+     * {@link #EXCEPTION}; a variable or field that a {@code Ref} holds, such as a captured variable
+     * or a property with an annotation, whose change could run code; a field of an immutable
+     * object, such as a const; an element of an immutable array; a computed property, which has no
+     * field; and a name the reference does not read.
+     *
+     * @param reference   a reference that {@link #scopes} or a read returned: a frame's locals, or
+     *                    an object's fields or an array's elements
+     * @param name        the variable's or field's name, or an element's index in brackets, such
+     *                    as {@code "[1]"}
+     * @param expression  the expression whose value the variable takes
+     * @param hex         true to show the new value's integers in hexadecimal
+     *
+     * @return the variable with its new value, as a read shows it; fails, with the reason in words,
+     *         if the expression cannot be evaluated, the variable cannot take its value, the
+     *         reference is not one of this stop's, or the program resumes first
+     */
+    public CompletableFuture<Variable> setVariable(int reference, String name, String expression, boolean hex) {
+        PureExpression parsed;
+        try {
+            parsed = PureExpression.parse(expression);
+        } catch (IllegalArgumentException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
+        var future = new CompletableFuture<List<Variable>>();
+        synchronized (this) {
+            Halt   current = halt;
+            Target target  = current == null ? null : current.targets.get(reference);
+            if (!(target instanceof Locals || target instanceof Children)
+                    || !request(current, new Read(new Assignment(target, name, parsed), hex, Filter.ALL, 0, 0, future))) {
+                return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_CHANGED));
+            }
+        }
+        return future.thenApply(vars -> {
+            // a change that the resume abandoned has no variables
             if (vars.isEmpty()) {
                 throw new IllegalArgumentException(RESUMED_FIRST);
             }
@@ -1883,6 +1943,7 @@ public final class SessionDebugger implements Debugger {
                         : part(fields(current, frame, object, hex), read);
                 case Children _ -> List.of();
                 case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e, hex));
+                case Assignment assignment -> List.of(assign(current, frame, assignment, hex));
                 // a lazy variable's value is computed by a run, never read (variables())
                 case Lazy _ -> List.of();
             };
@@ -1975,6 +2036,127 @@ public final class SessionDebugger implements Debugger {
      */
     private Variable resolve(Halt current, Frame waitingFrame, Frame frame, PureExpression expression, boolean hex) {
         return variable(current, waitingFrame, expression.text(), expression.evaluate(waitingFrame, frame), hex);
+    }
+
+    /**
+     * Give a variable of a frame, an object or an array the value of the assignment's expression,
+     * on the thread of the fiber waiting at the specified frame.
+     *
+     * @return the variable with its new value
+     *
+     * @throws IllegalArgumentException if the variable cannot take the value, saying why
+     */
+    private Variable assign(Halt current, Frame waitingFrame, Assignment assignment, boolean hex) {
+        String name = assignment.name();
+        if (name.equals("this") || name.equals(EXCEPTION)) {
+            throw new IllegalArgumentException(name + " cannot be changed.");
+        }
+
+        return switch (assignment.target()) {
+            case Locals(int _, Frame frame) -> {
+                int register = register(frame, name);
+                if (frame.f_ahVar[register] instanceof RefHandle) {
+                    throw new IllegalArgumentException(name + " is held by a Ref, which could run code to change it,"
+                            + " so it is not changed.");
+                }
+                ObjectHandle value = valueFor(waitingFrame, frame, assignment, frame.getVarInfo(register).getType());
+                frame.f_ahVar[register] = value;
+                yield variable(current, waitingFrame, name, value, hex);
+            }
+
+            case Children(int _, ArrayHandle array) -> {
+                long            index    = index(name, array);
+                TypeConstant    element  = array.getType().resolveGenericType("Element");
+                ObjectHandle    value    = valueFor(waitingFrame, waitingFrame, assignment, element);
+                var             template = (xArray) array.getTemplate();
+                ExceptionHandle pending  = waitingFrame.m_hException;
+                if (template.assignArrayValue(waitingFrame, array, index, value) != Op.R_NEXT) {
+                    // an immutable array refuses; the exception must not stay on the waiting frame
+                    ExceptionHandle refused = waitingFrame.m_hException;
+                    waitingFrame.m_hException = pending;
+                    throw new IllegalArgumentException(name + " cannot be changed: " + describe(refused) + '.');
+                }
+                yield variable(current, waitingFrame, name, value, hex);
+            }
+
+            case Children(int _, GenericHandle object) -> {
+                FieldInfo field = DebugConsole.getFieldLayout(object.getComposition()).get(name);
+                if (field == null) {
+                    boolean computed = computedProperties(object).stream()
+                            .anyMatch(property -> property.getName().equals(name));
+                    throw new IllegalArgumentException(computed
+                            ? name + " is computed by its getter, and has no field to change."
+                            : typeText(object) + " has no field " + name + '.');
+                }
+                if (!object.isMutable()) {
+                    throw new IllegalArgumentException(name + " is a field of an immutable " + typeText(object)
+                            + ", which cannot be changed.");
+                }
+                if (field.isTransient() || field.isInflated()) {
+                    throw new IllegalArgumentException(name + " is held by a Ref, which could run code to change it,"
+                            + " so it is not changed.");
+                }
+                ObjectHandle value = valueFor(waitingFrame, waitingFrame, assignment, field.getType());
+                object.setField(field.getIndex(), value);
+                yield variable(current, waitingFrame, name, value, hex);
+            }
+
+            default -> throw new IllegalArgumentException(name + " cannot be changed.");
+        };
+    }
+
+    /**
+     * @return the register of the innermost variable of the frame with the specified name
+     *
+     * @throws IllegalArgumentException if the frame has none
+     */
+    private static int register(Frame frame, String name) {
+        for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
+            VarInfo info = frame.getVarInfo(i);
+            if (info != null && name.equals(info.getName())) {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException("There is no variable \"" + name + "\" in this frame.");
+    }
+
+    /**
+     * @return the index that an element's name, such as {@code "[1]"}, gives
+     *
+     * @throws IllegalArgumentException if it is not an index of the array
+     */
+    private static long index(String name, ArrayHandle array) {
+        long size = array.m_hDelegate.m_cSize;
+        if (name.length() > 2 && name.startsWith("[") && name.endsWith("]")) {
+            try {
+                long index = Long.parseLong(name.substring(1, name.length() - 1));
+                if (index >= 0 && index < size) {
+                    return index;
+                }
+            } catch (NumberFormatException ignored) {
+                // not an index
+            }
+        }
+        throw new IllegalArgumentException(name + " is not an element of the array, whose size is " + size + '.');
+    }
+
+    /**
+     * @return the value of the assignment's expression, evaluated in the frame for a variable of the
+     *         specified type
+     *
+     * @throws IllegalArgumentException if it cannot be evaluated, is unassigned, or is not of the type
+     */
+    private static ObjectHandle valueFor(Frame waitingFrame, Frame frame, Assignment assignment, TypeConstant type) {
+        PureExpression expression = assignment.expression();
+        ObjectHandle   value      = shown(expression.evaluate(waitingFrame, frame, type));
+        if (value == null) {
+            throw new IllegalArgumentException(expression.text() + " is unassigned.");
+        }
+        if (!value.getType().isA(type)) {
+            throw new IllegalArgumentException(expression.text() + " is " + typeText(value) + ", not "
+                    + type.getValueString() + ", so " + assignment.name() + " cannot take it.");
+        }
+        return value;
     }
 
     /**
@@ -2872,6 +3054,17 @@ public final class SessionDebugger implements Debugger {
      * An expression to evaluate in a frame.
      */
     private record Evaluation(int thread, Frame frame, PureExpression expression) implements Target {
+    }
+
+    /**
+     * A change of a variable that a read of the target gave, by its name, to the value of an
+     * expression, which the waiting fiber of the target makes.
+     */
+    private record Assignment(Target target, String name, PureExpression expression) implements Target {
+        @Override
+        public int thread() {
+            return target.thread();
+        }
     }
 
     /**

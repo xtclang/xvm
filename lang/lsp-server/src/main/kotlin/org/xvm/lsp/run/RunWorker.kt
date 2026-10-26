@@ -52,7 +52,8 @@ import kotlin.time.toJavaDuration
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions` and
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
  * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
- * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`, `hex`), `runCode` (`id`, `request`, `frame`,
+ * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`, `hex`), `setVariable` (`id`, `request`, `reference`,
+ * `name`, `expression`, `hex`), `runCode` (`id`, `request`, `frame`,
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
@@ -98,6 +99,7 @@ object RunWorker {
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
                     "evaluate" -> runs.evaluate(command)
+                    "setVariable" -> runs.setVariable(command)
                     "runCode" -> runs.runCode(command)
                     "cancel" -> runs.cancel(command)
                     "exceptionInfo" -> runs.exceptionInfo(command)
@@ -340,6 +342,26 @@ object RunWorker {
                 )
                     ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
             read.whenComplete { variable, failure ->
+                answer(command) {
+                    if (failure != null) {
+                        addProperty("error", reason(failure))
+                    } else {
+                        add("variable", RunWorkerDebug.variable(state(variable)))
+                    }
+                }
+            }
+        }
+
+        /** Answers, as `evaluate` does, with the variable a change gave a new value, or the reason it is not changed. */
+        fun setVariable(command: JsonObject) {
+            val change =
+                debuggers[command["id"].asLong]?.setVariable(
+                    command["reference"].asInt,
+                    command["name"].asString,
+                    command["expression"].asString,
+                    command["hex"].asBoolean,
+                ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
+            change.whenComplete { variable, failure ->
                 answer(command) {
                     if (failure != null) {
                         addProperty("error", reason(failure))
@@ -653,7 +675,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 14
+        const val PROTOCOL = 15
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

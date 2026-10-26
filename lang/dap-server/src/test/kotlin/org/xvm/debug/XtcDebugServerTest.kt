@@ -23,6 +23,7 @@ import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetVariableArguments
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceArguments
@@ -80,6 +81,7 @@ class XtcDebugServerTest {
                 "supportsExceptionFilterOptions",
                 "supportsCancelRequest",
                 "supportsValueFormattingOptions",
+                "supportsSetVariable",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -268,6 +270,26 @@ class XtcDebugServerTest {
         server.valueFormat(ValueFormat()).get(10, SECONDS)
         variables(null)
         assertThat(runs.hexes.last()).isFalse()
+    }
+
+    @Test
+    fun `setVariable changes a variable to an expression's value, and one that it cannot take says why`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        fun set(expression: String) =
+            server.setVariable(
+                SetVariableArguments().apply {
+                    variablesReference = 7
+                    name = "n"
+                    value = expression
+                },
+            )
+        val changed = set("n * 2 + 1").get(10, SECONDS)
+        assertThat(listOf(changed.value, changed.type)).containsExactly("41", "Int")
+        assertThat(runs.sets).containsExactly(listOf(7, "n", "n * 2 + 1", false))
+        assertFailsWith("\"text\" is String, not Int, so n cannot take it.") { set("\"text\"") }
     }
 
     @Test
@@ -810,6 +832,9 @@ class XtcDebugServerTest {
         /** Each read's filter, start and count. */
         val reads = CopyOnWriteArrayList<Triple<ChildFilter, Int, Int>>()
 
+        /** Each change's reference, name, expression and hex. */
+        val sets = CopyOnWriteArrayList<List<Any>>()
+
         /** Each run asked for, and its answer, which the test completes. */
         val ran = CopyOnWriteArrayList<Ran>()
         val runAnswers = CopyOnWriteArrayList<CompletableFuture<VariableState>>()
@@ -855,6 +880,21 @@ class XtcDebugServerTest {
                 "point" -> CompletableFuture.completedFuture(VariableState("point", "Vars:Point", "Vars:Point", 8))
                 "slow()" -> slowRead
                 else -> CompletableFuture.failedFuture(IllegalStateException("There is no variable \"$expression\" in this frame."))
+            }
+        }
+
+        override fun setVariable(
+            runId: String,
+            reference: Int,
+            name: String,
+            expression: String,
+            hex: Boolean,
+        ): CompletableFuture<VariableState> {
+            sets.add(listOf(reference, name, expression, hex))
+            return if (expression == "\"text\"") {
+                CompletableFuture.failedFuture(IllegalArgumentException("\"text\" is String, not Int, so $name cannot take it."))
+            } else {
+                CompletableFuture.completedFuture(VariableState(name, "41", "Int", 0))
             }
         }
 

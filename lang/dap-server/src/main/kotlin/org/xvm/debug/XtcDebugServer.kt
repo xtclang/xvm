@@ -33,6 +33,8 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsResponse
+import org.eclipse.lsp4j.debug.SetVariableArguments
+import org.eclipse.lsp4j.debug.SetVariableResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.debug.StackTraceArguments
@@ -278,6 +280,7 @@ class XtcDebugServer(
                 supportsExceptionFilterOptions = true
                 supportsCancelRequest = true
                 supportsValueFormattingOptions = true
+                supportsSetVariable = true
                 exceptionBreakpointFilters =
                     arrayOf(
                         ExceptionBreakpointsFilter().apply {
@@ -660,6 +663,31 @@ class XtcDebugServer(
                 variablesReference = 0
             },
         )
+    }
+
+    /**
+     * DAP: setVariable
+     *
+     * Changes a stopped frame's local, an object's field or an array's element, which `variablesReference` read, to
+     * the value of an expression, such as `5`, `n * 2` or `"text"`, evaluated without running the program's code; what
+     * cannot take the value, as a variable of another type or a field of an immutable object, fails with the reason.
+     * The answer is the variable's new value, which the client shows; the program goes on with it once it resumes.
+     */
+    override fun setVariable(args: SetVariableArguments): CompletableFuture<SetVariableResponse> {
+        if (!debuggedRunning()) return failed("The program is not stopped, so its variables cannot be changed.")
+        val hex = args.format?.hex ?: hexValues
+        return runs.setVariable(runId, args.variablesReference, args.name, args.value, hex).handle { state, failure ->
+            if (failure != null) {
+                val cause = (failure as? CompletionException)?.cause ?: failure
+                throw error(cause.message ?: cause.toString())
+            }
+            SetVariableResponse().apply {
+                value = state.value
+                type = state.type.ifEmpty { null }
+                variablesReference = state.variablesReference
+                indexedVariables = state.elements.takeIf { it > 0 }
+            }
+        }
     }
 
     /**
