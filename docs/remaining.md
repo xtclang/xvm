@@ -520,7 +520,11 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-23: `eddd77ee9` as `c7fedbe53`, `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
+  2026-10-26, after both were rebased onto master `5130e4211`, see the
+  [integration plan](errs-integration-plan.md): the torn-jar check `143594eec` as `12170a7c1`, the
+  AGENTS.md inline-comment rule `b15c44ab7` as `00f7289c0`, and the plan's part of the R5 record
+  `362aaafc4` as `f863ffabd`; #720's reviewed weak map came from master. Before that, 2026-10-23,
+  in the old history: `eddd77ee9` as `c7fedbe53`, `ab9fbddeb` as `e618f7a22`, without its `SessionDebuggerTest`
   change, `1473c7e89` as `a6c3f519d`, `89e519d99` as `78e0a9deb`, and #717's three fixes as `076907bda`
   (its test only, since #693 stopped at an unterminated string already), `3ce7fc147` and `18a8d910e`,
   and #718's `getRuntime()` review changes `dc12e9390` and `db624ebbc` as `d7701ed06` and `5a68503df`;
