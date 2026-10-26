@@ -440,8 +440,9 @@ this bridge; they cannot be inferred from compiler type hints.
      Shared X307 stops at an uncaught exception in both editors with no setup.
   8. *Pause and stop on entry (`5a7bf8def` runtime, `48f00ef8c` editors).* Pause stops a running
      program at the next line a fiber reaches; `stopOnEntry` stops it at the first line of its own
-     modules (worker protocol 7). Shared X308 pauses in VS Code, and X309 stops on entry there;
-     IntelliJ's Pause waits on LSP4IJ (UP30), and its configuration has no stop-on-entry option.
+     modules (worker protocol 7). Shared X308 pauses in VS Code, and X309 stops on entry there and,
+     since `df6c1a873`, in IntelliJ, whose configuration has the option; IntelliJ's Pause waits on
+     LSP4IJ (UP30).
      `5a64247bd` rewrote `SessionDebugger` plainly, with less mutable state, without changing it.
   9. *Watches and hover on paths (`2e4a81205` runtime, `c966674fc` editors).* `evaluate` in a
      stopped frame reads a path, a name and then fields and array elements such as `point.x` or
