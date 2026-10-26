@@ -37,9 +37,11 @@ import com.intellij.xdebugger.frame.XStackFrame
 import com.intellij.xdebugger.frame.XValue
 import com.intellij.xdebugger.frame.XValueChildrenList
 import com.intellij.xdebugger.frame.XValueContainer
+import com.intellij.xdebugger.frame.XValueModifier
 import com.intellij.xdebugger.frame.XValueNode
 import com.intellij.xdebugger.frame.XValuePlace
 import com.intellij.xdebugger.frame.presentation.XValuePresentation
+import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl
 import com.intellij.xdebugger.impl.evaluate.XEvaluationOrigin
 import com.intellij.xdebugger.impl.ui.tree.nodes.XEvaluationCallbackWithOrigin
 import org.xtclang.idea.run.XtcRunConfiguration
@@ -261,6 +263,37 @@ object DebugSessionUi {
             action.setSelected(AnActionEvent.createEvent(action, context, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null), on)
         }
         return true
+    }
+
+    /**
+     * Sets the value at the `/`-separated [path] to [expression], as the Variables view's Set Value does through the
+     * value's modifier: "" once it is set, or the error the modifier reports.
+     */
+    @JvmStatic
+    fun setValue(
+        project: Project,
+        module: String,
+        path: String,
+        expression: String,
+    ): String {
+        val names = path.split('/').filter { it.isNotEmpty() }
+        var shown = locals(project, module)
+        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
+        val modifier = checkNotNull(named(shown, names.last(), path).modifier) { "${names.last()} has no Set Value" }
+        val result = CompletableFuture<String>()
+        modifier.setValue(
+            XExpressionImpl.fromText(expression),
+            object : XValueModifier.XModificationCallback {
+                override fun valueModified() {
+                    result.complete("")
+                }
+
+                override fun errorOccurred(errorMessage: String) {
+                    result.complete(errorMessage)
+                }
+            },
+        )
+        return result.get(30, TimeUnit.SECONDS)
     }
 
     /** The paused session's top frame's Locals, as the Variables view shows them. */

@@ -337,6 +337,15 @@ internal class EmbeddedRuns(
         hex: Boolean,
     ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression, hex) }
 
+    /** Changes a variable of a stopped program under the debugger to an expression's value, an integer in hexadecimal if [hex]. */
+    internal fun setVariable(
+        runId: String,
+        reference: Int,
+        name: String,
+        expression: String,
+        hex: Boolean,
+    ): CompletableFuture<VariableState> = debugged(runId) { worker.setVariable(it, reference, name, expression, hex) }
+
     /**
      * Runs code in a frame of a stopped program under the debugger, for at most [limit], and with [program], the whole
      * program meanwhile, its integer value in hexadecimal if [hex]; cancelling it ends the run.
