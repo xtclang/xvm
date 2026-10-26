@@ -215,7 +215,7 @@ The existing console debugger is a full implementation of the `Debugger` interfa
 | Watch expressions (`WO`, `WR`) | Partial (WE TODO) | `evaluate` in watch context |
 | Stack traces | Fully implemented | `stackTrace` |
 | Source display | Fully implemented | `source` |
-| `toString()` display (`DS`) | Fully implemented | `evaluate`, or a variable's value on demand (R10) |
+| `toString()` display (`DS`) | Fully implemented | `evaluate`, or an object's lazy `toString()` variable (R10a, `1d88e086d`) |
 | Identity code (`DI`) | Fully implemented | Variable presentation (R10) |
 | Value view mode (`V`) | Fully implemented | `variables`/`evaluate` with `format` (R10) |
 | Multi-result evaluation (`EM`) | Fully implemented | `evaluate` (R7) |

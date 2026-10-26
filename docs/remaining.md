@@ -278,8 +278,11 @@ come from are in parentheses.
 - [ ] R9: data breakpoints, which stop when a property or field changes.
 - [ ] R10: value formats (`V`) and identity codes (`DI`). IntelliJ's hexadecimal toggle: UP36; in VS Code,
   our extension contributes the menu item, by design (UP38).
-- [ ] R10: a value's `toString()` on demand (`DS`), through R7's evaluation.
-- [ ] R10: computed properties as lazy variables; only fields show now. IntelliJ: UP35.
+- [x] R10: a value's `toString()` on demand (`DS`), through R7's evaluation, and computed properties
+  as lazy variables (`1d88e086d`, R10a): an object's fields are followed by its public computed
+  properties and its `toString()`, `(...)`, whose reads run the getter or `toString()` on the stopped
+  fiber for at most a second (worker protocol 12, `presentationHint.lazy`). Shared X316; IntelliJ
+  clicks LSP4IJ's Show value link (UP35, #1768), or with 0.21.0 expands the variable to its value.
 - [ ] R10: paging of large arrays and collections, in place of the first 100 elements.
 - [ ] R10: changing a variable's value while stopped (`setVariable`).
 - [ ] R10: completions in the Debug Console.
@@ -394,9 +397,10 @@ passes with the workaround disabled. The gates are in
   "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
   program stopped while IntelliJ shows it running. Passes natively since R9 (2026-10-23).
 - [ ] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), filed 2026-10-26, `feat/dap-lazy-variables` at `0f740223`): lazy
-  variables behind a "Show value" link. Not checked natively until R10 makes computed properties
-  lazy. Gate after a release: a computed property in IntelliJ's Variables view shows its value when
-  its link is clicked.
+  variables behind a "Show value" link. Checked natively on 2026-10-26 with R10a (`1d88e086d`): with
+  a plugin built from #1768, X316's lazy variables have a Show value link and no children, and
+  clicking them shows their values (`run-2879359689441688077`, `run-13880544694745259179`). Gate after
+  a release: X316 in IntelliJ through the link only, its 0.21.0 path and UP35 tag removed.
 - [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), filed 2026-10-26, `feat/dap-value-formats` at `50575ca9`): a "Show
   Values as Hexadecimal" toggle. Not checked natively until R10 formats values. Gate after a release:
   the toggle shows a stopped frame's integers in hexadecimal in IntelliJ.

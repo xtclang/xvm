@@ -480,7 +480,9 @@ this bridge; they cannot be inferred from compiler type hints.
   tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
   R7's evaluation; computed properties as lazy variables, where only fields show now; paging of
   large arrays and collections in place of the first 100 elements; changing a variable's value
-  while stopped (`setVariable`); and completions in the Debug Console.
+  while stopped (`setVariable`); and completions in the Debug Console. Done so far:
+  `toString()` on demand and computed properties, as lazy variables whose reads run their code for
+  at most a second (`1d88e086d`, R10a, worker protocol 12, shared X316).
 - [ ] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
   temporary breakpoint, so it may already work and needs checking), choosing which call on a line
   to step into (`stepInTargets`), restarting a frame (the console's `T`), and continuing, stepping or

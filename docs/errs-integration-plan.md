@@ -2622,6 +2622,18 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   partial in IntelliJ (UP40); VS Code `run-gqafml`, IntelliJ `run-4121547544985287605`; ESLint,
   `tsc`, `spotlessCheck`.
 
+### R10: values (2026-10-26)
+
+- `1d88e086d` (R10a, `javatools`, `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`,
+  `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md`): an object's
+  computed properties and `toString()` as lazy variables, read by a run on the stopped fiber with
+  the one-second limit; worker protocol 12 carries `lazy`, and the server sends
+  `presentationHint.lazy`. `SessionDebuggerTest` 37; `:javatools:test` 679, 42 skips;
+  `:lang:dap-server:test` 28, `:lang:lsp-server:test` 2388 (2 skipped),
+  `:lang:intellij-plugin:test` 151; shared X316, partial in IntelliJ (UP35); VS Code `run-KZ6ZKt`,
+  IntelliJ `run-12840101946100786608`, and natively with LSP4IJ #1768
+  (`run-2879359689441688077`, `run-13880544694745259179`); ESLint, `tsc`, `spotlessCheck`.
+
 ### R6–R7 integration bursts (2026-10-22)
 
 R6 and R7's first part are seven code commits on this branch, with their records; variables and
@@ -2630,7 +2642,7 @@ burst G, R9's conditions, logpoints and exception classes burst H, expressions w
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
 races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
 resume burst M, console lines run as code by the server burst N, by the editors burst O, the
-whole program's opt-in burst P, and IntelliJ's stop on entry burst Q. All the work
+whole program's opt-in burst P, IntelliJ's stop on entry burst Q, and R10's lazy variables burst R. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2656,6 +2668,7 @@ master `1c4efe422`.
 | O: the editors' consoles run code | `03a422f6c` (R7u) | `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | N | VS Code and IntelliJ playbooks to X314 (X308, X309 and X312 VS Code only; X311, X313 and X314 partial in IntelliJ); ESLint and `tsc`; `spotlessCheck` |
 | P: the whole program runs with console code, on request | `70cdd636f` (R7v) | `javatools`, `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | O | `:javatools:test` (`SessionDebuggerTest`), `:lang:dap-server:test`, `:lang:lsp-server:test`, `:lang:intellij-plugin:test`; VS Code and IntelliJ playbooks to X315; ESLint and `tsc`; `spotlessCheck` |
 | Q: IntelliJ stops on entry | `df6c1a873` | `lang/intellij-plugin`, the shared catalog's X309, `lang/doc/manual-test-plan.md` | P, whose README text it extends | `:lang:intellij-plugin:test`; IntelliJ playbook X304, X305, X307, X309, X314, X315; VS Code playbook X309; `spotlessCheck` |
+| R: lazy computed properties and `toString()` | `1d88e086d` (R10a) | `javatools`, `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | P, Q | `:javatools:test` (`SessionDebuggerTest`), `:lang:dap-server:test`, `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers), `:lang:intellij-plugin:test`; VS Code and IntelliJ playbooks to X316; ESLint and `tsc`; `spotlessCheck` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.

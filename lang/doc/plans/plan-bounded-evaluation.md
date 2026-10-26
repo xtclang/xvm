@@ -3,7 +3,8 @@
 **Status (2026-10-26): decided and done. Tier 1 (`fda3dc3e8` runtime, `0540055e9` editors, shared X313), and
 tier 2: running code on the stopped fiber (`d77fb9b51`), ending it at its deadline, on cancel, resume and terminate
 (`72c7bdbbc`), the server and worker (`68491020b`), the editors (`03a422f6c`, shared X314), and the
-`evaluationRunsProgram` opt-in (`70cdd636f`, shared X315). R10's on-demand values on top of tier 2 are next.** This
+`evaluationRunsProgram` opt-in (`70cdd636f`, shared X315); and on top of it R10's values on demand, an object's
+computed properties and `toString()` as lazy variables (`1d88e086d`, shared X316).** This
 is R7's last feature in the
 [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance): Debug Console expressions,
 watches and hovers on any expression, conditions and logpoint messages beyond paths, and, through them, R10's
@@ -186,7 +187,11 @@ improvement, not part of this plan.
       in the same stop again at its next line once the run ends, its old frame IDs reading nothing; `invalidated`
       is then for `all` areas. Shared X315 calls into a service whose fiber the stop held mid-method.
 3. **R10 on top of tier 2**: `toString()` on demand and computed properties as lazy variables, which also lets
-   UP35 be checked in IntelliJ with our adapter.
+   UP35 be checked in IntelliJ with our adapter. Done: `1d88e086d` (R10a). An object's fields are followed by a
+   lazy variable for each public computed property and one for `toString()`; reading one runs the getter, or
+   `toString()`, as a run on the stopped fiber with the one-second limit, without compiling anything. A lazy
+   read sends no `invalidated`, which would fold the value just shown. Shared X316; UP35 works natively with
+   LSP4IJ #1768.
 
 ## Questions to decide
 
