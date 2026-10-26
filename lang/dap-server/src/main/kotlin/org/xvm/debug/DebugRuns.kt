@@ -73,7 +73,7 @@ data class ScopeState(
  * is empty when it is not known), and the reference its own fields or elements are read by, or 0 when it has none.
  * A [lazy] one, an object's computed property or its `toString()`, has a placeholder for its value and no type, and
  * reading its reference runs the code that computes the value, for at most a second, which answers with one variable
- * that has the value and its type.
+ * that has the value and its type. An array's has the number of its [elements], which can be read a part at a time.
  */
 data class VariableState(
     val name: String,
@@ -81,7 +81,18 @@ data class VariableState(
     val type: String,
     val variablesReference: Int,
     val lazy: Boolean = false,
+    val elements: Int = 0,
 )
+
+/**
+ * Which of a value's children a read gives, as DAP's `filter` names them: all, the named ones (a frame's locals, an
+ * object's fields and lazy variables), or the indexed ones (an array's elements).
+ */
+enum class ChildFilter {
+    ALL,
+    NAMED,
+    INDEXED,
+}
 
 /**
  * Which thrown exceptions stop a debugged program: every one, or those that no frame will catch, and for each, the
@@ -214,12 +225,17 @@ interface DebugRuns {
      * The variables of a scope, or the fields or elements of a variable, by its reference; none for a reference
      * from before the program last resumed. A lazy variable's reference runs its code, and fails, with the reason as
      * its message, if the code throws or does not end within a second. With [hex], integers are in hexadecimal, such as
-     * `0x1F`, and a negative one of a type of fixed size in its two's complement.
+     * `0x1F`, and a negative one of a type of fixed size in its two's complement. Only the children [filter] takes are
+     * read, from the one at [start], [count] of them, or all from there for 0; an array's are read only for that part,
+     * and all of a large one from [start] are its first 100 and how many more there are.
      */
     fun variables(
         runId: String,
         reference: Int,
         hex: Boolean,
+        filter: ChildFilter,
+        start: Int,
+        count: Int,
     ): CompletableFuture<List<VariableState>>
 
     /**

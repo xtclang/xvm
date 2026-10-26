@@ -34,6 +34,7 @@ import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.ThreadEventArguments
 import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.junit.jupiter.api.Test
@@ -267,6 +268,42 @@ class XtcDebugServerTest {
         server.valueFormat(ValueFormat()).get(10, SECONDS)
         variables(null)
         assertThat(runs.hexes.last()).isFalse()
+    }
+
+    @Test
+    fun `an array's variable says how many elements it has, and a client reads them a part at a time`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val squares =
+            server
+                .variables(VariablesArguments().apply { variablesReference = 20 })
+                .get(10, SECONDS)
+                .variables
+                .single()
+        assertThat(squares.indexedVariables).isEqualTo(250)
+        assertThat(runs.reads.last()).isEqualTo(Triple(ChildFilter.ALL, 0, 0))
+
+        // the part a client asks for is the part the program reads
+        server
+            .variables(
+                VariablesArguments().apply {
+                    variablesReference = 21
+                    filter = VariablesArgumentsFilter.INDEXED
+                    start = 200
+                    count = 50
+                },
+            ).get(10, SECONDS)
+        assertThat(runs.reads.last()).isEqualTo(Triple(ChildFilter.INDEXED, 200, 50))
+        server
+            .variables(
+                VariablesArguments().apply {
+                    variablesReference = 21
+                    filter = VariablesArgumentsFilter.NAMED
+                },
+            ).get(10, SECONDS)
+        assertThat(runs.reads.last()).isEqualTo(Triple(ChildFilter.NAMED, 0, 0))
     }
 
     @Test
@@ -770,6 +807,9 @@ class XtcDebugServerTest {
         /** Whether each read, evaluation and run asked for hexadecimal integers. */
         val hexes = CopyOnWriteArrayList<Boolean>()
 
+        /** Each read's filter, start and count. */
+        val reads = CopyOnWriteArrayList<Triple<ChildFilter, Int, Int>>()
+
         /** Each run asked for, and its answer, which the test completes. */
         val ran = CopyOnWriteArrayList<Ran>()
         val runAnswers = CopyOnWriteArrayList<CompletableFuture<VariableState>>()
@@ -872,6 +912,9 @@ class XtcDebugServerTest {
             runId: String,
             reference: Int,
             hex: Boolean,
+            filter: ChildFilter,
+            start: Int,
+            count: Int,
         ) = CompletableFuture
             .completedFuture(
                 when (reference) {
@@ -892,9 +935,14 @@ class XtcDebugServerTest {
 
                     9 -> listOf(VariableState("sum", "7", "Int", 0))
 
+                    20 -> listOf(VariableState("squares", "Int[250]", "Array<Int>", 21, elements = 250))
+
                     else -> emptyList()
-                },
-            ).also { hexes.add(hex) }
+                }.drop(start).let { if (count > 0) it.take(count) else it },
+            ).also {
+                hexes.add(hex)
+                reads.add(Triple(filter, start, count))
+            }
 
         override fun step(
             runId: String,
