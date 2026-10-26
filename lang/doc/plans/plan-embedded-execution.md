@@ -466,6 +466,9 @@ this bridge; they cannot be inferred from compiler type hints.
 - [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.
+  *Runtime retention (2026-10-26, `1ca73e922`):* a shut-down interpreter's runtime is no longer kept
+  by a pending timer alarm, values its templates cached in statics, or `FullyBoundHandle.NO_OP`; the
+  `javatools` test JVM holds one runtime at a time.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
