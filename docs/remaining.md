@@ -276,8 +276,11 @@ come from are in parentheses.
   exception views (`5b2686a2e`, `edeab8f5b`; shared X312 in VS Code). IntelliJ: UP34 (filter
   conditions) and UP33 (`exceptionInfo`).
 - [ ] R9: data breakpoints, which stop when a property or field changes.
-- [ ] R10: value formats (`V`) and identity codes (`DI`). IntelliJ's hexadecimal toggle: UP36; in VS Code,
-  our extension contributes the menu item, by design (UP38).
+- [x] R10: value formats (`V`) and identity codes (`DI`) (`cb551d4c2`, R10b): integers in hexadecimal when
+  a request's DAP `format` asks, or the session's own `xtc/valueFormat`, which VS Code's Variables and
+  Watch views' Show Values as Hexadecimal sets, since VS Code never sends a format (UP38); a mutable
+  object's value ends with its identity code (worker protocol 13). Shared X317; IntelliJ's hexadecimal
+  toggle is UP36 (#1769). An unsigned 64-bit value of 2^63 or more no longer shows as negative.
 - [x] R10: a value's `toString()` on demand (`DS`), through R7's evaluation, and computed properties
   as lazy variables (`1d88e086d`, R10a): an object's fields are followed by its public computed
   properties and its `toString()`, `(...)`, whose reads run the getter or `toString()` on the stopped
@@ -402,8 +405,10 @@ passes with the workaround disabled. The gates are in
   clicking them shows their values (`run-2879359689441688077`, `run-13880544694745259179`). Gate after
   a release: X316 in IntelliJ through the link only, its 0.21.0 path and UP35 tag removed.
 - [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), filed 2026-10-26, `feat/dap-value-formats` at `50575ca9`): a "Show
-  Values as Hexadecimal" toggle. Not checked natively until R10 formats values. Gate after a release:
-  the toggle shows a stopped frame's integers in hexadecimal in IntelliJ.
+  Values as Hexadecimal" toggle. Checked natively on 2026-10-26 with R10b (`cb551d4c2`): with a plugin
+  built from #1769's head `62acabd6`, X317 turns the toggle on and its integers show as `0xFF`, then
+  decimal again (`run-5016431580533175464`). Gate after a release: X317 in IntelliJ with its
+  hexadecimal check always on, and its UP36 tag removed.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
