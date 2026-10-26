@@ -2487,6 +2487,12 @@ Four more commits, runtime and editors for each, and a rewrite, on this branch o
   thread for an editor's Pause; shared X308 and X309 pass in VS Code (`run-eEwGRI`). IntelliJ's
   Pause waits on LSP4IJ, which never sent `pause`: UP30, fixed in LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757),
   with which X308 passes natively in IntelliJ.
+- `df6c1a873` (`lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md`,
+  2026-10-26): IntelliJ's Ecstasy Application configuration has "Stop at the program's first line
+  (Debug)", sent as `stopOnEntry`; shared X309 passes in IntelliJ too, its coverage full.
+  `:lang:intellij-plugin:test` 151; IntelliJ playbook X304, X305, X307, X309, X314 and X315
+  (`run-15617489008681755938`, `run-14399690067536073664`), VS Code X309 (`run-3SVRbe`);
+  `spotlessCheck`.
 
 The plan's R9–R13 (`cc4e55021`) list the debugger features beyond R7.
 
@@ -2623,8 +2629,8 @@ stepping add burst E, exception stops, pause and stop on entry burst F, watches 
 burst G, R9's conditions, logpoints and exception classes burst H, expressions with operators
 burst I, the runner's frames left out of stacks burst J, the tests of stale handles, resume
 races and services burst K, code run on a stopped fiber burst L, its deadline, cancel and
-resume burst M, console lines run as code by the server burst N, by the editors burst O, and the
-whole program's opt-in burst P. All the work
+resume burst M, console lines run as code by the server burst N, by the editors burst O, the
+whole program's opt-in burst P, and IntelliJ's stop on entry burst Q. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
 None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
@@ -2649,6 +2655,7 @@ master `1c4efe422`.
 | N: console lines run as code | `68491020b` (R7t) | `lang/dap-server`, `lang/lsp-server` | M | `:lang:dap-server:test` (`XtcDebugServerTest`), `:lang:lsp-server:test` (`EmbeddedExecutionTest` runs real workers), `spotlessCheck` |
 | O: the editors' consoles run code | `03a422f6c` (R7u) | `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | N | VS Code and IntelliJ playbooks to X314 (X308, X309 and X312 VS Code only; X311, X313 and X314 partial in IntelliJ); ESLint and `tsc`; `spotlessCheck` |
 | P: the whole program runs with console code, on request | `70cdd636f` (R7v) | `javatools`, `lang/dap-server`, `lang/lsp-server`, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog, `lang/doc/manual-test-plan.md` | O | `:javatools:test` (`SessionDebuggerTest`), `:lang:dap-server:test`, `:lang:lsp-server:test`, `:lang:intellij-plugin:test`; VS Code and IntelliJ playbooks to X315; ESLint and `tsc`; `spotlessCheck` |
+| Q: IntelliJ stops on entry | `df6c1a873` | `lang/intellij-plugin`, the shared catalog's X309, `lang/doc/manual-test-plan.md` | P, whose README text it extends | `:lang:intellij-plugin:test`; IntelliJ playbook X304, X305, X307, X309, X314, X315; VS Code playbook X309; `spotlessCheck` |
 
 The records `9e58ca545` and this R7 record change `docs/`, which only this branch has, and the
 plans in `lang/doc`, whose changes travel with B, C and D.
