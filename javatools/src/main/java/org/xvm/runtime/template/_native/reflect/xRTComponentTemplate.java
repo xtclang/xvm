@@ -236,10 +236,10 @@ public class xRTComponentTemplate
      * @return the TypeConstant for an Array of ComponentTemplate
      */
     public static TypeConstant ensureComponentArrayType() {
-        TypeConstant type = COMPONENT_ARRAY_TYPE;
+        TypeConstant type = INSTANCE.m_typeComponentArray;
         if (type == null) {
             ConstantPool pool = INSTANCE.pool();
-            COMPONENT_ARRAY_TYPE = type = pool.ensureArrayType(
+            INSTANCE.m_typeComponentArray = type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
         }
         return type;
@@ -249,9 +249,9 @@ public class xRTComponentTemplate
      * @return the TypeComposition for an RTMultiMethodTemplate
      */
     public static TypeComposition getMultiMethodTemplateComposition(Container container) {
-        ClassTemplate templateRT = MULTI_METHOD_TEMPLATE;
+        ClassTemplate templateRT = INSTANCE.m_templateMultiMethod;
         if (templateRT == null) {
-            MULTI_METHOD_TEMPLATE = templateRT =
+            INSTANCE.m_templateMultiMethod = templateRT =
                 INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
         }
 
@@ -392,8 +392,8 @@ public class xRTComponentTemplate
         private final Component f_struct;
     }
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data fields ---------------------------------------------------------------------------
 
-    private static TypeConstant  COMPONENT_ARRAY_TYPE;
-    private static ClassTemplate MULTI_METHOD_TEMPLATE;
+    private TypeConstant  m_typeComponentArray;
+    private ClassTemplate m_templateMultiMethod;
 }
