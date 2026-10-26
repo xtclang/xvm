@@ -366,20 +366,23 @@ passes with the workaround disabled. The gates are in
   X137/X146/X259 run.
 - [ ] UP03 (#1720, #1739): narrow the guarded Rename/Move entry points; gate: X103 and X130.
 - [ ] UP03: follow LSP4IJ #1740 (generic UI wait during the `will*` requests), still open.
+- [ ] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757), merged 2026-10-26): `DAPDebugProcess` did not implement `startPausing()`,
+  so IntelliJ's Pause Program did nothing for any DAP session; X308 passes natively with it. Gate:
+  X308 in IntelliJ with coverage full, and its IntelliJ case restored.
+- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), merged 2026-10-26): the exception hint from `exceptionInfo`. Gate: X307's
+  hint shows the exception and its stack without the runner's frames.
+- [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), merged 2026-10-26): conditions on exception filters, sent as
+  `filterOptions`. Gate: X312 in IntelliJ.
+- [ ] UP37 ([#1763](https://github.com/redhat-developer/lsp4ij/pull/1763), merged 2026-10-26): `DAPExpressionCodeFragment` honors the `isPhysical`
+  that IntelliJ asks for, so IntelliJ 2026.2's inline logpoint editor no longer fails its inspection
+  pass's assertion. Gate: a breakpoint with Suspend unchecked and a log expression, with no IDE error.
+- [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), merged 2026-10-25): LSP4IJ announces `supportsInvalidatedEvent` and
+  handles `invalidated`, refreshing the threads, the stopped stacks and the views. Gate: X314 and X315
+  full in IntelliJ, their `invalidated` checks restored.
 - UP13 stays: the `createSettings` override is LSP4IJ's supported extension point.
 
 ### LSP4IJ: pull requests open
 
-- [ ] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)): LSP4IJ's `DAPDebugProcess` did not implement `startPausing()` (0.21.0 and
-  `main`), so IntelliJ's Pause Program did nothing for any DAP session. The pull request pauses the
-  first thread the adapter reports, and each child session's; natively, X308 passes with it and
-  fails on `main` without it. Gate after a release: X308 in IntelliJ with coverage full, and its
-  IntelliJ case restored.
-- [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
-  prints after Resume, but that was our probe's race: it read the console before the exit code, so a
-  program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
-  reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
-  (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 - [ ] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758)): after an exception stop, LSP4IJ shows the exception in the editor one
   second later, on the editor it found at the stop, without checking that it is still open; an
   editor closed in that second fails with `DisposalException` "Editor is already disposed" (0.21.0
@@ -387,36 +390,36 @@ passes with the workaround disabled. The gates are in
   the hint for a disposed editor; its test fails without the check, and natively an X307 that closes
   its file right after the stop reports the IDE error on `main` and none with the fix. Gate after a
   release: X307 without the wait, and no IDE errors.
-
-- [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), `feat/dap-invalidated`, 2026-10-23): LSP4IJ neither announces
-  `supportsInvalidatedEvent` nor handles the DAP `invalidated` event, so after an evaluation that changes
-  the stopped program its views keep the old values. The pull request refreshes the threads, loads the
-  stopped stacks again and rebuilds the views. Not checked natively until tier 2 sends the event. Gate
-  after a release: a shared case whose console evaluation changes a variable shows it in IntelliJ.
-
-### LSP4IJ: DAP features ready locally, not filed
-
-IntelliJ's side of R9 and R10, each a local commit in `~/src/lsp4ij` on a branch off `main` (`ef2b18c3`),
-with tests ([details](errs-upstream-issues.md#lsp4ij-dap-features-prepared-2026-10-22)). UP32, UP33 and UP34
-are filed, and pass natively against our adapter since R9 (2026-10-23); the others wait for their R10 adapter
-work, a native check, and the user's go-ahead to file them.
-
 - [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), `feat/dap-logpoints` at `f2a38e58`): breakpoints that don't suspend as DAP logpoints; the
   "Evaluate and log" expression logged at stops; such a breakpoint resumes instead of leaving the
-  program stopped while IntelliJ shows it running.
-- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), `feat/dap-exception-info` at `7f1a5224`): the exception hint from `exceptionInfo`.
-- [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), `feat/dap-exception-filter-conditions` `a4f73d29`): conditions on exception filters, sent
-  as `filterOptions`.
-- [ ] UP35 `feat/dap-lazy-variables` (`83a0e92d`): lazy variables behind a "Show value" link.
-- [ ] UP41, no fix written yet (2026-10-24): LSP4IJ never sends DAP `cancel` (0.21.0, and `main`), so an
-  IntelliJ evaluation that runs code cannot be ended before its time limit. Found by X314, which
-  checks cancel in VS Code only.
-- [ ] UP36 `feat/dap-value-formats` (`b0a76151`): a "Show Values as Hexadecimal" toggle.
-- [ ] UP37 ([#1763](https://github.com/redhat-developer/lsp4ij/pull/1763), `fix/dap-physical-expression-fragment`
-  `e869c476`): `DAPExpressionCodeFragment` ignored the `isPhysical` that IntelliJ asks for, so IntelliJ
-  2026.2's inline logpoint editor fails its inspection pass's assertion on a breakpoint's "Evaluate and
-  log" expression, an IDE error with the `-ea` IntelliJ ships. The pull request honors `isPhysical`.
-  Gate after a release: a breakpoint with Suspend unchecked and a log expression, with no IDE error.
+  program stopped while IntelliJ shows it running. Passes natively since R9 (2026-10-23).
+- [ ] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), filed 2026-10-26, `feat/dap-lazy-variables` at `0f740223`): lazy
+  variables behind a "Show value" link. Not checked natively until R10 makes computed properties
+  lazy. Gate after a release: a computed property in IntelliJ's Variables view shows its value when
+  its link is clicked.
+- [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), filed 2026-10-26, `feat/dap-value-formats` at `50575ca9`): a "Show
+  Values as Hexadecimal" toggle. Not checked natively until R10 formats values. Gate after a release:
+  the toggle shows a stopped frame's integers in hexadecimal in IntelliJ.
+- [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
+  prints after Resume, but that was our probe's race: it read the console before the exit code, so a
+  program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
+  reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
+  (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
+
+### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41)
+
+- [ ] UP41 (2026-10-24, cause found 2026-10-26): an IntelliJ evaluation that runs code cannot be ended
+  before its time limit; X314 checks cancel in VS Code only. LSP4IJ never sends DAP `cancel`, but the
+  gap is IntelliJ's first: `XDebuggerEvaluator.XEvaluationCallback` has no obsolescence
+  (`XValueCallback` has no `isObsolete()`, and `XEvaluationCallbackBase` adds none), and the Evaluate
+  dialog neither cancels an evaluation when it closes or evaluates again nor offers to stop one, so an
+  evaluator never learns that its result is no longer wanted. LSP4IJ could only cancel at a resume,
+  step or stop, where our server ends the run itself. To do: an IntelliJ Platform ticket (IJPL) for an
+  evaluation's obsolescence or cancel; then the LSP4IJ half: a `DebugRemoteEndpoint` whose
+  `sendCancelNotification()` sends DAP `cancel` with the request's `seq` to an adapter with
+  `supportsCancelRequest` (LSP4J's sends LSP's `$/cancelRequest` notification, which a DAP endpoint
+  writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
+  cancels no DAP request today, so no adapter gets that event.
 
 ### LSP4J
 
