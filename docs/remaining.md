@@ -344,8 +344,14 @@ come from are in parentheses.
   program's module rather than the class's own. Not through the `source` request: a file, the one
   navigation opens, also gives the editors their language features there. VS Code and IntelliJ
   pass X324.
-- [ ] R12: the loaded modules (`modules`, `loadedSources`). VS Code has no Modules view (UP39), only
-  Loaded Scripts for `loadedSources`.
+- [x] R12: the loaded modules (`modules`, `loadedSources`) (2026-10-27; shared X326). The debugger
+  lists the program's modules as the runtime linked them: its own, which `addModule` made known,
+  and the libraries it uses, each with its version, its recorded source directory and its classes'
+  source paths, read once per module (worker protocol 18). `modules` answers them a page at a time,
+  `isUserCode` for the program's own; `loadedSources` answers their files, a bundled library's in
+  its bundled source, as its frames are, which `XdkLibrarySources` now writes without parsing its
+  declarations, since a library has hundreds. VS Code shows them in Loaded Scripts; it has no
+  Modules view (UP39). IntelliJ has neither (UP45), so X326 is not implemented there.
 - [ ] R13: Debug for Gradle-mode and command-line runs.
 - [ ] R13: debugging tests.
 - [ ] R13: attaching to a program that already runs.
@@ -554,6 +560,12 @@ passes with the workaround disabled. The gates are in
   IntelliJ stopped there; after a count to 3,000,000 it ran to its exit. VS Code 1.140 removes its
   temporary breakpoint when the session stops. To do: an LSP4IJ issue and a fix that removes the
   temporary breakpoint at the next stop or when the session ends; then X323 is full in IntelliJ.
+
+### LSP4IJ: no loaded sources or modules (UP45): not filed
+
+- [ ] UP45 (2026-10-27): LSP4IJ never sends `loadedSources` or `modules`, and has no view for them
+  (0.21.0 and `main`, `42f1f16e`). XVM's adapter answers both since R12, which VS Code shows in
+  Loaded Scripts (X326). To do: an LSP4IJ issue for a loaded sources view; then IntelliJ's X326.
 
 ### A DAP completion's `start` (UP43): not filed
 
