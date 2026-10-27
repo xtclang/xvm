@@ -12,6 +12,9 @@ import org.eclipse.lsp4j.debug.CompletionsResponse
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.ContinueResponse
+import org.eclipse.lsp4j.debug.DataBreakpointAccessType
+import org.eclipse.lsp4j.debug.DataBreakpointInfoArguments
+import org.eclipse.lsp4j.debug.DataBreakpointInfoResponse
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
@@ -41,6 +44,8 @@ import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.ScopesResponse
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.SetDataBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetDataBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetFunctionBreakpointsArguments
@@ -104,7 +109,9 @@ import kotlin.time.Duration.Companion.seconds
  * `% N`), and a log message, which makes it a logpoint: its message, with each `{expression}` replaced by its value,
  * goes to the console, and the program runs on. A function breakpoint names a method, alone or after its class's, as
  * `twice` or `Point.move`, and stops at the first line of the program's methods of that name, with the reason
- * `function breakpoint`. The exception filters stop the program where an exception that nothing catches,
+ * `function breakpoint`. A data breakpoint watches a field of an object, which `dataBreakpointInfo` names from a
+ * variable of the stopped program: once the field's value has changed, the program stops at the next line of the
+ * object's service with the reason `data breakpoint`. The exception filters stop the program where an exception that nothing catches,
  * or any exception, is thrown, with the reason `exception`, and each may name exception classes, separated by
  * commas, to stop only for them and the classes that extend them; `exceptionInfo` tells of the exception. They are
  * installed before the program's first line as breakpoints are. `pause` stops a running
@@ -237,6 +244,15 @@ class XtcDebugServer(
         /** Why a fiber cannot be stepped. */
         const val NOT_STOPPED = "That thread is not stopped, so it cannot be stepped."
 
+        /** Why a variable cannot be watched by a data breakpoint, as the program also says. */
+        const val ONLY_FIELDS = "Only a field of an object can be watched."
+
+        /** Why a data breakpoint is not installed while no debugged program runs. */
+        const val NOT_WATCHING = "A data breakpoint watches a field of the running program."
+
+        /** Why a data breakpoint for reads is not installed. */
+        const val ONLY_WRITES = "Only a change of the field's value stops the program."
+
         /** Why a frame cannot restart: its fiber does not wait at a line, or the frame says it cannot (`canRestart`). */
         const val NOT_RESTARTABLE = "That frame cannot be restarted."
 
@@ -304,6 +320,7 @@ class XtcDebugServer(
                 supportsConditionalBreakpoints = true
                 supportsHitConditionalBreakpoints = true
                 supportsFunctionBreakpoints = true
+                supportsDataBreakpoints = true
                 supportsLogPoints = true
                 supportsExceptionInfoRequest = true
                 supportsExceptionFilterOptions = true
@@ -392,7 +409,72 @@ class XtcDebugServer(
                 else -> runs.setFunctionBreakpoints(runId, requests)
             }
         return states.thenApply { installed ->
-            SetFunctionBreakpointsResponse().apply { breakpoints = installed.map(::functionBreakpoint).toTypedArray() }
+            SetFunctionBreakpointsResponse().apply { breakpoints = installed.map(::breakpoint).toTypedArray() }
+        }
+    }
+
+    /**
+     * DAP: dataBreakpointInfo
+     *
+     * Names a variable of the stopped program as a data breakpoint's target: a field of a mutable object, which writes
+     * change; not a local, an element, a computed property, or an expression. The field keeps its data ID for the rest
+     * of the session, which does not persist.
+     */
+    override fun dataBreakpointInfo(args: DataBreakpointInfoArguments): CompletableFuture<DataBreakpointInfoResponse> {
+        val reference = args.variablesReference
+        val info =
+            if (reference == null || !debuggedRunning()) {
+                CompletableFuture.completedFuture(DataInfoState(null, ONLY_FIELDS))
+            } else {
+                runs.dataBreakpointInfo(runId, reference, args.name.orEmpty()).exceptionally { DataInfoState(null, ONLY_FIELDS) }
+            }
+        return info.thenApply { state ->
+            DataBreakpointInfoResponse().apply {
+                dataId = state.dataId
+                description = state.description
+                accessTypes = state.dataId?.let { arrayOf(DataBreakpointAccessType.WRITE) }
+                canPersist = false
+            }
+        }
+    }
+
+    /**
+     * DAP: setDataBreakpoints
+     *
+     * Replaces the data breakpoints, each on a field that `dataBreakpointInfo` named: once the field's value has
+     * changed, the program stops at the next line of its service, with the reason `data breakpoint`. Only writes stop
+     * it; a breakpoint for reads is not installed, nor one while no debugged program runs.
+     */
+    override fun setDataBreakpoints(args: SetDataBreakpointsArguments): CompletableFuture<SetDataBreakpointsResponse> {
+        val given = args.breakpoints.orEmpty()
+        val requests =
+            given.map {
+                DataBreakpointRequest(
+                    lastBreakpoint.incrementAndGet(),
+                    it.dataId.orEmpty(),
+                    it.condition,
+                    it.hitCondition,
+                )
+            }
+        logger.info("setDataBreakpoints: dataIds={}", requests.map { it.dataId })
+        val writes =
+            requests.filterIndexed {
+                index,
+                _,
+                ->
+                given[index].accessType.let { it == null || it == DataBreakpointAccessType.WRITE }
+            }
+        val states =
+            if (debuggedRunning()) {
+                runs.setDataBreakpoints(runId, writes)
+            } else {
+                CompletableFuture.completedFuture(writes.map { BreakpointState(it.id, 0, false, NOT_WATCHING) })
+            }
+        return states.thenApply { installed ->
+            val byId = installed.associateBy { it.id }
+            SetDataBreakpointsResponse().apply {
+                breakpoints = requests.map { breakpoint(byId[it.id] ?: BreakpointState(it.id, 0, false, ONLY_WRITES)) }.toTypedArray()
+            }
         }
     }
 
@@ -1048,14 +1130,17 @@ class XtcDebugServer(
             client?.breakpoint(
                 BreakpointEventArguments().apply {
                     reason = BreakpointEventArgumentsReason.CHANGED
-                    breakpoint = functionBreakpoint(state)
+                    breakpoint = breakpoint(state)
                 },
             )
         }
     }
 
-    /** A function breakpoint, at the first line of the first method of its name if one has it. */
-    private fun functionBreakpoint(state: BreakpointState) =
+    /**
+     * A breakpoint that is not of a file: a function breakpoint, at the first line of the first method of its name if one
+     * has it, or a data breakpoint, which has no line.
+     */
+    private fun breakpoint(state: BreakpointState) =
         Breakpoint().apply {
             id = state.id
             isVerified = state.verified
