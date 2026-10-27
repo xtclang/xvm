@@ -307,13 +307,52 @@ class EmbeddedExecutionTest {
                 // killed, as when the IDE or the operating system ends the server: nothing tells the worker
                 host.destroyForcibly()
                 val exited = runCatching { worker.onExit().get(30, SECONDS) }.isSuccess
-                assertThat(exited).describedAs { "The worker still runs 30 s after its server died:\n${threadDump(pid)}" }.isTrue()
+                assertThat(exited)
+                    .describedAs { "The worker still runs 30 s after its server died:\n${linuxState(pid)}\n${threadDump(pid)}" }
+                    .isTrue()
             } finally {
                 worker.destroyForcibly()
             }
         } finally {
             host.destroyForcibly()
         }
+    }
+
+    /** What Linux says of a process that should have ended: its state and parent, and each thread's. */
+    private fun linuxState(pid: Long): String {
+        val proc = Path.of("/proc/$pid")
+
+        fun read(what: () -> String) = runCatching(what).getOrElse { "unreadable: $it" }
+        val status =
+            read {
+                Files
+                    .readAllLines(
+                        proc.resolve("status"),
+                    ).filter { it.startsWith("State:") || it.startsWith("PPid:") }
+                    .joinToString("; ")
+            }
+        val threads =
+            read {
+                Files.list(proc.resolve("task")).use { tasks ->
+                    tasks.toList().joinToString("\n") { task ->
+                        val state =
+                            read {
+                                Files
+                                    .readString(task.resolve("stat"))
+                                    .substringAfterLast(')')
+                                    .trim()
+                                    .substringBefore(' ')
+                            }
+                        "  ${task.fileName} ${read {
+                            Files
+                                .readString(
+                                    task.resolve("comm"),
+                                ).trim()
+                        }} $state ${read { Files.readString(task.resolve("wchan")) }}"
+                    }
+                }
+            }
+        return "$status\n$threads"
     }
 
     /** The threads of a JVM that should have ended, from the JDK's jcmd, or why there are none. */
