@@ -109,6 +109,11 @@ module.exports = grammar({
         // readings until the enclosing syntax distinguishes a type from a value.
         [$._expression, $.keyword_type],
         [$.non_null_type, $.conditional_type],
+        // `protected Foo` as an access-qualified type vs `protected` as a
+        // declaration modifier followed by a type — GLR forks, and
+        // access_qualified_type's prec.dynamic(-1) drops the type reading
+        // whenever the declaration reading also succeeds.
+        [$.type_expression, $.access_qualified_type],
 
         // Declaration keyword conflicts
         [$.module_declaration, $.keyword_type],
@@ -166,7 +171,7 @@ module.exports = grammar({
         // Conditional type conflicts
         [$.conditional_type, $.function_type],
         [$.conditional_type, $.named_function_type],
-        [$.incorporates_clause, $.conditional_type],
+        [$._incorporated_mixin, $.conditional_type],
 
         // Type system conflicts
         [$._non_bi_type, $.generic_type],
@@ -189,7 +194,6 @@ module.exports = grammar({
         // Array type literal conflicts
         [$._non_bi_type, $.array_type_literal],
         [$._non_bi_type, $._expression],
-        [$.member_type, $._expression],
         [$._non_bi_type, $._expression, $.array_type_literal],
     ],
 
@@ -222,7 +226,10 @@ module.exports = grammar({
             repeat($.annotation),
             'module',
             field('name', $.qualified_name),
-            repeat($.delegates_clause),
+            // The type compositions a module can have (the reference parser uses the same parseCompositions()
+            // as for classes), e.g. `module PeopleTest incorporates TerminalApp.Mixin("People DB Test") {`.
+            // Not `extends`: a module cannot extend a class, and with the optional body `extends T (` is ambiguous.
+            repeat(choice($.implements_clause, $.incorporates_clause, $.delegates_clause)),
             optional(field('body', $.module_body)),
         ),
 
@@ -519,16 +526,22 @@ module.exports = grammar({
 
         // Property accessor syntax: `Type propName.get() { ... }` or `Type propName.calc() = expr;`
         // Supports any accessor method name (get, set, calc, add, etc.)
+        // Modifiers can appear in either order: "static protected" or "protected static"
         property_getter_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional(seq($.visibility_modifier, repeat($.annotation))),
+            optional(choice(
+                seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
+                seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
+            )),
             $.type_expression,
             $.identifier,
             '.',
             $.identifier,
             $.parameters,
-            choice($.block, seq('=', $._expression, ';'), ';'),
+            // A block body can be followed by the property's initial value, as in the reference
+            // parser: `private Boolean[] hopsTls.get() { ... } = [];`
+            choice(seq($.block, optional(seq('=', $._expression, ';'))), seq('=', $._expression, ';'), ';'),
         ),
 
         // Constructor can have optional finally block: construct(...) { } finally { }
@@ -562,11 +575,15 @@ module.exports = grammar({
         extends_clause: $ => seq('extends', commaSep1($.type_expression)),
         extends_clause_with_args: $ => seq('extends', $.type_expression, optional($.arguments)),
         implements_clause: $ => seq('implements', commaSep1($.type_expression)),
-        // Incorporates can be conditional: incorporates conditional Mixin<Type extends Constraint>
+        // Incorporates names one or more mixins, as the reference parser takes them: incorporates M1, M2("x")
+        // Each can be conditional: incorporates conditional Mixin<Type extends Constraint>
         // Uses $._non_bi_type after 'conditional' to avoid conflict with conditional_type in type_expression
-        incorporates_clause: $ => choice(
-            seq('incorporates', 'conditional', $._non_bi_type, optional($.arguments)),
-            seq('incorporates', $.type_expression, optional($.arguments)),
+        // prec.right: a '(' after the type is always its argument list, as in the reference parser; this
+        // matters where nothing has to follow the clause, e.g. a module declaration without a body
+        incorporates_clause: $ => seq('incorporates', commaSep1($._incorporated_mixin)),
+        _incorporated_mixin: $ => choice(
+            prec.right(seq('conditional', $._non_bi_type, optional($.arguments))),
+            prec.right(seq($.type_expression, optional($.arguments))),
         ),
         // Delegates clause: delegates Type(expr)
         delegates_clause: $ => seq('delegates', $.type_expression, '(', $._expression, ')'),
@@ -617,6 +634,7 @@ module.exports = grammar({
             $.function_type,
             $.tuple_type,
             $.immutable_type,
+            $.access_qualified_type,
             $.parenthesized_type,
             $.keyword_type,
             $.qualified_keyword_type,
@@ -631,6 +649,15 @@ module.exports = grammar({
         qualified_keyword_type: $ => prec(3, seq(choice('struct', 'service', 'class', 'const', 'enum'), $.type_name)),
         // immutable can be standalone or with a type. prec.right makes it greedy.
         immutable_type: $ => prec.right(seq('immutable', optional($._non_bi_type))),
+        // Access-qualified type: `protected TxManager<TestSchema>` — per BNF
+        // ExtendedPrefixTypeExpression, the access modifier is a type prefix in
+        // the same slot as `immutable` (TypeAccessModifier). Used in cast
+        // contexts like `.as(protected Foo<K, V>)` / `.revealAs((protected Foo))`.
+        // prec.dynamic(-1): when GLR keeps both the `visibility_modifier type name`
+        // declaration reading and this type-prefix reading alive (e.g. `protected
+        // Int x;`), prefer the declaration; in cast/argument contexts there is no
+        // competing reading so this rule still wins.
+        access_qualified_type: $ => prec.dynamic(-1, prec.right(seq($.visibility_modifier, $._non_bi_type))),
         // Parenthesized type may carry annotations on the inner type, e.g.
         // `(@AutoFreezable Freezable)? o = Null` -- the annotation applies
         // to `Freezable`, the parens scope it under the `?` nullable wrap.
@@ -651,8 +678,15 @@ module.exports = grammar({
         //   Map<K,V>.Entry → member_type(generic_type, Entry)
         //   Map<K,V>.Entry<X>.Inner → member_type(member_type(...), Inner)
         //   ecstasy.lang.src.Compiler → qualified_type_name (NOT member_type!)
-        // The base must have type arguments - this prevents ambiguity with qualified names
-        member_type: $ => prec.left(seq(choice($.generic_type, $.member_type), '.', $.identifier, optional($.type_arguments))),
+        // The base must have type arguments - this prevents ambiguity with qualified names.
+        // The with-type-arguments form is given higher precedence than `member_expression`
+        // (whose prec is MAX_PRECEDENCE_PLUS_2) so that a value-position virtual-child type
+        // literal like `Base<Int>.Child2<String>` is parsed as a single `member_type` rather
+        // than `member_expression(Base<Int>, Child2)` followed by an unparseable `<String>;`.
+        member_type: $ => choice(
+            prec.left(18, seq(choice($.generic_type, $.member_type), '.', $.identifier, $.type_arguments)),
+            prec.left(seq(choice($.generic_type, $.member_type), '.', $.identifier)),
+        ),
         // Type arguments can include constraints: <Key, Value extends Shareable>
         // Can also include angle-bracket type lists for method signatures: Method<Target, <Params>, <Return>>
         // Can be empty: Class<> for wildcard/inferred type arguments
@@ -663,7 +697,9 @@ module.exports = grammar({
         ),
         // Angle bracket type list: <> or <Type> or <Type1, Type2> - used in method type signatures
         angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), $._type_gt),
-        array_type: $ => prec.left(seq($._non_bi_type, '[', ']')),
+        // One `?` per dimension, as in the reference parser: `Int[]`, `Int[?]`, `Int[?,?]`
+        array_type: $ => prec.left(seq($._non_bi_type, '[', optional($._array_dims), ']')),
+        _array_dims: $ => seq('?', repeat(seq(',', '?'))),
         nullable_type: $ => prec.left(seq($._non_bi_type, '?')),
         // Non-null type modifier (no auto-narrowing): Type!
         non_null_type: $ => prec.left(seq($._non_bi_type, token.immediate('!'))),
@@ -713,6 +749,7 @@ module.exports = grammar({
             $.const_declaration,
             $.enum_declaration,
             $.mixin_declaration,
+            $.annotation_declaration,
             $.service_declaration,
             // Local function declarations (functions defined inside method bodies)
             $.local_function_declaration,
@@ -841,18 +878,19 @@ module.exports = grammar({
                 choice('val', 'var'),
                 optional(field('type', $.type_expression)),
                 field('name', choice($.identifier, $.wildcard)),
-                optional(seq(choice('=', ':='), field('value', $._expression))),
+                optional(seq(choice('=', ':='), field('value', $._value))),
                 ';',
             ),
             // Typed form without val/var: @Annotation private static Type x = expr;
+            // The wildcard discards the value here too: `Int _ = node.value;`
             // prec(1) to prefer variable declaration over expression statement when ambiguous
             prec(1, seq(
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 optional('static'),
                 field('type', $.type_expression),
-                field('name', $.identifier),
-                optional(seq(choice('=', ':='), field('value', $._expression))),
+                field('name', choice($.identifier, $.wildcard)),
+                optional(seq(choice('=', ':='), field('value', $._value))),
                 ';',
             )),
             // Named function type form: function ReturnType varName(ParamTypes) = lambda;
@@ -1235,6 +1273,12 @@ module.exports = grammar({
             // Generic type literal as expression - for type literals like: Type x = Map<Key, Value>
             // Also handles qualified type names with type args: Map<Serializable.Key, Serializable.Value>
             $.generic_type,
+            // Member type literal as expression - for virtual-child type literals like:
+            // Type x = Base<Int>.Child2<String>. Without this, the trailing <String> after
+            // a member access is mis-parsed as a binary '<' / '>' comparison chain.
+            // The static precedence on `member_type`'s with-type-arguments form (above)
+            // makes it outrank `member_expression`, so no GLR conflict is needed here.
+            $.member_type,
             // Parenthesized type as expression - for type method calls: (immutable).and(type)
             // In XTC, types are first-class values and methods can be called on them
             $.parenthesized_type,
@@ -1319,7 +1363,7 @@ module.exports = grammar({
         // Array type literal as expression - for type comparisons like: type == Byte[]
         // Also supports generic array types: type == Map<String, Int>[]
         // Also supports nullable array types: Element?[]
-        array_type_literal: $ => seq(choice($.generic_type, $.type_name), optional('?'), '[', ']'),
+        array_type_literal: $ => seq(choice($.generic_type, $.type_name), optional('?'), '[', optional($._array_dims), ']'),
 
         // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
         // Also supports anonymous inner classes: new Type(args) { body }
@@ -1328,12 +1372,20 @@ module.exports = grammar({
         // prec.left on the array form ensures the optional initializer arguments are greedily consumed
         new_expression: $ => choice(
             seq('new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments), optional(field('body', $.anonymous_inner_class_body))),
-            prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', field('size', $._expression), ']', optional(field('arguments', $.arguments)))),
+            // One size per dimension, e.g. `new Int[7, (i) -> -1]` (the reference parser reads an argument list)
+            prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', commaSep1(field('size', $._expression)), ']', optional(field('arguments', $.arguments)))),
             seq('new', repeat($.annotation), field('type', $.type_expression), '[', ']'),  // empty array: new Type[]
             seq(field('object', $._expression), '.', 'new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new [@Anno(...)]* Type(args)
             seq(field('object', $._expression), '.', 'new', field('arguments', $.arguments)),  // expr.new(args) - outer copy
             seq('new', field('arguments', $.arguments)),  // new(args) - copy constructor (virtual new)
         ),
+
+        // A variable's initial value: an expression, or an annotated type literal, e.g. `Class<Base> clz = @M Base;`
+        // (the reference parser reads a type expression for a leading '@' in primary position). The
+        // annotated type is not an _expression, where it would compete with annotated declarations
+        // such as `@Inject ecstasy.io.Console console;` at the start of a statement.
+        _value: $ => choice($._expression, $.annotated_type_literal),
+        annotated_type_literal: $ => seq(repeat1($.annotation), $.type_expression),
 
         // Anonymous inner class body
         anonymous_inner_class_body: $ => seq('{', repeat($._class_member), '}'),
@@ -1621,7 +1673,7 @@ module.exports = grammar({
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)
-        identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+        identifier: $ => /[\p{L}_][\p{L}\p{M}\p{N}\p{Sc}_]*/,
         // Context keywords (val, var, etc.) can be used as identifiers in some contexts
         // Use alias to create visible identifier nodes when keywords are used as names
         _identifier_or_context_keyword: $ => choice($.identifier, alias('val', $.identifier), alias('var', $.identifier)),

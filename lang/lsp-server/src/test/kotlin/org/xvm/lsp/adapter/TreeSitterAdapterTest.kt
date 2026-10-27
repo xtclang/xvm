@@ -361,6 +361,37 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * One `incorporates` with a list of mixins (issue #738), as the reference parser takes it: before, only
+         * `incorporates M1 incorporates M2` parsed. Each mixin of the list can have arguments or be conditional.
+         */
+        @Test
+        @DisplayName("should parse a list of mixins after one incorporates")
+        fun shouldParseIncorporatesList() {
+            val sources =
+                listOf(
+                    """
+                    module TypeInfoTest {
+                        class C incorporates M1, M2 {}
+                        mixin M1 into C {}
+                        mixin M2 into C {}
+                    }
+                    """.trimIndent(),
+                    """module Mixins { class C incorporates M1("one"), M2, M3(2) {} }""",
+                    "module Mixins { class C<Element> incorporates M1, conditional M2<Element extends Int> {} }",
+                    """module PeopleTest incorporates TerminalApp.Mixin("People DB Test"), Database { void run() {} }""",
+                )
+
+            for (source in sources) {
+                val result = ts.compile(freshUri(), source)
+
+                assertThat(result.success).describedAs(source).isTrue()
+                assertThat(result.diagnostics)
+                    .describedAs(source)
+                    .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+            }
+        }
+
+        /**
          * Multi-dimensional arrays (issue #453): one size per dimension in construction, as in
          * `manualTests/errors.x`, one `?` per dimension in array types, and one index per
          * dimension in access. The reference parser accepts all of them; that multi-dimensional

@@ -171,7 +171,7 @@ module.exports = grammar({
         // Conditional type conflicts
         [$.conditional_type, $.function_type],
         [$.conditional_type, $.named_function_type],
-        [$.incorporates_clause, $.conditional_type],
+        [$._incorporated_mixin, $.conditional_type],
 
         // Type system conflicts
         [$._non_bi_type, $.generic_type],
@@ -575,13 +575,15 @@ module.exports = grammar({
         extends_clause: $ => seq('extends', commaSep1($.type_expression)),
         extends_clause_with_args: $ => seq('extends', $.type_expression, optional($.arguments)),
         implements_clause: $ => seq('implements', commaSep1($.type_expression)),
-        // Incorporates can be conditional: incorporates conditional Mixin<Type extends Constraint>
+        // Incorporates names one or more mixins, as the reference parser takes them: incorporates M1, M2("x")
+        // Each can be conditional: incorporates conditional Mixin<Type extends Constraint>
         // Uses $._non_bi_type after 'conditional' to avoid conflict with conditional_type in type_expression
         // prec.right: a '(' after the type is always its argument list, as in the reference parser; this
         // matters where nothing has to follow the clause, e.g. a module declaration without a body
-        incorporates_clause: $ => choice(
-            prec.right(seq('incorporates', 'conditional', $._non_bi_type, optional($.arguments))),
-            prec.right(seq('incorporates', $.type_expression, optional($.arguments))),
+        incorporates_clause: $ => seq('incorporates', commaSep1($._incorporated_mixin)),
+        _incorporated_mixin: $ => choice(
+            prec.right(seq('conditional', $._non_bi_type, optional($.arguments))),
+            prec.right(seq($.type_expression, optional($.arguments))),
         ),
         // Delegates clause: delegates Type(expr)
         delegates_clause: $ => seq('delegates', $.type_expression, '(', $._expression, ')'),
