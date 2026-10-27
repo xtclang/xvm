@@ -10131,6 +10131,42 @@
         ]
       }
     },
+    "X329": {
+      "title": "a restarted frame is called again by its caller, which stops at its first line, and runs on from there",
+      "manual": [
+        "How VS Code offers it is checked manually: Restart Frame in the Call Stack view's context menu, on a frame that can restart; VS Code checks canRestart and sends restartFrame for the frame."
+      ],
+      "values": {
+        "file": "Restarts.x",
+        "module": "Restarts",
+        "source": "module Restarts {\n    Int run() {\n        @Inject Console console;\n        Int n = outer(20);\n        console.print($\"n={n}\");\n        return n;\n    }\n\n    Int outer(Int n) {\n        @Inject Console console;\n        console.print($\"outer {n}\");\n        return inner(n + 1);\n    }\n\n    Int inner(Int n) {\n        return n * 2;\n    }\n}\n",
+        "breakpointLine": 16,
+        "frames": [
+          "Restarts.inner",
+          "Restarts.outer",
+          "Restarts.run"
+        ],
+        "canRestart": [
+          true,
+          true,
+          false
+        ],
+        "restart": "Restarts.outer",
+        "frame": [
+          "Restarts.outer",
+          10
+        ],
+        "printed": "outer 20",
+        "output": "n=42",
+        "exitCode": 42
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, has no Reset Frame for a DAP session: it never sends restartFrame (UP47), so IntelliJ has none to check."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
