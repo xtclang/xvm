@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
 import org.xvm.debug.CompletionsState
+import org.xvm.debug.DataBreakpointRequest
+import org.xvm.debug.DataInfoState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -301,6 +303,25 @@ internal class RunWorkerProcess(
             val source = RunWorkerDebug.source(breakpoints)
             source.keySet().forEach { add(it, source[it]) }
         }.thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
+
+    /** Names a variable of a stopped run as a data breakpoint's target, a field of an object, or says why it cannot be. */
+    fun dataBreakpointInfo(
+        id: Long,
+        reference: Int,
+        name: String,
+    ): CompletableFuture<DataInfoState> =
+        request("dataBreakpointInfo", id) {
+            addProperty("reference", reference)
+            addProperty("name", name)
+        }.thenApply { DataInfoState(it["dataId"]?.asString, it["description"].asString) }
+
+    /** Replaces the data breakpoints of a run under the debugger; answers how they were installed. */
+    fun setDataBreakpoints(
+        id: Long,
+        breakpoints: List<DataBreakpointRequest>,
+    ): CompletableFuture<List<BreakpointState>> =
+        request("setDataBreakpoints", id) { add("breakpoints", RunWorkerDebug.data(breakpoints)) }
+            .thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
 
     /** Replaces the function breakpoints of a run under the debugger; answers how they were installed. */
     fun setFunctionBreakpoints(
