@@ -13,6 +13,7 @@ import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -56,14 +57,16 @@ import kotlin.time.toJavaDuration
  * the process streams directly, travels as events and so can never corrupt the protocol. Stdin closing,
  * which is also what happens when the language server exits or dies, stops any run and ends the worker.
  *
- * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions` and
- * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
+ * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions`,
+ * `stopOnEntry` and `functions` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`),
+ * `shutdown`;
  * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
  * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`, `hex`), `setVariable` (`id`, `request`, `reference`,
  * `name`, `expression`, `hex`), `completions` (`id`, `request`, `frame`, `text`, `offset`), `runCode` (`id`, `request`, `frame`,
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
- * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
+ * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `setFunctionBreakpoints` (`id`, `request`,
+ * `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
  * `stepInTargets` (`id`, `request`, `frame`), `stepInto` (`id`, `request`, `thread`, `target`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`,
  * `filter`: `ALL`, `NAMED` or `INDEXED`, `start`, `count`), `step`
@@ -72,7 +75,8 @@ import kotlin.time.toJavaDuration
  * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
  * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, `poolThreads`,
  * `consoles`, `runs`, sent after the run's exit), `log` (`text`); for a run under the debugger, `breakpoints` (`id`,
- * `path`, `breakpoints`: how a file's breakpoints were installed before the program started), `stopped` (`id`,
+ * `path`, `breakpoints`: how a file's breakpoints were installed before the program started), `functionBreakpoints`
+ * (`id`, `breakpoints`: how the function breakpoints were installed before it started), `stopped` (`id`,
  * `reason`, `description`, `thread`, `breakpoints`), `logged` (`id`, `text`: a logpoint's message) and `reply`
  * (`id`, `request`, and the answer or `error`).
  */
@@ -105,6 +109,7 @@ object RunWorker {
                     "endInput" -> runs.endInput(command["id"].asLong)
                     "stop" -> runs.stop(command["id"].asLong)
                     "setBreakpoints" -> runs.setBreakpoints(command)
+                    "setFunctionBreakpoints" -> runs.setFunctionBreakpoints(command)
                     "threads" -> runs.threads(command)
                     "modules" -> runs.modules(command)
                     "stepInTargets" -> runs.stepInTargets(command)
@@ -177,7 +182,8 @@ object RunWorker {
                         command.getAsJsonArray("breakpoints")?.let { breakpoints ->
                             val exceptions = RunWorkerDebug.exceptionsOf(command["exceptions"])
                             val stopOnEntry = command["stopOnEntry"]?.asBoolean == true
-                            debugger(id, repositories, RunWorkerDebug.sourcesOf(breakpoints), exceptions, stopOnEntry, output)
+                            val functions = RunWorkerDebug.functionsOf(command.getAsJsonArray("functions"))
+                            debugger(id, repositories, RunWorkerDebug.sourcesOf(breakpoints), exceptions, stopOnEntry, functions, output)
                         }
                     EmbeddingSupport.instance().runMethod(
                         LinkedRepository(*repositories.toTypedArray()),
@@ -255,9 +261,9 @@ object RunWorker {
 
         /**
          * The runtime debugger of a run started with breakpoints: it knows the program's own modules, so the
-         * breakpoints in their files are verified, and installs the breakpoints, reporting each file's, the exception
-         * stops and the stop on entry before the program starts. Its stops are reported as `stopped` events, after the
-         * program's output so far.
+         * breakpoints in their files are verified, and installs the breakpoints and the function breakpoints, reporting
+         * how each file's and the function breakpoints were installed, the exception stops and the stop on entry before
+         * the program starts. Its stops are reported as `stopped` events, after the program's output so far.
          */
         private fun debugger(
             id: Long,
@@ -265,6 +271,7 @@ object RunWorker {
             sources: List<SourceBreakpoints>,
             exceptions: ExceptionStops,
             stopOnEntry: Boolean,
+            functions: List<FunctionBreakpointRequest>,
             output: OutputBatches,
         ): SessionDebugger {
             val debugger =
@@ -301,6 +308,12 @@ object RunWorker {
                     add("breakpoints", RunWorkerDebug.states(install(debugger, source)))
                 }
             }
+            if (functions.isNotEmpty()) {
+                channel.send("functionBreakpoints") {
+                    addProperty("id", id)
+                    add("breakpoints", RunWorkerDebug.states(install(debugger, functions)))
+                }
+            }
             debugger.setExceptionStops(exceptions.all, exceptions.allTypes, exceptions.uncaught, exceptions.uncaughtTypes)
             // after the modules are known, so it stops in the program's code, not in the libraries before it
             if (stopOnEntry) debugger.stopOnEntry()
@@ -310,6 +323,14 @@ object RunWorker {
 
         fun setBreakpoints(command: JsonObject) =
             reply(command) { debugger -> add("breakpoints", RunWorkerDebug.states(install(debugger, RunWorkerDebug.sourceOf(command)))) }
+
+        fun setFunctionBreakpoints(command: JsonObject) =
+            reply(command) { debugger ->
+                add(
+                    "breakpoints",
+                    RunWorkerDebug.states(install(debugger, RunWorkerDebug.functionsOf(command.getAsJsonArray("breakpoints")))),
+                )
+            }
 
         fun threads(command: JsonObject) =
             reply(command) { debugger ->
@@ -533,6 +554,14 @@ object RunWorker {
                     source.breakpoints.map { SessionDebugger.Line(it.id, it.line, it.condition, it.hitCondition, it.logMessage) },
                 ).map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
 
+        private fun install(
+            debugger: SessionDebugger,
+            functions: List<FunctionBreakpointRequest>,
+        ): List<BreakpointState> =
+            debugger
+                .setMethodBreakpoints(functions.map { SessionDebugger.Method(it.id, it.name, it.condition, it.hitCondition) })
+                .map { BreakpointState(it.id(), it.line(), it.verified(), it.message(), it.path()) }
+
         /** Answers a request for a run's debugger; a run without one, or one that ended, answers with an error. */
         private fun reply(
             command: JsonObject,
@@ -750,7 +779,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 19
+        const val PROTOCOL = 20
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

@@ -206,9 +206,12 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * count, which counts the hits whose condition holds; and a log message, which makes it a logpoint
  * that logs the message, with the values of the expressions in braces in it, and does not stop. The
  * fiber that reaches it evaluates them on its own thread, as it would variables; a condition that
- * cannot be evaluated stops the program and says why. Thrown exceptions may stop the program only
- * for some exception classes, those named and the classes that extend them, and the host can read
- * the exception that stopped the program ({@link #exceptionInfo}).
+ * cannot be evaluated stops the program and says why. A breakpoint may also be installed by a
+ * method's name ({@link #setMethodBreakpoints}): it stops at the first line of each of the
+ * program's methods of that name, with the reason "function breakpoint", as DAP calls it. Thrown
+ * exceptions may stop the program only for some exception classes, those named and the classes
+ * that extend them, and the host can read the exception that stopped the program
+ * ({@link #exceptionInfo}).
  *
  * <p><b>The host's code, and the program's end.</b> The host's own code, in the container it names
  * with {@link #setHost}, is not debugged, and stacks, the exception's included, end where the host
@@ -251,6 +254,12 @@ public final class SessionDebugger implements Debugger {
      * method.
      */
     public static final String NO_CODE = "There is no code on this line.";
+
+    /**
+     * The message of a breakpoint on entering a method whose name none of the program's known
+     * modules has.
+     */
+    public static final String NO_METHOD = "No method of the program has this name.";
 
     /**
      * The value of an expression that {@link #run} runs as a statement, since it has no value, such
@@ -357,7 +366,7 @@ public final class SessionDebugger implements Debugger {
     /**
      * The installed breakpoints, replaced as a whole when they change.
      */
-    private volatile Installed installed = new Installed(Map.of(), Map.of());
+    private volatile Installed installed = new Installed(Map.of(), Map.of(), Map.of());
 
     /**
      * The thrown exceptions that stop the program.
@@ -494,6 +503,31 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * A breakpoint on entering a method, which DAP calls a function breakpoint, that the host
+     * requests: its ID, the method's name, and a condition and a hit count, as a {@link Line} has.
+     * The name is a method's or a function's own, such as {@code twice}, or follows its class's,
+     * as its frames are named, such as {@code Point.move}; a module's methods follow the module's
+     * name, such as {@code Targets.twice}.
+     *
+     * @param id         the breakpoint's ID, which the host chooses, and which a stop at it
+     *                   reports ({@link Stop#breakpointIds})
+     * @param name       the method's name, alone or after its class's
+     * @param condition  the condition, or null for none
+     * @param hitCount   the hit count, or null for none
+     */
+    public record Method(int id, String name, String condition, String hitCount) {
+        /**
+         * A breakpoint that stops every time a fiber enters a method of the name.
+         *
+         * @param id    the breakpoint's ID, which the host chooses
+         * @param name  the method's name, alone or after its class's
+         */
+        public Method(int id, String name) {
+            this(id, name, null, null);
+        }
+    }
+
+    /**
      * A breakpoint as installed: its ID, the line it was installed on, which may follow the
      * requested line when that line has no code of its own, whether it was installed, and if not,
      * why.
@@ -501,12 +535,28 @@ public final class SessionDebugger implements Debugger {
      * @param id        the requested breakpoint's ID
      * @param line      the 1-based line it is installed on; for one that is not installed, the
      *                  requested line, or the line it would be installed on if only its condition,
-     *                  hit count or log message cannot be understood
+     *                  hit count or log message cannot be understood; for a method's, the line
+     *                  where that method's code starts, or 0 if no method has its name
      * @param verified  true if it is installed
-     * @param message   why it is not installed: {@link #NOT_IN_PROGRAM}, {@link #NO_CODE}, or what
-     *                  is wrong with its condition, hit count or log message; null if it is
+     * @param message   why it is not installed: {@link #NOT_IN_PROGRAM}, {@link #NO_CODE},
+     *                  {@link #NO_METHOD}, or what is wrong with its condition, hit count or log
+     *                  message; null if it is
+     * @param path      for a breakpoint on entering a method, the source file of the method that
+     *                  its line is in, or null if no method has its name; null for a breakpoint
+     *                  of a file, which is in that file
      */
-    public record Breakpoint(int id, int line, boolean verified, String message) {
+    public record Breakpoint(int id, int line, boolean verified, String message, String path) {
+        /**
+         * A breakpoint of a source file, as installed in that file.
+         *
+         * @param id        the requested breakpoint's ID
+         * @param line      the 1-based line it is installed on
+         * @param verified  true if it is installed
+         * @param message   why it is not installed, or null if it is
+         */
+        public Breakpoint(int id, int line, boolean verified, String message) {
+            this(id, line, verified, message, null);
+        }
     }
 
     /**
@@ -677,12 +727,14 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint", "step", "exception", "pause" or
-     * "entry"), what stopped it in words (an exception's type and text), the fiber that stopped,
-     * and the IDs of the breakpoints it stopped at.
+     * Why and where the program stopped: the reason ("breakpoint", "function breakpoint", "step",
+     * "exception", "pause" or "entry"), what stopped it in words (an exception's type and text),
+     * the fiber that stopped, and the IDs of the breakpoints it stopped at.
      *
-     * @param reason         {@code "breakpoint"}, also for {@code assert:debug}, {@code "step"},
-     *                       {@code "exception"}, {@code "pause"} or {@code "entry"}
+     * @param reason         {@code "breakpoint"}, also for {@code assert:debug},
+     *                       {@code "function breakpoint"} for a breakpoint on entering a method,
+     *                       {@code "step"}, {@code "exception"}, {@code "pause"} or
+     *                       {@code "entry"}
      * @param description    what stopped it in words, or null: an exception's type and text,
      *                       {@code "assert:debug"}, or why a breakpoint's condition cannot be
      *                       evaluated
@@ -755,7 +807,8 @@ public final class SessionDebugger implements Debugger {
                 continue;
             }
             try {
-                Options.of(request).ifPresent(given -> options.put(request.id(), given));
+                Options.of(request.condition(), request.hitCount(), request.logMessage())
+                        .ifPresent(given -> options.put(request.id(), given));
             } catch (IllegalArgumentException e) {
                 result.add(new Breakpoint(request.id(), line, false, e.getMessage()));
                 continue;
@@ -776,7 +829,51 @@ public final class SessionDebugger implements Debugger {
             idsByFile.put(file, Map.copyOf(idsByLine));
             optionsById.putAll(options);
         }
-        installed = new Installed(Map.copyOf(idsByFile), Map.copyOf(optionsById));
+        installed = new Installed(Map.copyOf(idsByFile), current.idsByName(), Map.copyOf(optionsById));
+        updateActive();
+        return result;
+    }
+
+    /**
+     * Replace the breakpoints on entering methods. Each stops at the first line of every method of
+     * the program's known modules that has its name, not of the libraries' methods, and is
+     * installed as at the first of them, by source file and line. One whose name no such method
+     * has, or whose condition or hit count cannot be understood, is not installed. A method's
+     * breakpoint and a breakpoint on its first line are one, the line's. The hit counts start
+     * again; the host may call it at any time, as {@link #setBreakpoints}.
+     *
+     * @param methods  the breakpoints; none removes them all
+     *
+     * @return each breakpoint as installed, in the order requested
+     */
+    public synchronized List<Breakpoint> setMethodBreakpoints(List<Method> methods) {
+        var idsByName = new HashMap<String, Integer>();
+        var options   = new HashMap<Integer, Options>();
+        var result    = new ArrayList<Breakpoint>(methods.size());
+        for (Method request : methods) {
+            String     name = request.name().strip();
+            Breakpoint at   = entered(request.id(), name);
+            if (at == null) {
+                result.add(new Breakpoint(request.id(), 0, false, NO_METHOD, null));
+                continue;
+            }
+            try {
+                Options.of(request.condition(), request.hitCount(), null)
+                        .ifPresent(given -> options.put(request.id(), given));
+            } catch (IllegalArgumentException e) {
+                result.add(new Breakpoint(request.id(), at.line(), false, e.getMessage(), at.path()));
+                continue;
+            }
+            idsByName.putIfAbsent(name, request.id());
+            result.add(at);
+        }
+
+        // the earlier ones and their options are replaced
+        Installed current     = installed;
+        var       optionsById = new HashMap<>(current.optionsById());
+        current.idsByName().values().forEach(optionsById::remove);
+        optionsById.putAll(options);
+        installed = new Installed(current.idsByFile(), Map.copyOf(idsByName), Map.copyOf(optionsById));
         updateActive();
         return result;
     }
@@ -1550,7 +1647,7 @@ public final class SessionDebugger implements Debugger {
     @Override
     public synchronized void detach() {
         detached     = true;
-        installed    = new Installed(Map.of(), Map.of());
+        installed    = new Installed(Map.of(), Map.of(), Map.of());
         stepping     = null;
         pendingPause = null;
         release();
@@ -1702,7 +1799,8 @@ public final class SessionDebugger implements Debugger {
         Pause                pause  = pendingPause;
         ToIntFunction<Frame> next   = f -> terminating ? end(f) : pc + 1;
         if (hit.stops()) {
-            return stop(frame, "breakpoint", hit.description(), List.of(id), null, null, next);
+            String reason = installed.idsByName().containsValue(id) ? "function breakpoint" : "breakpoint";
+            return stop(frame, reason, hit.description(), List.of(id), null, null, next);
         }
         if (step != null && step.endsAt(frame) && startsLine(frame, pc)) {
             return stop(frame, "step", null, List.of(), step, null, next);
@@ -2135,7 +2233,7 @@ public final class SessionDebugger implements Debugger {
         Runtime attached = runtime;
         if (attached != null) {
             boolean stopping = halt != null || running != null || stepping != null || pendingPause != null;
-            boolean watching = !installed.idsByFile().isEmpty() || exceptionStops.any();
+            boolean watching = !installed.idsByFile().isEmpty() || !installed.idsByName().isEmpty() || exceptionStops.any();
             attached.setDebuggerActive(stopping || watching);
         }
     }
@@ -3186,23 +3284,29 @@ public final class SessionDebugger implements Debugger {
     }
 
     private Integer[] computeBreaks(Installed current, MethodStructure function, Op[] ops) {
-        if (current.idsByFile().isEmpty()) {
+        if (current.idsByFile().isEmpty() && current.idsByName().isEmpty()) {
             return NO_BREAKS;
         }
 
         String                path      = sourcePath(function);
-        Map<Integer, Integer> idsByLine = path == null ? null : current.idsByFile().get(canonical(path));
-        if (idsByLine == null) {
+        Map<Integer, Integer> idsByLine = path == null ? Map.of() : current.idsByFile().getOrDefault(canonical(path), Map.of());
+        Integer               entered   = enteredId(current, function);
+        if (idsByLine.isEmpty() && entered == null) {
             return NO_BREAKS;
         }
 
-        // a line starts at the Nop after which calculateLineNumber() reports it
+        // a line starts at the Nop after which calculateLineNumber() reports it; a breakpoint on
+        // entering the method is at its first, unless one of its file is
         Integer[] breaks = null;
         int       line   = 1;
         for (int i = 0, count = ops.length; i < count; i++) {
             if (ops[i].ensureOp() instanceof Nop nop) {
                 line += nop.getLineCount();
                 Integer id = idsByLine.get(line);
+                if (entered != null) {
+                    id      = id == null ? entered : id;
+                    entered = null;
+                }
                 if (id != null) {
                     if (breaks == null) {
                         breaks = new Integer[count];
@@ -3212,6 +3316,45 @@ public final class SessionDebugger implements Debugger {
             }
         }
         return breaks == null ? NO_BREAKS : breaks;
+    }
+
+    /**
+     * @return the ID of the breakpoint on entering the specified method, by its name after its
+     *         class's or its own, if it is a method of a known module; otherwise null
+     */
+    private Integer enteredId(Installed current, MethodStructure function) {
+        if (current.idsByName().isEmpty()) {
+            return null;
+        }
+        ClassStructure  clazz  = function.getContainingClass();
+        ModuleStructure module = clazz == null ? null : module(clazz);
+        if (module == null || !moduleNames.contains(module.getName())) {
+            return null;
+        }
+        Integer id = current.idsByName().get(functionName(function));
+        return id == null ? current.idsByName().get(function.getName()) : id;
+    }
+
+    /**
+     * @return the breakpoint with the specified ID on entering the methods of the specified name,
+     *         as installed at the first line of the first of the known modules' methods of that
+     *         name, by source file and line; null if none has it
+     */
+    private Breakpoint entered(int id, String name) {
+        return methodsByFile.entrySet().stream()
+                .flatMap(file -> file.getValue().stream()
+                        .filter(method -> !method.lines().isEmpty() && isNamed(method.name(), name))
+                        .map(method -> new Breakpoint(id, method.lines().first(), true, null, file.getKey())))
+                .min(Comparator.comparing(Breakpoint::path).thenComparingInt(Breakpoint::line))
+                .orElse(null);
+    }
+
+    /**
+     * @return true if a breakpoint's name names the method that its frames name as specified, such
+     *         as {@code Point.move}: by that name, or by the method's own, {@code move}
+     */
+    private static boolean isNamed(String frameName, String name) {
+        return frameName.equals(name) || frameName.endsWith('.' + name);
     }
 
     // ----- source index --------------------------------------------------------------------------
@@ -3229,7 +3372,7 @@ public final class SessionDebugger implements Debugger {
                     }
                 }
                 int first = method.getSourceLineNumber() + 1;
-                var spans = new MethodLines(first, first + method.getSourceLineCount() - 1, codeLines);
+                var spans = new MethodLines(functionName(method), first, first + method.getSourceLineCount() - 1, codeLines);
                 methodsByFile.computeIfAbsent(canonical(path), _ -> new ArrayList<>()).add(spans);
             }
         }
@@ -3347,14 +3490,16 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * The installed breakpoints: by real path, the ID of the breakpoint on each line; the options
-     * of the breakpoints that have any, by ID; and the breakpoint IDs of each method seen, by op
-     * index, computed for these breakpoints.
+     * The installed breakpoints: by real path, the ID of the breakpoint on each line; by name, the
+     * ID of the breakpoint on entering the methods of that name; the options of the breakpoints
+     * that have any, by ID; and the breakpoint IDs of each method seen, by op index, computed for
+     * these breakpoints.
      */
-    private record Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<Integer, Options> optionsById,
-                             Map<Op[], Integer[]> idsByOps) {
-        Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<Integer, Options> optionsById) {
-            this(idsByFile, optionsById, new ConcurrentHashMap<>());
+    private record Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<String, Integer> idsByName,
+                             Map<Integer, Options> optionsById, Map<Op[], Integer[]> idsByOps) {
+        Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<String, Integer> idsByName,
+                  Map<Integer, Options> optionsById) {
+            this(idsByFile, idsByName, optionsById, new ConcurrentHashMap<>());
         }
     }
 
@@ -3364,15 +3509,16 @@ public final class SessionDebugger implements Debugger {
      */
     private record Options(PureExpression condition, HitCount hitCount, List<LogPart> log) {
         /**
-         * @return the options of the requested breakpoint, if it has any
+         * @return the options of a breakpoint with the specified condition, hit count and log
+         *         message, each null when not given, if it has any
          *
          * @throws IllegalArgumentException if a condition, hit count or log message cannot be
          *                                  understood, saying which and why
          */
-        static Optional<Options> of(Line request) {
-            String condition = blankless(request.condition());
-            String hitCount  = blankless(request.hitCount());
-            String log       = request.logMessage() == null || request.logMessage().isEmpty() ? null : request.logMessage();
+        static Optional<Options> of(String givenCondition, String givenHitCount, String logMessage) {
+            String condition = blankless(givenCondition);
+            String hitCount  = blankless(givenHitCount);
+            String log       = logMessage == null || logMessage.isEmpty() ? null : logMessage;
             if (condition == null && hitCount == null && log == null) {
                 return Optional.empty();
             }
@@ -3646,8 +3792,9 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A method's source lines, 1-based: the lines it spans and those where its code starts.
+     * A method's name, as its frames are named, and its source lines, 1-based: the lines it spans
+     * and those where its code starts.
      */
-    private record MethodLines(int first, int last, NavigableSet<Integer> lines) {
+    private record MethodLines(String name, int first, int last, NavigableSet<Integer> lines) {
     }
 }
