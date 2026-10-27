@@ -29,4 +29,5 @@ enum class AdapterCapability {
     MONIKER,
     CALL_HIERARCHY,
     INLAY_HINT,
+    INLINE_VALUE,
 }
