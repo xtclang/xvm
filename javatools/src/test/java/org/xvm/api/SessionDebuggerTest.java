@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ import org.xvm.runtime.SessionDebugger.Completions;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
 import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
+import org.xvm.runtime.SessionDebugger.ModuleInfo;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
 import org.xvm.runtime.SessionDebugger.Step;
@@ -666,6 +668,40 @@ public class SessionDebuggerTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
             assertEquals(3_000_000L, control.result());
             assertTrue(session.threads().isEmpty());
+        }
+    }
+
+    @Test
+    public void theProgramsModulesAreItsOwnAndTheLibrariesItUsesWithTheSourceFilesOfTheirClasses()
+            throws Exception {
+        Path  source  = compile("Modules", LIBRARY.replace("Library", "Modules"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Modules"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 6)));
+        // before the program starts, the runtime has linked nothing
+        assertTrue(session.modules().isEmpty());
+
+        Control control = run("Modules", new StringWriter(), session);
+        try (control) {
+            stops.next();
+            Map<String, ModuleInfo> modules = new HashMap<>();
+            session.modules().forEach(module -> modules.put(module.name(), module));
+
+            ModuleInfo program = modules.get("Modules");
+            assertTrue(program.own());
+            assertEquals(List.of("Modules.x"), program.sources());
+            assertEquals(source.getParent().toRealPath(), Path.of(program.sourceDir()).toRealPath());
+
+            ModuleInfo ecstasy = modules.get("ecstasy.xtclang.org");
+            assertFalse(ecstasy.own());
+            assertTrue(ecstasy.sources().contains("ecstasy/collections/Collection.x"), ecstasy.sources().toString());
+            assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue(), ecstasy.sourceDir());
+            assertEquals(session.modules(), session.modules());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
         }
     }
 
