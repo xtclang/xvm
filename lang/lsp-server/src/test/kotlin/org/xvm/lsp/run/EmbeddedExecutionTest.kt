@@ -11,6 +11,7 @@ import org.assertj.core.api.Assertions.entry
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -60,7 +61,7 @@ class EmbeddedExecutionTest {
     @TempDir lateinit var directory: Path
 
     private lateinit var lib: File
-    private val worker = RunWorkerProcess()
+    private var worker = RunWorkerProcess()
 
     @BeforeAll
     fun compileProgramsOnce() {
@@ -139,6 +140,18 @@ class EmbeddedExecutionTest {
     @BeforeEach
     fun canonicalDirectory() {
         directory = directory.toRealPath()
+    }
+
+    @AfterEach
+    fun freshWorkerAfterALeftoverRun() {
+        // a test that fails before its run or debug session ends leaves its program on the class's worker, where it
+        // would fail the tests after it; they get a fresh worker instead
+        val left = worker.tracked()
+        if (left != 0) {
+            println("a test left runs on the class's worker (tracked=$left), so the next test gets a fresh one")
+            worker.close()
+            worker = RunWorkerProcess()
+        }
     }
 
     @Test
