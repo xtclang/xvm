@@ -847,6 +847,64 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a step into one of the calls of the line goes into that call, and the line's other calls run on`() {
+        CompilerTestSupport.configure()
+        val module = source("Targets.x", TARGETS.trimIndent())
+        val path = directory.resolve("Targets.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Targets", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Targets", "moduleUri": "$module"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 4}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+
+            fun top(seq: Int): JsonObject {
+                sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
+                return client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject
+            }
+            sessions.request(id, 6, "stepInTargets", """{"frameId": ${top(5)["id"].asInt}}""")
+            val targets =
+                client
+                    .until(id) { it.response == "stepInTargets" }
+                    .last()["body"]
+                    .asJsonObject["targets"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(targets.map { it["label"].asString }).containsExactly("add(Int, Int)", "twice(Int)")
+
+            // into the second call: add() runs without stopping, and the step ends in twice()
+            sessions.request(id, 7, "stepIn", """{"threadId": $thread, "targetId": ${targets[1]["id"].asInt}}""")
+            val stepped = client.until(id) { it.event == "stopped" }
+            assertThat(stepped.single { it.response == "stepIn" }["success"].asBoolean).isTrue()
+            assertThat(stepped.last()["body"].asJsonObject["reason"].asString).isEqualTo("step")
+            assertThat(top(8).let { it["name"].asString to it["line"].asInt }).isEqualTo("Targets.twice" to 15)
+
+            sessions.request(id, 9, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 10, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(6)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a stop lists the fibers that do not wait at a line, with what they do, and the stack of one that waits`() {
         CompilerTestSupport.configure()
         val module = source("Waits.x", PROGRAM.trimIndent().replace("Program", "Waits"))
@@ -881,7 +939,10 @@ class EmbeddedExecutionTest {
                     .asJsonObject["threads"]
                     .asJsonArray
                     .map { it.asJsonObject }
-            assertThat(threads.map { it["name"].asString }).containsExactly("Worker", "Waits (waiting)")
+            // the stopped fiber, run()'s that waits, and the worker's fiber for that call, once it has taken it
+            val names = threads.map { it["name"].asString }
+            assertThat(names.take(2)).containsExactly("Worker", "Waits (waiting)")
+            assertThat(names.drop(2)).allMatch { it == "Worker (not started)" }
             assertThat(threads[0]["id"].asInt).isEqualTo(thread)
 
             // the waiting fiber's own stack, where it asks the worker; its frame has no variables
@@ -2276,6 +2337,28 @@ class EmbeddedExecutionTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """
+
+        /** A module whose run() calls add() and then twice() on line 4; add() is on line 11, twice() on line 15. */
+        const val TARGETS =
+            """
+            module Targets {
+                Int run() {
+                    @Inject Console console;
+                    Int n = twice(add(1, 2));
+                    Int m = n > 100 ? twice(n) : n;
+                    console.print($"n={n} m={m}");
+                    return m;
+                }
+
+                Int add(Int a, Int b) {
+                    return a + b;
+                }
+
+                Int twice(Int n) {
+                    return n * 2;
                 }
             }
             """
