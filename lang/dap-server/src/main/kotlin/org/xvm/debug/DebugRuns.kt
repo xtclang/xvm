@@ -67,6 +67,18 @@ data class FrameState(
     val source: String? = null,
 )
 
+/**
+ * A module of the program: its name, its version if it has one, the source directory it recorded, the source paths of its
+ * classes within that directory, and whether it is the program's own, not a library's.
+ */
+data class ModuleState(
+    val name: String,
+    val version: String?,
+    val sourceDir: String?,
+    val sources: List<String>,
+    val own: Boolean,
+)
+
 /** A scope of a stopped frame: its name, and the reference its variables are read by. */
 data class ScopeState(
     val name: String,
@@ -350,4 +362,7 @@ interface DebugRuns {
         module: String,
         path: String,
     ): String? = null
+
+    /** The modules of the debugged program, its own and the libraries it uses; none before it starts. */
+    fun modules(runId: String): CompletableFuture<List<ModuleState>> = CompletableFuture.completedFuture(emptyList())
 }
