@@ -9,6 +9,9 @@ import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.CompletionItemType
 import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
+import org.eclipse.lsp4j.debug.DataBreakpoint
+import org.eclipse.lsp4j.debug.DataBreakpointAccessType
+import org.eclipse.lsp4j.debug.DataBreakpointInfoArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
@@ -28,6 +31,7 @@ import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.RestartFrameArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetDataBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetFunctionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetVariableArguments
@@ -89,6 +93,7 @@ class XtcDebugServerTest {
                 "supportsConditionalBreakpoints",
                 "supportsHitConditionalBreakpoints",
                 "supportsFunctionBreakpoints",
+                "supportsDataBreakpoints",
                 "supportsLogPoints",
                 "supportsExceptionInfoRequest",
                 "supportsExceptionFilterOptions",
@@ -226,6 +231,55 @@ class XtcDebugServerTest {
         runs.events.stopped(StopState("function breakpoint", null, 12, listOf(running.breakpoints.single().id)))
         assertThat(client.stops.single().reason).isEqualTo("function breakpoint")
         assertThat(client.stops.single().hitBreakpointIds).containsExactly(running.breakpoints.single().id)
+    }
+
+    @Test
+    fun `a field of an object is a data breakpoint's target, which stops on a write while the program runs`() {
+        // before the program runs, nothing can be watched
+        val early = server.dataBreakpointInfo(DataBreakpointInfoArguments().apply { name = "count" }).get(10, SECONDS)
+        assertThat(early.dataId).isNull()
+        assertThat(early.description).isEqualTo(XtcDebugServer.ONLY_FIELDS)
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        val info =
+            server
+                .dataBreakpointInfo(
+                    DataBreakpointInfoArguments().apply {
+                        variablesReference = 7
+                        name = "count"
+                    },
+                ).get(10, SECONDS)
+        assertThat(info.dataId).isEqualTo("41")
+        assertThat(info.description).isEqualTo("Counter.count")
+        assertThat(info.accessTypes).containsExactly(DataBreakpointAccessType.WRITE)
+        assertThat(info.canPersist).isFalse()
+
+        // a write is installed; a read is not, nor sent
+        val response =
+            server
+                .setDataBreakpoints(
+                    SetDataBreakpointsArguments().apply {
+                        breakpoints =
+                            arrayOf(
+                                DataBreakpoint().apply {
+                                    dataId = "41"
+                                    condition = "n > 2"
+                                },
+                                DataBreakpoint().apply {
+                                    dataId = "41"
+                                    accessType = DataBreakpointAccessType.READ
+                                },
+                            )
+                    },
+                ).get(10, SECONDS)
+        assertThat(response.breakpoints.map { it.isVerified to it.message })
+            .containsExactly(true to null, false to XtcDebugServer.ONLY_WRITES)
+        assertThat(runs.watched.single().map { it.dataId to it.condition }).containsExactly("41" to "n > 2")
+
+        runs.events.stopped(StopState("data breakpoint", "Counter.count changed from 0 to 2", 12, listOf(response.breakpoints[0].id)))
+        assertThat(client.stops.single().reason).isEqualTo("data breakpoint")
+        assertThat(client.stops.single().description).isEqualTo("Counter.count changed from 0 to 2")
     }
 
     @Test
@@ -1168,6 +1222,25 @@ class XtcDebugServerTest {
         ): CompletableFuture<List<BreakpointState>> {
             installed.add(breakpoints)
             return CompletableFuture.completedFuture(breakpoints.breakpoints.map { BreakpointState(it.id, it.line, true) })
+        }
+
+        val watched = CopyOnWriteArrayList<List<DataBreakpointRequest>>()
+
+        /** Field count of the object whose fields reference 7 reads is data ID 41. */
+        override fun dataBreakpointInfo(
+            runId: String,
+            reference: Int,
+            name: String,
+        ) = CompletableFuture.completedFuture(
+            if (reference == 7 && name == "count") DataInfoState("41", "Counter.count") else DataInfoState(null, "no"),
+        )
+
+        override fun setDataBreakpoints(
+            runId: String,
+            breakpoints: List<DataBreakpointRequest>,
+        ): CompletableFuture<List<BreakpointState>> {
+            watched.add(breakpoints)
+            return CompletableFuture.completedFuture(breakpoints.map { BreakpointState(it.id, 0, it.dataId == "41") })
         }
 
         val installedFunctions = CopyOnWriteArrayList<List<FunctionBreakpointRequest>>()
