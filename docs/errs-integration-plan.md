@@ -65,8 +65,9 @@ with the same subject but one. Master absorbed the two that reach the runtime th
 serves the next run". The same happened on #693, which has 182 commits. errs' `Runtime` keeps its
 own `setDebugger`, which detaches the debugger it replaces and attaches the new one, with #718's
 constructor and `getDebugger`; errs' tree differs from the old tip only by master's two changes.
-The old tips are kept locally as `backup/errs-pre-rebase-20261027` (`e1d1947eb1`) and
-`backup/693-pre-rebase-20261027` (`d8bfeff83e`).
+The old tips were kept locally as `backup/errs-pre-rebase-20261027` (`e1d1947eb1`) and
+`backup/693-pre-rebase-20261027` (`d8bfeff83e`). Later on 2026-10-27, those backups, the
+2026-10-26 ones and their bundle were deleted; the commit maps keep the old hashes.
 
 - #716's `InterpreterConnector` conflicted where #718 added `setDebugger`, and keeps both methods.
   #717 and #724 rebased without conflicts, and each PR's commits are unchanged apart from that one.
@@ -1569,7 +1570,7 @@ and [IntelliJ settings](https://plugins.jetbrains.com/docs/intellij/settings-gui
 | Diagnostics and analysis | Compiler diagnostics, push/pull negotiation and automatic reanalysis work; editor Problems filtering is available. | Prefer native severity/filter controls; expose analysis/status and refresh/rebuild commands. Any future debounce, excludes or on-save analysis option must define stale-diagnostic behavior and graph coverage. No switch may bypass rename/type proof or silently suppress internal failures. |
 | Refactoring, imports and file operations | Guarded rename/move/action paths and graph settings persistence exist. | Explain refusal reasons and relevant configuration; respect native preview/confirmation/Undo. Source-graph proposals need explicit persisted edits. Do not make unsafe operations available through a preference. |
 | Tracing, timing and notifications | VS Code `xtc.trace.server`; LSP4IJ logs; compile/API/queue timing and transient startup notifications. | Add discoverable log/queue/status views, trace level and bounded log retention/export, including human-readable queued jobs. Keep source content out of routine logs. Prefer IDE notification controls; advanced startup-notification preference only if needed. |
-| Run/debug and future providers | Embedded Run and DAP debugging ship in both editors; R8 and R9–R13, and several LSP providers, remain separate work. | R5 owns target/arguments/working directory/environment/Stop/Rerun UI; R6–R8 own debugger controls. Notebook, color and inline completion settings follow implemented capabilities, not placeholders advertised as working. |
+| Run/debug and future providers | Embedded Run and DAP debugging ship in both editors, through the R8 release gate; R9–R13, and several LSP providers, remain separate work. | R5 owns target/arguments/working directory/environment/Stop/Rerun UI; R6–R8 own debugger controls. Notebook, color and inline completion settings follow implemented capabilities, not placeholders advertised as working. |
 
 Local desktop implementation and acceptance are complete as of October 6; the
 [completion receipt](#ui1ui7-completion-batch-2026-10-06) records combined runs and their limits.
@@ -1677,19 +1678,20 @@ to the compiler-only PR:
   breakpoints are placed on the lines the program was built from, and refused on changed lines.
   In IntelliJ, the cases that are partial or not implemented are so only because of LSP4IJ
   0.21.0's limits, UP30–UP42.
-- [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
+- [x] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
   *In progress (2026-10-26):* the runtime retention fix (`474af84f08`), the soak in
   `EmbeddedExecutionTest` (`0d6e890bad`), repeated runs, stops and debug sessions driven from both
   editors as shared X322 (`718ddd656e`), logs correlated by their `build=`, `run=`, `worker=` and
   `generation=` fields (`a87b63d9de`), an execution worker that does not call `System.gc()`
   (`2668896b26`), tests that find retained objects by walking the object graph instead of waiting
   for the collector (`77e3c4b7c5`), and focused Gradle test tasks (`e91b5e58cb`, `30d9685ff3`).
-  *Done apart from Windows (2026-10-27):* the soak and the `lsp-server` and `javatools` tests pass
+  *Done (2026-10-27):* the soak and the `lsp-server` and `javatools` tests pass
   on Linux, in a Podman container, as well as on macOS; what the Linux runs found is in
   [remaining.md](remaining.md#r8-runtime-release-gate). VS Code passes all 34 run and debug cases,
   and IntelliJ 21 of its 32, with the other 11 partial because of the test driver or LSP4IJ
   0.21.0. The docs are current (`3ac199f192`), and each runtime PR passes CI on its own head.
-  Windows is open: CI's `lang` checks run on `ubuntu-latest` only.
+  A Windows soak is not planned (decided 2026-10-27): CI's `lang` checks run on `ubuntu-latest`
+  only.
 - [ ] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
   debugger's commands: breakpoint kinds (R9), values (R10), execution control (R11), program
   structure and sources (R12), and debugging beyond embedded runs (R13), listed in the
