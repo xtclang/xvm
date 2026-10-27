@@ -315,8 +315,8 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **lsp4j** | 0.24.0 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
-| **lsp4ij** | 0.19.1 | IntelliJ LSP client plugin | Red Hat's plugin, uses lsp4j internally |
+| **lsp4j** | 1.0.0 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
+| **lsp4ij** | 0.21.0 | IntelliJ LSP client plugin | Red Hat's plugin, uses lsp4j internally |
 
 **How they work together:**
 - **lsp4j** provides the LSP protocol implementation (types, JSON-RPC, message handling)

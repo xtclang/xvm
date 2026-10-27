@@ -554,7 +554,7 @@ LSP4IJ's `JavaProcessCommandBuilder` locates IntelliJ's bundled JBR 25 automatic
 | tree-sitter CLI | 0.24.3 | Grammar validation (auto-downloaded) | N/A |
 | jtreesitter | 0.24.1 | JVM bindings (FFM API) | **Java 22+** |
 | lsp4j | 0.21.1 | LSP protocol implementation | Java 11+ |
-| lsp4ij | 0.19.1 | IntelliJ LSP client | Java 17+ |
+| lsp4ij | 0.21.0 | IntelliJ LSP client | Java 21+ |
 
 > **Note**: jtreesitter 0.24.x requires Java 22+ despite being the "oldest" version.
 > See [Java Version Compatibility](#java-version-compatibility) above.
