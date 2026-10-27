@@ -1140,6 +1140,39 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X323") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val file = uri(data.string("file"))
+            val cursor = data.int("cursorLine")
+            try {
+                debugger.debug(project, module, file, data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // Run to Cursor, on a line in the loop after a long count
+                debugger.runToCursor(project, module, file, cursor)
+                // TODO LSP4IJ: UP44 — LSP4IJ removes Run to Cursor's temporary breakpoint once the continue request is answered,
+                //  not when the program stops there, so the program runs past the cursor to its exit; with a fix it stops at the
+                //  cursor's line, before it prints, and this checks that and Resume to the exit, as VS Code's X323 does
+                val ended =
+                    debugger.awaitState(project, module, "Run to Cursor resumes the program, which runs past the cursor", 60.seconds) {
+                        it.has("exitCode") || (it["suspended"]?.asBoolean == true && it["line"]?.asInt == cursor)
+                    }
+                check(ended.has("exitCode")) { "Run to Cursor stopped at line $cursor: UP44 is fixed, so X323 is full in IntelliJ: $ended" }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                check(data.string("output") in ended.string("console")) { "Console after Run to Cursor: ${ended.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1252,6 +1285,13 @@ internal interface DebugSessionProbe {
     fun resume(
         project: Project,
         module: String,
+    )
+
+    fun runToCursor(
+        project: Project,
+        module: String,
+        uri: String,
+        line: Int,
     )
 
     fun evaluate(
