@@ -9992,7 +9992,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
+          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44, fixed by our LSP4IJ #1773, open). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
         ]
       }
     },
@@ -10071,7 +10071,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45), so IntelliJ has no loaded sources or modules to check."
+          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45, implemented by our LSP4IJ #1774, open), so IntelliJ has no loaded sources or modules to check."
         ]
       }
     },
