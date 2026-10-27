@@ -627,13 +627,13 @@ passes with the workaround disabled. The gates are in
   found both, with the program's sources and modules. To do: after a release with it, implement
   IntelliJ's X326.
 
-### LSP4IJ: no function breakpoints (UP46): our #1780, open
+### LSP4IJ: no function breakpoints (UP46): our #1780, merged
 
 - [ ] UP46 (2026-10-27): LSP4IJ has no function breakpoints: it never sends `setFunctionBreakpoints`
   (0.21.0 and `main`, `42f1f16e`); its breakpoints are lines, disassembly instructions and
   exception filters. XVM's adapter installs them since R9 (X328), which VS Code's Breakpoints view
-  adds. Implemented by our [#1780](https://github.com/redhat-developer/lsp4ij/pull/1780) (2026-10-27,
-  open, `d870dd93`): a DAP Function Breakpoint type, added from the Breakpoints dialog's "+", sent
+  adds. Implemented by our [#1780](https://github.com/redhat-developer/lsp4ij/pull/1780) (merged
+  2026-10-27 as `0d3c64de`, unreleased): a DAP Function Breakpoint type, added from the Breakpoints dialog's "+", sent
   with `setFunctionBreakpoints` and matched by `hitBreakpointIds`. Checked natively: with a plugin
   built from it, IntelliJ's X328 stops in `Entered.twice` and runs to its exit
   (`run-11586456472789120644`), and again at `bef74868`, rebased onto `main` with #1752
@@ -658,18 +658,18 @@ passes with the workaround disabled. The gates are in
   [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
   last item waits on it. To do: build it once an editor sends `singleThread`.
 
-### LSP4IJ: no inline values for Ecstasy (UP50): our fix on a local branch
+### LSP4IJ: no inline values for Ecstasy (UP50): our #1781, open
 
 - [ ] UP50 (2026-10-27): IntelliJ shows no inline values for Ecstasy. LSP4IJ never sends
   `textDocument/inlineValue` (0.21.0 and `main`, `f22304a4`); its scan of the editor's TextMate tokens
   places none of the frame's variables; and it leaves the frame's Locals group collapsed, while
   IntelliJ computes inline data only for the variables it shows. LSP4IJ issue
   [#1432](https://github.com/redhat-developer/lsp4ij/issues/1432) reports the same; its maintainer
-  answered that inline values are an LSP feature. Our local LSP4IJ branch
-  `feat/dap-inline-values-from-lsp` (`da152094`, not pushed) asks the language server, falls back to
-  the token scan, and expands the locals' group; with a plugin built from it, IntelliJ draws the
-  values and X331 passes (`run-1069392384661177323`). To do: decide on the PR, then after a release
-  with it, make IntelliJ's X331 full.
+  answered that inline values are an LSP feature. Fixed by our
+  [#1781](https://github.com/redhat-developer/lsp4ij/pull/1781) (2026-10-27, open, `f76a4fd5`): it asks
+  the language server, falls back to the token scan, and expands the locals' group; with a plugin
+  built from it, IntelliJ draws the values and X331 passes (`run-4604772112093360200`). To do: after a
+  release with it, make IntelliJ's X331 full.
 
 ### LSP4IJ: no data breakpoints (UP48): not filed
 
