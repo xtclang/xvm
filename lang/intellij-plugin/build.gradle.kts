@@ -818,7 +818,11 @@ val runIdeCapturedIdeVersion = ideVersion
 val runIdeCapturedSinceBuild = intellijSinceBuild
 val runIdeCapturedLsp4ijVersion =
     localLsp4ijPlugin.map { "local plugin: $it" }.orElse(
-        if (marketplaceLsp4ijChannel.isEmpty()) marketplaceLsp4ijVersion else "$marketplaceLsp4ijVersion ($marketplaceLsp4ijChannel channel)",
+        if (marketplaceLsp4ijChannel.isEmpty()) {
+            marketplaceLsp4ijVersion
+        } else {
+            "$marketplaceLsp4ijVersion ($marketplaceLsp4ijChannel channel)"
+        },
     )
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
