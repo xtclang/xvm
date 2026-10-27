@@ -507,18 +507,22 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * One frame of a stopped fiber's stack: an ID unique within the stop, the method's name, the
-     * source file, or null when it is not known, and the 1-based line, or 0.
+     * source file, or null when it is not known, the 1-based line, or 0, and the module and source
+     * path that the source file is made of.
      *
-     * @param id    the frame's ID, which {@link #scopes}, {@link #evaluate} and {@link #run} take,
-     *              until the stop ends; only the fiber's own frames have scopes, not those of the
-     *              fibers that called it
-     * @param name  the method's name after its class's, such as {@code "Point.toString"}, or after
-     *              its module's simple name for a method of a module
-     * @param path  the source file, as the compiler recorded it: the module's source directory and
-     *              the class's source path; null if it is not known
-     * @param line  the 1-based line where the frame is, or 0 if it is not known
+     * @param id      the frame's ID, which {@link #scopes}, {@link #evaluate} and {@link #run}
+     *                take, until the stop ends; only the fiber's own frames have scopes, not those
+     *                of the fibers that called it
+     * @param name    the method's name after its class's, such as {@code "Point.toString"}, or
+     *                after its module's simple name for a method of a module
+     * @param path    the source file, as the compiler recorded it: the source directory of the
+     *                class's own module and the class's source path; null if it is not known
+     * @param line    the 1-based line where the frame is, or 0 if it is not known
+     * @param module  the name of the class's module, such as {@code "ecstasy.xtclang.org"}, or null
+     * @param source  the class's source path within its module's source directory, such as
+     *                {@code "ecstasy/collections/Collection.x"}, or null
      */
-    public record StackFrameInfo(int id, String name, String path, int line) {
+    public record StackFrameInfo(int id, String name, String path, int line, String module, String source) {
     }
 
     /**
@@ -1953,9 +1957,13 @@ public final class SessionDebugger implements Debugger {
                 continue;
             }
 
-            int frameId = handles.incrementAndGet();
-            int line    = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
-            stack.add(new StackFrameInfo(frameId, functionName(function), sourcePath(function), line));
+            int             frameId = handles.incrementAndGet();
+            int             line    = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
+            ClassStructure  clazz   = function.getContainingClass();
+            ModuleStructure module  = clazz == null ? null : module(clazz);
+            LiteralConstant source  = clazz == null ? null : clazz.getSourcePath();
+            stack.add(new StackFrameInfo(frameId, functionName(function), sourcePath(function), line,
+                    module == null ? null : module.getName(), source == null ? null : source.getValue()));
             if (stackFrame.frame != null && stackFrame.frame.f_fiber == frame.f_fiber) {
                 current.frames.put(frameId, new FrameAt(threadId, stackFrame.frame));
             }
@@ -2972,9 +2980,21 @@ public final class SessionDebugger implements Debugger {
             return null;
         }
 
-        LiteralConstant path = clazz.getSourcePath();
-        LiteralConstant dir  = clazz.getFileStructure().getModule().getSourceDir();
+        // the class's own module: the file structure's is the program's, also for a library's class
+        ModuleStructure module = module(clazz);
+        LiteralConstant path   = clazz.getSourcePath();
+        LiteralConstant dir    = module == null ? null : module.getSourceDir();
         return path == null || dir == null ? null : dir.getValue() + path.getValue();
+    }
+
+    /**
+     * @return the module that holds the class, whose source directory its source path is in, or
+     *         null
+     */
+    private static ModuleStructure module(ClassStructure clazz) {
+        return clazz.getIdentityConstant().getModuleConstant().getComponent() instanceof ModuleStructure module
+                ? module
+                : null;
     }
 
     /**

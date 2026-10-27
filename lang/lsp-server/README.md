@@ -607,7 +607,9 @@ as installed, on the line it was put on, or not installed, with the reason. A br
 without code moves to the next line with code in its method. Breakpoints set later are installed
 at once. A breakpoint or `assert:debug` stops the program with every fiber stopped:
 `threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
-frame's file and line, and `continue` resumes it. `scopes` gives a stopped frame's Locals, and
+frame's file and line, and `continue` resumes it. A frame of a bundled XDK library's code is in the
+library's bundled source, the read-only copy that navigation opens, since the source directory the
+library records is the one it was built in. `scopes` gives a stopped frame's Locals, and
 `variables` its `this` and named variables, an object's fields and an array's elements (the first
 100, or the part a request's `start` and `count` name, as its `filter` of `named` or `indexed`
 takes them; an array's variable has `indexedVariables`, its size), each with its value and type in words; they are read on the waiting fiber's own thread, and a

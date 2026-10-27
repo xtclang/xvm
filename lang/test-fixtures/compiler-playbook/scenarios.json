@@ -9996,6 +9996,31 @@
         ]
       }
     },
+    "X324": {
+      "title": "a stack frame in a bundled library's code shows the library's bundled source at its line, and the program then runs to its exit",
+      "manual": [
+        "How each editor shows the library frame's source, read-only, is checked manually; VS Code checks the frame's source and opens it at the frame's line, IntelliJ the frame's file and line."
+      ],
+      "values": {
+        "file": "LibraryFrame.x",
+        "module": "LibraryFrame",
+        "source": "module LibraryFrame {\n    void run() {\n        @Inject Console console;\n        Int[] numbers = [7];\n        numbers.forEach(n -> {\n            console.print($\"n={n}\");\n        });\n    }\n}\n",
+        "breakpointLine": 6,
+        "frames": [
+          "LibraryFrame.->",
+          "Collection.forEach",
+          "LibraryFrame.run"
+        ],
+        "librarySource": "ecstasy/collections/Collection.x",
+        "libraryText": "process(",
+        "output": "n=7",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

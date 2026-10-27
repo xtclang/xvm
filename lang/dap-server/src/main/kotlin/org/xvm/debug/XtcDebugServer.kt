@@ -919,7 +919,9 @@ class XtcDebugServer(
         StackFrame().apply {
             id = frame.id
             name = frame.name
-            frame.path?.let { file ->
+            // a bundled library's frame is shown in the source its code was compiled from
+            val shown = frame.module?.let { module -> frame.source?.let { runs.librarySource(module, it) } } ?: frame.path
+            shown?.let { file ->
                 source =
                     Source().apply {
                         path = file
@@ -927,7 +929,7 @@ class XtcDebugServer(
                     }
             }
             line = frame.line + lineBase
-            column = if (frame.path == null) 0 else 1 + columnBase
+            column = if (shown == null) 0 else 1 + columnBase
         }
 
     private fun end(sendTerminated: Boolean) {

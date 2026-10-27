@@ -1319,6 +1319,57 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X324', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in the lambda');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
+                const frames = (await session.customRequest('stackTrace', { threadId })).stackFrames as { name: string; line: number; source?: { path?: string } }[];
+                assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
+
+                // the library's frame is in the source bundled with it, not a file of the workspace, and opens at its line
+                const library = frames[1];
+                const file = library.source?.path ?? '';
+                assert.ok(file.replace(/\\/g, '/').endsWith(data.librarySource), JSON.stringify(library));
+                assert.ok(!file.startsWith(vscode.workspace.getWorkspaceFolder(document.uri)!.uri.fsPath), file);
+                const opened = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+                const text = opened.lineAt(library.line - 1).text;
+                assert.ok(text.includes(data.libraryText), text);
+
+                // the lambda runs once, so Continue runs the program to its exit
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1346,7 +1397,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X323 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X324 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;

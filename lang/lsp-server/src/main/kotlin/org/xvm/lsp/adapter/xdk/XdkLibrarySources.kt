@@ -10,6 +10,7 @@ import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SymbolMoniker
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Properties
@@ -122,6 +123,19 @@ internal object XdkLibrarySources {
     }
 
     fun sourceUri(name: String?): String? = name?.takeIf(::owns)
+
+    /**
+     * The read-only file with the bundled source of [path] in the library [module], which navigation opens too, or null
+     * when [module] is not a bundled library or has no such source.
+     */
+    fun file(
+        module: String,
+        path: String,
+    ): String? {
+        if (module !in XdkLibraries.moduleNames) return null
+        val entry = entries[path] ?: return null
+        return Path.of(URI(sources.computeIfAbsent(path) { parse(module, path, entry) }.uri)).toString()
+    }
 
     /** Use the actual artifact identity, never a name search across library modules. */
     fun declaration(identity: IdentityConstant): DependencyDeclaration? {

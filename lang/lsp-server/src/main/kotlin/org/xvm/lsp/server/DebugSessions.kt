@@ -18,6 +18,7 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
 import org.xvm.debug.XtcDebugServer
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.run.RunWorkerProcess
 import java.io.Closeable
 import java.net.URI
@@ -228,6 +229,11 @@ internal class DebugSessions(
         override fun pause(runId: String) = runs.pause(runId)
 
         override fun resume(runId: String) = runs.resume(runId)
+
+        override fun librarySource(
+            module: String,
+            path: String,
+        ) = XdkLibrarySources.file(module, path)
     }
 
     private companion object {

@@ -211,6 +211,22 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module whose run() calls Collection.forEach, from the ecstasy library, which calls its
+     * lambda: line 6 is the lambda's.
+     */
+    private static final String LIBRARY = """
+            module Library {
+                void run() {
+                    @Inject Console console;
+                    Int[] numbers = [1, 2, 3];
+                    numbers.forEach(n -> {
+                        console.print($"n={n}");
+                    });
+                }
+            }
+            """;
+
+    /**
      * A module whose run() loops five times over line 7, with i from 0 to 4 and even true when i
      * is, prints "sum 10" and returns 10.
      */
@@ -608,9 +624,7 @@ public class SessionDebuggerTest {
 
     @BeforeAll
     static void configure() throws URISyntaxException {
-        URL modules = SessionDebuggerTest.class.getResource("/xdk-modules");
-        assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
-        support = new EmbeddingSupport().configure(new DirRepository(new File(modules.toURI()), true), null);
+        support = new EmbeddingSupport().configure(xdk(), null);
     }
 
     /**
@@ -620,6 +634,40 @@ public class SessionDebuggerTest {
     @AfterAll
     static void shutdown() {
         support.shutdownInterpreter();
+    }
+
+    @Test
+    public void aFrameOfALibrarysCodeIsInTheLibrarysOwnSourceDirectoryAndNamesItsModuleAndSource()
+            throws Exception {
+        Path  source  = compile("Library", LIBRARY);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Library"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 6)));
+
+        Control control = run("Library", new StringWriter(), session);
+        try (control) {
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            assertEquals(List.of("Library.->", "Collection.forEach", "Library.run"),
+                    frames.stream().map(StackFrameInfo::name).toList());
+
+            StackFrameInfo lambda = frames.get(0);
+            assertEquals("Library", lambda.module());
+            assertEquals("Library.x", lambda.source());
+            assertEquals(source.toRealPath(), Path.of(lambda.path()).toRealPath());
+
+            // the library's own source directory, where it was compiled, not the program's
+            StackFrameInfo forEach = frames.get(1);
+            assertEquals("ecstasy.xtclang.org", forEach.module());
+            assertEquals("ecstasy/collections/Collection.x", forEach.source());
+            assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue() + forEach.source(),
+                    forEach.path());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
     }
 
     @Test
@@ -2295,5 +2343,14 @@ public class SessionDebuggerTest {
 
     private static ModuleRepository input() {
         return new DirRepository(outputDir.toFile(), true);
+    }
+
+    /**
+     * @return the compiled XDK modules, which the build puts in the test resources
+     */
+    private static ModuleRepository xdk() throws URISyntaxException {
+        URL modules = SessionDebuggerTest.class.getResource("/xdk-modules");
+        assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
+        return new DirRepository(new File(modules.toURI()), true);
     }
 }
