@@ -758,7 +758,8 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-27, after both were rebased onto master `bcd8e30d58`: R8's fixes that are not debugger
+  2026-10-27: the semantic token history's synchronization `efdcff889c` as `f1d2060f29`, its
+  SemanticTokenReportsTest passing; before that, after both were rebased onto master `bcd8e30d58`: R8's fixes that are not debugger
   work are the pool count, the graph-walk tests and the worker's heap without `System.gc()` as
   `9eae4bfa50`, `1feca90e99` and `34b3ef3878`, then the read-only test skips `c730053240` as
   `c5adf2518e`, a worker's exit within 5 s `c68bbcba08` as `fa879b8b7f`, with `RunWorker` by hand,
