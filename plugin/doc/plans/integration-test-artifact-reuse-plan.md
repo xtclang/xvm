@@ -193,7 +193,7 @@ This keeps the concerns separate:
 
 This recommendation also aligns with the publication-job cleanup plan in:
 
-- [`lang/doc/plans/intellij-plugin-publication-artifact-reuse-plan.md`](../../../lang/doc/plans/intellij-plugin-publication-artifact-reuse-plan.md)
+- `lang/doc/plans/intellij-plugin-publication-artifact-reuse-plan.md`
 
 Both plans are really asking for the same underlying change:
 

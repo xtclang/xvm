@@ -422,6 +422,6 @@ bool tree_sitter_xtc_external_scanner_scan(void *payload, TSLexer *lexer, const 
 ## Related Documentation
 
 See also:
-- [adapter-rebuild.md](./adapter-rebuild.md) - Adapter selection and rebuild behavior
-- [lsp-logging.md](./lsp-logging.md) - LSP server logging
-- [native-library-staleness.md](./native-library-staleness.md) - Staleness verification
+- [adapter-rebuild.md](https://github.com/xtclang/xvm/blob/8378ebde06999873ed1fd4d688b22c5048e9c555/lang/doc/plans/tree-sitter/adapter-rebuild.md) - Adapter selection and rebuild behavior
+- [lsp-logging.md](https://github.com/xtclang/xvm/blob/8378ebde06999873ed1fd4d688b22c5048e9c555/lang/doc/plans/tree-sitter/lsp-logging.md) - LSP server logging
+- [native-library-staleness.md](https://github.com/xtclang/xvm/blob/8378ebde06999873ed1fd4d688b22c5048e9c555/lang/doc/plans/tree-sitter/native-library-staleness.md) - Staleness verification

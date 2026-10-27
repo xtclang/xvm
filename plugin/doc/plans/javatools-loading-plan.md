@@ -4,7 +4,7 @@
 
 The Gradle plugin currently models JavaTools loading as a task:
 
-- [`loadJavaTools`](../../../plugin/src/main/java/org/xtclang/plugin/tasks/XtcLoadJavaToolsTask.java)
+- [`loadJavaTools`](https://github.com/xtclang/xvm/blob/4d7cbfde6b7b69a34834461ebb10052b0c1ab1f4/plugin/src/main/java/org/xtclang/plugin/tasks/XtcLoadJavaToolsTask.java)
 
 That task exists because some plugin code needs `javatools.jar` classes visible in the Gradle daemon
 classloader for direct/in-process behavior and shared launcher plumbing.
@@ -47,7 +47,7 @@ artifacts, not loss of workspace outputs or the local build cache between GitHub
 
 ### 1. `loadJavaTools` is a side-effect task
 
-[`XtcLoadJavaToolsTask`](../../../plugin/src/main/java/org/xtclang/plugin/tasks/XtcLoadJavaToolsTask.java)
+[`XtcLoadJavaToolsTask`](https://github.com/xtclang/xvm/blob/4d7cbfde6b7b69a34834461ebb10052b0c1ab1f4/plugin/src/main/java/org/xtclang/plugin/tasks/XtcLoadJavaToolsTask.java)
 mutates the plugin classloader so `javatools.jar` classes become available in the current Gradle
 daemon.
 

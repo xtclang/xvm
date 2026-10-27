@@ -40,8 +40,8 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 
 ## .github (2 files)
 
-- **M** — [.github/scripts/ci-changes.py](./.github/scripts/ci-changes.py)
-- **M** — [.github/workflows/commit.yml](./.github/workflows/commit.yml)
+- **M** — .github/scripts/ci-changes.py
+- **M** — .github/workflows/commit.yml
 
 ## Repository root (2 files)
 
@@ -124,7 +124,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java](./javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java](./javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/Context.java](./javatools/src/main/java/org/xvm/compiler/ast/Context.java)
-- **A** — [javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java](./javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java)
+- **A** — javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/ElseExpression.java](./javatools/src/main/java/org/xvm/compiler/ast/ElseExpression.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/ElvisExpression.java](./javatools/src/main/java/org/xvm/compiler/ast/ElvisExpression.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/Expression.java](./javatools/src/main/java/org/xvm/compiler/ast/Expression.java)
@@ -145,10 +145,10 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/NotNullExpression.java](./javatools/src/main/java/org/xvm/compiler/ast/NotNullExpression.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/Parameter.java](./javatools/src/main/java/org/xvm/compiler/ast/Parameter.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/ParenthesizedExpression.java](./javatools/src/main/java/org/xvm/compiler/ast/ParenthesizedExpression.java)
-- **A** — [javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java](./javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java)
-- **A** — [javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java](./javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java)
-- **A** — [javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java](./javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java)
-- **A** — [javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java](./javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java)
+- **A** — javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java
+- **A** — javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java
+- **A** — javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java
+- **A** — javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java](./javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java](./javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java)
 - **M** — [javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java](./javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java)
@@ -206,8 +206,8 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [javatools/src/test/java/org/xvm/api/EmbeddingFootprintTest.java](./javatools/src/test/java/org/xvm/api/EmbeddingFootprintTest.java)
 - **A** — [javatools/src/test/java/org/xvm/api/EmbeddingRepositoryFailureTest.java](./javatools/src/test/java/org/xvm/api/EmbeddingRepositoryFailureTest.java)
 - **A** — [javatools/src/test/java/org/xvm/api/ErrorListenerBoundaryTest.java](./javatools/src/test/java/org/xvm/api/ErrorListenerBoundaryTest.java)
-- **A** — [javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java](./javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java)
-- **A** — [javatools/src/test/java/org/xvm/asm/DirRepositoryFailureTest.java](./javatools/src/test/java/org/xvm/asm/DirRepositoryFailureTest.java)
+- **A** — javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java
+- **A** — javatools/src/test/java/org/xvm/asm/DirRepositoryFailureTest.java
 - **A** — [javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java](./javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java)
 - **A** — [javatools/src/test/java/org/xvm/asm/ErrorListenerAbortTest.java](./javatools/src/test/java/org/xvm/asm/ErrorListenerAbortTest.java)
 - **A** — [javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java](./javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java)
@@ -215,10 +215,10 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [javatools/src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java](./javatools/src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java)
 - **A** — [javatools/src/test/java/org/xvm/asm/ErrorListenerSilenceTest.java](./javatools/src/test/java/org/xvm/asm/ErrorListenerSilenceTest.java)
 - **A** — [javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java](./javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java)
-- **A** — [javatools/src/test/java/org/xvm/asm/FileRepositoryFailureTest.java](./javatools/src/test/java/org/xvm/asm/FileRepositoryFailureTest.java)
+- **A** — javatools/src/test/java/org/xvm/asm/FileRepositoryFailureTest.java
 - **M** — [javatools/src/test/java/org/xvm/asm/FileStructureErrorListenerTest.java](./javatools/src/test/java/org/xvm/asm/FileStructureErrorListenerTest.java)
 - **A** — [javatools/src/test/java/org/xvm/asm/ReportingTest.java](./javatools/src/test/java/org/xvm/asm/ReportingTest.java)
-- **A** — [javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java](./javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java)
+- **A** — javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java
 - **A** — [javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java](./javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java)
 - **A** — [javatools/src/test/java/org/xvm/compiler/CompilerDuplicateTypeTest.java](./javatools/src/test/java/org/xvm/compiler/CompilerDuplicateTypeTest.java)
 - **A** — [javatools/src/test/java/org/xvm/compiler/CursorBindingTest.java](./javatools/src/test/java/org/xvm/compiler/ast/bindings/CursorBindingTest.java)
@@ -232,7 +232,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [javatools/src/test/java/org/xvm/compiler/ast/CompositionSourceTest.java](./javatools/src/test/java/org/xvm/compiler/ast/CompositionSourceTest.java)
 - **A** — [javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java](./javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java)
 - **A** — [javatools/src/test/java/org/xvm/compiler/ast/NameResolverReportingTest.java](./javatools/src/test/java/org/xvm/compiler/ast/NameResolverReportingTest.java)
-- **A** — [javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java](./javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java)
+- **A** — javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java
 - **A** — [javatools/src/test/java/org/xvm/compiler/ast/ValidationScopeTest.java](./javatools/src/test/java/org/xvm/compiler/ast/ValidationScopeTest.java)
 - **A** — [javatools/src/test/java/org/xvm/compiler/ast/partial/RegisteredChildFieldsTest.java](./javatools/src/test/java/org/xvm/compiler/ast/partial/RegisteredChildFieldsTest.java)
 - **M** — [javatools/src/test/java/org/xvm/runtime/TestNumber.java](./javatools/src/test/java/org/xvm/runtime/TestNumber.java)
@@ -250,7 +250,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **M** — [javatools_utils/src/main/java/org/xvm/util/TransientThreadLocal.java](./javatools_utils/src/main/java/org/xvm/util/TransientThreadLocal.java)
 - **M** — [javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java](./javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java)
 - **M** — [javatools_utils/src/test/java/org/xvm/util/SetTest.java](./javatools_utils/src/test/java/org/xvm/util/SetTest.java)
-- **A** — [javatools_utils/src/test/java/org/xvm/util/TransientThreadLocalTest.java](./javatools_utils/src/test/java/org/xvm/util/TransientThreadLocalTest.java)
+- **A** — javatools_utils/src/test/java/org/xvm/util/TransientThreadLocalTest.java
 
 ## lang (2 files)
 
@@ -260,7 +260,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 ## lang/dap-server (2 files)
 
 - **M** — [lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt](./lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt)
-- **M** — [lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt](./lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt)
+- **M** — lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt
 
 ## lang/doc (8 files)
 
@@ -302,7 +302,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 ## lang/intellij-plugin (174 files)
 
 - **M** — [lang/intellij-plugin/README.md](./lang/intellij-plugin/README.md)
-- **M** — [lang/intellij-plugin/TESTING.md](./lang/intellij-plugin/TESTING.md)
+- **M** — [lang/intellij-plugin/testing.md](./lang/intellij-plugin/testing.md)
 - **M** — [lang/intellij-plugin/build.gradle.kts](./lang/intellij-plugin/build.gradle.kts)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CachedIdeInstaller.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CachedIdeInstaller.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientDiagnostics.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientDiagnostics.kt)
@@ -323,7 +323,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/NativeDiagnostics.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/NativeDiagnostics.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/NativeSemanticViews.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/NativeSemanticViews.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/NavigationChooserTest.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/NavigationChooserTest.kt)
-- **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityColors.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityColors.kt)
+- **A** — lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityColors.kt
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityCompilerImports.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityCompilerImports.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityDependencies.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityDependencies.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityDocumentation.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityDocumentation.kt)
@@ -359,7 +359,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/UiWaitsTest.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/UiWaitsTest.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/WorkspaceFolders.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/WorkspaceFolders.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CodeLensUi.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CodeLensUi.kt)
-- **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/ColorUi.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/ColorUi.kt)
+- **A** — lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/ColorUi.kt
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CompilerImportPage.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CompilerImportPage.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CompilerLibrariesPage.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CompilerLibrariesPage.kt)
 - **A** — [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CompilerReportPage.kt](./lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/CompilerReportPage.kt)
@@ -489,7 +489,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AdapterFutures.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AdapterFutures.kt)
 - **M** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AdapterModels.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AdapterModels.kt)
 - **M** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AdapterTree.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AdapterTree.kt)
-- **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/DocumentColor.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/DocumentColor.kt)
+- **A** — lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/DocumentColor.kt
 - **M** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/FormattingConfig.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/FormattingConfig.kt)
 - **M** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/LanguageConstants.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/LanguageConstants.kt)
 - **M** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/mock/MockAdapter.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/mock/MockAdapter.kt)
@@ -525,7 +525,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAutoImports.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAutoImports.kt)
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkBuildModel.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkBuildModel.kt)
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkCalls.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkCalls.kt)
-- **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkColorPrototype.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkColorPrototype.kt)
+- **A** — lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkColorPrototype.kt
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkCursorQueries.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkCursorQueries.kt)
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDependency.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDependency.kt)
 - **A** — [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDiagnosticIndex.kt](./lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDiagnosticIndex.kt)
@@ -666,7 +666,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCallHierarchyTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCallHierarchyTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCallableBreadthTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCallableBreadthTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCandidateProbeTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCandidateProbeTest.kt)
-- **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkColorValueTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkColorValueTest.kt)
+- **A** — lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkColorValueTest.kt
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCompletionSignatureTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCompletionSignatureTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCompoundHeaderTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkCompoundHeaderTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkConditionalRenameTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkConditionalRenameTest.kt)
@@ -779,7 +779,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ClientNotificationsTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ClientNotificationsTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ClientPresentationTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ClientPresentationTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/CodeLensSettingsTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/CodeLensSettingsTest.kt)
-- **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ColorValueProtocolTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ColorValueProtocolTest.kt)
+- **A** — lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ColorValueProtocolTest.kt
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/CompilerConfigurationTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/CompilerConfigurationTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/CompilerLibrariesTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/CompilerLibrariesTest.kt)
 - **A** — [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ConnectionProgressTest.kt](./lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/ConnectionProgressTest.kt)
@@ -829,7 +829,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 
 ## lang/test-fixtures (8 files)
 
-- **A** — [lang/test-fixtures/color-values/ColorPrototype.x](./lang/test-fixtures/color-values/ColorPrototype.x)
+- **A** — lang/test-fixtures/color-values/ColorPrototype.x
 - **A** — [lang/test-fixtures/compiler-playbook/compiler-import/build.gradle.kts](./lang/test-fixtures/compiler-playbook/compiler-import/build.gradle.kts)
 - **A** — [lang/test-fixtures/compiler-playbook/compiler-import/gradle.properties](./lang/test-fixtures/compiler-playbook/compiler-import/gradle.properties)
 - **A** — [lang/test-fixtures/compiler-playbook/compiler-import/settings.gradle.kts](./lang/test-fixtures/compiler-playbook/compiler-import/settings.gradle.kts)
@@ -879,7 +879,7 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 - **A** — [lang/vscode-extension/src/test/lifecycle/index.ts](./lang/vscode-extension/src/test/lifecycle/index.ts)
 - **A** — [lang/vscode-extension/src/test/native-focus.ts](./lang/vscode-extension/src/test/native-focus.ts)
 - **A** — [lang/vscode-extension/src/test/playbook/advanced.ts](./lang/vscode-extension/src/test/playbook/advanced.ts)
-- **A** — [lang/vscode-extension/src/test/playbook/colors.ts](./lang/vscode-extension/src/test/playbook/colors.ts)
+- **A** — lang/vscode-extension/src/test/playbook/colors.ts
 - **A** — [lang/vscode-extension/src/test/playbook/compilerImports.ts](./lang/vscode-extension/src/test/playbook/compilerImports.ts)
 - **A** — [lang/vscode-extension/src/test/playbook/completion.ts](./lang/vscode-extension/src/test/playbook/completion.ts)
 - **A** — [lang/vscode-extension/src/test/playbook/dependencies.ts](./lang/vscode-extension/src/test/playbook/dependencies.ts)

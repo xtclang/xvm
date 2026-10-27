@@ -13858,7 +13858,7 @@ retained. The operation-local ownership test is additional coverage for the new 
 compile counts, source hashes, compiler serialization and process exit. With `--workspace ../platform`,
 it opens real source documents and adds/removes an unrelated temporary source module outside that
 checkout. Each phase preserves exact document symbols and diagnostics. The
-[manual recipe](../lang/doc/manual-test-plan.md#bounded-l82-regression-and-memory-checkpoint)
+[manual recipe](../lang/doc/manual-test-plan.md#bounded-regression-and-memory-workload)
 distinguishes this many-buffer evidence from selected native X147/X148/X259 acceptance.
 
 Evidence is under `lang/lsp-server/build/reports/configuration-workload/l82-2026-10-06/`.
@@ -14002,7 +14002,7 @@ the token classifications or palette mapping exercised in the earlier native X41
 
 ## L77 color-value prototype (2026-10-06)
 
-The fixture [`ColorPrototype.x`](../lang/test-fixtures/color-values/ColorPrototype.x) defines
+The fixture `ColorPrototype.x` defines
 `const Rgba(UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha = 255) {}`. Its contract is byte-valued
 sRGB with straight alpha; zero is transparent and 255 opaque. This is a test module, not a public
 XDK color/graphics API. The fixed module/type identity intentionally scopes this experiment.
