@@ -4,8 +4,8 @@ Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of
 Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
 2026-10-22, and R7, the runtime debugger, was completed on 2026-10-26, both in VS Code and
-IntelliJ. The release gate (R8) is done apart from Windows, on 2026-10-27, and parts of R9, and
-R10, are done. The audit in
+IntelliJ. The release gate (R8) was completed on 2026-10-27, without a Windows soak, which is not
+planned, and parts of R9, and R10, are done. The audit in
 the next section describes the code before the first delivery.
 
 ## First delivery (2026-10-15)
@@ -466,7 +466,7 @@ this bridge; they cannot be inferred from compiler type hints.
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
   [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
-- [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
+- [x] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.
   *Runtime retention (2026-10-26, `474af84f08`):* a shut-down interpreter's runtime is no longer kept
@@ -501,7 +501,7 @@ this bridge; they cannot be inferred from compiler type hints.
   *Docs (2026-10-26, `3ac199f192`)* and *PRs (2026-10-27):* the run and debug docs are current,
   and #716, #717, #718, #724 (with #730's fix), #731 and #693 each pass CI on their own heads,
   rebased onto master `ddaa3d0a4`.
-  Open: Windows, which CI's `lang` checks do not run on.
+  Not planned (decided 2026-10-27): a soak on Windows, which CI's `lang` checks do not run on.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
