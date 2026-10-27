@@ -69,8 +69,9 @@ data class ThreadState(
 )
 
 /**
- * One frame of a stopped fiber's stack: its ID, the method's name, its source file if known, its 1-based line, and the
- * module and source path within it that the source file is, for a library's source that is not on this machine.
+ * One frame of a stopped fiber's stack: its ID, the method's name, its source file if known, its 1-based line, the
+ * module and source path within it that the source file is, for a library's source that is not on this machine, and
+ * whether [DebugRuns.restartFrame] can restart it.
  */
 data class FrameState(
     val id: Int,
@@ -79,6 +80,7 @@ data class FrameState(
     val line: Int,
     val module: String? = null,
     val source: String? = null,
+    val restartable: Boolean = false,
 )
 
 /**
@@ -410,5 +412,15 @@ interface DebugRuns {
         runId: String,
         threadId: Int,
         targetId: Int,
+    ): CompletableFuture<Boolean> = CompletableFuture.completedFuture(false)
+
+    /**
+     * Restarts a stopped frame that can restart: its fiber leaves it and the frames above it, and its caller makes the
+     * call again; the program stops again, with the reason `restart`, at the call's first line. False when no such
+     * frame waits, or it cannot restart.
+     */
+    fun restartFrame(
+        runId: String,
+        frameId: Int,
     ): CompletableFuture<Boolean> = CompletableFuture.completedFuture(false)
 }
