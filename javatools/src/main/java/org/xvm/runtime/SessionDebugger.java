@@ -38,12 +38,16 @@ import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpCallable;
+import org.xvm.asm.OpInvocable;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -531,6 +535,17 @@ public final class SessionDebugger implements Debugger {
      *                   known, and false for a library
      */
     public record ModuleInfo(String name, String version, String sourceDir, List<String> sources, boolean own) {
+    }
+
+    /**
+     * A call that the line where a fiber waits makes, which {@link #stepInto} steps into.
+     *
+     * @param id     the call's ID, which {@link #stepInto} takes, until the stop ends
+     * @param label  what the call calls: the name of a method or function and the types of its
+     *               parameters, such as {@code "twice(Int)"}, or {@code "new Point(Int, Int)"} for
+     *               a constructor
+     */
+    public record StepTarget(int id, String label) {
     }
 
     /**
@@ -1359,6 +1374,92 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * The calls that the line where a fiber waits makes, in the order of its code, which a step
+     * into one of them goes into; asked again in the same stop, the same ones.
+     *
+     * @param frameId  the ID of the frame where a fiber waits, the first of its stack
+     *
+     * @return the calls; none for another frame, and none for a call of a function that a
+     *         variable holds
+     */
+    public synchronized List<StepTarget> stepInTargets(int frameId) {
+        var current = halt;
+        var at      = current == null ? null : current.frames.get(frameId);
+        if (at == null) {
+            return List.of();
+        }
+        // only the frame where the fiber waits makes the calls of its line next
+        var snapshot = current.stacks.get(at.thread());
+        return snapshot != null && snapshot.frame() == at.frame()
+                ? current.callsOf.computeIfAbsent(frameId, _ -> calls(current, at))
+                : List.of();
+    }
+
+    /**
+     * Resume the stopped program, stepping the specified fiber into one of the calls of its line,
+     * as {@link #step} steps into the next one it makes: the program stops again, with the reason
+     * "step", at the first line of the code that call runs, or at the next line, as a step over
+     * would, if the line does not make that call.
+     *
+     * @param threadId  the ID of a fiber that {@link #threads} returned
+     * @param targetId  the ID of a call that {@link #stepInTargets} returned for its frame
+     *
+     * @return false if the program runs, the fiber does not wait, or the call is not one of its
+     *         line's; then nothing changes
+     */
+    public synchronized boolean stepInto(int threadId, int targetId) {
+        var current  = halt;
+        var call     = current == null ? null : current.calls.get(targetId);
+        var snapshot = snapshotOf(threadId);
+        if (call == null || snapshot == null || call.thread() != threadId) {
+            return false;
+        }
+
+        // set first, so lines stay checked as the fibers resume
+        var frame = snapshot.frame();
+        stepping = new Stepping(Step.IN, frame, frame.getFiber(), call.op());
+        release();
+        return true;
+    }
+
+    /**
+     * @return the calls that the line where the frame waits makes, from the op after its start to
+     *         the next line's
+     */
+    private List<StepTarget> calls(Halt current, FrameAt at) {
+        var frame = at.frame();
+        var ops   = frame.getOps();
+        var calls = new ArrayList<StepTarget>();
+        for (int pc = frame.getPC() + 1; pc < ops.length && !startsLine(frame, pc); pc++) {
+            var label = callLabel(frame, ops[pc].ensureOp());
+            if (label != null) {
+                int id = handles.incrementAndGet();
+                current.calls.put(id, new Call(at.thread(), pc));
+                calls.add(new StepTarget(id, label));
+            }
+        }
+        return List.copyOf(calls);
+    }
+
+    /**
+     * @return what the op calls, as {@link StepTarget#label} says it, or null if it calls nothing
+     *         that a step into can name
+     */
+    private static String callLabel(Frame frame, Op op) {
+        MethodConstant method = switch (op) {
+            case OpInvocable invoke -> invoke.getInvokedMethod(frame);
+            case OpCallable  call   -> call.getCalledMethod(frame);
+            default                 -> null;
+        };
+        if (method == null) {
+            return null;
+        }
+        var name   = method.isConstructor() ? "new " + method.getNamespace().getName() : method.getName();
+        var params = Arrays.stream(method.getRawParams()).map(TypeConstant::getValueString).collect(Collectors.joining(", "));
+        return name + '(' + params + ')';
+    }
+
+    /**
      * Stop the program at the next line any of its fibers reaches, with the reason "pause"; does
      * nothing while it is stopped. It returns at once; the stop comes through
      * {@link Listener#stopped} once a fiber next reaches a line, which, while all of them wait, as
@@ -1650,8 +1751,8 @@ public final class SessionDebugger implements Debugger {
      */
     private void leave(Frame frame) {
         Stepping step = stepping;
-        if (step != null && step.frame() == frame && step.step() != Step.IN) {
-            stepping = new Stepping(Step.IN, frame, frame.f_fiber);
+        if (step != null && step.frame() == frame && (step.step() != Step.IN || step.call() != Stepping.NO_CALL)) {
+            stepping = new Stepping(Step.IN, frame, frame.getFiber());
         }
     }
 
@@ -2044,7 +2145,7 @@ public final class SessionDebugger implements Debugger {
      * remember the frames of that fiber, whose variables it reads while it waits.
      */
     private Snapshot snapshot(Halt current, Frame frame) {
-        return new Snapshot(frame.f_context.getName(), frames(current, frame), Thread.currentThread(), frame);
+        return new Snapshot(frame.getContext().getName(), frames(current, frame), Thread.currentThread(), frame);
     }
 
     /**
@@ -2103,7 +2204,7 @@ public final class SessionDebugger implements Debugger {
     private static Container stoppedContainer(Halt current) {
         return current.stacks.values().stream()
                 .findFirst()
-                .map(snapshot -> snapshot.frame().f_context.getContainer())
+                .map(snapshot -> snapshot.frame().getContext().getContainer())
                 .orElse(null);
     }
 
@@ -3231,6 +3332,13 @@ public final class SessionDebugger implements Debugger {
          */
         final Map<Integer, List<StackFrameInfo>> others = new HashMap<>();
 
+        /**
+         * The calls that {@link #stepInTargets} named, by ID, and the calls of each frame it was
+         * asked about, by frame ID.
+         */
+        final Map<Integer, Call>             calls   = new HashMap<>();
+        final Map<Integer, List<StepTarget>> callsOf = new HashMap<>();
+
         Halt(int threadId, ExceptionInfo exception, Container frozen) {
             this.threadId  = threadId;
             this.exception = exception;
@@ -3383,19 +3491,36 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A step that runs: how, and the frame and fiber it started at.
+     * A step that runs: how, the frame and fiber it started at, and, for a step into one of the
+     * calls of its line, the index of that call's op, or {@link #NO_CALL}.
      */
-    private record Stepping(Step step, Frame frame, Fiber fiber) {
+    private record Stepping(Step step, Frame frame, Fiber fiber, int call) {
+        static final int NO_CALL = -1;
+
+        Stepping(Step step, Frame frame, Fiber fiber) {
+            this(step, frame, fiber, NO_CALL);
+        }
+
         /**
          * @return true if the step ends at a line of the specified frame
          */
         boolean endsAt(Frame at) {
             return switch (step) {
                 case OVER -> at == frame;
-                case IN   -> !at.isNative() && at.f_fiber.isAssociated(fiber);
+                // into a call of the line: a line that code reached while the frame makes that call
+                // runs, or the frame's next line, if the line does not make it
+                case IN   -> call == NO_CALL
+                        ? !at.isNative() && at.getFiber().isAssociated(fiber)
+                        : at == frame || frame.getPC() == call && !at.isNative() && at.getFiber().isAssociated(fiber);
                 case OUT  -> false;
             };
         }
+    }
+
+    /**
+     * A call of a line where a fiber waits: that fiber's ID, and the index of the call's op.
+     */
+    private record Call(int thread, int op) {
     }
 
     /**
