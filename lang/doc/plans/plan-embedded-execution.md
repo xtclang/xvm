@@ -550,6 +550,9 @@ this bridge; they cannot be inferred from compiler type hints.
   those nested in it, with what each does if it does not wait at a line, and the stack of one that
   waits otherwise, without variables (shared X325). Thread events are not sent: a fiber starts for
   every call to a service.
+  *Loaded modules (2026-10-27):* `modules` and `loadedSources` answer the program's own modules and
+  the libraries it uses, a library's sources in their bundled copies (worker protocol 18, shared
+  X326). VS Code shows them in Loaded Scripts; IntelliJ has neither (UP45).
 - [ ] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
   are refused now; debugging tests; and attaching to a program that already runs.
 
@@ -563,5 +566,5 @@ R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 pre
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
 R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
 and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X325, cover the editor side of R5–R8, R11 and R12; R8 also
+playbook's execution and debug cases, among X280–X326, cover the editor side of R5–R8, R11 and R12; R8 also
 needs the server's soak and release evidence.
