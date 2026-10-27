@@ -15,6 +15,7 @@ import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
+import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -299,6 +300,27 @@ internal class RunWorkerProcess(
     /** The fibers of a stopped run; none while it runs. */
     fun threads(id: Long): CompletableFuture<List<ThreadState>> =
         request("threads", id).thenApply { RunWorkerDebug.threadsOf(it.getAsJsonArray("threads")) }
+
+    /** The calls that the line of a stopped frame makes, in the order of its code. */
+    fun stepInTargets(
+        id: Long,
+        frame: Int,
+    ): CompletableFuture<List<StepTargetState>> =
+        request(
+            "stepInTargets",
+            id,
+        ) { addProperty("frame", frame) }.thenApply { RunWorkerDebug.stepTargetsOf(it.getAsJsonArray("targets")) }
+
+    /** Steps a stopped fiber into one of the calls of its line. */
+    fun stepInto(
+        id: Long,
+        thread: Int,
+        target: Int,
+    ): CompletableFuture<Boolean> =
+        request("stepInto", id) {
+            addProperty("thread", thread)
+            addProperty("target", target)
+        }.thenApply { it["stepped"].asBoolean }
 
     /** The modules of a debugged run, its own and the libraries it uses; none before it starts. */
     fun modules(id: Long): CompletableFuture<List<ModuleState>> =

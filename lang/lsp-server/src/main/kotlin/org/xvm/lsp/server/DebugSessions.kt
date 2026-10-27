@@ -167,6 +167,17 @@ internal class DebugSessions(
 
         override fun modules(runId: String) = runs.modules(runId)
 
+        override fun stepInTargets(
+            runId: String,
+            frameId: Int,
+        ) = runs.stepInTargets(runId, frameId)
+
+        override fun stepInto(
+            runId: String,
+            threadId: Int,
+            targetId: Int,
+        ) = runs.stepInto(runId, threadId, targetId)
+
         override fun stackTrace(
             runId: String,
             threadId: Int,

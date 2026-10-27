@@ -15,6 +15,7 @@ import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
+import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -359,6 +360,19 @@ internal class EmbeddedRuns(
 
     /** The fibers of a stopped program under the debugger. */
     internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
+
+    /** The calls that the line of a stopped frame of a program under the debugger makes. */
+    internal fun stepInTargets(
+        runId: String,
+        frame: Int,
+    ): CompletableFuture<List<StepTargetState>> = debugged(runId) { worker.stepInTargets(it, frame) }
+
+    /** Steps a stopped fiber of a program under the debugger into one of the calls of its line. */
+    internal fun stepInto(
+        runId: String,
+        thread: Int,
+        target: Int,
+    ): CompletableFuture<Boolean> = debugged(runId) { worker.stepInto(it, thread, target) }
 
     /** The modules of a program under the debugger, its own and the libraries it uses. */
     internal fun modules(runId: String): CompletableFuture<List<ModuleState>> = debugged(runId, worker::modules)
