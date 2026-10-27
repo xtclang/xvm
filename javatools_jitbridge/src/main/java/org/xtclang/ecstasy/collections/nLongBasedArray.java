@@ -11,10 +11,10 @@ import java.util.function.BiFunction;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.Iterator;
+import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nObject;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.numbers.Int64;
 
@@ -312,13 +312,13 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     @Override public ArrayType slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
-        long upper = nRangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
+        long upper = RangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
         if (size$get$p(ctx) > upper) {
             throw $oob(ctx, upper);
         }
 
         // optimized empty slice
-        if (nRangeᐸInt64ᐳ.$empty(ctx, n1, n2)) {
+        if (RangeᐸInt64ᐳ.$empty(ctx, n1, n2)) {
             // return TODO empty Array$Object
         }
 

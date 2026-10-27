@@ -7,6 +7,7 @@ import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.OutOfBounds;
+import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.ReadOnly;
 
 import org.xtclang.ecstasy.text.String;
@@ -17,7 +18,6 @@ import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObject;
 
@@ -465,7 +465,7 @@ public abstract class Array
      *
      * @return the specified array slice
      */
-    public Array slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
+    public Array slice(Ctx ctx, RangeᐸInt64ᐳ range) {
         if (range.$rangeTo128(ctx)) {
             return slice$p(ctx, ctx.i0, ctx.i1);
         } else {
