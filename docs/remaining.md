@@ -331,9 +331,9 @@ breakpoint list, which the editors replace.
 
 ### R8: runtime release gate
 
-- [ ] Repeated compile/run/stop/debug soak, with memory and process checks, on every supported
-  platform.
-  *Partial (2026-10-26, `ee8a0ae4d`):* `EmbeddedExecutionTest`'s soak repeats rounds of four runs
+- [x] Repeated compile/run/stop/debug soak, with memory and process checks, on macOS and Linux
+  (2026-10-27).
+  *Soak (2026-10-26, `0d6e890bad`):* `EmbeddedExecutionTest`'s soak repeats rounds of four runs
   on one worker: an edited module built and run to its exit, a run stopped while it runs, a debug
   session continued from a breakpoint after a watch and a cancelled console run, and one
   terminated while console code runs. One worker serves them all and keeps no run, console,
@@ -342,13 +342,35 @@ breakpoint list, which the editors replace.
   three times on macOS. It found that the worker counted a JDK thread started from a pool thread,
   the common pool's delay scheduler, as runtime pool growth, which retired a healthy worker; the
   worker now reports the pool's own size. Memory is checked by counts only. The worker no longer
-  calls `System.gc()` (`3a9112c31`): it reports the heap the JVM left after its own latest
+  calls `System.gc()` (`2668896b26`): it reports the heap the JVM left after its own latest
   collections, and the server keeps its 512 MB limit on that but dropped the 128 MB growth rule,
   since two such figures say nothing about what runs retain. The tests that waited for the
-  collector walk the object graph instead (`aa94f23b5`). Not done: Linux until CI has run it,
-  Windows, where nothing runs the `lsp-server` tests, and repeated cycles driven from the editors.
+  collector walk the object graph instead (`77e3c4b7c5`).
+  *Editors (2026-10-26, `718ddd656e`):* shared X322 repeats runs, stopped runs and debug sessions of
+  one module from each editor; each ends, and afterwards no run or debug session is open. It
+  passes in VS Code and IntelliJ.
+  *Linux (2026-10-27, `6b8f5bbe03`):* arm64 Linux with JDK 25, in a Podman container on the Mac, as
+  a user other than root, with one test fork. `javatools`' 686 tests pass (42 skipped). With
+  `--init` on a quiet host, all 2401 `lsp-server` tests pass but the 2 that are always skipped,
+  with the soak at 50 rounds (56 s), in 34 minutes. The runs found:
+  - As root, the tests of files without write permission failed, since root writes them anyway;
+    they skip where such a file stays writable (`e4a8e6847e`).
+  - When Gradle was the container's PID 1, which does not reap orphans, the worker of a killed
+    server exited but stayed a zombie, so "a worker exits when the language server process dies"
+    timed out waiting for it to end. With an init process that reaps (`podman run --init`) it
+    passes. The test now kills a worker that outlives its server and shows what the
+    worker was doing (`6b8f5bbe03`), and a worker whose input ends stops its runs on threads of
+    their own and exits within 5 s even if a program does not stop (`c474566892`).
+  - With the Mac's load average at 37–75 on 10 cores, `EmbeddedExecutionTest` took 667 s, against
+    50 s on a quiet host, and time limits failed: `XdkOnTypeFormattingTest`'s 20 ms (32 ms), and the runtime's 1 s limit on
+    a lazy `toString()` (`SessionDebugger.ON_DEMAND`) in the console test. That test then left its
+    program stopped on the class's shared worker, so three later tests failed with it. Alone, and
+    with its class on a quiet host, the console test passes.
+- [ ] The soak on Windows. CI runs the `lang` checks on `ubuntu-latest` only: a dispatch can add
+  `windows-latest`, which builds without them (`commit.yml`). There is no Windows machine to run
+  them on.
 - [x] A JVM that makes more than one runtime kept up to two that it was done with, about 115 MB each
-  (`1ca73e922`, 2026-10-26). Three things held one:
+  (`474af84f08`, 2026-10-26). Three things held one:
   - A pending alarm on the JVM-wide Java timer. The `Timer` service belongs to the native
     container, so `xNanosTimer.TimerHandle.Alarm` kept the runtime until the alarm was due.
   - 27 values that 13 templates cached in statics on first use, such as
@@ -362,7 +384,12 @@ breakpoint list, which the editors replace.
   holds one runtime at a time: its peak live heap is down from 275 to 226 MB, and from 242 to 193 MB
   at the end. Kept: the about 130 statics a template sets when it is made, such as its `INSTANCE`,
   still hold the newest runtime until another is made; the servers make one runtime per process.
-- [ ] Parity between IntelliJ and VS Code.
+- [x] Parity between IntelliJ and VS Code (2026-10-27, at `718ddd656e`). VS Code passes all 34 run
+  and debug cases, X280–X285, X287–X289, X291–X294, X301 and X303–X322. IntelliJ runs 32 of them,
+  all but X308 and X312, which it does not implement: 21 pass and 11 are partial, each with its
+  recorded limit. X287, X288 and X303 are partial because of the test driver; X311, X313–X318 and
+  X320 because of LSP4IJ 0.21.0 (UP32–UP42). X308 and X312 wait on LSP4IJ fixes (UP30, UP33,
+  UP34) that are merged on its main branch but not released.
 - [x] Logs that correlate build ID, queue job, artifact revision, worker PID and generation, and run
   ID (`a87b63d9d`, 2026-10-26). A build's ID is its compiler queue job's, which the trace gives as
   `id`; the build line gives each module with the start of its artifact's revision. The run's
@@ -373,8 +400,12 @@ breakpoint list, which the editors replace.
 - [x] Focused Gradle test tasks (`e91b5e58cb`, `30d9685ff3`, 2026-10-26): `graphQueryTest`,
   `emissionTest`, `dependencyHostTest`, `sourceGraphHostTest`, `embeddingConsumerTest` and
   `:javatools:errorListenerTest` each run what a doc's command used to list with `--tests`.
-- [ ] Playbook and capability docs brought up to date.
-- [ ] Each runtime PR validated on its own.
+- [x] Playbook and capability docs brought up to date (`3ac199f192`, 2026-10-26): R6 and R7 are
+  complete in both editors, the debug server's capabilities are listed, the catalog is given as
+  324 cases, X1–X322, and X308's and X312's IntelliJ limits name the LSP4IJ fixes.
+- [x] Each runtime PR validated on its own (2026-10-27). #716, #717, #718, #724, #731 and #693, each
+  rebased onto master `ddaa3d0a4`, pass CI on their own heads. #730's fix is now part of #724,
+  and #730 is closed.
 - Known limit kept: JIT runs are unsupported.
 
 ## 4. Upstream fixes
