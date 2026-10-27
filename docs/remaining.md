@@ -288,7 +288,14 @@ come from are in parentheses.
 - [x] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
   exception views (`5b2686a2e`, `edeab8f5b`; shared X312 in VS Code). IntelliJ: UP34 (filter
   conditions) and UP33 (`exceptionInfo`).
-- [ ] R9: data breakpoints, which stop when a property or field changes.
+- [x] R9: data breakpoints, which stop when a property or field changes (2026-10-27; shared X330).
+  `dataBreakpointInfo` names a field of a mutable object in the Variables view; a local, an
+  element, a computed property or an immutable object's field cannot be watched. Once the field's
+  value has changed, by what its variable shows, the program stops with the reason `data
+  breakpoint` at the next line that a fiber of the object's service reaches, and says from what to
+  what, such as `Counter.count changed from 0 to 2`. The check runs at each line of that service,
+  without a hook in the runtime's writes, and only writes are offered (worker protocol 22). VS Code
+  adds them with Break on Value Change; IntelliJ has none (UP48), so X330 is not implemented there.
 - [x] R10: value formats (`V`) and identity codes (`DI`) (`cb551d4c2`, R10b): integers in hexadecimal when
   a request's DAP `format` asks, or the session's own `xtc/valueFormat`, which VS Code's Variables and
   Watch views' Show Values as Hexadecimal sets, since VS Code never sends a format (UP38); a mutable
@@ -604,13 +611,22 @@ passes with the workaround disabled. The gates are in
   adds. To do: an LSP4IJ breakpoint type by a function's name, sent to an adapter that advertises
   `supportsFunctionBreakpoints`, as #1774 is for UP45; then implement IntelliJ's X328.
 
-### LSP4IJ: no restart frame (UP47): our fix in progress
+### LSP4IJ: no restart frame (UP47): our #1778, open
 
 - [ ] UP47 (2026-10-27): LSP4IJ never sends `restartFrame`, and ignores `supportsRestartFrame` and a
   frame's `canRestart` (0.21.0 and `main`, `42f1f16e`), so IntelliJ's Reset Frame is not offered in
   a DAP session. XVM's adapter restarts frames since R11 (X329), which VS Code's Call Stack view
-  offers. Our LSP4IJ change, a DAP drop-frame handler, is in progress. To do: after a release with
-  it, implement IntelliJ's X329.
+  offers. Fixed by our [#1778](https://github.com/redhat-developer/lsp4ij/pull/1778) (2026-10-27,
+  open, `62c4a53e`): a DAP drop-frame handler that offers Reset Frame on a frame that can restart,
+  sends `restartFrame`, and resumes the session until the `restart` stop. To do: a native check of
+  X329 with a plugin built from it, then, after a release with it, implement IntelliJ's X329.
+
+### LSP4IJ: no data breakpoints (UP48): not filed
+
+- [ ] UP48 (2026-10-27): LSP4IJ never sends `dataBreakpointInfo` or `setDataBreakpoints` (0.21.0 and
+  `main`, `42f1f16e`), so IntelliJ has no breakpoint on a variable's value in a DAP session. XVM's
+  adapter installs them since R9 (X330), which VS Code's Break on Value Change adds. To do: an
+  LSP4IJ change that offers them from the Variables view; then implement IntelliJ's X330.
 
 ### A DAP completion's `start` (UP43): not filed
 
