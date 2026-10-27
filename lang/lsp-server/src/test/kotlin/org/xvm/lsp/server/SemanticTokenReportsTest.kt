@@ -4,6 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.junit.jupiter.api.Test
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks full/range/delta token responses and bounded history. Reconstructed deltas must match exact token
@@ -60,6 +62,28 @@ class SemanticTokenReportsTest {
                 assertThat(reports.delta("file:///test.x", first.resultId, emptyList()).isLeft)
                     .isTrue()
             }
+    }
+
+    @Test
+    fun `concurrent queries keep the history whole`() {
+        // a concurrent adapter's queries call full and delta outside the document lifecycle lock, so the history is
+        // changed and evicted from several threads at once; it threw ConcurrentModificationException as an internal error
+        val reports = SemanticTokenReports(maximumReports = 4)
+        val pool = Executors.newFixedThreadPool(8)
+        try {
+            (0 until 8)
+                .map { thread ->
+                    pool.submit {
+                        val uri = "file:///test$thread.x"
+                        repeat(2_000) { index ->
+                            val first = reports.full(uri, listOf(0, index, 1, 0, 0))
+                            reports.delta(uri, first.resultId, listOf(0, index, 2, 0, 0))
+                        }
+                    }
+                }.forEach { it.get(60, SECONDS) }
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     @Test
