@@ -126,10 +126,16 @@ public abstract class xConstrainedInteger
 
     @Override
     protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn) {
-        return cBytes == f_cNumBits / 8
-            ? convertLong(frame, fromByteArray(ab, cBytes, f_fSigned), iReturn, f_fChecked)
-            : frame.raiseException(
+        if (cBytes != (f_cNumBits + 7) >>> 3) {
+            return frame.raiseException(
                 xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
+        }
+
+        // a value narrower than a byte, such as a Nibble, is one byte whose low bits hold it
+        long lValue = fromByteArray(ab, cBytes, f_fSigned);
+        return f_cNumBits < 8 && lValue >>> f_cNumBits != 0
+            ? overflow(frame)
+            : convertLong(frame, lValue, iReturn, f_fChecked);
     }
 
     @Override

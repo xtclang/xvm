@@ -74,10 +74,10 @@ const Nibble(Bit[] bits)
     }
 
     /**
-     * Construct an 4-bit unsigned integer number from its network-portable representation.
+     * Construct an 4-bit unsigned integer number from its network-portable representation, which
+     * is one byte whose low four bits hold the value, as [toByteArray] makes it.
      *
-     * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
-     *               as they would appear on the wire or in a file
+     * @param bytes  an array of one byte, whose value is in the range `[0..F]`
      */
     @Override
     construct(Byte[] bytes) {
@@ -201,6 +201,13 @@ const Nibble(Bit[] bits)
 
     @Override
     Nibble toNibble(Boolean checkBounds = False) = this;
+
+    /**
+     * @return the network-portable representation of the nibble: one byte, whose low four bits hold
+     *         the value
+     */
+    @Override
+    Byte[] toByteArray(Array.Mutability mutability = Constant) = [toUInt8()].toArray(mutability);
 
     /**
      * @return the Int8 value corresponding to the magnitude of the nibble, in the range `[0..F]`
