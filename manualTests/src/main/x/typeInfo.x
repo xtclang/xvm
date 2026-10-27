@@ -33,7 +33,8 @@ module TestTypeInfo {
     void testUnionContribution() {
         // Base's "into C | X" is incomplete while C's TypeInfo is being built;
         // X's TypeInfo is already complete; recording X as unfinished prevents C from completing
-        class C incorporates Wide, Narrow {}
+        class C incorporates Wide
+                incorporates Narrow {}
 
         class X {}
 
