@@ -1036,10 +1036,9 @@ class CompilerPlaybook(
                     ideFrame().codeEditorForFile(Path.of(target.first).fileName.toString())
                 val original = library.text
                 rejectFormatting(library)
-                check(
-                    library.text == original && Files.readString(Path.of(target.first)) == original,
-                )
-                check(!Files.isWritable(Path.of(target.first)))
+                val (source, writable) = librarySource(target)
+                check(library.text == original && source == original)
+                check(!writable)
                 val reopened = open(data.text("file"))
                 rejectRename(reopened, reopened.text.indexOf(name), data.text("renameRejection"))
             }
@@ -2000,13 +1999,33 @@ class CompilerPlaybook(
         }
     }
 
-    private fun libraryDeclaration(
+    private fun Driver.libraryDeclaration(
         target: Pair<String, Int>,
         name: String,
     ) {
-        declaration(target, name)
-        check(!Files.isWritable(Path.of(target.first))) {
-            "Bundled declaration must open read-only: ${target.first}"
+        val (source, writable) = librarySource(target)
+        check(Regex("${Regex.escape(name)}\\b").matchesAt(source, target.second)) {
+            "Expected declaration '$name' at $target"
+        }
+        check(!writable) { "Bundled declaration must open read-only: ${target.first}" }
+    }
+
+    /**
+     * The text of the library source that the selected editor shows at [target], and whether it can be changed.
+     * With LSP4IJ 0.21.0 it is a protected copy on disk; with an LSP4IJ that serves `workspace/textDocumentContent`
+     * (UP25, #1749), it is the language server's `ecstasy-library:` document, which has no file.
+     */
+    private fun Driver.librarySource(target: Pair<String, Int>): Pair<String, Boolean> {
+        val file = Path.of(target.first)
+        if (Files.isRegularFile(file)) return Files.readString(file) to Files.isWritable(file)
+        return withContext(OnDispatcher.EDT) {
+            val editor =
+                checkNotNull(service<FileEditorManager>(singleProject()).getSelectedTextEditor()) { "No editor shows ${target.first}" }
+            check(
+                editor.getVirtualFile().getPath() == target.first,
+            ) { "The editor shows ${editor.getVirtualFile().getPath()}, not ${target.first}" }
+            val document = cast(editor.getDocument(), ParityDocument::class)
+            document.getText() to document.isWritable()
         }
     }
 
