@@ -511,8 +511,11 @@ this bridge; they cannot be inferred from compiler type hints.
   R7's step 10, hit counts and logpoints, whose `{...}` parts are evaluated;
   exception filters by class, with the classes that extend them; and `exceptionInfo`, with the
   exception's stack trace (worker protocol 9). Shared X311 and X312 pass in VS Code; IntelliJ checks
-  X311's condition, and the rest waits on LSP4IJ (UP32-UP34). Still open in R9: function and data
-  breakpoints.
+  X311's condition, and the rest waits on LSP4IJ (UP32-UP34).
+  *Function breakpoints (2026-10-27):* `setFunctionBreakpoints` stops at the first line of the
+  program's methods of a name, such as `twice` or `Point.move`, with a condition and hit count, and
+  answers with the first such method's line (worker protocol 20, shared X328); IntelliJ has none
+  (UP46). Still open in R9: data breakpoints.
 - [x] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
   tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
   R7's evaluation; computed properties as lazy variables, where only fields showed before; paging of
@@ -569,5 +572,5 @@ R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 pre
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
 R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
 and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X327, cover the editor side of R5–R8, R11 and R12; R8 also
+playbook's execution and debug cases, among X280–X328, cover the editor side of R5–R8, R11 and R12; R8 also
 needs the server's soak and release evidence.
