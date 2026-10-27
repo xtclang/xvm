@@ -10194,7 +10194,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48), so IntelliJ has none to check."
+          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48, implemented by our local LSP4IJ branch, not yet proposed). IntelliJ's case, through Break on Value Change in the Variables view, passed with a plugin built from that branch (run-15563293796254899407) and runs once a release has it."
         ]
       }
     },
