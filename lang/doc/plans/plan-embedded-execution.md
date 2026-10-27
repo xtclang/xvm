@@ -574,6 +574,58 @@ this bridge; they cannot be inferred from compiler type hints.
   X326). VS Code shows them in Loaded Scripts; IntelliJ has neither (UP45).
 - [ ] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
   are refused now; debugging tests; and attaching to a program that already runs.
+  *Design (2026-10-27):* one debug agent, in the program's own JVM, that speaks the worker
+  protocol's debug commands and events over a socket in place of the worker's stdio, so that the
+  runtime's side (`SessionDebugger`) and the adapter's (`XtcDebugServer`, `DebugRuns`) stay as they
+  are.
+  - *Today.* Only embedded runs are debugged: VS Code turns a Gradle-mode Debug into a plain Gradle
+    run, and IntelliJ offers Debug only in embedded mode (`XtcRunConfiguration.canRun`). Gradle's
+    `runXtc`, its alias tasks and `testXtc` fork a JVM that runs `org.xvm.tool.Runner` or
+    `TestRunner` (ATTACHED by default; DIRECT runs them in the daemon), and `xec` and `xtc test`
+    run the same classes, whose runtime has only the console debugger (`DebugConsole`, at
+    `assert:debug`). Neither editor runs tests yet.
+  - *javatools: a debugger for the launchers.* `Runner` and `TestRunner` take
+    `--debug=connect|listen:<host>:<port>[,suspend][,token=<t>]`. They find a `DebuggerProvider`, a
+    new SPI in `org.xvm.api`, through `ServiceLoader`; it makes the run's `Debugger` from the
+    repository and the module, which the launcher installs before the module starts, as
+    `EmbeddingSupport.runMethod` does. With `suspend`, the provider returns once the IDE has sent
+    its breakpoints, as an embedded run's setup does. Without a provider, or with `--jit`,
+    `--debug` is refused, saying why. javatools ships no provider: the console debugger stays the
+    default.
+  - *lang: the agent.* The worker's debug commands move out of `RunWorker.Runs` into a session
+    bound to a line channel: the worker binds it to its stdio, and `XtcDebugAgent`, the provider,
+    in the language server's jar that the editors ship, binds it to a TCP socket on the loopback
+    address. `connect` dials the IDE, which launched the program; `listen` waits for an IDE to
+    attach. The agent sends `ready` with the protocol and the XDK's fingerprint, which the IDE
+    checks as it checks a worker's, refusing an agent of another XDK and saying which, and then
+    the same replies and events. The program's output stays with the program, in Gradle's or the
+    terminal's console, not the debug session's. The token keeps another local process from
+    attaching.
+  - *lang: the IDE's side.* `RemoteRuns`, a `DebugRuns` over that socket, reuses
+    `RunWorkerProcess`'s requests, replies and events. `XtcDebugServer` gains `attach` (`host`,
+    `port`, `token`). Its launch in Gradle mode listens on a free port and asks the editor, by a
+    new `xtc/debugTask` request, to run the module's Gradle task with
+    `-PxtcDebug=connect:127.0.0.1:<port>,suspend,token=<t>` and `-PxtcDebugAgent=<agent jar>`;
+    the session ends with the task. Breakpoints are by the compiled file and line: a file edited
+    since an external build is not mapped, as an embedded run's is, and its breakpoints say so
+    where the module's recorded source differs.
+  - *Gradle plugin.* `xtcDebug` and `xtcDebugAgent` on `runXtc`, the alias tasks and `testXtc`,
+    as providers, so the configuration cache keeps them as inputs: the launcher gets `--debug`,
+    the forked JVM the agent on its classpath. DIRECT mode refuses them, since the daemon's JVM
+    would host the agent.
+  - *Editors.* VS Code: Gradle-mode Debug starts a debug session, not a plain Gradle run; an
+    `attach` configuration (`host`, `port`, `token`) for `xec --debug=listen:...`; and Debug for
+    tests once the editor runs them with `testXtc`. IntelliJ: Debug for Gradle-mode configurations,
+    and an Ecstasy attach configuration through LSP4IJ's DAP attach (`DebugMode.ATTACH`).
+  - *Order.* (1) The SPI and `--debug`, with a provider in javatools' tests. (2) The agent and the
+    worker's split, tested over a socket as `EmbeddedExecutionTest` tests the worker. (3)
+    `RemoteRuns`, `attach`, and the command-line case. (4) The Gradle plugin's properties, with
+    `manualTests` as the third-party consumer. (5) Gradle-mode Debug, and running and debugging
+    tests, in both editors. Shared cases: a Gradle-mode Debug stops at a breakpoint and runs to
+    its exit; `xec --debug=listen` and an attach stop at a breakpoint; a debugged xunit test stops
+    in the test.
+  - *Limits.* A JIT run and a DIRECT Gradle run cannot be debugged; a program started without
+    `--debug` has no agent to attach to; a library's sources are those of the program's XDK.
 
 Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
 execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;

@@ -390,8 +390,14 @@ recorded partial coverage.
   declarations, since a library has hundreds. VS Code shows them in Loaded Scripts; it has no
   Modules view (UP39). IntelliJ has neither (UP45), so X326 is not implemented there.
 - [ ] R13: Debug for Gradle-mode and command-line runs.
-- [ ] R13: debugging tests.
+- [ ] R13: debugging tests, which needs the editors to run tests first.
 - [ ] R13: attaching to a program that already runs.
+  Design for all three (2026-10-27) in
+  [the execution plan's R13](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance):
+  a debug agent in the program's JVM, which `Runner` and `TestRunner` install through a new
+  `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
+  to a new `RemoteRuns` in the language server; Gradle-mode Debug connects back, `xec` listens for
+  an attach.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and
