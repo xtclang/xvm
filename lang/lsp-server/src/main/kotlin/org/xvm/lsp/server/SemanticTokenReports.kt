@@ -9,7 +9,10 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.UUID
 
-/** Detached token arrays only. Access is serialized by the document lifecycle lock. */
+/**
+ * Detached token arrays only. The history is shared by the queries of a concurrent adapter, which run outside the
+ * document lifecycle lock, so its methods synchronize on it.
+ */
 internal class SemanticTokenReports(
     private val maximumReports: Int = 128,
     private val maximumIntegers: Int = 1_000_000,
@@ -22,6 +25,7 @@ internal class SemanticTokenReports(
         val data: List<Int>,
     )
 
+    @Synchronized
     fun full(
         uri: String,
         data: List<Int>,
@@ -37,6 +41,7 @@ internal class SemanticTokenReports(
         return SemanticTokens(id, snapshot.toList())
     }
 
+    @Synchronized
     fun delta(
         uri: String,
         previousId: String,
@@ -72,10 +77,12 @@ internal class SemanticTokenReports(
         return Either.forRight(SemanticTokensDelta(edits, current.resultId))
     }
 
+    @Synchronized
     fun retire(uri: String) {
         reports.entries.removeIf { it.value.uri == key(uri) }
     }
 
+    @Synchronized
     fun clear() = reports.clear()
 
     private fun key(uri: String): String =
