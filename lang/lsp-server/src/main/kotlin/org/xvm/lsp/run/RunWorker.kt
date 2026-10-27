@@ -312,7 +312,10 @@ object RunWorker {
 
         fun stackTrace(command: JsonObject) =
             reply(command) { debugger ->
-                val frames = debugger.stackTrace(command["thread"].asInt).map { FrameState(it.id(), it.name(), it.path(), it.line()) }
+                val frames =
+                    debugger.stackTrace(command["thread"].asInt).map {
+                        FrameState(it.id(), it.name(), it.path(), it.line(), it.module(), it.source())
+                    }
                 add("frames", RunWorkerDebug.frames(frames))
             }
 
@@ -722,7 +725,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 16
+        const val PROTOCOL = 17
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
