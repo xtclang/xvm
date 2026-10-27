@@ -272,6 +272,11 @@ Planned in [the execution plan](../lang/doc/plans/plan-embedded-execution.md#add
 after the R8 gate unless one is chosen to gate the release. The console debugger's commands they
 come from are in parentheses.
 
+Editor batch (2026-10-27), for X280–X330 after `819e2ac754`: VS Code passes all of them
+(`run-OFR39r`, X326 in `run-NGgnBV` once `modules` took no arguments), and IntelliJ passes its 44
+implemented cases among them with released LSP4IJ 0.21.0 (`run-15774751429931474506`), 13 at their
+recorded partial coverage.
+
 - [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
   X311). Conditions are `Boolean` expressions since R7's tier 1 (X313). IntelliJ checks the condition;
   its hit counts and logpoints: UP32.
@@ -621,8 +626,10 @@ passes with the workaround disabled. The gates are in
   a DAP session. XVM's adapter restarts frames since R11 (X329), which VS Code's Call Stack view
   offers. Fixed by our [#1778](https://github.com/redhat-developer/lsp4ij/pull/1778) (2026-10-27,
   open, `62c4a53e`): a DAP drop-frame handler that offers Reset Frame on a frame that can restart,
-  sends `restartFrame`, and resumes the session until the `restart` stop. To do: a native check of
-  X329 with a plugin built from it, then, after a release with it, implement IntelliJ's X329.
+  sends `restartFrame`, and resumes the session until the `restart` stop. Checked natively
+  (2026-10-27): with a plugin built from it, IntelliJ's X329 resets outer() through the Reset Frame
+  action, which is hidden on run(), and passes (`run-17331679936087029005`). To do: after a
+  release with it, make IntelliJ's X329 full.
 
 ### VS Code and LSP4IJ: no single-thread execution (UP49): open upstream
 
