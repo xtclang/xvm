@@ -98,8 +98,8 @@ In the file tables, **A** means added and **M** means modified relative to that 
 | 8 | M | [javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java](javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java) | 1 | 1 |
 | 9 | M | [javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java](javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java) | 1 | 1 |
 | 10 | M | [javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java](javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java) | 2 | 2 |
-| 11 | A | [javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java](javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java) | 67 | 0 |
-| 12 | A | [javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java](javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java) | 64 | 0 |
+| 11 | A | javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java | 67 | 0 |
+| 12 | A | javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java | 64 | 0 |
 
 ## I3 — Require a real compiler consumer in language-tooling CI
 
