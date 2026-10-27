@@ -132,9 +132,7 @@ public class Runtime {
     }
 
     /**
-     * @return the debugger of this runtime's services: the one the host set, else
-     *         {@link Debugger#NONE} if the system property {@code org.xvm.runtime.debugger=off}
-     *         turned it off, else the terminal {@link DebugConsole}, which then stays the choice
+     * @return the debugger of this runtime's services
      */
     public Debugger getDebugger() {
         Debugger debugger = m_debugger;
@@ -145,8 +143,7 @@ public class Runtime {
     }
 
     /**
-     * Set the debugger of this runtime's services; a host without a terminal for the
-     * {@link DebugConsole} sets {@link Debugger#NONE}.
+     * Set the debugger of this runtime's services
      *
      * @param debugger  the debugger to use
      */
@@ -187,8 +184,7 @@ public class Runtime {
     private boolean m_fDebugger;
 
     /**
-     * The debugger the host set, {@link Debugger#NONE} if the system property turned it off, or
-     * the {@link DebugConsole} once it is chosen; null until one of them.
+     * The debugger instance; null until is set explicitly or lazily assigned
      */
     private volatile Debugger m_debugger;
 }
