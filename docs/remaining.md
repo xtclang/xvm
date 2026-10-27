@@ -321,8 +321,16 @@ come from are in parentheses.
 - [ ] R11: restarting a frame (`T`).
 - [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
 - [ ] R12: every service and fiber in Threads, with their containers (`VF`), and thread events.
-- [ ] R12: frames whose source file is not on the machine, such as library code, through the
-  `source` request from the bundled XDK's sources.
+- [x] R12: frames whose source file is not on the machine, such as library code (2026-10-27; shared
+  X324). A frame of a bundled XDK library's code is in the library's bundled source, at its line:
+  the read-only copy that navigation opens too, which is the source the library's code was compiled
+  from. The library records the source directory it was built in, which a user's machine does not
+  have. Each frame carries its module and its source path in the module (worker protocol 17). Found
+  and fixed: a frame of any other module's code had the program's source directory with the class's
+  source path, a file that does not exist, since the debugger took the source directory from the
+  program's module rather than the class's own. Not through the `source` request: a file, the one
+  navigation opens, also gives the editors their language features there. VS Code and IntelliJ
+  pass X324.
 - [ ] R12: the loaded modules (`modules`, `loadedSources`). VS Code has no Modules view (UP39), only
   Loaded Scripts for `loadedSources`.
 - [ ] R13: Debug for Gradle-mode and command-line runs.
