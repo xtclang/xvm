@@ -1209,6 +1209,45 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X325") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                // by then, run() has asked the busy worker for its count, and waits for the answer
+                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"))
+                debugger.awaitState(project, module, "the worker stops at its count", 60.seconds) { it["suspended"]?.asBoolean == true }
+
+                // the stopped fiber first, then run()'s, which waits for the worker, with its own stack
+                val threads =
+                    JsonParser
+                        .parseString(debugger.threads(project, module))
+                        .asJsonArray
+                        .map { it.asJsonObject }
+                check(threads.map { it.string("name") } == data.strings("threads")) { "Threads: $threads" }
+                val frames = threads[1].getAsJsonArray("frames").map { it.asJsonObject }
+                val expected = data.getAsJsonArray("waitingFrames").map { it.asJsonArray }
+                check(frames.size == expected.size) { "The waiting fiber's frames: $frames" }
+                expected.forEachIndexed { index, frame ->
+                    check(frame[0].asString in frames[index].string("name") && frames[index].int("line") == frame[1].asInt) {
+                        "Frame $index is not ${frame[0].asString} at ${frame[1].asInt}: $frames"
+                    }
+                }
+
+                debugger.clearBreakpoints(project)
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1329,6 +1368,11 @@ internal interface DebugSessionProbe {
         uri: String,
         line: Int,
     )
+
+    fun threads(
+        project: Project,
+        module: String,
+    ): String
 
     fun evaluate(
         project: Project,
