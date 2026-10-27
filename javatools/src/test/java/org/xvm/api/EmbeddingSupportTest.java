@@ -28,6 +28,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Phaser;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -427,18 +429,21 @@ public class EmbeddingSupportTest {
 
         // what the console debugger's E compiles, at the assert:debug, before anything has asked
         // for the frame's variables: a parameter, a method of an injected value, and a name that
-        // does not resolve, whose lambda must not stay in the class
+        // does not resolve, whose lambda must not stay in the class; each compiled expression
+        // adds a lambda, so the class has two before the one that fails, and still two after it
+        var compiled = new ConcurrentHashMap<String, Boolean>();
         var errors   = new ConcurrentHashMap<String, List<String>>();
-        var lambdas  = new CopyOnWriteArrayList<Integer>();
+        var before   = new AtomicInteger();
+        var after    = new AtomicInteger();
         var evaluate = new Debugger() {
             @Override
             public int activate(Frame frame, int iPC) {
                 ClassStructure clz = frame.f_function.getContainingClass();
                 compile(frame, "n + 1");
                 compile(frame, "random.int(1)");
-                lambdas.add(lambdaCount(clz));
+                before.set(lambdaCount(clz));
                 compile(frame, "nope");
-                lambdas.add(lambdaCount(clz));
+                after.set(lambdaCount(clz));
                 return iPC + 1;
             }
 
@@ -456,15 +461,15 @@ public class EmbeddingSupportTest {
                 return Debugger.NONE.checkBreakPoint(frame, hEx);
             }
 
-            private void compile(Frame frame, String code) {
-                // as the console debugger's E wraps the code
-                String          eval     = "{\nreturn {Object r__ = {\nreturn " + code
+            private void compile(Frame frame, String expression) {
+                // as the console debugger's E wraps the expression
+                String          eval     = "{\nreturn {Object r__ = {\nreturn " + expression
                                          + ";\n}; return r__.toString();};\n}";
                 EvalCompiler    compiler = new EvalCompiler(frame, eval);
                 MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
-                errors.put(code, lambda == null
-                        ? compiler.getErrors().stream().map(ErrorInfo::getMessageText).toList()
-                        : List.of());
+                compiled.put(expression, lambda != null);
+                // only to say why, if an expression that should compile does not
+                errors.put(expression, compiler.getErrors().stream().map(ErrorInfo::getMessageText).toList());
             }
 
             private static int lambdaCount(ClassStructure clz) {
@@ -485,10 +490,11 @@ public class EmbeddingSupportTest {
 
         assertTrue(output.contains("5 0"), output);
         assertAll(
-            () -> assertEquals(List.of(), errors.get("n + 1"), "a parameter"),
-            () -> assertEquals(List.of(), errors.get("random.int(1)"), "an injected value"),
-            () -> assertFalse(errors.get("nope").isEmpty(), "a name that does not resolve"),
-            () -> assertEquals(lambdas.get(0), lambdas.get(1), "the lambdas of the class"));
+            () -> assertTrue(compiled.get("n + 1"), () -> "a parameter: " + errors.get("n + 1")),
+            () -> assertTrue(compiled.get("random.int(1)"), () -> "an injected value: " + errors.get("random.int(1)")),
+            () -> assertFalse(compiled.get("nope"), "a name that does not resolve"),
+            () -> assertEquals(2, before.get(), "the lambdas of the two expressions that compile"),
+            () -> assertEquals(before.get(), after.get(), "the lambdas after the one that does not"));
     }
 
     @Test
