@@ -11,6 +11,7 @@ import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
@@ -358,6 +359,9 @@ internal class EmbeddedRuns(
 
     /** The fibers of a stopped program under the debugger. */
     internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
+
+    /** The modules of a program under the debugger, its own and the libraries it uses. */
+    internal fun modules(runId: String): CompletableFuture<List<ModuleState>> = debugged(runId, worker::modules)
 
     /** A stopped fiber's stack, with each frame's line where it is now in its file, which may have changed since the build. */
     internal fun stackTrace(

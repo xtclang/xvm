@@ -25,6 +25,11 @@ import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InvalidatedAreas
 import org.eclipse.lsp4j.debug.InvalidatedEventArguments
+import org.eclipse.lsp4j.debug.LoadedSourcesArguments
+import org.eclipse.lsp4j.debug.LoadedSourcesResponse
+import org.eclipse.lsp4j.debug.Module
+import org.eclipse.lsp4j.debug.ModulesArguments
+import org.eclipse.lsp4j.debug.ModulesResponse
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
@@ -85,7 +90,7 @@ import kotlin.time.Duration.Companion.seconds
  *
  * Breakpoints the client sets before the program starts are installed before its first line: they are answered
  * as pending, and `breakpoint` events report how they were installed. A stop is reported with every fiber
- * stopped; `threads` lists the fibers that wait, `stackTrace` their stacks, `scopes` a frame's local variables,
+ * stopped; `threads` lists the program's fibers, `stackTrace` their stacks, `scopes` a frame's local variables,
  * `variables` their values and the fields and elements of objects and arrays; `next`, `stepIn` and `stepOut` step a
  * fiber, and the program stops again with the reason `step`, and `continue` resumes it. A breakpoint may have a
  * condition, an expression whose Boolean value must be True, a hit condition (`N` for the Nth hit, `>= N`, `> N` or
@@ -286,6 +291,8 @@ class XtcDebugServer(
                 supportsValueFormattingOptions = true
                 supportsSetVariable = true
                 supportsCompletionsRequest = true
+                supportsModulesRequest = true
+                supportsLoadedSourcesRequest = true
                 completionTriggerCharacters = arrayOf(".")
                 exceptionBreakpointFilters =
                     arrayOf(
@@ -480,7 +487,7 @@ class XtcDebugServer(
         return failed("Attaching is not available; launch the module instead.")
     }
 
-    /** DAP: threads. The fibers of the stopped program that wait; while it runs, [RUNNING_THREAD]. */
+    /** DAP: threads. The fibers of the stopped program, those that wait at a line first; while it runs, [RUNNING_THREAD]. */
     override fun threads(): CompletableFuture<ThreadsResponse> {
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(ThreadsResponse().apply { threads = emptyArray() })
@@ -524,6 +531,64 @@ class XtcDebugServer(
                         .map(::stackFrame)
                         .toTypedArray()
                 totalFrames = frames.size
+            }
+        }
+    }
+
+    /** DAP: modules. The debugged program's modules, its own and the libraries it uses, a page at a time. */
+    override fun modules(args: ModulesArguments): CompletableFuture<ModulesResponse> {
+        if (!debuggedRunning()) {
+            return CompletableFuture.completedFuture(
+                ModulesResponse().apply {
+                    modules = emptyArray()
+                    totalModules = 0
+                },
+            )
+        }
+        return runs.modules(runId).exceptionally { emptyList() }.thenApply { all ->
+            val first = args.startModule ?: 0
+            val count = args.moduleCount?.takeIf { it > 0 } ?: all.size
+            ModulesResponse().apply {
+                modules =
+                    all
+                        .drop(first)
+                        .take(count)
+                        .map { module ->
+                            Module().apply {
+                                setId(module.name)
+                                name = module.name
+                                path = module.sourceDir
+                                version = module.version
+                                isUserCode = module.own
+                            }
+                        }.toTypedArray()
+                totalModules = all.size
+            }
+        }
+    }
+
+    /**
+     * DAP: loadedSources. The source files of the program's modules: those of its own where they were compiled from, and
+     * a bundled library's in the source bundled with it, as its frames are.
+     */
+    override fun loadedSources(args: LoadedSourcesArguments?): CompletableFuture<LoadedSourcesResponse> {
+        if (!debuggedRunning()) {
+            return CompletableFuture.completedFuture(LoadedSourcesResponse().apply { sources = emptyArray() })
+        }
+        return runs.modules(runId).exceptionally { emptyList() }.thenApply { modules ->
+            LoadedSourcesResponse().apply {
+                sources =
+                    modules
+                        .flatMap { module ->
+                            module.sources.mapNotNull { source ->
+                                (runs.librarySource(module.name, source) ?: module.sourceDir?.let { it + source })?.let { file ->
+                                    Source().apply {
+                                        path = file
+                                        name = File(file).name
+                                    }
+                                }
+                            }
+                        }.toTypedArray()
             }
         }
     }

@@ -1417,6 +1417,63 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X326', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const received: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent, received);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in the lambda');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+
+                // VS Code asks for the loaded sources once its Loaded Scripts view shows
+                await vscode.commands.executeCommand('workbench.debug.loadedScriptsView.focus');
+                const asked = await eventually(async () => received.find(message => message.type === 'request' && message.command === 'loadedSources'),
+                    request => request !== undefined, 'VS Code asks for the loaded sources');
+                const answer = await eventually(async () => sent.find(message => message.type === 'response' && message.command === 'loadedSources'
+                    && message.request_seq === asked!.seq), response => response !== undefined, 'The loaded sources are answered');
+                const paths = (answer!.body?.sources ?? []).map(source => (source.path ?? '').replace(/\\/g, '/'));
+                assert.ok(paths.some(path => path.endsWith(`/${data.file}`)), JSON.stringify(paths));
+                const library = paths.find(path => path.endsWith(`/${data.librarySource}`));
+                assert.ok(library, JSON.stringify(paths));
+                assert.ok(!library.startsWith(vscode.workspace.getWorkspaceFolder(document.uri)!.uri.fsPath.replace(/\\/g, '/')), library);
+
+                // VS Code has no Modules view; the answer says which modules are the program's own
+                const modules = (await session.customRequest('modules', {})).modules as { name: string; isUserCode?: boolean }[];
+                for (const [name, own] of Object.entries(data.modules as Record<string, boolean>)) {
+                    assert.strictEqual(modules.find(module => module.name === name)?.isUserCode, own, JSON.stringify(modules));
+                }
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1444,9 +1501,10 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X325 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X326 cases check. */
 interface DapMessage {
     seq?: number;
+    request_seq?: number;
     type: string;
     event?: string;
     command?: string;
@@ -1461,6 +1519,7 @@ interface DapMessage {
         breakpoint?: { verified: boolean; line?: number };
         breakpoints?: { verified: boolean; line?: number; message?: string }[];
         stackFrames?: { name: string; line: number; source?: { path?: string } }[];
+        sources?: { path?: string }[];
         totalFrames?: number;
     };
 }

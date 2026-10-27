@@ -13,6 +13,7 @@ import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
@@ -61,7 +62,8 @@ import kotlin.time.toJavaDuration
  * `name`, `expression`, `hex`), `completions` (`id`, `request`, `frame`, `text`, `offset`), `runCode` (`id`, `request`, `frame`,
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
- * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
+ * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
+ * `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`,
  * `filter`: `ALL`, `NAMED` or `INDEXED`, `start`, `count`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -103,6 +105,7 @@ object RunWorker {
                     "stop" -> runs.stop(command["id"].asLong)
                     "setBreakpoints" -> runs.setBreakpoints(command)
                     "threads" -> runs.threads(command)
+                    "modules" -> runs.modules(command)
                     "stackTrace" -> runs.stackTrace(command)
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
@@ -308,6 +311,16 @@ object RunWorker {
         fun threads(command: JsonObject) =
             reply(command) { debugger ->
                 add("threads", RunWorkerDebug.threads(debugger.threads().map { ThreadState(it.id(), it.name()) }))
+            }
+
+        fun modules(command: JsonObject) =
+            reply(command) { debugger ->
+                add(
+                    "modules",
+                    RunWorkerDebug.modules(
+                        debugger.modules().map { ModuleState(it.name(), it.version(), it.sourceDir(), it.sources(), it.own()) },
+                    ),
+                )
             }
 
         fun stackTrace(command: JsonObject) =
@@ -725,7 +738,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 17
+        const val PROTOCOL = 18
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

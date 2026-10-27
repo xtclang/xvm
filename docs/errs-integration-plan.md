@@ -1705,7 +1705,7 @@ do not satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6)
 debugger (R7) stops, steps and evaluates in both editors.
 
 Current native automation inventory (2026-10-27): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **327 cases**: X1–X325 except the retired
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **328 cases**: X1–X326 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
 added since, among them the embedded run cases above, have selected native receipts recorded with

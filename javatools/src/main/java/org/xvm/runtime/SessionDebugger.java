@@ -22,6 +22,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import java.util.concurrent.CompletableFuture;
@@ -43,6 +44,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -326,6 +328,12 @@ public final class SessionDebugger implements Debugger {
     private final Set<String> moduleNames = ConcurrentHashMap.newKeySet();
 
     /**
+     * The source paths of each module's classes, by module name, once {@link #modules} has read
+     * them; they do not change while the program runs.
+     */
+    private final Map<String, List<String>> moduleSources = new ConcurrentHashMap<>();
+
+    /**
      * The methods compiled from each source file, by real path, from the known modules; guarded
      * by this debugger's monitor.
      */
@@ -509,6 +517,20 @@ public final class SessionDebugger implements Debugger {
      *              after that container's module, such as {@code "inner.example.org/Counter"}
      */
     public record ThreadInfo(int id, String name) {
+    }
+
+    /**
+     * A module of the program: its own or a library it uses.
+     *
+     * @param name       the module's name, such as {@code "ecstasy.xtclang.org"}
+     * @param version    the module's version, or null if it has none
+     * @param sourceDir  the source directory the module was compiled from, as it recorded it, or
+     *                   null if it is not known
+     * @param sources    the source paths of the module's classes within that directory, in order
+     * @param own        true for a module of the program's own, which {@link #addModule} made
+     *                   known, and false for a library
+     */
+    public record ModuleInfo(String name, String version, String sourceDir, List<String> sources, boolean own) {
     }
 
     /**
@@ -799,6 +821,52 @@ public final class SessionDebugger implements Debugger {
      */
     public boolean isStopped() {
         return halt != null;
+    }
+
+    /**
+     * The modules of the program, while it runs or is stopped: those of its own that {@link
+     * #addModule} made known and the libraries they use, as the runtime linked them for the
+     * program, in name order; none before the program starts.
+     *
+     * @return the program's modules
+     */
+    public List<ModuleInfo> modules() {
+        Runtime attached = runtime;
+        if (attached == null) {
+            return List.of();
+        }
+        var modules = new TreeMap<String, ModuleStructure>();
+        for (Container container : attached.containers()) {
+            if (moduleNames.contains(container.getModule().getName())) {
+                container.getConstantPool().getFileStructure().children().stream()
+                        .filter(module -> !module.isFingerprint())
+                        .forEach(module -> modules.putIfAbsent(module.getName(), module));
+            }
+        }
+        return modules.values().stream().map(module -> {
+            LiteralConstant dir     = module.getSourceDir();
+            Version         version = module.getVersion();
+            return new ModuleInfo(module.getName(), version == null ? null : version.toString(),
+                    dir == null ? null : dir.getValue(),
+                    moduleSources.computeIfAbsent(module.getName(), _ -> sources(module)),
+                    moduleNames.contains(module.getName()));
+        }).toList();
+    }
+
+    /**
+     * @return the source paths of the classes of a module, in order
+     */
+    private static List<String> sources(ModuleStructure module) {
+        var paths = new TreeSet<String>();
+        var todo  = new ArrayDeque<Component>(List.of(module));
+        while (!todo.isEmpty()) {
+            Component component = todo.pop();
+            if (component instanceof ClassStructure clazz && clazz.getSourcePath() != null) {
+                paths.add(clazz.getSourcePath().getValue());
+            }
+            todo.addAll(component.children());
+        }
+        return List.copyOf(paths);
     }
 
     /**

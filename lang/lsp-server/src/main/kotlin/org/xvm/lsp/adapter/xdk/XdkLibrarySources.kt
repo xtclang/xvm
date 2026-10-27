@@ -52,6 +52,9 @@ internal object XdkLibrarySources {
     private val directory by lazy { Files.createTempDirectory("xtc-library-sources-") }
     private val sources = ConcurrentHashMap<String, SourceFile>()
 
+    /** The read-only files of the bundled sources written so far, by source path. */
+    private val copies = ConcurrentHashMap<String, Path>()
+
     /** Attached source text and the revision used to detect a changed source file. */
     private data class Entry(
         val text: String,
@@ -134,8 +137,22 @@ internal object XdkLibrarySources {
     ): String? {
         if (module !in XdkLibraries.moduleNames) return null
         val entry = entries[path] ?: return null
-        return Path.of(URI(sources.computeIfAbsent(path) { parse(module, path, entry) }.uri)).toString()
+        return copy(path, entry).toString()
     }
+
+    /** The read-only file with the bundled source of [path], written the first time it is asked for. */
+    private fun copy(
+        path: String,
+        entry: Entry,
+    ): Path =
+        copies.computeIfAbsent(path) {
+            val file = directory.resolve(path).normalize()
+            require(file.startsWith(directory)) { "Invalid bundled source path" }
+            Files.createDirectories(file.parent)
+            Files.writeString(file, entry.text)
+            check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
+            file.toFile().canonicalFile.toPath()
+        }
 
     /** Use the actual artifact identity, never a name search across library modules. */
     fun declaration(identity: IdentityConstant): DependencyDeclaration? {
@@ -178,21 +195,14 @@ internal object XdkLibrarySources {
         entry: Entry,
     ): SourceFile {
         val text = entry.text
-        val file = directory.resolve(path).normalize()
-        require(file.startsWith(directory)) { "Invalid bundled source path" }
-        Files.createDirectories(file.parent)
-        Files.writeString(file, text)
-        check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
+        val file = copy(path, entry)
         val declarations = libraryDeclarations(text, path)
         val virtualUri = URI(SCHEME, module, "/${XdkLibraries.revision(module)}/${entry.revision}/$path", null, null).toASCIIString()
         return SourceFile(
             module,
             path,
-            file
-                .toFile()
-                .canonicalFile
-                .toURI()
-                .toString(),
+            // as File gives it, which owns() compares with
+            file.toFile().toURI().toString(),
             ReadOnlyDocument(virtualUri, text),
             declarations,
         )

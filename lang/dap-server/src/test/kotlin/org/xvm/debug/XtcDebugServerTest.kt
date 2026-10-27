@@ -18,6 +18,8 @@ import org.eclipse.lsp4j.debug.ExceptionInfoArguments
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InvalidatedEventArguments
+import org.eclipse.lsp4j.debug.LoadedSourcesArguments
+import org.eclipse.lsp4j.debug.ModulesArguments
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
@@ -90,6 +92,8 @@ class XtcDebugServerTest {
                 "supportsSetVariable",
                 "supportsCompletionsRequest",
                 "completionTriggerCharacters",
+                "supportsModulesRequest",
+                "supportsLoadedSourcesRequest",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -599,6 +603,47 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `modules and loaded sources are the program's own and its libraries', a bundled library's sources bundled with it`() {
+        runs.modules =
+            listOf(
+                ModuleState("App", null, "/work/", listOf("App.x"), true),
+                ModuleState(ECSTASY, "1.0", "/build/lib_ecstasy/", listOf(COLLECTION, "ecstasy/Object.x"), false),
+            )
+        runs.libraries = mapOf((ECSTASY to COLLECTION) to "/bundled/ecstasy/collections/Collection.x")
+        val capabilities = server.initialize(InitializeRequestArguments()).get(10, SECONDS)
+        assertThat(capabilities.supportsModulesRequest).isTrue()
+        assertThat(capabilities.supportsLoadedSourcesRequest).isTrue()
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        // a page of one, the second
+        val modules =
+            server
+                .modules(
+                    ModulesArguments().apply {
+                        startModule = 1
+                        moduleCount = 1
+                    },
+                ).get(10, SECONDS)
+        assertThat(modules.totalModules).isEqualTo(2)
+        assertThat(modules.modules.map { listOf(it.id.right, it.name, it.path, it.version, it.isUserCode) })
+            .containsExactly(listOf(ECSTASY, ECSTASY, "/build/lib_ecstasy/", "1.0", false))
+
+        // a library source that is not bundled is where the library was built
+        assertThat(
+            server
+                .loadedSources(LoadedSourcesArguments())
+                .get(10, SECONDS)
+                .sources
+                .map { it.path to it.name },
+        ).containsExactly(
+            "/work/App.x" to "App.x",
+            "/bundled/ecstasy/collections/Collection.x" to "Collection.x",
+            "/build/lib_ecstasy/ecstasy/Object.x" to "Object.x",
+        )
+    }
+
+    @Test
     fun `a failed build reports its diagnostics and fails the launch, which runs nothing`() {
         runs.result = LaunchResult(null, "/work/App.x:2:5: error: no such type [COMPILER-42]")
         server.configurationDone(ConfigurationDoneArguments())
@@ -1032,6 +1077,10 @@ class XtcDebugServerTest {
             module: String,
             path: String,
         ) = libraries[module to path]
+
+        var modules = listOf<ModuleState>()
+
+        override fun modules(runId: String) = CompletableFuture.completedFuture(modules)
 
         override fun scopes(
             runId: String,
