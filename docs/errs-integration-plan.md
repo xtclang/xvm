@@ -1373,7 +1373,11 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   Backend and packaged-stdio tests pass; shared X132 passes in both editors for multi-range requests
   and negotiated default save hooks. Editor settings for the opt-in options and a native multi-range
   UI are not introduced: hosts can already invoke standard formatting/save preferences.
-- [ ] **L73 — Server commands and edit application.** Implement an explicit
+- [x] **L73 — Server commands and edit application.** *Closed 2026-10-27, with nothing to build:*
+  Run reaches the R2–R5 service through the editors' `xtc.runModule` and `xtc/run`, and the legacy
+  code action's apply is the one edit-running command, negotiated with `workspace/applyEdit` and
+  refusal tested; a server-run Run for clients without `xtc.runModule` waits until one is needed.
+  The original scope: implement an explicit
   `workspace/executeCommand` registry if server-run actions are required, with negotiated
   `workspace/applyEdit` and failure handling. Current module Run lenses use a client command;
   the only negotiated server command resolves/applies a one-use legacy code action. This non-Run
