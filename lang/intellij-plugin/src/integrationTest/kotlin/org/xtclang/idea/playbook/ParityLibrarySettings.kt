@@ -70,10 +70,19 @@ internal fun ParityScenarios.librarySettingsCases() {
 
                         fun definition() {
                             val target = query("textDocument/definition", document, document.at(data.string("anchor"))).rows().single()
-                            val path = Path.of(URI(target.string("uri")))
+                            check(target["range"].asJsonObject["start"].asJsonObject.int("line") == data.int("definitionLine"))
+                            val uri = target.string("uri")
+                            if (URI(uri).scheme != "file") {
+                                // TODO LSP4IJ: UP25 — an LSP4IJ that declares workspace/textDocumentContent (#1749) is given
+                                // the attached source as the server's ecstasy-library: document, which it opens read-only
+                                // without a file; the server serves its text
+                                val content = protocol.query("workspace/textDocumentContent", mapOf("uri" to uri))
+                                check(content.asJsonObject["text"].asString == data.string("source"))
+                                return
+                            }
+                            val path = Path.of(URI(uri))
                             check(!Files.isWritable(path))
                             check(Files.readString(path) == data.string("source"))
-                            check(target["range"].asJsonObject["start"].asJsonObject.int("line") == data.int("definitionLine"))
                             val library = open(path.toString())
                             check(library.text == data.string("source"))
                         }
