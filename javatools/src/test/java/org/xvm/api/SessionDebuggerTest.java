@@ -57,6 +57,7 @@ import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
 import org.xvm.runtime.SessionDebugger.Step;
 import org.xvm.runtime.SessionDebugger.Stop;
+import org.xvm.runtime.SessionDebugger.ThreadInfo;
 import org.xvm.runtime.SessionDebugger.Variable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -634,6 +635,38 @@ public class SessionDebuggerTest {
     @AfterAll
     static void shutdown() {
         support.shutdownInterpreter();
+    }
+
+    @Test
+    public void aStopListsTheFibersThatDoNotWaitAtALineWithWhatTheyDoAndTheStacksOfThoseThatStandStill()
+            throws Exception {
+        Path  source  = compile("Waits", PROGRAM.replace("Program", "Waits"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Waits"));
+        // by then, run() has asked the busy worker for its count, and waits for the answer
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "done == 100000", null, null)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Waits", output, session);
+        try (control) {
+            Stop             stop    = stops.next();
+            List<ThreadInfo> threads = session.threads();
+            assertEquals(List.of("Worker", "Waits (waiting)"), threads.stream().map(ThreadInfo::name).toList());
+            assertEquals(stop.threadId(), threads.getFirst().id());
+
+            // the waiting fiber's own stack, the same when asked again, whose frames have no variables
+            List<StackFrameInfo> waiting = session.stackTrace(threads.get(1).id());
+            assertEquals(List.of("Waits.run:19"), waiting.stream().map(frame -> frame.name() + ':' + frame.line()).toList());
+            assertEquals(waiting, session.stackTrace(threads.get(1).id()));
+            assertTrue(session.scopes(waiting.getFirst().id()).isEmpty());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(3_000_000L, control.result());
+            assertTrue(session.threads().isEmpty());
+        }
     }
 
     @Test
@@ -1388,12 +1421,7 @@ public class SessionDebuggerTest {
         Control control = run("Holds", new StringWriter(), session);
         Stop    stop    = stops.next();
         // the spinning fiber, on a thread of its own, reaches a line of its loop and waits there
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
-            while (session.threads().size() < 2) {
-                Thread.sleep(10);
-            }
-        });
-        int spinner = session.threads().get(1).id();
+        int spinner = waitingAtLines(session, 2).get(1);
         assertEquals("Spinner.spin", session.stackTrace(spinner).getFirst().name());
         assertEquals(stop.threadId(), session.threads().getFirst().id());
 
@@ -1416,15 +1444,11 @@ public class SessionDebuggerTest {
         StringWriter output  = new StringWriter();
         Control      control = run("Shares", output, session);
         Stop         stop    = stops.next();
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
-            while (session.threads().size() < 2) {
-                Thread.sleep(10);
-            }
-        });
+        waitingAtLines(session, 2);
 
         // the spinner's frame has its variables, which its own thread reads, and its service's
         // state stands still while the program is stopped
-        int                   spinner = session.threads().get(1).id();
+        int                   spinner = waitingAtLines(session, 2).get(1);
         int                   frame   = session.stackTrace(spinner).getFirst().id();
         Map<String, Variable> spin    = byName(read(session, session.scopes(frame).getFirst().variablesReference()));
         assertTrue(spin.containsKey("count"), spin.keySet().toString());
@@ -2106,11 +2130,7 @@ public class SessionDebuggerTest {
 
         Control control = run("Blocked", new StringWriter(), session);
         Stop    stop    = stops.next();
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
-            while (session.threads().size() < 2) {
-                Thread.sleep(10);
-            }
-        });
+        waitingAtLines(session, 2);
 
         // the spinner's fiber waits at a line in its service, which therefore cannot answer
         int frame = session.stackTrace(stop.threadId()).getFirst().id();
@@ -2139,11 +2159,7 @@ public class SessionDebuggerTest {
         try (control) {
             Stop stop = stops.next();
             // the worker's fiber waits at a line of its loop, part of the way through it
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (session.threads().size() < 2) {
-                    Thread.sleep(10);
-                }
-            });
+            waitingAtLines(session, 2);
             int main   = session.stackTrace(stop.threadId()).getFirst().id();
             int worker = session.threads().stream().filter(t -> t.id() != stop.threadId()).findFirst().orElseThrow().id();
             int frame  = session.stackTrace(worker).getFirst().id();
@@ -2155,11 +2171,7 @@ public class SessionDebuggerTest {
             session.setBreakpoints(source.toString(), List.of(new Line(1, 18), new Line(2, 7)));
             assertEquals("199990000", session.run(main, "busy()", RUN_LIMIT, true)
                     .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (session.threads().size() < 2) {
-                    Thread.sleep(10);
-                }
-            });
+            waitingAtLines(session, 2);
             int again = session.stackTrace(worker).getFirst().id();
             assertNotEquals(frame, again);
             assertTrue(Long.parseLong(evaluate(session, again, "done").value()) > count);
@@ -2339,6 +2351,27 @@ public class SessionDebuggerTest {
         assertTrue(support.compile(file.toFile(), null, new DirRepository(outputDir.toFile(), false), errs),
                 () -> "compile failed: " + errs.getErrors());
         return file;
+    }
+
+    /**
+     * Wait until the specified number of the stopped program's fibers wait at a line, which
+     * {@link SessionDebugger#threads} lists first, named by their services alone.
+     *
+     * @return the IDs of the fibers that wait at a line, the stopped one first
+     */
+    private static List<Integer> waitingAtLines(SessionDebugger session, int count) {
+        return assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (true) {
+                List<Integer> ids = session.threads().stream()
+                        .filter(thread -> !thread.name().endsWith(")"))
+                        .map(ThreadInfo::id)
+                        .toList();
+                if (ids.size() >= count) {
+                    return ids;
+                }
+                Thread.sleep(10);
+            }
+        });
     }
 
     private static ModuleRepository input() {
