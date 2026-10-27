@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
@@ -589,6 +590,42 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
+    // TODO LSP4IJ: UP30 — Pause Program needs LSP4IJ's startPausing (#1757); the catalog keeps X308 not-implemented
+    // until a release has it, so this runs only with an LSP4IJ that has it (-Plsp4ijChannel=nightly) and X308 made full
+    case("X308") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                // no breakpoint: the program loops forever once it has printed
+                debugger.debug(project, module, uri(data.string("file")), 0)
+                debugger.awaitState(project, module, "the program runs", 60.seconds) {
+                    data.string("started") in it["console"]?.asString.orEmpty()
+                }
+
+                debugger.pause(project, module)
+                val paused =
+                    debugger.awaitState(project, module, "Pause stops the program", 60.seconds) {
+                        it["suspended"]?.asBoolean ==
+                            true
+                    }
+                val top = paused.getAsJsonArray("frames").first().asJsonObject
+                check(data.string("frame") in top.string("name") && top.int("line") in data.getAsJsonArray("lines").map { it.asInt }) {
+                    "Paused at: $paused"
+                }
+
+                // the program never ends on its own: stopping the session ends it
+                debugger.stopSession(project, module)
+                debugger.awaitState(project, module, "stopping the session ends the program", 60.seconds) { it.has("exitCode") }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
     case("X309") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -673,6 +710,54 @@ internal fun ParityScenarios.runEntryCases() {
                 val ended = debugger.awaitState(project, module, "the program runs to its exit", 60.seconds) { it.has("exitCode") }
                 check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
             } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    // TODO LSP4IJ: UP34, UP33 — an exception filter's condition needs LSP4IJ's filterOptions (#1760), and its hint
+    // the exceptionInfo answer (#1761); the catalog keeps X312 not-implemented until a release has them, so this runs
+    // only with an LSP4IJ that has them (-Plsp4ijChannel=nightly) and X312 made full
+    case("X312") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            // as LSP4IJ's exception breakpoints panel checks the filter with its condition, and unchecks the adapter's
+            // Uncaught Exceptions, which is checked by default
+            val filters =
+                JsonObject().apply {
+                    addProperty(data.string("filter"), data.string("condition"))
+                    add("uncaught", JsonNull.INSTANCE)
+                }
+            val previous = debugger.exceptionFilters(filters.toString())
+            try {
+                debugger.debug(project, module, uri(data.string("file")), 0)
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops at the exception class the condition names", 60.seconds) {
+                        it["suspended"]?.asBoolean == true
+                    }
+                check(data.string("caught") in stopped.string("console")) { "The caught exception stopped the program: $stopped" }
+                val (name, line) = data.getAsJsonArray("frame").let { it[0].asString to it[1].asInt }
+                val top = stopped.getAsJsonArray("frames").first().asJsonObject
+                check(name in top.string("name") && top.int("line") == line) { "Stopped at: $stopped" }
+
+                // the hint is the exceptionInfo answer: the exception, its description and its stack, from check()
+                var hints = listOf<String>()
+                awaitUi("LSP4IJ shows the exception's information where it was thrown", 30.seconds, { "Hints: $hints" }) {
+                    hints = JsonParser.parseString(debugger.hintTexts()).asJsonArray.map { it.asString }
+                    hints.any { hint ->
+                        listOf(data.string("exception"), data.string("description"), data.string("stackTrace")).all { it in hint }
+                    }
+                }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume lets the program fail", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+            } finally {
+                debugger.exceptionFilters(previous)
                 debugger.clearBreakpoints(project)
             }
         }
@@ -1249,6 +1334,62 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
+    // TODO LSP4IJ: UP45 — loaded sources and modules need LSP4IJ's Loaded Sources and Modules views (#1774); the catalog
+    // keeps X326 not-implemented until a release has them, so this runs only with an LSP4IJ that has them
+    // (-Plsp4ijChannel=nightly) and X326 made full
+    case("X326") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops in the lambda", 60.seconds) { it["suspended"]?.asBoolean == true }
+
+                // the views list the program's file and its libraries' bundled sources, and say which modules are its own
+                val own = data.getAsJsonObject("modules").entrySet().associate { it.key to it.value.asBoolean }
+                var shown = JsonObject()
+
+                fun paths() =
+                    shown
+                        .getAsJsonArray("sources")
+                        ?.map {
+                            it.asJsonObject["path"]
+                                ?.asString
+                                .orEmpty()
+                                .replace('\\', '/')
+                        }.orEmpty()
+                awaitUi("the Loaded Sources and Modules views show the program's", 30.seconds, { "Views: $shown" }) {
+                    shown = JsonParser.parseString(debugger.loadedSources(project, module)).asJsonObject
+                    val modules =
+                        shown.getAsJsonArray("modules").associate {
+                            it.asJsonObject.string("name") to
+                                it.asJsonObject["isUserCode"]?.asBoolean
+                        }
+                    shown["sourcesShown"].asBoolean &&
+                        shown["modulesShown"].asBoolean &&
+                        paths().any { it.endsWith("/${data.string("file")}") } &&
+                        paths().any { it.endsWith("/${data.string("librarySource")}") } &&
+                        own.all { (name, isOwn) -> modules[name] == isOwn }
+                }
+                val library = paths().first { it.endsWith("/${data.string("librarySource")}") }
+                check(
+                    !library.startsWith(project.getBasePath().orEmpty().replace('\\', '/')),
+                ) { "A library source in the project: $library" }
+
+                debugger.clearBreakpoints(project)
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
     case("X327") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -1659,6 +1800,25 @@ internal interface DebugSessionProbe {
     ): String
 
     fun hintShown(): Boolean
+
+    fun hintTexts(): String
+
+    fun pause(
+        project: Project,
+        module: String,
+    )
+
+    fun stopSession(
+        project: Project,
+        module: String,
+    )
+
+    fun exceptionFilters(filters: String): String
+
+    fun loadedSources(
+        project: Project,
+        module: String,
+    ): String
 
     fun debugWhen(
         project: Project,
