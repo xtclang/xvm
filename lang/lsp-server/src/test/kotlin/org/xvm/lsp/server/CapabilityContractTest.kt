@@ -95,5 +95,6 @@ class CapabilityContractTest {
             AdapterCapability.MONIKER -> "monikerProvider"
             AdapterCapability.CALL_HIERARCHY -> "callHierarchyProvider"
             AdapterCapability.INLAY_HINT -> "inlayHintProvider"
+            AdapterCapability.INLINE_VALUE -> "inlineValueProvider"
         }
 }

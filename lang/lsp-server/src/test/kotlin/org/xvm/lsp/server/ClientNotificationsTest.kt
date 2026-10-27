@@ -30,6 +30,7 @@ internal class ClientNotificationsTest {
                 ClientRefresh.Feature.DIAGNOSTICS to "refreshDiagnostics",
                 ClientRefresh.Feature.TOKENS to "refreshSemanticTokens",
                 ClientRefresh.Feature.INLAYS to "refreshInlayHints",
+                ClientRefresh.Feature.INLINE_VALUES to "refreshInlineValues",
                 ClientRefresh.Feature.LENSES to "refreshCodeLenses",
                 ClientRefresh.Feature.FOLDING to "refreshFoldingRanges",
             )

@@ -235,7 +235,7 @@ adopted. Publishing requires both checks.
 ```
 
 This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
-Ultimate features and automatic trials are disabled. The 332-case catalog is shared with VS Code;
+Ultimate features and automatic trials are disabled. The 333-case catalog is shared with VS Code;
 see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](testing.md).
 
 The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
