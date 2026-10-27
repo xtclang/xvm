@@ -53,6 +53,29 @@ with the same subject; master absorbed none. Two errs commits that change `misc.
 exactly #733's diff. `TestMisc` passes. The old tip is kept locally as
 `backup/errs-pre-rebase-20261026-2` (`c2c55df10`).
 
+**errs, #693, #716, #717 and #724 rebased onto master `bcd8e30d58` (2026-10-27).** Master had
+moved by #731, a Nibble's bytes, and #718, an embedded run's `assert:debug`, which landed with its
+review's changes: `org.xvm.runtime.debugger=off` turns the debugger off, the runtime keeps the
+console debugger once it is chosen, and `Debugger.activate`'s parameter is `frame`. Commit
+references made between the entry above and this one are to the old history:
+[the third commit map](errs-rebase-2026-10-27.tsv) maps errs' 1037 commits to 1035 replays, each
+with the same subject but one. Master absorbed the two that reach the runtime through
+`ServiceContext.getRuntime()`. The commit that brought #718's fix here keeps only its
+`EmbeddedExecutionTest` check, as "Check that an embedded run passes assert:debug and its worker
+serves the next run". The same happened on #693, which has 182 commits. errs' `Runtime` keeps its
+own `setDebugger`, which detaches the debugger it replaces and attaches the new one, with #718's
+constructor and `getDebugger`; errs' tree differs from the old tip only by master's two changes.
+The old tips are kept locally as `backup/errs-pre-rebase-20261027` (`e1d1947eb1`) and
+`backup/693-pre-rebase-20261027` (`d8bfeff83e`).
+
+- #716's `InterpreterConnector` conflicted where #718 added `setDebugger`, and keeps both methods.
+  #717 and #724 rebased without conflicts, and each PR's commits are unchanged apart from that one.
+- Validation:
+  - errs: `:javatools:test` 688, 42 skips; `:lang:lsp-server:test` 2401 (2 skipped).
+  - #693: `EmbeddingSupportTest` 29, `RuntimeDebuggerTest` 2, `EmbeddedExecutionTest` 32;
+    spotlessCheck.
+  - #716: `EmbeddingSupportTest` 28, `RuntimeDebuggerTest` 2; spotlessCheck.
+
 - Conflicts, resolved the same way on both branches:
   - `EMB-5`: both pass `{e, message}`. #727 made it print the exception, and this branch prints
     both (`Internal error: {1}. Cause: {0}`), which is kept.
