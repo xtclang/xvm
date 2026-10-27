@@ -847,6 +847,61 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `run to cursor, a breakpoint added while stopped and removed once reached, stops the program there once`() {
+        CompilerTestSupport.configure()
+        val loops = source("Loops.x", LOOPS.trimIndent())
+        val path = directory.resolve("Loops.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Loops", loops)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Loops", "moduleUri": "$loops"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 4}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val first = client.until(id) { it.event == "stopped" }
+            val thread = first.last()["body"].asJsonObject["threadId"].asInt
+
+            fun top(seq: Int): Pair<String, Int> {
+                sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
+                return client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject
+                    .let { it["name"].asString to it["line"].asInt }
+            }
+            assertThat(top(5)).isEqualTo("Loops.run" to 4)
+
+            // both editors run to the cursor as one more breakpoint, on line 7 in the loop, and Continue
+            sessions.request(id, 6, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 4}, {"line": 7}]}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val atCursor = client.until(id) { it.event == "stopped" }
+            assertThat(top(8)).isEqualTo("Loops.run" to 7)
+            val output = { messages: List<JsonObject> ->
+                messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            }
+            // the loop's first round, before it prints
+            assertThat(output(first + atCursor)).doesNotContain("i=")
+
+            // stopped there, they remove that breakpoint again, so the loop's next rounds do not stop
+            sessions.request(id, 9, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 4}]}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 10, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.filter { it.event == "stopped" }).isEmpty()
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(3)
+            assertThat(output(first + atCursor + rest)).contains("i=0", "i=1", "i=2", "total=3")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a console line in a stopped frame runs code there, whose effect stays, and cancel or the time limit ends a run that loops`() {
         CompilerTestSupport.configure()
         val module = source("Runs.x", RUNS.trimIndent())
@@ -2045,6 +2100,23 @@ class EmbeddedExecutionTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """
+
+        /** A module whose run() prints in a loop, on line 7, three times, and returns the sum 3. */
+        const val LOOPS =
+            """
+            module Loops {
+                Int run() {
+                    @Inject Console console;
+                    Int total = 0;
+                    for (Int i = 0; i < 3; ++i) {
+                        total += i;
+                        console.print($"i={i}");
+                    }
+                    console.print($"total={total}");
+                    return total;
                 }
             }
             """
