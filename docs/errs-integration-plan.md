@@ -1329,7 +1329,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L76 inline completion | Compiler cursor projection, capability negotiation, cancellation and shared X255–X258 pass batched backend and selected editor validation. | Plain names/expected-type values only. LSP4IJ native invocation/selection constraints are UP26; no generative service is implied. |
 | L77 colors | None: the fixture-only document-color prototype and X273–X275 were removed on 2026-10-21. | Excluded until Ecstasy has a color type; highlighting is semantic tokens. See the [removal record](#l77-color-prototype-removed-2026-10-21). |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
-| L79 debug inline values | Done 2026-10-27: `textDocument/inlineValue` answers the stopped method's parameters and locals as lookups the editor makes in the stopped frame, and refresh follows a compile (X331 in VS Code; IntelliJ: UP50). | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
+| L79 debug inline values | Done 2026-10-27: `textDocument/inlineValue` answers the stopped method's parameters and locals as lookups the editor makes in the stopped frame, and refresh follows a compile (X331 in VS Code; IntelliJ with our local LSP4IJ branch: UP50). | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
 | L81 progress/trace/refresh | Implemented and accepted for the current providers. Visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap pass both hosts. IntelliJ same-process projects and both VS Code window modes pass lifecycle checks. | UP15 still classifies typed-parameter failures as ParseError; reader recovery passes. Full-catalog, extended scale and cross-platform release evidence belong to L82. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
@@ -1433,7 +1433,8 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 - [x] **L79 — Debug inline values.** *Done 2026-10-27 (shared X331):* the server answers
   `textDocument/inlineValue` with the stopped method's or lambda's parameters and locals up to the
   stopped line, as lookups by name in the stopped frame, and sends `workspace/inlineValue/refresh`
-  after a compile; VS Code passes X331, and IntelliJ keeps LSP4IJ's own inline values (UP50).
+  after a compile; VS Code passes X331. IntelliJ shows no inline values for Ecstasy with released
+  LSP4IJ, and passes X331 with our local LSP4IJ branch (UP50).
   The original scope: define a debugger integration, then implement
   `textDocument/inlineValue` and `workspace/inlineValue/refresh`. Compiler type inlay hints do
   not provide runtime values. DAP breakpoints, stepping and evaluation are the R6–R7 track.
