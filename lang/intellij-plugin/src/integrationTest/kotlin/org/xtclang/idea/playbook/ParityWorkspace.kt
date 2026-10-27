@@ -251,7 +251,7 @@ class ParityWorkspace(
             protocol
                 .server()
                 .getOpenedDocuments()
-                .firstOrNull { it.getFile().getPath() == Path.of(URI(uri)).toString() }
+                .firstOrNull { it.getFile().getPath() == editorPath(uri) }
                 ?.getSynchronizer()
                 ?.getDocument()
                 ?.getText()
@@ -467,6 +467,12 @@ class ParityWorkspace(
     }
 }
 
+/**
+ * The path IntelliJ gives the editor of a location's URI: its file's, or, for a document that LSP4IJ opens from
+ * `workspace/textDocumentContent` (UP25, #1749), such as a bundled library source, the URI itself.
+ */
+internal fun editorPath(uri: String): String = URI(uri).let { if (it.scheme == "file") Path.of(it).toString() else uri }
+
 /** Compare local URI spelling without changing objects that must round-trip to the server. */
 internal fun JsonObject.string(name: String): String =
     get(name).asString.let { value ->
@@ -517,4 +523,6 @@ interface ParityDocuments {
 @Remote("com.intellij.openapi.editor.Document")
 interface ParityDocument {
     fun getText(): String
+
+    fun isWritable(): Boolean
 }
