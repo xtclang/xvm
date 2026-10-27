@@ -59,9 +59,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### L79: debug inline values (after R7)
 
-- [ ] `textDocument/inlineValue`, from the R7 debugger's suspended frames.
-- [ ] `workspace/inlineValue/refresh`.
-- [ ] A shared acceptance case in both editors.
+- [x] `textDocument/inlineValue` (2026-10-27; shared X331): the parameters and locals of the method or
+  lambda where the program is stopped, at each occurrence up to the stopped line, as lookups by name
+  that the editor makes in the stopped frame; not fields, nor variables declared further on.
+- [x] `workspace/inlineValue/refresh`, after a compile, to a client that takes it.
+- [x] A shared acceptance case: X331 passes in VS Code, which shows no values for Ecstasy without it
+  (`debug.inlineValues` on `auto`). IntelliJ's is not implemented: LSP4IJ never asks (UP50).
 
 ### L82: completion evidence and release gates
 
@@ -653,6 +656,14 @@ passes with the workaround disabled. The gates are in
   always resume every fiber; VS Code's request
   [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
   last item waits on it. To do: build it once an editor sends `singleThread`.
+
+### LSP4IJ: no inline values from the server (UP50): by design for now, not filed
+
+- UP50 (2026-10-27): LSP4IJ never sends `textDocument/inlineValue`, and its `refreshInlineValues` does
+  nothing (0.21.0 and `main`, `e9f8bb42`). IntelliJ's inline values in a DAP session come from LSP4IJ's
+  scan of the editor's TextMate tokens for the frame's variable names up to the stopped line
+  (`HighlighterDebugVariablePositionProvider`), which is not scope-aware. XVM's server answers them
+  since L79 (X331). If taken up: an LSP4IJ variable-position provider that asks the language server.
 
 ### LSP4IJ: no data breakpoints (UP48): not filed
 
