@@ -869,6 +869,9 @@ class XtcDebugServerTest {
     fun `requests whose arguments are optional work without them, as VS Code sends configurationDone`() {
         server.configurationDone(null).get(10, SECONDS)
         server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        // VS Code sends a custom request with empty arguments as one without them
+        assertThat(server.modules(null).get(10, SECONDS).modules).isNotNull()
+        assertThat(server.loadedSources(null).get(10, SECONDS).sources).isNotNull()
         server.terminate(null).get(10, SECONDS)
         runs.events.exited(null, "Stopped.")
         server.disconnect(null).get(10, SECONDS)

@@ -666,7 +666,7 @@ class XtcDebugServer(
     }
 
     /** DAP: modules. The debugged program's modules, its own and the libraries it uses, a page at a time. */
-    override fun modules(args: ModulesArguments): CompletableFuture<ModulesResponse> {
+    override fun modules(args: ModulesArguments?): CompletableFuture<ModulesResponse> {
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(
                 ModulesResponse().apply {
@@ -676,8 +676,8 @@ class XtcDebugServer(
             )
         }
         return runs.modules(runId).exceptionally { emptyList() }.thenApply { all ->
-            val first = args.startModule ?: 0
-            val count = args.moduleCount?.takeIf { it > 0 } ?: all.size
+            val first = args?.startModule ?: 0
+            val count = args?.moduleCount?.takeIf { it > 0 } ?: all.size
             ModulesResponse().apply {
                 modules =
                     all
