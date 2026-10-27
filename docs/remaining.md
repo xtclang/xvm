@@ -366,9 +366,9 @@ breakpoint list, which the editors replace.
     a lazy `toString()` (`SessionDebugger.ON_DEMAND`) in the console test. That test then left its
     program stopped on the class's shared worker, so three later tests failed with it. Alone, and
     with its class on a quiet host, the console test passes.
-- [ ] The soak on Windows. CI runs the `lang` checks on `ubuntu-latest` only: a dispatch can add
-  `windows-latest`, which builds without them (`commit.yml`). There is no Windows machine to run
-  them on.
+- Not planned (decided 2026-10-27): the soak on Windows. CI runs the `lang` checks on
+  `ubuntu-latest` only: a dispatch can add `windows-latest`, which builds without them
+  (`commit.yml`). There is no Windows machine to run them on.
 - [x] A JVM that makes more than one runtime kept up to two that it was done with, about 115 MB each
   (`474af84f08`, 2026-10-26). Three things held one:
   - A pending alarm on the JVM-wide Java timer. The `Timer` service belongs to the native
@@ -574,7 +574,14 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-26, after both were rebased onto master `5130e4211`, see the
+  2026-10-27, after both were rebased onto master `bcd8e30d58`: R8's fixes that are not debugger
+  work are the pool count, the graph-walk tests and the worker's heap without `System.gc()` as
+  `9eae4bfa50`, `1feca90e99` and `34b3ef3878`, then the read-only test skips `c730053240` as
+  `c5adf2518e`, a worker's exit within 5 s `c68bbcba08` as `fa879b8b7f`, with `RunWorker` by hand,
+  its test's thread dump `49d4f0dd5a` as `a2d059ddf9`, `FileRepository`'s temporary file
+  `02b9109102` as `18b27fe115`, a fresh worker after a failed test `06dacc9c91` as `ce5dfab340`,
+  and the test warnings `3321ab391b` as `63f03a4bac`. Before that, 2026-10-26, after both were
+  rebased onto master `5130e4211`, see the
   [integration plan](errs-integration-plan.md): the torn-jar check `143594eec` as `12170a7c1`, the
   AGENTS.md inline-comment rule `b15c44ab7` as `00f7289c0`, and the plan's part of the R5 record
   `362aaafc4` as `f863ffabd`; #720's reviewed weak map came from master. Before that, 2026-10-23,
@@ -697,16 +704,16 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
     anywhere in the source, also after an escaped backslash, as `doc/x.md` specifies. Issue
     [#729](https://github.com/xtclang/xvm/issues/729) asks whether that should change.
   The rest is on master already (#672, #703 and others), withdrawn, or part of the stacked pull requests.
-- [ ] Once master lets a host set its own debugger, which #718's `setDebugger()` did and the DAP work
-  now brings (#718, once merged), file the `EvalCompiler` fixes above again, as a new pull request or
-  by reopening [#721](https://github.com/xtclang/xvm/pull/721). The branch
-  `lagergren/fix-debugger-eval-captures` (`f3069b4fb`, 2026-10-24) has the fix and its test, and is
-  based on #718's branch: rebase it onto master, which leaves only its own commit. The test, an
-  `EmbeddingSupportTest` case, sets a debugger of its own on the run's connector with #718's
-  `InterpreterConnector.setDebugger()`, and compiles `n + 1`, `random.int(1)` and `nope` with
+- [x] The `EvalCompiler` fixes above, filed again on 2026-10-27 as
+  [#735](https://github.com/xtclang/xvm/pull/735), once #718 let a host set its own debugger; the
+  closed [#721](https://github.com/xtclang/xvm/pull/721) points to it.
+  `lagergren/fix-debugger-eval-captures`, rebased onto master, has only its own commit
+  (`312846cf9d`). Its `EmbeddingSupportTest` case sets a debugger of its own on the run's connector
+  with `InterpreterConnector.setDebugger()`, and compiles `n + 1`, `random.int(1)` and `nope` with
   `EvalCompiler` where the run stopped at `assert:debug`; with master's `EvalCompiler` it fails all
-  three ways. The console cannot be driven from `manualTests` instead: the run task only inherits
-  Gradle's standard input, which is empty in CI.
+  three ways, checked again on master `bcd8e30d58`. `:javatools:test` passes 460 (42 skipped). The
+  console cannot be driven from `manualTests` instead: the run task only inherits Gradle's standard
+  input, which is empty in CI.
 - [x] A compiler crash on both master and this branch: a file that ends in `$"abc{x`, `"abc\` or `'\`
   failed with `NoSuchElementException` from `Source.next`, through `Lexer.eatTemplateExpression`,
   `eatStringChars` and `eatCharLiteral`. Fixed here (`92d87bb08`), in master pull request #717, and on #693.
