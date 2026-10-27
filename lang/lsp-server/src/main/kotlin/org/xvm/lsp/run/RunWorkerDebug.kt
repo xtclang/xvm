@@ -10,6 +10,7 @@ import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
@@ -89,6 +90,32 @@ internal object RunWorkerDebug {
                     },
                 )
             }
+        }
+
+    fun modules(modules: List<ModuleState>) =
+        JsonArray().apply {
+            modules.forEach { module ->
+                add(
+                    JsonObject().apply {
+                        addProperty("name", module.name)
+                        module.version?.let { addProperty("version", it) }
+                        module.sourceDir?.let { addProperty("sourceDir", it) }
+                        add("sources", JsonArray().apply { module.sources.forEach(::add) })
+                        addProperty("own", module.own)
+                    },
+                )
+            }
+        }
+
+    fun modulesOf(json: JsonArray): List<ModuleState> =
+        json.map { it.asJsonObject }.map { module ->
+            ModuleState(
+                module["name"].asString,
+                module["version"]?.asString,
+                module["sourceDir"]?.asString,
+                module["sources"].asJsonArray.map { it.asString },
+                module["own"].asBoolean,
+            )
         }
 
     fun threadsOf(json: JsonArray): List<ThreadState> =
