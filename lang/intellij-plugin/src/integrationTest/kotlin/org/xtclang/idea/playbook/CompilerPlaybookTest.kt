@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.starter.ci.CIServer
 import com.intellij.ide.starter.ci.NoCIServer
+import com.intellij.ide.starter.config.ConfigurationStorage
+import com.intellij.ide.starter.config.monitoringDumpsIntervalSeconds
 import com.intellij.ide.starter.di.di
 import com.intellij.ide.starter.driver.engine.runIdeWithDriver
 import com.intellij.ide.starter.models.IdeInfo
@@ -243,6 +245,10 @@ class CompilerPlaybookTest {
                     APPEND,
                 )
             }
+        // macOS 27 kills a JVM whose thread dump reads the mach port of a thread that has just exited (EXC_GUARD,
+        // GUARD_TYPE_MACH_PORT, in VM_PrintThreads): the test IDE crashed in Starter's thread dump of every minute, so
+        // it takes none there
+        if (System.getProperty("os.name").startsWith("Mac")) ConfigurationStorage.monitoringDumpsIntervalSeconds(Int.MAX_VALUE)
         val previousDi = di
         di =
             DI {
