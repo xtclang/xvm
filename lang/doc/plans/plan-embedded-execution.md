@@ -4,7 +4,8 @@ Status: accepted architecture and delivery plan, 2026-09-28. A first delivery of
 Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delivery-2026-10-15)); it
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
 2026-10-22, and R7, the runtime debugger, was completed on 2026-10-26, both in VS Code and
-IntelliJ. The release gate (R8) is in progress, and parts of R9, and R10, are done. The audit in
+IntelliJ. The release gate (R8) is done apart from Windows, on 2026-10-27, and parts of R9, and
+R10, are done. The audit in
 the next section describes the code before the first delivery.
 
 ## First delivery (2026-10-15)
@@ -468,16 +469,16 @@ this bridge; they cannot be inferred from compiler type hints.
 - [ ] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.
-  *Runtime retention (2026-10-26, `1ca73e922`):* a shut-down interpreter's runtime is no longer kept
+  *Runtime retention (2026-10-26, `474af84f08`):* a shut-down interpreter's runtime is no longer kept
   by a pending timer alarm, values its templates cached in statics, or `FullyBoundHandle.NO_OP`; the
   `javatools` test JVM holds one runtime at a time.
-  *Soak (2026-10-26, `ee8a0ae4d`):* rounds of an edited build and run, a stopped run, and debug
+  *Soak (2026-10-26, `0d6e890bad`):* rounds of an edited build and run, a stopped run, and debug
   sessions continued or terminated from a breakpoint, on one worker, which keeps no run, console,
   debugger, console code, session or compiled sources, and whose runtime pool keeps its size. The
   worker counted a JDK thread that joined the pool's thread group as pool growth and was retired;
   it now reports the pool's own size. Memory is checked by counts, not by the heap after
-  `System.gc()`. Linux, Windows and the editors' side are still to do.
-  *No forced collection (2026-10-26, `3a9112c31`):* the worker no longer calls `System.gc()` after a
+  `System.gc()`.
+  *No forced collection (2026-10-26, `2668896b26`):* the worker no longer calls `System.gc()` after a
   run. It reports the heap the JVM left after its own latest collections; the 512 MB limit applies to
   that, and the 128 MB growth rule of R4 is gone.
   *Correlated logs (2026-10-26, `a87b63d9d`):* the build, run, debug session and worker lines share
@@ -488,6 +489,19 @@ this bridge; they cannot be inferred from compiler type hints.
   `:javatools:errorListenerTest` each run what a doc's command used to list with `--tests`.
   *Editor cycles (2026-10-26, `718ddd656e`):* shared X322 repeats runs, stopped runs and debug
   sessions of one module from both editors; each ends, and no run or debug session stays open.
+  *Linux (2026-10-27, `6b8f5bbe03`):* in a Podman container (arm64, JDK 25, not root), `javatools`'
+  tests and the soak at 50 rounds pass. The runs found that the tests of read-only files fail as
+  root (they skip there now, `e4a8e6847e`), that a worker which exits stays a zombie under a PID 1
+  that does not reap, and that the console test's lazy `toString()` exceeds the runtime's 1 s
+  limit on a host under heavy load, and then leaves its program stopped on the class's shared
+  worker. A worker whose input ends now stops its runs and exits within 5 s (`c474566892`).
+  *Parity (2026-10-27, at `718ddd656e`):* VS Code passes all 34 run and debug cases; IntelliJ
+  passes 21 of its 32 and the other 11 are partial, three because of the test driver and eight
+  because of LSP4IJ 0.21.0 (UP32–UP42). X308 and X312 wait on unreleased LSP4IJ fixes.
+  *Docs (2026-10-26, `3ac199f192`)* and *PRs (2026-10-27):* the run and debug docs are current,
+  and #716, #717, #718, #724 (with #730's fix), #731 and #693 each pass CI on their own heads,
+  rebased onto master `ddaa3d0a4`.
+  Open: Windows, which CI's `lang` checks do not run on.
 - [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
