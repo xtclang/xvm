@@ -10163,7 +10163,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no Reset Frame for a DAP session: it never sends restartFrame (UP47), so IntelliJ has none to check."
+          "LSP4IJ 0.21.0, and its main branch, has no Reset Frame for a DAP session: it never sends restartFrame (UP47, fixed by our LSP4IJ #1778, open). IntelliJ's case, through the Reset Frame action, passed with a plugin built from #1778 (run-17331679936087029005) and runs once a release has it."
         ]
       }
     },
