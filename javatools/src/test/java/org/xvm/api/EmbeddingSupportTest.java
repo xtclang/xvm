@@ -22,10 +22,13 @@ import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Phaser;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,12 +38,22 @@ import org.xvm.api.EmbeddingSupport.ConsoleInput;
 import org.xvm.api.EmbeddingSupport.Control;
 import org.xvm.api.EmbeddingSupport.EntryPoint;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener.ErrorInfo;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 
+import org.xvm.compiler.EvalCompiler;
+
+import org.xvm.runtime.Debugger;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -394,6 +407,94 @@ public class EmbeddingSupportTest {
         String output = run("Breaks", "run", List.of(), ConsoleInput.NONE);
 
         assertEquals(List.of("before", "after"), output.lines().filter(line -> !line.isEmpty()).toList());
+    }
+
+    @Test
+    public void codeCompiledWhereARunStoppedSeesItsParametersAndInjectedValuesAndLeavesNoFailure()
+            throws IOException {
+        compileAndStore("""
+                module Evals {
+                    void run() {
+                        show(5);
+                    }
+
+                    void show(Int n) {
+                        @Inject Random random;
+                        assert:debug;
+                        @Inject Console console;
+                        console.print($"{n} {random.int(1)}");
+                    }
+                }
+                """);
+
+        // what the console debugger's E compiles, at the assert:debug, before anything has asked
+        // for the frame's variables: a parameter, a method of an injected value, and a name that
+        // does not resolve, whose lambda must not stay in the class; each compiled expression
+        // adds a lambda, so the class has two before the one that fails, and still two after it
+        var compiled = new ConcurrentHashMap<String, Boolean>();
+        var errors   = new ConcurrentHashMap<String, List<String>>();
+        var before   = new AtomicInteger();
+        var after    = new AtomicInteger();
+        var evaluate = new Debugger() {
+            @Override
+            public int activate(Frame frame, int iPC) {
+                ClassStructure clz = frame.f_function.getContainingClass();
+                compile(frame, "n + 1");
+                compile(frame, "random.int(1)");
+                before.set(lambdaCount(clz));
+                compile(frame, "nope");
+                after.set(lambdaCount(clz));
+                return iPC + 1;
+            }
+
+            @Override
+            public int checkBreakPoint(Frame frame, int iPC) {
+                return Debugger.NONE.checkBreakPoint(frame, iPC);
+            }
+
+            @Override
+            public void onReturn(Frame frame) {
+            }
+
+            @Override
+            public int checkBreakPoint(Frame frame, ExceptionHandle hEx) {
+                return Debugger.NONE.checkBreakPoint(frame, hEx);
+            }
+
+            private void compile(Frame frame, String expression) {
+                // as the console debugger's E wraps the expression
+                String          eval     = "{\nreturn {Object r__ = {\nreturn " + expression
+                                         + ";\n}; return r__.toString();};\n}";
+                EvalCompiler    compiler = new EvalCompiler(frame, eval);
+                MethodStructure lambda   = compiler.createLambda(frame.poolContext().typeString());
+                compiled.put(expression, lambda != null);
+                // only to say why, if an expression that should compile does not
+                errors.put(expression, compiler.getErrors().stream().map(ErrorInfo::getMessageText).toList());
+            }
+
+            private static int lambdaCount(ClassStructure clz) {
+                return clz.getChild("->") instanceof MultiMethodStructure lambdas
+                        ? lambdas.getChildrenCount()
+                        : 0;
+            }
+        };
+
+        var connector = (InterpreterConnector) support.ensureConnector();
+        connector.setDebugger(evaluate);
+        String output;
+        try {
+            output = run("Evals", "run", List.of(), ConsoleInput.NONE);
+        } finally {
+            connector.setDebugger(Debugger.NONE);
+        }
+
+        assertTrue(output.contains("5 0"), output);
+        assertAll(
+            () -> assertTrue(compiled.get("n + 1"), () -> "a parameter: " + errors.get("n + 1")),
+            () -> assertTrue(compiled.get("random.int(1)"), () -> "an injected value: " + errors.get("random.int(1)")),
+            () -> assertFalse(compiled.get("nope"), "a name that does not resolve"),
+            () -> assertEquals(2, before.get(), "the lambdas of the two expressions that compile"),
+            () -> assertEquals(before.get(), after.get(), "the lambdas after the one that does not"));
     }
 
     @Test
