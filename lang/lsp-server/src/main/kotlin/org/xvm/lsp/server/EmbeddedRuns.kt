@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
 import org.xvm.debug.CompletionsState
+import org.xvm.debug.DataBreakpointRequest
+import org.xvm.debug.DataInfoState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -361,6 +363,19 @@ internal class EmbeddedRuns(
             }
         }
     }
+
+    /** Names a variable of a stopped program under the debugger as a data breakpoint's target. */
+    internal fun dataBreakpointInfo(
+        runId: String,
+        reference: Int,
+        name: String,
+    ): CompletableFuture<DataInfoState> = debugged(runId) { worker.dataBreakpointInfo(it, reference, name) }
+
+    /** Replaces the data breakpoints of a running program under the debugger. */
+    internal fun setDataBreakpoints(
+        runId: String,
+        breakpoints: List<DataBreakpointRequest>,
+    ): CompletableFuture<List<BreakpointState>> = debugged(runId) { worker.setDataBreakpoints(it, breakpoints) }
 
     /** Replaces the function breakpoints of a running program under the debugger, each on its line now. */
     internal fun setFunctionBreakpoints(

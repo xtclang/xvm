@@ -10,6 +10,7 @@ import org.xvm.asm.ModuleRepository
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.CompletionState
 import org.xvm.debug.CompletionsState
+import org.xvm.debug.DataBreakpointRequest
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
@@ -66,6 +67,7 @@ import kotlin.time.toJavaDuration
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `setFunctionBreakpoints` (`id`, `request`,
+ * `breakpoints`), `dataBreakpointInfo` (`id`, `request`, `reference`, `name`), `setDataBreakpoints` (`id`, `request`,
  * `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
  * `stepInTargets` (`id`, `request`, `frame`), `stepInto` (`id`, `request`, `thread`, `target`), `restartFrame` (`id`,
  * `request`, `frame`), `stackTrace` (`id`,
@@ -111,6 +113,8 @@ object RunWorker {
                     "stop" -> runs.stop(command["id"].asLong)
                     "setBreakpoints" -> runs.setBreakpoints(command)
                     "setFunctionBreakpoints" -> runs.setFunctionBreakpoints(command)
+                    "dataBreakpointInfo" -> runs.dataBreakpointInfo(command)
+                    "setDataBreakpoints" -> runs.setDataBreakpoints(command)
                     "threads" -> runs.threads(command)
                     "modules" -> runs.modules(command)
                     "stepInTargets" -> runs.stepInTargets(command)
@@ -332,6 +336,19 @@ object RunWorker {
                     "breakpoints",
                     RunWorkerDebug.states(install(debugger, RunWorkerDebug.functionsOf(command.getAsJsonArray("breakpoints")))),
                 )
+            }
+
+        fun dataBreakpointInfo(command: JsonObject) =
+            reply(command) { debugger ->
+                val info = debugger.watchable(command["reference"].asInt, command["name"].asString)
+                info.dataId()?.let { addProperty("dataId", it) }
+                addProperty("description", info.description())
+            }
+
+        fun setDataBreakpoints(command: JsonObject) =
+            reply(command) { debugger ->
+                val data = RunWorkerDebug.dataOf(command.getAsJsonArray("breakpoints"))
+                add("breakpoints", RunWorkerDebug.states(watch(debugger, data)))
             }
 
         fun threads(command: JsonObject) =
@@ -559,6 +576,14 @@ object RunWorker {
                     source.breakpoints.map { SessionDebugger.Line(it.id, it.line, it.condition, it.hitCondition, it.logMessage) },
                 ).map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
 
+        private fun watch(
+            debugger: SessionDebugger,
+            data: List<DataBreakpointRequest>,
+        ): List<BreakpointState> =
+            debugger
+                .setDataBreakpoints(data.map { SessionDebugger.Data(it.id, it.dataId, it.condition, it.hitCondition) })
+                .map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
+
         private fun install(
             debugger: SessionDebugger,
             functions: List<FunctionBreakpointRequest>,
@@ -784,7 +809,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 21
+        const val PROTOCOL = 22
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
