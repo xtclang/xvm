@@ -39,7 +39,9 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import com.intellij.xdebugger.breakpoints.XBreakpoint
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
+import com.intellij.xdebugger.breakpoints.XBreakpointType
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
@@ -890,6 +892,71 @@ object DebugSessionUi {
         }
         return states.toString()
     }
+
+    /**
+     * Adds a DAP function breakpoint on the function [name], with the [condition], as the Breakpoints dialog's "+" and
+     * its DAP Function Breakpoint item do once the name is typed, through the type that LSP4IJ registers (#1780); the
+     * probe finds it by its ID, since LSP4IJ 0.21.0, which it compiles against, has none. False without that type.
+     */
+    @JvmStatic
+    fun addFunctionBreakpoint(
+        project: Project,
+        name: String,
+        condition: String,
+    ): Boolean {
+        @Suppress("UNCHECKED_CAST")
+        val type =
+            XBreakpointType.EXTENSION_POINT_NAME.extensionList.firstOrNull { it.id == FUNCTION_BREAKPOINT }
+                as? XBreakpointType<XBreakpoint<XBreakpointProperties<*>>, XBreakpointProperties<*>> ?: return false
+        ApplicationManager.getApplication().invokeAndWait {
+            val properties = checkNotNull(type.createProperties()) { "No properties for a function breakpoint" }
+            properties.javaClass.getMethod("setName", String::class.java).invoke(properties, name)
+            ApplicationManager.getApplication().runWriteAction {
+                val breakpoint = XDebuggerManager.getInstance(project).breakpointManager.addBreakpoint(type, properties)
+                breakpoint.conditionExpression = XExpressionImpl.fromText(condition)
+            }
+        }
+        return true
+    }
+
+    /**
+     * The function breakpoints, as the module's debug session shows them in the Breakpoints dialog: each one's `state`,
+     * `verified` once the debug adapter installed it, `invalid` with the `message` it gave if it did not, or `pending`.
+     */
+    @JvmStatic
+    fun functionBreakpoints(
+        project: Project,
+        module: String,
+    ): String {
+        val session = checkNotNull(session(project, module) as? XDebugSessionImpl) { "No debug session of $module" }
+        val states = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            XDebuggerManager
+                .getInstance(project)
+                .breakpointManager.allBreakpoints
+                .filter { it.type.id == FUNCTION_BREAKPOINT }
+                .forEach { breakpoint ->
+                    val shown = session.getBreakpointPresentation(breakpoint)
+                    states.add(
+                        JsonObject().apply {
+                            addProperty(
+                                "state",
+                                when {
+                                    shown == null -> "pending"
+                                    shown.errorMessage != null -> "invalid"
+                                    else -> "verified"
+                                },
+                            )
+                            shown?.errorMessage?.let { addProperty("message", it) }
+                        },
+                    )
+                }
+        }
+        return states.toString()
+    }
+
+    /** The ID of LSP4IJ's DAP function breakpoint type (#1780). */
+    private const val FUNCTION_BREAKPOINT = "dap-function-breakpoint"
 
     /** Types [text] at the start of the 1-based [line] of the file [uri], without saving it. */
     @JvmStatic

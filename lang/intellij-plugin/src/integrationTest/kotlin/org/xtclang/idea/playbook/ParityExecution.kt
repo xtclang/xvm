@@ -1291,6 +1291,46 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
+    // TODO LSP4IJ: UP46 — function breakpoints need LSP4IJ's breakpoint type for them (#1780); the catalog keeps X328
+    // not-implemented until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X328 made full
+    case("X328") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                // as the Breakpoints dialog adds it, with a condition on the method's parameter
+                check(debugger.addFunctionBreakpoint(project, data.string("function"), data.string("condition"))) {
+                    "This LSP4IJ has no DAP function breakpoints"
+                }
+                debugger.debug(project, module, uri(data.string("file")), 0)
+
+                // the second call, the first whose n is more than 5, below run()'s line that makes it
+                val (name, line) = data.getAsJsonArray("frame").let { it[0].asString to it[1].asInt }
+                val (caller, callerLine) = data.getAsJsonArray("caller").let { it[0].asString to it[1].asInt }
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops where it enters the method", 60.seconds) {
+                        it["suspended"]?.asBoolean == true && it["line"]?.asInt == line
+                    }
+                val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                check(name in frames[0].string("name") && caller in frames[1].string("name") && frames[1].int("line") == callerLine) {
+                    "Frames: $frames"
+                }
+                val shown = JsonParser.parseString(debugger.functionBreakpoints(project, module)).asJsonArray.map { it.asJsonObject }
+                check(shown.map { it.string("state") } == listOf("verified")) { "Function breakpoints: $shown" }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
     // TODO LSP4IJ: UP47 — Reset Frame needs LSP4IJ's drop-frame handler (#1778); the catalog keeps X329 not-implemented
     // until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X329 made full
     case("X329") { data ->
@@ -1466,6 +1506,17 @@ internal interface DebugSessionProbe {
     ): String
 
     fun resettable(
+        project: Project,
+        module: String,
+    ): String
+
+    fun addFunctionBreakpoint(
+        project: Project,
+        name: String,
+        condition: String,
+    ): Boolean
+
+    fun functionBreakpoints(
         project: Project,
         module: String,
     ): String
