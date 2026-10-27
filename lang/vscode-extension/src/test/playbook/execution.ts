@@ -1607,7 +1607,8 @@ export function debugSessionCases(): void {
                 // the frames that the Call Stack view offers Restart Frame on: not run(), which the runtime called
                 const frames = await stack();
                 assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
-                assert.deepStrictEqual(frames.map(frame => frame.canRestart === true), data.canRestart);
+                // false is said, since a frame that does not say it cannot restart can
+                assert.deepStrictEqual(frames.map(frame => frame.canRestart), data.canRestart);
 
                 // as Restart Frame does: its caller calls it again, and it stops at its first line
                 vscode.debug.removeBreakpoints([breakpoint]);

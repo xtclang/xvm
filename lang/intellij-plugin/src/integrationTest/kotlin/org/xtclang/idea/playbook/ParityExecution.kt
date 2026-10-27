@@ -1290,6 +1290,50 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    // TODO LSP4IJ: UP47 — Reset Frame needs LSP4IJ's drop-frame handler (#1778); the catalog keeps X329 not-implemented
+    // until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X329 made full
+    case("X329") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops in inner()", 60.seconds) { it["suspended"]?.asBoolean == true }
+
+                // the frames that the Frames view offers Reset Frame on: not run(), which the runtime called
+                val offered = JsonParser.parseString(debugger.resettable(project, module)).asJsonArray.map { it.asBoolean }
+                check(offered == data.getAsJsonArray("canRestart").map { it.asBoolean }) { "Reset Frame offered: $offered" }
+
+                // as Reset Frame does: its caller calls it again, and it stops at its first line
+                debugger.clearBreakpoints(project)
+                debugger.resetFrame(project, module, data.string("restart"))
+                val (name, line) = data.getAsJsonArray("frame").let { it[0].asString to it[1].asInt }
+                debugger.awaitState(project, module, "the restarted frame stops at its first line", 60.seconds) {
+                    it["suspended"]?.asBoolean == true &&
+                        it["line"]?.asInt == line &&
+                        it
+                            .getAsJsonArray("frames")
+                            ?.firstOrNull()
+                            ?.asJsonObject
+                            ?.string("name")
+                            ?.contains(name) == true
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                val console = exited.string("console")
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in console) { "Console after Resume: $console" }
+                check(console.split(data.string("printed")).size - 1 == 2) { "Console after Resume: $console" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1420,6 +1464,17 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
     ): String
+
+    fun resettable(
+        project: Project,
+        module: String,
+    ): String
+
+    fun resetFrame(
+        project: Project,
+        module: String,
+        name: String,
+    )
 
     fun smartStepInto(
         project: Project,
