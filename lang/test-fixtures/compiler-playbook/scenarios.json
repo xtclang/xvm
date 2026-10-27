@@ -10021,6 +10021,35 @@
         "limitations": []
       }
     },
+    "X325": {
+      "title": "a stop lists every fiber of the program, with what one that does not wait at a line does, and the stack of a fiber that waits for another service",
+      "manual": [
+        "How each editor lists the threads and marks the stopped one is checked manually; VS Code checks the threads and stackTrace answers, IntelliJ the Frames view's threads and frames."
+      ],
+      "values": {
+        "file": "Waits.x",
+        "module": "Waits",
+        "source": "module Waits {\n    service Worker {\n        Int done;\n\n        void work() {\n            for (Int i : 0 ..< 200_000) {\n                ++done;\n            }\n        }\n\n        Int finished() = done;\n    }\n\n    Int run() {\n        Worker worker = new Worker();\n        worker.work^();\n        @Inject Console console;\n        console.print(\"working\");\n        Int done = worker.finished();\n        console.print($\"done {done}\");\n        return done % 256;\n    }\n}\n",
+        "breakpointLine": 7,
+        "condition": "done == 100000",
+        "threads": [
+          "Worker",
+          "Waits (waiting)"
+        ],
+        "waitingFrames": [
+          [
+            "Waits.run",
+            19
+          ]
+        ],
+        "output": "done 200000",
+        "exitCode": 64
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

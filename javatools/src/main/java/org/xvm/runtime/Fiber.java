@@ -169,6 +169,10 @@ public class Fiber
         return f_lId;
     }
 
+    public ServiceContext getContext() {
+        return f_context;
+    }
+
     public FiberStatus getStatus() {
         return m_status;
     }

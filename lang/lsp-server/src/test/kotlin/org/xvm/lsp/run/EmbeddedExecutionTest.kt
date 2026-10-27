@@ -847,6 +847,72 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a stop lists the fibers that do not wait at a line, with what they do, and the stack of one that waits`() {
+        CompilerTestSupport.configure()
+        val module = source("Waits.x", PROGRAM.trimIndent().replace("Program", "Waits"))
+        val path = directory.resolve("Waits.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Waits", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Waits", "moduleUri": "$module"}""")
+            // by then, run() has asked the busy worker for its count, and waits for the answer
+            sessions.request(
+                id,
+                3,
+                "setBreakpoints",
+                """{"source": {"path": "$path"}, "breakpoints": [{"line": 7, "condition": "done == 100000"}]}""",
+            )
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "threads")
+            val threads =
+                client
+                    .until(id) { it.response == "threads" }
+                    .last()["body"]
+                    .asJsonObject["threads"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(threads.map { it["name"].asString }).containsExactly("Worker", "Waits (waiting)")
+            assertThat(threads[0]["id"].asInt).isEqualTo(thread)
+
+            // the waiting fiber's own stack, where it asks the worker; its frame has no variables
+            sessions.request(id, 6, "stackTrace", """{"threadId": ${threads[1]["id"].asInt}}""")
+            val frames =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(frames.map { it["name"].asString to it["line"].asInt }).containsExactly("Waits.run" to 19)
+            sessions.request(id, 7, "scopes", """{"frameId": ${frames[0]["id"].asInt}}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "scopes" }
+                    .last()["body"]
+                    .asJsonObject["scopes"]
+                    .asJsonArray,
+            ).isEmpty()
+
+            sessions.request(id, 8, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 9, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(200_000 % 256)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a frame in a bundled library's code shows the library's bundled source, read-only, at its line`() {
         CompilerTestSupport.configure()
         val library = source("Library.x", LIBRARY.trimIndent())

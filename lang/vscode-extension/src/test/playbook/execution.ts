@@ -1370,6 +1370,53 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X325', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            // by then, run() has asked the busy worker for its count, and waits for the answer
+            const breakpoint = new vscode.SourceBreakpoint(
+                new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)), true, data.condition);
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The worker stops at its count');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+
+                // the stopped fiber first, then run()'s, which waits for the worker, with its own stack
+                const threads = (await session.customRequest('threads')).threads as { id: number; name: string }[];
+                assert.deepStrictEqual(threads.map(thread => thread.name), data.threads);
+                assert.strictEqual(threads[0].id, dapEvents(sent, 'stopped')[0].body?.threadId);
+                const frames = (await session.customRequest('stackTrace', { threadId: threads[1].id })).stackFrames as { name: string; line: number }[];
+                assert.deepStrictEqual(frames.map(frame => [frame.name, frame.line]), data.waitingFrames);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1397,7 +1444,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X324 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X325 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;
