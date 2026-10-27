@@ -5,7 +5,8 @@ Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delive
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
 2026-10-22, and R7, the runtime debugger, was completed on 2026-10-26, both in VS Code and
 IntelliJ. The release gate (R8) was completed on 2026-10-27, without a Windows soak, which is not
-planned, and parts of R9, and R10, are done. The audit in
+planned. R9 and R10 are done, and so are R11's Run to Cursor, step into a call and restart of a
+frame, and R12's threads, library sources and modules. The audit in
 the next section describes the code before the first delivery.
 
 ## First delivery (2026-10-15)
@@ -502,7 +503,7 @@ this bridge; they cannot be inferred from compiler type hints.
   and #716, #717, #718, #724 (with #730's fix), #731 and #693 each pass CI on their own heads,
   rebased onto master `ddaa3d0a4`.
   Not planned (decided 2026-10-27): a soak on Windows, which CI's `lang` checks do not run on.
-- [ ] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
+- [x] **R9 — Breakpoint kinds.** Conditional breakpoints (the console debugger's `BC`), hit counts and
   logpoints, which print without stopping; function breakpoints, which stop when a method is
   entered; exception breakpoints by type (the console's `BE+ <exception>`), with `exceptionInfo`
   for the editors' exception views; and data breakpoints, which stop when a property or field
@@ -515,7 +516,11 @@ this bridge; they cannot be inferred from compiler type hints.
   *Function breakpoints (2026-10-27):* `setFunctionBreakpoints` stops at the first line of the
   program's methods of a name, such as `twice` or `Point.move`, with a condition and hit count, and
   answers with the first such method's line (worker protocol 20, shared X328); IntelliJ has none
-  (UP46). Still open in R9: data breakpoints.
+  (UP46).
+  *Data breakpoints (2026-10-27):* `dataBreakpointInfo` names a field of a mutable object, and
+  `setDataBreakpoints` stops the program at the next line of the object's service once the field
+  has changed, saying from what to what (worker protocol 22, shared X330); only writes. IntelliJ
+  has none (UP48). R9 is complete.
 - [x] **R10 — Values.** Value formats such as hexadecimal (the console's `V`) and identity codes that
   tell instances apart (`DI`); a value's `toString()` on demand (`DS`), which runs code and so uses
   R7's evaluation; computed properties as lazy variables, where only fields showed before; paging of
@@ -576,5 +581,5 @@ R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 pre
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
 R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
 and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X329, cover the editor side of R5–R8, R11 and R12; R8 also
+playbook's execution and debug cases, among X280–X330, cover the editor side of R5–R8, R11 and R12; R8 also
 needs the server's soak and release evidence.
