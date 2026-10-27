@@ -311,8 +311,12 @@ come from are in parentheses.
   IntelliJ: with 0.21.0, editing Evaluate Expression's expression fails IntelliJ's Document/PSI
   check (UP37), so it checks the names offered; with #1763 it also checks the text a chosen one
   makes.
-- [ ] R11: Run to Cursor in both editors (`SL`); VS Code's sets a temporary breakpoint, so check
-  whether it already works.
+- [x] R11: Run to Cursor in both editors (`SL`) (2026-10-27; shared X323). Both editors add a
+  temporary breakpoint and continue, which the server already handled: `EmbeddedExecutionTest` sends
+  that sequence, on a line in a loop, and the program stops there once and then runs to its exit.
+  VS Code passes X323, whose program counts to 3,000,000 before the cursor's line. IntelliJ's is
+  partial: LSP4IJ removes the temporary breakpoint once the continue request is answered, so the
+  program runs past the cursor (UP44).
 - [ ] R11: choosing which call on a line to step into (`stepInTargets`).
 - [ ] R11: restarting a frame (`T`).
 - [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
@@ -519,6 +523,16 @@ passes with the workaround disabled. The gates are in
   `supportsCancelRequest` (LSP4J's sends LSP's `$/cancelRequest` notification, which a DAP endpoint
   writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
   cancels no DAP request today, so no adapter gets that event.
+
+### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): not filed
+
+- [ ] UP44 (2026-10-27): `DAPDebugProcess.runToPosition()` registers a temporary breakpoint and
+  resumes, and `resume(context, position)` removes it once the `continue` request is answered, not
+  when the program stops there (0.21.0 and `main`, `42f1f16e`). A program that takes longer to reach
+  the cursor than that round trip runs past it: with the cursor two statements after the stop,
+  IntelliJ stopped there; after a count to 3,000,000 it ran to its exit. VS Code 1.140 removes its
+  temporary breakpoint when the session stops. To do: an LSP4IJ issue and a fix that removes the
+  temporary breakpoint at the next stop or when the session ends; then X323 is full in IntelliJ.
 
 ### A DAP completion's `start` (UP43): not filed
 
