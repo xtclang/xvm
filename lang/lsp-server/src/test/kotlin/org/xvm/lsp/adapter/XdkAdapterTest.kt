@@ -250,7 +250,7 @@ class XdkAdapterTest {
             var range: SelectionRange? = innermost
             var steps = 0
             while (range?.parent != null) {
-                val parent = range.parent!!
+                val parent = range.parent
                 assertThat(parent.range.start.line).isLessThanOrEqualTo(range.range.start.line)
                 assertThat(parent.range.end.line).isGreaterThanOrEqualTo(range.range.end.line)
                 range = parent
