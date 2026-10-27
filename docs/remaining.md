@@ -348,7 +348,10 @@ come from are in parentheses.
   nor when it or a frame above it is native or has a continuation, nor at an exception's stop
   (worker protocol 21). VS Code offers it in the Call Stack view; IntelliJ has no Reset Frame for
   the session (UP47), so X329 is not implemented there.
-- [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
+- [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped. Not built
+  (decided 2026-10-27): it needs DAP's `singleThread`, which neither editor sends (UP49: VS Code
+  [#166450](https://github.com/microsoft/vscode/issues/166450), open since 2022; LSP4IJ none),
+  and a stop that lets one service run while the rest stay held, which no editor could reach.
 - [x] R12: every service and fiber in Threads, with their containers (`VF`) (2026-10-27; shared
   X325). At a stop, `threads` lists the fibers that wait at a line first, as before, then the other
   fibers of the program's services, in its own container and those nested in it, in the order the
@@ -620,6 +623,13 @@ passes with the workaround disabled. The gates are in
   open, `62c4a53e`): a DAP drop-frame handler that offers Reset Frame on a frame that can restart,
   sends `restartFrame`, and resumes the session until the `restart` stop. To do: a native check of
   X329 with a plugin built from it, then, after a release with it, implement IntelliJ's X329.
+
+### VS Code and LSP4IJ: no single-thread execution (UP49): open upstream
+
+- [ ] UP49 (2026-10-27): neither editor sends `singleThread` with `continue` or a step, so they
+  always resume every fiber; VS Code's request
+  [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
+  last item waits on it. To do: build it once an editor sends `singleThread`.
 
 ### LSP4IJ: no data breakpoints (UP48): not filed
 

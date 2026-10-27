@@ -551,6 +551,9 @@ this bridge; they cannot be inferred from compiler type hints.
   console's `T` does, and the caller makes the call again, stopping at its first line with the
   reason `restart`; `canRestart` says which frames can (worker protocol 21, shared X329). IntelliJ
   has no Reset Frame for the session (UP47).
+  *One fiber at a time (2026-10-27):* not built. Neither editor sends DAP's `singleThread` (UP49,
+  VS Code #166450), so continuing, stepping or pausing one fiber while the others stay stopped
+  would be reachable from no editor; it waits on one that sends it.
 - [ ] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
   containers, also those that run or wait for a reply (the console's `VF`), not only those stopped
   at a line, and thread events as they start and end; frames whose source file is not on the
