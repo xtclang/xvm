@@ -380,6 +380,23 @@ public class EmbeddingSupportTest {
     }
 
     @Test
+    public void assertDebugContinuesSinceAnEmbeddedRunHasNoDebugger() throws IOException {
+        compileAndStore("""
+                module Breaks {
+                    void run() {
+                        @Inject Console console;
+                        console.print("before");
+                        assert:debug;
+                        console.print("after");
+                    }
+                }
+                """);
+        String output = run("Breaks", "run", List.of(), ConsoleInput.NONE);
+
+        assertEquals(List.of("before", "after"), output.lines().filter(line -> !line.isEmpty()).toList());
+    }
+
+    @Test
     public void consoleInputIsReadLineByLineAndEndsWithAnEmptyLine() throws IOException {
         compileAndStore(readerModule("Reader"));
         String output = run("Reader", "run", List.of(),

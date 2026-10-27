@@ -20,6 +20,7 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
 
+import org.xvm.runtime.Debugger;
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -54,6 +55,7 @@ class InterpreterControl
      */
     static Connector createConnector(ModuleRepository repository) {
         InterpreterConnector connector = new InterpreterConnector(repository);
+        connector.setDebugger(Debugger.NONE);
         connector.loadModule("runner.xtclang.org");
         connector.start(null);
         return connector;

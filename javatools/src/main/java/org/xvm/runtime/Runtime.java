@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -43,6 +44,13 @@ public class Runtime {
                 .name("IOWorker@", 0)
                 .factory();
         f_executorIO = Executors.newThreadPerTaskExecutor(factoryIO);
+
+        // the debugger can be turned off by a system property, unless a host sets one, for example:
+        //      JAVA_OPTS=-Dorg.xvm.runtime.debugger=off xec TestSimple
+        // the console debugger is not made here: it reads the user's preferences when it is made
+        if ("off".equals(System.getProperty("org.xvm.runtime.debugger"))) {
+            m_debugger = Debugger.NONE;
+        }
     }
 
     public void start() {
@@ -123,6 +131,29 @@ public class Runtime {
         m_fDebugger = fActive;
     }
 
+    /**
+     * @return the debugger of this runtime's services: the one the host set, else
+     *         {@link Debugger#NONE} if the system property {@code org.xvm.runtime.debugger=off}
+     *         turned it off, else the terminal {@link DebugConsole}, which then stays the choice
+     */
+    public Debugger getDebugger() {
+        Debugger debugger = m_debugger;
+        if (debugger == null) {
+            m_debugger = debugger = DebugConsole.INSTANCE;
+        }
+        return debugger;
+    }
+
+    /**
+     * Set the debugger of this runtime's services; a host without a terminal for the
+     * {@link DebugConsole} sets {@link Debugger#NONE}.
+     *
+     * @param debugger  the debugger to use
+     */
+    public void setDebugger(Debugger debugger) {
+        m_debugger = Objects.requireNonNull(debugger);
+    }
+
     // ----- constants and fields ------------------------------------------------------------------
 
     /**
@@ -154,4 +185,10 @@ public class Runtime {
      * The "debugger is active" flag.
      */
     private boolean m_fDebugger;
+
+    /**
+     * The debugger the host set, {@link Debugger#NONE} if the system property turned it off, or
+     * the {@link DebugConsole} once it is chosen; null until one of them.
+     */
+    private volatile Debugger m_debugger;
 }
