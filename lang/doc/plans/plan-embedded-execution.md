@@ -541,6 +541,11 @@ this bridge; they cannot be inferred from compiler type hints.
   at a line, and thread events as they start and end; frames whose source file is not on the
   machine, such as library code, served through the `source` request from the bundled XDK's
   sources; and the loaded modules (`modules`, `loadedSources`).
+  *Library sources (2026-10-27):* a frame of a bundled XDK library's code is in the library's
+  bundled source, the read-only copy that navigation opens, not through the `source` request: the
+  editors' language features work there too. Frames carry their module and source path (worker
+  protocol 17), and a frame of another module's code no longer joins the program's source directory
+  to the class's path. Shared X324 passes in both editors.
 - [ ] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
   are refused now; debugging tests; and attaching to a program that already runs.
 
@@ -554,5 +559,5 @@ R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 pre
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
 R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
 and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X323, cover the editor side of R5–R8 and R11; R8 also
+playbook's execution and debug cases, among X280–X324, cover the editor side of R5–R8, R11 and R12; R8 also
 needs the server's soak and release evidence.
