@@ -1,11 +1,14 @@
 package org.xtclang.idea.playbook.probe
 
 import com.google.gson.JsonArray
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.intellij.codeInsight.CodeInsightSettings
 import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.hint.HintManager
+import com.intellij.codeInsight.hint.HintUtil
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.impl.LookupImpl
@@ -30,6 +33,7 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
@@ -73,9 +77,16 @@ import com.intellij.xdebugger.impl.ui.tree.nodes.XValueGroupNodeImpl
 import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl
 import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
 import com.intellij.xdebugger.stepping.XSmartStepIntoVariant
+import com.redhat.devtools.lsp4ij.dap.settings.UserDefinedDebugAdapterServerSettings
+import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
+import org.eclipse.lsp4j.debug.Module
+import org.eclipse.lsp4j.debug.Source
+import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
+import java.awt.Window
+import java.util.TreeMap
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -631,6 +642,148 @@ object DebugSessionUi {
         ApplicationManager.getApplication().invokeAndWait { shown = HintManager.getInstance().hasShownHintsThatWillHideByOtherHint(false) }
         return shown
     }
+
+    /** The texts of the editor hints that show, such as LSP4IJ's where an exception stopped the program, without HTML. */
+    @JvmStatic
+    fun hintTexts(): String {
+        val texts = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            Window.getWindows().filter { it.isShowing }.forEach { window ->
+                UIUtil
+                    .uiTraverser(window)
+                    .filter(HintUtil.HintLabel::class.java)
+                    .filter { it.isShowing }
+                    .forEach { texts.add(StringUtil.removeHtmlTags(it.text)) }
+            }
+        }
+        return texts.toString()
+    }
+
+    /** Pauses the module's running session, as the Pause Program action does. */
+    @JvmStatic
+    fun pause(
+        project: Project,
+        module: String,
+    ) {
+        checkNotNull(session(project, module)) { "No debug session of $module" }.pause()
+    }
+
+    /** Stops the module's session, as the Stop action does. */
+    @JvmStatic
+    fun stopSession(
+        project: Project,
+        module: String,
+    ) {
+        checkNotNull(session(project, module)) { "No debug session of $module" }.stop()
+    }
+
+    /**
+     * Sets the Ecstasy debug adapter's exception breakpoint filters as LSP4IJ's exception breakpoints panel does when a
+     * filter is checked or unchecked and given a condition, for the sessions that start from now on: [filters] is a JSON
+     * object of filter IDs, each with its condition, empty for none, or null to uncheck it, and `null` returns the
+     * filters to the adapter's defaults. Returns the filters as they were, in the same form.
+     */
+    @JvmStatic
+    fun exceptionFilters(filters: String): String {
+        val settings = UserDefinedDebugAdapterServerSettings.getInstance()
+        val previous = settings.getFilterSettings(XtcDebugAdapterFactory.SERVER_ID)?.takeIf { it.exceptionBreakpointsFilters != null }
+        val was =
+            previous?.let {
+                val conditions = filterConditions(it)
+                JsonObject().apply {
+                    it.exceptionBreakpointsFilters.forEach { filter ->
+                        if (filter.default_ ==
+                            true
+                        ) {
+                            addProperty(filter.filter, conditions[filter.filter].orEmpty())
+                        } else {
+                            add(filter.filter, JsonNull.INSTANCE)
+                        }
+                    }
+                }
+            }
+        val updated = UserDefinedDebugAdapterServerSettings.FilterItemSettings()
+        JsonParser.parseString(filters).takeIf { it.isJsonObject }?.asJsonObject?.let { wanted ->
+            updated.exceptionBreakpointsFilters =
+                wanted.keySet().map { id ->
+                    ExceptionBreakpointsFilter().apply {
+                        filter = id
+                        default_ = !wanted[id].isJsonNull
+                    }
+                }
+            // TODO LSP4IJ: UP34 — conditions came with #1760, after 0.21.0, which the probe compiles against
+            val conditions =
+                wanted.entrySet().filter { !it.value.isJsonNull && it.value.asString.isNotEmpty() }.associate {
+                    it.key to
+                        it.value.asString
+                }
+            if (conditions.isNotEmpty()) {
+                updated.javaClass.getMethod("setExceptionBreakpointsFilterConditions", Map::class.java).invoke(updated, TreeMap(conditions))
+            }
+        }
+        settings.setFilterSettings(XtcDebugAdapterFactory.SERVER_ID, updated)
+        return was?.toString() ?: "null"
+    }
+
+    /**
+     * The Loaded Sources and Modules views of the module's session, as LSP4IJ shows them (#1774): whether each view is
+     * there, the `sources` with their `name` and `path`, and the `modules` with their `name` and `isUserCode`.
+     */
+    @JvmStatic
+    fun loadedSources(
+        project: Project,
+        module: String,
+    ): String {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val process = session.debugProcess
+        val state = JsonObject()
+        ApplicationManager.getApplication().invokeAndWait {
+            state.addProperty("sourcesShown", session.ui?.findContent(LOADED_SOURCES) != null)
+            state.addProperty("modulesShown", session.ui?.findContent(MODULES) != null)
+        }
+        val sources = call(checkNotNull(call(process, "getLoadedSourcesPanel")), "getSources") as List<*>
+        state.add(
+            "sources",
+            JsonArray().apply {
+                sources.filterIsInstance<Source>().forEach { source ->
+                    add(
+                        JsonObject().apply {
+                            addProperty("name", source.name)
+                            addProperty("path", source.path)
+                        },
+                    )
+                }
+            },
+        )
+        val modules = call(checkNotNull(call(process, "getModulesPanel")), "getModules") as List<*>
+        state.add(
+            "modules",
+            JsonArray().apply {
+                modules.filterIsInstance<Module>().forEach { shown ->
+                    add(
+                        JsonObject().apply {
+                            addProperty("name", shown.name)
+                            addProperty("isUserCode", shown.isUserCode)
+                        },
+                    )
+                }
+            },
+        )
+        return state.toString()
+    }
+
+    /** The conditions of the exception breakpoint filters in LSP4IJ's settings, which LSP4IJ 0.21.0 doesn't have. */
+    private fun filterConditions(settings: UserDefinedDebugAdapterServerSettings.FilterItemSettings): Map<String, String> =
+        runCatching { settings.javaClass.getMethod("getExceptionBreakpointsFilterConditions").invoke(settings) as? Map<*, *> }
+            .getOrNull()
+            .orEmpty()
+            .entries
+            .associate { it.key.toString() to it.value.toString() }
+
+    /** The IDs of LSP4IJ's Loaded Sources and Modules views in the debug session's layout (UP45). */
+    private const val LOADED_SOURCES = "dap-loaded-sources-panel"
+
+    private const val MODULES = "dap-modules-panel"
 
     /** Resumes the module's paused session, as the Resume Program action does. */
     @JvmStatic
