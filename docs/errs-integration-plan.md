@@ -1661,7 +1661,12 @@ to the compiler-only PR:
   `generation=` fields (`a87b63d9de`), an execution worker that does not call `System.gc()`
   (`2668896b26`), tests that find retained objects by walking the object graph instead of waiting
   for the collector (`77e3c4b7c5`), and focused Gradle test tasks (`e91b5e58cb`, `30d9685ff3`).
-  Linux validation of the soak and parity between the editors are in progress.
+  *Done apart from Windows (2026-10-27):* the soak and the `lsp-server` and `javatools` tests pass
+  on Linux, in a Podman container, as well as on macOS; what the Linux runs found is in
+  [remaining.md](remaining.md#r8-runtime-release-gate). VS Code passes all 34 run and debug cases,
+  and IntelliJ 21 of its 32, with the other 11 partial because of the test driver or LSP4IJ
+  0.21.0. The docs are current (`3ac199f192`), and each runtime PR passes CI on its own head.
+  Windows is open: CI's `lang` checks run on `ubuntu-latest` only.
 - [ ] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
   debugger's commands: breakpoint kinds (R9), values (R10), execution control (R11), program
   structure and sources (R12), and debugging beyond embedded runs (R13), listed in the
