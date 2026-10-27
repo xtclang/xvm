@@ -84,6 +84,15 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Test harness stability
 
+- [ ] X259 fails with LSP4IJ 0.21.0 at its last step: once the library is back to `Int`, the
+  consumer's hints don't follow (`run-1660337404068710181`, twice); it passes with the nightly
+  (`run-481780523334095669`). A regression since its last full pass, to be bisected.
+- [ ] X74 and X150 each stopped a full IntelliJ run, with the nightly, and pass alone with both
+  LSP4IJs: X150's popup inspection saw the source change under it ("Before: cl; now: clhis lo").
+- [ ] The server re-announces every library document a client fetched after each dependency change
+  (`ReadOnlyDocuments.refresh()`), though a URI's text can't change, and LSP4IJ fetches them all
+  again; in X146 that filled the LSP console. Decide whether a refresh is needed at all.
+
 - [x] Popup inspection race: a popup that disappears between its presence check and its row read,
   keeping the document-change guard and never replaying an accepted edit. The rows are read and a
   row is chosen in one IDE step each, so a closed popup reads as absent and the wait reopens it
@@ -501,6 +510,16 @@ passes with the workaround disabled. The gates are in
 [the register](errs-upstream-issues.md#register).
 
 - [ ] Watch for the next LSP4IJ release and bump the pin.
+- [x] Checked against LSP4IJ's nightly 0.21.1-20261027-160212 (`main` `0d3c64de`, 2026-10-27), with
+  `-Plsp4ijChannel=nightly` (`4ca6f5993d`): IntelliJ's X308 (UP30), X312 (UP33, UP34), X326 (UP45),
+  X328 (UP46) and X329 (UP47) pass, made full for the runs; X308, X312 and X326 are new
+  (`09ffee515b`). The UP25 and UP26 replacement gates pass. What the nightly changes, and the playbook
+  now takes: library sources open as the server's read-only documents without files (#1749;
+  `8d845d167e`, `3b7c450765`); the console loses X146's versions to their traffic, now read from
+  LSP4IJ's synchronizer (`ddcc6fda9d`); a restart reopens documents with new versions (`b499c339fb`).
+  A full run's IDE was killed by macOS in IDE Starter's thread dump of every minute; the playbook
+  takes none on macOS (`ff06c86d0b`). A full run stopped in turn at X74, X150 and X285 (the IDE
+  crash); X74 and X150 pass alone. Before the bump: pass a full run.
 - [ ] UP01 (#1696): remove the `ConnectionLifetime` guard in `XtcLspServerSupportProvider`; gate:
   `ConnectionLifetimeTest`, the packaged process regressions, START/STARTUP and
   START/START_PROJECTS.
