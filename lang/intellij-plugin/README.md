@@ -807,7 +807,7 @@ Ensure you have the Gradle plugin enabled in IntelliJ (bundled by default).
 
 ## License
 
-Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
+Apache License 2.0 - See [LICENSE](../../LICENSE.md) for details.
 
 The native file-tree Move action now requests compiler proof before moving selected source files
 or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
