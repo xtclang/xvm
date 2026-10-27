@@ -7,6 +7,7 @@ import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.CompletionState
 import org.xvm.debug.CompletionsState
+import org.xvm.debug.DataBreakpointRequest
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
@@ -48,6 +49,25 @@ internal object RunWorkerDebug {
         }
 
     fun sourcesOf(json: JsonArray): List<SourceBreakpoints> = json.map { sourceOf(it.asJsonObject) }
+
+    fun data(data: List<DataBreakpointRequest>) =
+        JsonArray().apply {
+            data.forEach { request ->
+                add(
+                    JsonObject().apply {
+                        addProperty("id", request.id)
+                        addProperty("dataId", request.dataId)
+                        request.condition?.let { addProperty("condition", it) }
+                        request.hitCondition?.let { addProperty("hitCondition", it) }
+                    },
+                )
+            }
+        }
+
+    fun dataOf(json: JsonArray): List<DataBreakpointRequest> =
+        json.map { it.asJsonObject }.map {
+            DataBreakpointRequest(it["id"].asInt, it["dataId"].asString, it["condition"]?.asString, it["hitCondition"]?.asString)
+        }
 
     fun functions(functions: List<FunctionBreakpointRequest>) =
         JsonArray().apply {

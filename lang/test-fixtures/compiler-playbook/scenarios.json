@@ -10167,6 +10167,37 @@
         ]
       }
     },
+    "X330": {
+      "title": "a data breakpoint on a field of an object stops at the next line once the field has changed, and says how",
+      "manual": [
+        "How VS Code adds a data breakpoint is checked manually: Break on Value Change in the Variables view's context menu, on a field of an object; VS Code sends dataBreakpointInfo and setDataBreakpoints as that menu does."
+      ],
+      "values": {
+        "file": "Watched.x",
+        "module": "Watched",
+        "source": "module Watched {\n    Int run() {\n        @Inject Console console;\n        Counter counter = new Counter();\n        counter.add(2);\n        counter.add(3);\n        console.print($\"count={counter.count}\");\n        return counter.count;\n    }\n\n    class Counter {\n        Int count = 0;\n        Int adds  = 0;\n\n        void add(Int n) {\n            count += n;\n            ++adds;\n        }\n    }\n}\n",
+        "breakpointLine": 5,
+        "variable": "counter",
+        "field": "count",
+        "description": "Counter.count",
+        "changes": [
+          "Counter.count changed from 0 to 2",
+          "Counter.count changed from 2 to 5"
+        ],
+        "frame": [
+          "Counter.add",
+          17
+        ],
+        "output": "count=5",
+        "exitCode": 5
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48), so IntelliJ has none to check."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

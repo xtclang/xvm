@@ -1632,6 +1632,71 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X330', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops before the first add()');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
+                const top = async () => ((await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; name: string; line: number }[])[0];
+
+                // the field of the variable's object, as the Variables view's Break on Value Change asks for it
+                const scopes = (await session.customRequest('scopes', { frameId: (await top()).id })).scopes as { variablesReference: number }[];
+                const locals = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables as DapVariable[];
+                const object = locals.find(variable => variable.name === data.variable)!;
+                const info = await session.customRequest('dataBreakpointInfo', { variablesReference: object.variablesReference, name: data.field }) as
+                    { dataId: string | null; description: string; accessTypes?: string[] };
+                assert.strictEqual(info.description, data.description);
+                assert.deepStrictEqual(info.accessTypes, ['write']);
+                const set = await session.customRequest('setDataBreakpoints', { breakpoints: [{ dataId: info.dataId, accessType: 'write' }] }) as
+                    { breakpoints: { verified: boolean }[] };
+                assert.ok(set.breakpoints[0].verified, JSON.stringify(set));
+
+                // each add() stops at the line after the one that changed the field, and says how it changed
+                vscode.debug.removeBreakpoints([breakpoint]);
+                for (const [index, change] of (data.changes as string[]).entries()) {
+                    await vscode.commands.executeCommand('workbench.action.debug.continue');
+                    await eventually(async () => dapEvents(sent, 'stopped').length, count => count > index + 1, `The program stops once ${change}`);
+                    const stopped = dapEvents(sent, 'stopped')[index + 1].body;
+                    assert.strictEqual(stopped?.reason, 'data breakpoint');
+                    assert.strictEqual(stopped?.description, change);
+                    const frame = await top();
+                    assert.deepStrictEqual([frame.name, frame.line], data.frame);
+                }
+
+                await session.customRequest('setDataBreakpoints', { breakpoints: [] });
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1659,7 +1724,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X329 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X330 cases check. */
 interface DapMessage {
     seq?: number;
     request_seq?: number;
@@ -1672,6 +1737,7 @@ interface DapMessage {
         exitCode?: number;
         output?: string;
         reason?: string;
+        description?: string;
         text?: string;
         threadId?: number;
         breakpoint?: { verified: boolean; line?: number };
