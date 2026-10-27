@@ -34,7 +34,9 @@ class MarketplaceListingTest {
 
     @Test
     fun `a listing with a document type is refused`() {
-        val listing = """<?xml version="1.0"?><!DOCTYPE plugin-repository [<!ENTITY v "1.0">]><plugin-repository><version>&v;</version></plugin-repository>"""
+        val listing =
+            """<?xml version="1.0"?><!DOCTYPE plugin-repository [<!ENTITY v "1.0">]>""" +
+                "<plugin-repository><idea-plugin><version>&v;</version></idea-plugin></plugin-repository>"
         assertThrows(SAXParseException::class.java) { MarketplaceListing.newestVersion(listing) }
     }
 }
