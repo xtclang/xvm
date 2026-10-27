@@ -10050,6 +10050,31 @@
         "limitations": []
       }
     },
+    "X326": {
+      "title": "a debugged program's loaded sources are its own files and its libraries' bundled sources, and its modules say which are its own",
+      "manual": [
+        "How VS Code's Loaded Scripts view groups the sources is checked manually; VS Code checks the loadedSources request it sends when the view shows, and the modules answer."
+      ],
+      "values": {
+        "file": "Loaded.x",
+        "module": "Loaded",
+        "source": "module Loaded {\n    void run() {\n        @Inject Console console;\n        Int[] numbers = [7];\n        numbers.forEach(n -> {\n            console.print($\"n={n}\");\n        });\n    }\n}\n",
+        "breakpointLine": 6,
+        "librarySource": "ecstasy/collections/Collection.x",
+        "modules": {
+          "Loaded": true,
+          "ecstasy.xtclang.org": false
+        },
+        "output": "n=7",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45), so IntelliJ has no loaded sources or modules to check."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

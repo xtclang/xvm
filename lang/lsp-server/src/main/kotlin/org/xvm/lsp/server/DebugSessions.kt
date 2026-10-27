@@ -165,6 +165,8 @@ internal class DebugSessions(
 
         override fun threads(runId: String) = runs.threads(runId)
 
+        override fun modules(runId: String) = runs.modules(runId)
+
         override fun stackTrace(
             runId: String,
             threadId: Int,
