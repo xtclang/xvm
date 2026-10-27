@@ -550,7 +550,8 @@ this bridge; they cannot be inferred from compiler type hints.
   *Restart a frame (2026-10-27):* `restartFrame` leaves the frame and those above it, as the
   console's `T` does, and the caller makes the call again, stopping at its first line with the
   reason `restart`; `canRestart` says which frames can (worker protocol 21, shared X329). IntelliJ
-  has no Reset Frame for the session (UP47).
+  has no Reset Frame for the session (UP47); with a plugin built from our LSP4IJ #1778, IntelliJ's
+  X329 passes through the Reset Frame action (`run-17331679936087029005`).
   *One fiber at a time (2026-10-27):* not built. Neither editor sends DAP's `singleThread` (UP49,
   VS Code #166450), so continuing, stepping or pausing one fiber while the others stay stopped
   would be reachable from no editor; it waits on one that sends it.
