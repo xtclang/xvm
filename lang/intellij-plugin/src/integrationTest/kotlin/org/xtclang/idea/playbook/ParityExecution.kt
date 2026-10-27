@@ -1331,6 +1331,44 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
+    // TODO LSP4IJ: UP50 — IntelliJ draws inline values for Ecstasy only with an LSP4IJ that asks the language server
+    // for them and expands the frame's locals; 0.21.0 draws none, so the catalog keeps X331 not-implemented and this
+    // runs only with a plugin built from our local branch (-Plsp4ijPlugin) and X331 made full
+    case("X331") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val file = uri(data.string("file"))
+            try {
+                debugger.debug(project, module, file, data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops in add()", 60.seconds) { it["suspended"]?.asBoolean == true }
+
+                // the values IntelliJ draws at the ends of the lines, each variable of the stopped frame once
+                val expected = data.getAsJsonObject("frameValues").entrySet().associate { it.key to it.value.asString }
+                var shown = listOf<Pair<Int, String>>()
+                awaitUi("the debugger draws the inline values", 30.seconds, { "Inline values: $shown" }) {
+                    shown =
+                        JsonParser.parseString(debugger.inlineValues(project, file)).asJsonArray.map {
+                            it.asJsonObject.int("line") to it.asJsonObject.string("text")
+                        }
+                    // the renderer's text is the name and the value, which it draws with " = " between them
+                    expected.all { (name, value) -> shown.any { (_, text) -> text.filterNot { it in " =" } == "$name$value" } }
+                }
+                check(shown.none { (_, text) -> text.startsWith("count") || text.startsWith("after") }) { "Inline values: $shown" }
+
+                debugger.clearBreakpoints(project)
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
     // TODO LSP4IJ: UP47 — Reset Frame needs LSP4IJ's drop-frame handler (#1778); the catalog keeps X329 not-implemented
     // until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X329 made full
     case("X329") { data ->
@@ -1519,6 +1557,11 @@ internal interface DebugSessionProbe {
     fun functionBreakpoints(
         project: Project,
         module: String,
+    ): String
+
+    fun inlineValues(
+        project: Project,
+        uri: String,
     ): String
 
     fun resetFrame(
