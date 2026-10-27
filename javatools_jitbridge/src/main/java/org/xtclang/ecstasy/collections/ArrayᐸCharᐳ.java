@@ -6,7 +6,7 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
-import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
+import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.numbers.Int64;
@@ -189,8 +189,8 @@ public class ArrayᐸCharᐳ
      */
     @Override
     public ArrayᐸCharᐳ slice$p(Ctx ctx, long n1, long n2) {
-        long lower = nRangeᐸInt64ᐳ.$effectiveLowerBound(ctx, n1, n2);
-        long upper = nRangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
+        long lower = RangeᐸInt64ᐳ.$effectiveLowerBound(ctx, n1, n2);
+        long upper = RangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
         if (lower < 0) {
             throw $oob(ctx, lower);
         }
@@ -210,7 +210,7 @@ public class ArrayᐸCharᐳ
         ctx.alloc(data.length * 8L);
 
         // repack at index zero so String construction can directly use the slice's storage
-        boolean descending = nRangeᐸInt64ᐳ.$descending(n1, n2);
+        boolean descending = RangeᐸInt64ᐳ.$descending(n1, n2);
         long    index      = descending ? upper : lower;
         int     step       = descending ? -1 : 1;
         for (int i = 0; i < size; i++, index += step) {

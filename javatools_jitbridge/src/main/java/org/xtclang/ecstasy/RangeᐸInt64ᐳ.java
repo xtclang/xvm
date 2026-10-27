@@ -4,30 +4,30 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
-public class nRangeᐸInt64ᐳ
+public class RangeᐸInt64ᐳ
         extends nLongRange {
 
-    private nRangeᐸInt64ᐳ(Ctx ctx, long first, long last, boolean firstExclusive, boolean lastExclusive) {
+    private RangeᐸInt64ᐳ(Ctx ctx, long first, long last, boolean firstExclusive, boolean lastExclusive) {
         super(ctx, first, last, firstExclusive, lastExclusive);
     }
 
     // ----- Range / Interval API ------------------------------------------------------------------
 
-    public static nRangeᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long first, long last,
+    public static RangeᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long first, long last,
                                         boolean firstExclusive, boolean _firstExclusive,
                                         boolean lastExclusive, boolean _lastExclusive) {
-        return new nRangeᐸInt64ᐳ(ctx, first, last, !_firstExclusive && firstExclusive,
+        return new RangeᐸInt64ᐳ(ctx, first, last, !_firstExclusive && firstExclusive,
                 !_lastExclusive && lastExclusive);
     }
 
-    long first$get$p(Ctx ctx) {
+    public long first$get$p(Ctx ctx) {
         return $descending ? $upperBound : $lowerBound;
     }
 
     /**
      * The ending bound of the range.
      */
-    long last$get$p(Ctx ctx) {
+    public long last$get$p(Ctx ctx) {
         return $descending ? $lowerBound : $upperBound;
     }
 

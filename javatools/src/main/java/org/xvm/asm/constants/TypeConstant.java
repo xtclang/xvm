@@ -7504,7 +7504,7 @@ public abstract class TypeConstant
     public boolean isJitImplInterface() {
         // Tuple and Type are always represented by native classes
         TypeConstant typeJit = getJitCCType();
-        return typeJit.isInterfaceType()
+        return (typeJit.isInterfaceType() || Builder.isEmbedded(typeJit.getExplicitClassFormat()))
                 && !typeJit.isTuple()
                 && !typeJit.isTypeOfType();
     }

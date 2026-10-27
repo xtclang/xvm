@@ -431,6 +431,10 @@ public class TypeSystem {
                     : new PureBuilder(this, art);
         }
 
+        if (Builder.isEmbedded(type.getExplicitClassFormat())) {
+            return new PureBuilder(this, art);
+        }
+
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
