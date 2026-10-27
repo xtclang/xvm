@@ -392,6 +392,44 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * One `extends` or `delegates` with a list of types, as the reference parser takes them: before, each took
+         * one type. Each extended type can have arguments, each delegated type has its delegate expression. That a
+         * class extends more than one class is a compiler error, not a parse error.
+         */
+        @Test
+        @DisplayName("should parse a list of types after one extends or delegates")
+        fun shouldParseExtendsAndDelegatesLists() {
+            val sources =
+                listOf(
+                    """module Supers { class C extends B(1), D, E("e") {} }""",
+                    "module Delegation { class C(A a, B b) delegates A(a), B(b) {} }",
+                    "module Delegation { class C delegates Map<String, Int>(map), List<Int>(list.reversed()) {} }",
+                    """
+                    module Mixed {
+                        class C(A a, B b) extends P(1), Q implements I, J incorporates M1, M2("x") delegates A(a), B(b) {}
+                    }
+                    """.trimIndent(),
+                    """
+                    module Kinds {
+                        service S extends B(1), D delegates A(a), B(b) {}
+                        const K extends B, D(2) implements I;
+                        mixin M into C extends B(1), D {}
+                    }
+                    """.trimIndent(),
+                    "module json.xtclang.org delegates TextFormat(Schema.DEFAULT), Format(Schema.DEFAULT) {}",
+                )
+
+            for (source in sources) {
+                val result = ts.compile(freshUri(), source)
+
+                assertThat(result.success).describedAs(source).isTrue()
+                assertThat(result.diagnostics)
+                    .describedAs(source)
+                    .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+            }
+        }
+
+        /**
          * Multi-dimensional arrays (issue #453): one size per dimension in construction, as in
          * `manualTests/errors.x`, one `?` per dimension in array types, and one index per
          * dimension in access. The reference parser accepts all of them; that multi-dimensional
