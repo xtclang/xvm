@@ -278,7 +278,13 @@ come from are in parentheses.
 - [x] R9: the call stack and `exceptionInfo`'s stack trace without the embedding runner's frames
   (`TaskRegistry`, `runner.x`), seen in IntelliJ's hint with #1761; the call stack had them too, in both
   editors, under the program's (`ad8268260`, `48dabb5a5`; X304 and X307 check the whole stack).
-- [ ] R9: function breakpoints, which stop when a method is entered.
+- [x] R9: function breakpoints, which stop when a method is entered (2026-10-27; shared X328). One
+  names a method, alone or after its class's or module's, as the call stack names it, such as
+  `twice` or `Point.move`, and stops at the first line of each of the program's methods of that
+  name, not the libraries', with the reason `function breakpoint` and a condition and hit count as
+  a line's has. It is installed at the first such method's line, or says that no method has the
+  name, also when set before the program starts (worker protocol 20). VS Code adds them in its
+  Breakpoints view; IntelliJ has none (UP46), so X328 is not implemented there.
 - [x] R9: exception breakpoints by type (`BE+ <exception>`), and `exceptionInfo` for the editors'
   exception views (`5b2686a2e`, `edeab8f5b`; shared X312 in VS Code). IntelliJ: UP34 (filter
   conditions) and UP33 (`exceptionInfo`).
@@ -582,6 +588,14 @@ passes with the workaround disabled. The gates are in
   Modules tabs, added once the adapter reports any; with a plugin built from it, a temporary X326
   found both, with the program's sources and modules. To do: after a release with it, implement
   IntelliJ's X326.
+
+### LSP4IJ: no function breakpoints (UP46): not filed
+
+- [ ] UP46 (2026-10-27): LSP4IJ has no function breakpoints: it never sends `setFunctionBreakpoints`
+  (0.21.0 and `main`, `42f1f16e`); its breakpoints are lines, disassembly instructions and
+  exception filters. XVM's adapter installs them since R9 (X328), which VS Code's Breakpoints view
+  adds. To do: an LSP4IJ breakpoint type by a function's name, sent to an adapter that advertises
+  `supportsFunctionBreakpoints`, as #1774 is for UP45; then implement IntelliJ's X328.
 
 ### A DAP completion's `start` (UP43): not filed
 
