@@ -393,6 +393,12 @@ internal class EmbeddedRuns(
         target: Int,
     ): CompletableFuture<Boolean> = debugged(runId) { worker.stepInto(it, thread, target) }
 
+    /** Restarts a stopped frame of a program under the debugger, which its caller calls again. */
+    internal fun restartFrame(
+        runId: String,
+        frame: Int,
+    ): CompletableFuture<Boolean> = debugged(runId) { worker.restartFrame(it, frame) }
+
     /** The modules of a program under the debugger, its own and the libraries it uses. */
     internal fun modules(runId: String): CompletableFuture<List<ModuleState>> = debugged(runId, worker::modules)
 
