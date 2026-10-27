@@ -10235,7 +10235,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, never sends textDocument/inlineValue (UP50): IntelliJ's inline values in a DAP session come from LSP4IJ's scan of the editor's TextMate tokens, not from the language server, so there is no answer of the server's to check."
+          "LSP4IJ 0.21.0, and its main branch, never sends textDocument/inlineValue, and shows no inline values for Ecstasy at all: its scan of the editor's TextMate tokens finds none of the frame's variables, and it leaves the frame's Locals group collapsed, so IntelliJ computes no inline data until it is expanded (UP50, LSP4IJ issue #1432). IntelliJ's case passes with a plugin built from our local LSP4IJ branch, which asks the language server and expands the locals (run-1069392384661177323)."
         ]
       }
     },
