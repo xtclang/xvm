@@ -92,6 +92,16 @@ class EmbeddedExecutionTest {
             FOREVER,
             ASK,
             """
+            module Breaker {
+                void run() {
+                    @Inject Console console;
+                    console.print("before");
+                    assert:debug;
+                    console.print("after");
+                }
+            }
+            """,
+            """
             module Waiter {
                 void run() {
                     @Inject Console console;
@@ -317,6 +327,16 @@ class EmbeddedExecutionTest {
         val run = run("Exit", args = listOf("ignored"))
         assertThat(run.code).isEqualTo(42)
         assertThat(run.output).contains("Warning: Method \"run\" does not take any parameters; ignoring the specified arguments.")
+    }
+
+    @Test
+    fun `assert debug does not stop a run, which has no debugger, and the worker serves the next run`() {
+        val run = run("Breaker")
+        assertThat(run.error).isNull()
+        assertThat(run.code).isEqualTo(0)
+        assertThat(run.output.lines().filter { it.isNotEmpty() }).containsExactly("before", "after")
+
+        assertThat(run("Exit").code).isEqualTo(42)
     }
 
     @Test
