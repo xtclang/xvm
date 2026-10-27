@@ -542,6 +542,10 @@ this bridge; they cannot be inferred from compiler type hints.
   *Step into a call (2026-10-27):* `stepInTargets` lists the calls of a stopped frame's line, from its
   ops, and `stepIn` with a `targetId` stops in the chosen one, letting the line's other calls run, or
   at the next line if the line does not make it (worker protocol 19, shared X327).
+  *Restart a frame (2026-10-27):* `restartFrame` leaves the frame and those above it, as the
+  console's `T` does, and the caller makes the call again, stopping at its first line with the
+  reason `restart`; `canRestart` says which frames can (worker protocol 21, shared X329). IntelliJ
+  has no Reset Frame for the session (UP47).
 - [ ] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
   containers, also those that run or wait for a reply (the console's `VF`), not only those stopped
   at a line, and thread events as they start and end; frames whose source file is not on the
@@ -572,5 +576,5 @@ R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 pre
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
 R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
 and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X328, cover the editor side of R5–R8, R11 and R12; R8 also
+playbook's execution and debug cases, among X280–X329, cover the editor side of R5–R8, R11 and R12; R8 also
 needs the server's soak and release evidence.
