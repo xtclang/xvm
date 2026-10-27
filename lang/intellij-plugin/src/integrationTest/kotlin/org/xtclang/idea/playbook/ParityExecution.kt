@@ -1375,8 +1375,8 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP48 — data breakpoints need LSP4IJ's Break on Value Change (our local branch); 0.21.0 has none, so
-    // the catalog keeps X330 not-implemented and this runs only with a plugin built from it (-Plsp4ijPlugin), X330 made full
+    // TODO LSP4IJ: UP48 — data breakpoints need LSP4IJ's Break on Value Change (#1782); 0.21.0 has none, so the catalog
+    // keeps X330 not-implemented and this runs only with a plugin built from it (-Plsp4ijPlugin), X330 made full
     case("X330") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
