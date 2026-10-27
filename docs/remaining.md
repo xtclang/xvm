@@ -333,7 +333,14 @@ come from are in parentheses.
   `stepInTargets` and `stepInto` (protocol 19), and the adapter `stepInTargets` and `stepIn` with a
   `targetId`. VS Code offers it as Step Into Target, IntelliJ as Smart Step Into, which LSP4IJ 0.21.0
   sends as `stepInTargets`.
-- [ ] R11: restarting a frame (`T`).
+- [x] R11: restarting a frame (`T`) (2026-10-27; shared X329). The fiber leaves the frame and those
+  above it, without running more of their code or their `finally` blocks, and the frame's caller
+  makes the call again, with the values its arguments hold now, as the console's `T` does through
+  the runtime's `R_RESET`; the program stops at the call's first line with the reason `restart`.
+  A frame says whether it can (`canRestart`): not when its caller is native, the host's or a run's,
+  nor when it or a frame above it is native or has a continuation, nor at an exception's stop
+  (worker protocol 21). VS Code offers it in the Call Stack view; IntelliJ has no Reset Frame for
+  the session (UP47), so X329 is not implemented there.
 - [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
 - [x] R12: every service and fiber in Threads, with their containers (`VF`) (2026-10-27; shared
   X325). At a stop, `threads` lists the fibers that wait at a line first, as before, then the other
@@ -596,6 +603,14 @@ passes with the workaround disabled. The gates are in
   exception filters. XVM's adapter installs them since R9 (X328), which VS Code's Breakpoints view
   adds. To do: an LSP4IJ breakpoint type by a function's name, sent to an adapter that advertises
   `supportsFunctionBreakpoints`, as #1774 is for UP45; then implement IntelliJ's X328.
+
+### LSP4IJ: no restart frame (UP47): our fix in progress
+
+- [ ] UP47 (2026-10-27): LSP4IJ never sends `restartFrame`, and ignores `supportsRestartFrame` and a
+  frame's `canRestart` (0.21.0 and `main`, `42f1f16e`), so IntelliJ's Reset Frame is not offered in
+  a DAP session. XVM's adapter restarts frames since R11 (X329), which VS Code's Call Stack view
+  offers. Our LSP4IJ change, a DAP drop-frame handler, is in progress. To do: after a release with
+  it, implement IntelliJ's X329.
 
 ### A DAP completion's `start` (UP43): not filed
 
