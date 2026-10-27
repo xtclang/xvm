@@ -5,15 +5,14 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.attribute.SourceFileAttribute;
 import java.lang.constant.ClassDesc;
 
-import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
@@ -42,27 +41,16 @@ public class PureBuilder extends CommonBuilder {
 
     @Override
     protected void assembleInterfaces(ClassBuilder classBuilder) {
-        Set<ClassDesc> interfaces = new LinkedHashSet<>();
-        addContributionInterfaces(typeInfo, interfaces);
-        addSuperInterfaces(interfaces);
+        List<ClassDesc> interfaces = new ArrayList<>();
+
+        addContributionInterfaces(typeInfo, interfaces, true);
+
         interfaces.remove(art.CD());
         if (interfaces.isEmpty()) {
             interfaces.add(CD_Object);
         }
 
-        classBuilder.withInterfaceSymbols(interfaces.toArray(ClassDesc[]::new));
-    }
-
-    /**
-     * Add interface contracts inherited through Ecstasy class inheritance.
-     */
-    protected void addSuperInterfaces(Set<ClassDesc> interfaces) {
-        TypeConstant superType = typeInfo.getExtends();
-        if (superType != null && shouldAddInterface(superType)) {
-            interfaces.add(superType.isJitImplInterface()
-                ? getCCDesc(superType)
-                : ClassDesc.of(typeSystem.ensureJitClassName(superType, ClassfileShape.Pure)));
-        }
+        classBuilder.withInterfaceSymbols(interfaces);
     }
 
     @Override

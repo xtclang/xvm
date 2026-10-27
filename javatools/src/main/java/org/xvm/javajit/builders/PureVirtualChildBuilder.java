@@ -4,12 +4,13 @@ import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.constant.ClassDesc;
 
-import java.util.Set;
+import java.util.Collection;
 
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
@@ -27,7 +28,12 @@ public class PureVirtualChildBuilder extends PureBuilder {
     }
 
     @Override
-    protected void addSuperInterfaces(Set<ClassDesc> interfaces) {
+    protected void addContributionInterfaces(TypeInfo typeInfo, Collection<ClassDesc> interfaces,
+                                             boolean isInterface) {
+        // passing "false" skips the "Extends" contribution; the class-chain traversal below
+        // supplies the inherited child interfaces
+        super.addContributionInterfaces(typeInfo, interfaces, false);
+
         // a phantom has no local declaration, so its underlying identity also counts as inherited
         boolean isPhantom = thisType.isPhantom();
         for (IdentityConstant id : typeInfo.getClassChain().keySet()) {

@@ -701,17 +701,9 @@ public class CommonBuilder
             interfaces.add(getCCDesc(classStruct.getNormalizedType()));
         }
 
-        addContributionInterfaces(typeInfo, interfaces);
-
-        boolean isJitInterface = this.isInterface;
-        if (isEmbedded(classStruct.getFormat())) {
-            // mixin inheritance is Java interface inheritance
-            TypeConstant superType = typeInfo.getExtends();
-            if (superType != null) {
-                interfaces.add(getCCDesc(superType));
-            }
-            isJitInterface = true;
-        }
+        // mixins and annotations are represented as Java interfaces
+        boolean isJitInterface = isInterface || isEmbedded(classStruct.getFormat());
+        addContributionInterfaces(typeInfo, interfaces, isJitInterface);
 
         if (interfaces.isEmpty()) {
             if (isJitInterface && !jitType.equals(pool().typeComparable())) {

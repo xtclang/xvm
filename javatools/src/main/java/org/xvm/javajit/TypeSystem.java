@@ -500,14 +500,9 @@ public class TypeSystem {
         public final String prefix;
     }
 
-    public String ensureJitClassName(TypeConstant type, ClassfileShape shape) {
-        String classname = type.getJitCCName(this);
-        if (shape == ClassfileShape.Impl) {
-            return classname;
-        }
-        return flavorClassName(classname, shape.prefix.charAt(0));
-    }
-
+    /**
+     * Jit artifacts.
+     */
     public record Artifact(
             TypeConstant   type,
             ClassStructure clz,

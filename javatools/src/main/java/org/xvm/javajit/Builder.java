@@ -192,15 +192,30 @@ public abstract class Builder {
 
     /**
      * Add the Java interfaces contributed by Ecstasy implements and incorporates clauses.
+     *
+     * @param isInterface  true iff the generated Java artifact is an interface
      */
-    protected void addContributionInterfaces(TypeInfo typeInfo, Collection<ClassDesc> interfaces) {
+    protected void addContributionInterfaces(TypeInfo typeInfo, Collection<ClassDesc> interfaces,
+                                             boolean isInterface) {
         for (Contribution contrib : typeInfo.getContributionList()) {
+            TypeConstant contribType = contrib.getTypeConstant().removeAccess();
+
+            if (!shouldAddInterface(contribType)) {
+                continue;
+            }
+
             switch (contrib.getComposition()) {
-                case Implements, Incorporates:
-                    TypeConstant contribType = contrib.getTypeConstant().removeAccess();
-                    if (shouldAddInterface(contribType)) {
-                        interfaces.add(getCCDesc(contribType));
+                case Extends: {
+                    if (isInterface) {
+                        interfaces.add(isEmbedded(contribType.getExplicitClassFormat())
+                            ? getCCDesc(contribType)
+                            : ClassDesc.of(TypeSystem.pureInterface(getCCName(contribType))));
                     }
+                    break;
+                }
+
+                case Implements, Incorporates:
+                    interfaces.add(getCCDesc(contribType));
                     break;
             }
         }
