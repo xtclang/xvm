@@ -155,7 +155,7 @@ public class nTuple
      *     Tuple!<> slice(Range<Int> interval)
      * }</pre>
      */
-    public nTuple slice(Ctx ctx, nRangeᐸInt64ᐳ interval) {
+    public nTuple slice(Ctx ctx, RangeᐸInt64ᐳ interval) {
         long lower = interval.$lowerBound + (interval.$lowerExclusive ? 1 : 0);
         long upper = interval.$upperBound + (interval.$upperExclusive ? 0 : 1);
         if (lower < 0 || upper > $values.length) {
@@ -214,7 +214,7 @@ public class nTuple
      *     Tuple!<> removeAll(Interval<Int> interval)
      * }</pre>
      */
-    public nTuple removeAll(Ctx ctx, nRangeᐸInt64ᐳ interval) {
+    public nTuple removeAll(Ctx ctx, RangeᐸInt64ᐳ interval) {
         throw Exception.$unsupported(ctx, "Tuple.removeAll()");
     }
 

@@ -36,14 +36,14 @@ public abstract class nLongRange
     /**
      * True iff the starting bound of the range is exclusive.
      */
-    boolean firstExclusive$get$p(Ctx ctx) {
+    public boolean firstExclusive$get$p(Ctx ctx) {
         return $descending ? $upperExclusive : $lowerExclusive;
     }
 
     /**
      * True iff the ending bound of the range is exclusive.
      */
-    boolean lastExclusive$get$p(Ctx ctx) {
+    public boolean lastExclusive$get$p(Ctx ctx) {
         return $descending ? $lowerExclusive : $upperExclusive;
     }
 

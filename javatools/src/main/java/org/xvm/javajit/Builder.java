@@ -2429,6 +2429,7 @@ public abstract class Builder {
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
+    public static final String N_RangeInt64   = "org.xtclang.ecstasy.RangeᐸInt64ᐳ";
     public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
     public static final String N_Ref          = "org.xtclang.ecstasy.reflect.Ref";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
@@ -2452,7 +2453,6 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
-    public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nTuple       = "org.xtclang.ecstasy.nTuple";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
