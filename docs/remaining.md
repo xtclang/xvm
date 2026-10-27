@@ -627,7 +627,8 @@ passes with the workaround disabled. The gates are in
   open, `d870dd93`): a DAP Function Breakpoint type, added from the Breakpoints dialog's "+", sent
   with `setFunctionBreakpoints` and matched by `hitBreakpointIds`. Checked natively: with a plugin
   built from it, IntelliJ's X328 stops in `Entered.twice` and runs to its exit
-  (`run-11586456472789120644`). To do: after a release with it, make IntelliJ's X328 full.
+  (`run-11586456472789120644`), and again at `bef74868`, rebased onto `main` with #1752
+  (`run-551361467612578401`). To do: after a release with it, make IntelliJ's X328 full.
 
 ### LSP4IJ: no restart frame (UP47): our #1778, merged
 
