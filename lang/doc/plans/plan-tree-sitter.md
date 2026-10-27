@@ -475,9 +475,9 @@ code actions remain open. This historical list is not the compiler's current bac
 
 | Task | Status | Documentation |
 |------|--------|---------------|
-| LSP Server Logging | COMPLETE (2026-01-31) | [tree-sitter/lsp-logging.md](./tree-sitter/lsp-logging.md) |
+| LSP Server Logging | COMPLETE (2026-01-31) | [tree-sitter/lsp-logging.md](https://github.com/xtclang/xvm/blob/8378ebde06999873ed1fd4d688b22c5048e9c555/lang/doc/plans/tree-sitter/lsp-logging.md) |
 | Native Library Staleness | SUPERSEDED (2026-02-02) | Replaced by on-demand build |
-| Adapter Rebuild Behavior | COMPLETE (2026-02-02) | [tree-sitter/adapter-rebuild.md](./tree-sitter/adapter-rebuild.md) |
+| Adapter Rebuild Behavior | COMPLETE (2026-02-02) | [tree-sitter/adapter-rebuild.md](https://github.com/xtclang/xvm/blob/8378ebde06999873ed1fd4d688b22c5048e9c555/lang/doc/plans/tree-sitter/adapter-rebuild.md) |
 | On-Demand Native Build | COMPLETE (2026-02-02) | [tree-sitter/native-build-strategy.md](./tree-sitter/native-build-strategy.md) |
 | Out-of-Process LSP Server | COMPLETE (2026-02-02) | See [§ Out-of-Process LSP Server](#task-out-of-process-lsp-server) below |
 
