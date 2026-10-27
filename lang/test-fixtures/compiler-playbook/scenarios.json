@@ -9992,7 +9992,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44, fixed by our LSP4IJ #1773, open). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
+          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44, fixed by our LSP4IJ #1773, merged 2026-10-27, unreleased; with a plugin built from main at e9f8bb42, Run to Cursor stops at the cursor, run-11586456472789120644). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
         ]
       }
     },
@@ -10071,7 +10071,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45, implemented by our LSP4IJ #1774, open), so IntelliJ has no loaded sources or modules to check."
+          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45, implemented by our LSP4IJ #1774, merged 2026-10-27, unreleased), so IntelliJ has no loaded sources or modules to check."
         ]
       }
     },
@@ -10127,7 +10127,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no function breakpoints: it never sends setFunctionBreakpoints (UP46), so IntelliJ has none to check."
+          "LSP4IJ 0.21.0, and its main branch, has no function breakpoints: it never sends setFunctionBreakpoints (UP46, implemented by our LSP4IJ #1780, open). IntelliJ's case, through a DAP function breakpoint, passed with a plugin built from #1780 (run-11586456472789120644) and runs once a release has it."
         ]
       }
     },
@@ -10163,7 +10163,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no Reset Frame for a DAP session: it never sends restartFrame (UP47, fixed by our LSP4IJ #1778, open). IntelliJ's case, through the Reset Frame action, passed with a plugin built from #1778 (run-17331679936087029005) and runs once a release has it."
+          "LSP4IJ 0.21.0, and its main branch, has no Reset Frame for a DAP session: it never sends restartFrame (UP47, fixed by our LSP4IJ #1778, merged 2026-10-27, unreleased). IntelliJ's case, through the Reset Frame action, passed with a plugin built from #1778 (run-17331679936087029005) and runs once a release has it."
         ]
       }
     },
