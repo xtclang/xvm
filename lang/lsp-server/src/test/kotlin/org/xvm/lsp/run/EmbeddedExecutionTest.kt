@@ -913,6 +913,62 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a debugged program's modules and loaded sources are its own and its libraries', a library's in its bundled source`() {
+        CompilerTestSupport.configure()
+        val library = source("Library.x", LIBRARY.trimIndent())
+        val path = directory.resolve("Library.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Library", "moduleUri": "$library"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 6}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+
+            sessions.request(id, 5, "modules", "{}")
+            val modules =
+                client
+                    .until(id) { it.response == "modules" }
+                    .last()["body"]
+                    .asJsonObject["modules"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .associate { it["name"].asString to it["isUserCode"].asBoolean }
+            assertThat(modules).containsEntry("Library", true).containsEntry("ecstasy.xtclang.org", false)
+
+            sessions.request(id, 6, "loadedSources")
+            val sources =
+                client
+                    .until(id) { it.response == "loadedSources" }
+                    .last()["body"]
+                    .asJsonObject["sources"]
+                    .asJsonArray
+                    .map { Path.of(it.asJsonObject["path"].asString) }
+            assertThat(sources.map { it.toRealPath() }).contains(Path.of(path).toRealPath())
+            // a library's source is the read-only copy bundled with it, which its frames show too
+            val collection = sources.single { it.endsWith(Path.of("ecstasy/collections/Collection.x")) }
+            assertThat(collection).exists()
+            assertThat(collection.startsWith(directory)).isFalse()
+            assertThat(Files.isWritable(collection)).isFalse()
+
+            sessions.request(id, 7, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 8, "continue", """{"threadId": $thread}""")
+            client.until(id) { it.event == "terminated" }
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a frame in a bundled library's code shows the library's bundled source, read-only, at its line`() {
         CompilerTestSupport.configure()
         val library = source("Library.x", LIBRARY.trimIndent())
