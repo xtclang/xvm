@@ -62,6 +62,7 @@ interface Adapter : Closeable {
                             AdapterCapability.MONIKER,
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
+                            AdapterCapability.INLINE_VALUE,
                             AdapterCapability.INLINE_COMPLETION,
                         )
                 }.toSet()
@@ -708,6 +709,31 @@ interface Adapter : Closeable {
         uri: String,
         range: Range,
     ): List<InlayHint>
+
+    /**
+     * Get the variables whose values an editor shows beside the code while the program is stopped.
+     *
+     * **LSP capability:** `textDocument/inlineValue` -- the variables in a range of the document where the
+     * program is stopped, each by an occurrence and a name, which the editor looks up in the stopped frame.
+     *
+     * **Editor activation:** Automatic while debugging; VS Code shows them as `debug.inlineValues` says.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns empty.
+     * - *TreeSitter:* Returns empty (needs scopes).
+     * - *Compiler:* The parameters and local variables of the method or lambda where the program is stopped,
+     *   where its code names them up to the stopped line; not fields, nor variables declared further on.
+     *
+     * @param uri the document URI
+     * @param range the range shown
+     * @param stopped where the program is stopped (0-based line and column)
+     * @return the variables, by occurrence, in source order
+     */
+    fun getInlineValues(
+        uri: String,
+        range: Range,
+        stopped: Position,
+    ): List<InlineValue> = emptyList()
 
     /**
      * Format an entire document.
