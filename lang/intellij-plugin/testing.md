@@ -741,6 +741,25 @@ same. Omit the property to return to the released dependency. Using the built di
 the Gradle plugin's temporary ZIP metadata extraction invalidating configuration-cache reuse.
 No local path or snapshot is committed as a default, and no plugin is published by this task.
 
+To test LSP4IJ fixes that are merged but not released, take LSP4IJ from a Marketplace channel
+instead. `-Plsp4ijChannel=nightly` takes the newest nightly that the IDE line accepts, which
+LSP4IJ's own build publishes to the Marketplace's nightly channel. `-Plsp4ijVersion=<version>`
+names a version, from that channel or, without one, from the default channel:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.compilerPlaybook' \
+  -Plsp4ijChannel=nightly \
+  -PintellijPlaybookCases=X304,X306 \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+The compile classpath, `runIde` and the playbook's IDE all take that version, and the native report
+records it with its channel. Finding the newest nightly asks the Marketplace on each build, so a
+newer one invalidates the configuration cache. Such a version can't be published:
+`verifyPluginInternalApis` accepts only the version that its policy names. `lsp4ijPlugin` takes
+neither property.
+
 The release build retains the Ecstasy compatibility bridges for LSP4IJ 0.21.0.
 An experiment against a locally repaired dependency does not justify removing them from the
 published plugin. Validate each bridge independently, then repeat native acceptance with the

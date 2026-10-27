@@ -213,6 +213,8 @@ class CompilerPlaybookTest {
         require(replacementGates.all { it in setOf("UP25", "UP26") }) { "Unknown replacement gate: $replacementGates" }
         require(replacementGates.isEmpty() || localLsp4ij != null) { "Replacement gates require an explicit local LSP4IJ build" }
         val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
+        // the Marketplace channel of lsp4ijVersion, such as nightly; empty for the default channel
+        val lsp4ijChannel = System.getProperty("xtc.playbook.lsp4ijChannel", "")
         val ideFailures = CopyOnWriteArrayList<String>()
         val selection =
             System
@@ -274,7 +276,7 @@ class CompilerPlaybookTest {
             Files.writeString(run.resolve("ide-paths.txt"), context.paths.toString())
             PluginConfigurator(context).apply {
                 if (localLsp4ij == null) {
-                    installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion)
+                    installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion, lsp4ijChannel.ifEmpty { null })
                 } else {
                     installPluginFromDir(Path.of(localLsp4ij.path))
                 }
@@ -338,6 +340,7 @@ class CompilerPlaybookTest {
                 mapOf(
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
+                    "lsp4ijChannel" to lsp4ijChannel,
                     "localLsp4ij" to localLsp4ij,
                     "replacementGates" to replacementGates,
                     // The shared catalog retains shipping-version limitations. Report the
