@@ -209,12 +209,14 @@ class CompilerPlaybookTest {
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
         val localLsp4ij = System.getProperty("xtc.playbook.lsp4ijPlugin")?.let { LocalLsp4ijPlugin.read(Path.of(it)) }
-        val replacementGates = System.getProperty("xtc.playbook.replacementGates", "").split(',').filter(String::isNotEmpty)
-        require(replacementGates.all { it in setOf("UP25", "UP26") }) { "Unknown replacement gate: $replacementGates" }
-        require(replacementGates.isEmpty() || localLsp4ij != null) { "Replacement gates require an explicit local LSP4IJ build" }
-        val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
         // the Marketplace channel of lsp4ijVersion, such as nightly; empty for the default channel
         val lsp4ijChannel = System.getProperty("xtc.playbook.lsp4ijChannel", "")
+        val replacementGates = System.getProperty("xtc.playbook.replacementGates", "").split(',').filter(String::isNotEmpty)
+        require(replacementGates.all { it in setOf("UP25", "UP26") }) { "Unknown replacement gate: $replacementGates" }
+        require(replacementGates.isEmpty() || localLsp4ij != null || lsp4ijChannel.isNotEmpty()) {
+            "Replacement gates require an LSP4IJ that isn't the release: a local build or a channel's"
+        }
+        val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
         val selection =
             System
