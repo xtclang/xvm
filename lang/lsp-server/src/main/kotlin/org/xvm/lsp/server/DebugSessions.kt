@@ -186,6 +186,11 @@ internal class DebugSessions(
             targetId: Int,
         ) = runs.stepInto(runId, threadId, targetId)
 
+        override fun restartFrame(
+            runId: String,
+            frameId: Int,
+        ) = runs.restartFrame(runId, frameId)
+
         override fun stackTrace(
             runId: String,
             threadId: Int,

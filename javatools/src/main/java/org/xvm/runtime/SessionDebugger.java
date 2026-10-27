@@ -169,7 +169,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * fiber reaches: over a call, in the same frame; into one, in any frame of a fiber that the stepped
  * one calls or is called by; out of one, once its frame returns. A frame that returns, or that an
  * exception leaves, during a step over continues it as a step into, so it stops at its caller's
- * next line. Any other stop, such as a breakpoint, ends the step.
+ * next line. Any other stop, such as a breakpoint, ends the step. A restart of a frame
+ * ({@link #restartFrame}) leaves the frames above it and the frame itself, and its caller makes
+ * the call again, which stops at its first line with the reason "restart".
  *
  * <p><b>Pauses.</b> A pause stops the program at the next line any of its fibers reaches, with the
  * reason "pause", or, asked for before the program starts, at its first line, with the reason
@@ -387,6 +389,11 @@ public final class SessionDebugger implements Debugger {
      * The pause that is pending, or null.
      */
     private volatile Pause pendingPause;
+
+    /**
+     * The restart of a frame in progress, or null.
+     */
+    private volatile Restart restarting;
 
     /**
      * The last exception the program stopped at, which does not stop it again as it unwinds.
@@ -612,10 +619,12 @@ public final class SessionDebugger implements Debugger {
      *                class's own module and the class's source path; null if it is not known
      * @param line    the 1-based line where the frame is, or 0 if it is not known
      * @param module  the name of the class's module, such as {@code "ecstasy.xtclang.org"}, or null
-     * @param source  the class's source path within its module's source directory, such as
-     *                {@code "ecstasy/collections/Collection.x"}, or null
+     * @param source       the class's source path within its module's source directory, such as
+     *                     {@code "ecstasy/collections/Collection.x"}, or null
+     * @param restartable  true if {@link #restartFrame} can restart the frame
      */
-    public record StackFrameInfo(int id, String name, String path, int line, String module, String source) {
+    public record StackFrameInfo(int id, String name, String path, int line, String module, String source,
+                                 boolean restartable) {
     }
 
     /**
@@ -1520,6 +1529,37 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * Resume the stopped program, restarting the specified frame of a fiber that waits at a line:
+     * the fiber leaves the frames above it and the frame itself, without running more of their
+     * code, and the frame's caller makes the call again, with the values its arguments hold now.
+     * The program stops again, with the reason "restart", at the first line of that call's code.
+     *
+     * <p>What the frames left had done stays done, and their "finally" blocks do not run. The stop
+     * ends as at a {@link #resume}; any other stop of the fiber before it leaves its frames ends
+     * the restart, as it ends a step.
+     *
+     * @param frameId  the ID of a frame that {@link StackFrameInfo#restartable} says can restart
+     *
+     * @return false if the program runs, or the frame cannot restart; then nothing changes
+     */
+    public synchronized boolean restartFrame(int frameId) {
+        var current = halt;
+        var at      = current == null ? null : current.frames.get(frameId);
+        if (at == null || !at.restartable()) {
+            return false;
+        }
+
+        // set first, so lines stay checked as the fibers resume; the caller's call is the op it
+        // ran last
+        var frame  = at.frame();
+        var caller = frame.getCaller();
+        restarting = new Restart(frame.getFiber(), caller);
+        stepping   = new Stepping(Step.IN, caller, frame.getFiber(), caller.getPC(), "restart");
+        release();
+        return true;
+    }
+
+    /**
      * @return the calls that the line where the frame waits makes, from the op after its start to
      *         the next line's
      */
@@ -1690,7 +1730,7 @@ public final class SessionDebugger implements Debugger {
         }
 
         // assert:debug stops the program as a breakpoint does
-        return stop(frame, "breakpoint", "assert:debug", List.of(), null, null, f -> terminating ? end(f) : pc + 1);
+        return stop(frame, "breakpoint", "assert:debug", List.of(), null, null, f -> resumes(f, pc));
     }
 
     /**
@@ -1782,6 +1822,11 @@ public final class SessionDebugger implements Debugger {
      * step ends, or for a pause.
      */
     private int line(Frame frame, int pc) {
+        if (restartOf(frame) instanceof Restart restart) {
+            // also once the program is being stopped for good: the runtime's op before the call
+            // takes only these answers, and the fiber ends at the first line of the call
+            return unwind(frame, restart);
+        }
         if (terminating) {
             return end(frame);
         }
@@ -1797,13 +1842,13 @@ public final class SessionDebugger implements Debugger {
         Hit                  hit    = id == null ? Hit.RUN : hit(frame, id);
         Stepping             step   = stepping;
         Pause                pause  = pendingPause;
-        ToIntFunction<Frame> next   = f -> terminating ? end(f) : pc + 1;
+        ToIntFunction<Frame> next   = f -> resumes(f, pc);
         if (hit.stops()) {
             String reason = installed.idsByName().containsValue(id) ? "function breakpoint" : "breakpoint";
             return stop(frame, reason, hit.description(), List.of(id), null, null, next);
         }
         if (step != null && step.endsAt(frame) && startsLine(frame, pc)) {
-            return stop(frame, "step", null, List.of(), step, null, next);
+            return stop(frame, step.reason(), null, List.of(), step, null, next);
         }
         if (pause != null && startsLine(frame, pc) && (!pause.program() || isProgram(frame))) {
             return stop(frame, pause.reason(), null, List.of(), pause, null, next);
@@ -1852,6 +1897,39 @@ public final class SessionDebugger implements Debugger {
         if (step != null && step.frame() == frame && (step.step() != Step.IN || step.call() != Stepping.NO_CALL)) {
             stepping = new Stepping(Step.IN, frame, frame.getFiber());
         }
+    }
+
+    /**
+     * @return the restart of a frame of the specified frame's fiber, if one is in progress
+     */
+    private Restart restartOf(Frame frame) {
+        Restart restart = restarting;
+        return restart != null && restart.fiber() == frame.getFiber() ? restart : null;
+    }
+
+    /**
+     * Leave a frame of a fiber whose frame restarts, up to that frame's caller, which then makes
+     * the call again: for {@link Op#R_RESET}, the runtime goes up to the frame's caller and asks
+     * again before the caller's call, which it makes for {@link Op#R_NEXT}.
+     */
+    private int unwind(Frame frame, Restart restart) {
+        if (frame != restart.caller()) {
+            return Op.R_RESET;
+        }
+        restarting = null;
+        return Op.R_NEXT;
+    }
+
+    /**
+     * @return what a fiber does once its stop at the specified op ends: it ends while the program
+     *         is being stopped for good, leaves its frame if one of its frames restarts, and
+     *         otherwise goes on with the next op
+     */
+    private int resumes(Frame frame, int pc) {
+        if (terminating) {
+            return end(frame);
+        }
+        return restartOf(frame) instanceof Restart restart ? unwind(frame, restart) : pc + 1;
     }
 
     /**
@@ -2039,6 +2117,10 @@ public final class SessionDebugger implements Debugger {
             // stop ends, also while a fiber runs code in it
             int       threadId        = threadId(frame.f_fiber);
             Container nativeContainer = frame.f_context.f_container.getNativeContainer();
+            if (restartOf(frame) != null) {
+                // the fiber stops before it leaves its frames: the restart ends as a step does
+                restarting = null;
+            }
             stepping     = null;
             pendingPause = null;
             current      = new Halt(threadId, exception, nativeContainer.freezeTime() ? nativeContainer : null);
@@ -2253,13 +2335,19 @@ public final class SessionDebugger implements Debugger {
     private List<StackFrameInfo> frames(Halt current, Frame frame) {
         int threadId = threadId(frame.f_fiber);
         var stack    = new ArrayList<StackFrameInfo>();
+
+        // a frame restarts only if neither it nor a frame above it is native or goes on with a
+        // continuation once it returns, which leaving them would skip; not at an exception
+        boolean leavable = current != null && (current.exception == null || current.threadId != threadId);
         for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
             MethodStructure function = stackFrame.function;
+            Frame           at       = stackFrame.frame;
             if (isHost(stackFrame)) {
                 // the host calls the program, so the rest of the stack is the host's own code
                 break;
             }
-            if (function == null || stackFrame.frame != null && stackFrame.frame.isNative()) {
+            leavable = leavable && isLeavable(at, frame.getFiber());
+            if (function == null || at != null && at.isNative()) {
                 continue;
             }
 
@@ -2268,13 +2356,30 @@ public final class SessionDebugger implements Debugger {
             ClassStructure  clazz   = function.getContainingClass();
             ModuleStructure module  = clazz == null ? null : module(clazz);
             LiteralConstant source  = clazz == null ? null : clazz.getSourcePath();
+            boolean         restart = leavable && callsAgain(at.getCaller());
             stack.add(new StackFrameInfo(frameId, functionName(function), sourcePath(function), line,
-                    module == null ? null : module.getName(), source == null ? null : source.getValue()));
-            if (current != null && stackFrame.frame != null && stackFrame.frame.f_fiber == frame.f_fiber) {
-                current.frames.put(frameId, new FrameAt(threadId, stackFrame.frame));
+                    module == null ? null : module.getName(), source == null ? null : source.getValue(), restart));
+            if (current != null && at != null && at.getFiber() == frame.getFiber()) {
+                current.frames.put(frameId, new FrameAt(threadId, at, restart));
             }
         }
         return List.copyOf(stack);
+    }
+
+    /**
+     * @return true if a restart can leave the specified frame of the fiber: one of the fiber's own
+     *         frames that is not native and runs no code after it returns
+     */
+    private static boolean isLeavable(Frame frame, Fiber fiber) {
+        return frame != null && frame.getFiber() == fiber && !frame.isNative() && !frame.hasContinuation();
+    }
+
+    /**
+     * @return true if the specified caller of a frame can make its call again: the program's own
+     *         code, not native, the host's or a run's
+     */
+    private boolean callsAgain(Frame caller) {
+        return caller != null && !caller.isNative() && !isHost(caller) && runOf(caller) == null;
     }
 
     /**
@@ -3637,14 +3742,19 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A step that runs: how, the frame and fiber it started at, and, for a step into one of the
-     * calls of its line, the index of that call's op, or {@link #NO_CALL}.
+     * A step that runs: how, the frame and fiber it started at; for a step into one of the calls
+     * of its line, the index of that call's op, or {@link #NO_CALL}; and the reason of the stop
+     * where it ends, "step", or "restart" for the step into the call that restarts a frame.
      */
-    private record Stepping(Step step, Frame frame, Fiber fiber, int call) {
+    private record Stepping(Step step, Frame frame, Fiber fiber, int call, String reason) {
         static final int NO_CALL = -1;
 
         Stepping(Step step, Frame frame, Fiber fiber) {
             this(step, frame, fiber, NO_CALL);
+        }
+
+        Stepping(Step step, Frame frame, Fiber fiber, int call) {
+            this(step, frame, fiber, call, "step");
         }
 
         /**
@@ -3677,9 +3787,16 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A frame of a waiting fiber, by that fiber's ID.
+     * A frame of a waiting fiber, by that fiber's ID, and whether it can restart.
      */
-    private record FrameAt(int thread, Frame frame) {
+    private record FrameAt(int thread, Frame frame, boolean restartable) {
+    }
+
+    /**
+     * The restart of a frame, in progress: the fiber leaves its frames up to the restarted frame's
+     * caller, which then makes the call again.
+     */
+    private record Restart(Fiber fiber, Frame caller) {
     }
 
     /**

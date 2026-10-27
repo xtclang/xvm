@@ -34,6 +34,7 @@ import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import org.eclipse.lsp4j.debug.PauseArguments
+import org.eclipse.lsp4j.debug.RestartFrameArguments
 import org.eclipse.lsp4j.debug.Scope
 import org.eclipse.lsp4j.debug.ScopePresentationHint
 import org.eclipse.lsp4j.debug.ScopesArguments
@@ -97,7 +98,8 @@ import kotlin.time.Duration.Companion.seconds
  * as pending, and `breakpoint` events report how they were installed. A stop is reported with every fiber
  * stopped; `threads` lists the program's fibers, `stackTrace` their stacks, `scopes` a frame's local variables,
  * `variables` their values and the fields and elements of objects and arrays; `next`, `stepIn` and `stepOut` step a
- * fiber, and the program stops again with the reason `step`, and `continue` resumes it. A breakpoint may have a
+ * fiber, and the program stops again with the reason `step`; `restartFrame` makes a frame's caller call it again,
+ * stopping with the reason `restart`; and `continue` resumes it. A breakpoint may have a
  * condition, an expression whose Boolean value must be True, a hit condition (`N` for the Nth hit, `>= N`, `> N` or
  * `% N`), and a log message, which makes it a logpoint: its message, with each `{expression}` replaced by its value,
  * goes to the console, and the program runs on. A function breakpoint names a method, alone or after its class's, as
@@ -235,6 +237,9 @@ class XtcDebugServer(
         /** Why a fiber cannot be stepped. */
         const val NOT_STOPPED = "That thread is not stopped, so it cannot be stepped."
 
+        /** Why a frame cannot restart: its fiber does not wait at a line, or the frame says it cannot (`canRestart`). */
+        const val NOT_RESTARTABLE = "That frame cannot be restarted."
+
         /**
          * The thread a debugged program shows while it runs and none of its fibers is stopped, named after its module:
          * the one an editor's Pause acts on, which pauses the whole program. Fiber IDs count up from 0.
@@ -309,6 +314,7 @@ class XtcDebugServer(
                 supportsModulesRequest = true
                 supportsLoadedSourcesRequest = true
                 supportsStepInTargetsRequest = true
+                supportsRestartFrame = true
                 completionTriggerCharacters = arrayOf(".")
                 exceptionBreakpointFilters =
                     arrayOf(
@@ -732,6 +738,18 @@ class XtcDebugServer(
         }
     }
 
+    /**
+     * DAP: restartFrame. The frame's caller calls it again, once its fiber has left it and the frames above it without
+     * running more of their code; the program stops again, with the reason `restart`, at the call's first line. Only a
+     * frame with `canRestart` can: one that the program's own code called, of a fiber that waits at a line.
+     */
+    override fun restartFrame(args: RestartFrameArguments): CompletableFuture<Void> {
+        if (!debuggedRunning()) return failed(NOT_RESTARTABLE)
+        return runs
+            .restartFrame(runId, args.frameId)
+            .thenApply<Void> { restarted -> if (restarted) null else throw error(NOT_RESTARTABLE) }
+    }
+
     /** DAP: stepOut. Steps the fiber until its method returns, to the caller's next line. */
     override fun stepOut(args: StepOutArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OUT)
 
@@ -1092,6 +1110,7 @@ class XtcDebugServer(
             }
             line = frame.line + lineBase
             column = if (shown == null) 0 else 1 + columnBase
+            canRestart = frame.restartable
         }
 
     private fun end(sendTerminated: Boolean) {
