@@ -47,6 +47,9 @@ import org.eclipse.lsp4j.InlineCompletionItem
 import org.eclipse.lsp4j.InlineCompletionList
 import org.eclipse.lsp4j.InlineCompletionParams
 import org.eclipse.lsp4j.InlineCompletionTriggerKind
+import org.eclipse.lsp4j.InlineValue
+import org.eclipse.lsp4j.InlineValueParams
+import org.eclipse.lsp4j.InlineValueVariableLookup
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.LinkedEditingRangeParams
@@ -1686,6 +1689,27 @@ class XtcTextDocumentService(
                 adapter.getSemanticTokens(params.textDocument.uri)?.data.orEmpty(),
                 params.range,
             )
+        }
+
+    /**
+     * LSP: textDocument/inlineValue
+     *
+     * The variables whose values the editor shows beside the code while the program is stopped, each a lookup by name,
+     * which the editor makes in the stopped frame; the server reads no values.
+     *
+     * @see org.eclipse.lsp4j.services.TextDocumentService.inlineValue
+     */
+    override fun inlineValue(params: InlineValueParams): CompletableFuture<List<InlineValue>> =
+        supplyAsync(
+            "textDocument/inlineValue",
+            "${params.textDocument.uri} range=${params.range.fmt()}",
+            { result -> "${result.size} values" },
+            uri = params.textDocument.uri,
+        ) {
+            val stopped = params.context.stoppedLocation.start
+            adapter
+                .getInlineValues(params.textDocument.uri, toAdapterRange(params.range), AdapterPosition(stopped.line, stopped.character))
+                .map { InlineValue(InlineValueVariableLookup(it.range.toLsp(), true, it.name)) }
         }
 
     /**

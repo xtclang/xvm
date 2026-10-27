@@ -320,6 +320,7 @@ class XtcLanguageServer(
         refresh.request(
             ClientRefresh.Feature.TOKENS,
             ClientRefresh.Feature.INLAYS,
+            ClientRefresh.Feature.INLINE_VALUES,
             ClientRefresh.Feature.LENSES,
             ClientRefresh.Feature.FOLDING,
         )
@@ -582,6 +583,12 @@ class XtcLanguageServer(
                     AdapterCapability.INLAY_HINT in adapter.capabilities
                 ) {
                     add(ClientRefresh.Feature.INLAYS)
+                }
+                if (
+                    workspace?.inlineValue?.refreshSupport == true &&
+                    AdapterCapability.INLINE_VALUE in adapter.capabilities
+                ) {
+                    add(ClientRefresh.Feature.INLINE_VALUES)
                 }
                 if (
                     workspace?.codeLens?.refreshSupport == true &&
@@ -976,6 +983,10 @@ class XtcLanguageServer(
                     } else {
                         Either.forLeft(true)
                     }
+            }
+
+            if (AdapterCapability.INLINE_VALUE in adapter.capabilities) {
+                inlineValueProvider = Either.forLeft(true)
             }
 
             // documentLinkProvider: URLs in comments / string literals.
