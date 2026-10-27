@@ -671,18 +671,19 @@ passes with the workaround disabled. The gates are in
   built from it, IntelliJ draws the values and X331 passes (`run-4604772112093360200`). To do: after a
   release with it, make IntelliJ's X331 full.
 
-### LSP4IJ: no data breakpoints (UP48): our local branch, not proposed
+### LSP4IJ: no data breakpoints (UP48): our #1782, open
 
 - [ ] UP48 (2026-10-27): LSP4IJ never sends `dataBreakpointInfo` or `setDataBreakpoints` (0.21.0 and
   `main`, `42f1f16e`), so IntelliJ has no breakpoint on a variable's value in a DAP session. XVM's
-  adapter installs them since R9 (X330), which VS Code's Break on Value Change adds. Fixed on our
-  local LSP4IJ branch `feat/dap-data-breakpoints` (2026-10-27, `860f8de6` on `main` `0d3c64de`, not
-  pushed): Break on Value Change in the Variables view asks `dataBreakpointInfo` and adds a DAP data
-  breakpoint, which it sends with `setDataBreakpoints`; one that cannot persist goes with its
-  session. In IntelliJ 2026.2 the action finds the DAP value behind the split debugger's frontend
-  proxy through `XDebuggerTreeBackendOnlyActionBase`. With a plugin built from it, IntelliJ's X330
-  passes (`run-15563293796254899407`, `b6191ffbce`). To do: once it is checked here, propose it
-  upstream; after a release with it, make IntelliJ's X330 full.
+  adapter installs them since R9 (X330), which VS Code's Break on Value Change adds. Fixed by our
+  [#1782](https://github.com/redhat-developer/lsp4ij/pull/1782) (2026-10-27, open, `bf392a08` on
+  `main` `0d3c64de`): Break on Value Change in the Variables view asks `dataBreakpointInfo` and adds
+  a DAP data breakpoint, which it sends with `setDataBreakpoints`; one that cannot persist goes with
+  its session. In IntelliJ 2026.2 the action finds the DAP value behind the split debugger's
+  frontend proxy through `XDebuggerTreeBackendOnlyActionBase`. Its `DAPBreakOnValueChangeSessionTest`
+  runs a debug session against a DAP server in the test's process. With a plugin built from it,
+  IntelliJ's X330 passes (`run-15563293796254899407`, `b6191ffbce`). To do: after a release with
+  it, make IntelliJ's X330 full.
 
 ### A DAP completion's `start` (UP43): not filed
 
