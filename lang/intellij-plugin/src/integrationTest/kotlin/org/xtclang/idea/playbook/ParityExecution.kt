@@ -1331,44 +1331,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP50 — IntelliJ draws inline values for Ecstasy only with an LSP4IJ that asks the language server
-    // for them and expands the frame's locals; 0.21.0 draws none, so the catalog keeps X331 not-implemented and this
-    // runs only with a plugin built from our local branch (-Plsp4ijPlugin) and X331 made full
-    case("X331") { data ->
-        val document = open(data.string("file"), data.string("source"))
-        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
-        clean(document)
-        embedded { _, project ->
-            val debugger = with(driver) { utility(DebugSessionProbe::class) }
-            val module = data.string("module")
-            val file = uri(data.string("file"))
-            try {
-                debugger.debug(project, module, file, data.int("breakpointLine"))
-                debugger.awaitState(project, module, "the program stops in add()", 60.seconds) { it["suspended"]?.asBoolean == true }
-
-                // the values IntelliJ draws at the ends of the lines, each variable of the stopped frame once
-                val expected = data.getAsJsonObject("frameValues").entrySet().associate { it.key to it.value.asString }
-                var shown = listOf<Pair<Int, String>>()
-                awaitUi("the debugger draws the inline values", 30.seconds, { "Inline values: $shown" }) {
-                    shown =
-                        JsonParser.parseString(debugger.inlineValues(project, file)).asJsonArray.map {
-                            it.asJsonObject.int("line") to it.asJsonObject.string("text")
-                        }
-                    // the renderer's text is the name and the value, which it draws with " = " between them
-                    expected.all { (name, value) -> shown.any { (_, text) -> text.filterNot { it in " =" } == "$name$value" } }
-                }
-                check(shown.none { (_, text) -> text.startsWith("count") || text.startsWith("after") }) { "Inline values: $shown" }
-
-                debugger.clearBreakpoints(project)
-                debugger.resume(project, module)
-                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
-                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
-            } finally {
-                debugger.clearBreakpoints(project)
-            }
-        }
-    }
-
     // TODO LSP4IJ: UP47 — Reset Frame needs LSP4IJ's drop-frame handler (#1778); the catalog keeps X329 not-implemented
     // until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X329 made full
     case("X329") { data ->
@@ -1407,6 +1369,101 @@ internal fun ParityScenarios.runEntryCases() {
                 check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
                 check(data.string("output") in console) { "Console after Resume: $console" }
                 check(console.split(data.string("printed")).size - 1 == 2) { "Console after Resume: $console" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    // TODO LSP4IJ: UP48 — data breakpoints need LSP4IJ's Break on Value Change (our local branch); 0.21.0 has none, so
+    // the catalog keeps X330 not-implemented and this runs only with a plugin built from it (-Plsp4ijPlugin), X330 made full
+    case("X330") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops before the first add()", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // as Break on Value Change on the counter's count, in the Variables view's menu, adds it
+                check(debugger.breakOnValueChange(project, "${data.string("variable")}/${data.string("field")}")) {
+                    "Break on Value Change is not offered"
+                }
+                var watched = listOf<JsonObject>()
+                awaitUi("the data breakpoint is installed", 30.seconds, { "Data breakpoints: $watched" }) {
+                    watched = JsonParser.parseString(debugger.dataBreakpoints(project, module)).asJsonArray.map { it.asJsonObject }
+                    watched.singleOrNull()?.let { it.string("text") == data.string("description") && it.string("state") == "verified" } ==
+                        true
+                }
+
+                // each add() stops at the line after the one that changed the count
+                debugger.clearLineBreakpoints(project)
+                val (name, line) = data.getAsJsonArray("frame").let { it[0].asString to it[1].asInt }
+                repeat(data.getAsJsonArray("changes").size()) { index ->
+                    debugger.resume(project, module)
+                    debugger.awaitState(project, module, "change ${index + 1} stops the program", 60.seconds) {
+                        it["suspended"]?.asBoolean == true &&
+                            it["line"]?.asInt == line &&
+                            it
+                                .getAsJsonArray("frames")
+                                ?.firstOrNull()
+                                ?.asJsonObject
+                                ?.string("name")
+                                ?.contains(name) == true
+                    }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+                // the adapter's data ID lasts only the session, so the breakpoint goes with it
+                awaitUi("the data breakpoint goes with the session", 30.seconds) {
+                    JsonParser.parseString(debugger.dataBreakpoints(project, module)).asJsonArray.isEmpty
+                }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    // TODO LSP4IJ: UP50 — IntelliJ draws inline values for Ecstasy only with an LSP4IJ that asks the language server
+    // for them and expands the frame's locals; 0.21.0 draws none, so the catalog keeps X331 not-implemented and this
+    // runs only with a plugin built from our local branch (-Plsp4ijPlugin) and X331 made full
+    case("X331") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val file = uri(data.string("file"))
+            try {
+                debugger.debug(project, module, file, data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops in add()", 60.seconds) { it["suspended"]?.asBoolean == true }
+
+                // the values IntelliJ draws at the ends of the lines, each variable of the stopped frame once
+                val expected = data.getAsJsonObject("frameValues").entrySet().associate { it.key to it.value.asString }
+                var shown = listOf<Pair<Int, String>>()
+                awaitUi("the debugger draws the inline values", 30.seconds, { "Inline values: $shown" }) {
+                    shown =
+                        JsonParser.parseString(debugger.inlineValues(project, file)).asJsonArray.map {
+                            it.asJsonObject.int("line") to it.asJsonObject.string("text")
+                        }
+                    // the renderer's text is the name and the value, which it draws with " = " between them
+                    expected.all { (name, value) -> shown.any { (_, text) -> text.filterNot { it in " =" } == "$name$value" } }
+                }
+                check(shown.none { (_, text) -> text.startsWith("count") || text.startsWith("after") }) { "Inline values: $shown" }
+
+                debugger.clearBreakpoints(project)
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
             } finally {
                 debugger.clearBreakpoints(project)
             }
@@ -1563,6 +1620,18 @@ internal interface DebugSessionProbe {
         project: Project,
         uri: String,
     ): String
+
+    fun breakOnValueChange(
+        project: Project,
+        path: String,
+    ): Boolean
+
+    fun dataBreakpoints(
+        project: Project,
+        module: String,
+    ): String
+
+    fun clearLineBreakpoints(project: Project)
 
     fun resetFrame(
         project: Project,
