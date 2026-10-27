@@ -21,6 +21,7 @@ internal class ClientRefresh(
         DIAGNOSTICS,
         TOKENS,
         INLAYS,
+        INLINE_VALUES,
         LENSES,
         FOLDING,
     }
@@ -64,6 +65,7 @@ internal class ClientRefresh(
                                     Feature.DIAGNOSTICS -> it.refreshDiagnostics()
                                     Feature.TOKENS -> it.refreshSemanticTokens()
                                     Feature.INLAYS -> it.refreshInlayHints()
+                                    Feature.INLINE_VALUES -> it.refreshInlineValues()
                                     Feature.LENSES -> it.refreshCodeLenses()
                                     Feature.FOLDING -> it.refreshFoldingRanges()
                                 }
