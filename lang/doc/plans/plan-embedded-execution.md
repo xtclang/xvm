@@ -536,6 +536,9 @@ this bridge; they cannot be inferred from compiler type hints.
   server already handled; `EmbeddedExecutionTest` checks that sequence, and shared X323 passes in
   VS Code. In IntelliJ it is partial: LSP4IJ removes the temporary breakpoint once `continue` is
   answered, so a program that takes longer to reach the cursor runs past it (UP44).
+  *Step into a call (2026-10-27):* `stepInTargets` lists the calls of a stopped frame's line, from its
+  ops, and `stepIn` with a `targetId` stops in the chosen one, letting the line's other calls run, or
+  at the next line if the line does not make it (worker protocol 19, shared X327).
 - [ ] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
   containers, also those that run or wait for a reply (the console's `VF`), not only those stopped
   at a line, and thread events as they start and end; frames whose source file is not on the
@@ -566,5 +569,5 @@ R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 pre
 R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
 R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
 and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X326, cover the editor side of R5–R8, R11 and R12; R8 also
+playbook's execution and debug cases, among X280–X327, cover the editor side of R5–R8, R11 and R12; R8 also
 needs the server's soak and release evidence.
