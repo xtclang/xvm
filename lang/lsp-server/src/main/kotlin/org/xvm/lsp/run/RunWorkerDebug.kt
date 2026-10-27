@@ -13,6 +13,7 @@ import org.xvm.debug.FrameState
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -117,6 +118,21 @@ internal object RunWorkerDebug {
                 module["own"].asBoolean,
             )
         }
+
+    fun stepTargets(targets: List<StepTargetState>) =
+        JsonArray().apply {
+            targets.forEach { target ->
+                add(
+                    JsonObject().apply {
+                        addProperty("id", target.id)
+                        addProperty("label", target.label)
+                    },
+                )
+            }
+        }
+
+    fun stepTargetsOf(json: JsonArray): List<StepTargetState> =
+        json.map { it.asJsonObject }.map { StepTargetState(it["id"].asInt, it["label"].asString) }
 
     fun threadsOf(json: JsonArray): List<ThreadState> =
         json.map { it.asJsonObject }.map { ThreadState(it["id"].asInt, it["name"].asString) }
