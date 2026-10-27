@@ -152,9 +152,10 @@ public class FileRepository
             throw new IOException("repository is read-only: " + this);
         }
 
-        String sModule  = module.getName();
-        File   dir      = resolveFile(file).getParentFile();
-        File   workFile = File.createTempFile("tmp." + sModule, ".xtc", dir);
+        // not named *.xtc: a write that never finishes, such as a killed build's, must not look
+        // like a module to a directory scan or to a build that bundles the directory's modules
+        File dir      = resolveFile(file).getParentFile();
+        File workFile = File.createTempFile(file.getName(), ".tmp", dir);
 
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
