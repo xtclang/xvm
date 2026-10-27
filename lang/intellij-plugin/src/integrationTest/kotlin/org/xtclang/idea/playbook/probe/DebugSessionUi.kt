@@ -14,6 +14,7 @@ import com.intellij.execution.RunManager
 import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.impl.ConsoleViewImpl
+import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -36,6 +37,7 @@ import com.intellij.platform.debugger.impl.shared.proxy.XDebugManagerProxy
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.SimpleColoredText
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.util.ui.UIUtil
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
@@ -63,7 +65,12 @@ import com.intellij.xdebugger.impl.XDebugSessionImpl
 import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl
 import com.intellij.xdebugger.impl.evaluate.XDebuggerEvaluationDialog
 import com.intellij.xdebugger.impl.evaluate.XEvaluationOrigin
+import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree
+import com.intellij.xdebugger.impl.ui.tree.nodes.XDebuggerTreeNode
 import com.intellij.xdebugger.impl.ui.tree.nodes.XEvaluationCallbackWithOrigin
+import com.intellij.xdebugger.impl.ui.tree.nodes.XValueContainerNode
+import com.intellij.xdebugger.impl.ui.tree.nodes.XValueGroupNodeImpl
+import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl
 import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
 import com.intellij.xdebugger.stepping.XSmartStepIntoVariant
 import org.xtclang.idea.run.XtcRunConfiguration
@@ -997,6 +1004,134 @@ object DebugSessionUi {
                 }
         }
         return JsonArray().apply { values.sortedBy { it.asJsonObject["line"].asInt }.forEach(::add) }.toString()
+    }
+
+    /**
+     * Chooses Break on Value Change on the variable at the `/`-separated [path], such as `counter/count`, as its item in
+     * the Variables view's menu does (LSP4IJ's `DAP.BreakOnValueChange`), once the view's groups and the variables
+     * along the path are expanded, as clicks do. False if this LSP4IJ has no such item, or does not offer it there.
+     */
+    @JvmStatic
+    fun breakOnValueChange(
+        project: Project,
+        path: String,
+    ): Boolean {
+        val action = ActionManager.getInstance().getAction(BREAK_ON_VALUE_CHANGE) ?: return false
+        val tree = variablesTree(project)
+        val names = path.split('/')
+        val node = names.fold<String, XDebuggerTreeNode>(tree.root) { parent, name -> child(tree, parent, name) } as XValueNodeImpl
+        var offered = false
+        ApplicationManager.getApplication().invokeAndWait {
+            // selected in the tree, whose data context then carries the selection as the backend reads it
+            tree.selectionPath = node.path
+            val context = DataManager.getInstance().getDataContext(tree)
+            val event = AnActionEvent.createEvent(action, context, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+            action.update(event)
+            offered = event.presentation.isEnabledAndVisible
+            if (offered) action.actionPerformed(event)
+        }
+        return offered
+    }
+
+    /**
+     * The data breakpoints, as the module's debug session shows them in the Breakpoints dialog: each one's `text`, such
+     * as `Counter.count`, and its `state`, `verified`, `invalid` with its `message`, or `pending`; none once it is gone.
+     */
+    @JvmStatic
+    fun dataBreakpoints(
+        project: Project,
+        module: String,
+    ): String {
+        val session = session(project, module) as? XDebugSessionImpl
+        val states = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            XDebuggerManager
+                .getInstance(project)
+                .breakpointManager.allBreakpoints
+                .filter { it.type.id == DATA_BREAKPOINT }
+                .forEach { breakpoint ->
+                    @Suppress("UNCHECKED_CAST")
+                    val type = breakpoint.type as XBreakpointType<XBreakpoint<*>, *>
+                    val shown = session?.getBreakpointPresentation(breakpoint)
+                    states.add(
+                        JsonObject().apply {
+                            addProperty("text", type.getDisplayText(breakpoint))
+                            addProperty(
+                                "state",
+                                when {
+                                    shown == null -> "pending"
+                                    shown.errorMessage != null -> "invalid"
+                                    else -> "verified"
+                                },
+                            )
+                            shown?.errorMessage?.let { addProperty("message", it) }
+                        },
+                    )
+                }
+        }
+        return states.toString()
+    }
+
+    /** Removes the line breakpoints, as the gutter does, and leaves the others. */
+    @JvmStatic
+    fun clearLineBreakpoints(project: Project) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val manager = XDebuggerManager.getInstance(project).breakpointManager
+            ApplicationManager.getApplication().runWriteAction {
+                manager.allBreakpoints.filterIsInstance<XLineBreakpoint<*>>().forEach(manager::removeBreakpoint)
+            }
+        }
+    }
+
+    /** LSP4IJ's Break on Value Change, in the Variables view's menu (UP48). */
+    private const val BREAK_ON_VALUE_CHANGE = "DAP.BreakOnValueChange"
+
+    /** The ID of LSP4IJ's DAP data breakpoint type (UP48). */
+    private const val DATA_BREAKPOINT = "dap-data-breakpoint"
+
+    /** The Variables view of the session that the Debug tool window shows, which it shows as a stop does. */
+    private fun variablesTree(project: Project): XDebuggerTree {
+        var tree: XDebuggerTree? = null
+        ApplicationManager.getApplication().invokeAndWait {
+            val window = ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.DEBUG)
+            window?.show()
+            tree =
+                window?.contentManager?.selectedContent?.component?.let { component ->
+                    UIUtil.uiTraverser(component).filter(XDebuggerTree::class.java).firstOrNull()
+                }
+        }
+        return checkNotNull(tree) { "No Variables view" }
+    }
+
+    /**
+     * The variable named [name] among the children of [parent], or of its groups, such as a frame's Locals, which it
+     * expands, as a click does, and waits for until they are loaded.
+     */
+    private fun child(
+        tree: XDebuggerTree,
+        parent: XDebuggerTreeNode,
+        name: String,
+    ): XDebuggerTreeNode {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (true) {
+            var found: XDebuggerTreeNode? = null
+            ApplicationManager.getApplication().invokeAndWait {
+                val pending = ArrayDeque(listOf(parent))
+                while (found == null && pending.isNotEmpty()) {
+                    val node = pending.removeFirst()
+                    if (!tree.isExpanded(node.path)) tree.expandPath(node.path)
+                    (node as? XValueContainerNode<*>)?.loadedChildren.orEmpty().forEach { loaded ->
+                        when {
+                            loaded is XValueNodeImpl && loaded.name == name -> found = loaded
+                            loaded is XValueGroupNodeImpl -> pending.add(loaded)
+                        }
+                    }
+                }
+            }
+            found?.let { return it }
+            check(System.nanoTime() < deadline) { "No variable $name in the Variables view" }
+            Thread.sleep(100)
+        }
     }
 
     /** The ID of LSP4IJ's DAP function breakpoint type (#1780). */
