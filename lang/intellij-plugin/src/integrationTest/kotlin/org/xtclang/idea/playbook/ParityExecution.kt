@@ -1173,6 +1173,42 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X324") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops in the lambda", 60.seconds) {
+                        it["suspended"]?.asBoolean == true && it.has("frames")
+                    }
+                val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                data.strings("frames").forEachIndexed { index, name ->
+                    check(frames.getOrNull(index)?.string("name")?.contains(name) == true) { "Frame $index is not $name: $frames" }
+                }
+
+                // the library's frame is in the source bundled with it, at its line
+                val library = frames[1]
+                val file = library.string("file")
+                check(file.endsWith(data.string("librarySource"))) { "The library's frame is in $file" }
+                val text = Files.readAllLines(Path.of(file))[library.int("line") - 1]
+                check(data.string("libraryText") in text) { "Line ${library.int("line")} of $file: $text" }
+
+                // the lambda runs once, so Resume runs the program to its exit
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */

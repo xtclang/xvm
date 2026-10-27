@@ -847,6 +847,60 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a frame in a bundled library's code shows the library's bundled source, read-only, at its line`() {
+        CompilerTestSupport.configure()
+        val library = source("Library.x", LIBRARY.trimIndent())
+        val path = directory.resolve("Library.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Library", "moduleUri": "$library"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 6}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+            val frames =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            // the lambda, the library's forEach that calls it, and run, which calls forEach
+            assertThat(frames.map { it["name"].asString to it["source"].asJsonObject["path"].asString })
+                .containsExactly(
+                    "Library.->" to path,
+                    "Collection.forEach" to frames[1]["source"].asJsonObject["path"].asString,
+                    "Library.run" to path,
+                )
+
+            // not a file in the program's folder, nor where the library was built, but the source it was compiled from
+            val file = Path.of(frames[1]["source"].asJsonObject["path"].asString)
+            assertThat(file).exists().endsWith(Path.of("ecstasy/collections/Collection.x"))
+            assertThat(file.startsWith(directory)).isFalse()
+            assertThat(Files.isWritable(file)).isFalse()
+            assertThat(Files.readAllLines(file)[frames[1]["line"].asInt - 1]).contains("process(")
+
+            sessions.request(id, 6, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("n=1", "n=2", "n=3")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `run to cursor, a breakpoint added while stopped and removed once reached, stops the program there once`() {
         CompilerTestSupport.configure()
         val loops = source("Loops.x", LOOPS.trimIndent())
@@ -2100,6 +2154,20 @@ class EmbeddedExecutionTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """
+
+        /** A module whose run() calls Collection.forEach, which calls its lambda: line 6 is the lambda's. */
+        const val LIBRARY =
+            """
+            module Library {
+                void run() {
+                    @Inject Console console;
+                    Int[] numbers = [1, 2, 3];
+                    numbers.forEach(n -> {
+                        console.print($"n={n}");
+                    });
                 }
             }
             """

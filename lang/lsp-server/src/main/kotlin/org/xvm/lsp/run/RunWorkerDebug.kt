@@ -103,13 +103,24 @@ internal object RunWorkerDebug {
                         addProperty("name", frame.name)
                         frame.path?.let { addProperty("path", it) }
                         addProperty("line", frame.line)
+                        frame.module?.let { addProperty("module", it) }
+                        frame.source?.let { addProperty("source", it) }
                     },
                 )
             }
         }
 
     fun framesOf(json: JsonArray): List<FrameState> =
-        json.map { it.asJsonObject }.map { FrameState(it["id"].asInt, it["name"].asString, it["path"]?.asString, it["line"].asInt) }
+        json.map { it.asJsonObject }.map {
+            FrameState(
+                it["id"].asInt,
+                it["name"].asString,
+                it["path"]?.asString,
+                it["line"].asInt,
+                it["module"]?.asString,
+                it["source"]?.asString,
+            )
+        }
 
     fun scopes(scopes: List<ScopeState>) =
         JsonArray().apply {
