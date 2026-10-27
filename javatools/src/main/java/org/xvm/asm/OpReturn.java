@@ -190,7 +190,7 @@ public abstract class OpReturn
                     // e.g.: Int? f() = Null; load the default primitive value and a `true` null
                     // indicator
                     Builder.unboxNullable(code, pdRet.type,
-                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                            bctx.builder.getCCDesc(pdRet.type.removeNullable()));
                     Builder.store(code, CD_boolean, slotValEx);
                     Builder.store(code, pdRet.cd, slotR);
                     break;
@@ -221,7 +221,7 @@ public abstract class OpReturn
                     assert fOptimized;
                     // e.g.: Int128? f() = Null; load the default values and a `true` null indicator
                     Builder.unboxNullable(code, pdRet.type,
-                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                            bctx.builder.getCCDesc(pdRet.type.removeNullable()));
                     // iSynth - the null indicator and primitive values in reverse order
                     storeOptimizedReturns(bctx, code, retIndexes, retIndexes.length);
                     break;
@@ -319,7 +319,7 @@ public abstract class OpReturn
                     // e.g.: Int? f() = Null; load the default primitive value and a `true` null
                     // indicator
                     Builder.unboxNullable(code, pdRet.type,
-                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                            bctx.builder.getCCDesc(pdRet.type.removeNullable()));
                     bctx.storeToContext(code, CD_boolean, pdExt.altIndex);
                     cd = pdRet.cd;
                     break;
@@ -369,7 +369,7 @@ public abstract class OpReturn
                      "Widened->NullableXvmPrimitive":
                     // e.g.: Int128? f() = Null; load the default values and a `true` null indicator
                     Builder.unboxNullable(code, pdRet.type,
-                            bctx.builder.ensureClassDesc(pdRet.type.removeNullable()));
+                            bctx.builder.getCCDesc(pdRet.type.removeNullable()));
                     bctx.storeOptReturnsToContext(code, optIndexes, 1, optIndexes.length - 1);
                     cd = pdRet.cd;
                     break;

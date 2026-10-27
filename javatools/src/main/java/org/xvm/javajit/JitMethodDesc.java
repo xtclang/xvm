@@ -11,6 +11,7 @@ import java.util.stream.IntStream;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -71,6 +72,11 @@ public class JitMethodDesc {
     public final boolean isOptimizedStatic;
     public final MethodTypeDesc standardMD;  // the generic "xObj" flavor
     public final MethodTypeDesc optimizedMD; // (optional) optimized primitive
+
+    public static final int JMD_VIRTUAL     = 0x00;
+    public static final int JMD_STATIC      = 0x01;
+    public static final int JMD_CONSTRUCTOR = 0x03; // includes validators and JMD_STATIC
+    public static final int JMD_FINALIZER   = 0x04; // adds CtorCtx to a constructor signature
 
     /**
      * @return true if this an XvmPrimitive type method.
@@ -248,12 +254,25 @@ public class JitMethodDesc {
     }
 
     /**
+     * Compute the JIT descriptor flags for the specified method structure.
+     */
+    public static int flagsFor(MethodStructure method) {
+        if ((method.isConstructor() || method.isValidator()) && !method.isPropertyInitializer()) {
+            int flags = JMD_CONSTRUCTOR;
+            if (method.isConstructor() && method.getConstructFinally() != null) {
+                flags |= JMD_FINALIZER;
+            }
+            return flags;
+        }
+        return method.isStatic() ? JMD_STATIC : JMD_VIRTUAL;
+    }
+
+    /**
      *
      * @param builder        the Builder that is creating a call to the specified target
      * @param targetType     the target type on which the method if located (may be null in the case
      *                       of a function that exists only at runtime)
-     * @param isStatic       true iff the method is static (function, constructor, etc.)
-     * @param isConstructor  true iff the method is a constructor
+     * @param flags          JMD_VIRTUAL or a mask of JMD_STATIC, JMD_CONSTRUCTOR, and JMD_FINALIZER
      *
      * @return the JitMethodDesc for the method associated with this signature for the specified
      *         container
@@ -261,11 +280,16 @@ public class JitMethodDesc {
     public static JitMethodDesc of(
             Builder        builder,
             TypeConstant   targetType,
-            boolean        isStatic,
-            boolean        isConstructor,
+            int            flags,
             TypeConstant[] paramTypes,
             TypeConstant[] returnTypes,
             int            reqParamCount) {
+
+        boolean isConstructor = (flags & JMD_CONSTRUCTOR) == JMD_CONSTRUCTOR;
+        boolean isStatic      = (flags & JMD_STATIC) != 0;
+        boolean hasFinalizer  = (flags & JMD_FINALIZER) != 0;
+
+        assert isConstructor || !hasFinalizer;
 
         // methods and constructors require a target type
         assert (!isConstructor && isStatic) || targetType != null;
@@ -288,7 +312,7 @@ public class JitMethodDesc {
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
-                    ClassDesc cdStd     = builder.ensureClassDesc(type);
+                    ClassDesc cdStd     = builder.getCCDesc(type);
                     stdParamList.add(new JitParamDesc(type, stdFlavor, cdStd, iOrig, iStd++, false));
                 }
 
@@ -372,7 +396,7 @@ public class JitMethodDesc {
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
 
-                cd = builder.ensureClassDesc(type);
+                cd = builder.getCCDesc(type);
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
                 if (iOrig >= 0) {
@@ -404,7 +428,7 @@ public class JitMethodDesc {
             }
 
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
-                ClassDesc cdStd = builder.ensureClassDesc(type);
+                ClassDesc cdStd = builder.getCCDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
@@ -441,7 +465,7 @@ public class JitMethodDesc {
                 assert type.isSingleUnderlyingClass(true);
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
-                cd   = builder.ensureClassDesc(type);
+                cd   = builder.getCCDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
@@ -462,9 +486,8 @@ public class JitMethodDesc {
                 : null;
 
         if (isConstructor) {
-            boolean fAddCtorCtx = true; // TODO: isFinalizerRequired()
-            return new JitCtorDesc(targetType, targetType.getCallableClassDesc(builder.typeSystem),
-                    fAddCtorCtx, /*fAddType*/ false, /*fAddOuter*/ false,
+            return new JitCtorDesc(targetType, builder.getCCDesc(targetType),
+                    hasFinalizer, /*fAddType*/ false, /*fAddOuter*/ false,
                     stdReturns, stdParams, optReturns, optParams);
         } else {
             return new JitMethodDesc(targetType, stdReturns, stdParams, optReturns, optParams, isStatic);

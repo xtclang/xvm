@@ -1,8 +1,6 @@
 
 package int64RangeTests {
 
-    @Inject Console console;
-
     void run() {
 
         newRange();

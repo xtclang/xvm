@@ -67,6 +67,7 @@ import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.javajit.builders.ArrayBuilder;
+import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -376,9 +377,7 @@ public abstract class TypeConstant
      * @return an equivalent TypeConstant with the specified access modifier
      */
     public TypeConstant ensureAccess(Access access) {
-        return getAccess().isMoreAccessibleThan(access)
-                ? getConstantPool().ensureAccessTypeConstant(this, access)
-                : this;
+        return getConstantPool().ensureAccessTypeConstant(this, access);
     }
 
     /**
@@ -552,6 +551,25 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff this type represents a virtual child class (excluding interfaces and mixins)
+     */
+    public boolean isVirtualChildClass() {
+        return isSingleUnderlyingClass(true) &&
+                getSingleUnderlyingClass(true).getComponent() instanceof ClassStructure clz &&
+                clz.isVirtualChildClass();
+    }
+
+    /**
+     * Determine whether this is a virtual child class with a same-name super child in its
+     * enclosing parent's inheritance hierarchy, rather than a hard-left class.
+     *
+     * @return true iff this type represents a derived virtual child class
+     */
+    public boolean isDerivedVirtualChildClass() {
+        return isVirtualChildClass() && !VirtualChildBuilder.isHardLeft(getJitCCType());
+    }
+
+    /**
      * @return true iff this type represents an anonymous class type
      */
     public boolean isAnonymousClass() {
@@ -623,6 +641,20 @@ public abstract class TypeConstant
     public TypeConstant getOriginParentType() {
         assert isVirtualChild();
         return getUnderlyingType().getOriginParentType();
+    }
+
+    /**
+     * A transient VirtualChildTypeConstant can have parent B, but retain an origin parent D.
+     *
+     * Rebuild the child type from its declaration, preserving actual generic arguments while
+     * discarding retained origin-parent context. For a phantom child, this resolves to the
+     * inherited declaration.
+     *
+     * @return the resolved child declaration type without retained origin-parent context
+     */
+    public TypeConstant dropOriginParent(ConstantPool pool) {
+        assert isVirtualChild();
+        return getSingleUnderlyingClass(true).getFormalType().resolveGenerics(pool, this);
     }
 
     /**
@@ -2003,9 +2035,30 @@ public abstract class TypeConstant
      * @param info  the new TypeInfo
      */
     protected void setTypeInfo(TypeInfo info) {
-        TypeInfo infoOld;
-        while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this))
-                || info.isPlaceHolder()) {
+        while (true) {
+            TypeInfo infoOld = s_typeinfo.get(this);
+            if (rankTypeInfo(info) <= rankTypeInfo(infoOld) && !info.isPlaceHolder()) {
+                // we have not made any progress; let's check if at least dependencies have shrunk
+                if (infoOld.getProgress() != Progress.Incomplete) {
+                    // only an incomplete TypeInfo can improve through fewer unresolved dependencies
+                    break;
+                }
+
+                Set<TypeConstant> setDependsPrev = infoOld.collectDependTypes(null);
+                if (setDependsPrev == null) {
+                    // no improvement is possible
+                    break;
+                }
+
+                // a retry can acquire inherited members while still waiting on the "into" type;
+                // retain that progress only if the unresolved dependency set strictly shrank
+                Set<TypeConstant> setDepends = info.collectDependTypes(null);
+                if (setDepends != null && (setDepends.size() >= setDependsPrev.size() ||
+                                          !setDependsPrev.containsAll(setDepends))) {
+                    // no improvement
+                    break;
+                }
+            }
             // update the TypeInfo
             if (s_typeinfo.compareAndSet(this, infoOld, info)) {
                 // update the invalidation count that we have caught up to at this point
@@ -3540,6 +3593,12 @@ public abstract class TypeConstant
             // if this type represents a mixin we cannot complete until the "into" type does
             if (typeContrib instanceof UnionTypeConstant typeUnion) {
                 typeUnion.decompose(setDepends);
+
+                // an incomplete union can contain completed alternatives; exclude those
+                setDepends.removeIf(type -> {
+                    TypeInfo info = type.getTypeInfo();
+                    return isComplete(info) && type.isUpToDate(info);
+                });
             } else {
                 setDepends.add(typeContrib.removeAccess());
             }
@@ -3552,6 +3611,17 @@ public abstract class TypeConstant
                 // itself, and may miss the information from the "into" type(s), which we already
                 // (i) have or (ii) don't care about
                 if (infoContrib.dependsOn(this.removeAccess())) {
+                    infoContrib.collectDependTypes(setDepends);
+
+                    // exclude the dependencies from the Into to avoid circularity problems
+                    TypeConstant typeInto = infoContrib.getInto().removeAccess();
+                    if (typeInto instanceof UnionTypeConstant typeUnion) {
+                        Set<TypeConstant> setInto = new HashSet<>();
+                        typeUnion.decompose(setInto);
+                        setDepends.removeAll(setInto);
+                    } else {
+                        setDepends.remove(typeInto);
+                    }
                     return !setDepends.isEmpty();
                 }
             }
@@ -7170,8 +7240,8 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public ClassDesc getCallableClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getJitCCType().ensureJitClassName(ts));
+    public ClassDesc getJitCCDesc(TypeSystem ts) {
+        return ClassDesc.of(getJitCCName(ts));
     }
 
     /**
@@ -7180,17 +7250,59 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public ClassDesc getInstanceeClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getJitICType().ensureJitClassName(ts));
+    public ClassDesc getJitICDesc(TypeSystem ts) {
+        return ClassDesc.of(getJitICName(ts));
     }
 
     /**
-     * Ensure a unique Java class name that represents a "JIT Call Class Name" for this type in the
+     * Obtain the Java descriptor of this type's implementation (Impl) shape.
+     *
+     * @see #getJitImplName(TypeSystem)
+     */
+    public ClassDesc getJitImplDesc(TypeSystem ts) {
+        return ClassDesc.of(getJitImplName(ts));
+    }
+
+    /**
+     * Obtain a unique Java class name that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
      * @see doc/jit_class_names.txt
      */
-    public String ensureJitClassName(TypeSystem ts) {
+    public String getJitCCName(TypeSystem ts) {
+        TypeConstant type = getJitCCType();
+        String       name = type.ensureJitName(ts);
+
+        // derived virtual child classes use their pure interface for all virtual calls
+        return type.isDerivedVirtualChildClass() ? TypeSystem.pureInterface(name) : name;
+    }
+
+    /**
+     * Obtain a unique Java class name that represents a "JIT Instance Class Name" for this type in
+     * the specified TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public String getJitICName(TypeSystem ts) {
+        return getJitICType().ensureJitName(ts);
+    }
+
+    /**
+     * Obtain the Java name of this type's implementation (Impl) shape.
+     *
+     * <p>The Impl shape may be a class or an interface and need not be instantiable. For virtual
+     * child classes this is the implementation class, not the Pure callable interface; for
+     * mixins this is their Java interface.
+     */
+    public String getJitImplName(TypeSystem ts) {
+        return getJitCCType().ensureJitName(ts);
+    }
+
+    /**
+     * Ensure the Java class name for a type already selected by {@link #getJitCCType()} or
+     * {@link #getJitICType()}.
+     */
+    private String ensureJitName(TypeSystem ts) {
         assert isSingleUnderlyingClass(true);
 
         String sJitName = m_sJitName;
@@ -7198,7 +7310,7 @@ public abstract class TypeConstant
             // get the master instance of the type constant
             ModuleLoader loader = ts.findOwnerLoader(this);
             TypeConstant that   = loader.module.getConstantPool().register(this);
-            sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitClassName(ts);
+            sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitName(ts);
             m_sJitName = sJitName;
         }
         return sJitName;
@@ -7248,7 +7360,7 @@ public abstract class TypeConstant
                     || (typeValue.isSingleUnderlyingClass(true)
                             && typeValue.getSingleUnderlyingClass(true).equals(pool.clzEnum()))
                     ? Builder.N_Enumeration
-                    : TypeSystem.enumerationClass(typeValue.ensureJitClassName(ts));
+                    : TypeSystem.enumerationClass(typeValue.getJitCCName(ts));
         }
 
         if (id.equals(pool.clzFunction())) {
@@ -7258,7 +7370,8 @@ public abstract class TypeConstant
         StringBuilder sb = new StringBuilder(id.getClassJitName(ts));
 
         TypeConstant typeCanonical = getJitCCType();
-        if (typeCanonical.getParamsCount() > 0 || sb.indexOf(HASH_MARKER) >= 0) {
+        if (typeCanonical.getParamsCount() > 0 || typeCanonical.isVirtualChild() ||
+                sb.indexOf(HASH_MARKER) >= 0) {
             // it's critical here to use the class module loader's pool
             TypeSystem.appendJitSuffix(sb, pool.register(typeCanonical).getPosition());
         }
@@ -7331,7 +7444,11 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public boolean isJitL2Specialized() {
-        TypeConstant   jitType     = getJitCCType();
+        TypeConstant jitType = getJitCCType();
+        if (jitType.isVirtualChild() && jitType.getParentType().isJitL2Specialized()) {
+            // a child uses its parent's formal parameters even if it declares none of its own
+            return true;
+        }
         ClassStructure classStruct = (ClassStructure)
                 jitType.getSingleUnderlyingClass(true).getComponent();
 
@@ -7350,6 +7467,12 @@ public abstract class TypeConstant
 
         TypeConstant typeThisJit = getJitCCType();
 
+        // D_iC1 is an interface even though its instances extend the hard-left B_C0;
+        // assigning that interface reference to B_C0 still requires a Java checkcast
+        if (typeThisJit.isDerivedVirtualChildClass() && !typeThatJit.isJitCCInterface()) {
+            return false;
+        }
+
         // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
         // Ecstasy: M --into--> C, so M.isA(C), but
         // Java:    C --implements--> M, so M -> C requires a checkcast
@@ -7362,10 +7485,21 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return true iff the specified type is represented by the Java interface and needs to be
-     *         cast explicitly to {@code nObject} class to invoke its methods
+     * Determine whether this type's callable representation (JCC) is a Java interface.
+     * Unlike {@link #isJitImplInterface()}, this includes derived virtual child classes, whose
+     * JCC is a Pure interface while their Impl shape is a Java class.
+     *
+     * @return true iff this type's JCC is a Java interface
      */
-    public boolean isJitInterface() {
+    public boolean isJitCCInterface() {
+        return isJitImplInterface() || isDerivedVirtualChildClass();
+    }
+
+    /**
+     * @return true iff this type's Impl shape is a Java interface; a derived virtual child class
+     *         uses a Pure interface for virtual calls, but its Impl shape is a Java class
+     */
+    public boolean isJitImplInterface() {
         // Tuple and Type are always represented by native classes
         TypeConstant typeJit = getJitCCType();
         return typeJit.isInterfaceType()
@@ -7395,7 +7529,7 @@ public abstract class TypeConstant
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getJitCCType(), Specific, builder.ensureClassDesc(this));
+        return new JitTypeDesc(getJitCCType(), Specific, builder.getCCDesc(this));
     }
 
     /**
@@ -7626,14 +7760,14 @@ public abstract class TypeConstant
 
             switch (nOp) {
             case Op.OP_CMP:
-                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.invokestatic(bctx.builder.getCCDesc(this), methodName, methodDesc);
                 generateOrdered(bctx, code);
                 return;
 
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 // boolean equals(Ctx, primitives1..., primitives2...)
-                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.invokestatic(bctx.builder.getCCDesc(this), methodName, methodDesc);
                 switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifne(lblTrue);
                 case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifeq(lblTrue);
@@ -7646,7 +7780,7 @@ public abstract class TypeConstant
                  Op.OP_IS_LT,  Op.OP_JMP_LT,
                  Op.OP_IS_LTE, Op.OP_JMP_LTE:
                 // int compare(Ctx, primitives1..., primitives2...)
-                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.invokestatic(bctx.builder.getCCDesc(this), methodName, methodDesc);
                 code.iconst_0();
 
                 switch (nOp) {
@@ -7692,10 +7826,10 @@ public abstract class TypeConstant
                 MethodConstant idFunky   = bodyFunky.getIdentity();
                 TypeConstant   typeFunky = idFunky.getNamespace().getType();
 
-                assert typeFunky.isJitInterface();
+                assert typeFunky.isJitImplInterface();
 
                 cd         = ClassDesc.of(TypeSystem.funkyInterface(
-                                bctx.builder.ensureJitClassName(typeFunky)));
+                                bctx.builder.getCCName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmd        = bodyFunky.getJitDesc(bctx.builder, typeFunky);
                 fInterface = true;
@@ -7703,10 +7837,10 @@ public abstract class TypeConstant
                 MethodInfo   method     = bctx.getTypeInfo(this).getMethodBySignature(sig);
                 TypeConstant typeTarget = method.getJitIdentity().getNamespace().getType();
 
-                cd         = bctx.builder.ensureClassDesc(typeTarget);
+                cd         = typeTarget.getJitImplDesc(ts);
                 sJitName   = method.ensureJitMethodName(ts);
                 jmd        = method.getJitDesc(bctx.builder, this);
-                fInterface = typeTarget.isJitInterface();
+                fInterface = typeTarget.isJitImplInterface();
             }
 
             MethodTypeDesc md;
@@ -7721,7 +7855,7 @@ public abstract class TypeConstant
             }
 
             if (isFormal) {
-                RegisterInfo regType  = bctx.loadType(code, typeFormal.getType());
+                RegisterInfo regType  = bctx.loadDataType(code, typeFormal.getType());
                 int          slotType = bctx.storeTempValue(code, regType.cd());
 
                 // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
@@ -7734,7 +7868,8 @@ public abstract class TypeConstant
                 Builder.load(code, regType.cd(), slotType);
             } else {
                 bctx.loadCtx(code);
-                bctx.loadType(code, getType()); // type of this type
+                bctx.loadType(code, this);
+
             }
             reg1.load(code);
             argLoader.load(code);

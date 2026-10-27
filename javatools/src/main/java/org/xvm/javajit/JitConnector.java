@@ -60,7 +60,8 @@ public class JitConnector
             var loader   = xvm.nativeTypeSystem.loader;
             var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector")
                                  .asSubclass(Injector.class);
-            var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
+            var injector = clz.getDeclaredConstructor(Xvm.class, Map.class)
+                              .newInstance(xvm, mapInjections);
             try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
             }
@@ -83,7 +84,7 @@ public class JitConnector
     }
 
     private void invoke0Impl(MethodStructure methodStructure, String... args) {
-        String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
+        String typeName = ts.owned[0].module.getIdentityConstant().getType().getJitCCName(ts);
 
         TypeSystemLoader loader    = ts.loader;
         ConstantPool     pool      = ts.pool();

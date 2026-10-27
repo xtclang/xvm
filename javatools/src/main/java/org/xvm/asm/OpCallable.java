@@ -28,11 +28,14 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCallDesc;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 import org.xvm.javajit.TypeSystem;
+
+import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -55,8 +58,6 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.md;
-
-import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -677,11 +678,13 @@ public abstract class OpCallable extends Op {
      * Build support for CALL_ ops.
      */
     protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem    ts = bctx.typeSystem;
+        TypeSystem   ts   = bctx.typeSystem;
+        ConstantPool pool = ts.pool();
+
         ClassDesc     cdTarget;
         String        sJitName;
         JitMethodDesc jmdCall;
-        boolean       fSpecial;
+        JitCallDesc   callSuper = null;
         boolean       fInterface;
         boolean       fCond;
         boolean       fFunky;
@@ -699,37 +702,31 @@ public abstract class OpCallable extends Op {
                 TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
                 MethodInfo   infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
 
-                cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                cdTarget   = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
                 jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
-                fSpecial   = false;
-                fInterface = typeTarget.isJitInterface();
+                fInterface = typeTarget.isJitCCInterface();
                 fCond      = infoMethod.isConditionalReturn(infoTarget);
             } else {
-                MethodConstant   idSuper  = bodySuper.getIdentity();
-                IdentityConstant idCallee = idSuper.getNamespace();
-                Format           format   = idCallee.getComponent().getFormat();
+                callSuper  = bctx.resolveSuperCall();
+                cdTarget   = callSuper.owner();
+                sJitName   = callSuper.name();
+                jmdCall    = callSuper.jmd();
+                fInterface = false;
 
-                if (format == Format.MIXIN) {
-                    // we need to generate a synthetic super
-                    cdTarget = ClassDesc.of(bctx.className);
-                    sJitName = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
-                               + HASH + nDepth;
-
-                    bctx.buildSuper(sJitName, nDepth);
-                    fInterface = false;
-                } else {
-                    TypeConstant typeTarget = bctx.isSpecialized
-                            ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
-                            : idCallee.getType();
-                    cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
-                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
-                            ensureJitMethodName(ts);
-                    fInterface = typeTarget.isJitInterface();
+                ClassDesc cdReceiver = callSuper.receiverCD();
+                if (cdReceiver != null) {
+                    if (callSuper.isVirtual()) {
+                        // a super-router call uses this for Java dispatch and as the explicit
+                        // body receiver
+                        code.aload(0);
+                    }
+                    code.checkcast(cdReceiver);
                 }
-                jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
-                fSpecial = true;
-                fCond    = bodySuper.getMethodStructure().isConditionalReturn();
+
+                // absence of MethodStructure indicates a synthetic field; it's never conditional
+                MethodStructure methodSuper = bodySuper.getMethodStructure();
+                fCond = methodSuper != null && methodSuper.isConditionalReturn();
             }
             fFunky = false;
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
@@ -776,12 +773,8 @@ public abstract class OpCallable extends Op {
 
             Builder builder = bctx.builder;
 
-            cdTarget   = builder.ensureClassDesc(typeTarget);
-            jmdCall    = infoMethod.getJitDesc(builder, typeTarget);
-            fSpecial   = false;
-            fInterface = !typeTarget.isSingleUnderlyingClass(false);
-            fCond      = infoMethod.isConditionalReturn(infoTarget);
-            fFunky     = idFormal != null && infoMethod.containsAbstractFunction();
+            fCond  = infoMethod.isConditionalReturn(infoTarget);
+            fFunky = idFormal != null && infoMethod.containsAbstractFunction();
 
             if (fFunky) {
                 MethodBody     bodyFunky = infoMethod.getAbstractFunction();
@@ -790,8 +783,7 @@ public abstract class OpCallable extends Op {
 
                 assert typeFunky.isInterfaceType();
 
-                cdTarget   = ClassDesc.of(TypeSystem.funkyInterface(
-                                builder.ensureJitClassName(typeFunky)));
+                cdTarget   = ClassDesc.of(TypeSystem.funkyInterface(builder.getCCName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmdCall    = bodyFunky.getJitDesc(builder, typeFunky);
                 fInterface = true;
@@ -800,12 +792,20 @@ public abstract class OpCallable extends Op {
                 if (idFormal instanceof PropertyConstant) {
                     bctx.loadConstant(code, idFormal);
                 } else {
-                    bctx.loadType(code, idFormal.getType());
+                    bctx.loadDataType(code, idFormal.getType());
                 }
                 // generated class-of-class extends Class and implements the funky interface
                 bctx.loadCtx(code);
                 code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
                     .checkcast(cdTarget);
+            } else {
+                // inherited functions live on their declaring implementation; for virtual children,
+                // that implementation may be outside the target's Java superclass chain
+                TypeConstant typeImpl = body.resolveDeclaringType(pool, typeTarget);
+
+                cdTarget   = typeImpl.getJitImplDesc(ts);
+                fInterface = typeImpl.isJitImplInterface();
+                jmdCall    = infoMethod.getJitDesc(builder, typeImpl);
             }
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
@@ -815,13 +815,12 @@ public abstract class OpCallable extends Op {
             TypeConstant typeFn = regFn.type();
             assert typeFn.isFunction();
 
-            ConstantPool   pool         = ts.pool();
             TypeConstant[] atypeParams  = pool.extractFunctionParams(typeFn);
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(typeFn);
 
             fCond   = pool.isConditionalReturn(typeFn);
             jmdCall = JitMethodDesc.of(bctx.builder,
-                    null, true, false, atypeParams, atypeReturns, atypeParams.length);
+                    null, JitMethodDesc.JMD_STATIC, atypeParams, atypeReturns, atypeParams.length);
 
             boolean fTuple = isTupleReturn();
             if (fTuple) {
@@ -903,11 +902,8 @@ public abstract class OpCallable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmdCall, anArgValue);
 
-        if (fSpecial) {
-            // Note: when the caller is a direct subinterface of the interface being called we need
-            // to use invokespecial on an interface method, which is only legal if we don't
-            // skip levels in the hierarchy
-            code.invokespecial(cdTarget, sJitName, mdCall, fInterface);
+        if (callSuper != null) {
+            callSuper.invoke(code, jmdCall.isOptimized);
         } else if (fFunky || m_nFunctionId == A_SUPER) {
             // funky functions and delegating super calls dispatch on the loaded receiver
             if (fInterface) {
@@ -943,10 +939,27 @@ public abstract class OpCallable extends Op {
      * @param nParentArg  the parent argument, or {@link #A_IGNORE} for a non-child
      */
     protected int buildNew(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
-        MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-        TypeConstant   typeTarget = nParentArg == A_IGNORE
-                ? idCtor.getNamespace().getType()
-                : bctx.getReturnType(m_nRetValue);
+        MethodConstant   idCtor   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        IdentityConstant idTarget = idCtor.getNamespace();
+        TypeConstant     typeTarget;
+
+        if (nParentArg == A_IGNORE) {
+            typeTarget = idTarget.getType();
+        } else {
+            // since the parent is specified, we know it's a NEW_C op
+            ConstantPool   pool        = bctx.pool();
+            ClassStructure structChild = (ClassStructure) idTarget.getComponent();
+            TypeConstant   typeParent  = bctx.getArgumentType(nParentArg).removeAccess();
+
+            if (structChild.isVirtualChild()) {
+                typeTarget = pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName());
+            } else {
+                typeTarget = structChild.isInnerChild()
+                        ? pool.ensureInnerChildTypeConstant(typeParent,
+                            (ClassConstant) structChild.getIdentityConstant())
+                        : structChild.getNormalizedType();
+            }
+        }
 
         JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, nParentArg, anArgValue);
         bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
@@ -997,7 +1010,7 @@ public abstract class OpCallable extends Op {
         MethodBody   bodyCtor      = infoCtor.getVirtualConstructor();
         TypeConstant typeInterface = bodyCtor.getIdentity().getNamespace().getType();
         TypeInfo     infoInterface = bctx.getTypeInfo(typeInterface);
-        ClassDesc    cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
+        ClassDesc    cdInterface   = bctx.builder.getCCDesc(typeInterface);
 
         JitMethodDesc jmdNew = Builder.convertConstructToNew(infoInterface, cdInterface,
                 (JitCtorDesc) bodyCtor.getJitDesc(bctx.builder, typeInterface));
@@ -1063,27 +1076,31 @@ public abstract class OpCallable extends Op {
             assert origin != null;
 
             typeTarget = origin.getType();
-            cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+            cdTarget   = typeTarget.getJitImplDesc(bctx.typeSystem);
             sJitCtor   = infoCtor.ensureJitMethodName(bctx.typeSystem);
         }
 
-        JitMethodDesc jmdCtor = infoCtor.getJitDesc(bctx.builder, typeTarget);
+        JitCallDesc call    = bctx.builder.resolveConstructorCall(infoCtor, typeTarget, cdTarget, sJitCtor);
+        JitCtorDesc jmdCtor = (JitCtorDesc) call.jmd();
 
-        boolean fOptimized = jmdCtor.isOptimized;
-        MethodTypeDesc md;
-        if (fOptimized) {
-            md        = jmdCtor.optimizedMD;
-            sJitCtor += Builder.OPT;
+        if (call.isVirtual()) {
+            bctx.loadThis(code);
+            code.checkcast(call.owner());
         }
-        else {
-            md = jmdCtor.standardMD;
-        }
-
         bctx.loadCtx(code);
-        bctx.loadCtorCtx(code);
+        if (jmdCtor.hasCtorCtx()) {
+            bctx.loadCtorCtx(code);
+        }
         bctx.loadThis(code);
+
+        TypeConstant typeReceiver = jmdCtor.typeTarget;
+        if (VirtualChildBuilder.isHardLeft(typeReceiver) && bctx.thisType.isJitCCInterface()) {
+            // a hard-left constructor requires a concrete receiver; e.g. a super-constructor call
+            // from D.C0 to B.C0 loads "this" as D_iC0, so the verifier requires a cast to B_C0
+            code.checkcast(typeReceiver.getJitCCDesc(bctx.typeSystem));
+        }
         bctx.loadCallArguments(code, jmdCtor, anArgValue);
-        code.invokestatic(cdTarget, sJitCtor, md);
+        call.invoke(code, jmdCtor.isOptimized);
         return -1;
     }
 

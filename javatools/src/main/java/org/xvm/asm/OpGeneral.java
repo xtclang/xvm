@@ -290,7 +290,7 @@ public abstract class OpGeneral
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
         if (jmd.isOptimizedStatic) {
-            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+            code.invokestatic(bctx.builder.getCCDesc(typeTarget), sJitName, md);
         } else {
             code.invokevirtual(regTarget.cd(), sJitName, md);
         }
@@ -318,7 +318,7 @@ public abstract class OpGeneral
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, NO_ARGS);
         if (jmd.isOptimizedStatic) {
-            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+            code.invokestatic(bctx.builder.getCCDesc(typeTarget), sJitName, md);
         } else {
             code.invokevirtual(regTarget.cd(), sJitName, md);
         }

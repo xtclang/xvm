@@ -28,6 +28,9 @@ import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
+import org.xvm.javajit.builders.PureBuilder;
+import org.xvm.javajit.builders.PureVirtualChildBuilder;
+import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
@@ -308,10 +311,8 @@ public class TypeSystem {
                 switch (art.shape) {
                 case Impl:
                     classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
-                    builder.build(classBuilder);
-                    break;
-
-                case Enum:
+                    // fall through
+                case Pure, Enum:
                     builder.build(classBuilder);
                     break;
 
@@ -398,8 +399,9 @@ public class TypeSystem {
             return null;
         }
 
+        // TODO: optimize "ensureBuilder(art).getSuperCD()" call
         return switch (art.shape()) {
-            case Impl -> art.type().isJitInterface()
+            case Impl -> art.type().isJitImplInterface()
                     ? ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
 
@@ -407,7 +409,7 @@ public class TypeSystem {
 
             case Class -> ClassHierarchyInfo.ofClass(CD_Class);
 
-            case Funky -> ClassHierarchyInfo.ofInterface();
+            case Funky, Pure -> ClassHierarchyInfo.ofInterface();
 
             case Exception -> ClassHierarchyInfo.ofClass(
                     ((ExceptionBuilder) ensureBuilder(art)).getJavaExceptionSuperCD());
@@ -417,11 +419,17 @@ public class TypeSystem {
     }
 
     /**
-     * @return a builder for the specified type
+     * @return a builder for the specified artifact
      */
     protected Builder ensureBuilder(Artifact art) {
         ConstantPool pool = pool();
-        TypeConstant type = art.type;
+        TypeConstant type = art.type();
+
+        if (art.shape() == ClassfileShape.Pure) {
+            return type.isVirtualChildClass()
+                    ? new PureVirtualChildBuilder(this, art)
+                    : new PureBuilder(this, art);
+        }
 
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module.x, since this is not the native TypeSystem
@@ -462,7 +470,10 @@ public class TypeSystem {
             }
         }
 
-        return new CommonBuilder(this, art);
+        // an Ecstasy virtual-child interface is already a Java interface and uses CommonBuilder
+        return type.isVirtualChildClass()
+                ? new VirtualChildBuilder(this, art)
+                : new CommonBuilder(this, art);
     }
 
     /**
@@ -471,7 +482,7 @@ public class TypeSystem {
     public enum ClassfileShape {
         Class    ("" + CLASS ), // class of class
         Pure     ("" + PURE  ), // interface
-        Funky    ("" + FUNKY ), // the funky (static) part of an interface
+        Funky    ("" + FUNKY ), // static-function interface or virtual-child instantiator interface
         Proxy    ("" + PROXY ),
         Duck     ("" + DUCK  ),
         Enum     ("" + ENUM  ),
@@ -489,14 +500,9 @@ public class TypeSystem {
         public final String prefix;
     }
 
-    public String ensureJitClassName(TypeConstant type, ClassfileShape shape) {
-        String classname = type.ensureJitClassName(this);
-        if (shape == ClassfileShape.Impl) {
-            return classname;
-        }
-        return flavorClassName(classname, shape.prefix.charAt(0));
-    }
-
+    /**
+     * Jit artifacts.
+     */
     public record Artifact(
             TypeConstant   type,
             ClassStructure clz,
@@ -603,15 +609,26 @@ public class TypeSystem {
     }
 
     /**
-     * Build a name for the interface that holds only the static abstract functions of an Ecstasy
-     * funky interface as instance methods.
+     * Build a name for an interface that describes static abstract functions or virtual-child
+     * instantiators as instance methods on the class-of-class (an instantiator interface).
      *
-     * @param name  the JIT name of the interface
+     * @param name  the JIT name of the class or interface
      *
      * @return the JIT name of the `Funky` interface
      */
     public static String funkyInterface(String name) {
         return flavorClassName(name, FUNKY);
+    }
+
+    /**
+     * Build the callable interface name for an already-escaped implementation class name.
+     *
+     * @param name  the JIT name of the implementation class
+     *
+     * @return the JIT name of the callable interface
+     */
+    public static String pureInterface(String name) {
+        return flavorClassName(name, PURE);
     }
 
     private static String flavorClassName(String name, char flavor) {

@@ -176,7 +176,7 @@ public abstract class OpInPlaceAssign
         bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
 
         if (jmd.isOptimizedStatic) {
-            code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+            code.invokestatic(bctx.builder.getCCDesc(typeTarget), sJitName, md);
         } else {
             code.invokevirtual(regTarget.cd(), sJitName, md);
         }
@@ -184,7 +184,7 @@ public abstract class OpInPlaceAssign
         TypeConstant typeResult   = method.getSignature().getRawReturns()[0]; // could differ from
         TypeConstant typeResolved = typeResult.resolveAutoNarrowing(bctx.pool(), false, typeTarget, null);
         if (!typeResult.isA(typeResolved)) {
-            code.checkcast(bctx.builder.ensureClassDesc(typeResolved));
+            code.checkcast(bctx.builder.getCCDesc(typeResolved));
         }
         return typeResult;
     }

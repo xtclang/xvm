@@ -322,6 +322,15 @@ public class MethodBody {
     }
 
     /**
+     * @return true iff this is a constructor, excluding property initializers
+     */
+    public boolean isConstructorOnly() {
+        MethodStructure structMethod = getClassifyingMethodStructure();
+        return structMethod != null && structMethod.isConstructor() &&
+                !structMethod.isPropertyInitializer();
+    }
+
+    /**
      * @return true iff this is a virtual constructor
      */
     public boolean isVirtualConstructor() {
@@ -685,6 +694,16 @@ public class MethodBody {
     }
 
     /**
+     * @return the function or method type for the function or method represented by this body
+     */
+    public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
+        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
+        return isFunction()
+                ? sig.asFunctionType()
+                : sig.asMethodType(pool, typeContainer);
+    }
+
+    /**
      * @return the ConstantPool
      */
     private ConstantPool pool() {
@@ -778,7 +797,7 @@ public class MethodBody {
         Explicit(Existence.Class),
         ;
 
-        private Implementation(Existence existence) {
+        Implementation(Existence existence) {
             EXISTS = existence;
         }
 
@@ -816,25 +835,26 @@ public class MethodBody {
         }
 
         MethodStructure   method = getClassifyingMethodStructure();
-        SignatureConstant sig    = method.resolveSignature(
-                builder.pool(), typeTarget.getJitCCType());
+        SignatureConstant sig    = method.resolveSignature(builder.pool(), typeTarget.getJitCCType());
 
         // TODO consider caching this
-        boolean fCtorOrValidator = isCtorOrValidator();
-        return JitMethodDesc.of(builder, typeTarget,
-                fCtorOrValidator || method.isStatic(), fCtorOrValidator,
+        return JitMethodDesc.of(builder, typeTarget, JitMethodDesc.flagsFor(method),
                 sig.getRawParams(), sig.getRawReturns(),
-                                method.getTypeParamCount() + method.getRequiredParamCount());
+                method.getTypeParamCount() + method.getRequiredParamCount());
     }
 
     /**
-     * @return the function or method type for the function or method represented by this body
+     * Resolve this body's declaring class type using the target's generic bindings. For example,
+     * a body declared on D<Element>.C0 needs to be resolved to D<Int>.C0 for a D<Int>.C1 target.
+     * This identifies the declaring class of this body, not necessarily the head of its call chain.
+     *
+     * @param pool        the ConstantPool for the resolved type
+     * @param typeTarget  the target type that supplies the generic bindings
+     *
+     * @return the resolved declaring class type
      */
-    public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
-        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
-        return isFunction()
-                ? sig.asFunctionType()
-                : sig.asMethodType(pool, typeContainer);
+    public TypeConstant resolveDeclaringType(ConstantPool pool, TypeConstant typeTarget) {
+        return getIdentity().getClassIdentity().getFormalType().resolveGenerics(pool, typeTarget);
     }
 
     // ----- fields --------------------------------------------------------------------------------

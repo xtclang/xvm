@@ -36,11 +36,8 @@ import static java.lang.constant.ConstantDescs.CD_Object;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
-import static org.xvm.javajit.Builder.MD_TypeIsA;
-import static org.xvm.javajit.Builder.MD_xvmType;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
@@ -446,14 +443,7 @@ public abstract class OpSwitch
                 code.ifne(label);
             }
         } else {
-            reg.load(code);
-            if (reg.type().isJitInterface()) {
-                code.checkcast(CD_nObject);
-            }
-            bctx.loadCtx(code);
-            code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType);
-            bctx.loadTypeConstant(code, typeConst);
-            code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+            bctx.generateIsA(code, reg, typeConst);
             code.ifne(label);
         }
     }

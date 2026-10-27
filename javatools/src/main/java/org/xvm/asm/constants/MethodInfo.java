@@ -392,8 +392,7 @@ public class MethodInfo
         if (childInfo.getType().isPhantom()) {
             // an undeclared inherited child has no constructor contract of its own
             TypeConstant typeChild = childInfo.getType();
-            childInfo = childInfo.getClassStructure().getFormalType().
-                    resolveGenerics(typeChild.getConstantPool(), typeChild).
+            childInfo = typeChild.dropOriginParent(typeChild.getConstantPool()).
                     ensureAccess(Access.PRIVATE).ensureTypeInfo();
             ctor = childInfo.getMethodBySignature(getSignature());
             assert ctor != null;
@@ -962,6 +961,13 @@ public class MethodInfo
     public boolean isConstructor() {
         // virtual constructor could be capped
         return getTail().isConstructor();
+    }
+
+    /**
+     * @return true iff this is a constructor, excluding property initializers
+     */
+    public boolean isConstructorOnly() {
+        return getTail().isConstructorOnly();
     }
 
     /**
@@ -1639,7 +1645,7 @@ public class MethodInfo
                 // the capped method, while the narrowing method supplies its classification and
                 // default-parameter count
                 SignatureConstant sig = getSignature();
-                yield JitMethodDesc.of(builder, typeContainer, method.isStatic(), false,
+                yield JitMethodDesc.of(builder, typeContainer, JitMethodDesc.flagsFor(method),
                         sig.getRawParams(), sig.getRawReturns(),
                         method.getTypeParamCount() + getRequiredParamCount(infoType));
             }

@@ -247,7 +247,7 @@ public abstract class OpIndex
         boolean      fPrimitive = typeEl.isJitPrimitive();
 
         if (typeTarget.isArray()) {
-            ClassDesc cdArray = bctx.builder.ensureClassDesc(typeTarget);
+            ClassDesc cdArray = bctx.builder.getCCDesc(typeTarget);
 
             if (isMutating()) {
                 // duplicate the array on the stack and ensure that it is mutable
@@ -265,14 +265,14 @@ public abstract class OpIndex
                     case OP_I_GET -> {
                         code.invokevirtual(cdArray, "getElement$p", md(CD_Object, CD_Ctx, CD_long));
                         if (!typeEl.equals(pool.typeObject())) {
-                            code.checkcast(bctx.builder.ensureClassDesc(typeEl));
+                            code.checkcast(bctx.builder.getCCDesc(typeEl));
                         }
 
                         if (fPrimitive) {
                             // the element is primitive, but the method return will be Object,
                             // most likely the type is a nullable JIT primitive.
                             // we need to perform a null check and unbox
-                            ClassDesc cd = bctx.builder.ensureClassDesc(typeEl.removeNullable());
+                            ClassDesc cd = bctx.builder.getCCDesc(typeEl.removeNullable());
                             Builder.unboxNullable(code, typeEl, cd);
                         }
                     }
@@ -337,7 +337,7 @@ public abstract class OpIndex
             } else {
                 bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
             }
-            if (typeTarget.isJitInterface()) {
+            if (typeTarget.isJitCCInterface()) {
                 code.invokeinterface(reg.cd(), sJitName, jmd.optimizedMD);
             } else {
                 code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
@@ -356,7 +356,7 @@ public abstract class OpIndex
                     // most likely the type is a nullable primitive,
                     // we need to perform a null check and unbox
                     if (fNullable) {
-                        ClassDesc cd = bctx.builder.ensureClassDesc(typeEl.removeNullable());
+                        ClassDesc cd = bctx.builder.getCCDesc(typeEl.removeNullable());
                         Builder.unboxNullable(code, typeEl, cd);
                     } else {
                         Builder.unbox(code, typeEl);
@@ -490,7 +490,7 @@ public abstract class OpIndex
 
         TypeConstant type    = regArray.type();
         TypeConstant typeEl  = type.resolveGenericType("Element");
-        ClassDesc    cdArray = bctx.builder.ensureClassDesc(type);
+        ClassDesc    cdArray = bctx.builder.getCCDesc(type);
 
         boolean javaPrimitive = typeEl.removeNullable().isJavaPrimitive();
         boolean xvmPrimitive  = typeEl.removeNullable().isXvmPrimitive();
@@ -548,7 +548,7 @@ public abstract class OpIndex
      */
     protected void storeArrayElement(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
                                      RegisterInfo regElement) {
-        ClassDesc   cdArray = bctx.builder.ensureClassDesc(regArray.type());
+        ClassDesc   cdArray = bctx.builder.getCCDesc(regArray.type());
         ClassDesc[] cdArgs  = prependArgs(regElement.slotCds(), CD_Ctx, CD_long);
 
         regArray.load(code);

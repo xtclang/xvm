@@ -47,6 +47,7 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -250,7 +251,7 @@ public class FBind
 
         assert typeFn.isFunction() && regFn.cd().equals(CD_nFunction);
 
-        JitMethodDesc jmdBefore = JitMethodDesc.of(bctx.builder, typeFn, true, false,
+        JitMethodDesc jmdBefore = JitMethodDesc.of(bctx.builder, typeFn, JMD_STATIC,
                 pool.extractFunctionParams(typeFn), pool.extractFunctionReturns(typeFn),
                 Integer.MAX_VALUE);
 
@@ -281,7 +282,7 @@ public class FBind
             typeFn = pool.bindFunctionParam(typeFn, nArgPos);
 
             JitMethodDesc jmdAfter = JitMethodDesc.of(bctx.builder,
-                    null, true, false, pool.extractFunctionParams(typeFn),
+                    null, JMD_STATIC, pool.extractFunctionParams(typeFn),
                     pool.extractFunctionReturns(typeFn),
                     Integer.MAX_VALUE);
 
@@ -361,7 +362,7 @@ public class FBind
             fOptBefore = fOptAfter;
         }
 
-        ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
+        ClassDesc cdFn = bctx.builder.getCCDesc(typeFn);
         code.new_(cdFn)
             .dup();
         bctx.loadCtx(code);
@@ -457,7 +458,7 @@ public class FBind
         code.iload(slotImm)
             .ifeq(labelEnd);
         regArg.load(code);
-        if (regArg.type().isJitInterface()) {
+        if (regArg.type().isJitCCInterface()) {
             code.checkcast(CD_nObject);
         }
         code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean))

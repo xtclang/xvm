@@ -306,8 +306,8 @@ public class AnnotatedTypeConstant
         }
 
         if (that.isA(typeBase)) {
-            // (@A B) - Sub(B) => B
-            return pool.typeObject();
+            // (@A B) - Sub(B) => A
+            return typeAnno;
         }
 
         // recurse to cover cases like this:

@@ -3,8 +3,6 @@
  */
 class IpSubTests {
 
-    @Inject Console console;
-
     void run() {
         testIpSubInt();
         testIpSubUInt();

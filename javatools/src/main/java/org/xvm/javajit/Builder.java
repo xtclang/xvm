@@ -1,22 +1,25 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
+import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
-import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
 
+import java.util.Collection;
+
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -26,6 +29,8 @@ import org.xvm.asm.constants.*;
 
 import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
+
+import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
@@ -84,8 +89,8 @@ public abstract class Builder {
     }
 
     /**
-     * Assemble the Java interface that represents the static abstract functions of an Ecstasy
-     * interface as instance methods.
+     * Assemble the Java interface that represents static abstract functions or virtual-child
+     * constructors as instance methods on the class-of-class.
      */
     public void buildFunkyInterface(ClassBuilder classBuilder) {
         throw new UnsupportedOperationException();
@@ -99,9 +104,78 @@ public abstract class Builder {
         throw new UnsupportedOperationException();
     }
 
-    public boolean isPrimitive() {
-        // in theory, this could be cached as it is in CommonBuilder
-        return getThisType().isJitPrimitive();
+    /**
+     * Obtain the JVM receiver descriptor for a generated Ecstasy body.
+     */
+    public ClassDesc getThisClassDesc(BuildContext bctx) {
+        return art.CD();
+    }
+
+    /**
+     * Resolve a CONSTR_* call target after its declaring contribution and JIT name have been
+     * selected.
+     *
+     * <p>While trivial for simple classes, this becomes more complex for virtual children.
+     */
+    public JitCallDesc resolveConstructorCall(MethodInfo constructor, TypeConstant targetType,
+                                              ClassDesc targetCD, String name) {
+        return JitCallDesc.static_(targetCD, name, constructor.getJitDesc(this, targetType), false);
+    }
+
+    /**
+     * Ensure the backing-field target used by an accessor super call.
+     *
+     * @param body  the Field implementation of a property getter or setter
+     *
+     * @return the call descriptor for accessing the backing field without re-entering
+     *         the custom accessor
+     */
+    public JitCallDesc ensureFieldAccessor(MethodBody body) {
+        throw new UnsupportedOperationException("Field super: " + body);
+    }
+
+    /**
+     * Load a backing field without invoking an Ecstasy property getter. Virtual-child contracts
+     * expose raw accessors because the declaring JIC need not be a Java ancestor of the receiver.
+     */
+    public void loadField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
+        if (owner.isDerivedVirtualChildClass()) {
+            code.invokeinterface(getCCDesc(owner), FieldGet + name, md(cd));
+        } else {
+            code.getfield(getCCDesc(owner), name, cd);
+        }
+    }
+
+    /**
+     * Store a backing field without invoking an Ecstasy property setter or its mutability check.
+     */
+    public void storeField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
+        if (owner.isDerivedVirtualChildClass()) {
+            code.invokeinterface(getCCDesc(owner), FieldSet + name, md(CD_void, cd));
+        } else {
+            code.putfield(getCCDesc(owner), name, cd);
+        }
+    }
+
+    /**
+     * Resolve a private child method to its detached body on the declaring child's Impl class if
+     * applicable.
+     *
+     * @return the detached-body call descriptor, or null if the receiver is not a virtual child
+     *         class or the method is not a private instance method declared directly on a class
+     */
+    public JitCallDesc resolvePrivateDetachedCall(MethodInfo method, TypeConstant receiverType) {
+        if (receiverType.isVirtualChildClass() &&
+                !method.isFunction() && !method.isCtorOrValidator()) {
+
+            MethodBody head = method.getHead();
+            if (head.getIdentity().getNamespace() instanceof ClassConstant &&
+                head.getMethodStructure().getAccess() == Access.PRIVATE) {
+
+                return VirtualChildBuilder.resolveChildMethodCall(this, head, receiverType);
+            }
+        }
+        return null;
     }
 
     /**
@@ -113,7 +187,60 @@ public abstract class Builder {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? thisType.isConst() ? CD_nConst : CD_nObject
-            : ensureClassDesc(superType);
+            : getCCDesc(superType);
+    }
+
+    /**
+     * Add the Java interfaces contributed by Ecstasy implements and incorporates clauses.
+     *
+     * @param isInterface  true iff the generated Java artifact is an interface
+     */
+    protected void addContributionInterfaces(TypeInfo typeInfo, Collection<ClassDesc> interfaces,
+                                             boolean isInterface) {
+        for (Contribution contrib : typeInfo.getContributionList()) {
+            TypeConstant contribType = contrib.getTypeConstant().removeAccess();
+
+            if (!shouldAddInterface(contribType)) {
+                continue;
+            }
+
+            switch (contrib.getComposition()) {
+                case Extends: {
+                    if (isInterface) {
+                        interfaces.add(isEmbedded(contribType.getExplicitClassFormat())
+                            ? getCCDesc(contribType)
+                            : ClassDesc.of(TypeSystem.pureInterface(getCCName(contribType))));
+                    }
+                    break;
+                }
+
+                case Implements, Incorporates:
+                    interfaces.add(getCCDesc(contribType));
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @return true iff we should add the specified type to the list of interfaces
+     *         implemented/extended by this class
+     */
+    protected boolean shouldAddInterface(TypeConstant type) {
+        // ignore "implements Object" for classes and "implements Comparable" for everyone
+        return (getThisType().getExplicitClassFormat() == Format.INTERFACE ||
+                !type.equals(pool().typeObject())) && !type.equals(pool().typeComparable());
+    }
+
+    /**
+     * Declare the standard and optimized abstract method signatures.
+     */
+    protected void addAbstractMethod(ClassBuilder classBuilder, String name, JitMethodDesc jmd) {
+        int flags = ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT;
+
+        classBuilder.withMethod(name, jmd.standardMD, flags, _ -> {});
+        if (jmd.isOptimized) {
+            classBuilder.withMethod(name + OPT, jmd.optimizedMD, flags, _ -> {});
+        }
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -126,32 +253,46 @@ public abstract class Builder {
     }
 
     /**
-     * Ensure a unique ClassDesc for the specified type.
+     * Obtain a unique ClassDesc for the specified type.
      */
-    public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.getCallableClassDesc(typeSystem);
+    public ClassDesc getCCDesc(TypeConstant type) {
+        return type.getJitCCDesc(typeSystem);
     }
 
     /**
-     * Ensure a unique Java class that represents a "JIT Call Class Name" for the specified type in
+     * Obtain the Java descriptor of the specified type's implementation (Impl) shape.
+     */
+    public ClassDesc getImplDesc(TypeConstant type) {
+        return type.getJitImplDesc(typeSystem);
+    }
+
+    /**
+     * Obtain the Java descriptor of the Pure interface corresponding to the specified type's
+     * Impl shape.
+     */
+    public ClassDesc getPureImplDesc(TypeConstant type) {
+        return ClassDesc.of(TypeSystem.pureInterface(type.getJitImplName(typeSystem)));
+    }
+
+    /**
+     * Obtain a unique Java class that represents a "JIT Call Class Name" for the specified type in
      * this builder's TypeSystem.
      *
      * @see "doc/jit_class_names.txt"
      */
-    public String ensureJitClassName(TypeConstant type) {
-        return type.ensureJitClassName(typeSystem);
+    public String getCCName(TypeConstant type) {
+        return type.getJitCCName(typeSystem);
     }
 
     /**
-     * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
+     * Obtain a unique Java class that represents a "JIT Instance Class Name" for the specified type
      * in this builder's TypeSystem.
      *
      * @see "doc/jit_class_names.txt"
      */
-    public String ensureJitInstanceClassName(TypeConstant type) {
-        assert type.isSingleUnderlyingClass(false);
+    public String getICName(TypeConstant type) {
         // TODO
-        return type.ensureJitClassName(typeSystem);
+        return type.getJitICName(typeSystem);
     }
 
     /**
@@ -180,21 +321,20 @@ public abstract class Builder {
      * <p>Out: TypeConstant on Java stack
      */
     protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
-        loadTypeConstant(code, type);
-
-        if (bctx != null && !bctx.isStatic && type.containsFormalType(true)) {
-            code.dup()
-                .invokevirtual(CD_TypeConstant, "getConstantPool", md(CD_ConstantPool));
-
-            RegisterInfo regThis = bctx.loadThis(code);
-            if (regThis.type().isJitInterface()) {
-                code.checkcast(CD_nObject);
-            }
-            bctx.loadCtx(code);
-            code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType)
-                .invokevirtual(CD_TypeConstant, "resolveGenerics",
-                        md(CD_TypeConstant, CD_ConstantPool, CD_GenericTypeResolver));
+        if (bctx == null) {
+            loadTypeConstant(code, type);
+        } else {
+            bctx.loadTypeConstant(code, type);
         }
+    }
+
+    /**
+     * Load the {@code nType} for the specified represented type, with Ctx as parameter 0.
+     */
+    public CodeBuilder loadType(CodeBuilder code, TypeConstant type) {
+        loadCtx(code);
+        loadTypeConstant(code, type);
+        return code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
     }
 
     /**
@@ -252,7 +392,7 @@ public abstract class Builder {
                 }
                 case IntN, UIntN -> {
                     TypeConstant type  = intConstant.getType();
-                    ClassDesc    cd    = ensureClassDesc(type);
+                    ClassDesc    cd    = getCCDesc(type);
                     String       value = intConstant.getIntValue().getBigInteger().toString();
                     ClassDesc    biCD  = ClassDesc.of(BigInteger.class.getName());
 
@@ -354,7 +494,7 @@ public abstract class Builder {
                     // instead of holding the value, the field contains a container-independent
                     // MethodHandle used to compute the value and cache it at the container
                     code.aload(bctx.ctxSlot(code))
-                        .getstatic(ensureClassDesc(ownerType),
+                        .getstatic(getCCDesc(ownerType),
                                 propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
                         .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic);
                     code.checkcast(jtd.cd);
@@ -363,14 +503,14 @@ public abstract class Builder {
 
                 switch (jtd.flavor) {
                 case Primitive:
-                    code.getstatic(ensureClassDesc(ownerType),
+                    code.getstatic(getCCDesc(ownerType),
                             propId.ensureJitPropertyName(typeSystem),
                             JitTypeDesc.requirePrimitiveFieldClass(propType));
                     normalizePrimitiveField(code, propType);
                     return singletonReg;
 
                 case Specific, Widened:
-                    code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
+                    code.getstatic(getCCDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
                     return singletonReg;
 
@@ -428,7 +568,12 @@ public abstract class Builder {
 
         case TypeConstant type:
             assert type.isTypeOfType();
-            return bctx.loadType(code, type); // TODO move loadType here?
+            if (bctx == null) {
+                loadType(code, type.getParamType(0));
+                return new SingleSlot(type, Specific, CD_nType, "");
+            } else {
+                return bctx.loadDataType(code, type);
+            }
 
         case ClassConstant _:
         case DecoratedClassConstant _: {
@@ -437,7 +582,9 @@ public abstract class Builder {
             TypeConstant     type    = constId.getValueType(pool, null);
 
             if (type.isA(pool.typeEnumeration())) {
-                String    name = ensureJitClassName(type);
+                // the enum's class-of-class holds the singleton, not the generalized Enumeration
+                String    name = TypeSystem.enumerationClass(
+                        getCCName(type.getParamType(0)));
                 ClassDesc cd   = ClassDesc.of(name);
                 code.getstatic(cd, Instance, cd);
                 return new SingleSlot(type, Specific, cd, "");
@@ -445,11 +592,14 @@ public abstract class Builder {
 
             assert type.isA(pool.typeClass());
 
-            loadCtx(bctx, code);
-            loadTypeConstant(bctx, code, type.getParamType(0));
-            code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
-            loadCtx(bctx, code)
-                .invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx));
+            if (bctx == null) {
+                loadType(code, type.getParamType(0));
+                loadCtx(code);
+            } else {
+                bctx.loadType(code, type.getParamType(0));
+                loadCtx(bctx, code);
+            }
+            code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx));
             return new SingleSlot(type, Specific, CD_Class, "");
         }
 
@@ -467,9 +617,12 @@ public abstract class Builder {
             // 1) ensure the method exists
             TypeConstant containerType = bctx.thisType;
             ClassDesc    containerCD   = ClassDesc.of(bctx.className);
+            boolean      isDeferred    = methodId.isLambda();
+            JitCallDesc  call          = null;
             String       jitName;
             MethodBody   body;
             TypeConstant sigType; // function or method type
+
             if (methodId.isLambda()) {
                 MethodStructure lambda = (MethodStructure) methodId.getComponent();
                 jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
@@ -485,41 +638,58 @@ public abstract class Builder {
                 if (alias) {
                     // an alias can refer to a method on another type, e.g. FPConvertible.toDec
                     containerType = containerId.getType();
-                    containerCD   = ensureClassDesc(containerType);
+                    containerCD   = getCCDesc(containerType);
                     containerInfo = bctx.getTypeInfo(containerType);
                 }
 
                 MethodInfo method = containerInfo.getMethodById(methodId);
                 assert method != null;
 
+                call    = resolvePrivateDetachedCall(method, containerType);
                 jitName = method.ensureJitMethodName(typeSystem);
                 body    = method.getHead();
                 sigType = body.getIdentity().getType();
 
                 if (!alias && body.getIdentity().getNestedDepth() > 2) {
+                    // private detached calls are never nested
+                    assert call == null;
+
                     // methods nested inside properties or methods are not visible otherwise and
                     // need to be built on-the-spot
                     bctx.buildMethod(jitName, body);
+                    isDeferred = true;
                 }
             }
 
             // 2) create the MethodHandle(s)
-            JitMethodDesc jmd         = body.getJitDesc(this, containerType);
-            boolean       isFunction  = body.getMethodStructure().isFunction();
-            boolean       isInterface = containerType.isJitInterface();
+            boolean isFunction = body.getMethodStructure().isFunction();
+            if (!isDeferred && containerType.isVirtualChildClass()) {
+                // functions live on their declaring implementation; ordinary bound methods
+                // dispatch through the callable contract, not the body host
+                containerCD = isFunction
+                        ? getImplDesc(body.resolveDeclaringType(pool(), containerType))
+                        : getCCDesc(containerType);
+            }
 
-            DirectMethodHandleDesc.Kind kind = isFunction
-                    ? isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_STATIC
-                                  : DirectMethodHandleDesc.Kind.STATIC
-                    : isInterface ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
-                                  : DirectMethodHandleDesc.Kind.VIRTUAL;
+            JitMethodDesc jmd         = call == null ? body.getJitDesc(this, containerType) : call.jmd();
+            boolean       isInterface = isDeferred || isFunction
+                    ? containerType.isJitImplInterface()
+                    : containerType.isJitCCInterface();
 
-            DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
-                    containerCD, jitName, jmd.standardMD);
+            if (isDeferred && !isFunction && bctx.methodDesc instanceof JitDetachedBodyDesc detached) {
+                // a nested method is static on the body owner, with its enclosing receiver type
+                call = new JitCallDesc(containerCD, DetachedBody + jitName, jmd,
+                        JitCallDesc.Kind.Static, false, detached.receiverCD);
+            }
 
-            DirectMethodHandleDesc optMD = jmd.isOptimized
-                    ? MethodHandleDesc.ofMethod(kind, containerCD, jitName + OPT, jmd.optimizedMD)
-                    : null;
+            if (call == null) {
+                call = new JitCallDesc(containerCD, jitName, jmd,
+                        isFunction ? JitCallDesc.Kind.Static : JitCallDesc.Kind.Virtual,
+                        isInterface, null);
+            }
+
+            DirectMethodHandleDesc stdMD = call.toMethodHandle(false);
+            DirectMethodHandleDesc optMD = call.jmd().isOptimized ? call.toMethodHandle(true) : null;
 
             if (isFunction) {
                 // 3) instantiate a function object
@@ -568,7 +738,8 @@ public abstract class Builder {
             return loadUInt8Array(bctx, code, bytesConstant);
 
         case ArrayConstant arrayConst: {
-            TypeConstant arrayType = arrayConst.getType();
+            // a generic literal must use this compilation's element type
+            TypeConstant arrayType = arrayConst.getType().resolveGenerics(pool(), getThisType());
             Constant[]   values    = arrayConst.getValue();
             return arrayConst.getFormat() == Tuple
                     ? loadTuple(bctx, code, arrayType, values)
@@ -592,7 +763,7 @@ public abstract class Builder {
             MethodInfo     ctorInfo = typeInfo.getMethodById(ctorId);
             JitCtorDesc    ctorJmd  = (JitCtorDesc) ctorInfo.getJitDesc(this, mapType);
             String         ctorName = ctorInfo.ensureJitMethodName(typeSystem).replace("construct", NEW);
-            String         clzName  = ensureJitClassName(mapType);
+            String         clzName  = getICName(mapType);
             ClassDesc      mapCd    = ClassDesc.of(clzName);
             JitMethodDesc  newJmd   = convertConstructToNew(typeInfo, mapCd, ctorJmd);
 
@@ -747,7 +918,7 @@ public abstract class Builder {
             RegisterInfo valueReg = loadConstant(bctx, code, values[i]);
             if (valueReg.flavor().isOptimized) {
                 box(code, valueReg);
-            } else if (valueReg.type().isJitInterface()) {
+            } else if (valueReg.type().isJitCCInterface()) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();
@@ -942,7 +1113,7 @@ public abstract class Builder {
         code.dup();
         loadCtx(bctx, code);
         code.invokevirtual(cdArray, "$makeImmut", MD_xvmVoid);
-        return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+        return new SingleSlot(arrayType, Specific, getCCDesc(arrayType), "");
     }
 
     private SingleSlot loadRange(BuildContext bctx, CodeBuilder code, RangeConstant rangeConst) {
@@ -963,7 +1134,7 @@ public abstract class Builder {
             code.iconst_0();
         });
 
-        return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
+        return new SingleSlot(rangeType, Specific, getCCDesc(rangeType), "");
     }
 
     /**
@@ -1034,7 +1205,11 @@ public abstract class Builder {
         }
 
         String    getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
-        ClassDesc ownerCD    = ensureClassDesc(typeOwner);
+        ClassDesc ownerCD    = getCCDesc(typeOwner);
+        if (!invokeStatic && !typeContainer.isJitAssignableTo(typeOwner)) {
+            // a derived child's interface receiver can call a getter hosted by a hard-left class
+            code.checkcast(ownerCD);
+        }
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
@@ -1051,7 +1226,7 @@ public abstract class Builder {
         code.aload(ctxSlot);
         if (invokeStatic) {
             code.invokestatic(ownerCD, getterName, md);
-        } else if (!isNative && typeOwner.isJitInterface()) {
+        } else if (!isNative && typeOwner.isJitCCInterface()) {
             code.invokeinterface(ownerCD, getterName, md);
         } else {
             code.invokevirtual(ownerCD, getterName, md);
@@ -1060,7 +1235,7 @@ public abstract class Builder {
         TypeConstant jitType = jitInfo.getType();
         TypeConstant xvmType = xvmInfo.getType();
         if (!jitType.isJitAssignableTo(xvmType)) {
-            code.checkcast(ensureClassDesc(xvmType));
+            code.checkcast(getCCDesc(xvmType));
         }
         return xvmInfo;
     }
@@ -1271,12 +1446,21 @@ public abstract class Builder {
     }
 
     /**
+     * Resolve a named generic parameter on the object already on the Java stack.
+     */
+    public static CodeBuilder loadTypeForName(CodeBuilder code, String name, int ctxSlot) {
+        return code.aload(ctxSlot)
+                   .ldc(name)
+                   .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+    }
+
+    /**
      * Invoke the specified method with the opcode required by the property's JVM owner
      * representation.
      */
    public static CodeBuilder invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
                                String methodName, MethodTypeDesc md) {
-        if (targetType.isJitInterface()) {
+        if (targetType.isJitCCInterface()) {
             code.invokeinterface(cd, methodName, md);
         } else {
             code.invokevirtual(cd, methodName, md);
@@ -1818,7 +2002,7 @@ public abstract class Builder {
         Label endLabel     = code.newLabel();
         Label successLabel = code.newLabel();
 
-        ClassDesc cd = ensureClassDesc(typeTo);
+        ClassDesc cd = getCCDesc(typeTo);
         code.labelBinding(startLabel)
             .checkcast(cd)
             .goto_(successLabel)
@@ -1908,6 +2092,20 @@ public abstract class Builder {
     }
 
     /**
+     * Obtain a virtual child's instantiator-router descriptor for class-of-class dispatch.
+     * The instantiator interface declares this router with the resolved type and outer object,
+     * even when the corresponding static instantiator does not need a TypeConstant argument.
+     */
+    public JitMethodDesc getChildConstructorDesc(MethodInfo constructor) {
+        TypeInfo      info = constructor.getTypeInfo();
+        TypeConstant  type = info.getType().getJitCCType();
+        JitMethodDesc jmd  = convertConstructToNew(info, getCCDesc(type),
+                (JitCtorDesc) constructor.getJitDesc(this, type));
+        return new JitCtorDesc(type, null, false, true, true,
+                jmd.standardReturns, jmd.standardParams, jmd.optimizedReturns, jmd.optimizedParams);
+    }
+
+    /**
      * Call the "new$" [static] method.
      *
      * @param argsLoader the function (consumer) that is responsible for loading the arguments
@@ -1921,8 +2119,11 @@ public abstract class Builder {
 
     /**
      * Call the "$new" (instantiator) static method, optionally supplying the outer (parent) object.
-     * Virtual children dispatch through a factory on the parent; other classes use the
+     * Virtual children resolve against their runtime parent and call an instantiator router on
+     * the child's class-of-class through its instantiator interface; other classes use the
      * instantiator directly.
+     *
+     * @see "doc/jit_class_names.txt"
      */
     public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
                                   MethodConstant ctorId, RegisterInfo outer,
@@ -1941,52 +2142,64 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     targetCD   = ensureClassDesc(targetType);
-        String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        ClassDesc     targetCD = getCCDesc(targetType);
         JitMethodDesc instorMD;
 
         if (targetJIC.isVirtualChild()) {
             assert outer != null : "Virtual child without an outer";
+            assert bctx  != null : "Out of context";
 
-            // dispatch to the parent's factory so inherited code constructs the overridden child
-            TypeInfo     baseInfo = ctor.getChildConstructorOrigin().getTypeInfo();
-            TypeConstant baseType = baseInfo.getType().getJitICType();
+            MethodInfo    origin       = ctor.getChildConstructorOrigin();
+            JitMethodDesc instorRouter = getChildConstructorDesc(origin);
+            String        targetName   = instorRouter.typeTarget.getJitImplName(typeSystem);
+            ClassDesc     instorIface  = ClassDesc.of(TypeSystem.funkyInterface(targetName));
+            String        name         = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
 
-            instorMD = convertConstructToNew(baseInfo, ensureClassDesc(baseType),
-                        (JitCtorDesc) ctor.getJitDesc(this, baseType));
+            instorMD = convertConstructToNew(targetInfo, targetCD,
+                    (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
             MethodTypeDesc md;
-            if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
-                instorName += Builder.OPT;
+            if (instorRouter.isOptimized) {
+                md    = instorRouter.optimizedMD;
+                name += OPT;
             } else {
-                md = instorMD.standardMD;
+                md = instorRouter.standardMD;
             }
 
-            TypeConstant parentType = targetJIC.getParentType();
-            ClassDesc    parentCD   = ensureClassDesc(parentType);
-
+            // evaluate the outer once; its runtime type selects both the child override and JIC
             RegisterInfo outerReg = outer.load(code);
-            if (!outerReg.type().isJitAssignableTo(parentType)) {
-                code.checkcast(parentCD);
+            if (outerReg.type().isJitCCInterface()) {
+                code.checkcast(CD_nObject);
             }
-            code.aload(ctxSlot);
-            if (baseInfo.hasGenericTypes()) {
-                loadTypeConstant(bctx, code, targetType);
-            }
-            argsLoader.accept(instorMD);
 
-            // the routing method can be extracted from the constructor's MethodDesc
-            int    outerIndex  = baseInfo.hasGenericTypes() ? 2 : 1;
-            String factoryName = targetJIC.getSingleUnderlyingClass(true).getName() + instorName;
+            // childType   = outer.$childType(ctx, targetType);
+            // instorIface = (InstorIface) nType.$ensureType(ctx, childType).$xvmClass(ctx);
+            // target      = (Target) instorIface.$new(ctx, childType, outer, args...); // or $new$p
+            int outerSlot = bctx.storeTempValue(code, CD_nObject);
+            code.aload(outerSlot)
+                .aload(ctxSlot);
+            loadTypeConstant(bctx, code, targetType);
+            code.invokevirtual(CD_nObject, "$childType", MD_xvmChildType);
 
-            code.invokevirtual(parentCD, factoryName, md.dropParameterTypes(outerIndex, outerIndex + 1));
+            int typeSlot = bctx.storeTempValue(code, CD_TypeConstant);
+            code.aload(ctxSlot)
+                .aload(typeSlot)
+                .invokestatic(CD_nType, "$ensureType", MD_EnsureType)
+                .aload(ctxSlot)
+                .invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+                .checkcast(instorIface)
+                .aload(ctxSlot)
+                .aload(typeSlot)
+                .aload(outerSlot);
+            argsLoader.accept(instorRouter);
+            code.invokeinterface(instorIface, name, md);
 
             if (!md.returnType().equals(targetCD)) {
                 // every override returns the base child type in its Java descriptor
                 code.checkcast(targetCD);
             }
         } else {
+            String instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
             instorMD = convertConstructToNew(targetInfo, targetCD,
                         (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
@@ -2004,7 +2217,7 @@ public abstract class Builder {
             }
             if (outer != null) {
                 outer.load(code);
-                if (!outer.cd().equals(CD_nObject)) {
+                if (outer.type().isJitCCInterface()) {
                     code.checkcast(CD_nObject);
                 }
             }
@@ -2113,6 +2326,14 @@ public abstract class Builder {
             }
         }
         return code;
+    }
+
+    /**
+     * @return true iff code from the component of the specified format is embedded in an
+     *         incorporating class
+     */
+    public static boolean isEmbedded(Format format) {
+        return format == Format.MIXIN || format == Format.ANNOTATION;
     }
 
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
@@ -2275,13 +2496,13 @@ public abstract class Builder {
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
-    public static final String MODULE         = "¤module"; // the main module class name
-    public static final String LAMBDA         = "lambda¤"; // the base of the lambda function name
-    public static final String EXT            = "$ext";    // a multi-slot extension field of a primitive field
-    public static final String INIT           = "$init";   // the singleton initialization instance method
-    public static final String NEW            = "$new";    // the instance creation static method (i.e. instantiator)
-    public static final String OPT            = "$p";      // methods that contains primitive types
-    public static final String DELEGATE       = "$d";      // methods that delegates to an underlying property
+    public static final String MODULE     = "¤module"; // the main module class name
+    public static final String LAMBDA     = "lambda¤"; // the base of the lambda function name
+    public static final String EXT        = "$ext";    // a multi-slot extension field of a primitive field
+    public static final String INIT       = "$init";   // the singleton initialization instance method
+    public static final String NEW        = "$new";    // the instance creation static method (i.e. instantiator)
+    public static final String OPT        = "$p";      // methods that contains primitive types
+    public static final String DELEGATE   = "$d";      // methods that delegates to an underlying property
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
@@ -2404,6 +2625,26 @@ public abstract class Builder {
      */
     public static final String Outer = "$outer";
 
+    /**
+     * The prefix for a virtual child's detached implementation body.
+     */
+    public static final String DetachedBody = "s$";
+
+    /**
+     * Prefix for synthetic getters of individual JVM backing fields, e.g. "$get$value() -> T".
+     * Virtual-child Pure interfaces declare these methods and Impl classes implement them, allowing
+     * field access through an interface receiver without invoking Ecstasy property getters.
+     * The signature uses the field's JVM type and has no Ctx parameter.
+     */
+    public static final String FieldGet = "$get$";
+
+    /**
+     * Prefix for synthetic setters of individual JVM backing fields, e.g. "$set$value(T) -> void".
+     * These correspond to {@link #FieldGet} and, like putfield, bypass Ecstasy property setters and
+     * their mutability checks for struct access.
+     */
+    public static final String FieldSet = "$set$";
+
     // various commonly used MethodDesc constants
     public static final MethodTypeDesc MD_Bit_box      = md(CD_Bit, CD_int);
     public static final MethodTypeDesc MD_Boolean_box  = md(CD_Boolean, CD_boolean);
@@ -2445,8 +2686,10 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_L2D          = md(CD_double, CD_long);
     public static final MethodTypeDesc MD_F2I          = md(CD_int, CD_float);
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
+    public static final MethodTypeDesc MD_xvmClass     = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
     public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);
     public static final MethodTypeDesc MD_xvmInitType  = md(CD_void, CD_Ctx, CD_TypeConstant);
+    public static final MethodTypeDesc MD_xvmChildType = md(CD_TypeConstant, CD_Ctx, CD_TypeConstant);
 }

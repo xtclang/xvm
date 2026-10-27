@@ -33,6 +33,9 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
+import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
+import static org.xvm.javajit.JitMethodDesc.JMD_VIRTUAL;
+
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
  * virtual levels) about a single property as it appears in a particular type.
@@ -403,69 +406,6 @@ public class PropertyInfo
     }
 
     /**
-     * Retain only property bodies that originate from the identities specified in the passed sets.
-     *
-     * @param idProp      the identity of the property for this operation
-     * @param setClass    the set of identities that call chain bodies can come from
-     * @param setClass    the set of identities that call chain bodies can come from
-     * @param setDefault  the set of identities that default bodies can come from
-     *
-     * @return the resulting PropertyInfo, or null if nothing has been retained
-     */
-    public PropertyInfo retainOnly(PropertyConstant      idProp,
-                                   Set<IdentityConstant> setClass,
-                                   Set<IdentityConstant> setDefault) {
-        List<PropertyBody> list  = null;
-        PropertyBody[]     aBody = m_aBody;
-        for (int i = 0, c = aBody.length; i < c; ++i) {
-            PropertyBody     body     = aBody[i];
-            IdentityConstant constClz = idProp.getClassIdentity(); // TODO GG explain (and why inside the loop?)
-            boolean fRetain;
-            switch (body.getImplementation()) {
-            case FromInto:      // "into" isn't in the call chain
-            case Implicit:
-            case Default:       // interface type - allow multiple copies to survive
-            case Declared:      // interface type - allow multiple copies to survive
-                fRetain = true;
-                break;
-
-            case Native:
-                // generic type parameters can come from either the concrete contributions, or
-                // from an interface
-                fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
-                break;
-
-            case SansCode:
-            case Delegating:
-            case Explicit:
-                // concrete type
-                fRetain = setClass.contains(constClz);
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-            if (fRetain) {
-                if (list != null) {
-                    list.add(body);
-                }
-            } else if (list == null) {
-                // "Array.asList()" produces an immutable list
-                list = new ArrayList<>(Arrays.asList(aBody).subList(0, i));
-            }
-        }
-
-        if (list == null) {
-            return this;
-        }
-
-        return list.isEmpty()
-                ? null
-                : new PropertyInfo(list.toArray(new PropertyBody[0]),
-                        m_type, m_fRequireField, m_fSuppressVar, f_nRank);
-    }
-
-    /**
      * Create a new PropertyInfo that represents a more limited (public or protected) access to the
      * members of this property that is on the private type.
      *
@@ -552,8 +492,8 @@ public class PropertyInfo
         PropertyBody[]          aBodyOld = m_aBody;
         int                     cBodies  = aBodyOld.length;
         ArrayList<PropertyBody> listNew  = new ArrayList<>(cBodies); // may be smaller than cBodies
-        for (int i = 0; i < cBodies; i++) {
-            PropertyBody body = aBodyOld[i];
+
+        for (PropertyBody body : aBodyOld) {
             if (setFromInto == null || setFromInto.contains(body.getIdentity().getClassIdentity())) {
                 listNew.add(new PropertyBody(body.getStructure(), Implementation.FromInto, null,
                         body.getType(), body.isRO(), body.isRW(), body.hasCustomCode(), Effect.None,
@@ -1504,7 +1444,8 @@ public class PropertyInfo
      * @return the JitMethodDesc for the property getter on the specified target type
      */
     public JitMethodDesc getGetterJitDesc(Builder builder, TypeConstant typeTarget) {
-        return JitMethodDesc.of(builder, typeTarget, this.isConstant(), false,
+        return JitMethodDesc.of(builder, typeTarget,
+                this.isConstant() ? JMD_STATIC : JMD_VIRTUAL,
                 TypeConstant.NO_TYPES, new TypeConstant[] {getType()}, 0);
     }
 
@@ -1524,7 +1465,8 @@ public class PropertyInfo
      * @return the JitMethodDesc for the property setter on the specified target type
      */
     public JitMethodDesc getSetterJitDesc(Builder builder, TypeConstant typeTarget) {
-        return JitMethodDesc.of(builder, typeTarget, this.isConstant(), false,
+        return JitMethodDesc.of(builder, typeTarget,
+                this.isConstant() ? JMD_STATIC : JMD_VIRTUAL,
                 new TypeConstant[] {getType()}, TypeConstant.NO_TYPES, 1);
     }
 

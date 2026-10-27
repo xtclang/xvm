@@ -73,19 +73,26 @@ public abstract class nObject
     }
 
     /**
-     * Helper method to resolve generic types.
+     * Resolve a named generic parameter against this object's runtime type.
+     *
+     * @throws {@link XvmError} if the runtime type has no formal with the specified name
      *
      * @see org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty
      */
     public nType $typeForName(Ctx ctx, java.lang.String name) {
-        TypeConstant type = $xvmType(ctx).resolveGenericType(name);
-        return type == null ? null : nType.$ensureType(ctx, type);
+        TypeConstant targetType = $xvmType(ctx);
+        TypeConstant type       = targetType.resolveGenericType(name);
+        if (type == null) {
+            throw Exception.$xvmError(ctx, "Unresolvable formal type \"" + name + "\" in " +
+                    targetType.getValueString(), null);
+        }
+        return nType.$ensureType(ctx, type);
     }
 
     /**
      * Resolve a virtual child's type against this runtime parent, preserving its own parameters.
-     * Used by {@link org.xvm.javajit.builders.CommonBuilder#assembleVirtualChildFactory} when a
-     * child's "$new" requires a TypeConstant.
+     * Used by {@link org.xvm.javajit.Builder#buildNew} before dispatching construction through
+     * the child's class-of-class.
      * Also used by generated "$xvmType" methods on non-generic virtual children.
      */
     public TypeConstant $childType(Ctx ctx, TypeConstant childType) {

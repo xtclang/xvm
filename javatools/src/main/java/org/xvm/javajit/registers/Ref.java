@@ -106,7 +106,7 @@ public class Ref
 
     @Override
     public RegisterInfo load(CodeBuilder code) {
-        ClassDesc referentCd = bctx.builder.ensureClassDesc(referentType());
+        ClassDesc referentCd = bctx.builder.getCCDesc(referentType());
         String    refName    = "⅋" + name;
 
         super.load(code);
@@ -141,7 +141,7 @@ public class Ref
                 -> throw new UnsupportedOperationException("flavor: " + referentFlavor);
         }
 
-        int tempSlot = bctx.storeTempValue(code, bctx.builder.ensureClassDesc(type));
+        int tempSlot = bctx.storeTempValue(code, bctx.builder.getCCDesc(type));
         if (bctx.isAssigned(this)) {
             super.load(code); // nRef
             bctx.loadCtx(code)

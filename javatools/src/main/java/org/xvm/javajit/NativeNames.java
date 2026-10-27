@@ -30,6 +30,7 @@ public class NativeNames {
 
         reservedMethodName.put("reflect.Ref/get/0", "get");
         reservedMethodName.put("reflect.Ref/peek/0", "peek");
+        reservedMethodName.put("reflect.Type/equals/2", "equals");
         reservedMethodName.put("reflect.Type/hashed/0", "hashed"); // TEMPORARY
         reservedMethodName.put("reflect.Var/set/1", "set");
 
@@ -157,6 +158,11 @@ public class NativeNames {
         reservedMethodName.put("numbers.UIntN/prevValue/0", "prevValue");
         reservedMethodName.put("numbers.UIntN/skip/1",      "skip");
         reservedMethodName.put("numbers.UIntN/stepsTo/1",   "stepsTo");
+
+        reservedMethodName.put("temporal.Timer/start/0",    "start");
+        reservedMethodName.put("temporal.Timer/schedule/3", "schedule");
+        reservedMethodName.put("temporal.Timer/stop/0",     "stop");
+        reservedMethodName.put("temporal.Timer/reset/0",    "reset");
     }
 
     /**

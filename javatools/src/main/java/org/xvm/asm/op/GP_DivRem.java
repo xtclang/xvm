@@ -91,7 +91,7 @@ public class GP_DivRem
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nArgValue}, 2);
 
             if (frame.isNextRegister(m_anRetValue[0])) {
-                frame.introduceVarCopy(m_anRetValue[0], m_nTarget); // TODO GG review this (type comes from op method)
+                frame.introduceVarCopy(m_anRetValue[0], m_nTarget);
             }
 
             if (frame.isNextRegister(m_anRetValue[1])) {
@@ -221,7 +221,7 @@ public class GP_DivRem
             bctx.loadCtx(code);
             bctx.loadCallArguments(code, jmd, new int[] {m_nArgValue});
             if (jmd.isOptimizedStatic) {
-                code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, md);
+                code.invokestatic(bctx.builder.getCCDesc(typeTarget), sJitName, md);
             } else {
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
@@ -231,13 +231,13 @@ public class GP_DivRem
 
             // the quotient is on the stack
             if (!typeReturn.isA(typeResult)) {
-                code.checkcast(bctx.builder.ensureClassDesc(typeResult));
+                code.checkcast(bctx.builder.getCCDesc(typeResult));
             }
             bctx.storeValue(code, m_anRetValue[0], typeTarget);
             // the remainder is in the context
             bctx.loadFromContext(code, cdTarget, 0);
             if (!typeReturn.isA(typeResult)) {
-                code.checkcast(bctx.builder.ensureClassDesc(typeResult));
+                code.checkcast(bctx.builder.getCCDesc(typeResult));
             }
             bctx.storeValue(code, m_anRetValue[1], typeTarget);
         }

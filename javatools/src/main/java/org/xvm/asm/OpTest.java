@@ -22,12 +22,10 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
-import static org.xvm.javajit.Builder.MD_xvmType;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -452,21 +450,14 @@ public abstract class OpTest
                 }
                 return;
             } else {
-                regTarget.load(code);
-                if (typeTarget.isJitInterface()) {
-                    code.checkcast(CD_nObject);
-                }
-                bctx.loadCtx(code);
-                code.invokevirtual(CD_nObject, "$xvmType", MD_xvmType); // target type
-                bctx.loadTypeConstant(code, typeTest);                  // test type
+                bctx.generateIsA(code, regTarget, typeTest);
             }
         } else {
             RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // nType
             assert regType.type().isTypeOfType();
-            code.getfield(CD_nType, DataType, CD_TypeConstant);
+            code.getfield(CD_nType, DataType, CD_TypeConstant)
+                .invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
         }
-
-        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
 
         if (getOpCode() == OP_IS_NTYPE) {
             code.iconst_m1().ixor(); // "not"

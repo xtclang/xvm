@@ -1,7 +1,5 @@
 class Float64Tests {
 
-    @Inject Console console;
-
     void run() {
         // Comparison tests
         testFloat64CompareEq();

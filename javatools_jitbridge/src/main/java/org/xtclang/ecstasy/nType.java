@@ -62,7 +62,7 @@ public class nType
     public Class $xvmClass(Ctx ctx) {
         if (xvmClass == null) {
             TypeSystem       typeSystem  = ctx.container.typeSystem;
-            java.lang.String className   = $dataType.ensureJitClassName(typeSystem);
+            java.lang.String className   = $dataType.getJitImplName(typeSystem);
             java.lang.String classOfType = TypeSystem.classOfClass(className);
             try {
                 java.lang.Class clz;
@@ -79,6 +79,23 @@ public class nType
             }
         }
         return xvmClass;
+    }
+
+    /**
+     * Resolve a named generic parameter against the represented {@link #$dataType} rather than the
+     * {@link #$xvmType()}, which {@link #$typeForName} would do.
+     *
+     * @throws an {@link XvmError} if the represented type has no formal with the specified name
+     *
+     * @see org.xvm.javajit.BuildContext#loadFormalType
+     */
+    public nType $dataTypeForName(Ctx ctx, java.lang.String name) {
+        TypeConstant type = $dataType.resolveGenericType(name);
+        if (type == null) {
+            throw Exception.$xvmError(ctx, "Unresolvable formal type \"" + name + "\" in " +
+                    $dataType.getValueString(), null);
+        }
+        return $ensureType(ctx, type);
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
@@ -114,13 +131,12 @@ public class nType
 
         TypeConstant hasherType = pool.ensureParameterizedTypeConstant(
                 pool.ensureEcstasyTypeConstant("collections.NaturalHasher"), $dataType);
-        TypeSystem       typeSystem = ctx.container.typeSystem;
-        MethodConstant   ctorId     = hasherType.ensureTypeInfo().findConstructor();
-        java.lang.String newName    = ctorId.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        TypeSystem       ts      = ctx.container.typeSystem;
+        MethodConstant   ctorId  = hasherType.ensureTypeInfo().findConstructor();
+        java.lang.String newName = ctorId.ensureJitMethodName(ts).replace("construct", NEW);
         try {
             // use the generated factory so the hasher implements the correct specialized interface
-            java.lang.Class<?> hasherClass = typeSystem.loader.loadClass(
-                    hasherType.getJitCCType().ensureJitClassName(typeSystem));
+            java.lang.Class<?> hasherClass = ts.loader.loadClass(hasherType.getJitICName(ts));
             ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, TypeConstant.class)
                     .invoke(null, ctx, hasherType);
             return true;
@@ -153,6 +169,14 @@ public class nType
     public static nType $ensureType(Ctx ctx, TypeConstant type) {
         // TODO: cache type -> nType
         return new nType(ctx, type);
+    }
+
+    /**
+     * Native implementation of: "static <CompileType extends Type> Boolean equals(CompileType value1,
+     * CompileType value2)".
+     */
+    public static boolean equals$p(Ctx ctx, nType CompileType, nType value1, nType value2) {
+        return value1.$dataType.equals(value2.$dataType);
     }
 
     /**
@@ -339,7 +363,7 @@ public class nType
 
     private Method ensureMethod(Ctx ctx, java.lang.String methodName, int valueCount) {
         TypeSystem         typeSystem = ctx.container.typeSystem;
-        java.lang.String   className  = $dataType.ensureJitClassName(typeSystem);
+        java.lang.String   className  = $dataType.getJitCCName(typeSystem);
         java.lang.Class<?> targetClass;
         try {
             targetClass = typeSystem.loader.loadClass(className);

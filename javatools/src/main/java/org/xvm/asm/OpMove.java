@@ -50,6 +50,11 @@ public abstract class OpMove
     }
 
     @Override
+    public boolean usesSuper() {
+        return m_nFromValue == A_SUPER;
+    }
+
+    @Override
     public void resetSimulation() {
         resetRegister(m_argTo);
     }

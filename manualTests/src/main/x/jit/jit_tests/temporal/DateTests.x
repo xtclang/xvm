@@ -1,7 +1,5 @@
 class DateTests {
 
-    @Inject Console console;
-
     void run() {
         testCreateDate();
         testCreateDateFromString();
