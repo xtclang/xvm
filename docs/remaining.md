@@ -30,10 +30,15 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### L73: server commands and edit application
 
-- [ ] Route the embedded Run commands through `workspace/executeCommand` to the R2–R5 build/run
-  service, without assembling a CLI command or compiling again in the protocol handler.
-- [ ] Negotiate `workspace/applyEdit`, with failure handling, for any server-run action that edits.
-- [ ] Add a shared acceptance case for each server command, in both editors.
+- [x] Closed (decided 2026-10-27), with nothing to build:
+  - Run reaches the R2–R5 build/run service without a command line or a second compile: the module
+    lens names the editors' own `xtc.runModule`, which in embedded mode sends `xtc/run` to the
+    service (X280–X303 in both editors).
+  - The one server command that edits, the legacy code action's apply, is advertised only to a
+    client with `workspace/applyEdit` and without code-action literals. A refusal or a 10-second
+    wait fails the request with the client's reason (`CapabilityNegotiationTest`).
+  - Not built: a server-run Run command for LSP clients without their own `xtc.runModule`, such as
+    Neovim, Helix or Zed, whose lens has no command they can run. It waits until one is needed.
 - Rule kept: no generic command registry or placeholder handler without a named user action.
 
 ### L77: colors (removed)
