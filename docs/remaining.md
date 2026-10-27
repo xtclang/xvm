@@ -594,7 +594,7 @@ passes with the workaround disabled. The gates are in
   writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
   cancels no DAP request today, so no adapter gets that event.
 
-### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): our #1773, open
+### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): our #1773, merged
 
 - [ ] UP44 (2026-10-27): `DAPDebugProcess.runToPosition()` registers a temporary breakpoint and
   resumes, and `resume(context, position)` removes it once the `continue` request is answered, not
@@ -602,36 +602,40 @@ passes with the workaround disabled. The gates are in
   the cursor than that round trip runs past it: with the cursor two statements after the stop,
   IntelliJ stopped there; after a count to 3,000,000 it ran to its exit. VS Code 1.140 removes its
   temporary breakpoint when the session stops. Fixed by our
-  [#1773](https://github.com/redhat-developer/lsp4ij/pull/1773) (2026-10-27, open): the temporary
-  breakpoint stays until the program next stops, and the session's end forgets it; with a plugin
-  built from it, X323 stops at the cursor in IntelliJ. To do: after a release with it, make X323
+  [#1773](https://github.com/redhat-developer/lsp4ij/pull/1773) (merged 2026-10-27, unreleased): the
+  temporary breakpoint stays until the program next stops, and the session's end forgets it; with a
+  plugin built from it, and again from `main` at `e9f8bb42` (`run-11586456472789120644`), X323 stops
+  at the cursor in IntelliJ. To do: after a release with it, make X323
   full in IntelliJ, its UP44 gate removed.
 
-### LSP4IJ: no loaded sources or modules (UP45): our #1774, open
+### LSP4IJ: no loaded sources or modules (UP45): our #1774, merged
 
 - [ ] UP45 (2026-10-27): LSP4IJ never sends `loadedSources` or `modules`, and has no view for them
   (0.21.0 and `main`, `42f1f16e`). XVM's adapter answers both since R12, which VS Code shows in
   Loaded Scripts (X326). Implemented by our
-  [#1774](https://github.com/redhat-developer/lsp4ij/pull/1774) (2026-10-27, open): Loaded Sources and
+  [#1774](https://github.com/redhat-developer/lsp4ij/pull/1774) (merged 2026-10-27, unreleased): Loaded Sources and
   Modules tabs, added once the adapter reports any; with a plugin built from it, a temporary X326
   found both, with the program's sources and modules. To do: after a release with it, implement
   IntelliJ's X326.
 
-### LSP4IJ: no function breakpoints (UP46): not filed
+### LSP4IJ: no function breakpoints (UP46): our #1780, open
 
 - [ ] UP46 (2026-10-27): LSP4IJ has no function breakpoints: it never sends `setFunctionBreakpoints`
   (0.21.0 and `main`, `42f1f16e`); its breakpoints are lines, disassembly instructions and
   exception filters. XVM's adapter installs them since R9 (X328), which VS Code's Breakpoints view
-  adds. To do: an LSP4IJ breakpoint type by a function's name, sent to an adapter that advertises
-  `supportsFunctionBreakpoints`, as #1774 is for UP45; then implement IntelliJ's X328.
+  adds. Implemented by our [#1780](https://github.com/redhat-developer/lsp4ij/pull/1780) (2026-10-27,
+  open, `d870dd93`): a DAP Function Breakpoint type, added from the Breakpoints dialog's "+", sent
+  with `setFunctionBreakpoints` and matched by `hitBreakpointIds`. Checked natively: with a plugin
+  built from it, IntelliJ's X328 stops in `Entered.twice` and runs to its exit
+  (`run-11586456472789120644`). To do: after a release with it, make IntelliJ's X328 full.
 
-### LSP4IJ: no restart frame (UP47): our #1778, open
+### LSP4IJ: no restart frame (UP47): our #1778, merged
 
 - [ ] UP47 (2026-10-27): LSP4IJ never sends `restartFrame`, and ignores `supportsRestartFrame` and a
   frame's `canRestart` (0.21.0 and `main`, `42f1f16e`), so IntelliJ's Reset Frame is not offered in
   a DAP session. XVM's adapter restarts frames since R11 (X329), which VS Code's Call Stack view
-  offers. Fixed by our [#1778](https://github.com/redhat-developer/lsp4ij/pull/1778) (2026-10-27,
-  open, `62c4a53e`): a DAP drop-frame handler that offers Reset Frame on a frame that can restart,
+  offers. Fixed by our [#1778](https://github.com/redhat-developer/lsp4ij/pull/1778) (merged
+  2026-10-27, unreleased, `62c4a53e`): a DAP drop-frame handler that offers Reset Frame on a frame that can restart,
   sends `restartFrame`, and resumes the session until the `restart` stop. Checked natively
   (2026-10-27): with a plugin built from it, IntelliJ's X329 resets outer() through the Reset Frame
   action, which is hidden on run(), and passes (`run-17331679936087029005`). To do: after a
