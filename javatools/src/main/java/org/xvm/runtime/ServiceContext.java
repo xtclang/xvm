@@ -81,6 +81,18 @@ public class ServiceContext {
         return f_container.f_runtime;
     }
 
+    public Container getContainer() {
+        return f_container;
+    }
+
+    public String getName() {
+        return f_sName;
+    }
+
+    public long getId() {
+        return f_lId;
+    }
+
     public LinkerContext getLinkerContext() {
         return f_container;
     }
