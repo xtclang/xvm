@@ -317,7 +317,16 @@ come from are in parentheses.
   VS Code passes X323, whose program counts to 3,000,000 before the cursor's line. IntelliJ's is
   partial: LSP4IJ removes the temporary breakpoint once the continue request is answered, so the
   program runs past the cursor (UP44).
-- [ ] R11: choosing which call on a line to step into (`stepInTargets`).
+- [x] R11: choosing which call on a line to step into (`stepInTargets`) (2026-10-27; shared X327).
+  `SessionDebugger.stepInTargets` lists the calls that the line where a fiber waits makes, from its
+  ops, in the order of its code, each named by what it calls (`twice(Int)`, `new Point(Int, Int)`);
+  `stepInto` steps into one: the step ends at the first line that code reaches while its frame makes
+  that call, or at the next line if the line does not make it, and falls back to a plain step into
+  if the frame returns first. `OpInvocable.getInvokedMethod` and `OpCallable.getCalledMethod` name a
+  call's target; a call of a function that a variable holds is not offered. The worker answers
+  `stepInTargets` and `stepInto` (protocol 19), and the adapter `stepInTargets` and `stepIn` with a
+  `targetId`. VS Code offers it as Step Into Target, IntelliJ as Smart Step Into, which LSP4IJ 0.21.0
+  sends as `stepInTargets`.
 - [ ] R11: restarting a frame (`T`).
 - [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
 - [x] R12: every service and fiber in Threads, with their containers (`VF`) (2026-10-27; shared
