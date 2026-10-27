@@ -11,6 +11,7 @@ import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -263,6 +264,9 @@ internal class EmbeddedRuns(
                         events.breakpoints(path, states.map { it.copy(line = lines.now(it.line)) })
                     }
 
+                    override fun functionBreakpoints(states: List<BreakpointState>) =
+                        events.functionBreakpoints(states.map { state -> now(state) { path -> sources?.lines(path) ?: LineMap.SAME } })
+
                     override fun stopped(stop: StopState) = events.stopped(stop)
 
                     override fun logged(text: String) = events.logged(text)
@@ -357,6 +361,21 @@ internal class EmbeddedRuns(
             }
         }
     }
+
+    /** Replaces the function breakpoints of a running program under the debugger, each on its line now. */
+    internal fun setFunctionBreakpoints(
+        runId: String,
+        breakpoints: List<FunctionBreakpointRequest>,
+    ): CompletableFuture<List<BreakpointState>> =
+        debugged(runId) { worker.setFunctionBreakpoints(it, breakpoints) }.thenApply { states ->
+            states.map { state -> now(state) { path -> lines(runId, path) } }
+        }
+
+    /** A function breakpoint on the line of its method's file where that line is now, which may have changed since the build. */
+    private fun now(
+        state: BreakpointState,
+        lines: (String) -> LineMap,
+    ) = state.path?.let { path -> state.copy(line = lines(path).now(state.line)) } ?: state
 
     /** The fibers of a stopped program under the debugger. */
     internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
