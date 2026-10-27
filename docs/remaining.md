@@ -320,7 +320,20 @@ come from are in parentheses.
 - [ ] R11: choosing which call on a line to step into (`stepInTargets`).
 - [ ] R11: restarting a frame (`T`).
 - [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped.
-- [ ] R12: every service and fiber in Threads, with their containers (`VF`), and thread events.
+- [x] R12: every service and fiber in Threads, with their containers (`VF`) (2026-10-27; shared
+  X325). At a stop, `threads` lists the fibers that wait at a line first, as before, then the other
+  fibers of the program's services, in its own container and those nested in it, in the order the
+  services were made: each named by its service, after its container's module if that is not the
+  stopped fiber's, with what it does (waiting, paused, not started, running, as in a native call, or
+  ending). A fiber that waits otherwise than at a line, is paused or ends has its stack, without
+  variables; one that runs has none, since its frames change as they would be read. The runtime
+  gains `ServiceContext.getContainer()`, `getName()` and `getId()`, `Fiber.getContext()` and
+  `Container.getParent()` for it. Found: listing every container of the runtime took in the other
+  programs it runs, as the tests' shared interpreter does; only the stopped program's count now.
+  Not done: thread events. A fiber starts for every call to a service, so an event for each would
+  cost every call of a debugged program, and both editors ask for the threads at each stop. Known
+  limit: the caller of a synchronous call to an idle service shows as running, without a stack, for
+  as long as the call takes: the runtime marks a fiber waiting only once it blocks.
 - [x] R12: frames whose source file is not on the machine, such as library code (2026-10-27; shared
   X324). A frame of a bundled XDK library's code is in the library's bundled source, at its line:
   the read-only copy that navigation opens too, which is the source the library's code was compiled
