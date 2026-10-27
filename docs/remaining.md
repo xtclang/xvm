@@ -551,21 +551,28 @@ passes with the workaround disabled. The gates are in
   writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
   cancels no DAP request today, so no adapter gets that event.
 
-### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): not filed
+### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): our #1773, open
 
 - [ ] UP44 (2026-10-27): `DAPDebugProcess.runToPosition()` registers a temporary breakpoint and
   resumes, and `resume(context, position)` removes it once the `continue` request is answered, not
   when the program stops there (0.21.0 and `main`, `42f1f16e`). A program that takes longer to reach
   the cursor than that round trip runs past it: with the cursor two statements after the stop,
   IntelliJ stopped there; after a count to 3,000,000 it ran to its exit. VS Code 1.140 removes its
-  temporary breakpoint when the session stops. To do: an LSP4IJ issue and a fix that removes the
-  temporary breakpoint at the next stop or when the session ends; then X323 is full in IntelliJ.
+  temporary breakpoint when the session stops. Fixed by our
+  [#1773](https://github.com/redhat-developer/lsp4ij/pull/1773) (2026-10-27, open): the temporary
+  breakpoint stays until the program next stops, and the session's end forgets it; with a plugin
+  built from it, X323 stops at the cursor in IntelliJ. To do: after a release with it, make X323
+  full in IntelliJ, its UP44 gate removed.
 
-### LSP4IJ: no loaded sources or modules (UP45): not filed
+### LSP4IJ: no loaded sources or modules (UP45): our #1774, open
 
 - [ ] UP45 (2026-10-27): LSP4IJ never sends `loadedSources` or `modules`, and has no view for them
   (0.21.0 and `main`, `42f1f16e`). XVM's adapter answers both since R12, which VS Code shows in
-  Loaded Scripts (X326). To do: an LSP4IJ issue for a loaded sources view; then IntelliJ's X326.
+  Loaded Scripts (X326). Implemented by our
+  [#1774](https://github.com/redhat-developer/lsp4ij/pull/1774) (2026-10-27, open): Loaded Sources and
+  Modules tabs, added once the adapter reports any; with a plugin built from it, a temporary X326
+  found both, with the program's sources and modules. To do: after a release with it, implement
+  IntelliJ's X326.
 
 ### A DAP completion's `start` (UP43): not filed
 
