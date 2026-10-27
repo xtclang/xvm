@@ -2035,9 +2035,30 @@ public abstract class TypeConstant
      * @param info  the new TypeInfo
      */
     protected void setTypeInfo(TypeInfo info) {
-        TypeInfo infoOld;
-        while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this))
-                || info.isPlaceHolder()) {
+        while (true) {
+            TypeInfo infoOld = s_typeinfo.get(this);
+            if (rankTypeInfo(info) <= rankTypeInfo(infoOld) && !info.isPlaceHolder()) {
+                // we have not made any progress; let's check if at least dependencies have shrunk
+                if (infoOld.getProgress() != Progress.Incomplete) {
+                    // only an incomplete TypeInfo can improve through fewer unresolved dependencies
+                    break;
+                }
+
+                Set<TypeConstant> setDependsPrev = infoOld.collectDependTypes(null);
+                if (setDependsPrev == null) {
+                    // no improvement is possible
+                    break;
+                }
+
+                // a retry can acquire inherited members while still waiting on the "into" type;
+                // retain that progress only if the unresolved dependency set strictly shrank
+                Set<TypeConstant> setDepends = info.collectDependTypes(null);
+                if (setDepends != null && (setDepends.size() >= setDependsPrev.size() ||
+                                          !setDependsPrev.containsAll(setDepends))) {
+                    // no improvement
+                    break;
+                }
+            }
             // update the TypeInfo
             if (s_typeinfo.compareAndSet(this, infoOld, info)) {
                 // update the invalidation count that we have caught up to at this point
@@ -3572,6 +3593,12 @@ public abstract class TypeConstant
             // if this type represents a mixin we cannot complete until the "into" type does
             if (typeContrib instanceof UnionTypeConstant typeUnion) {
                 typeUnion.decompose(setDepends);
+
+                // an incomplete union can contain completed alternatives; exclude those
+                setDepends.removeIf(type -> {
+                    TypeInfo info = type.getTypeInfo();
+                    return isComplete(info) && type.isUpToDate(info);
+                });
             } else {
                 setDepends.add(typeContrib.removeAccess());
             }
@@ -3584,6 +3611,17 @@ public abstract class TypeConstant
                 // itself, and may miss the information from the "into" type(s), which we already
                 // (i) have or (ii) don't care about
                 if (infoContrib.dependsOn(this.removeAccess())) {
+                    infoContrib.collectDependTypes(setDepends);
+
+                    // exclude the dependencies from the Into to avoid circularity problems
+                    TypeConstant typeInto = infoContrib.getInto().removeAccess();
+                    if (typeInto instanceof UnionTypeConstant typeUnion) {
+                        Set<TypeConstant> setInto = new HashSet<>();
+                        typeUnion.decompose(setInto);
+                        setDepends.removeAll(setInto);
+                    } else {
+                        setDepends.remove(typeInto);
+                    }
                     return !setDepends.isEmpty();
                 }
             }
