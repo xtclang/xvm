@@ -835,9 +835,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   of 80,000 highlighters installed, so it never measured the decorated case.
 - [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28). To do: get it
   merged.
-- [ ] UP20 (IntelliJ test Driver): ticket (project `AT`, or `IJPL` if `AT` isn't public), then a PR
-  from `driver-edt-modality` (`2c07e3ae4`).
-- [ ] UP29 (IntelliJ test Driver): ticket, then a PR from `driver-waitfor-once` (`5fe70a336`).
+- [ ] UP20 (IntelliJ test Driver): filed as [IJPL-259883](https://youtrack.jetbrains.com/issue/IJPL-259883); our [#3729](https://github.com/JetBrains/intellij-community/pull/3729) (open, 2026-10-28).
+  To do: get it merged.
+- [ ] UP29 (IntelliJ test Driver): filed as [IJPL-259884](https://youtrack.jetbrains.com/issue/IJPL-259884); our [#3730](https://github.com/JetBrains/intellij-community/pull/3730) (open, 2026-10-28).
+  To do: get it merged.
 - [ ] UP16 (VS Code): comment on microsoft/vscode#219122 (no activity since 2024), then a PR from
   `fix/explorer-cut-paste-stale-nodes` (`4dd451ed`) in `~/src/vscode`.
 - [ ] After each is fixed and released: remove the matching test or editor workaround and pass its
