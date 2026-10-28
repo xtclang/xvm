@@ -113,6 +113,7 @@ object RunWorker {
                         null,
                         EmbeddingSupport.EntryPoint(command.string("method") ?: "run", command.strings("args")),
                         console,
+                        // the editors always show what is typed: the echo request is not passed on to them yet
                         EmbeddingSupport.ConsoleInput.of(BufferedReader(input)),
                         command.string("rootDir")?.let(::File),
                         errors,
