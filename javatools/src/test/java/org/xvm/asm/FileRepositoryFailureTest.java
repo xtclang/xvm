@@ -1,7 +1,6 @@
 package org.xvm.asm;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 
 import java.nio.file.Files;
@@ -10,122 +9,120 @@ import java.nio.file.Path;
 import java.time.Duration;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Exercises failed and repaired module-file reads, including repairs that preserve file metadata. Ensures
- * failure observations do not turn write errors into read reports or leave failed reads permanently cached.
+ * Exercises failed module reads and recovery after normal file replacements. Ensures unchanged failures
+ * stay cached and quiet, while write errors still reach the writer.
  */
-class FileRepositoryFailureTest {
+class FileRepositoryFailureTest extends RepositoryFailureTestSupport {
     @TempDir
     Path directory;
-
-    private final Map<File, IOException> reports = new HashMap<>();
 
     @Test
     void invalidHeaderIsReportedAndCanBeRepaired() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true, reports::put);
+        var repository = new FileRepository(file.toFile(), true);
 
-        assertTrue(reports.isEmpty(), "construction must not initiate a read");
+        assertTrue(output().isEmpty(), "construction must not initiate a read");
         assertTrue(repository.getModuleNames().isEmpty());
         assertNull(repository.loadModule("Broken"));
-        assertEquals(Set.of(file.toFile()), reports.keySet());
-        assertNotNull(reports.get(file.toFile()));
+        assertTrue(output().contains(file.toString()));
 
-        reports.clear();
+        clearOutput();
         new FileStructure("Broken").writeTo(file.toFile());
-        assertNotNull(repository.loadModule("Broken"));
-        assertTrue(reports.isEmpty());
+        awaitModule(repository, "Broken");
+        assertTrue(output().isEmpty());
     }
 
     @Test
-    void truncatedPayloadIsReportedAfterItsHeaderWasRead() throws IOException {
+    void truncatedPayloadIsReportedAfterItsHeaderWasRead() throws Exception {
         Path file = directory.resolve("broken.xtc");
-        reports.clear();
+        clearOutput();
         new FileStructure("Broken").writeTo(file.toFile());
         byte[] contents = Files.readAllBytes(file);
         var input = new ByteArrayInputStream(contents);
         FileStructure.readFileInfo(input);
         Files.write(file, Arrays.copyOf(contents, contents.length - input.available()));
-        var repository = new FileRepository(file.toFile(), true, reports::put);
+        var repository = new FileRepository(file.toFile(), true);
 
         assertTrue(repository.getModuleNames().contains("Broken"));
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(reports.get(file.toFile()));
+        assertTrue(output().contains(file.toString()));
+        clearOutput();
+        Thread.sleep(80); // Past the burst interval; the unchanged bad payload remains unavailable.
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(reports.get(file.toFile()));
+        assertTrue(output().isEmpty());
 
-        reports.clear();
         Files.write(file, contents);
-        assertNotNull(repository.loadModule("Broken"));
-        assertTrue(reports.isEmpty());
+        awaitModule(repository, "Broken");
+        assertTrue(output().isEmpty());
     }
 
     @Test
-    void failedReadIsRetriedEvenWhenRepairPreservesItsMetadata() throws IOException {
-        Path file = directory.resolve("Good.xtc");
-        new FileStructure("Good").writeTo(file.toFile());
-        byte[] valid = Files.readAllBytes(file);
-        byte[] broken = valid.clone();
-        broken[0] = 0; // Invalidate the magic value without changing the file size.
-        Files.write(file, broken);
-        var timestamp = Files.getLastModifiedTime(file);
-        var repository = new FileRepository(file.toFile(), true, reports::put);
-        assertNull(repository.loadModule("Good"));
-        assertNotNull(reports.get(file.toFile()));
+    void unchangedFailureIsNotReadAgainWhenTheBurstIntervalExpires() throws Exception {
+        Path file = directory.resolve("Broken.xtc");
+        Files.writeString(file, "not a compiled module");
+        var repository = new FileRepository(file.toFile(), true);
+        assertNull(repository.loadModule("Broken"));
+        assertTrue(output().contains(file.toString()));
+        clearOutput();
 
-        reports.clear();
-        Files.write(file, valid);
-        Files.setLastModifiedTime(file, timestamp);
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
-            while (repository.loadModule("Good") == null) {
-                Thread.sleep(10);
-            }
-        });
-        assertTrue(reports.isEmpty());
+        Thread.sleep(80); // Advance past the production burst-cache interval.
+        for (int i = 0; i < 3; ++i) {
+            assertTrue(repository.getModuleNames().isEmpty());
+            assertNull(repository.loadModule("Broken"));
+        }
+        assertTrue(output().isEmpty(), "unchanged failures must not cause repeated reads or reports");
+
+        new FileStructure("Repaired").writeTo(file.toFile());
+        awaitModule(repository, "Repaired");
+        assertTrue(output().isEmpty());
     }
 
     @Test
     void removedCandidatesProduceNoFurtherReports() throws IOException {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true, reports::put);
+        var repository = new FileRepository(file.toFile(), true);
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(reports.get(file.toFile()));
+        assertTrue(output().contains(file.toString()));
 
-        reports.clear();
+        clearOutput();
         Files.delete(file);
-        assertTrue(repository.getModuleNames().isEmpty());
-        assertTrue(reports.isEmpty());
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            while (!repository.getModuleNames().isEmpty()) Thread.sleep(10);
+        });
+        assertTrue(output().isEmpty());
     }
+
     @Test
-    void failedWritesAreThrownSeparatelyFromReadReports() throws IOException {
+    void failedWritesStillReachTheWriter() throws IOException {
         Path file = directory.resolve("Old.xtc");
         Files.writeString(file, "unreadable candidate");
         byte[] original = Files.readAllBytes(file);
-        var repository = new FileRepository(file.toFile(), true, reports::put);
+        var repository = new FileRepository(file.toFile(), true);
 
         assertNull(repository.loadModule("Missing"));
-        assertEquals(Set.of(file.toFile()), reports.keySet());
-        reports.clear();
+        assertTrue(output().contains(file.toString()));
+        clearOutput();
         assertThrows(IOException.class, () -> repository.storeModule(new FileStructure("Good").getModule()));
-        assertTrue(reports.isEmpty(), "a write failure is not a read event");
+        assertTrue(output().isEmpty(), "write failures must be thrown, not printed");
         assertArrayEquals(original, Files.readAllBytes(file));
     }
 
+    private static void awaitModule(ModuleRepository repository, String name) {
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            while (repository.loadModule(name) == null) Thread.sleep(10);
+        });
+    }
 }
