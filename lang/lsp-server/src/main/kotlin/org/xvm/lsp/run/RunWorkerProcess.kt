@@ -5,6 +5,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.DebugSetup
+import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -78,7 +80,8 @@ internal class RunWorkerProcess(
         val method: String,
         val args: List<String>,
         val rootDir: String?,
-        val breakpoints: List<SourceBreakpoints>? = null,
+        /** The debugger's setup, for a run under the debugger. */
+        val debug: DebugSetup? = null,
     )
 
     /**
@@ -216,7 +219,11 @@ internal class RunWorkerProcess(
                             addProperty("method", request.method)
                             add("args", JsonArray().apply { request.args.forEach(::add) })
                             request.rootDir?.let { addProperty("rootDir", it) }
-                            request.breakpoints?.let { add("breakpoints", RunWorkerDebug.sources(it)) }
+                            request.debug?.let { setup ->
+                                add("breakpoints", RunWorkerDebug.sources(setup.breakpoints))
+                                add("exceptions", RunWorkerDebug.exceptions(setup.exceptions))
+                                if (setup.stopOnEntry) addProperty("stopOnEntry", true)
+                            }
                         },
                     )
                 if (sent) null else "The execution worker could not be started".also { worker.end(it) }
@@ -288,6 +295,15 @@ internal class RunWorkerProcess(
         request("variables", id) { addProperty("reference", reference) }
             .thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
 
+    /** Replaces a debugged run's exception stops. */
+    fun setExceptionStops(
+        id: Long,
+        stops: ExceptionStops,
+    ) = command("exceptionStops", id) {
+        val json = RunWorkerDebug.exceptions(stops)
+        json.keySet().forEach { add(it, json[it]) }
+    }
+
     /** Steps a stopped run's fiber; false when that fiber does not wait. */
     fun step(
         id: Long,
@@ -298,6 +314,9 @@ internal class RunWorkerProcess(
             addProperty("thread", thread)
             addProperty("step", kind.name.lowercase())
         }.thenApply { it["stepped"].asBoolean }
+
+    /** Pauses a debugged run at the next line one of its fibers reaches. */
+    fun pause(id: Long) = command("pause", id)
 
     /** Resumes a stopped run. */
     fun resume(id: Long) = command("continue", id)
