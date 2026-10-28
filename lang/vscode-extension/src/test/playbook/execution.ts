@@ -265,6 +265,9 @@ export function debugSessionCases(): void {
                         .flatMap(message => message.body?.stackFrames ?? []),
                     values => values.length >= data.frames.length, 'VS Code shows the call stack');
                 assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
+                // the program's frames are the whole stack, without the runner that hosts it
+                assert.strictEqual(sent.find(message => message.type === 'response' && message.command === 'stackTrace')?.body?.totalFrames,
+                    data.frames.length, JSON.stringify(frames));
                 assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(document.uri.fsPath));
                 assert.ok(dapOutput(sent).includes(data.before), dapOutput(sent));
                 assert.ok(!dapOutput(sent).includes(data.after), 'Nothing after the breakpoint has run');
@@ -426,6 +429,8 @@ export function debugSessionCases(): void {
                         .flatMap(message => message.body?.stackFrames ?? []),
                     values => values.length >= data.frames.length, 'VS Code shows where the exception was thrown');
                 assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
+                assert.strictEqual(sent.find(message => message.type === 'response' && message.command === 'stackTrace')?.body?.totalFrames,
+                    data.frames.length, JSON.stringify(frames));
 
                 const session = started;
                 assert.ok(session, 'The Ecstasy debug session started');
@@ -777,6 +782,7 @@ interface DapMessage {
         threadId?: number;
         breakpoint?: { verified: boolean; line?: number };
         stackFrames?: { name: string; line: number; source?: { path?: string } }[];
+        totalFrames?: number;
     };
 }
 
