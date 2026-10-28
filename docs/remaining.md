@@ -714,6 +714,14 @@ passes with the workaround disabled. The gates are in
   their insertions one character to the left, so nothing is filed. XVM's adapter sends `length`
   only, which both editors replace before the cursor (`0e0d7e2c4`).
 
+### LSP4IJ: no monikers (UP51): not filed
+
+- UP51 (2026-10-28): LSP4IJ never sends `textDocument/moniker` (0.21.0 and `main`, `7469aab9`), and
+  IntelliJ has no view or navigation that uses monikers; no LSP4IJ issue or pull request mentions
+  them. XVM's server answers them since L74/L75, and IntelliJ's X31 and X252–X254 pass by sending
+  the request through LSP4IJ's LSP4J endpoint, a protocol check rather than native coverage; VS Code
+  has no moniker view either. Nothing is filed until IntelliJ has a use for them.
+
 ### LSP4J
 
 - [ ] UP15: get LSP4J #997 reviewed and merged. @pisv was asked on 2026-10-20; no reply yet.
