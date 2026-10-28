@@ -22,8 +22,11 @@ internal data class LanguageServiceConfiguration(
         }
     }
 
+    // the server reads text synchronization and save formatting only from its initialization options
     fun requiresRestart(previous: LanguageServiceConfiguration): Boolean =
-        adapter != previous.adapter || textSynchronization != previous.textSynchronization
+        adapter != previous.adapter ||
+            textSynchronization != previous.textSynchronization ||
+            saveFormatting != previous.saveFormatting
 
     fun initializationOptions(nativeFormatOnSave: Boolean = false): Map<String, Any> =
         mapOf(

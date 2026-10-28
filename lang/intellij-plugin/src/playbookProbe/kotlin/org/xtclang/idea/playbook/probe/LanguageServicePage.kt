@@ -36,7 +36,7 @@ object LanguageServicePage {
                 components.filterIsInstance<JBCheckBox>().single { it.name == "xtc.service.hints" }
             val saving =
                 components.filterIsInstance<JComboBox<*>>().single { it.name == "xtc.service.save" }
-            check(!saving.isEnabled) { "Unavailable LSP4IJ save hook must not be offered" }
+            check(saving.isEnabled == hints.isEnabled) { "Save formatting must be offered like the other settings" }
             inherit.isSelected = false
             hints.isSelected = !hints.isSelected
             check(page.isModified())
@@ -126,6 +126,14 @@ object LanguageServicePage {
         value: String,
     ) {
         choiceSetting(project, "xtc.service.adapter", value)
+    }
+
+    @JvmStatic
+    fun saveOwner(
+        project: Project,
+        value: String,
+    ) {
+        choiceSetting(project, "xtc.service.save", value)
     }
 
     private fun choiceSetting(
