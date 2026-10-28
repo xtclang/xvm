@@ -76,7 +76,7 @@ public class VirtualChildBuilder extends CommonBuilder {
     }
 
     @Override
-    protected boolean shouldGenerate(IdentityConstant id) {
+    public boolean shouldGenerate(IdentityConstant id) {
         if (id instanceof PropertyConstant propId && !propId.isConstant() &&
                 propId.getClassIdentity().getComponent() instanceof ClassStructure clz &&
                 clz.isVirtualChildClass()) {
