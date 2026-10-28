@@ -89,6 +89,8 @@ internal class RunWorkerProcess(
         val rootDir: String?,
         /** The debugger's setup, for a run under the debugger. */
         val debug: DebugSetup? = null,
+        /** The ID the client knows the run by, which the logs give beside the worker's own run number. */
+        val runId: String? = null,
     )
 
     /**
@@ -121,13 +123,20 @@ internal class RunWorkerProcess(
         val run: Long? = null,
     )
 
-    /** One worker JVM and the run it hosts, if any. Guarded by [lock], apart from its reader thread. */
+    /**
+     * One worker JVM and the run it hosts, if any; [generation] counts the workers this server started, from 1. Guarded by
+     * [lock], apart from its reader thread.
+     */
     private inner class Worker(
         val process: Process,
+        val generation: Int,
     ) {
         val input = PrintStream(process.outputStream, true, Charsets.UTF_8)
         val ready = CompletableFuture<Unit>()
         var run: Long? = null
+
+        /** The client's ID of the run the worker hosts, or hosted last. */
+        var runId: String? = null
         var timer: ScheduledFuture<*>? = null
 
         /** Commands waiting for the worker to report the expected identity; null once it has. */
@@ -169,10 +178,16 @@ internal class RunWorkerProcess(
             ended = ended ?: reason
             process.destroyForcibly()
         }
+
+        /** The worker as the logs give it. */
+        override fun toString() = "worker=${process.pid()} generation=$generation"
     }
 
     private val lock = Any()
     private val workers = mutableListOf<Worker>()
+
+    /** The workers started so far, which numbers each one's generation. Guarded by [lock]. */
+    private var generations = 0
     private val listeners = ConcurrentHashMap<Long, Listener>()
     private val hosts = ConcurrentHashMap<Long, Worker>()
     private val nextId = AtomicLong(1)
@@ -214,7 +229,9 @@ internal class RunWorkerProcess(
                 worker.timer?.cancel(false)
                 worker.timer = null
                 worker.run = id
+                worker.runId = request.runId
                 hosts[id] = worker
+                logger.info("run assigned: {} {} module={} method={}", runFields(id, request.runId), worker, request.module, request.method)
                 // commands are held until the worker reports the expected identity, so they keep their order
                 val sent =
                     worker.send(
@@ -236,6 +253,7 @@ internal class RunWorkerProcess(
                 if (sent) null else "The execution worker could not be started".also { worker.end(it) }
             }
         if (refused != null) {
+            logger.warn("run refused: {} reason={}", runFields(id, request.runId), refused)
             hosts.remove(id)
             listeners.remove(id)?.exited(null, refused)
         }
@@ -260,7 +278,8 @@ internal class RunWorkerProcess(
         val worker = hosts[id] ?: return
         after(limits.stop) {
             if (hosts[id] === worker) {
-                logger.warn("run {} did not stop within {}; ending its execution worker", id, limits.stop)
+                val runId = synchronized(lock) { worker.runId }
+                logger.warn("run did not stop within {}; ending its worker: {} {}", limits.stop, runFields(id, runId), worker)
                 worker.end("The program did not stop within ${limits.stop}, so its execution worker was ended")
             }
         }
@@ -515,7 +534,7 @@ internal class RunWorkerProcess(
                 logger.error("execution worker could not be started", failure)
                 return null
             }
-        val worker = Worker(process)
+        val worker = Worker(process, ++generations)
         workers += worker
         Thread
             .ofPlatform()
@@ -524,11 +543,11 @@ internal class RunWorkerProcess(
             .start { read(worker) }
         after(limits.startup) {
             if (!worker.ready.isDone) {
-                logger.warn("execution worker {} did not start within {}; ending it", process.pid(), limits.startup)
+                logger.warn("execution worker did not start within {}; ending it: {}", limits.startup, worker)
                 worker.end("The execution worker did not start within ${limits.startup}")
             }
         }
-        logger.info("execution worker started: pid {}", process.pid())
+        logger.info("execution worker started: {}", worker)
         return worker
     }
 
@@ -542,7 +561,7 @@ internal class RunWorkerProcess(
                 for (line in lines) {
                     val event = runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull()
                     if (event == null) {
-                        logger.warn("execution worker: {}", line)
+                        logger.warn("execution worker output: {} text={}", worker, line)
                         continue
                     }
                     val id = event["id"]?.asLong
@@ -551,12 +570,18 @@ internal class RunWorkerProcess(
 
                         "exit" ->
                             if (id != null) {
+                                val code = event["code"]?.asLong
+                                val error = event["error"]?.takeUnless { it.isJsonNull }?.asString
+                                val runId = synchronized(lock) { worker.runId.takeIf { worker.run == id } }
+                                logger.info(
+                                    "run exited: {} {} {}",
+                                    runFields(id, runId),
+                                    worker,
+                                    code?.let { "code=$it" } ?: error?.let { "error=$it" } ?: "code=none",
+                                )
                                 finished(worker, id)
                                 abandon(id)
-                                listeners.remove(id)?.exited(
-                                    event["code"]?.asLong,
-                                    event["error"]?.takeUnless { it.isJsonNull }?.asString,
-                                )
+                                listeners.remove(id)?.exited(code, error)
                             }
 
                         "breakpoints" ->
@@ -589,13 +614,13 @@ internal class RunWorkerProcess(
                                 ),
                             )
 
-                        "log" -> logger.info("execution worker: {}", event["text"]?.asString)
+                        "log" -> logger.info("execution worker log: {} text={}", worker, event["text"]?.asString)
 
                         "ready" -> accept(worker, RunWorkerIdentity.of(event))
 
-                        "started" -> logger.debug("execution worker: {}", line)
+                        "started" -> logger.debug("execution worker event: {} {}", worker, line)
 
-                        else -> logger.warn("execution worker sent an unknown event: {}", line)
+                        else -> logger.warn("execution worker sent an unknown event: {} event={}", worker, line)
                     }
                 }
             }
@@ -604,6 +629,7 @@ internal class RunWorkerProcess(
         } finally {
             // a worker still running exits once its input ends
             worker.input.close()
+            logger.info("execution worker exited: {} reason={}", worker, worker.ended ?: "it stopped on its own")
             val runs =
                 synchronized(lock) {
                     workers.remove(worker)
@@ -622,13 +648,12 @@ internal class RunWorkerProcess(
         worker: Worker,
         identity: RunWorkerIdentity?,
     ) {
-        val pid = worker.process.pid()
         if (identity == expected) {
-            logger.info("execution worker {} ready: {}", pid, identity)
+            logger.info("execution worker ready: {} identity={}", worker, identity)
             synchronized(lock) { if (!worker.release()) worker.end("The execution worker could not be started") }
         } else {
             val reported = identity?.toString() ?: "an earlier protocol"
-            logger.error("execution worker {} runs {}, but the language server expects {}; ending it", pid, reported, expected)
+            logger.error("execution worker runs {}, but the language server expects {}; ending it: {}", reported, expected, worker)
             worker.end("The execution worker runs $reported, but the language server expects $expected; restart the language server")
         }
         worker.ready.complete(Unit)
@@ -644,11 +669,12 @@ internal class RunWorkerProcess(
         worker: Worker,
         usage: Usage,
     ) {
-        val pid = worker.process.pid()
+        // the next run can start before this report arrives; its client ID is then not this run's
+        val runId = synchronized(lock) { worker.runId.takeIf { worker.run == null || worker.run == usage.run } }
         logger.info(
-            "execution worker {} after run {}: {} MB heap in use after its collections, of {} MB, {} threads ({} in the runtime's pool), {} consoles, {} runs",
-            pid,
-            usage.run,
+            "execution worker after a run: {} {} heapAfterCollections={}MB heapMax={}MB threads={} poolThreads={} consoles={} runs={}",
+            worker,
+            usage.run?.let { runFields(it, runId) } ?: "workerRun=?",
             usage.heapUsed / MB,
             usage.heapMax / MB,
             usage.threads,
@@ -675,7 +701,7 @@ internal class RunWorkerProcess(
                     else -> null
                 }
             if (worn == null || worker.ended != null) return
-            logger.warn("execution worker {} keeps {}; it serves no further run", pid, worn)
+            logger.warn("execution worker serves no further run: {} keeps={}", worker, worn)
             worker.worn = worn
             if (worker.run == null) retire(worker)
         }
@@ -731,6 +757,12 @@ internal class RunWorkerProcess(
 
     private companion object {
         private val logger = LoggerFactory.getLogger(RunWorkerProcess::class.java)
+
+        /** A run as the logs give it: the worker's run number, and the client's ID when it has one. */
+        fun runFields(
+            id: Long,
+            runId: String?,
+        ) = "workerRun=$id" + runId?.let { " run=$it" }.orEmpty()
 
         private const val MB = 1024L * 1024
 

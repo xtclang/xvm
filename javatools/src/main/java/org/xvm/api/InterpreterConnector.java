@@ -18,7 +18,10 @@ import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -176,6 +179,18 @@ public class InterpreterConnector
         int nResult = m_containerMain.getResult();
         m_containerMain = null;
         return nResult;
+    }
+
+    @Override
+    public void shutdown() {
+        // the native container's timers keep their pending alarms on the JVM-wide Java timer, and
+        // with them this runtime, until they are due
+        for (ServiceContext service : f_containerNative.getServices()) {
+            if (service.getService() instanceof xNanosTimer.TimerHandle timer) {
+                timer.cancelAlarms();
+            }
+        }
+        f_runtime.shutdownXVM();
     }
 
     // ----- data fields ---------------------------------------------------------------------------

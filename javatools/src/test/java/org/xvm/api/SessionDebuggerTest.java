@@ -33,6 +33,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -292,15 +293,16 @@ public class SessionDebuggerTest {
 
     /**
      * A module whose run() starts a service that loops on lines 6 and 7 forever, then prints
-     * "spinning" on line 16 and "stepped" on line 17.
+     * "spinning" on line 16 and "stepped" on line 17. The loop's count is the spinner's parameter,
+     * so its frame has it on every line, however soon the spinner is stopped.
      */
     private static final String HOLDS = """
             module Holds {
                 service Spinner {
                     Int spins;
 
-                    void spin() {
-                        for (Int count = 0; count >= 0; ++count) {
+                    void spin(Int count) {
+                        while (count++ >= 0) {
                             ++spins;
                         }
                     }
@@ -308,7 +310,7 @@ public class SessionDebuggerTest {
 
                 void run() {
                     Spinner spinner = new Spinner();
-                    spinner.spin^();
+                    spinner.spin^(0);
                     @Inject Console console;
                     console.print("spinning");
                     console.print("stepped");
@@ -609,6 +611,15 @@ public class SessionDebuggerTest {
         URL modules = SessionDebuggerTest.class.getResource("/xdk-modules");
         assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
         support = new EmbeddingSupport().configure(new DirRepository(new File(modules.toURI()), true), null);
+    }
+
+    /**
+     * The tests' interpreter ends with them, so that its runtime is not kept for the rest of the
+     * JVM's tests.
+     */
+    @AfterAll
+    static void shutdown() {
+        support.shutdownInterpreter();
     }
 
     @Test

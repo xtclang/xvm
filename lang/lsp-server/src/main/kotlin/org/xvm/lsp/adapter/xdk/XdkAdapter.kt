@@ -435,11 +435,35 @@ class XdkAdapter
                 val snapshot = overlays.toMap()
                 val problem = discovery.get().problem
                 val result = CompletableFuture<XdkBuildResult>()
-                val task =
+                lateinit var task: CompilerQueueTrace.Work
+                task =
                     queueTrace.task("embedded-build", scope, result) {
                         try {
                             if (!result.isDone) {
-                                result.complete(build(scope, order, snapshot, inputs, graph, problem, folder, rebuild, result))
+                                val built =
+                                    build(
+                                        scope,
+                                        order,
+                                        snapshot,
+                                        inputs,
+                                        graph,
+                                        problem,
+                                        folder,
+                                        rebuild,
+                                        result,
+                                    ).copy(id = task.id)
+                                logger.info(
+                                    "embedded build: build={} scope={} outcome={} modules={}",
+                                    built.id,
+                                    scope,
+                                    when {
+                                        built.cancelled -> "cancelled"
+                                        built.succeeded -> "succeeded"
+                                        else -> "failed"
+                                    },
+                                    built.modules.joinToString(",") { it.logged + if (it.reused) "(reused)" else "" },
+                                )
+                                result.complete(built)
                             }
                         } catch (failure: Exception) {
                             result.completeExceptionally(failure)
