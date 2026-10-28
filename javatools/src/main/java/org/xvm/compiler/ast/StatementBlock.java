@@ -58,6 +58,8 @@ import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * A block statement specifies a series of statements.
  *
@@ -322,8 +324,7 @@ public class StatementBlock
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());
             } else {
-                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
-                        getEndPosition(), getEndPosition());
+                errs.error(Compiler.RETURN_REQUIRED, in(getSource(), getEndPosition(), getEndPosition()));
             }
         } else {
             // it is possible that there is a dangling label at the end that is unreachable,
@@ -737,8 +738,8 @@ public class StatementBlock
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis && errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+            if (!fHasThis) {
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             }
             return fHasThis;
         }

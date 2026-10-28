@@ -2,6 +2,8 @@ package org.xvm.asm;
 
 import java.util.ArrayList;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorListener.ErrorInfo;
@@ -15,14 +17,14 @@ import org.xvm.compiler.Source;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static org.xvm.asm.ErrorListener.NOWHERE;
 
 /** Migration examples that compile independently of later listener-ownership changes. */
 class ErrorListenerMigrationTest {
@@ -53,6 +55,7 @@ class ErrorListenerMigrationTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void legacyStructureReportsStillUseTheBranchSourceSite() {
         var source = new Source("module Example {}");
         var errors = new ErrorList();
@@ -78,6 +81,35 @@ class ErrorListenerMigrationTest {
         assertThrows(CompilerException.class, parser::parseSource);
         assertEquals(1, errors.getSeriousErrorCount());
         assertTrue(errors.isAbortDesired());
+    }
+
+    /**
+     * A host may cancel without emitting an error. Suppression must preserve that live policy,
+     * even though the recoverable lexer diagnostic itself is deliberately discarded.
+     */
+    @Test
+    void derivedSilencePreservesAHostStopWithoutAnError() {
+        var stopped = new AtomicBoolean();
+        var received = new ArrayList<ErrorInfo>();
+        ErrorListener host = new ErrorListener() {
+            @Override
+            public void log(ErrorInfo error) {
+                received.add(error);
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return stopped.get();
+            }
+        };
+        var quiet = host.silence(Silence.CASCADE);
+        assertFalse(quiet.isAbortDesired());
+        stopped.set(true);
+
+        assertThrows(CompilerException.class,
+                () -> new Lexer(new Source("\"\\q\""), quiet).forEachRemaining(token -> {}));
+        assertTrue(received.isEmpty(), "suppression did not publish a diagnostic to cause the stop");
+        assertTrue(quiet.isAbortDesired(), "the live host policy, not a local error, requests the stop");
     }
 
     @Test

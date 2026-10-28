@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -21,7 +22,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Argument;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -43,6 +43,9 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
@@ -491,7 +494,7 @@ public class NameExpression
     public TypeConstant getImplicitType(Context ctx) {
         return isValidated()
                 ? getType()
-                : getImplicitType(ctx, null, ErrorListener.BLACKHOLE);
+                : getImplicitType(ctx, null, silent(PROBE));
     }
 
     /**
@@ -519,10 +522,6 @@ public class NameExpression
             return TypeFit.Fit;
         }
 
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
     }
 
@@ -537,7 +536,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, null).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, silent(PROBE)).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 
@@ -755,7 +754,9 @@ public class NameExpression
                     }
                     // there is a read of the implicit "this" variable
                     else if (getParent() instanceof NameExpression) {
-                        if (!ctx.requireThis(getStartPosition(), null)) {
+                        // a question, not an assertion: the comment below says the outer
+                        // expression reports whatever follows from the answer
+                        if (!ctx.requireThis(getStartPosition(), silent(PROBE))) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that
@@ -2015,7 +2016,7 @@ public class NameExpression
                     // process the "this.OuterName" construct
                     if (!typeLeft.isTypeOfType() && !fIdMode) {
                         Constant constTarget = new NameResolver(this, sName)
-                                .forceResolve(ErrorListener.BLACKHOLE);
+                                .forceResolve(silent(PROBE));
                         if (constTarget instanceof IdentityConstant && constTarget.isClass()) {
                             if (constTarget.equals(pool.clzOuter())) {
                                 // this.Outer
@@ -2752,7 +2753,7 @@ public class NameExpression
                 break CheckDynamic;
             }
 
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, silent(PROBE));
             if (!(argLeft instanceof Register regLeft)) {
                 break CheckDynamic;
             }
@@ -3025,7 +3026,7 @@ public class NameExpression
         if (typeNarrow != null) {
             assert isValidated();
 
-            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument arg = resolveRawArgument(ctx, false, silent(PROBE));
 
             if (left != null) {
                 if (arg instanceof FormalTypeChildConstant constFormal) {
