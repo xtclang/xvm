@@ -11,6 +11,7 @@ import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionStops
+import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.LaunchResult
 import org.xvm.debug.LaunchTarget
 import org.xvm.debug.ProgramEvents
@@ -138,6 +139,8 @@ internal class DebugSessions(
                             states: List<BreakpointState>,
                         ) = events.breakpoints(path, states)
 
+                        override fun functionBreakpoints(states: List<BreakpointState>) = events.functionBreakpoints(states)
+
                         override fun stopped(stop: StopState) = events.stopped(stop)
 
                         override fun logged(text: String) = events.logged(text)
@@ -157,6 +160,11 @@ internal class DebugSessions(
             runId: String,
             breakpoints: SourceBreakpoints,
         ) = runs.setBreakpoints(runId, breakpoints)
+
+        override fun setFunctionBreakpoints(
+            runId: String,
+            breakpoints: List<FunctionBreakpointRequest>,
+        ) = runs.setFunctionBreakpoints(runId, breakpoints)
 
         override fun setExceptionStops(
             runId: String,

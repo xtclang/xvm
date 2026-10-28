@@ -11,6 +11,7 @@ import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -71,6 +72,9 @@ internal class RunWorkerProcess(
             path: String,
             states: List<BreakpointState>,
         ) {}
+
+        /** How the function breakpoints were installed, before a run under the debugger started. */
+        fun functionBreakpoints(states: List<BreakpointState>) {}
 
         /** A run under the debugger stopped; it waits until [resume]. */
         fun stopped(stop: StopState) {}
@@ -249,6 +253,7 @@ internal class RunWorkerProcess(
                                 add("breakpoints", RunWorkerDebug.sources(setup.breakpoints))
                                 add("exceptions", RunWorkerDebug.exceptions(setup.exceptions))
                                 if (setup.stopOnEntry) addProperty("stopOnEntry", true)
+                                if (setup.functions.isNotEmpty()) add("functions", RunWorkerDebug.functions(setup.functions))
                             }
                         },
                     )
@@ -296,6 +301,14 @@ internal class RunWorkerProcess(
             val source = RunWorkerDebug.source(breakpoints)
             source.keySet().forEach { add(it, source[it]) }
         }.thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
+
+    /** Replaces the function breakpoints of a run under the debugger; answers how they were installed. */
+    fun setFunctionBreakpoints(
+        id: Long,
+        breakpoints: List<FunctionBreakpointRequest>,
+    ): CompletableFuture<List<BreakpointState>> =
+        request("setFunctionBreakpoints", id) { add("breakpoints", RunWorkerDebug.functions(breakpoints)) }
+            .thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
 
     /** The fibers of a stopped run; none while it runs. */
     fun threads(id: Long): CompletableFuture<List<ThreadState>> =
@@ -616,6 +629,9 @@ internal class RunWorkerProcess(
                                 ?.let(
                                     listeners::get,
                                 )?.breakpoints(event["path"].asString, RunWorkerDebug.statesOf(event.getAsJsonArray("breakpoints")))
+
+                        "functionBreakpoints" ->
+                            id?.let(listeners::get)?.functionBreakpoints(RunWorkerDebug.statesOf(event.getAsJsonArray("breakpoints")))
 
                         "stopped" -> id?.let(listeners::get)?.stopped(RunWorkerDebug.stopOf(event))
 
