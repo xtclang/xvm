@@ -10,7 +10,6 @@ import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueHandler
@@ -99,13 +98,6 @@ class XtcClientFeatures : LSPClientFeatures() {
         diagnosticResults.set(null)
         edits.forEach { it.cancel(false) }
         super.dispose()
-    }
-
-    override fun initializeParams(params: InitializeParams) {
-        super.initializeParams(params)
-        // TODO LSP4IJ: UP25 — 0.21.0 has no workspace/textDocumentContent provider or refresh
-        // handler. Leave this capability absent so library navigation uses protected file views.
-        // Remove the fallback only after upstream supports read-only virtual document lifetimes.
     }
 
     init {

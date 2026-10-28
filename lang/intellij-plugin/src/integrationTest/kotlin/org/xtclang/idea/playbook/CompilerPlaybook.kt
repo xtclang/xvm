@@ -2030,14 +2030,12 @@ class CompilerPlaybook(
     }
 
     /**
-     * The text of the library source that the selected editor shows at [target], and whether it can be changed.
-     * With LSP4IJ 0.21.0 it is a protected copy on disk; with an LSP4IJ that serves `workspace/textDocumentContent`
-     * (UP25, #1749), it is the language server's `ecstasy-library:` document, which has no file.
+     * The text of the library source that the selected editor shows at [target], and whether it can be changed: the
+     * language server's `ecstasy-library:` document, which LSP4IJ opens from `workspace/textDocumentContent` and which
+     * has no file.
      */
-    private fun Driver.librarySource(target: Pair<String, Int>): Pair<String, Boolean> {
-        val file = Path.of(target.first)
-        if (Files.isRegularFile(file)) return Files.readString(file) to Files.isWritable(file)
-        return withContext(OnDispatcher.EDT) {
+    private fun Driver.librarySource(target: Pair<String, Int>): Pair<String, Boolean> =
+        withContext(OnDispatcher.EDT) {
             val editor =
                 checkNotNull(service<FileEditorManager>(singleProject()).getSelectedTextEditor()) { "No editor shows ${target.first}" }
             check(
@@ -2046,7 +2044,6 @@ class CompilerPlaybook(
             val document = cast(editor.getDocument(), ParityDocument::class)
             document.getText() to document.isWritable()
         }
-    }
 
     private fun JEditorUiComponent.diagnostics(): List<Diagnostic> =
         awaitUiNotNull("read editor diagnostics", HANG_LIMIT) { readDiagnostics() }

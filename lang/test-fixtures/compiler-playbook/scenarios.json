@@ -8230,10 +8230,8 @@
         "monikerScheme": "ecstasy-artifact-v1"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "UP25: LSP4IJ 0.21.0 has no workspace/textDocumentContent provider; tests use the supported read-only file fallback and direct library monikers."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X255": {
