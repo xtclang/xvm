@@ -16,9 +16,9 @@ class ConnectionProcessTest {
 
     @Test
     fun `cancelled startup never creates a child in the upstream provider`() {
-        withProvider { provider, lifetime ->
-            lifetime.stop()
-            assertThatThrownBy { lifetime.start() }
+        withProvider { provider ->
+            provider.stop()
+            assertThatThrownBy { provider.start() }
                 .isInstanceOf(CannotStartProcessException::class.java)
             assertThat(provider.pid).isNull()
         }
@@ -26,21 +26,23 @@ class ConnectionProcessTest {
 
     @Test
     fun `repeated start owns one process and stopping reaps it`() {
-        withProvider { provider, lifetime ->
-            lifetime.start()
+        withProvider { provider ->
+            provider.start()
             val pid = requireNotNull(provider.pid)
-            lifetime.start()
+            // a provider owns one process: LSP4IJ creates a new provider for each start
+            assertThatThrownBy { provider.start() }
+                .isInstanceOf(CannotStartProcessException::class.java)
             assertThat(provider.pid).isEqualTo(pid)
             val process = ProcessHandle.of(pid).orElseThrow()
-            lifetime.stop()
+            provider.stop()
             process.onExit().awaited()
             assertThat(process.isAlive).isFalse()
-            assertThatThrownBy { lifetime.start() }
+            assertThatThrownBy { provider.start() }
                 .isInstanceOf(CannotStartProcessException::class.java)
         }
     }
 
-    private fun withProvider(check: (OSProcessStreamConnectionProvider, ConnectionLifetime) -> Unit) {
+    private fun withProvider(check: (OSProcessStreamConnectionProvider) -> Unit) {
         val source =
             Files.writeString(
                 directory.resolve("Probe.java"),
@@ -61,7 +63,7 @@ class ConnectionProcessTest {
                 fun child(): Process? = processHandler?.process
             }
         try {
-            check(provider, ConnectionLifetime({ provider.start() }, { provider.stop() }))
+            check(provider)
         } finally {
             provider.child()?.let { child ->
                 if (child.isAlive) child.destroyForcibly()
