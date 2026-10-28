@@ -102,6 +102,45 @@ The old tips were kept locally as `backup/errs-pre-rebase-20261027` (`e1d1947eb1
     control that. It passed 8 times alone, and the whole suite passed.
 - Pushed with leases: errs `ff0d4509e..2db3347c9`, #693 `e89299190..f863ffabd`.
 
+**errs and #693 rebased onto master `c98975b8b9` (2026-10-28).** Master had moved by #734, a
+module's temporary file; #735, the console debugger's `E` with injected variables; #717, the lexer at
+a source's end; #737, a JIT milestone; #739 and #740, the tree-sitter grammar's lists after
+`incorporates`, `extends` and `delegates`; and #736, a cleanup after #735. Commit references made
+between the entry above and this one are to the old history:
+[the fourth commit map](errs-rebase-2026-10-28.tsv) maps errs' 1128 commits to 1126 replays, each
+with the same subject. Master absorbed the two that landed as #717 and #734. The old tips are kept
+locally as `backup/errs-pre-rebase-20261028` (`8acc1eb92d`) and `backup/693-pre-rebase-20261028`
+(`c77de154c9`).
+
+- Conflicts on errs:
+  - `MethodBody`, twice, where #737 added `asFunctionType` above `pool()`. #737's method is kept
+    with each commit's own change to `pool()`'s javadoc.
+  - `PropertyInfo`, twice, where #737 removed `retainOnly`. Both commits only changed a duplicated
+    `@param` in its javadoc, so the method stays removed.
+  - `EmbeddingSupportTest`'s imports, four times, beside #735's. Each commit's own import change is
+    kept, as it was originally.
+  - `Runtime.setDebugger`'s javadoc, which #736 cut to its first line. That line is kept, with what
+    the method does with the debugger it replaces, as on #693.
+- errs' tree is that of a merge of master and the old tip, with `Runtime.java` resolved as above and
+  `EmbeddingSupportTest` keeping both sides' imports.
+- Two commits follow the replays:
+  - #716's review changes (`ca7ede0724` and `f4bf0e6a63` there): runner.x's `endWhenIdle`
+    declared in `start()`, shorter comments, `Container.getStatus()`'s javadoc in two sentences,
+    and `Control.running()`'s javadoc, which stays as the public API's contract, naming an HTTP
+    server.
+  - The caller's javadoc for `Runtime`'s debugger accessors, which #693 also takes as its commit 71
+    and which goes to master as #742.
+- #693's 70 commits rebased with the same `Runtime.setDebugger` conflict, resolved the same way.
+  #716's review changes went into its commit 39, which holds #716's fix, and the javadoc commit
+  became its commit 71. [errs-693-rebase-2026-10-28.tsv](errs-693-rebase-2026-10-28.tsv) maps the
+  regroup's #693 commits to the rebased ones.
+- Validation on errs, before #716's one-word change to `running()`'s javadoc: `spotlessCheck` and
+  `:lang:spotlessCheck`; `:javatools:test` 695, 0 failures, the 42 existing skips;
+  `:javatools_utils:test` 122 (2 skipped); `:lang:dap-server:test` 38; `:lang:lsp-server:test`
+  2,420 (2 skipped); `compilerStdioTest` 83; `:lang:intellij-plugin:test` 151. #693 compiles commit
+  by commit; its suites run on its tip before it is pushed.
+- errs was force-pushed with a lease from `8acc1eb92d`, with this record as its tip.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
