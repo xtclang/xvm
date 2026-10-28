@@ -11,7 +11,6 @@ import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.OpenedDocument
 import com.redhat.devtools.lsp4ij.internal.CancellationSupport
-import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.RenameFile
 import org.eclipse.lsp4j.RenameFilesParams
@@ -39,8 +38,6 @@ class XtcRenameEdit
         val edit: WorkspaceEdit,
         private val graph: SourceGraphEdit? = null,
         private val command: String = "Rename",
-        /** Whether Undo asks before it takes back an edit that changes the project: a rename's or a move's, not a code action's. */
-        private val asksUndo: Boolean = true,
     ) {
         /** Return false without changing any file when the request's documents have been retired. */
         fun apply(): Boolean {
@@ -118,10 +115,10 @@ class XtcRenameEdit
          * The command's undo policy. IntelliJ's refactorings run with the DEFAULT policy, whose Undo asks first when the
          * command is global (BaseRefactoringProcessor), as this one always is: a rename or a move that changes more than
          * one file, or a file's path, asks, and one that changes one file's text undoes at once, as an in-place rename's
-         * does. A code action's edit never asks.
+         * does.
          */
         private fun undoConfirmation(): UndoConfirmationPolicy =
-            if (asksUndo && ServerWorkspaceEdit.globalUndo(edit)) {
+            if (ServerWorkspaceEdit.globalUndo(edit)) {
                 UndoConfirmationPolicy.DEFAULT
             } else {
                 UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION
@@ -180,31 +177,6 @@ class XtcRenameEdit
         }
 
         companion object {
-            /** A selected lazy action shares Rename's document epoch and undo-command safeguards. */
-            fun requestAction(
-                wrapper: LanguageServerWrapper,
-                action: CodeAction,
-            ): CompletableFuture<XtcRenameEdit?> =
-                ReadAction.computeBlocking<CompletableFuture<XtcRenameEdit?>, RuntimeException> {
-                    val snapshot = capture(wrapper)
-                    val cancellation = CancellationSupport()
-                    val result =
-                        snapshot
-                            .flush()
-                            .thenCompose {
-                                cancellation.checkCanceled()
-                                cancellation.execute(
-                                    snapshot.server.textDocumentService.resolveCodeAction(action),
-                                )
-                            }.thenApply { resolved ->
-                                resolved.edit?.let {
-                                    XtcRenameEdit(snapshot, it, command = resolved.title, asksUndo = false)
-                                }
-                            }
-                    result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
-                    result
-                }
-
             private fun capture(wrapper: LanguageServerWrapper): Snapshot =
                 Snapshot(
                     wrapper,
