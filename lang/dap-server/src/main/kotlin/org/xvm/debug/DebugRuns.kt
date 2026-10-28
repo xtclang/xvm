@@ -54,12 +54,29 @@ data class ThreadState(
     val name: String,
 )
 
-/** One frame of a stopped fiber's stack: its ID, the method's name, its source file if known, and its 1-based line. */
+/**
+ * One frame of a stopped fiber's stack: its ID, the method's name, its source file if known, its 1-based line, and the
+ * module and source path within it that the source file is, for a library's source that is not on this machine.
+ */
 data class FrameState(
     val id: Int,
     val name: String,
     val path: String?,
     val line: Int,
+    val module: String? = null,
+    val source: String? = null,
+)
+
+/**
+ * A module of the program: its name, its version if it has one, the source directory it recorded, the source paths of its
+ * classes within that directory, and whether it is the program's own, not a library's.
+ */
+data class ModuleState(
+    val name: String,
+    val version: String?,
+    val sourceDir: String?,
+    val sources: List<String>,
+    val own: Boolean,
 )
 
 /** A scope of a stopped frame: its name, and the reference its variables are read by. */
@@ -335,4 +352,17 @@ interface DebugRuns {
 
     /** Resumes the stopped program. False when no such run is active. */
     fun resume(runId: String): Boolean
+
+    /**
+     * The file with the bundled source of a library's source [path] in its [module], for a frame of that library's code,
+     * or null when the module is not one of the bundled libraries. A library records the source directory it was built
+     * in, which this machine need not have, and the bundled source is the one its code was compiled from.
+     */
+    fun librarySource(
+        module: String,
+        path: String,
+    ): String? = null
+
+    /** The modules of the debugged program, its own and the libraries it uses; none before it starts. */
+    fun modules(runId: String): CompletableFuture<List<ModuleState>> = CompletableFuture.completedFuture(emptyList())
 }
