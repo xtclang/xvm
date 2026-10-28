@@ -741,6 +741,55 @@ passes with the workaround disabled. The gates are in
   the request through LSP4IJ's LSP4J endpoint, a protocol check rather than native coverage; VS Code
   has no moniker view either. Nothing is filed until IntelliJ has a use for them.
 
+### LSP4IJ: document links without a target (UP52): not checked natively
+
+- [ ] UP52 (2026-10-28): LSP4IJ declares document links but never resolves one, and its Ctrl+Click
+  ignores a link without a target (0.21.0 and `main`, `7469aab9`). XVM's server defers every link's
+  target to `documentLink/resolve` for any client that declares document links, so an HTTP(S) link
+  in a comment very likely opens nothing in IntelliJ. X131 resolves links itself, so it can't show
+  this. To do: check §15 natively in IntelliJ; if a click opens nothing, fix it in LSP4IJ (resolve a
+  clicked link without a target) or send LSP4IJ the targets with the links.
+
+### LSP4IJ: no linked editing (UP53): not filed
+
+- UP53 (2026-10-28): LSP4IJ never sends `textDocument/linkedEditingRange`, so IntelliJ users get no
+  rename-on-type for locals, which XVM's server answers. IntelliJ's X133 sends the request itself,
+  a protocol check rather than native coverage.
+
+### LSP4IJ: only the first of several ranges is formatted (UP54): not filed
+
+- UP54 (2026-10-28): when IntelliJ formats several ranges of a file at once, LSP4IJ formats the
+  first and drops the rest, and never sends LSP 3.18's `rangesFormatting`, which XVM's server
+  supports. Our `XtcFormattingService` takes the first range too. Our LSP4IJ #1784 documents it
+  (UP61).
+
+### LSP4IJ: no hit counts on line breakpoints (UP55): not filed
+
+- UP55 (2026-10-28): LSP4IJ's line breakpoints send a condition and a log message, never a hit
+  condition; function and data breakpoints do (#1780, #1782). XVM's adapter supports hit conditions
+  since R9. The R9 item above puts IntelliJ's hit counts under UP32, but our #1759 added logpoints
+  only.
+
+### LSP4IJ: the `exited` event (UP56): bridged, not filed
+
+- UP56 (2026-10-28): LSP4IJ ignores DAP's `exited` event, so the program's exit code never reaches
+  IntelliJ through it. XVM's `LanguageServerDebugProcessHandler` reads `exited` itself and ends its
+  process with that exit code.
+
+### LSP4IJ: refreshes and resolves XVM's server does without (UP57–UP60): not filed
+
+- UP57–UP60 (2026-10-28): LSP4IJ declares neither inline-value nor (LSP 3.18) folding-range refresh,
+  resolves no workspace symbol, and resolves inlay hints only without a label or for a clicked
+  part's command, not for tooltips. XVM's server sends each of these only to a client that declares
+  it, and otherwise sends the full results, so nothing is lost in IntelliJ.
+
+### LSP4IJ: its support lists disagreed with its code (UP61): our #1784, open
+
+- [ ] UP61 (2026-10-28): LSP4IJ's `LSPSupport.md` and `DAPSupport.md` marked some supported
+  features as unsupported, listed one method twice and left out others. Fixed by our
+  [#1784](https://github.com/redhat-developer/lsp4ij/pull/1784) (open, `07f7882d`). To do: get it
+  merged.
+
 ### LSP4J
 
 - [ ] UP15: get LSP4J #997 reviewed and merged. @pisv was asked on 2026-10-20; no reply yet.
