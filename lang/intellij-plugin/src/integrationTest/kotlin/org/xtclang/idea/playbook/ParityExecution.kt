@@ -806,13 +806,15 @@ internal fun ParityScenarios.runEntryCases() {
                 // the Evaluate Expression dialog's evaluations run code: LSP4IJ sends them as the console's (repl)
                 fun run(code: String) = JsonParser.parseString(debugger.evaluateFrom(project, module, code, "DIALOG")).asJsonObject
                 val (call, value) = data.strings("call")
+                val rebuilt = debugger.viewRebuilds(project, module)
                 val ran = run(call)
                 check(ran["value"]?.asString == value) { "$call is not $value: $ran" }
+                // the run invalidates the variables, so LSP4IJ rebuilds the session's views
+                awaitUi("the run invalidates the variables", HANG_LIMIT) { debugger.viewRebuilds(project, module) > rebuilt }
                 val (watch, watched) = data.strings("watch")
                 val shown = JsonParser.parseString(debugger.evaluate(project, module, watch)).asJsonObject
                 check(shown["value"]?.asString == watched) { "$watch is not $watched after $call: $shown" }
-                // TODO LSP4IJ: UP40, UP41 — LSP4IJ never sends DAP `cancel` (UP41) and does not handle `invalidated` (UP40,
-                // #1766), so both are checked in VS Code only; check them here too once a release has them
+                // TODO LSP4IJ: UP41 — LSP4IJ never sends DAP `cancel`, so a cancelled run is checked in VS Code only
                 val ended = run(data.string("loop"))["error"]?.asString.orEmpty()
                 check(data.string("limited") in ended) { "${data.string("loop")} does not end at its time limit: $ended" }
 
@@ -841,11 +843,15 @@ internal fun ParityScenarios.runEntryCases() {
                     HANG_LIMIT,
                 ) { it["suspended"]?.asBoolean == true }
 
-                // the worker's service answers once its fiber, which the stop holds otherwise, has done its work;
-                // TODO LSP4IJ: UP40 — LSP4IJ does not handle `invalidated` (#1766), so its event is checked in VS Code only
+                // the worker's service answers once its fiber, which the stop holds otherwise, has done its work
                 val (call, value) = data.strings("call")
+                val rebuilt = debugger.viewRebuilds(project, module)
                 val ran = JsonParser.parseString(debugger.evaluateFrom(project, module, call, "DIALOG")).asJsonObject
                 check(ran["value"]?.asString == value) { "$call is not $value: $ran" }
+                // the program ran, so the run invalidates the threads, stacks and variables, and LSP4IJ rebuilds the views
+                awaitUi("the run invalidates the threads, stacks and variables", HANG_LIMIT) {
+                    debugger.viewRebuilds(project, module) > rebuilt
+                }
 
                 debugger.resume(project, module)
                 val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", HANG_LIMIT) { it.has("exitCode") }
@@ -1939,6 +1945,11 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
     )
+
+    fun viewRebuilds(
+        project: Project,
+        module: String,
+    ): Int
 
     fun runToCursor(
         project: Project,
