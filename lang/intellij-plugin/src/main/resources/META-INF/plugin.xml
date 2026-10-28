@@ -182,7 +182,7 @@
         <renameHandler implementation="org.xtclang.idea.lsp.XtcFileRenameHandler"/>
         <refactoring.moveHandler implementation="org.xtclang.idea.lsp.XtcFileMoveHandler" order="first"/>
 
-        <!-- Preserve candidate signatures when the compiler cannot select an active argument. -->
+        <!-- LSP4IJ's signature help, after the edits LSP4IJ holds (UP73), for Ecstasy, TEXT and TextMate PSI. -->
         <codeInsight.parameterInfo language="Ecstasy"
                                    implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
         <codeInsight.parameterInfo language="TEXT"
