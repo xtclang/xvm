@@ -2775,8 +2775,9 @@ resume burst M, console lines run as code by the server burst N, by the editors 
 whole program's opt-in burst P, IntelliJ's stop on entry burst Q, R10's lazy variables burst R, its value formats burst S, its paging burst T, Set Value burst U, completions burst V, and source revisions burst W. All the work
 stays on this branch; the bursts below only say which commits belong together, in what order, what
 each needs, and what to validate when it is integrated, whenever and wherever that is decided.
-None of them goes into #693, which takes no debugger work, only unrelated bug fixes (decided
-2026-10-22). The conflict preview was a cherry-pick into a throwaway worktree on 2026-10-22, onto
+Until 2026-10-28 none of them went into #693, which took no debugger work, only unrelated bug fixes
+(decided 2026-10-22); since then they are there, distilled per feature (see
+[the debugger track in #693](#the-debugger-track-in-693-2026-10-28)). The conflict preview was a cherry-pick into a throwaway worktree on 2026-10-22, onto
 master `1c4efe422`.
 
 | Burst | Commits, in order | Paths | Needs | Validation |
@@ -2876,6 +2877,84 @@ with the same diff and its message's R6 and R7 references removed, and `5a24c43d
 written out against #693's `EmbeddedRuns`, with the same test and the server README's `xtc/stopRun`
 row. On #693, `EmbeddedExecutionTest` passes 32 tests with 0 failures, both new cases among them,
 and `spotlessCheck` passes.
+
+### The debugger track in #693 (2026-10-28)
+
+On 2026-10-28 the user decided that #693 takes everything that completes the LSP and DAP
+implementation, the debugger track included, distilled into one commit per feature and without
+temporaries, tracking documents, plans or saved output. The bursts above, and the R8–R12 and L79
+work after them, went onto #693's branch `errs/full-testable-lsp-20261009` as 24 commits on
+`b80a36e050`, from `9b3b802eb2` to `6f5f5fde1b`, pushed the same day.
+
+How it was done, in a worktree of #693's branch:
+- Each feature's errs commits were cherry-picked in this branch's order, then squashed into one
+  commit with a message written for it, without R labels: what the feature does, its tests, and
+  "the touched builds compile". Every commit compiles (javatools, dap-server, lsp-server, the
+  IntelliJ plugin with its integration tests, and the VS Code extension).
+- Left out of every commit: `docs/`, the root reports, `pr-roadmap.md`, `lang/doc/plans`,
+  `lang/doc/plan-dap-debugging.md` and the READMEs. `lang/doc/manual-test-plan.md` went with the
+  catalog, since the playbooks read its fixtures and case IDs.
+- Left out as commits: the records; `9ea18293e3`, since #693 has the lexer fixes from #717;
+  `b32802cdf0`, since #693 has #711 from master; and `4cf5450acd`, already #693's `b80a36e050`.
+- Folded in out of order, without conflicts: `819e2ac754` into the modules commit and `d64625009c`
+  into inline values.
+- Conflicts came where #693 already had later errs fixes: the stop-before-start fix in
+  `EmbeddedRuns`, which `5c144771e7` itself contains; the worker's `STOP_LIMIT`, `closeAll` and pool
+  count; `isRuntimeIdle()`; and the library copies' cleanup beside `file()` and `copy()`. Each kept
+  both, as this branch has them.
+- One gap from an earlier mirror: `cdeea279c1`, #693's copy of `44d16c6306`, left out its
+  `SessionDebuggerTest` change, since #693 had no debugger then. It came in with the threads
+  commit, where it conflicted.
+- Two #693-only commits: `024dd72b2a` drops the references to documents #693 does not carry, in
+  `XtcDebugServer`'s class comment and four of the catalog's IntelliJ limitations; and
+  `6f5f5fde1b` brings the server, VS Code, IntelliJ and lang READMEs and the IntelliJ testing
+  guide up to the code. There, LSP4IJ's limits name its pull requests instead of UP numbers or
+  `docs/remaining.md`, and the server README no longer counts debug inline values as incomplete.
+  It is a commit of its own, as the request was for no Markdown beyond what the features need;
+  the user had it pushed after checking what it changes.
+
+After it, `lang/` on #693 matches this branch apart from those references and the Markdown files
+left out, and the javatools files the debugger touches differ only where they did before: #693 has
+neither this branch's `_` for unused names nor its `f_errs` rename.
+
+| #693 | `lagergren/errs` | Subject |
+|---|---|---|
+| `9b3b802eb2` | `5c144771e7`, `0806a44483`, `db73f7688d`, `f35be5187c`, `0b9ed9e1a1`, `19f3a3db94` | Debug programs from VS Code and IntelliJ through the language server |
+| `bedb4f95fc` | `1dc86d19d8`, `5f0e3c6b55`, `ef9b2f3ad9`, `50db106999` | Show a stopped frame's variables, and step over, into and out of calls |
+| `24f0d0214f` | `8160818839`, `00e1a67949`, `ef03d13371`, `408117cd8f`, `b5e2ae2d96` | Stop at exceptions, pause a running program, and stop on entry |
+| `a900548b17` | `3cf545f70e`, `75c127303e`, `495f4ee882` | Evaluate watches and hovers on paths in a stopped frame |
+| `9f83f37358` | `c4be2bb822`, `d3f129e0a6` | Conditional breakpoints, hit counts, logpoints and exception classes |
+| `eaf096fc3e` | `2c297bfe76`, `dfc954a167` | Evaluate expressions with operators without running the program's code |
+| `44c1c58289` | `802ac958a1`, `da062d989e` | Leave the runner's frames out of the debugger's stacks and traces |
+| `85fbac4024` | `e5cec0931f`, `19218a1439`, `f85e60be77`, `f4c7ef6f89`, `382d4f999c`, `3ffaaeb955`, `afabe31c45` | Run code typed in the Debug Console on the stopped fiber |
+| `c72347157e` | `180c428330` | Stop at the program's first line from IntelliJ's configuration |
+| `354173cb93` | `86b144ba7e`, `c81ff4667b`, `afe167329a`, `62d58d7db7`, `50572a57a6`, `0cc2d30803`, `218fa139b2` | Lazy properties, hexadecimal values, paged arrays, Set Value, completions |
+| `4e68970590` | `e019611d79` | Place breakpoints on the lines a debugged program was built from |
+| `1422091681` | `276a4324c2`, `5f6147c354`, `b47829c994`, `6d50e44700`, `975ef77aad`, `f857eccafe`, `c18af5fa5a` | Soak runs and debug sessions on one worker, and let finished runtimes go |
+| `1c3dfa7a2b` | `1075925f35` | Check Run to Cursor in both editors |
+| `637cd8766d` | `7c179d2fc8`, `7a3de1d171`, `41dcbb20ce`, `baea5603b6`, `819e2ac754`, and `44d16c6306`'s `SessionDebuggerTest` half | Show library frames in their bundled source, every fiber, and modules |
+| `e8b6b6e5ec` | `a848f49d33` | Step into a chosen call of the stopped line |
+| `5214a0f676` | `bf8b9e3790` | Stop where a method of a name is entered |
+| `a44250e9a3` | `06cc6caf56` | Restart a stopped frame, which its caller then calls again |
+| `c1eb1e1df7` | `ec457f6415` | Stop once a watched field of an object has changed |
+| `d2fb27909a` | `7493591240`, `711817dbe4` | Check Reset Frame and function breakpoints in IntelliJ, for LSP4IJ's fixes |
+| `e3918489b7` | `1756acede6`, `d72ea0708c`, `d64625009c` | Answer inline values with the stopped method's variables |
+| `3a7f3e2b51` | `b6191ffbce`, `4ee212e982`, `09ffee515b`, `5f86be2546` | Check data breakpoints, Pause, exception filters and loaded sources in IntelliJ |
+| `1d136d3018` | `a521e2ebbf` | Check a document link's Ctrl+Click in IntelliJ's X131 |
+| `024dd72b2a` | none (#693 only) | Drop the debugger's references to documents this branch does not carry |
+| `6f5f5fde1b` | none (#693 only) | Describe debugging, and the run changes, in the server and editor READMEs |
+
+Receipts on #693 at `ee724c148a`, the README commit before its labels were replaced, whose code
+is `6f5f5fde1b`'s: `spotlessCheck` and
+`:lang:spotlessCheck`; `:javatools:test` 660 tests, 0 failures, the 42 existing skips
+(`SessionDebuggerTest` 48, `RuntimeRetentionTest` 2); `:lang:dap-server:test` 38;
+`:lang:lsp-server:test` 2,418, 0 failures, the 2 existing skips (`EmbeddedExecutionTest` 54, with a
+real worker); `compilerStdioTest` 83; `:lang:intellij-plugin:test` 151; the VS Code headless suite
+70; `verifyPlugin` Compatible with IU-262.10968.63 (2 deprecated, 104 internal and 108
+experimental API usages, the last LSP4IJ's DAP API). Native playbooks for X31, X131, X280–X289 and
+X304–X331: VS Code `run-t9cdiK`, 40 of 40; IntelliJ `run-16354350350821117767` (LSP4IJ 0.21.0),
+21 passed and 12 partial as the catalog declares, the 8 not implemented there not run, and no IDE
+errors.
 
 ### IntelliJ parity backlog (L60)
 
