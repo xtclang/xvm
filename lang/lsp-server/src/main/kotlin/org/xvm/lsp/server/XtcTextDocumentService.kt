@@ -742,7 +742,6 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             if (closed) return
             val affected = replace()
-            server.readOnlyDocuments.refresh()
             if (affected.isEmpty()) return
             diagnosticRevision++
             clearResolveReports()
