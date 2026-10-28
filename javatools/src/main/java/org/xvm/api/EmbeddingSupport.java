@@ -59,20 +59,19 @@ import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
+import org.xvm.runtime.template._native.io.xExternalConsole;
+
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
-import org.xvm.runtime.template._native.io.xExternalConsole;
-
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Severity.ERROR;
-
-import static org.xvm.util.Handy.quoted;
 
 /**
  * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
@@ -1152,7 +1151,7 @@ public class EmbeddingSupport {
          * @return input that reads lines from the specified reader and ignores "suppressEcho"
          */
         static ConsoleInput of(BufferedReader reader) {
-            Objects.requireNonNull(reader, "reader");
+            requireNonNull(reader, "reader");
             return _ -> reader.readLine();
         }
     }
@@ -1170,7 +1169,7 @@ public class EmbeddingSupport {
         public static final EntryPoint RUN = new EntryPoint("run");
 
         public EntryPoint {
-            Objects.requireNonNull(name, "name");
+            requireNonNull(name, "name");
             args = List.copyOf(args);
         }
 
@@ -1332,8 +1331,8 @@ public class EmbeddingSupport {
             ConsoleInput           consoleIn,
             File                   rootDir,
             @NotNull ErrorListener errs) {
-        Objects.requireNonNull(entry, "entry");
-        Objects.requireNonNull(consoleIn, "consoleIn");
+        requireNonNull(entry, "entry");
+        requireNonNull(consoleIn, "consoleIn");
         verifyConfigured();
         requireNonNull(errs, "errs");
 
@@ -1420,9 +1419,7 @@ public class EmbeddingSupport {
      * does. The arguments are a single value, an array for the first parameter, so any further
      * parameters must have default values. The array is passed when the method requires it, or
      * when it is not empty and the method has a parameter. Otherwise nothing is passed, and a
-     * default value of the parameter applies. Arguments for a method without parameters are
-     * dropped, and {@link #runMethod} reports {@link #WARN_ARGUMENTS_IGNORED}, as the command-line
-     * runner warns of them.
+     * default value of the parameter applies.
      *
      * @param method  the entry method, as found by {@link #entryMethod}
      * @param entry   the entry method's name and the supplied arguments
