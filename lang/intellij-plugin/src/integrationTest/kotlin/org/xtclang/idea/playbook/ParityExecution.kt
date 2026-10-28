@@ -877,20 +877,9 @@ internal fun ParityScenarios.runEntryCases() {
                 data.getAsJsonArray("lazy").map { it.asJsonArray }.forEach { pair ->
                     val (name, value) = pair[0].asString to pair[1].asString
                     val lazy = fields.single { it.string("name") == name }
-                    val shown =
-                        if (lazy.has("link")) {
-                            // with LSP4IJ #1768, a lazy variable has a Show value link
-                            debugger.showValue(project, module, "$expands/$name")
-                        } else {
-                            // TODO LSP4IJ: UP35 — LSP4IJ 0.21.0 ignores presentationHint.lazy (#1768), so a lazy variable
-                            // expands to one child that has its value
-                            JsonParser
-                                .parseString(debugger.variables(project, module, "$expands/$name"))
-                                .asJsonArray
-                                .single()
-                                .asJsonObject
-                                .string("value")
-                        }
+                    // a lazy variable has a Show value link, which asks for its value
+                    check(lazy.has("link")) { "$name has no Show value link: $lazy" }
+                    val shown = debugger.showValue(project, module, "$expands/$name")
                     check(shown == value) { "$name shows $shown, not $value" }
                 }
 
@@ -932,15 +921,12 @@ internal fun ParityScenarios.runEntryCases() {
                 identities.forEach { check(Regex(".+ #\\d+").matches(it)) { "No identity code: $identities" } }
                 check(identities.distinct().size == identities.size) { "The identity codes are not different: $identities" }
 
-                // TODO LSP4IJ: UP36 — LSP4IJ 0.21.0 has no Show Values as Hexadecimal (#1769), so the hexadecimal values are
-                // checked only with a plugin that has it
-                if (debugger.showHex(project, module, true)) {
-                    val hex = pairs("hex").toMap()
-                    awaitUi("the values show in hexadecimal", HANG_LIMIT) { locals().filterKeys { it in hex } == hex }
-                    debugger.showHex(project, module, false)
-                    val shown = pairs("decimal").toMap()
-                    awaitUi("the values show in decimal again", HANG_LIMIT) { locals().filterKeys { it in shown } == shown }
-                }
+                check(debugger.showHex(project, module, true)) { "No Show Values as Hexadecimal" }
+                val hex = pairs("hex").toMap()
+                awaitUi("the values show in hexadecimal", HANG_LIMIT) { locals().filterKeys { it in hex } == hex }
+                debugger.showHex(project, module, false)
+                val shown = pairs("decimal").toMap()
+                awaitUi("the values show in decimal again", HANG_LIMIT) { locals().filterKeys { it in shown } == shown }
 
                 debugger.resume(project, module)
                 val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", HANG_LIMIT) { it.has("exitCode") }
@@ -969,25 +955,17 @@ internal fun ParityScenarios.runEntryCases() {
                 val first = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 0)).asJsonObject
                 val elements = first.getAsJsonArray("children").map { it.asJsonObject }
                 check(elements.first().string("name") == "[0]" && elements.first().string("value") == "0") { "First: ${elements.first()}" }
-                if (first["more"].asBoolean) {
-                    // with LSP4IJ #1770, a page of elements, then IntelliJ's own "..." node, which reads the next page
-                    val total = data.int("elements")
-                    check(elements.size == data.int("shown") && first.int("remaining") == total - data.int("shown")) {
-                        "${elements.size} elements and ${first.int("remaining")} more"
-                    }
-                    val all = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 10)).asJsonObject
-                    val every = all.getAsJsonArray("children").map { it.asJsonObject }
-                    val (name, value) = data.strings("last")
-                    check(every.size == total && !all["more"].asBoolean) { "${every.size} elements, more: ${all["more"]}" }
-                    check(every.last().string("name") == name && every.last().string("value") == value) { "Last: ${every.last()}" }
-                } else {
-                    // TODO LSP4IJ: UP42 — LSP4IJ asks for all of a variable's children at once, never a page by
-                    // indexedVariables (#1770), so a large array shows its first elements and how many more there are
-                    check(elements.size == data.int("shown") + 1) { "${elements.size} elements shown: ${elements.takeLast(2)}" }
-                    check(elements.last().string("name") == "..." && elements.last().string("value") == data.string("more")) {
-                        "Last: ${elements.last()}"
-                    }
+                // a page of elements, then IntelliJ's own "..." node, which reads the next page
+                check(first["more"].asBoolean) { "The elements are not paged: ${elements.size} shown" }
+                val total = data.int("elements")
+                check(elements.size == data.int("shown") && first.int("remaining") == total - data.int("shown")) {
+                    "${elements.size} elements and ${first.int("remaining")} more"
                 }
+                val all = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 10)).asJsonObject
+                val every = all.getAsJsonArray("children").map { it.asJsonObject }
+                val (name, value) = data.strings("last")
+                check(every.size == total && !all["more"].asBoolean) { "${every.size} elements, more: ${all["more"]}" }
+                check(every.last().string("name") == name && every.last().string("value") == value) { "Last: ${every.last()}" }
 
                 debugger.resume(project, module)
                 val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", HANG_LIMIT) { it.has("exitCode") }
