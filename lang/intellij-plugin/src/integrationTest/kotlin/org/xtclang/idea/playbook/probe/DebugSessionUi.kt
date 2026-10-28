@@ -73,7 +73,7 @@ object DebugSessionUi {
         module: String,
         uri: String,
         breakpointLine: Int,
-    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = false)
+    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = false, stopOnEntry = false)
 
     /** Starts Debug as [debug] does, with a configuration that lets the program run while Evaluate Expression runs code. */
     @JvmStatic
@@ -82,7 +82,15 @@ object DebugSessionUi {
         module: String,
         uri: String,
         breakpointLine: Int,
-    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = true)
+    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = true, stopOnEntry = false)
+
+    /** Starts Debug, with no breakpoint, of a configuration that stops the program at its first line. */
+    @JvmStatic
+    fun debugFromEntry(
+        project: Project,
+        module: String,
+        uri: String,
+    ) = debug(project, module, uri, 0, evaluationRunsProgram = false, stopOnEntry = true)
 
     private fun debug(
         project: Project,
@@ -90,6 +98,7 @@ object DebugSessionUi {
         uri: String,
         breakpointLine: Int,
         evaluationRunsProgram: Boolean,
+        stopOnEntry: Boolean,
     ) {
         watch(project)
         sessions.remove(name(module))
@@ -106,6 +115,7 @@ object DebugSessionUi {
                 moduleUri = uri
                 runWith = XtcRunMode.PROJECT
                 this.evaluationRunsProgram = evaluationRunsProgram
+                this.stopOnEntry = stopOnEntry
             }
             runManager.setTemporaryConfiguration(settings)
             ProgramRunnerUtil.executeConfiguration(settings, DefaultDebugExecutor.getDebugExecutorInstance())
