@@ -368,24 +368,47 @@ exercises the standard build path with compiled modules supplied by its Gradle d
 
 ### Review scope and related work
 
-This listener-ownership migration builds on
-[PR #680: separating diagnostic reporting from abort policy](https://github.com/xtclang/xvm/pull/680).
-That pull request introduces the listener contract, factories and branch fixes. This change
-migrates compiler callers to explicit destinations and named suppression, including the TypeInfo
-cascade calls and required-listener boundaries. Most of the broad file coverage follows existing
-reporting calls; review their severity, code, arguments and location alongside the substantive
-ownership changes.
+[PR #680: separating diagnostic reporting from abort policy](https://github.com/xtclang/xvm/pull/680)
+introduces the listener contract, factories and branch fixes.
+[PR #681: explicit compiler listeners and named suppression](https://github.com/xtclang/xvm/pull/681)
+migrates callers and active compilation boundaries. This scoped-reporting change builds on both:
+it controls temporary parser/resolver destinations and restores validation callback state on normal,
+early and exceptional exits.
 
-The separate **scoped parser and validation reporting** branch handles temporary destinations,
-parser attempts and restoration after normal, early and exceptional exits. Further
-**explicit structure reporting and TypeInfo diagnostic replay** work removes ambient file/pool
-lookup and preserves diagnostics associated with cached semantic results. Those changes belong
-to their own review boundaries and are not claimed as completed by this migration.
+Further **explicit structure reporting and TypeInfo diagnostic replay** work removes ambient
+file/pool lookup and preserves diagnostics associated with cached semantic results. That work
+remains a separate review boundary. The file/pool ambient-listener API is still present here:
+`XvmStructure.log` retains its existing fallback when passed null; the active compilation
+boundaries listed above do not. Scoped restoration is another prerequisite for complete host
+reporting, not a claim that every compiler-failure or TypeInfo-cache path is already repaired.
 
-In this branch, the file/pool ambient-listener API and parser/resolver ownership are still present.
-`XvmStructure.log` still has its existing fallback when passed null; the active compilation
-boundaries listed above do not. This migration is a prerequisite for complete host reporting,
-not a claim that every compiler-failure or TypeInfo-cache path is already repaired.
+### Scoped parser and validation reporting
+
+`Parser.attempt()` replaces `Parser.SafeLookAhead`: use `Attempt.keep()` in place of
+`keepResults()`. A kept attempt merges its buffered diagnostics, including warnings; a discarded
+attempt restores its tokens and recovery state. Nested attempts observe their parent's abort
+request. This removes a public nested parser class and requires source migration/recompilation at
+the same breaking release boundary described above.
+
+Parser and resolver destinations use `Reporting` scopes, closed in reverse order with
+try-with-resources. `NameResolver.getErrorListener()` is null outside `resolve`; callbacks borrow
+the caller's non-null listener only during that call. These scopes restore destinations on every
+exit. They do not make a parser, resolver, AST or listener safe for concurrent use. The lexer still
+reports to its original listener; module-name-only scans should construct the parser with an
+explicit discard listener if lexical diagnostics are unwanted.
+
+Loop and try/finally label variables retain their context/listener as one immutable
+`ValidationScope` value. Each statement restores its previous value on normal, early and
+exceptional exits, and `Statement.validate` likewise restores its common validation context.
+The temporary references stay on the AST because label-variable and jump callbacks need the
+currently validating statement. No shared mutable holder is added to cloned AST nodes.
+`EvalCompiler` and `ModuleInfo.Node` own final diagnostic buffers from construction onward.
+
+The unit regressions cover nested reporting, failed host/resolver callbacks, token rollback,
+abort propagation and exceptional statement exits without requiring installed modules. Compile
+and run the existing `manualTests/src/main/x/loop.x` and `exceptions.x` exercises with the built
+XDK to check lazy label variables and try/finally behavior through code generation and execution.
+The separate Gradle compiler-consumer test supplies its compiled modules through dependencies.
 
 ## Assembler
 

@@ -224,7 +224,7 @@ public class ForEachStatement
 
         if (reg == null) {
             // this occurs only during validate()
-            assert m_ctxLabelVars != null;
+            assert m_labelVars != null;
 
             String       sLabel = ((LabeledStatement) getParent()).getName();
             Token        tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
@@ -240,7 +240,7 @@ public class ForEachStatement
             };
 
             reg = ctx.createRegister(type, getLabelName() + '.' + sName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
 
             switch (sName) {
             case "first": m_regFirst   = reg; break;
@@ -261,6 +261,18 @@ public class ForEachStatement
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
+        ValidationScope previous = m_labelVars;
+        try {
+            return validateScoped(ctx, errs);
+        } finally {
+            m_labelVars = previous;
+        }
+    }
+
+    /**
+     * Validate with callback state restored by {@link #validateImpl} on every exit.
+     */
+    private Statement validateScoped(Context ctx, ErrorListener errs) {
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
         // original error listener
@@ -298,8 +310,7 @@ public class ForEachStatement
             ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
-            m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
+            m_labelVars = new ValidationScope(ctx, errs);
 
             // ultimately, the condition has to be re-written, because it is inevitably shorthand for
             // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -561,8 +572,7 @@ public class ForEachStatement
             ctx = ctx.exit();
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
+            m_labelVars = null;
 
             errs.merge();
             return fValid ? this : null;
@@ -1321,8 +1331,7 @@ public class ForEachStatement
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
-    private transient Context          m_ctxLabelVars;
-    private transient ErrorListener    m_errsLabelVars;
+    private transient ValidationScope  m_labelVars;
     private transient Register         m_regFirst;
     private transient Register         m_regLast;
     private transient Register         m_regCount;
