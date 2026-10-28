@@ -113,6 +113,8 @@ import kotlin.time.measureTimedValue
 class XtcLanguageServer(
     private val adapter: Adapter,
     private val onExit: (Int) -> Unit = {},
+    /** Shown to the user once the handshake completes, e.g. that the requested adapter could not start. */
+    private val startupWarning: String? = null,
 ) : LanguageServer,
     LanguageClientAware,
     AutoCloseable {
@@ -656,6 +658,7 @@ class XtcLanguageServer(
         refresh.initialized()
         readOnlyDocuments.initialized()
         logger.info("initialized: handshake complete, requesting editor configuration")
+        startupWarning?.let(::showWarning)
         if (
             editCapabilities
                 .getAndUpdate {
