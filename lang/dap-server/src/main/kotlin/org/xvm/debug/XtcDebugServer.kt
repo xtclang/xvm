@@ -13,9 +13,12 @@ import org.eclipse.lsp4j.debug.EvaluateArgumentsContext
 import org.eclipse.lsp4j.debug.EvaluateResponse
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import org.eclipse.lsp4j.debug.PauseArguments
+import org.eclipse.lsp4j.debug.Scope
+import org.eclipse.lsp4j.debug.ScopePresentationHint
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.ScopesResponse
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
@@ -26,11 +29,16 @@ import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StackTraceResponse
+import org.eclipse.lsp4j.debug.StepInArguments
+import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.Thread
 import org.eclipse.lsp4j.debug.ThreadsResponse
+import org.eclipse.lsp4j.debug.Variable
+import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.VariablesResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -54,9 +62,10 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Breakpoints the client sets before the program starts are installed before its first line: they are answered
  * as pending, and `breakpoint` events report how they were installed. A stop is reported with every fiber
- * stopped; `threads` lists the fibers that wait, `stackTrace` their stacks, and `continue` resumes the program.
- * There are no variables, stepping, exception breakpoints, pause or evaluation yet (R7 in
- * lang/doc/plans/plan-embedded-execution.md), so none is advertised.
+ * stopped; `threads` lists the fibers that wait, `stackTrace` their stacks, `scopes` a frame's local variables,
+ * `variables` their values and the fields and elements of objects and arrays; `next`, `stepIn` and `stepOut` step a
+ * fiber, and the program stops again with the reason `step`, and `continue` resumes it. There are no exception
+ * breakpoints, pause or evaluation yet (R7 in lang/doc/plans/plan-embedded-execution.md), so none is advertised.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -117,6 +126,9 @@ class XtcDebugServer(
 
         /** A breakpoint the client gives no file for. */
         const val NO_SOURCE = "A breakpoint needs a source file."
+
+        /** Why a fiber cannot be stepped. */
+        const val NOT_STOPPED = "That thread is not stopped, so it cannot be stepped."
 
         /** Why a running program cannot be paused. */
         const val NO_PAUSE = "Pausing a running program is not available yet."
@@ -318,9 +330,54 @@ class XtcDebugServer(
         }
     }
 
-    /** DAP: scopes. There are no variables yet, so a frame has no scopes. */
-    override fun scopes(args: ScopesArguments): CompletableFuture<ScopesResponse> =
-        CompletableFuture.completedFuture(ScopesResponse().apply { scopes = emptyArray() })
+    /** DAP: scopes. A stopped frame's local variables; a frame of a fiber that called the stopped one has none. */
+    override fun scopes(args: ScopesArguments): CompletableFuture<ScopesResponse> {
+        if (!debuggedRunning()) {
+            return CompletableFuture.completedFuture(ScopesResponse().apply { scopes = emptyArray() })
+        }
+        return runs.scopes(runId, args.frameId).thenApply { states ->
+            ScopesResponse().apply {
+                scopes =
+                    states
+                        .map { state ->
+                            Scope().apply {
+                                name = state.name
+                                presentationHint = ScopePresentationHint.LOCALS
+                                variablesReference = state.variablesReference
+                                isExpensive = false
+                            }
+                        }.toTypedArray()
+            }
+        }
+    }
+
+    /**
+     * DAP: variables. A scope's variables, or a variable's fields or elements, with `start` and `count` taking a part
+     * of them; none for a reference from before the program last resumed.
+     */
+    override fun variables(args: VariablesArguments): CompletableFuture<VariablesResponse> {
+        if (!debuggedRunning()) {
+            return CompletableFuture.completedFuture(VariablesResponse().apply { variables = emptyArray() })
+        }
+        return runs.variables(runId, args.variablesReference).thenApply { states ->
+            val first = args.start ?: 0
+            val count = args.count?.takeIf { it > 0 } ?: states.size
+            VariablesResponse().apply {
+                variables =
+                    states
+                        .drop(first)
+                        .take(count)
+                        .map { state ->
+                            Variable().apply {
+                                name = state.name
+                                value = state.value
+                                type = state.type.ifEmpty { null }
+                                variablesReference = state.variablesReference
+                            }
+                        }.toTypedArray()
+            }
+        }
+    }
 
     /** DAP: continue. Resumes every fiber of the stopped program. */
     override fun continue_(args: ContinueArguments?): CompletableFuture<ContinueResponse> {
@@ -329,6 +386,15 @@ class XtcDebugServer(
         }
         return CompletableFuture.completedFuture(ContinueResponse().apply { allThreadsContinued = true })
     }
+
+    /** DAP: next. Steps the fiber over a call, to its next line; a return continues to the caller's next line. */
+    override fun next(args: NextArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OVER)
+
+    /** DAP: stepIn. Steps the fiber to the next line it reaches, also in a method that it calls. */
+    override fun stepIn(args: StepInArguments): CompletableFuture<Void> = step(args.threadId, StepKind.IN)
+
+    /** DAP: stepOut. Steps the fiber until its method returns, to the caller's next line. */
+    override fun stepOut(args: StepOutArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OUT)
 
     /** DAP: pause. Not available yet; a program stops only at its breakpoints and at `assert:debug`. */
     override fun pause(args: PauseArguments?): CompletableFuture<Void> = failed(NO_PAUSE)
@@ -407,6 +473,15 @@ class XtcDebugServer(
                 )
             }
         }
+
+    /** Steps a stopped fiber; the stop where the step ends is reported as a `stopped` event. */
+    private fun step(
+        threadId: Int,
+        kind: StepKind,
+    ): CompletableFuture<Void> {
+        if (!debuggedRunning()) return failed(NOT_STOPPED)
+        return runs.step(runId, threadId, kind).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+    }
 
     /** True while a debugged program runs, stopped or not. */
     private fun debuggedRunning() = debugging && started && !ended.isDone
