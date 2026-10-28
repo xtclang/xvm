@@ -9506,7 +9506,7 @@
     "X309": {
       "title": "a launch with stopOnEntry stops the program at its first line, before it prints, and Continue runs it to its exit",
       "manual": [
-        "How VS Code marks the line where the program stopped is checked manually; the case checks the stop its debug session reports and the stack it asks for."
+        "How each editor marks the line where the program stopped is checked manually; VS Code checks the stop its debug session reports, with the reason entry, and the stack it asks for, IntelliJ the stop and the stack of its debug session, which has no breakpoint, with the configuration's Stop at the program's first line checked."
       ],
       "values": {
         "file": "DebugEntry.x",
@@ -9518,10 +9518,8 @@
         "exitCode": 9
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "The Ecstasy Application configuration has no stop-on-entry option; a breakpoint on the program's first line does the same."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X310": {
