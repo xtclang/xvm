@@ -10,6 +10,11 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A module compiler for Ecstasy code.
  *
@@ -33,9 +38,7 @@ public class Compiler {
         if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
-        if (errs == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
+        requireNonNull(errs, "errs");
 
         m_stmtModule = stmtModule;
         m_errs       = errs;
@@ -122,7 +125,7 @@ public class Compiler {
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.setErrorListener(ErrorListener.BLACKHOLE);
+            m_structFile.setErrorListener(silent(DISCARD));
             setStage(Stage.Registered);
         }
 

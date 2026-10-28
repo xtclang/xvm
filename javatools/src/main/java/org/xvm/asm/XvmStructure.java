@@ -15,6 +15,8 @@ import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.at;
+
 import static org.xvm.util.Handy.stream;
 
 /**
@@ -469,7 +471,7 @@ public abstract class XvmStructure
      * @param aoParam  the parameters of the error
      */
     public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
-        ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+        ensureErrorListener(errs).log(sev, sCode, at(this), aoParam);
     }
 
     /**
