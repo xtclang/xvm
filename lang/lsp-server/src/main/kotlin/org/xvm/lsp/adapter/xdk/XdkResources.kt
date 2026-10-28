@@ -28,16 +28,29 @@ internal data class XdkResources
                     .toByteArray(),
             )
 
-        fun directory(): ResourceDir = ResourceDir(roots.filter(File::exists))
+        /**
+         * The compiler's view of the roots that exist. A root can still move away before the compiler reads it,
+         * which it handles as missing, so this skips the compiler's own existence check, which would throw then.
+         */
+        fun directory(): ResourceDir = object : ResourceDir(null, "", roots.filter(File::exists)) {}
 
         companion object {
+            /** The module's resource roots: [configured], or those the compiler [deduces][deduce] from [root]. */
             fun roots(
                 root: File,
                 configured: List<File>?,
+                deduce: (File) -> List<File> = { ResourceDir.forSource(it, true).locations },
             ): List<File> =
                 configured
                     ?: if (root.parentFile.isDirectory) {
-                        ResourceDir.forSource(root, true).locations.map { it.canonicalFile }
+                        try {
+                            deduce(root).map { it.canonicalFile }
+                        } catch (failure: IllegalArgumentException) {
+                            // The container moved away after the check above, as when a move is undone and
+                            // redone at once; the compiler's own check of it then throws.
+                            if (root.parentFile.isDirectory) throw failure
+                            listOf(root.parentFile.canonicalFile)
+                        }
                     } else {
                         // A moved/deleted module container has no ModuleInfo yet. Retain its source
                         // directory as a missing input until discovery or host configuration replaces
