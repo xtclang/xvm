@@ -51,7 +51,6 @@
                 text="Export Ecstasy Server Logs" description="Save recent server logs, timing traces and status as a ZIP">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
-        <action id="xtc.resolveCodeAction" class="org.xtclang.idea.lsp.XtcResolveCodeAction"/>
         <!-- The Run lens's LSP command: builds and runs the module the way the project builds and runs. -->
         <action id="xtc.runModule" class="org.xtclang.idea.run.XtcRunModuleAction"
                 text="Run Ecstasy Module" description="Build and run the Ecstasy module in this editor"

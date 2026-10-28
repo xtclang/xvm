@@ -24,14 +24,18 @@ import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.util.ui.UIUtil
 import com.redhat.devtools.lsp4ij.LSPIJUtils
+import com.redhat.devtools.lsp4ij.LanguageServerItem
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.features.codeAction.CodeActionData
+import com.redhat.devtools.lsp4ij.features.codeAction.LSPLazyCodeActionIntentionAction
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
@@ -43,16 +47,17 @@ import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * A code action that the server resolves, such as Create private method, edits one file: Undo in that file's editor takes
- * it back as a typed change is, at once, without asking first, as IntelliJ asks only for a change of the project. So does
- * the Undo action that Ctrl+Z performs there, with the editor's context, and the keymap's Undo key itself, through the
- * IDE's key dispatch, while the caret is where the edit left it. Once the caret has left it, IntelliJ's first Undo only
- * takes the caret back to the change, and the next one takes the change back.
+ * A code action that the server resolves, such as Create private method, edits one file, and LSP4IJ applies it once it
+ * has resolved it, in a command of its own (#1733): Undo in that file's editor takes it back as a typed change is, at
+ * once, without asking first, as IntelliJ asks only for a change of the project. So does the Undo action that Ctrl+Z
+ * performs there, with the editor's context, and the keymap's Undo key itself, through the IDE's key dispatch, while the
+ * caret is where the edit left it. Once the caret has left it, IntelliJ's first Undo only takes the caret back to the
+ * change, and the next one takes the change back.
  */
 class CodeActionUndoTest {
     @JvmField
     @RegisterExtension
-    val editor = LightEditor(StubLanguageServer(client = ::XtcLanguageClient))
+    val editor = LightEditor(StubLanguageServer(codeActions = true, client = ::XtcLanguageClient))
 
     @TempDir
     lateinit var directory: Path
@@ -107,7 +112,7 @@ class CodeActionUndoTest {
 
     /**
      * Creates a private method with a resolved code action in Root.x, with the caret at the call that names it, as Alt+Enter
-     * there does, runs [undo] on the EDT, and checks it took it back.
+     * there does, through LSP4IJ's lazy intention for the action, runs [undo] on the EDT, and checks it took it back.
      */
     private fun createMethodThenUndo(undo: (Project, VirtualFile) -> Unit) {
         val text = "module Root {\n    void run() {\n        announce();\n    }\n}\n"
@@ -132,12 +137,21 @@ class CodeActionUndoTest {
             Messages.NO
         }
         try {
-            XtcFileOperations.submit(
-                project,
-                "Create private method 'announce'",
-                XtcRenameEdit.requestAction(connection(), CodeAction("Create private method 'announce'")),
-            )
+            val connection = connection()
+            val action = CodeAction("Create private method 'announce'")
+            val intention =
+                LSPLazyCodeActionIntentionAction(0).apply {
+                    setLazyCodeActions {
+                        Either.forLeft(CodeActionData(Either.forRight(action), LanguageServerItem(connection.languageServer, connection)))
+                    }
+                }
+            runInEdtAndWait {
+                val psi = checkNotNull(PsiManager.getInstance(project).findFile(root))
+                check(intention.isAvailable(project, editor.fixture.editor, psi)) { "LSP4IJ does not offer ${action.title}" }
+                intention.invoke(project, editor.fixture.editor, psi)
+            }
             await("the method is created") { method in document(root) }
+            assertThat(server.requests).contains("codeAction/resolve")
             runInEdtAndWait { undo(project, root) }
             assertThat(dialogs).isEmpty()
             assertThat(document(root)).isEqualTo(text)
