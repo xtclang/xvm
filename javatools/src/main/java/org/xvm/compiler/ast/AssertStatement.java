@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -591,11 +592,7 @@ public class AssertStatement
 
         if (!conds.isEmpty()) {
             sb.append(' ')
-              .append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
+              .append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append(';');

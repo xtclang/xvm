@@ -34,8 +34,7 @@ final class PartialArgument {
     private static List<Expression> replace(IncompleteStatement call, int index, Expression value) {
         PartialAst.parentTree(value, call);
         var arguments = call.getArguments();
-        return IntStream.range(0, arguments.size())
-                .mapToObj(i -> i == index ? value : arguments.get(i)).toList();
+        return IntStream.range(0, arguments.size()).mapToObj(i -> i == index ? value : arguments.get(i)).toList();
     }
 
     private static Expression substitute(Expression written, Expression value) {

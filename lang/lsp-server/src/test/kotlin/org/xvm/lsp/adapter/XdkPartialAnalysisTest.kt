@@ -13,7 +13,6 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.ModuleStructure
-import org.xvm.compiler.CursorBinding
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AssignmentStatement
@@ -22,6 +21,7 @@ import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.ReturnStatement
+import org.xvm.compiler.ast.bindings.CursorBinding
 import org.xvm.compiler.ast.partial.IncompleteExpression
 import org.xvm.compiler.ast.partial.IncompleteStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter

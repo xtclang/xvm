@@ -19,8 +19,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -247,8 +249,7 @@ public abstract class Expression
         }
 
         if (hasMultiValueImpl()) {
-            return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
-                                                          : new TypeConstant[] {typeRequired}, fExhaustive, errs);
+            return testFitMulti(ctx, new TypeConstant[] {typeRequired}, fExhaustive, errs);
         }
 
         throw notImplemented();
@@ -745,7 +746,8 @@ public abstract class Expression
         assert fit != null;
         assert atypeRequired == null || checkElementsNonNull(atypeRequired);
         assert atypeActual   == null || checkElementsNonNull(atypeActual);
-        assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == atypeActual.length;
+        assert aconstVal == null || atypeActual != null && checkElementsNonNull(aconstVal)
+                && aconstVal.length == atypeActual.length;
 
         if (fit.isFit()) {
             checkShortCircuit(errs);
@@ -755,7 +757,7 @@ public abstract class Expression
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null) {
-            assert !fit.isFit() && aconstVal == null && (errs.hasSeriousErrors() || errs.isSilent());
+            assert !fit.isFit() && (errs.hasSeriousErrors() || errs.isSilent());
             m_fit = TypeFit.NoFit;
             return null;
         }
@@ -1584,7 +1586,8 @@ public abstract class Expression
      */
     public void generateConditionalJump(
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
-        assert !isVoid() && getType().isA(pool().typeBoolean());
+        TypeConstant typeBoolean = pool().typeBoolean();
+        assert !isVoid() && getType().isA(typeBoolean);
 
         if (isConstant()) {
             if (fWhenTrue == toConstant().equals(pool().valTrue())) {
@@ -1944,6 +1947,51 @@ public abstract class Expression
                         : typeCommon;
         }
         return atypeCommon;
+    }
+
+    /** Replace dynamic annotation arguments with registers, returning whether any changed. */
+    protected boolean generateAnnotationArguments(Context ctx, Code code, Constant[] arguments, ErrorListener errs) {
+        boolean changed = false;
+        for (int i = 0; i < arguments.length; ++i) {
+            if (arguments[i] instanceof ExpressionConstant constant) {
+                Expression expression = constant.getExpression();
+                Argument   argument   = expression.generateArgument(ctx, code, true, errs);
+                Register   register;
+                if (argument instanceof Register existing) {
+                    register = existing;
+                } else {
+                    register = code.createRegister(expression.getType());
+                    code.add(new Var(register));
+                    code.add(new Move(argument, register));
+                }
+                arguments[i] = new RegisterConstant(pool(), register);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /** Validate and retain a rewritten list element; a failed element leaves the original in place. */
+    static Expression validateElement(Context ctx, List<Expression> expressions, int index,
+                                      TypeConstant required, ErrorListener errs) {
+        Expression original  = expressions.get(index);
+        Expression validated = original.validate(ctx, required, errs);
+        if (validated != null && validated != original) {
+            expressions.set(index, validated);
+        }
+        return validated;
+    }
+
+    /** Evaluate operands in order, retaining each value before a later operand can mutate it. */
+    static Argument[] generateElementArguments(Context ctx, Code code, List<Expression> expressions,
+                                               boolean localProperties, ErrorListener errs) {
+        Argument[] arguments = new Argument[expressions.size()];
+        for (int i = 0; i < arguments.length; ++i) {
+            Expression expression = expressions.get(i);
+            Argument   argument   = expression.generateArgument(ctx, code, localProperties, errs);
+            arguments[i] = expression.ensurePointInTime(code, argument, expressions, i);
+        }
+        return arguments;
     }
 
     /**
@@ -2541,8 +2589,9 @@ public abstract class Expression
                     }
                     return null;
                 }
+                default:
+                    throw new IllegalStateException("seq=" + seq);
                 }
-                break;
             }
 
             case TargetProp: {
@@ -2614,79 +2663,6 @@ public abstract class Expression
             case IndexedNProp:
                 // TODO
                 throw notImplemented();
-
-            default:
-                throw new IllegalStateException();
-            }
-
-            // generic implementation
-            switch (seq) {
-            case Inc:
-            case Dec: {
-                Assignable LValTemp = createTempVar(code, getType());
-
-                // get the original value
-                getValue(LValTemp, false, code, errs);
-
-                // perform the sequential operation on the temp
-                LValTemp.assignSequential(seq, null, code, errs);
-
-                // store the operation's result
-                assign(LValTemp.getRegister(), code, errs);
-
-                return null;
-            }
-
-            case PreInc:
-            case PreDec: {
-                Assignable LValTemp = LValResult != null && LValResult.isNormalVariable()
-                        ? LValResult
-                        : createTempVar(code, getType());
-
-                // get the original value
-                getValue(LValTemp, false, code, errs);
-
-                // perform the sequential operation on the temp
-                Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
-                LValTemp.assignSequential(seqVoid, null, code, errs);
-
-                // store the operation's result
-                assign(LValTemp.getRegister(), code, errs);
-
-                // return the operation's result
-                if (LValResult == null) {
-                    return LValTemp.getRegister();
-                }
-
-                if (LValResult != LValTemp) {
-                    LValResult.assign(LValTemp.getRegister(), code, errs);
-                }
-                return null;
-            }
-
-            case PostInc:
-            case PostDec: {
-                Assignable LValTemp  = createTempVar(code, getType());
-                Argument   argResult = null;
-                if (LValResult == null) {
-                    LValResult = createTempVar(code, getType());
-                    argResult  = LValResult.getRegister();
-                }
-
-                // get the original value
-                getValue(LValTemp, false, code, errs);
-                LValResult.assign(LValTemp.getRegister(), code, errs);
-
-                // perform the sequential operation on the temp
-                Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
-                LValTemp.assignSequential(seqVoid, null, code, errs);
-
-                // store the operation's result
-                assign(LValTemp.getRegister(), code, errs);
-
-                // return the value that preceded the operation
-                return argResult;
-            }
 
             default:
                 throw new IllegalStateException();

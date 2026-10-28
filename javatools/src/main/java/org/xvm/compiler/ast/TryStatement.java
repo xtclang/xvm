@@ -73,7 +73,7 @@ public class TryStatement
         return catchall == null
                 ? catches == null
                         ? block.getEndPosition()
-                        : catches.get(catches.size() - 1).getEndPosition()
+                        : catches.getLast().getEndPosition()
                 : catchall.getEndPosition();
     }
 
@@ -273,6 +273,7 @@ public class TryStatement
             // the context for finally clause is a continuation of the context prior to "try"
             // plus the "worst case scenario" of the try-catch block, but we only need to
             // promote the information gathered by the finally block
+            assert ctxCatchAll != null;
             Context ctxFinally = ctxCatchAll.enter();
 
             m_validatingFinally = new ValidationScope(ctxFinally, errs);
@@ -292,7 +293,7 @@ public class TryStatement
             for (int i = 0, c = resources.size(); i < c; ++i) {
                 ctx = ctx.exit();
             }
-            ctx = ctx.exit();
+            ctx.exit();
         }
 
         return fValid ? this : null;
@@ -360,8 +361,7 @@ public class TryStatement
         if (catches != null) {
             code.add(new GuardEnd(labelCatchEnd));
 
-            for (int i = 0, c = catches.size(); i < c; ++i) {
-                CatchStatement stmtCatch = catches.get(i);
+            for (CatchStatement stmtCatch : catches) {
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
             }
@@ -406,6 +406,7 @@ public class TryStatement
             TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
                     .findMethods("close", 1, MethodKind.Method).iterator().next();
+            assert aFinallyStart != null;
             for (int i = resources.size() - 1; i >= 0; --i) {
                 code.add(aFinallyStart[i]);
                 Register regException = code.lastRegister();

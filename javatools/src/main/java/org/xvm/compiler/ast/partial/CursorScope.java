@@ -27,7 +27,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.AstNode;
@@ -45,6 +44,7 @@ import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
+import org.xvm.compiler.ast.bindings.CursorBinding;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
@@ -97,8 +97,7 @@ final class CursorScope {
                         qualifier, names.subList(1, names.size()), type.getParamTypes(), type.getEndPosition()),
                         scope, site.getCompletionPrefix(), errs);
                 if (names.size() == 2) {
-                    return candidates.stream().filter(candidate ->
-                            candidate.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
+                    return candidates.stream().filter(candidate -> candidate.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
                 }
                 var bound = formalBound(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
                 var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
