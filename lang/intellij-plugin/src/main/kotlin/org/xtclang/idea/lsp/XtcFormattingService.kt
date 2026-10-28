@@ -40,8 +40,9 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
         val application = ApplicationManager.getApplication()
         val synchronous = document.getUserData(FORMAT_DOCUMENT_SYNCHRONOUSLY) == true || application.isHeadlessEnvironment
         val modality = ModalityState.defaultModalityState()
-        val range =
-            request.formattingRanges.firstOrNull()?.takeUnless { it.length == original.length }
+        // every range IntelliJ asks for, in one rangesFormatting; none formats the whole document
+        val ranges =
+            request.formattingRanges.takeUnless { ranges -> ranges.any { it.length == original.length } }.orEmpty()
         val support = LSPFormattingSupport(file)
         val cancelled = AtomicBoolean()
 
@@ -73,7 +74,7 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                         server.clientFeatures.formattingFeature.getFormattingOptions(file, null)
                     val result =
                         support.getFeatureData(
-                            LSPFormattingParams(range, document, server, options),
+                            LSPFormattingParams(ranges, document, server, options),
                         )
                     if (cancelled.get()) support.cancel()
                     val edits = result?.let { ProgressIndicatorUtils.awaitWithCheckCanceled(it) }
