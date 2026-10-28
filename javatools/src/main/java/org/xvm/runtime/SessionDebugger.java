@@ -2,6 +2,8 @@ package org.xvm.runtime;
 
 import java.io.IOException;
 
+import java.math.BigInteger;
+
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
@@ -9,6 +11,7 @@ import java.time.Duration;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -35,12 +38,19 @@ import java.util.regex.Pattern;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Nop;
 
@@ -51,6 +61,7 @@ import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
@@ -58,6 +69,11 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+
+import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
+import org.xvm.runtime.template.numbers.xConstrainedInteger;
+import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
+import org.xvm.runtime.template.numbers.xUnconstrainedInteger;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
@@ -69,7 +85,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
  * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables},
- * {@link #evaluate}), has a waiting fiber run code ({@link #run}), and
+ * {@link #evaluate}), changes them ({@link #setVariable}), has a waiting fiber run code
+ * ({@link #run}), and
  * resumes it ({@link #resume}), steps one of its fibers ({@link #step}) or pauses it
  * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
  * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
@@ -92,8 +109,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * <li>When the program stops, {@link Listener#stopped} says where and why. While it is stopped,
  *     the host reads its waiting fibers ({@link #threads}), their stacks ({@link #stackTrace}), the
  *     scopes and variables of their frames ({@link #scopes}, {@link #variables}) and the exception
- *     it stopped at ({@link #exceptionInfo}); it evaluates expressions ({@link #evaluate}), and has
- *     a waiting fiber run code ({@link #run}).</li>
+ *     it stopped at ({@link #exceptionInfo}); it evaluates expressions ({@link #evaluate}), changes
+ *     variables ({@link #setVariable}), and has a waiting fiber run code ({@link #run}).</li>
  * <li>The host ends the stop: {@link #resume} lets the program run on, and {@link #step} lets it
  *     run until the stepped fiber reaches the line where the step ends, where it stops again. A
  *     program that runs stops at its next line once the host asks for a {@link #pause}.</li>
@@ -170,7 +187,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * operations ({@link PureExpression}). Any other expression, such as a call, runs as code on the
  * waiting fiber ({@link #run}), which leaves its wait to run it and then waits again, while the
  * program's other fibers stay where they wait; a time limit, a cancel, or the program's resume or
- * end ends such a run before its code does.
+ * end ends such a run before its code does. An object's fields are followed by lazy variables, its
+ * computed properties and its {@code toString()}, whose values take running its code: reading a
+ * lazy variable's reference runs that code as such a run, for at most {@link #ON_DEMAND}.
  *
  * <p><b>Breakpoints.</b> A breakpoint is installed by file and line: it stops every fiber that
  * reaches the first op of that line in any method compiled from that file. A file is the module's
@@ -208,8 +227,9 @@ public final class SessionDebugger implements Debugger {
     public static final String UNASSIGNED = "<unassigned>";
 
     /**
-     * The most elements of an array that {@link #variables} reads; a last entry says how many more
-     * there are.
+     * The most elements of an array that a read of all of them reads; a last entry says how many
+     * more there are. A read of a part of them, from a start for a count, reads that part
+     * ({@link #variables(int, boolean, Filter, int, int)}).
      */
     public static final int MAX_ELEMENTS = 100;
 
@@ -231,6 +251,22 @@ public final class SessionDebugger implements Debugger {
     public static final String NO_VALUE = "(no value)";
 
     /**
+     * The value of a lazy variable, whose value is computed only when the host reads its
+     * reference.
+     */
+    public static final String LAZY = "(...)";
+
+    /**
+     * The name of an object's lazy variable that shows its {@code toString()}.
+     */
+    public static final String TO_STRING = "toString()";
+
+    /**
+     * How long the code that computes a lazy variable's value may run (decided 2026-10-23).
+     */
+    public static final Duration ON_DEMAND = Duration.ofSeconds(1);
+
+    /**
      * The longest value text {@link #variables} returns; longer text is cut off.
      */
     private static final int MAX_TEXT = 1000;
@@ -240,6 +276,12 @@ public final class SessionDebugger implements Debugger {
      */
     private static final String NOT_STOPPED =
             "The frame is not one of the stopped program's, so nothing can be evaluated in it.";
+
+    /**
+     * Why nothing is changed by a reference that is not one of this stop's frames or values.
+     */
+    private static final String NOT_CHANGED =
+            "The variable is not one of the stopped program's, so it cannot be changed.";
 
     /**
      * Why an evaluation or a run that the program's resume abandoned has no answer.
@@ -492,21 +534,79 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * A variable of a scope, or a field or element of a value: its name, its value and its type in
-     * words, and the reference that {@link #variables} reads its fields or elements by, or 0 if it
-     * has none. An array of more than {@link #MAX_ELEMENTS} elements ends with a variable named
-     * "..." whose value says how many more there are.
+     * words, the reference that {@link #variables} reads its fields or elements by, or 0 if it has
+     * none, and whether it is lazy. An array of more than {@link #MAX_ELEMENTS} elements ends with a
+     * variable named "..." whose value says how many more there are.
+     *
+     * <p>A lazy variable is one whose value takes running the program's code: an object's computed
+     * property, or its {@code toString()} ({@link #TO_STRING}). Its value is {@link #LAZY}, its type
+     * {@code ""}, since it has no value yet, and reading its reference runs the code and answers with
+     * one variable, of the same name, that has the value and its type.
      *
      * @param name                the variable's or field's name, an element's index in brackets,
      *                            such as {@code "[0]"}, or the expression that was evaluated or run
-     * @param value               the value in words, cut off with "..." after 1000 characters;
-     *                            {@link #UNASSIGNED} for a variable that has no value yet, and
-     *                            {@link #NO_VALUE} for code that has none
+     * @param value               the value in words, cut off with "..." after 1000 characters,
+     *                            followed by its identity code, such as {@code #1023456}, for a
+     *                            mutable object or array; {@link #UNASSIGNED} for a variable that
+     *                            has no value yet, {@link #NO_VALUE} for code that has none, and
+     *                            {@link #LAZY} for a lazy variable
      * @param type                the value's type in words, or {@code ""} if it is not known
      * @param variablesReference  the reference that {@link #variables} reads the value's fields or
-     *                            elements by, until the stop ends; 0 if it has none to show, as
-     *                            for an object of another service
+     *                            elements by, or a lazy variable's value, until the stop ends; 0 if
+     *                            it has none to show, as for an object of another service
+     * @param lazy                true if reading the reference runs code to compute the value
+     * @param elements            the number of an array's elements, which the host can read a part
+     *                            at a time ({@link #variables(int, boolean, Filter, int, int)}); 0
+     *                            for any other value
      */
-    public record Variable(String name, String value, String type, int variablesReference) {
+    public record Variable(String name, String value, String type, int variablesReference, boolean lazy,
+                           int elements) {
+        /**
+         * A variable that is not lazy, and not of an array.
+         */
+        public Variable(String name, String value, String type, int variablesReference) {
+            this(name, value, type, variablesReference, false, 0);
+        }
+
+        /**
+         * A variable that is not of an array.
+         */
+        public Variable(String name, String value, String type, int variablesReference, boolean lazy) {
+            this(name, value, type, variablesReference, lazy, 0);
+        }
+    }
+
+    /**
+     * Which of a value's children a read gives, as a host asks with DAP's filter: all of them, the
+     * named ones, which are a frame's locals and an object's fields and lazy variables, or the
+     * indexed ones, which are an array's elements.
+     */
+    public enum Filter {
+        ALL,
+        NAMED,
+        INDEXED
+    }
+
+    /**
+     * A name that the text typed in a stopped frame can be completed with: its label, and what it
+     * names, {@code "variable"}, {@code "field"}, {@code "property"} or {@code "method"}.
+     *
+     * @param label  the name
+     * @param kind   what it names, as DAP's completion item types call them
+     */
+    public record Completion(String label, String kind) {
+    }
+
+    /**
+     * The completions of the name typed at an offset of a text: the part of the text they replace,
+     * from start, length characters long, which is the part of the name typed so far, and the names
+     * that start with it.
+     *
+     * @param start   the index in the text of the name's first character
+     * @param length  how many characters of the name are typed
+     * @param items   the names that start with what is typed
+     */
+    public record Completions(int start, int length, List<Completion> items) {
     }
 
     /**
@@ -749,26 +849,106 @@ public final class SessionDebugger implements Debugger {
      *
      * <p>Reading runs none of the program's code: a value's text is the runtime's own, its fields
      * are read as they are stored, and an array shows its first {@link #MAX_ELEMENTS} elements. A
+     * mutable object's or array's text ends with its identity code, such as {@code #1023456}, as
+     * the console debugger's DI shows it, which tells it apart from another with the same fields;
+     * an immutable value, such as a const, has none, since its value tells it apart. A
      * value has fields or elements to read if it belongs to the waiting fiber's service or is
      * immutable; an object of another service is read only on that service's own thread, so its
      * variable has no reference. Each value with fields or elements gets a new reference.
      *
+     * <p>An object's fields are followed by its lazy variables ({@link Variable#lazy}): one for each
+     * computed property, a property without a field whose getter computes its value, and one for its
+     * {@code toString()} ({@link #TO_STRING}). Reading a lazy variable's reference runs its code, the
+     * getter or {@code toString()}, on the waiting fiber, as {@link #run} runs code, so what it
+     * changes stays changed and nothing in it stops the program; it may take at most
+     * {@link #ON_DEMAND}. The answer is one variable, named as the lazy one, with the value: a
+     * property's value as {@link #run} shows it, or the String that {@code toString()} returned, in
+     * quotes as other strings are shown. A run
+     * that throws, or that does not end in time, fails the read with the reason, such as
+     * "fail threw IllegalState: no." Cancelling the answer ends the run.
+     *
      * @param reference  a reference that {@link #scopes} or an earlier read returned
      *
-     * @return the variables, in order: a frame's {@code this} and its named registers, a value's
-     *         fields, or an array's elements; none if the reference is not one of this stop's, or
-     *         the program resumes first. Fails if a value cannot be read.
+     * @return the variables, in order: a frame's {@code this} and its named registers, an object's
+     *         fields and then its lazy variables, an array's elements, or a lazy variable's value;
+     *         none if the reference is not one of this stop's, or the program resumes first. Fails
+     *         if a value cannot be read, or a lazy variable's code throws or does not end in time.
      */
     public CompletableFuture<List<Variable>> variables(int reference) {
+        return variables(reference, false);
+    }
+
+    /**
+     * Read the variables of a scope, or the fields or elements of a value, as
+     * {@link #variables(int)} does, and show their integer values in hexadecimal if hex is true:
+     * {@code 0x1F}, and a negative one in its type's two's complement, such as {@code 0xFF} for
+     * an {@code Int8} of -1, as a host asks for with a value format.
+     *
+     * @param hex  true to show integers in hexadecimal
+     *
+     * @return as {@link #variables(int)} does
+     */
+    public CompletableFuture<List<Variable>> variables(int reference, boolean hex) {
+        return variables(reference, hex, Filter.ALL, 0, 0);
+    }
+
+    /**
+     * Read a part of the variables of a scope, or of the fields or elements of a value, as
+     * {@link #variables(int, boolean)} does: those the filter takes, from the one at start, count of
+     * them, or all from there if count is 0. An array's elements are read only for that part, so a
+     * host can read a large array a page at a time, as {@link Variable#elements} tells it is one; a
+     * read of all of them from start reads its first {@link #MAX_ELEMENTS}, then says how many more
+     * there are. A lazy variable's value is not filtered.
+     *
+     * @param filter  which children to read
+     * @param start   the index of the first one to read
+     * @param count   how many to read, or 0 for all from start
+     *
+     * @return as {@link #variables(int)} does, but only the part asked for
+     */
+    public CompletableFuture<List<Variable>> variables(int reference, boolean hex, Filter filter, int start, int count) {
         var future = new CompletableFuture<List<Variable>>();
         synchronized (this) {
             Halt   current = halt;
             Target target  = current == null ? null : current.targets.get(reference);
-            if (target == null || !request(current, target, future)) {
+            if (target instanceof Lazy lazy) {
+                return compute(current, lazy, hex);
+            }
+            Read read = new Read(target, hex, filter, Math.max(start, 0), Math.max(count, 0), future);
+            if (target == null || !request(current, read)) {
                 future.complete(List.of());
             }
         }
         return future;
+    }
+
+    /**
+     * Run the code that computes a lazy variable's value, on the waiting fiber the variable belongs
+     * to, as {@link #run} runs code, for at most {@link #ON_DEMAND}. Called while holding this
+     * debugger's monitor.
+     *
+     * @return the variable with the value, or none if its fiber no longer waits; fails, with the
+     *         reason in words, if the code throws or does not end in time. Cancelling it ends the run.
+     */
+    private CompletableFuture<List<Variable>> compute(Halt current, Lazy lazy, boolean hex) {
+        if (!current.stacks.containsKey(lazy.thread())) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+
+        Computed computed = lazy.computed();
+        String   name     = computed.property() == null ? TO_STRING : computed.property().getName();
+        Run      request  = new Run(current.stacks.get(lazy.thread()).frame(), name, computed, ON_DEMAND, false, hex,
+                new CompletableFuture<>());
+        queue(current, lazy.thread(), request);
+
+        CompletableFuture<Variable>       answer = answer(request);
+        CompletableFuture<List<Variable>> value  = answer.thenApply(List::of);
+        value.whenComplete((_, _) -> {
+            if (value.isCancelled()) {
+                answer.cancel(false);
+            }
+        });
+        return value;
     }
 
     /**
@@ -793,6 +973,18 @@ public final class SessionDebugger implements Debugger {
      *         cannot be evaluated, the frame is not one of this stop's, or the program resumes first
      */
     public CompletableFuture<Variable> evaluate(int frameId, String expression) {
+        return evaluate(frameId, expression, false);
+    }
+
+    /**
+     * Evaluate an expression in a stopped frame as {@link #evaluate(int, String)} does, and show its
+     * integer value in hexadecimal if hex is true, as {@link #variables(int, boolean)} does.
+     *
+     * @param hex  true to show integers in hexadecimal
+     *
+     * @return as {@link #evaluate(int, String)} does
+     */
+    public CompletableFuture<Variable> evaluate(int frameId, String expression, boolean hex) {
         PureExpression parsed;
         try {
             parsed = PureExpression.parse(expression);
@@ -804,7 +996,8 @@ public final class SessionDebugger implements Debugger {
         synchronized (this) {
             Halt    current = halt;
             FrameAt at      = current == null ? null : current.frames.get(frameId);
-            if (at == null || !request(current, new Evaluation(at.thread(), at.frame(), parsed), future)) {
+            if (at == null || !request(current, new Read(new Evaluation(at.thread(), at.frame(), parsed), hex, Filter.ALL, 0, 0,
+                    future))) {
                 return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
             }
         }
@@ -815,6 +1008,92 @@ public final class SessionDebugger implements Debugger {
             }
             return vars.getFirst();
         });
+    }
+
+    /**
+     * Change a variable of the stopped program: a frame's local, an object's field or an array's
+     * element, named as a read by its reference gave it, to the value of an expression, which is
+     * evaluated as {@link #evaluate} evaluates one, without running any of the program's code; a
+     * literal takes the variable's type, as the compiler converts it, such as {@code 5} for an
+     * {@code Int8}. The names in the expression are those of the frame that the local is in, or of
+     * the frame where the fiber that holds the object or array waits. The waiting fiber changes it
+     * on its own thread, as it reads variables, and the program goes on with the new value once it
+     * resumes.
+     *
+     * <p>What it refuses, saying why: a value that is not of the variable's type; {@code this} and
+     * {@link #EXCEPTION}; a variable or field that a {@code Ref} holds, such as a captured variable
+     * or a property with an annotation, whose change could run code; a field of an immutable
+     * object, such as a const; an element of an immutable array; a computed property, which has no
+     * field; and a name the reference does not read.
+     *
+     * @param reference   a reference that {@link #scopes} or a read returned: a frame's locals, or
+     *                    an object's fields or an array's elements
+     * @param name        the variable's or field's name, or an element's index in brackets, such
+     *                    as {@code "[1]"}
+     * @param expression  the expression whose value the variable takes
+     * @param hex         true to show the new value's integers in hexadecimal
+     *
+     * @return the variable with its new value, as a read shows it; fails, with the reason in words,
+     *         if the expression cannot be evaluated, the variable cannot take its value, the
+     *         reference is not one of this stop's, or the program resumes first
+     */
+    public CompletableFuture<Variable> setVariable(int reference, String name, String expression, boolean hex) {
+        PureExpression parsed;
+        try {
+            parsed = PureExpression.parse(expression);
+        } catch (IllegalArgumentException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
+        var future = new CompletableFuture<List<Variable>>();
+        synchronized (this) {
+            Halt   current = halt;
+            Target target  = current == null ? null : current.targets.get(reference);
+            if (!(target instanceof Locals || target instanceof Children)
+                    || !request(current, new Read(new Assignment(target, name, parsed), hex, Filter.ALL, 0, 0, future))) {
+                return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_CHANGED));
+            }
+        }
+        return future.thenApply(vars -> {
+            // a change that the resume abandoned has no variables
+            if (vars.isEmpty()) {
+                throw new IllegalArgumentException(RESUMED_FIRST);
+            }
+            return vars.getFirst();
+        });
+    }
+
+    /**
+     * The names that complete the name typed at an offset of a text in a stopped frame, as a debug
+     * console offers them: after a dot, the members of the value of the path before it, evaluated
+     * as {@link #evaluate} evaluates one, which are its type's fields, properties and methods;
+     * otherwise the frame's variables, {@code this}, and the members of {@code this}, its private
+     * ones too, which the frame's code can use. Only the names that start with what is typed of the
+     * name are given, and nothing of the program runs.
+     * The waiting fiber that holds the frame reads them on its own thread, as it reads variables.
+     *
+     * @param frameId  the ID of a frame that {@link #stackTrace} returned
+     * @param text     the text typed so far
+     * @param offset   the index in the text where the name being typed ends, such as its length
+     *
+     * @return the completions, which are none if the path before a dot cannot be evaluated; fails
+     *         if the frame is not one of this stop's
+     */
+    public CompletableFuture<Completions> completions(int frameId, String text, int offset) {
+        var answer = new CompletableFuture<Completions>();
+        var read   = new CompletableFuture<List<Variable>>();
+        synchronized (this) {
+            Halt    current = halt;
+            FrameAt at      = current == null ? null : current.frames.get(frameId);
+            if (at == null
+                    || !request(current, new Read(new Completing(at.thread(), at.frame(), text, offset, answer), false,
+                            Filter.ALL, 0, 0, read))) {
+                return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
+            }
+        }
+        // the read completes once the answer has been made; one that the resume abandoned has none
+        Completions none = new Completions(Math.max(0, Math.min(offset, text.length())), 0, List.of());
+        return read.thenApply(_ -> answer.getNow(none));
     }
 
     /**
@@ -900,6 +1179,20 @@ public final class SessionDebugger implements Debugger {
      * @return as {@link #run(int, String, Duration)} does
      */
     public CompletableFuture<Variable> run(int frameId, String expression, Duration limit, boolean program) {
+        return run(frameId, expression, limit, program, false);
+    }
+
+    /**
+     * Run an expression's code in a stopped frame as {@link #run(int, String, Duration, boolean)}
+     * does, and show its value in hexadecimal, if it is an integer and hex is true, instead of by
+     * its {@code toString()}, as {@link #variables(int, boolean)} shows integers.
+     *
+     * @param hex  true to show an integer value in hexadecimal
+     *
+     * @return as {@link #run(int, String, Duration)} does
+     */
+    public CompletableFuture<Variable> run(int frameId, String expression, Duration limit, boolean program,
+                                           boolean hex) {
         Objects.requireNonNull(limit);
         Run request;
         synchronized (this) {
@@ -908,12 +1201,25 @@ public final class SessionDebugger implements Debugger {
             if (at == null || !current.stacks.containsKey(at.thread())) {
                 return CompletableFuture.failedFuture(new IllegalArgumentException(NOT_STOPPED));
             }
-            request = new Run(at.frame(), expression, limit, program, new CompletableFuture<>());
-            current.runs.computeIfAbsent(at.thread(), _ -> new ArrayDeque<>()).add(request);
-            notifyAll();
+            request = new Run(at.frame(), expression, null, limit, program, hex, new CompletableFuture<>());
+            queue(current, at.thread(), request);
         }
+        return answer(request);
+    }
 
-        // cancelling the answer ends the run
+    /**
+     * Queue a run for the waiting fiber with the specified ID, which starts it once no other run is
+     * in progress. Called while holding this debugger's monitor.
+     */
+    private void queue(Halt current, int threadId, Run request) {
+        current.runs.computeIfAbsent(threadId, _ -> new ArrayDeque<>()).add(request);
+        notifyAll();
+    }
+
+    /**
+     * @return the run's answer, whose cancelling ends the run
+     */
+    private CompletableFuture<Variable> answer(Run request) {
         CompletableFuture<Variable> answer = request.answer();
         answer.whenComplete((_, _) -> {
             if (answer.isCancelled()) {
@@ -1518,7 +1824,7 @@ public final class SessionDebugger implements Debugger {
 
             List<Read> reads = current.reads.remove(threadId);
             if (reads != null) {
-                reads.forEach(read -> read(current, frame, read.target(), read.future()));
+                reads.forEach(read -> read(current, frame, read));
                 continue;
             }
 
@@ -1593,15 +1899,15 @@ public final class SessionDebugger implements Debugger {
      *
      * @return false if that fiber does not wait
      */
-    private boolean request(Halt current, Target target, CompletableFuture<List<Variable>> future) {
-        Snapshot snapshot = current.stacks.get(target.thread());
+    private boolean request(Halt current, Read read) {
+        Snapshot snapshot = current.stacks.get(read.target().thread());
         if (snapshot == null) {
             return false;
         }
         if (snapshot.thread() == Thread.currentThread()) {
-            read(current, snapshot.frame(), target, future);
+            read(current, snapshot.frame(), read);
         } else {
-            current.reads.computeIfAbsent(target.thread(), _ -> new ArrayList<>()).add(new Read(target, future));
+            current.reads.computeIfAbsent(read.target().thread(), _ -> new ArrayList<>()).add(read);
             notifyAll();
         }
         return true;
@@ -1678,13 +1984,32 @@ public final class SessionDebugger implements Debugger {
      * host's actions on the answer must not run while this debugger's monitor is held. Called
      * while holding this debugger's monitor.
      */
-    private void read(Halt current, Frame frame, Target target, CompletableFuture<List<Variable>> future) {
-        List<Variable> vars;
+    private void read(Halt current, Frame frame, Read read) {
+        boolean                           hex    = read.hex();
+        Filter                            filter = read.filter();
+        CompletableFuture<List<Variable>> future = read.future();
+        List<Variable>                    vars;
         try {
-            vars = switch (target) {
-                case Locals(int _, Frame scope)                  -> locals(current, frame, scope);
-                case Children(int _, ObjectHandle value)         -> children(current, frame, value);
-                case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e));
+            vars = switch (read.target()) {
+                case Locals(int _, Frame scope) -> filter == Filter.INDEXED
+                        ? List.of()
+                        : part(locals(current, frame, scope, hex), read);
+                case Children(int _, ArrayHandle array) -> filter == Filter.NAMED
+                        ? List.of()
+                        : elements(current, frame, array, hex, read.start(), read.count());
+                case Children(int _, GenericHandle object) -> filter == Filter.INDEXED
+                        ? List.of()
+                        : part(fields(current, frame, object, hex), read);
+                case Children _ -> List.of();
+                case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e, hex));
+                case Assignment assignment -> List.of(assign(current, frame, assignment, hex));
+                case Completing completing -> {
+                    // nothing waits on the answer itself, so making it here runs none of the host's code
+                    completing.answer().complete(complete(frame, completing));
+                    yield List.of();
+                }
+                // a lazy variable's value is computed by a run, never read (variables())
+                case Lazy _ -> List.of();
             };
         } catch (RuntimeException e) {
             // a value the debugger cannot read fails the read, not the program
@@ -1700,55 +2025,56 @@ public final class SessionDebugger implements Debugger {
      * @return the exception the frame is throwing, if any, then its {@code this} and its named
      *         registers in scope
      */
-    private List<Variable> locals(Halt current, Frame waitingFrame, Frame frame) {
+    private List<Variable> locals(Halt current, Frame waitingFrame, Frame frame, boolean hex) {
         var             vars      = new ArrayList<Variable>();
         ExceptionHandle exception = frame.m_hException;
         if (exception != null) {
-            vars.add(variable(current, waitingFrame, EXCEPTION, exception));
+            vars.add(variable(current, waitingFrame, EXCEPTION, exception, hex));
         }
 
         ObjectHandle self = frame.f_hThis;
         if (self != null) {
-            vars.add(variable(current, waitingFrame, "this", self));
+            vars.add(variable(current, waitingFrame, "this", self, hex));
         }
 
         for (int i = 0, count = frame.getCurrentVarCount(); i < count; i++) {
             VarInfo info = frame.getVarInfo(i);
             String  name = info == null ? "" : info.getName();
             if (!name.isEmpty()) {
-                vars.add(variable(current, waitingFrame, name, frame.f_ahVar[i]));
+                vars.add(variable(current, waitingFrame, name, frame.f_ahVar[i], hex));
             }
         }
         return vars;
     }
 
     /**
-     * @return an array's elements, or an object's fields
+     * @return the part of the variables that the read asks for: from its start, as many as its
+     *         count, or all from there if its count is 0
      */
-    private List<Variable> children(Halt current, Frame waitingFrame, ObjectHandle value) {
-        return switch (value) {
-            case ArrayHandle array    -> elements(current, waitingFrame, array);
-            case GenericHandle object -> fields(current, waitingFrame, object);
-            default                   -> List.of();
-        };
+    private static List<Variable> part(List<Variable> vars, Read read) {
+        int from = Math.min(read.start(), vars.size());
+        int to   = read.count() == 0 ? vars.size() : (int) Math.min(vars.size(), (long) from + read.count());
+        return List.copyOf(vars.subList(from, to));
     }
 
     /**
-     * @return the array's elements, at most {@link #MAX_ELEMENTS} of them, then how many more
-     *         there are
+     * @return the array's elements from start, count of them, or, if count is 0, at most
+     *         {@link #MAX_ELEMENTS} of them, then how many more there are
      */
-    private List<Variable> elements(Halt current, Frame waitingFrame, ArrayHandle array) {
+    private List<Variable> elements(Halt current, Frame waitingFrame, ArrayHandle array, boolean hex, long start,
+                                    int count) {
         var  vars = new ArrayList<Variable>();
         long size = array.m_hDelegate.m_cSize;
-        for (int i = 0, count = (int) Math.min(size, MAX_ELEMENTS); i < count; i++) {
+        long end  = Math.min(size, start + (count == 0 ? MAX_ELEMENTS : count));
+        for (long i = start; i < end; i++) {
             ObjectHandle element = element(waitingFrame, array, i);
             if (element == null) {
                 break;
             }
-            vars.add(variable(current, waitingFrame, "[" + i + "]", element));
+            vars.add(variable(current, waitingFrame, "[" + i + "]", element, hex));
         }
-        if (size > MAX_ELEMENTS) {
-            vars.add(new Variable("...", (size - MAX_ELEMENTS) + " more", "", 0));
+        if (count == 0 && end < size) {
+            vars.add(new Variable("...", (size - end) + " more", "", 0));
         }
         return vars;
     }
@@ -1772,8 +2098,232 @@ public final class SessionDebugger implements Debugger {
     /**
      * @return the expression's value, as a variable named by the expression
      */
-    private Variable resolve(Halt current, Frame waitingFrame, Frame frame, PureExpression expression) {
-        return variable(current, waitingFrame, expression.text(), expression.evaluate(waitingFrame, frame));
+    private Variable resolve(Halt current, Frame waitingFrame, Frame frame, PureExpression expression, boolean hex) {
+        return variable(current, waitingFrame, expression.text(), expression.evaluate(waitingFrame, frame), hex);
+    }
+
+    /**
+     * Give a variable of a frame, an object or an array the value of the assignment's expression,
+     * on the thread of the fiber waiting at the specified frame.
+     *
+     * @return the variable with its new value
+     *
+     * @throws IllegalArgumentException if the variable cannot take the value, saying why
+     */
+    private Variable assign(Halt current, Frame waitingFrame, Assignment assignment, boolean hex) {
+        String name = assignment.name();
+        if (name.equals("this") || name.equals(EXCEPTION)) {
+            throw new IllegalArgumentException(name + " cannot be changed.");
+        }
+
+        return switch (assignment.target()) {
+            case Locals(int _, Frame frame) -> {
+                int register = register(frame, name);
+                if (frame.f_ahVar[register] instanceof RefHandle) {
+                    throw new IllegalArgumentException(name + " is held by a Ref, which could run code to change it,"
+                            + " so it is not changed.");
+                }
+                ObjectHandle value = valueFor(waitingFrame, frame, assignment, frame.getVarInfo(register).getType());
+                frame.f_ahVar[register] = value;
+                yield variable(current, waitingFrame, name, value, hex);
+            }
+
+            case Children(int _, ArrayHandle array) -> {
+                long            index    = index(name, array);
+                TypeConstant    element  = array.getType().resolveGenericType("Element");
+                ObjectHandle    value    = valueFor(waitingFrame, waitingFrame, assignment, element);
+                var             template = (xArray) array.getTemplate();
+                ExceptionHandle pending  = waitingFrame.m_hException;
+                if (template.assignArrayValue(waitingFrame, array, index, value) != Op.R_NEXT) {
+                    // an immutable array refuses; the exception must not stay on the waiting frame
+                    ExceptionHandle refused = waitingFrame.m_hException;
+                    waitingFrame.m_hException = pending;
+                    throw new IllegalArgumentException(name + " cannot be changed: " + describe(refused) + '.');
+                }
+                yield variable(current, waitingFrame, name, value, hex);
+            }
+
+            case Children(int _, GenericHandle object) -> {
+                FieldInfo field = DebugConsole.getFieldLayout(object.getComposition()).get(name);
+                if (field == null) {
+                    boolean computed = computedProperties(object).stream()
+                            .anyMatch(property -> property.getName().equals(name));
+                    throw new IllegalArgumentException(computed
+                            ? name + " is computed by its getter, and has no field to change."
+                            : typeText(object) + " has no field " + name + '.');
+                }
+                if (!object.isMutable()) {
+                    throw new IllegalArgumentException(name + " is a field of an immutable " + typeText(object)
+                            + ", which cannot be changed.");
+                }
+                if (field.isTransient() || field.isInflated()) {
+                    throw new IllegalArgumentException(name + " is held by a Ref, which could run code to change it,"
+                            + " so it is not changed.");
+                }
+                ObjectHandle value = valueFor(waitingFrame, waitingFrame, assignment, field.getType());
+                object.setField(field.getIndex(), value);
+                yield variable(current, waitingFrame, name, value, hex);
+            }
+
+            default -> throw new IllegalArgumentException(name + " cannot be changed.");
+        };
+    }
+
+    /**
+     * @return the completions of the name typed at the offset of the text, in the frame, on the
+     *         thread of the fiber waiting at the specified frame
+     */
+    private static Completions complete(Frame waitingFrame, Completing completing) {
+        String text  = completing.text();
+        int    end   = Math.max(0, Math.min(completing.offset(), text.length()));
+        int    start = end;
+        while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start - 1))) {
+            --start;
+        }
+
+        List<Completion> names;
+        if (start > 0 && text.charAt(start - 1) == '.') {
+            // the path before the dot: names, dots and indexes in brackets
+            int from  = start - 1;
+            int depth = 0;
+            while (from > 0) {
+                char ch = text.charAt(from - 1);
+                if (ch == ']') {
+                    ++depth;
+                } else if (ch == '[') {
+                    if (depth == 0) {
+                        break;
+                    }
+                    --depth;
+                } else if (depth == 0 && ch != '.' && !Character.isJavaIdentifierPart(ch)) {
+                    break;
+                }
+                --from;
+            }
+            names = membersOf(waitingFrame, completing.frame(), text.substring(from, start - 1).strip());
+        } else {
+            names = namesIn(completing.frame());
+        }
+
+        String typed = text.substring(start, end);
+        return new Completions(start, end - start, names.stream().filter(name -> name.label().startsWith(typed)).toList());
+    }
+
+    /**
+     * @return the names a frame's code can use: its variables, innermost first, {@code this}, and
+     *         all the members of {@code this}
+     */
+    private static List<Completion> namesIn(Frame frame) {
+        var names = new LinkedHashMap<String, Completion>();
+        for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
+            VarInfo info = frame.getVarInfo(i);
+            String  name = info == null ? "" : info.getName();
+            if (!name.isEmpty()) {
+                names.putIfAbsent(name, new Completion(name, "variable"));
+            }
+        }
+        ObjectHandle self = frame.f_hThis;
+        if (self != null) {
+            names.putIfAbsent("this", new Completion("this", "variable"));
+            members(self, true).forEach(member -> names.putIfAbsent(member.label(), member));
+        }
+        return List.copyOf(names.values());
+    }
+
+    /**
+     * @return the members of the value of the path, all of them for {@code this} and the public
+     *         ones otherwise, or none if it cannot be evaluated or is unassigned
+     */
+    private static List<Completion> membersOf(Frame waitingFrame, Frame frame, String path) {
+        ObjectHandle value;
+        try {
+            value = shown(PureExpression.parse(path).evaluate(waitingFrame, frame));
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
+        return value == null ? List.of() : members(value, path.equals("this"));
+    }
+
+    /**
+     * @return the members of the value's type, all of them or the public ones: its fields and
+     *         properties, other than constants and type parameters, in the type's order, then the
+     *         names of its methods, other than constructors and functions, sorted
+     */
+    private static List<Completion> members(ObjectHandle value, boolean all) {
+        TypeConstant type = all ? value.getType().ensureAccess(Constants.Access.PRIVATE) : value.getType();
+        TypeInfo     info = type.ensureTypeInfo();
+        var members = new LinkedHashMap<String, Completion>();
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : info.sortedProperties()) {
+            PropertyInfo property = entry.getValue();
+            if (!property.isConstant() && !property.isFormalType() && (all || property.getRefAccess() == Constants.Access.PUBLIC)) {
+                members.putIfAbsent(property.getName(), new Completion(property.getName(), property.hasField() ? "field" : "property"));
+            }
+        }
+        info.getMethods().entrySet().stream()
+                .filter(entry -> {
+                    MethodInfo method = entry.getValue();
+                    IdentityConstant owner = entry.getKey().getNamespace();
+                    return (all || method.getAccess() == Constants.Access.PUBLIC) && !method.isConstructor() && !method.isFunction()
+                            && !(owner instanceof PropertyConstant) && !(owner instanceof MethodConstant);
+                })
+                .map(entry -> entry.getKey().getName())
+                .sorted()
+                .forEach(name -> members.putIfAbsent(name, new Completion(name, "method")));
+        return List.copyOf(members.values());
+    }
+
+    /**
+     * @return the register of the innermost variable of the frame with the specified name
+     *
+     * @throws IllegalArgumentException if the frame has none
+     */
+    private static int register(Frame frame, String name) {
+        for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
+            VarInfo info = frame.getVarInfo(i);
+            if (info != null && name.equals(info.getName())) {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException("There is no variable \"" + name + "\" in this frame.");
+    }
+
+    /**
+     * @return the index that an element's name, such as {@code "[1]"}, gives
+     *
+     * @throws IllegalArgumentException if it is not an index of the array
+     */
+    private static long index(String name, ArrayHandle array) {
+        long size = array.m_hDelegate.m_cSize;
+        if (name.length() > 2 && name.startsWith("[") && name.endsWith("]")) {
+            try {
+                long index = Long.parseLong(name.substring(1, name.length() - 1));
+                if (index >= 0 && index < size) {
+                    return index;
+                }
+            } catch (NumberFormatException ignored) {
+                // not an index
+            }
+        }
+        throw new IllegalArgumentException(name + " is not an element of the array, whose size is " + size + '.');
+    }
+
+    /**
+     * @return the value of the assignment's expression, evaluated in the frame for a variable of the
+     *         specified type
+     *
+     * @throws IllegalArgumentException if it cannot be evaluated, is unassigned, or is not of the type
+     */
+    private static ObjectHandle valueFor(Frame waitingFrame, Frame frame, Assignment assignment, TypeConstant type) {
+        PureExpression expression = assignment.expression();
+        ObjectHandle   value      = shown(expression.evaluate(waitingFrame, frame, type));
+        if (value == null) {
+            throw new IllegalArgumentException(expression.text() + " is unassigned.");
+        }
+        if (!value.getType().isA(type)) {
+            throw new IllegalArgumentException(expression.text() + " is " + typeText(value) + ", not "
+                    + type.getValueString() + ", so " + assignment.name() + " cannot take it.");
+        }
+        return value;
     }
 
     /**
@@ -1784,21 +2334,43 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return the object's fields
+     * @return the object's fields, then a lazy variable for each of its computed properties, and one
+     *         for its {@code toString()}
      */
-    private List<Variable> fields(Halt current, Frame waitingFrame, GenericHandle object) {
+    private List<Variable> fields(Halt current, Frame waitingFrame, GenericHandle object, boolean hex) {
         var vars = new ArrayList<Variable>();
         for (Map.Entry<String, FieldInfo> entry : DebugConsole.getFieldLayout(object.getComposition()).entrySet()) {
-            vars.add(variable(current, waitingFrame, entry.getKey(), object.getField(entry.getValue().getIndex())));
+            vars.add(variable(current, waitingFrame, entry.getKey(), object.getField(entry.getValue().getIndex()), hex));
         }
+
+        int thread = threadId(waitingFrame.f_fiber);
+        for (PropertyInfo property : computedProperties(object)) {
+            int reference = reference(current, new Lazy(thread, new Computed(object, property.getIdentity())));
+            vars.add(new Variable(property.getName(), LAZY, "", reference, true));
+        }
+        int reference = reference(current, new Lazy(thread, new Computed(object, null)));
+        vars.add(new Variable(TO_STRING, LAZY, "", reference, true));
         return vars;
+    }
+
+    /**
+     * @return the object's computed properties, in the order they are declared: those that have no
+     *         field, so that a getter computes their value, and that any code may read; constants
+     *         and type parameters are left out
+     */
+    static List<PropertyInfo> computedProperties(ObjectHandle object) {
+        return Arrays.stream(object.getType().ensureTypeInfo().sortedProperties())
+                .map(Map.Entry::getValue)
+                .filter(property -> !property.hasField() && !property.isConstant() && !property.isFormalType()
+                        && property.getRefAccess() == Constants.Access.PUBLIC)
+                .toList();
     }
 
     /**
      * @return the variable of the specified value, with a reference to its fields or elements if
      *         it has any that the waiting fiber may read
      */
-    private Variable variable(Halt current, Frame waitingFrame, String name, ObjectHandle value) {
+    private Variable variable(Halt current, Frame waitingFrame, String name, ObjectHandle value, boolean hex) {
         ObjectHandle shown = shown(value);
         if (shown == null) {
             return new Variable(name, UNASSIGNED, "", 0);
@@ -1806,7 +2378,8 @@ public final class SessionDebugger implements Debugger {
 
         int thread   = threadId(waitingFrame.f_fiber);
         int children = hasChildren(waitingFrame, shown) ? reference(current, new Children(thread, shown)) : 0;
-        return new Variable(name, valueText(shown), typeText(shown), children);
+        int elements = shown instanceof ArrayHandle array ? (int) Math.min(array.m_hDelegate.m_cSize, Integer.MAX_VALUE) : 0;
+        return new Variable(name, valueText(shown, hex), typeText(shown), children, false, children == 0 ? 0 : elements);
     }
 
     /**
@@ -1823,27 +2396,84 @@ public final class SessionDebugger implements Debugger {
             case EnumHandle _ -> false;
             case ServiceHandle service when service.f_context != waitingFrame.f_context -> false;
             case ArrayHandle array -> array.m_hDelegate.m_cSize > 0;
-            case GenericHandle _ -> !DebugConsole.getFieldLayout(composition).isEmpty();
+            // an object without fields still has its toString(), and perhaps computed properties
+            case GenericHandle _ -> true;
             default -> false;
         };
     }
 
     /**
-     * @return the value in words: an array's element type and size, as Java debuggers show
-     *         arrays, else the runtime's own text of the value without the type it starts with,
-     *         or the type alone for an object
+     * @return the value in words, as {@link #valueText(ObjectHandle, boolean)} shows it, with its
+     *         integers in decimal
      */
     private static String valueText(ObjectHandle value) {
+        return valueText(value, false);
+    }
+
+    /**
+     * @return the value in words: an integer in hexadecimal if hex is true, and an unsigned one as
+     *         unsigned; an array's element type and size, as Java debuggers show arrays; else the
+     *         runtime's own text of the value
+     *         without the type it starts with, or the type alone for an object; and a mutable
+     *         object's or array's identity code after it ({@link #identified})
+     */
+    private static String valueText(ObjectHandle value, boolean hex) {
+        String hexText = hex ? hexText(value) : null;
+        if (hexText != null) {
+            return hexText;
+        }
+        if (value instanceof JavaLong integer && integer.getTemplate() instanceof xConstrainedInteger type
+                && !type.isSigned() && integer.getValue() < 0) {
+            // the runtime holds a UInt64 in a long, so that one of 2^63 or more would read as negative
+            return Long.toUnsignedString(integer.getValue());
+        }
+
         if (value instanceof ArrayHandle array) {
             TypeConstant elementType = array.getType().resolveGenericType("Element");
-            return (elementType == null ? "" : elementType.getValueString()) + '[' + array.m_hDelegate.m_cSize + ']';
+            return identified(value,
+                    (elementType == null ? "" : elementType.getValueString()) + '[' + array.m_hDelegate.m_cSize + ']');
         }
 
         String text = withoutType(value.toString());
-        if (text.isEmpty()) {
-            return typeText(value);
-        }
-        return cut(text);
+        return identified(value, text.isEmpty() ? typeText(value) : cut(text));
+    }
+
+    /**
+     * @return the text, followed by the value's identity code, such as {@code #1023456}, as the
+     *         console debugger's DI shows it, if the value is a mutable object or array, which
+     *         another with the same fields or elements is not; an immutable value, such as a const,
+     *         is told apart by its value
+     */
+    private static String identified(ObjectHandle value, String text) {
+        boolean object = value instanceof GenericHandle || value instanceof ArrayHandle;
+        return object && value.isMutable() && !(value.getComposition() instanceof ProxyComposition)
+                ? text + " #" + System.identityHashCode(value)
+                : text;
+    }
+
+    /**
+     * @return an integer's value in hexadecimal, such as {@code 0x1F}: a negative one of a type of
+     *         fixed size in its two's complement, such as {@code 0xFF} for an {@code Int8} of -1, and
+     *         one of an unbounded type with its sign; null if the value is not an integer
+     */
+    static String hexText(ObjectHandle value) {
+        return switch (value) {
+            case JavaLong integer when integer.getTemplate() instanceof xConstrainedInteger type ->
+                    hex(BigInteger.valueOf(integer.getValue()), type.getNumBits());
+            case LongLongHandle integer -> hex(integer.getValue().toBigInteger(), 128);
+            case IntNHandle integer when integer.getTemplate() instanceof xUnconstrainedInteger ->
+                    hex(integer.getValue().getBigInteger(), 0);
+            default -> null;
+        };
+    }
+
+    /**
+     * @return the value in hexadecimal: in the two's complement of the specified number of bits if
+     *         it is negative, or with its sign if the number of bits is 0, for a type without a size
+     */
+    private static String hex(BigInteger value, int bits) {
+        BigInteger shown = value.signum() < 0 && bits > 0 ? value.add(BigInteger.ONE.shiftLeft(bits)) : value;
+        return (shown.signum() < 0 ? "-0x" : "0x") + shown.abs().toString(16).toUpperCase();
     }
 
     /**
@@ -1911,11 +2541,18 @@ public final class SessionDebugger implements Debugger {
      * @return the run, ready to start, or null if the expression does not compile
      */
     private Running prepare(Halt current, Frame waitingFrame, Run run) {
-        long            firstFiber = Fiber.nextId();
-        Frame           frame      = run.frame();
-        TypeConstant    object     = frame.poolContext().typeObject();
-        EvalCompiler    value      = new EvalCompiler(frame, "{\nreturn " + run.expression() + ";\n}");
-        MethodStructure lambda     = value.createLambda(object);
+        long firstFiber = Fiber.nextId();
+        if (run.computed() != null) {
+            // a lazy variable's code is the value's getter or toString(), which needs no compiling
+            return new Running(run, waitingFrame.f_fiber, firstFiber, current, null, new int[0], false,
+                    waitingFrame.createNativeFrame(runOps, new ObjectHandle[3], Op.A_IGNORE, null),
+                    new AtomicReference<>());
+        }
+
+        Frame           frame  = run.frame();
+        TypeConstant    object = frame.poolContext().typeObject();
+        EvalCompiler    value  = new EvalCompiler(frame, "{\nreturn " + run.expression() + ";\n}");
+        MethodStructure lambda = value.createLambda(object);
         if (lambda != null) {
             return new Running(run, waitingFrame.f_fiber, firstFiber, current, lambda, value.getArgs(), false,
                     waitingFrame.createNativeFrame(runOps, new ObjectHandle[3], Op.A_IGNORE, null),
@@ -1961,11 +2598,15 @@ public final class SessionDebugger implements Debugger {
      * thread.
      */
     private void finish(Running run) {
-        run.lambda().getParent().removeChild(run.lambda());
+        if (run.lambda() != null) {
+            run.lambda().getParent().removeChild(run.lambda());
+        }
 
         ObjectHandle[]              registers  = run.trampoline().f_ahVar;
         String                      expression = run.run().expression();
         CompletableFuture<Variable> answer     = run.run().answer();
+        Computed                    computed   = run.run().computed();
+        boolean                     toString   = computed != null && computed.property() == null;
         synchronized (this) {
             if (running == run) {
                 running = null;
@@ -1981,14 +2622,21 @@ public final class SessionDebugger implements Debugger {
                 return;
             }
             if (registers[THROWN] instanceof ExceptionHandle thrown) {
-                String what = registers[VALUE] == null ? expression : expression + "'s toString()";
+                String what = registers[VALUE] == null || toString ? expression : expression + "'s toString()";
                 fail(answer, what + " threw " + describe(thrown) + '.');
             } else if (run.statement()) {
                 answer.completeAsync(() -> new Variable(expression, NO_VALUE, "", 0));
+            } else if (toString) {
+                // what toString() returns is a String, shown as other strings are
+                String text = valueText(registers[TEXT]);
+                answer.completeAsync(() -> new Variable(expression, text, "String", 0));
             } else {
-                Variable shown = variable(run.halt(), run.trampoline().f_framePrev, expression, registers[VALUE]);
-                String   text  = cut(((StringHandle) registers[TEXT]).getStringValue());
-                answer.completeAsync(() -> new Variable(shown.name(), text, shown.type(), shown.variablesReference()));
+                Variable shown   = variable(run.halt(), run.trampoline().f_framePrev, expression, registers[VALUE],
+                        run.run().hex());
+                String   hexText = run.run().hex() ? hexText(registers[VALUE]) : null;
+                String   text    = hexText != null ? hexText : cut(((StringHandle) registers[TEXT]).getStringValue());
+                answer.completeAsync(() -> new Variable(shown.name(), text, shown.type(), shown.variablesReference(), false,
+                        shown.elements()));
             }
         }
     }
@@ -1998,7 +2646,11 @@ public final class SessionDebugger implements Debugger {
      * frame's variables that it reads; its value goes on the native frame's stack.
      */
     private int callExpression(Frame trampoline) {
-        Running        run   = running;
+        Running run = running;
+        if (run.run().computed() instanceof Computed(ObjectHandle value, PropertyConstant property)) {
+            return computeValue(trampoline, value, property);
+        }
+
         Frame          frame = run.run().frame();
         int[]          vars  = run.args();
         ObjectHandle[] args  = new ObjectHandle[run.lambda().getMaxVars()];
@@ -2014,6 +2666,25 @@ public final class SessionDebugger implements Debugger {
         return Op.anyDeferred(args)
                 ? new Utils.GetArguments(args, f -> call(f, run, self, args)).doNext(trampoline)
                 : call(trampoline, run, self, args);
+    }
+
+    /**
+     * The first op of a lazy variable's run: the value of the object's computed property, through
+     * its getter, goes on the native frame's stack, or the object itself for its {@code toString()};
+     * a getter that fails at once ends the run with that exception.
+     */
+    private static int computeValue(Frame trampoline, ObjectHandle object, PropertyConstant property) {
+        if (property == null) {
+            trampoline.pushStack(object);
+            return Op.R_NEXT;
+        }
+
+        int result = object.getTemplate().getPropertyValue(trampoline, object, property, Op.A_STACK);
+        if (result == Op.R_EXCEPTION) {
+            trampoline.f_ahVar[THROWN] = trampoline.clearException();
+            return END_RUN;
+        }
+        return result;
     }
 
     /**
@@ -2553,24 +3224,62 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A read the host asked for, which the waiting fiber makes on its thread.
+     * A change of a variable that a read of the target gave, by its name, to the value of an
+     * expression, which the waiting fiber of the target makes.
      */
-    private record Read(Target target, CompletableFuture<List<Variable>> future) {
+    private record Assignment(Target target, String name, PureExpression expression) implements Target {
+        @Override
+        public int thread() {
+            return target.thread();
+        }
     }
 
     /**
-     * Code the host asks a waiting fiber to run: the frame it runs in, the expression, how long it
-     * may run, whether the whole program runs meanwhile, and the answer.
+     * The completions of the name typed at an offset of a text in a frame, which the waiting fiber
+     * that holds the frame answers.
      */
-    private record Run(Frame frame, String expression, Duration limit, boolean program,
-                       CompletableFuture<Variable> answer) {
+    private record Completing(int thread, Frame frame, String text, int offset, CompletableFuture<Completions> answer)
+            implements Target {
+    }
+
+    /**
+     * A lazy variable's value, which a run computes on the waiting fiber.
+     */
+    private record Lazy(int thread, Computed computed) implements Target {
+    }
+
+    /**
+     * What a lazy variable's run shows of a value: one of its computed properties, or its
+     * {@code toString()} if the property is null.
+     */
+    private record Computed(ObjectHandle value, PropertyConstant property) {
+    }
+
+    /**
+     * A read the host asked for, which the waiting fiber makes on its thread: what it reads, whether
+     * it shows integers in hexadecimal, which children it takes, from which one and how many of
+     * them, 0 for all from there, and its answer.
+     */
+    private record Read(Target target, boolean hex, Filter filter, int start, int count,
+                        CompletableFuture<List<Variable>> future) {
+    }
+
+    /**
+     * Code the host asks a waiting fiber to run: the frame it runs in, the expression, or the
+     * value's property or {@code toString()} that a lazy variable shows, which the expression then
+     * names, how long it may run, whether the whole program runs meanwhile, whether an integer value
+     * shows in hexadecimal, and the answer.
+     */
+    private record Run(Frame frame, String expression, Computed computed, Duration limit, boolean program,
+                       boolean hex, CompletableFuture<Variable> answer) {
     }
 
     /**
      * A run in progress: what the host asked for; the fiber it runs on; the ID of the first fiber
-     * created after it started; the stop it runs in; its compiled expression, the registers of the
-     * frame that the expression reads, and whether it is a statement; the native frame it runs in;
-     * and why it was ended before its code finished, if it was.
+     * created after it started; the stop it runs in; its compiled expression, or null for a lazy
+     * variable's run, the registers of the frame that the expression reads, and whether it is a
+     * statement; the native frame it runs in; and why it was ended before its code finished, if it
+     * was.
      */
     private record Running(Run run, Fiber fiber, long firstFiber, Halt halt, MethodStructure lambda, int[] args,
                            boolean statement, Frame trampoline, AtomicReference<String> ended) {

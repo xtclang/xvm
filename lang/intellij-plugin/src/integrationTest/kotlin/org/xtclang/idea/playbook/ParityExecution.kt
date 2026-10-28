@@ -787,6 +787,231 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X316") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // the object's fields, then its lazy variables, whose values run code only when asked for
+                val expands = data.string("expands")
+                val fields = JsonParser.parseString(debugger.variables(project, module, expands)).asJsonArray.map { it.asJsonObject }
+                val expected = data.getAsJsonArray("fields").map { pair -> pair.asJsonArray.map { it.asString } }
+                check(fields.map { listOf(it.string("name"), it.string("value")) } == expected) { "$expands shows $fields" }
+                data.getAsJsonArray("lazy").map { it.asJsonArray }.forEach { pair ->
+                    val (name, value) = pair[0].asString to pair[1].asString
+                    val lazy = fields.single { it.string("name") == name }
+                    val shown =
+                        if (lazy.has("link")) {
+                            // with LSP4IJ #1768, a lazy variable has a Show value link
+                            debugger.showValue(project, module, "$expands/$name")
+                        } else {
+                            // TODO LSP4IJ: UP35 — LSP4IJ 0.21.0 ignores presentationHint.lazy (#1768), so a lazy variable
+                            // expands to one child that has its value
+                            JsonParser
+                                .parseString(debugger.variables(project, module, "$expands/$name"))
+                                .asJsonArray
+                                .single()
+                                .asJsonObject
+                                .string("value")
+                        }
+                    check(shown == value) { "$name shows $shown, not $value" }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X317") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                fun locals() =
+                    JsonParser
+                        .parseString(debugger.variables(project, module, ""))
+                        .asJsonArray
+                        .map { it.asJsonObject }
+                        .associate { it.string("name") to it.string("value") }
+
+                fun pairs(key: String) = data.getAsJsonArray(key).map { pair -> pair.asJsonArray.let { it[0].asString to it[1].asString } }
+                val decimal = locals()
+                pairs("decimal").forEach { (name, value) -> check(decimal[name] == value) { "$name is not $value: $decimal" } }
+                // two objects with the same fields have different identity codes
+                val identities = data.strings("identities").map { decimal.getValue(it) }
+                identities.forEach { check(Regex(".+ #\\d+").matches(it)) { "No identity code: $identities" } }
+                check(identities.distinct().size == identities.size) { "The identity codes are not different: $identities" }
+
+                // TODO LSP4IJ: UP36 — LSP4IJ 0.21.0 has no Show Values as Hexadecimal (#1769), so the hexadecimal values are
+                // checked only with a plugin that has it
+                if (debugger.showHex(project, module, true)) {
+                    val hex = pairs("hex").toMap()
+                    awaitUi("the values show in hexadecimal", 30.seconds) { locals().filterKeys { it in hex } == hex }
+                    debugger.showHex(project, module, false)
+                    val shown = pairs("decimal").toMap()
+                    awaitUi("the values show in decimal again", 30.seconds) { locals().filterKeys { it in shown } == shown }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X318") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                val expands = data.string("expands")
+                val first = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 0)).asJsonObject
+                val elements = first.getAsJsonArray("children").map { it.asJsonObject }
+                check(elements.first().string("name") == "[0]" && elements.first().string("value") == "0") { "First: ${elements.first()}" }
+                if (first["more"].asBoolean) {
+                    // with LSP4IJ #1770, a page of elements, then IntelliJ's own "..." node, which reads the next page
+                    val total = data.int("elements")
+                    check(elements.size == data.int("shown") && first.int("remaining") == total - data.int("shown")) {
+                        "${elements.size} elements and ${first.int("remaining")} more"
+                    }
+                    val all = JsonParser.parseString(debugger.pagedVariables(project, module, expands, 10)).asJsonObject
+                    val every = all.getAsJsonArray("children").map { it.asJsonObject }
+                    val (name, value) = data.strings("last")
+                    check(every.size == total && !all["more"].asBoolean) { "${every.size} elements, more: ${all["more"]}" }
+                    check(every.last().string("name") == name && every.last().string("value") == value) { "Last: ${every.last()}" }
+                } else {
+                    // TODO LSP4IJ: UP42 — LSP4IJ asks for all of a variable's children at once, never a page by
+                    // indexedVariables (#1770), so a large array shows its first elements and how many more there are
+                    check(elements.size == data.int("shown") + 1) { "${elements.size} elements shown: ${elements.takeLast(2)}" }
+                    check(elements.last().string("name") == "..." && elements.last().string("value") == data.string("more")) {
+                        "Last: ${elements.last()}"
+                    }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X319") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // the Variables view's Set Value: a value of another type is refused with the reason, and the variable
+                // keeps its value; an expression of its type is its new value
+                val (name, expression, value) = data.strings("set")
+                val (other, reason) = data.strings("refused")
+
+                fun shown() =
+                    JsonParser
+                        .parseString(debugger.variables(project, module, ""))
+                        .asJsonArray
+                        .map { it.asJsonObject }
+                        .single { it.string("name") == name }
+                        .string("value")
+                val before = shown()
+                val refused = debugger.setValue(project, module, name, other)
+                check(reason in refused) { "Set Value of $other says $refused" }
+                check(shown() == before) { "$name changed to ${shown()}" }
+                check(debugger.setValue(project, module, name, expression).isEmpty()) { "Set Value of $expression failed" }
+                check(shown() == value) { "$name is ${shown()}, not $value" }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X320") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // Basic Completion in Evaluate Expression, which LSP4IJ answers with the adapter's completions: after a
+                // dot, the members of the value before it, those that start with what is typed of the name
+                val members = data.strings("members")
+                val (typed, name, completed) = data.strings("typed")
+                val offered = JsonParser.parseString(debugger.complete(project, module, members.first(), members[1])).asJsonObject
+                val names = offered.getAsJsonArray("items").map { it.asString }
+                check(names.containsAll(members.drop(1))) { "${members.first()} offers $names" }
+                val chosen = JsonParser.parseString(debugger.complete(project, module, typed, name)).asJsonObject
+                val filtered = chosen.getAsJsonArray("items").map { it.asString }
+                check(name in filtered && members.drop(1).filter { it != name }.none { it in filtered }) { "$typed offers $filtered" }
+                // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment fails IntelliJ's Document/PSI check once it is
+                //  edited, so the chosen name replaces what is typed only with LSP4IJ #1763, whose fragment is physical
+                if (chosen["inserted"].asBoolean) {
+                    check(offered.string("text") == members.first() + members[1]) { "Choosing ${members[1]}: $offered" }
+                    check(chosen.string("text") == completed) { "Completing $typed with $name: $chosen" }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -855,6 +1080,39 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
         path: String,
+    ): String
+
+    fun showValue(
+        project: Project,
+        module: String,
+        path: String,
+    ): String
+
+    fun showHex(
+        project: Project,
+        module: String,
+        on: Boolean,
+    ): Boolean
+
+    fun setValue(
+        project: Project,
+        module: String,
+        path: String,
+        expression: String,
+    ): String
+
+    fun complete(
+        project: Project,
+        module: String,
+        text: String,
+        pick: String,
+    ): String
+
+    fun pagedVariables(
+        project: Project,
+        module: String,
+        path: String,
+        pages: Int,
     ): String
 
     fun step(

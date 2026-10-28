@@ -5,6 +5,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ChildFilter
+import org.xvm.debug.CompletionsState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
@@ -296,9 +298,18 @@ internal class RunWorkerProcess(
     fun variables(
         id: Long,
         reference: Int,
+        hex: Boolean,
+        filter: ChildFilter,
+        start: Int,
+        count: Int,
     ): CompletableFuture<List<VariableState>> =
-        request("variables", id) { addProperty("reference", reference) }
-            .thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
+        request("variables", id) {
+            addProperty("reference", reference)
+            addProperty("hex", hex)
+            addProperty("filter", filter.name)
+            addProperty("start", start)
+            addProperty("count", count)
+        }.thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
 
     /** Replaces a debugged run's exception stops. */
     fun setExceptionStops(
@@ -309,15 +320,45 @@ internal class RunWorkerProcess(
         json.keySet().forEach { add(it, json[it]) }
     }
 
+    /** Changes a variable of the stopped program to an expression's value; fails with the reason when it cannot. */
+    fun setVariable(
+        id: Long,
+        reference: Int,
+        name: String,
+        expression: String,
+        hex: Boolean,
+    ): CompletableFuture<VariableState> =
+        request("setVariable", id) {
+            addProperty("reference", reference)
+            addProperty("name", name)
+            addProperty("expression", expression)
+            addProperty("hex", hex)
+        }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+
+    /** The names that complete the name typed at an offset of a text in a stopped frame; fails with the reason when it cannot. */
+    fun completions(
+        id: Long,
+        frame: Int,
+        text: String,
+        offset: Int,
+    ): CompletableFuture<CompletionsState> =
+        request("completions", id) {
+            addProperty("frame", frame)
+            addProperty("text", text)
+            addProperty("offset", offset)
+        }.thenApply { RunWorkerDebug.completionsOf(it.getAsJsonObject("completions")) }
+
     /** Evaluates an expression in a stopped frame; fails with the reason when it cannot. */
     fun evaluate(
         id: Long,
         frame: Int,
         expression: String,
+        hex: Boolean,
     ): CompletableFuture<VariableState> =
         request("evaluate", id) {
             addProperty("frame", frame)
             addProperty("expression", expression)
+            addProperty("hex", hex)
         }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
 
     /**
@@ -331,6 +372,7 @@ internal class RunWorkerProcess(
         expression: String,
         limit: Duration,
         program: Boolean,
+        hex: Boolean,
     ): CompletableFuture<VariableState> {
         val (number, reply) =
             send("runCode", id) {
@@ -338,6 +380,7 @@ internal class RunWorkerProcess(
                 addProperty("expression", expression)
                 addProperty("limit", limit.inWholeMilliseconds)
                 addProperty("program", program)
+                addProperty("hex", hex)
             }
         val answer = reply.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
         answer.whenComplete { _, failure ->
