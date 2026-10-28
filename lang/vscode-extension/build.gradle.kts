@@ -169,56 +169,118 @@ val extensionVersion =
             if (suffix.isEmpty()) version else "${version.substringBefore("-")}-$suffix"
         }
 
-val packageDirectory = layout.buildDirectory.dir("package")
-val stagePackage =
-    tasks.register<Sync>("stagePackage") {
-        description = "Stage extension files and versioned metadata without modifying sources"
-        dependsOn(npmCompile)
-        from(layout.projectDirectory) {
-            include("package.json", ".vscodeignore", "README.md", "snippets/**")
+// The Marketplace takes only major.minor.patch, and every upload needs a new version, so a Marketplace
+// pre-release replaces the patch with a build number, such as CI's run number. Like the suffix, this
+// changes only the staged manifest and resulting artifact.
+val marketplaceBuild = providers.gradleProperty("vscode.marketplace.build").orElse("")
+val marketplaceVersion =
+    providers
+        .fileContents(layout.projectDirectory.file("package.json"))
+        .asText
+        .zip(marketplaceBuild) { content, build ->
+            require(build.isNotEmpty()) { "A Marketplace package requires -Pvscode.marketplace.build=<build number>" }
+            val version = (JsonSlurper().parseText(content) as Map<*, *>)["version"] as String
+            val (major, minor, patch) =
+                requireNotNull(Regex("(\\d+)\\.(\\d+)\\.(\\d+)").matchEntire(version)) {
+                    "The package.json version $version is not major.minor.patch"
+                }.destructured
+            val number = build.toIntOrNull()
+            // above the patch, so that a pre-release never takes the version of a release
+            require(number != null && number > patch.toInt()) {
+                "vscode.marketplace.build must be an integer above $patch, the patch of $version; was $build"
+            }
+            "$major.$minor.$number"
         }
-        from(copyLicense, copyLanguageConfig)
-        from(copyCompilerModelImport) { into("resources") }
-        from(copyTextMateGrammar) { into("syntaxes") }
-        from(listOf(copyLspServer, copyDapServer)) { into("server") }
-        from(generateIcons) { into("icons") }
-        from(npmBundle) { into("out") }
-        from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("bin") }
-        into(packageDirectory)
 
-        val stagedManifest = packageDirectory.map { it.file("package.json") }
-        val packagedVersion = extensionVersion
-        inputs.property("extensionVersion", packagedVersion)
-        doLast {
-            val manifestFile = stagedManifest.get().asFile
-            val manifest = (JsonSlurper().parse(manifestFile) as Map<*, *>).toMutableMap()
-            manifest["version"] = packagedVersion.get()
-            // Gradle already built the icons and bundle; vsce must not run the source-tree npm hook.
-            val scripts = manifest["scripts"] as? Map<*, *>
-            if (scripts != null) manifest["scripts"] = scripts.filterKeys { it != "vscode:prepublish" }
-            manifestFile.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)) + "\n")
-        }
+// vsce resolves the README's relative links against the repository root, but the README is in this
+// directory, so links such as ../doc/manual-test-plan.md need it as their base
+val readmeBaseUrls =
+    listOf(
+        "--baseContentUrl",
+        "https://github.com/xtclang/xvm/blob/master/lang/vscode-extension",
+        "--baseImagesUrl",
+        "https://github.com/xtclang/xvm/raw/master/lang/vscode-extension",
+    )
+
+fun registerStagePackage(
+    name: String,
+    directory: Provider<Directory>,
+    version: Provider<String>,
+) = tasks.register<Sync>(name) {
+    description = "Stage extension files and versioned metadata without modifying sources"
+    dependsOn(npmCompile)
+    from(layout.projectDirectory) {
+        include("package.json", ".vscodeignore", "README.md", "snippets/**")
     }
+    from(copyLicense, copyLanguageConfig)
+    from(copyCompilerModelImport) { into("resources") }
+    from(copyTextMateGrammar) { into("syntaxes") }
+    from(listOf(copyLspServer, copyDapServer)) { into("server") }
+    from(generateIcons) { into("icons") }
+    from(npmBundle) { into("out") }
+    from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("bin") }
+    into(directory)
 
+    val stagedManifest = directory.map { it.file("package.json") }
+    inputs.property("extensionVersion", version)
+    doLast {
+        val manifestFile = stagedManifest.get().asFile
+        val manifest = (JsonSlurper().parse(manifestFile) as Map<*, *>).toMutableMap()
+        manifest["version"] = version.get()
+        // Gradle already built the icons and bundle; vsce must not run the source-tree npm hook.
+        val scripts = manifest["scripts"] as? Map<*, *>
+        if (scripts != null) manifest["scripts"] = scripts.filterKeys { it != "vscode:prepublish" }
+        manifestFile.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)) + "\n")
+    }
+}
+
+fun registerPackage(
+    name: String,
+    taskDescription: String,
+    stage: TaskProvider<Sync>,
+    archive: Provider<RegularFile>,
+    vsceOptions: List<String>,
+) = tasks.register<NodeTask>(name) {
+    description = taskDescription
+    dependsOn(npmInstall)
+    script.set(layout.projectDirectory.file("node_modules/@vscode/vsce/vsce"))
+    workingDir.set(stage.flatMap { it.destinationDirectory })
+    args.set(archive.map { listOf("package", "--no-dependencies") + vsceOptions + listOf("--out", it.asFile.absolutePath) })
+    inputs.files(stage)
+    inputs.file(layout.projectDirectory.file("package-lock.json"))
+    outputs.file(archive)
+    doFirst {
+        archive
+            .get()
+            .asFile.parentFile
+            .mkdirs()
+    }
+}
+
+val packageDirectory = layout.buildDirectory.dir("package")
+val stagePackage = registerStagePackage("stagePackage", packageDirectory, extensionVersion)
 val extensionArchive = layout.buildDirectory.file(extensionVersion.map { "distributions/xtc-language-$it.vsix" })
 val packageExtension =
-    tasks.register<NodeTask>("packageExtension") {
-        description = "Package the staged VS Code extension"
-        dependsOn(npmInstall)
-        script.set(layout.projectDirectory.file("node_modules/@vscode/vsce/vsce"))
-        workingDir.set(stagePackage.flatMap { it.destinationDirectory })
-        args.set(extensionArchive.map { listOf("package", "--no-dependencies", "--out", it.asFile.absolutePath) })
-        inputs.files(stagePackage)
-        inputs.file(layout.projectDirectory.file("package-lock.json"))
-        outputs.file(extensionArchive)
-        val archive = extensionArchive
-        doFirst {
-            archive
-                .get()
-                .asFile.parentFile
-                .mkdirs()
-        }
-    }
+    registerPackage(
+        "packageExtension",
+        "Package the staged VS Code extension",
+        stagePackage,
+        extensionArchive,
+        readmeBaseUrls,
+    )
+
+// A package of its own, so the extension's VSIX keeps the extension's version
+val marketplacePackageDirectory = layout.buildDirectory.dir("marketplace/package")
+val stageMarketplacePackage = registerStagePackage("stageMarketplacePackage", marketplacePackageDirectory, marketplaceVersion)
+val marketplaceArchive = layout.buildDirectory.file(marketplaceVersion.map { "marketplace/xtc-language-$it.vsix" })
+val packageMarketplaceExtension =
+    registerPackage(
+        "packageMarketplaceExtension",
+        "Package the staged VS Code extension as a Marketplace pre-release (requires -Pvscode.marketplace.build)",
+        stageMarketplacePackage,
+        marketplaceArchive,
+        readmeBaseUrls + "--pre-release",
+    )
 
 // Headless integration test: launches VS Code via @vscode/test-electron with
 // the extension loaded from the build tree, opens src/test/fixtures/hello.x,
