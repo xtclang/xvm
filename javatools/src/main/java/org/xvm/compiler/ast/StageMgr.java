@@ -18,10 +18,10 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 
 import org.xvm.compiler.ast.AstNode.ChildIterator;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.Severity;
 

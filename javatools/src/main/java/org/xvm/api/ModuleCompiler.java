@@ -129,9 +129,21 @@ public class ModuleCompiler {
             errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
             return false;
         }
+        return storeCompiled(module, output, errs);
+    }
 
+    /**
+     * Finish a file compilation by placing its module into the optional output repository.
+     *
+     * @param module  the compiled module, or null if the compilation failed or was abandoned
+     * @param output  (optional) the module repository to write the compiled module to
+     * @param errs    the ErrorListener that received the compilation's messages
+     *
+     * @return true if there is a module and it was stored, or no output was requested
+     */
+    static boolean storeCompiled(ModuleStructure module, ModuleRepository output, ErrorListener errs) {
         if (module == null) {
-            assert errs.hasSeriousErrors();
+            assert errs.hasSeriousErrors() || errs.isAbortDesired();
             return false;
         }
 

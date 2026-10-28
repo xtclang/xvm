@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -13,13 +12,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ExpressionConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Move;
-import org.xvm.asm.op.Var;
 import org.xvm.asm.op.Var_DN;
 import org.xvm.asm.op.Var_N;
 
@@ -264,23 +259,7 @@ public class VariableDeclarationStatement
                     Annotation           anno     = exprAnno.ensureAnnotation(pool);
                     if (!exprAnno.isConstant()) {
                         Constant[] aConst = anno.getParams();
-                        for (int j = 0, c = aConst.length; j < c; j++) {
-                            Constant constArg = aConst[j];
-                            if (constArg instanceof ExpressionConstant constExpr) {
-                                Expression exprArg = constExpr.getExpression();
-
-                                Argument argArg = exprArg.generateArgument(ctx, code, true, errs);
-                                Register regArg;
-                                if (argArg instanceof Register regA) {
-                                    regArg = regA;
-                                } else {
-                                    regArg = code.createRegister(exprArg.getType());
-                                    code.add(new Var(regArg));
-                                    code.add(new Move(argArg, regArg));
-                                }
-                                aConst[j] = new RegisterConstant(pool, regArg);
-                            }
-                        }
+                        exprAnno.generateAnnotationArguments(ctx, code, aConst, errs);
                         anno = pool.ensureAnnotation(anno.getAnnotationClass(), aConst);
                     }
                     typeReg = pool.ensureAnnotatedTypeConstant(typeReg, anno);

@@ -36,10 +36,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.Severity;
 
@@ -175,20 +175,6 @@ public class Context {
         Register regThis = m_regThis;
         if (regThis == null) {
             TypeConstant typeThis = getThisType();
-
-            // we used to adjust the type for "this" inside the property, but that seems to be
-            // unnecessary anymore; leaving the code as a reminder just in case
-            //
-            // Component parent = getMethod().getParent().getParent();
-            //
-            // while (parent instanceof MethodStructure)
-            //     {
-            //     parent = parent.getParent().getParent();
-            // }
-            // if (parent instanceof PropertyStructure prop && prop.isRefAnnotated())
-            //     {
-            //     typeThis = prop.getIdentityConstant().getRefType(typeThis);
-            // }
 
             ConstantPool pool = pool();
             if (isConstructor()) {
@@ -571,21 +557,13 @@ public class Context {
         }
 
         map.keySet().retainAll(mapThis.keySet()); // only keep common arguments
-        for (Map.Entry<String, Argument> entry : map.entrySet()) {
-            String   sName   = entry.getKey();
-            Argument argPrev = entry.getValue();
-            Argument argThis = mapThis.get(sName);
-
-            TypeConstant typePrev = argPrev.getType();
-            TypeConstant typeThis = argThis.getType();
-
-            TypeConstant typeJoin = typeThis.union(pool(), typePrev);
-            if (!typeJoin.equals(typePrev)) {
-                if (argPrev instanceof Register regPrev) {
-                    map.put(sName, regPrev.narrowType(typeJoin));
-                } else {
-                    map.remove(sName);
-                }
+        for (var iterator = map.entrySet().iterator(); iterator.hasNext(); ) {
+            var entry  = iterator.next();
+            var joined = joinArguments(entry.getValue(), mapThis.get(entry.getKey()));
+            if (joined == null) {
+                iterator.remove();
+            } else {
+                entry.setValue(joined);
             }
         }
         return map;
@@ -1374,16 +1352,6 @@ public class Context {
     }
 
     /**
-     * Narrow the type of the specified property in this context for the specified branch.
-     */
-    protected void narrowProperty(String sName, PropertyConstant idProp,
-                                  Branch branch, Argument argNarrow) {
-        if (argNarrow.getType().isA(idProp.getType())) {
-            replaceArgument(sName, branch, argNarrow);
-        }
-    }
-
-    /**
      * Merge the types of the existing argument with the specified one for the given branch.
      */
     protected void joinArgument(String sName, Branch branch, Argument argNew) {
@@ -1391,19 +1359,40 @@ public class Context {
             ? ensureNameMap()
             : ensureNarrowingMap(branch == Branch.WhenTrue);
 
-        Argument argOld = map.get(sName);
-        if (argOld != null) {
-            TypeConstant typeOld = argOld.getType();
-            TypeConstant typeNew = argNew.getType();
+        map.computeIfPresent(sName, (name, previous) -> joinArguments(previous, argNew));
+    }
 
-            TypeConstant typeJoin = typeNew.union(pool(), typeOld);
-            if (!typeJoin.equals(typeOld)) {
-                if (argOld instanceof Register regOld) {
-                    map.put(sName, regOld.narrowType(typeJoin));
-                } else {
-                    map.remove(sName);
-                }
-            }
+    /** Return the widened argument, or null when a non-register cannot retain the joined type. */
+    private Argument joinArguments(Argument previous, Argument next) {
+        TypeConstant original = previous.getType();
+        TypeConstant joined   = next.getType().union(pool(), original);
+        return joined.equals(original) ? previous
+                : previous instanceof Register register ? register.narrowType(joined) : null;
+    }
+
+    /** Propagate a short-circuit branch, replacing the certain path and joining the alternative. */
+    protected void promoteBranchArgument(String name, Argument argument, Branch branch, Branch certain) {
+        if (branch == certain) {
+            getOuterContext().replaceArgument(name, branch, argument);
+        } else if (branch != Branch.Always) {
+            getOuterContext().joinArgument(name, branch, argument);
+        }
+    }
+
+    /** Apply the same short-circuit rule to a narrowed formal type. */
+    protected void promoteBranchGenericType(FormalConstant formal, TypeConstant type, Branch branch, Branch certain) {
+        if (branch == certain) {
+            getOuterContext().replaceGenericType(formal, branch, type);
+        } else if (branch != Branch.Always) {
+            getOuterContext().joinGenericType(formal, branch, type);
+        }
+    }
+
+    /** Retain the parent's formal-type entries that are present in this branch. */
+    protected void retainOuterFormalTypes(Branch branch) {
+        Map<FormalConstant, TypeConstant> types = getFormalTypeMap(branch);
+        if (!types.isEmpty()) {
+            getOuterContext().ensureFormalTypeMap(branch).keySet().retainAll(types.keySet());
         }
     }
 
@@ -1825,16 +1814,15 @@ public class Context {
                                                   Branch branch) {
             // choose the wider type of the two branches and promote to "Always"
             if (branch == Branch.WhenTrue) {
-                TypeConstant typeTrue  = typeNarrowed;
                 TypeConstant typeFalse = getFormalTypeMap(Branch.WhenFalse).get(constFormal);
                 if (typeFalse != null) {
                     Context      ctxOuter = getOuterContext();
                     TypeConstant typeOrig = ctxOuter.getFormalTypeMap(Branch.Always).get(constFormal);
-                    if (typeFalse.isA(typeTrue)) {
-                        if (!typeTrue.equals(typeOrig)) {
-                            ctxOuter.replaceGenericType(constFormal, Branch.Always, typeTrue);
+                    if (typeFalse.isA(typeNarrowed)) {
+                        if (!typeNarrowed.equals(typeOrig)) {
+                            ctxOuter.replaceGenericType(constFormal, Branch.Always, typeNarrowed);
                         }
-                    } else if (typeTrue.isA(typeFalse)) {
+                    } else if (typeNarrowed.isA(typeFalse)) {
                         if (!typeFalse.equals(typeOrig)) {
                             ctxOuter.replaceGenericType(constFormal, Branch.Always, typeFalse);
                         }
@@ -1862,27 +1850,23 @@ public class Context {
         }
 
         private void discardBranch(boolean fWhenTrue) {
-            Map mapBranch;
-
-            // clear this branch
-            mapBranch = getNarrowingMap(fWhenTrue);
-            if (!mapBranch.isEmpty()) {
-                mapBranch.clear();
+            Map<String, Argument> names = getNarrowingMap(fWhenTrue);
+            Map<FormalConstant, TypeConstant> types = getFormalTypeMap(Branch.of(fWhenTrue));
+            if (!names.isEmpty()) {
+                names.clear();
             }
-            mapBranch = getFormalTypeMap(Branch.of(fWhenTrue));
-            if (!mapBranch.isEmpty()) {
-                mapBranch.clear();
+            if (!types.isEmpty()) {
+                types.clear();
             }
 
             // copy the opposite branch; the context may merge it (see IfContext)
-            mapBranch = getNarrowingMap(!fWhenTrue);
-            if (!mapBranch.isEmpty()) {
-                ensureNarrowingMap(fWhenTrue).putAll(mapBranch);
+            names = getNarrowingMap(!fWhenTrue);
+            types = getFormalTypeMap(Branch.of(!fWhenTrue));
+            if (!names.isEmpty()) {
+                ensureNarrowingMap(fWhenTrue).putAll(names);
             }
-
-            mapBranch = getFormalTypeMap(Branch.of(!fWhenTrue));
-            if (!mapBranch.isEmpty()) {
-                ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
+            if (!types.isEmpty()) {
+                ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(types);
             }
 
             // promote the other branch's assignments
@@ -2043,25 +2027,13 @@ public class Context {
             // outer context;  the "when false" portion of this context is combined with the
             // "when false" portion of the outer context
             Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());
-            Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
-            return asnJoin;
+            return Assignment.join(asnFalse, asnInner.whenTrue());
         }
 
         @Override
         protected void promoteNarrowedTypes() {
-            // retain only our "false" entries in the parent's "false" context;
-            // consider an example:
-            //    Int? a; Int? b;
-            //    if (a != Null &&  // IfContext : "a" is Int for "true"; Null for "false"
-            //        b != Null)    // AndContext: "b" is Int for "true"; Null for "false"
-            //      {
-            //                      // exit from AndContext infers "a" and "b" are Int into
-            //  }               // the "true" branch of the parent IfContext
-            //    else
-            //      {
-            //                      // exit from AndContext infers nothing into the "false" branch
-            //  }               // of the parent IfContext
-            //
+            // For "a != Null && b != Null", both names narrow on success, but neither
+            // narrows on failure: either operand could have failed.
             getOuterContext().retainNarrowedTypes(getNarrowingMap(false), false);
 
             super.promoteNarrowedTypes();
@@ -2071,27 +2043,13 @@ public class Context {
         protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
             super.promoteNarrowedType(sName, arg, branch);
 
-            // promote our "true" into the parent's "true" branch
-            // join our "false" with the parent's "false"
-            switch (branch) {
-            case WhenTrue:
-                getOuterContext().replaceArgument(sName, branch, arg);
-                break;
-
-            case WhenFalse:
-                getOuterContext().joinArgument(sName, branch, arg);
-                break;
-            }
+            promoteBranchArgument(sName, arg, branch, Branch.WhenTrue);
         }
 
         @Override
         protected void promoteNarrowedGenericTypes() {
             // retain only our "false" entries in the parent's "false" context
-            Map<FormalConstant, TypeConstant> map = getFormalTypeMap(Branch.WhenFalse);
-            if (!map.isEmpty()) {
-                getOuterContext().ensureFormalTypeMap(Branch.WhenFalse).keySet().
-                    retainAll(map.keySet());
-            }
+            retainOuterFormalTypes(Branch.WhenFalse);
             super.promoteNarrowedGenericTypes();
         }
 
@@ -2100,17 +2058,7 @@ public class Context {
                                                   Branch branch) {
             super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
-            // promote our "true" into the parent's "true" branch and
-            // join our "false" with the parent's "false"
-            switch (branch) {
-            case WhenTrue:
-                getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
-                break;
-
-            case WhenFalse:
-                getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
-                break;
-            }
+            promoteBranchGenericType(constFormal, typeNarrowed, branch, Branch.WhenTrue);
         }
     }
 
@@ -2145,8 +2093,7 @@ public class Context {
             // outer context;  the "when true" portion of this context is combined with the
             // "when true" portion of the outer context
             Assignment asnTrue = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
-            Assignment asnJoin = Assignment.join(asnInner.whenFalse(), asnTrue);
-            return asnJoin;
+            return Assignment.join(asnInner.whenFalse(), asnTrue);
         }
 
         @Override
@@ -2162,27 +2109,13 @@ public class Context {
         protected void promoteNarrowedType(String sName, Argument arg, Branch branch) {
             super.promoteNarrowedType(sName, arg, branch);
 
-            // promote our "false" into the parent's "false" branch and
-            // join our "true" with the parent's "true"
-            switch (branch) {
-            case WhenFalse:
-                getOuterContext().replaceArgument(sName, branch, arg);
-                break;
-
-            case WhenTrue:
-                getOuterContext().joinArgument(sName, branch, arg);
-                break;
-            }
+            promoteBranchArgument(sName, arg, branch, Branch.WhenFalse);
         }
 
         @Override
         protected void promoteNarrowedGenericTypes() {
             // retain only our "true" entries in the parent's "true" context
-            Map<FormalConstant, TypeConstant> map = getFormalTypeMap(Branch.WhenTrue);
-            if (!map.isEmpty()) {
-                getOuterContext().ensureFormalTypeMap(Branch.WhenTrue).keySet().
-                    retainAll(map.keySet());
-            }
+            retainOuterFormalTypes(Branch.WhenTrue);
             super.promoteNarrowedGenericTypes();
         }
 
@@ -2191,17 +2124,7 @@ public class Context {
                                                   Branch branch) {
             super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
-            // promote our "false" into the parent's "false" branch and
-            // join our "true" with the parent's "true"
-            switch (branch) {
-            case WhenFalse:
-                getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
-                break;
-
-            case WhenTrue:
-                getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
-                break;
-            }
+            promoteBranchGenericType(constFormal, typeNarrowed, branch, Branch.WhenFalse);
         }
     }
 
@@ -2277,8 +2200,7 @@ public class Context {
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
             // the "when true" portion of this context replaces the "when true" portion of the
             // outer context
-            Assignment asnJoin = Assignment.join(asnOuter.whenFalse(), asnInner.whenTrue());
-            return asnJoin;
+            return Assignment.join(asnOuter.whenFalse(), asnInner.whenTrue());
         }
 
         @Override
@@ -2315,8 +2237,7 @@ public class Context {
 
         @Override
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter) {
-            Assignment asnJoin = asnOuter.joinLoop(asnInner);
-            return asnJoin;
+            return asnOuter.joinLoop(asnInner);
         }
     }
 

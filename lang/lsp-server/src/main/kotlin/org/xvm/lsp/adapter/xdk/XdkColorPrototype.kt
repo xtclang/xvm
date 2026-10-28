@@ -6,10 +6,10 @@ import org.xvm.asm.ConstantPool
 import org.xvm.asm.ErrorList
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.ByteConstant
-import org.xvm.compiler.InvocationBinding
 import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
+import org.xvm.compiler.ast.bindings.InvocationBinding
 import org.xvm.lsp.adapter.ColorPresentation
 import org.xvm.lsp.adapter.ColorValue
 import org.xvm.lsp.adapter.DocumentColor

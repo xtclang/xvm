@@ -42,10 +42,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InstantRepository;
-import org.xvm.compiler.InitializerBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -56,6 +53,9 @@ import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InitializerBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
@@ -969,21 +969,7 @@ public class EmbeddingSupport {
             errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to locate module " + file);
             return false;
         }
-
-        if (module == null) {
-            assert errs.hasSeriousErrors() || errs.isAbortDesired();
-            return false;
-        }
-
-        if (output != null) {
-            try {
-                output.storeModule(module);
-            } catch (IOException e) {
-                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
-                return false;
-            }
-        }
-        return true;
+        return ModuleCompiler.storeCompiled(module, output, errs);
     }
 
     /**

@@ -26,8 +26,6 @@ import org.xvm.asm.constants.SingletonConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.TypedefConstant
-import org.xvm.compiler.CursorBinding
-import org.xvm.compiler.InvocationBinding
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
@@ -50,6 +48,8 @@ import org.xvm.compiler.ast.TypeExpression
 import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.compiler.ast.VariableTypeExpression
+import org.xvm.compiler.ast.bindings.CursorBinding
+import org.xvm.compiler.ast.bindings.InvocationBinding
 import org.xvm.compiler.ast.partial.IncompleteLocalDeclaration
 import org.xvm.compiler.ast.partial.IncompleteStatement
 import org.xvm.lsp.adapter.xdk.SemanticModel.ExpressionType
