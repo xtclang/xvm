@@ -1,5 +1,6 @@
 package org.xvm.lsp.run
 
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -21,6 +22,9 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuild
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.server.DebugMessageParams
+import org.xvm.lsp.server.DebugSessionParams
+import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns
 import org.xvm.lsp.server.RunExitedParams
 import org.xvm.lsp.server.RunInputParams
@@ -593,6 +597,176 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a debug session over the server's connection builds and runs the module, and its exit ends the session`() {
+        CompilerTestSupport.configure()
+        val hello =
+            source("Hello.x", "module Hello { void run(String[] args) { @Inject Console console; console.print($\"hello {args[0]}\"); } }")
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Hello", hello)))
+            // on the class's worker, which is already started; closing these runs would close it
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Hello", "moduleUri": "$hello", "args": ["world"]}""")
+            sessions.request(id, 3, "configurationDone")
+            val messages = client.until(id) { it.event == "terminated" }
+
+            val initialize = messages.indexOfFirst { it.response == "initialize" }
+            assertThat(messages[initialize]["success"].asBoolean).isTrue()
+            assertThat(messages.indexOfFirst { it.event == "initialized" }).isGreaterThan(initialize)
+            assertThat(messages.single { it.response == "launch" }["success"].asBoolean).isTrue()
+            assertThat(messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("hello world")
+            assertThat(messages.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isZero()
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `a line a debug session's client sends from its console while the program runs is the program's input`() {
+        CompilerTestSupport.configure()
+        val asks = source("Asks.x", ONE_LINE.trimIndent())
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Asks", asks)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Asks", "noDebug": true}""")
+            sessions.request(id, 3, "configurationDone")
+            client.until(id) { it.event == "output" && "Name? " in it["body"].asJsonObject["output"].asString }
+            sessions.request(id, 4, "evaluate", """{"expression": "Ada", "context": "repl"}""")
+            val messages = client.until(id) { it.event == "terminated" }
+
+            assertThat(messages.single { it.response == "evaluate" }["success"].asBoolean).isTrue()
+            assertThat(messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("Hello, Ada!")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `a breakpoint stops a debugged program, which shows its threads and stack, and continue runs it to its exit`() {
+        CompilerTestSupport.configure()
+        val stops = source("Stops.x", STOPS.trimIndent())
+        val path = directory.resolve("Stops.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val untilStop = client.until(id) { it.event == "stopped" }
+
+            val pending =
+                untilStop
+                    .single { it.response == "setBreakpoints" }["body"]
+                    .asJsonObject["breakpoints"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject
+            assertThat(pending["verified"].asBoolean).isFalse()
+            val installed = untilStop.single { it.event == "breakpoint" }["body"].asJsonObject["breakpoint"].asJsonObject
+            assertThat(installed["id"].asInt).isEqualTo(pending["id"].asInt)
+            assertThat(installed["verified"].asBoolean).isTrue()
+            assertThat(installed["line"].asInt).isEqualTo(11)
+            val stopped = untilStop.last()["body"].asJsonObject
+            assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+            assertThat(stopped["hitBreakpointIds"].asJsonArray.map { it.asInt }).containsExactly(pending["id"].asInt)
+            val thread = stopped["threadId"].asInt
+
+            sessions.request(id, 5, "threads")
+            val threads =
+                client
+                    .until(id) { it.response == "threads" }
+                    .last()["body"]
+                    .asJsonObject["threads"]
+                    .asJsonArray
+            assertThat(threads.map { it.asJsonObject["id"].asInt }).contains(thread)
+            sessions.request(id, 6, "stackTrace", """{"threadId": $thread}""")
+            val frames =
+                client
+                    .until(
+                        id,
+                    ) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(
+                frames.map { it["name"].asString to it["line"].asInt }.take(2),
+            ).containsExactly("Stops.twice" to 11, "Stops.run" to 5)
+            assertThat(frames.first()["source"].asJsonObject["path"].asString).isEqualTo(path)
+
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains("before").contains("after 42")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `terminating a debug session while its program is stopped ends the program`() {
+        CompilerTestSupport.configure()
+        val halts = source("Halts.x", STOPS.trimIndent().replace("Stops", "Halts"))
+        val path = directory.resolve("Halts.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Halts", halts)))
+            val runs = EmbeddedRuns(adapter, { client }, worker)
+            val sessions = DebugSessions(runs, { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Halts"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val untilStop = client.until(id) { it.event == "stopped" }
+
+            sessions.request(id, 5, "terminate")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(1)
+            // the program ended where it stopped, without running on to its end
+            val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains("before").doesNotContain("after")
+            soon(30).until { runs.tracked() == 0 }
+            sessions.end(DebugSessionParams(id))
+        }
+        assertThat(run("Exit").code).isEqualTo(42)
+    }
+
+    @Test
+    fun `terminating a debug session while its module builds keeps the program from starting`() {
+        CompilerTestSupport.configure()
+        val late = source("Waits.x", "module Waits { void run() { @Inject Console console; console.print(\"started\"); } }")
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Waits", late)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            // without configurationDone, the program would start only after a short wait
+            sessions.request(id, 2, "launch", """{"module": "Waits"}""")
+            sessions.request(id, 3, "terminate")
+            val messages = client.until(id) { it.event == "terminated" }
+
+            val output = messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains(EmbeddedRuns.STOPPED_BEFORE_START).doesNotContain("started\n")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `runs do not start the runner's HTTP endpoint`() {
         assertThat(run("Exit").output).doesNotContain("Runner is listening")
     }
@@ -946,6 +1120,55 @@ class EmbeddedExecutionTest {
         }
     }
 
+    /** Records the DAP messages that debug sessions send their client. */
+    private class DebugClient :
+        XtcLanguageClient,
+        LanguageClient by mock(LanguageClient::class.java) {
+        private val messages = LinkedBlockingQueue<DebugMessageParams>()
+
+        override fun debugMessage(params: DebugMessageParams) {
+            messages.add(params)
+        }
+
+        // a debug session's program reports through DAP events, not the run notifications
+        override fun runOutput(params: RunOutputParams) = error("run output outside the debug session: $params")
+
+        override fun runExited(params: RunExitedParams) = error("run exit outside the debug session: $params")
+
+        /** The session's messages, in order, up to the first that satisfies [last]. */
+        fun until(
+            sessionId: String,
+            last: (JsonObject) -> Boolean,
+        ): List<JsonObject> {
+            val received = mutableListOf<JsonObject>()
+            while (received.none(last)) {
+                val next = messages.poll(60, SECONDS) ?: error("no DAP message within 60 s after $received")
+                if (next.sessionId == sessionId) received += next.message
+            }
+            return received
+        }
+    }
+
+    /** Sends a DAP request; without [arguments], it has none, as VS Code sends `configurationDone`. */
+    private fun DebugSessions.request(
+        sessionId: String,
+        seq: Int,
+        command: String,
+        arguments: String? = null,
+    ) = receive(
+        DebugMessageParams(
+            sessionId,
+            JsonParser
+                .parseString(
+                    """{"seq": $seq, "type": "request", "command": "$command"${arguments?.let { ", \"arguments\": $it" }.orEmpty()}}""",
+                ).asJsonObject,
+        ),
+    )
+
+    private val JsonObject.event get() = takeIf { it["type"]?.asString == "event" }?.get("event")?.asString
+
+    private val JsonObject.response get() = takeIf { it["type"]?.asString == "response" }?.get("command")?.asString
+
     private data class Outcome(
         val output: String,
         val code: Long?,
@@ -991,6 +1214,36 @@ class EmbeddedExecutionTest {
                     console.print("started");
                     // runs until stopped: an empty while (True) is rejected as non-terminating
                     for (Int count = 0; count >= 0; ++count) {}
+                }
+            }
+            """
+
+        /** A module whose run() calls a method on line 5; the method's code is on lines 11 and 12. */
+        const val STOPS =
+            """
+            module Stops {
+                Int run() {
+                    @Inject Console console;
+                    console.print("before");
+                    Int n = twice(21);
+                    console.print($"after {n}");
+                    return n;
+                }
+
+                Int twice(Int n) {
+                    Int result = n * 2;
+                    return result;
+                }
+            }
+            """
+
+        const val ONE_LINE =
+            """
+            module Asks {
+                void run() {
+                    @Inject Console console;
+                    String name = console.readLine("Name? ");
+                    console.print($"Hello, {name}!");
                 }
             }
             """
