@@ -11,7 +11,6 @@ import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.InitializeParams
-import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueHandler
@@ -112,12 +111,6 @@ class XtcClientFeatures : LSPClientFeatures() {
         params.capabilities?.textDocument?.synchronization?.apply {
             willSave = false
             willSaveWaitUntil = false
-        }
-        // TODO LSP4IJ: UP18 — snippet templates indent even when an item requests AsIs.
-        // Advertise the implemented mode until native X150 passes without this constraint.
-        params.capabilities?.textDocument?.completion?.apply {
-            insertTextMode = InsertTextMode.AdjustIndentation
-            completionItem?.insertTextModeSupport?.valueSet = listOf(InsertTextMode.AdjustIndentation)
         }
     }
 
