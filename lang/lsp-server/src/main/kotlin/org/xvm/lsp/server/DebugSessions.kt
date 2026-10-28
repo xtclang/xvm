@@ -130,6 +130,8 @@ internal class DebugSessions(
                         ) = events.breakpoints(path, states)
 
                         override fun stopped(stop: StopState) = events.stopped(stop)
+
+                        override fun logged(text: String) = events.logged(text)
                     },
                     ready,
                 ).thenApply { LaunchResult(it.runId, describe(it.build)) }
@@ -173,6 +175,11 @@ internal class DebugSessions(
             frameId: Int,
             expression: String,
         ) = runs.evaluate(runId, frameId, expression)
+
+        override fun exceptionInfo(
+            runId: String,
+            threadId: Int,
+        ) = runs.exceptionInfo(runId, threadId)
 
         override fun step(
             runId: String,

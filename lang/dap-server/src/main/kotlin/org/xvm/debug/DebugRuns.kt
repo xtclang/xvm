@@ -16,10 +16,18 @@ data class LaunchTarget(
     val workingDirectory: String? = null,
 )
 
-/** A breakpoint a session asks for: its DAP ID, which the session chooses, and its 1-based line. */
+/**
+ * A breakpoint a session asks for: its DAP ID, which the session chooses, its 1-based line, and how it stops, each
+ * null when not given: a [condition], a path to a Boolean that must be True; a [hitCondition], `N` for the Nth hit,
+ * or `>= N`, `> N` or `% N`; and a [logMessage], which makes it a logpoint that logs the message, with each `{path}`
+ * in it replaced by that path's value, and does not stop.
+ */
 data class BreakpointRequest(
     val id: Int,
     val line: Int,
+    val condition: String? = null,
+    val hitCondition: String? = null,
+    val logMessage: String? = null,
 )
 
 /** The breakpoints of one source file, by its path; none removes the file's breakpoints. */
@@ -70,10 +78,24 @@ data class VariableState(
     val variablesReference: Int,
 )
 
-/** Which thrown exceptions stop a debugged program: every one, or those that no frame will catch. */
+/**
+ * Which thrown exceptions stop a debugged program: every one, or those that no frame will catch, and for each, the
+ * names of the exception classes it means, which stop it as they and the classes extending them are thrown, or none
+ * for any.
+ */
 data class ExceptionStops(
     val all: Boolean = false,
     val uncaught: Boolean = false,
+    val allTypes: List<String> = emptyList(),
+    val uncaughtTypes: List<String> = emptyList(),
+)
+
+/** The exception a stopped fiber stopped the program at: its type, its text and stack trace if any, and whether no frame will catch it. */
+data class ExceptionInfoState(
+    val type: String,
+    val text: String?,
+    val stackTrace: String?,
+    val uncaught: Boolean,
 )
 
 /**
@@ -119,6 +141,9 @@ interface ProgramEvents {
 
     /** A debugged program stopped; it waits until it is resumed. */
     fun stopped(stop: StopState) {}
+
+    /** A logpoint of a debugged program logged a message; the program runs on. */
+    fun logged(text: String) {}
 }
 
 /** A launch's outcome: the run's ID when the program was started, or what a failed build reported. */
@@ -198,6 +223,12 @@ interface DebugRuns {
         frameId: Int,
         expression: String,
     ): CompletableFuture<VariableState>
+
+    /** The exception that the stopped fiber stopped the program at; null when it stopped it for another reason. */
+    fun exceptionInfo(
+        runId: String,
+        threadId: Int,
+    ): CompletableFuture<ExceptionInfoState?>
 
     /**
      * Resumes the stopped program, stepping one of its fibers: it stops again, with the reason `step`, where the step
