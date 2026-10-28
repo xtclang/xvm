@@ -126,6 +126,9 @@ class XtcLanguageServer(
     internal val partialResults = PartialResults(client = { client })
     private val embeddedRuns = EmbeddedRuns(adapter, { client })
 
+    /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
+    private val discoveryRefresh = CoalescingTask("xtc-discovery", ::rediscover)
+
     override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
 
     /** Negotiated support for versioned edits, resource renames and file-watch registrations. */
@@ -331,6 +334,12 @@ class XtcLanguageServer(
     private val compilerSettings = AtomicReference(CompilerSettings())
 
     companion object {
+        /** The pull-diagnostics provider identifier the server registers and accepts in diagnostic requests. */
+        const val PULL_DIAGNOSTICS_IDENTIFIER = "xtc"
+
+        /** Edits during a workspace walk make its result stale; give up after this many walks in a row. */
+        private const val MAX_RESCANS = 5
+
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
         private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
         private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"
@@ -765,6 +774,11 @@ class XtcLanguageServer(
         return true
     }
 
+    /** Shows [message] to the user as a warning, when a client is connected. */
+    internal fun showWarning(message: String) {
+        client?.showMessage(MessageParams(MessageType.Warning, message))
+    }
+
     private fun reportCompilerConfigError(failure: IllegalArgumentException) {
         val message =
             "Invalid ${CompilerConfiguration.SECTION}; previous source configuration retained: ${failure.message}"
@@ -880,7 +894,7 @@ class XtcLanguageServer(
             if (usesPullDiagnostics) {
                 diagnosticProvider =
                     DiagnosticRegistrationOptions(true, true).apply {
-                        identifier = "xtc"
+                        identifier = PULL_DIAGNOSTICS_IDENTIFIER
                         workDoneProgress = true
                     }
             }
@@ -1146,6 +1160,7 @@ class XtcLanguageServer(
         if (alreadyClosed) return
         clientReady.cancel(false)
         indexing.cancel(false)
+        discoveryRefresh.close()
         embeddedRuns.close()
         formattingState.close()
         resourceFileWatchers.close()
@@ -1371,23 +1386,36 @@ class XtcLanguageServer(
                 )
             }
         }
-        try {
-            textDocumentService.refreshDependencies {
-                compiler.changeWorkspaceFolders(added, removed)
-            }
-            updateResourceWatchers()
-        } catch (failure: IllegalArgumentException) {
-            reportCompilerConfigError(failure)
-        } catch (failure: IOException) {
-            logger.warn("Workspace discovery failed; keeping previous graph: {}", failure.message)
-        }
+        compiler.updateWorkspaceFolders(added, removed)
+        discoveryRefresh.request()
     }
 
+    /** Rediscovers source modules after membership changes; returns at once, the rescan runs off-thread. */
     fun refreshCompilerDiscovery() {
+        if (adapter is XdkAdapter) discoveryRefresh.request()
+    }
+
+    /** Completes once every requested rediscovery has finished, for tests that need the new graph. */
+    internal fun discoveryIdle(): CompletableFuture<Void> = discoveryRefresh.idle()
+
+    /**
+     * Scans without any lock, then adopts the scan under the document lock only if nothing it read changed;
+     * an edit during the walk means scanning again.
+     */
+    private fun rediscover() {
         val compiler = adapter as? XdkAdapter ?: return
         try {
-            textDocumentService.refreshDependencies { compiler.refreshDiscoveredSources() }
-            updateResourceWatchers()
+            repeat(MAX_RESCANS) {
+                if (compilerSettings.get().closed) return
+                val scan = compiler.scanDiscoveredSources() ?: return
+                var installed = false
+                textDocumentService.refreshDependencies { scan.install()?.also { installed = true }.orEmpty() }
+                if (installed) {
+                    updateResourceWatchers()
+                    return
+                }
+            }
+            logger.info("Source discovery changed during {} rescans; the next file event retries", MAX_RESCANS)
         } catch (failure: IllegalArgumentException) {
             reportCompilerConfigError(failure)
         } catch (failure: IOException) {
@@ -1442,6 +1470,7 @@ class XtcLanguageServer(
             diagnostics.map {
                 it.toLsp(uri).apply {
                     if (!options.diagnosticRelatedInformation) relatedInformation = null
+                    tags = tags?.filter(options.diagnosticTags::contains)?.ifEmpty { null }
                 }
             }
         currentClient.publishDiagnostics(

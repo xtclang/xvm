@@ -16,7 +16,7 @@ class DiagnosticTest {
         assertThat(diagnostic.severity).isEqualTo(Diagnostic.Severity.ERROR)
         assertThat(diagnostic.message).isEqualTo("Undefined variable 'x'")
         assertThat(diagnostic.location).isEqualTo(location)
-        assertThat(diagnostic.source).isEqualTo("xtc")
+        assertThat(diagnostic.source).isEqualTo("Ecstasy")
     }
 
     @Test

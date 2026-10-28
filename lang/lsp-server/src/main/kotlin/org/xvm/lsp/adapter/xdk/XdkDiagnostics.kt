@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.XvmStructure
+import org.xvm.compiler.Compiler
 import org.xvm.compiler.Source
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -46,9 +47,18 @@ internal fun ErrorListener.ErrorInfo.toDiagnostic(
                 message
             },
         code = code,
-        source = "xtc",
+        source = Diagnostic.SOURCE,
+        // only where the compiler reports exactly the code that can never run, so editors may fade it
+        tags = if (where is ErrorListener.Site.In && code in UNREACHABLE) setOf(Diagnostic.Tag.UNNECESSARY) else emptySet(),
     )
 }
+
+/**
+ * Compiler codes reported on code that can never run: an operand short-circuited away by a constant, and a
+ * catch target an earlier clause already catches. Others that sound similar are reported on wider or
+ * unplaced constructs (a whole contribution clause, a type constant), so fading them would mislead.
+ */
+private val UNREACHABLE = setOf(Compiler.EXPRESSION_UNREACHABLE, Compiler.CATCH_TYPE_ALREADY_CAUGHT)
 
 /** Only absolute source identities can be published as navigable locations. */
 private fun Source.diagnosticUri(): String? {
