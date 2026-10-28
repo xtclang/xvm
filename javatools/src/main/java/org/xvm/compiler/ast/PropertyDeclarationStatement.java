@@ -42,6 +42,7 @@ import org.xvm.compiler.Constants;
 import org.xvm.compiler.InitializerBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -418,6 +419,15 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
+                    if (mgr.getCursorBindings().isEnabled() && PartialSyntax.contains(value)) {
+                        // A cursor hole cannot become a constant. Validate the source-owned
+                        // initializer so its facts survive; disposable clones are never published.
+                        initializer = createAstNodeFor(createInitializer());
+                        value = null;
+                        new StageMgr(initializer, Stage.Emitted, errs,
+                                mgr.getInvocationBindings(), mgr.getCursorBindings()).fastForward(10);
+                        return;
+                    }
                     // create a clone of ourselves
                     PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
 
@@ -522,7 +532,7 @@ public class PropertyDeclarationStatement
                         value = null;
 
                         // "catch up" the newly created initializer to our stage
-                        if (!new StageMgr(initializer, Stage.Validated, errs, mgr.getInvocationBindings()).fastForward(10)) {
+                        if (!new StageMgr(initializer, Stage.Validated, errs, mgr.getInvocationBindings(), mgr.getCursorBindings()).fastForward(10)) {
                             // basically an assertion
                             log(errs, Severity.FATAL, Compiler.FATAL_ERROR, initializer);
                         }
