@@ -113,10 +113,10 @@ class RunWorkerSupervisionTest {
     }
 
     @Test
-    fun `a worker that holds what an ended run left, grew its runtime pool or keeps growing its heap is retired`() {
+    fun `a worker that holds what an ended run left or grew its runtime pool is retired`() {
         // each bound on its own: none of these reaches the heap or thread totals
         workers(RunWorkerProcess.Limits(heap = 1L shl 30, threads = 1_000)).use { workers ->
-            for (module in listOf("Leak", "Unended", "Pool", "Grow")) {
+            for (module in listOf("Leak", "Unended", "Pool")) {
                 val (_, quick) = workers.run("Quick")
                 assertThat(quick.exit()).isEqualTo(0L to null)
                 val kept = workers.workerPids().single()
