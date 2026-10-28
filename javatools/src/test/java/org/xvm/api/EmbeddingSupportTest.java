@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -92,6 +93,15 @@ public class EmbeddingSupportTest {
         assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
         xdkModules = new File(modules.toURI());
         support = new EmbeddingSupport().configure(repo(), null);
+    }
+
+    /**
+     * The tests' interpreter ends with them, so that its runtime is not kept for the rest of the
+     * JVM's tests.
+     */
+    @AfterAll
+    static void shutdown() {
+        support.shutdownInterpreter();
     }
 
     @Test

@@ -47,6 +47,9 @@ internal class CompilerQueueTrace {
         ) : Runnable {
             private val span = ExecutionTrace.span("compiler-queue", kind, uri)
 
+            /** The job's ID, as the trace gives it. */
+            val id: Long get() = span.id
+
             init {
                 synchronized(lock) {
                     jobs[span.id] = Job(span, submitted.incrementAndGet(), Phase.DEBOUNCING)
