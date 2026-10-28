@@ -1,13 +1,10 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.DirRepository
-import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
-import org.xvm.asm.LinkedRepository
-import org.xvm.compiler.Source
+import com.google.gson.GsonBuilder
 import org.xvm.lsp.model.Diagnostic
 import java.io.File
+import java.security.MessageDigest
+import java.util.HexFormat
 
 /** One source module's outcome in an embedded build. */
 data class XdkBuiltModule(
@@ -18,6 +15,10 @@ data class XdkBuiltModule(
     val skipped: Boolean,
     /** The written .xtc file, when the module compiled. */
     val artifact: String?,
+    /** An earlier compile of exactly these sources and dependency revisions supplied the artifact. */
+    val reused: Boolean = false,
+    /** SHA-256 identity of the written artifact. */
+    val revision: String? = null,
 )
 
 /**
@@ -34,69 +35,108 @@ data class XdkBuildResult(
     val workingDirectory: String,
 )
 
+/** What an embedded build keeps of one module from the closure compile. */
+internal class XdkBuildModule(
+    val module: XdkSourceModule,
+    /** Present only when the module compiled. */
+    val artifact: XdkDependency?,
+    val diagnostics: List<Diagnostic>,
+    val skipped: Boolean,
+    val reused: Boolean,
+    /** SHA-256 of each source document's text, by URI, exactly as compiled. */
+    val sources: Map<String, String>,
+    /** Revision of every module this one was compiled against, by name. */
+    val dependencies: Map<String, String>,
+)
+
 /**
- * Embedded build: compiles source modules in dependency order into `build/xtc/embedded/lib` under
- * the owning workspace folder, and writes the binary dependencies they compile against into
- * `build/xtc/embedded/dependencies`. These are kept apart from Gradle's outputs. Runs only on the
- * serialized compiler worker, because the embedded compiler is shared.
+ * Embedded build output: writes what one closure compile of a captured source snapshot produced into
+ * `build/xtc/embedded/lib` under the owning workspace folder, the binary dependencies it compiled against
+ * into `build/xtc/embedded/dependencies`, and a source manifest into `build/xtc/embedded/manifest.json`.
+ * These are kept apart from Gradle's outputs. A module that did not compile has no artifact here, so an
+ * earlier one is never run in its place.
  */
 internal object XdkBuild {
-    private const val MAX_ERRORS = 500
-
-    fun build(
-        order: List<XdkSourceModule>,
-        dependencies: XdkDependencies,
+    fun write(
+        modules: List<XdkBuildModule>,
+        binaries: XdkDependencies,
         folder: File,
-        rebuild: Boolean,
-        cancelled: () -> Boolean,
     ): XdkBuildResult {
         val root = File(folder, "build/xtc/embedded")
         val lib = File(root, "lib").apply { mkdirs() }
-        val binaries = File(root, "dependencies").apply { mkdirs() }
-        dependencies.modules.values.forEach {
-            File(binaries, it.module.substringBefore('.') + ".xtc").writeBytes(it.bytes())
+        val dependencies = File(root, "dependencies").apply { mkdirs() }
+        binaries.modules.values.forEach {
+            File(dependencies, artifactName(it.module)).writeBytes(it.bytes())
         }
-        if (rebuild) {
-            order.forEach { File(lib, it.name.substringBefore('.') + ".xtc").delete() }
-        }
-
-        val output = DirRepository(lib, false)
-        val input = LinkedRepository(output, DirRepository(binaries, true))
-        val failed = mutableSetOf<String>()
-        val modules = mutableListOf<XdkBuiltModule>()
-        val diagnostics = mutableListOf<Diagnostic>()
-        for (module in order) {
-            if (cancelled()) {
-                return XdkBuildResult(false, true, modules, diagnostics, listOf(lib.path, binaries.path), folder.path)
-            }
-            if (module.dependencies.any(failed::contains)) {
-                failed += module.name
-                modules += XdkBuiltModule(module.name, module.uri, succeeded = false, skipped = true, artifact = null)
-                continue
-            }
-
-            val errors = ErrorList(MAX_ERRORS)
-            val compiled =
-                EmbeddingSupport.instance().compile(
-                    module.root,
-                    input,
-                    output,
-                    ErrorListener.cancellable(errors, cancelled),
-                )
-            val source = Source(module.root.readText(), module.uri)
-            errors.errors.mapTo(diagnostics) { it.toDiagnostic(source, emptyMap(), emptyMap()) }
-            if (!compiled) failed += module.name
-            modules +=
+        val built =
+            modules.map { outcome ->
+                val file = File(lib, artifactName(outcome.module.name))
+                outcome.artifact?.let { file.writeBytes(it.bytes()) } ?: file.delete()
                 XdkBuiltModule(
-                    module.name,
-                    module.uri,
-                    succeeded = compiled,
-                    skipped = false,
-                    artifact = File(lib, module.name.substringBefore('.') + ".xtc").takeIf { compiled }?.path,
+                    outcome.module.name,
+                    outcome.module.uri,
+                    succeeded = outcome.artifact != null,
+                    skipped = outcome.skipped,
+                    artifact = file.path.takeIf { outcome.artifact != null },
+                    reused = outcome.reused,
+                    revision = outcome.artifact?.revision,
                 )
-        }
-        return XdkBuildResult(failed.isEmpty(), false, modules, diagnostics, listOf(lib.path, binaries.path), folder.path)
+            }
+        File(root, "manifest.json").writeText(manifest(modules, built))
+        return XdkBuildResult(
+            succeeded = modules.all { it.artifact != null },
+            cancelled = false,
+            modules = built,
+            diagnostics = modules.flatMap { it.diagnostics },
+            modulePath = listOf(lib.path, dependencies.path),
+            workingDirectory = folder.path,
+        )
     }
+
+    /** A cancelled build writes nothing. */
+    fun cancelled(folder: File): XdkBuildResult {
+        val root = File(folder, "build/xtc/embedded")
+        return XdkBuildResult(
+            succeeded = false,
+            cancelled = true,
+            modules = emptyList(),
+            diagnostics = emptyList(),
+            modulePath = listOf(File(root, "lib").path, File(root, "dependencies").path),
+            workingDirectory = folder.path,
+        )
+    }
+
+    /** A build that cannot start, e.g. because the source graph is misconfigured, reports why. */
+    fun failed(
+        folder: File,
+        diagnostic: Diagnostic,
+    ): XdkBuildResult = cancelled(folder).copy(cancelled = false, diagnostics = listOf(diagnostic))
+
+    fun sha256(text: String): String =
+        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)))
+
+    private fun artifactName(module: String) = module.substringBefore('.') + ".xtc"
+
+    private fun manifest(
+        modules: List<XdkBuildModule>,
+        built: List<XdkBuiltModule>,
+    ): String =
+        GsonBuilder().setPrettyPrinting().create().toJson(
+            mapOf(
+                "modules" to
+                    modules.zip(built).map { (outcome, module) ->
+                        linkedMapOf(
+                            "name" to module.name,
+                            "uri" to module.uri,
+                            "succeeded" to module.succeeded,
+                            "reused" to module.reused,
+                            "revision" to module.revision,
+                            "sources" to outcome.sources.toSortedMap(),
+                            "dependencies" to outcome.dependencies.toSortedMap(),
+                        )
+                    },
+            ),
+        )
 }
 
 /** A source module with an entry method the runner can call, proven from its compiled artifact. */

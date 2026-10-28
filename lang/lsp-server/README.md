@@ -512,11 +512,19 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | `xtc/runOutput` `{runId, text}` | notification | Program output, in order |
 | `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome |
 
-Builds run on the same serialized compile queue as editor analysis, against the files on disk
-(clients save first), and write `build/xtc/embedded/lib` and `build/xtc/embedded/dependencies` in the
-workspace folder that owns the module. Every build compiles the requested modules again; `rebuild`
-also deletes their previous artifacts first. A module whose dependency fails is reported as skipped,
-not compiled against an old artifact.
+Builds compile the text the server holds when the build is requested, open documents included,
+saved or not (both clients save first anyway); edits made after that belong to the next build. They
+run on the same serialized compile queue and through the same module-closure compile as editor
+analysis, and write `build/xtc/embedded/lib` and `build/xtc/embedded/dependencies` in the workspace
+folder that owns the module. A module whose sources and dependency revisions are exactly those of an
+earlier compile, by an earlier build or by editor analysis, is not compiled again: its outcome
+reports `reused: true`, and every module reports its artifact's SHA-256 `revision`. `rebuild`
+compiles every requested module again. A module that fails loses its previous artifact, so a run can
+never pick up an old one, and a module whose dependency fails is reported as skipped.
+`build/xtc/embedded/manifest.json` records, for each module, the SHA-256 of every source document as
+compiled, the revisions of the modules it compiled against, and its own revision. A run whose module
+no longer declares the requested entry method is refused by the runner's entry check before any of
+its code runs.
 
 Clients choose `runId` so they can route output that arrives before the `xtc/run` response.
 `args` reach the method exactly as given, never shell-parsed. The entry method follows the
