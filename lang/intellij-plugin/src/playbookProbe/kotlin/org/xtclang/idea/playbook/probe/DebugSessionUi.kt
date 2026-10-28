@@ -7,7 +7,6 @@ import com.google.gson.JsonParser
 import com.intellij.codeInsight.CodeInsightSettings
 import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
 import com.intellij.codeInsight.completion.CompletionType
-import com.intellij.codeInsight.hint.HintManager
 import com.intellij.codeInsight.hint.HintUtil
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupManager
@@ -48,11 +47,13 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import com.intellij.xdebugger.breakpoints.SuspendPolicy
 import com.intellij.xdebugger.breakpoints.XBreakpoint
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
 import com.intellij.xdebugger.breakpoints.XBreakpointType
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
+import com.intellij.xdebugger.evaluation.EvaluationMode
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
 import com.intellij.xdebugger.frame.XCompositeNode
 import com.intellij.xdebugger.frame.XDebuggerTreeNodeHyperlink
@@ -78,6 +79,7 @@ import com.intellij.xdebugger.impl.ui.tree.nodes.XValueGroupNodeImpl
 import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl
 import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
 import com.intellij.xdebugger.stepping.XSmartStepIntoVariant
+import com.redhat.devtools.lsp4ij.dap.breakpoints.DAPBreakpointProperties
 import com.redhat.devtools.lsp4ij.dap.settings.UserDefinedDebugAdapterServerSettings
 import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
 import org.eclipse.lsp4j.debug.Module
@@ -690,14 +692,6 @@ object DebugSessionUi {
         return result.get(HANG_SECONDS, TimeUnit.SECONDS).toString()
     }
 
-    /** True while an editor hint shows, such as the one LSP4IJ shows where an exception stopped the program. */
-    @JvmStatic
-    fun hintShown(): Boolean {
-        var shown = false
-        boundedEdt(ModalityState.defaultModalityState()) { shown = HintManager.getInstance().hasShownHintsThatWillHideByOtherHint(false) }
-        return shown
-    }
-
     /** The texts of the editor hints that show, such as LSP4IJ's where an exception stopped the program, without HTML. */
     @JvmStatic
     fun hintTexts(): String {
@@ -1033,24 +1027,59 @@ object DebugSessionUi {
         uri: String,
         breakpointLine: Int,
         condition: String,
+        hitCondition: String,
     ) {
         boundedEdt(ModalityState.defaultModalityState()) {
-            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
-            val line = breakpointLine - 1
-
-            @Suppress("UNCHECKED_CAST")
-            val type =
-                XDebuggerUtil.getInstance().lineBreakpointTypes.first { it.canPutAt(file, line, project) }
-                    as XLineBreakpointType<XBreakpointProperties<*>>
             ApplicationManager.getApplication().runWriteAction {
-                XDebuggerManager
-                    .getInstance(project)
-                    .breakpointManager
-                    .addLineBreakpoint(type, file.url, line, type.createBreakpointProperties(file, line))
-                    .setCondition(condition)
+                lineBreakpoint(project, uri, breakpointLine).apply {
+                    setCondition(condition)
+                    if (hitCondition.isNotEmpty()) {
+                        checkNotNull(properties as? DAPBreakpointProperties) { "Not a DAP breakpoint: $properties" }.hitCondition =
+                            hitCondition
+                    }
+                }
             }
         }
         debug(project, module, uri, 0)
+    }
+
+    /**
+     * Adds a logpoint on the 1-based [line] of the file [uri]: a line breakpoint that doesn't suspend and evaluates and
+     * logs [expression], which LSP4IJ sends as the DAP logMessage `{expression}`.
+     */
+    @JvmStatic
+    fun addLogpoint(
+        project: Project,
+        uri: String,
+        line: Int,
+        expression: String,
+    ) {
+        boundedEdt(ModalityState.defaultModalityState()) {
+            ApplicationManager.getApplication().runWriteAction {
+                lineBreakpoint(project, uri, line).apply {
+                    suspendPolicy = SuspendPolicy.NONE
+                    logExpressionObject = XDebuggerUtil.getInstance().createExpression(expression, null, null, EvaluationMode.EXPRESSION)
+                }
+            }
+        }
+    }
+
+    /** Adds a line breakpoint of the type that fits the 1-based [line] of the file [uri], in a write action. */
+    private fun lineBreakpoint(
+        project: Project,
+        uri: String,
+        line: Int,
+    ): XLineBreakpoint<XBreakpointProperties<*>> {
+        val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+
+        @Suppress("UNCHECKED_CAST")
+        val type =
+            XDebuggerUtil.getInstance().lineBreakpointTypes.first { it.canPutAt(file, line - 1, project) }
+                as XLineBreakpointType<XBreakpointProperties<*>>
+        return XDebuggerManager
+            .getInstance(project)
+            .breakpointManager
+            .addLineBreakpoint(type, file.url, line - 1, type.createBreakpointProperties(file, line - 1))
     }
 
     /** Adds a line breakpoint on the 1-based [line] of the file [uri], as a click in its gutter does. */
