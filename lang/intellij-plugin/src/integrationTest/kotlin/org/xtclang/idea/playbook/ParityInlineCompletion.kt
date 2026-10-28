@@ -33,9 +33,7 @@ internal fun ParityScenarios.inlineCompletionCases() {
             ).asJsonObject["items"].rows()
             check(protocol.capabilities().asJsonObject["inlineCompletionProvider"].asBoolean)
             if (mode == "selection") {
-                if (replacementGate("UP26")) {
-                    nativeInlineAlternatives(document, offset, source)
-                }
+                nativeInlineAlternatives(document, offset, source)
                 check(queryInline(InlineCompletionTriggerKind.Automatic).isEmpty())
                 val alternatives = queryInline(InlineCompletionTriggerKind.Invoked).map { it.string("insertText") }
                 check(alternatives.sorted() == listOf("another", "answer"))
@@ -47,8 +45,6 @@ internal fun ParityScenarios.inlineCompletionCases() {
                 val selected = queryInline(InlineCompletionTriggerKind.Invoked, mapOf("range" to range, "text" to "ans"))
                 check(selected.map { it.string("insertText") } == listOf("answer"))
                 check(queryInline(InlineCompletionTriggerKind.Invoked, mapOf("range" to range, "text" to "answer")).isEmpty())
-                // TODO LSP4IJ: UP26 always sends Automatic, including DirectCall, without selectedCompletionInfo.
-                // Keep this protocol coverage explicit until native invocation/selection is forwarded.
                 return@case
             }
             check(queryInline(InlineCompletionTriggerKind.Automatic).map { it.string("insertText") } == listOf(data.string("expected")))
