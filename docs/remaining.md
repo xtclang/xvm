@@ -802,11 +802,11 @@ passes with the workaround disabled. The gates are in
   IntelliJ. Our [#1790](https://github.com/redhat-developer/lsp4ij/pull/1790) (open, 2026-10-28)
   declares both and handles them.
 
-### LSP4IJ: no workspace symbol resolve (UP59): our #1788, open
+### LSP4IJ: no workspace symbol resolve (UP59): our #1788, merged
 
 - [ ] UP59 (2026-10-28): LSP4IJ resolves no workspace symbol, so XVM's server sends it each
-  symbol's full location. Our [#1788](https://github.com/redhat-developer/lsp4ij/pull/1788) (open,
-  2026-10-28) declares `resolveSupport` for `location.range` and resolves a URI-only symbol when it
+  symbol's full location. Our [#1788](https://github.com/redhat-developer/lsp4ij/pull/1788) (merged
+  2026-10-28, unreleased, `44675cb3`) declares `resolveSupport` for `location.range` and resolves a URI-only symbol when it
   is opened. To do: after a release with it, a native Go to Symbol case that opens a URI-only symbol
   at its range.
 
