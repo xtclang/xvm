@@ -8278,10 +8278,8 @@
         "expected": "answer"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "UP26: LSP4IJ 0.21.0 labels direct invocations Automatic and omits selectedCompletionInfo; explicit alternatives and selection constraints are asserted over its connection, not the native UI."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X258": {
