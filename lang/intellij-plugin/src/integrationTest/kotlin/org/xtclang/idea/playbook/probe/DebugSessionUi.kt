@@ -30,6 +30,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.platform.debugger.impl.shared.proxy.XDebugManagerProxy
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.SimpleColoredText
 import com.intellij.ui.SimpleTextAttributes
@@ -38,7 +39,9 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import com.intellij.xdebugger.breakpoints.XBreakpoint
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
+import com.intellij.xdebugger.breakpoints.XBreakpointType
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
@@ -690,6 +693,107 @@ object DebugSessionUi {
         }
     }
 
+    /**
+     * Whether Reset Frame is offered on each frame of the module's paused session, in the stack's order, as the Frames
+     * view's context menu shows it once that frame is selected and the debugger has said whether it can be dropped.
+     */
+    @JvmStatic
+    fun resettable(
+        project: Project,
+        module: String,
+    ): String {
+        checkNotNull(session(project, module)) { "No debug session of $module" }
+        val proxy = sessionProxy(project)
+        val stack = call(proxy, "getCurrentExecutionStack") as XExecutionStack
+        val frames = stackFrames(stack)
+        val offered = JsonArray()
+        frames.forEachIndexed { index, frame ->
+            select(proxy, stack, frame, index == 0)
+            offered.add(resetFrameOffered(project))
+        }
+        select(proxy, stack, frames.first(), true)
+        return offered.toString()
+    }
+
+    /**
+     * Selects the frame of the module's paused session whose name contains [name], as the Frames view does, and resets it
+     * with Reset Frame, which LSP4IJ's drop-frame handler takes.
+     */
+    @JvmStatic
+    fun resetFrame(
+        project: Project,
+        module: String,
+        name: String,
+    ) {
+        checkNotNull(session(project, module)) { "No debug session of $module" }
+        val proxy = sessionProxy(project)
+        val stack = call(proxy, "getCurrentExecutionStack") as XExecutionStack
+        val frames = stackFrames(stack)
+        val frame = frames.first { SimpleColoredText().also(it::customizePresentation).toString().contains(name) }
+        select(proxy, stack, frame, frame === frames.first())
+        check(resetFrameOffered(project)) { "Reset Frame is not offered on $name" }
+        ApplicationManager.getApplication().invokeAndWait {
+            ActionManager.getInstance().getAction(RESET_FRAME).actionPerformed(resetFrameEvent(project))
+        }
+    }
+
+    /** IntelliJ's Reset Frame, in the Frames view's context menu and in Run | Debugging Actions. */
+    private const val RESET_FRAME = "Debugger.PopFrame"
+
+    /**
+     * The project's current debug session as the debugger's actions and the Frames view see it, a frontend proxy since
+     * 2025.3, whose frames are its own; its methods are newer than the platform this probe compiles against.
+     */
+    private fun sessionProxy(project: Project): Any =
+        checkNotNull(XDebugManagerProxy.getInstance().getCurrentSessionProxy(project)) { "No current debug session" }
+
+    private fun call(
+        target: Any,
+        name: String,
+        vararg args: Any?,
+    ): Any? =
+        target.javaClass.methods
+            .first { it.name == name && it.parameterCount == args.size }
+            .invoke(target, *args)
+
+    /**
+     * Selects the frame of the stack, as clicking it in the Frames view does, and waits until the drop-frame handler has
+     * said whether it can be dropped, which it asks the debugger for once.
+     */
+    private fun select(
+        proxy: Any,
+        stack: XExecutionStack,
+        frame: XStackFrame,
+        top: Boolean,
+    ) {
+        ApplicationManager.getApplication().invokeAndWait { call(proxy, "setCurrentStackFrame", stack, frame, top) }
+        val handler = checkNotNull(call(proxy, "getDropFrameHandler")) { "No drop-frame handler" }
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (call(proxy, "getCurrentStackFrame") !== frame || call(handler, "canDropFrame", frame).toString() == "UNSURE") {
+            check(System.nanoTime() < deadline) {
+                "The debugger did not say whether ${SimpleColoredText().also(frame::customizePresentation)} can be reset"
+            }
+            Thread.sleep(100)
+        }
+    }
+
+    /**
+     * Whether Reset Frame is offered for the current session's current frame: outside the main menu and the debugger's
+     * toolbar, as in the Frames view's context menu, a frame that cannot be dropped hides the item rather than disabling it.
+     */
+    private fun resetFrameOffered(project: Project): Boolean {
+        var offered = false
+        ApplicationManager.getApplication().invokeAndWait { offered = resetFrameEvent(project).presentation.isEnabledAndVisible }
+        return offered
+    }
+
+    /** Reset Frame's event in the project, updated as its menu item is. */
+    private fun resetFrameEvent(project: Project): AnActionEvent {
+        val action = ActionManager.getInstance().getAction(RESET_FRAME)
+        val context = SimpleDataContext.getProjectContext(project)
+        return AnActionEvent.createEvent(action, context, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null).also(action::update)
+    }
+
     /** Runs the module's paused session to the 1-based [line] of the file [uri], as Run to Cursor does. */
     @JvmStatic
     fun runToCursor(
@@ -788,6 +892,71 @@ object DebugSessionUi {
         }
         return states.toString()
     }
+
+    /**
+     * Adds a DAP function breakpoint on the function [name], with the [condition], as the Breakpoints dialog's "+" and
+     * its DAP Function Breakpoint item do once the name is typed, through the type that LSP4IJ registers (#1780); the
+     * probe finds it by its ID, since LSP4IJ 0.21.0, which it compiles against, has none. False without that type.
+     */
+    @JvmStatic
+    fun addFunctionBreakpoint(
+        project: Project,
+        name: String,
+        condition: String,
+    ): Boolean {
+        @Suppress("UNCHECKED_CAST")
+        val type =
+            XBreakpointType.EXTENSION_POINT_NAME.extensionList.firstOrNull { it.id == FUNCTION_BREAKPOINT }
+                as? XBreakpointType<XBreakpoint<XBreakpointProperties<*>>, XBreakpointProperties<*>> ?: return false
+        ApplicationManager.getApplication().invokeAndWait {
+            val properties = checkNotNull(type.createProperties()) { "No properties for a function breakpoint" }
+            properties.javaClass.getMethod("setName", String::class.java).invoke(properties, name)
+            ApplicationManager.getApplication().runWriteAction {
+                val breakpoint = XDebuggerManager.getInstance(project).breakpointManager.addBreakpoint(type, properties)
+                breakpoint.conditionExpression = XExpressionImpl.fromText(condition)
+            }
+        }
+        return true
+    }
+
+    /**
+     * The function breakpoints, as the module's debug session shows them in the Breakpoints dialog: each one's `state`,
+     * `verified` once the debug adapter installed it, `invalid` with the `message` it gave if it did not, or `pending`.
+     */
+    @JvmStatic
+    fun functionBreakpoints(
+        project: Project,
+        module: String,
+    ): String {
+        val session = checkNotNull(session(project, module) as? XDebugSessionImpl) { "No debug session of $module" }
+        val states = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            XDebuggerManager
+                .getInstance(project)
+                .breakpointManager.allBreakpoints
+                .filter { it.type.id == FUNCTION_BREAKPOINT }
+                .forEach { breakpoint ->
+                    val shown = session.getBreakpointPresentation(breakpoint)
+                    states.add(
+                        JsonObject().apply {
+                            addProperty(
+                                "state",
+                                when {
+                                    shown == null -> "pending"
+                                    shown.errorMessage != null -> "invalid"
+                                    else -> "verified"
+                                },
+                            )
+                            shown?.errorMessage?.let { addProperty("message", it) }
+                        },
+                    )
+                }
+        }
+        return states.toString()
+    }
+
+    /** The ID of LSP4IJ's DAP function breakpoint type (#1780). */
+    private const val FUNCTION_BREAKPOINT = "dap-function-breakpoint"
 
     /** Types [text] at the start of the 1-based [line] of the file [uri], without saving it. */
     @JvmStatic
@@ -959,7 +1128,23 @@ object DebugSessionUi {
         }
     }
 
-    private fun frames(stack: XExecutionStack): JsonArray {
+    private fun frames(stack: XExecutionStack): JsonArray =
+        JsonArray().apply {
+            stackFrames(stack).forEach { frame ->
+                add(
+                    JsonObject().apply {
+                        addProperty("name", SimpleColoredText().also(frame::customizePresentation).toString())
+                        frame.sourcePosition?.let { position ->
+                            addProperty("file", position.file.path)
+                            addProperty("line", position.line + 1)
+                        }
+                    },
+                )
+            }
+        }
+
+    /** The stack's frames, as the Frames view receives them. */
+    private fun stackFrames(stack: XExecutionStack): List<XStackFrame> {
         val frames = CompletableFuture<List<XStackFrame>>()
         val collected = mutableListOf<XStackFrame>()
         stack.computeStackFrames(
@@ -978,18 +1163,6 @@ object DebugSessionUi {
                 }
             },
         )
-        return JsonArray().apply {
-            frames.get(30, TimeUnit.SECONDS).forEach { frame ->
-                add(
-                    JsonObject().apply {
-                        addProperty("name", SimpleColoredText().also(frame::customizePresentation).toString())
-                        frame.sourcePosition?.let { position ->
-                            addProperty("file", position.file.path)
-                            addProperty("line", position.line + 1)
-                        }
-                    },
-                )
-            }
-        }
+        return frames.get(30, TimeUnit.SECONDS)
     }
 }
