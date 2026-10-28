@@ -15,8 +15,8 @@ import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.junit.jupiter.api.Test
 
 /**
- * Checks that the IntelliJ client advertises only capabilities its native integration can honor. Guards
- * snippet indentation, save-hook limitations and deferred resolution against misleading negotiation.
+ * Checks that the IntelliJ client advertises only capabilities its native integration can honor: snippet
+ * indentation, save hooks and deferred resolution.
  */
 class ClientCapabilitiesTest {
     @Test
@@ -50,7 +50,7 @@ class ClientCapabilitiesTest {
     }
 
     @Test
-    fun `do not advertise save hooks that LSP4IJ does not dispatch`() {
+    fun `advertise the save hooks LSP4IJ dispatches`() {
         val sync =
             SynchronizationCapabilities().apply {
                 willSave = true
@@ -66,8 +66,8 @@ class ClientCapabilitiesTest {
                     }
             }
         XtcLanguageServerFactory().createClientFeatures().initializeParams(params)
-        assertThat(sync.willSave).isFalse()
-        assertThat(sync.willSaveWaitUntil).isFalse()
+        assertThat(sync.willSave).isTrue()
+        assertThat(sync.willSaveWaitUntil).isTrue()
         assertThat(sync.didSave).isTrue()
     }
 
