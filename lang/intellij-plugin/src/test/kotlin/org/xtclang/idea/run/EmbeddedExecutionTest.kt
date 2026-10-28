@@ -45,6 +45,39 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `embedded is the default, also in a project with a Gradle build, and its runs say Gradle settings do not apply`(
+        @TempDir root: Path,
+    ) {
+        Files.writeString(root.resolve("build.gradle.kts"), "")
+        val default = XtcBuildSettings.Options().mode
+        assertThat(default).isEqualTo(XtcBuildMode.EMBEDDED)
+        assertThat(XtcBuildSettings.resolve(default, root)).isEqualTo(XtcBuildMode.EMBEDDED)
+        assertThat(XtcBuildSettings.gradleNotUsed(root)).contains("Gradle settings", "do not apply")
+        assertThat(XtcBuildSettings.gradleNotUsed(root.resolve("plain"))).isNull()
+
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server, XtcBuildSettings.gradleNotUsed(root))
+        handler.startNotify()
+        server.requests.poll(30, SECONDS)
+        assertThat(handler.text()).contains("with the embedded compiler...\n", "Gradle settings")
+    }
+
+    @Test
+    fun `the notice links to the settings page that chooses the mode`(
+        @TempDir root: Path,
+    ) {
+        Files.writeString(root.resolve("build.gradle.kts"), "")
+        val before = "Building with the embedded compiler...\n"
+        val notice = checkNotNull(XtcBuildSettings.gradleNotUsed(root)) + "\n"
+        val link = checkNotNull(BuildSettingsLink.applyFilter(notice, before.length + notice.length)).resultItems.single()
+        assertThat((before + notice).substring(link.highlightStartOffset, link.highlightEndOffset))
+            .isEqualTo("Settings | Build, Execution, Deployment | Ecstasy")
+        assertThat(link.hyperlinkInfo).isNotNull()
+        assertThat(BuildSettingsLink.applyFilter(before, before.length)).isNull()
+    }
+
+    @Test
     fun `configurations saved with useGradle follow the project unless they ran the command line`() {
         assertThat(XtcRunConfiguration.runMode(null, "true")).isEqualTo(XtcRunMode.PROJECT)
         assertThat(XtcRunConfiguration.runMode(null, null)).isEqualTo(XtcRunMode.PROJECT)
@@ -190,10 +223,11 @@ class EmbeddedExecutionTest {
     private fun handler(
         sessions: EmbeddedRunSessions,
         server: FakeServer,
+        notice: String? = null,
     ) = RecordingHandler(
         EmbeddedRunProcessHandler(sessions, {
             CompletableFuture.completedFuture(server.proxy)
-        }, RunParams("file:///work/App.x"), "App", { UTF_8 }),
+        }, RunParams("file:///work/App.x"), "App", notice, consoleCharset = { UTF_8 }),
     )
 
     private class Recorder : EmbeddedRunSessions.Session {

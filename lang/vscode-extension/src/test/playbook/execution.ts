@@ -1,6 +1,9 @@
 import * as assert from 'node:assert';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
+import { buildModeStatus } from '../../build-mode-selection';
+import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
 import { client, eventually, noErrors, playbook, type Workspace } from './support';
@@ -203,6 +206,108 @@ export function executionInputCases(): void {
             const run = await executions.await('run', data.module, finished, 'Program ends after the end of input');
             assert.strictEqual(run.exitCode, data.exitCode, run.text);
             assert.ok(run.text.includes(data.ended), run.text);
+        });
+    });
+}
+
+/** Runs [action], which starts the shell task called [name], and returns that task process's exit code. */
+async function shellTaskExit(name: string, action: () => Thenable<unknown>): Promise<number | undefined> {
+    let ended = false;
+    let exitCode: number | undefined;
+    const listener = vscode.tasks.onDidEndTaskProcess(event => {
+        if (event.execution.task.name === name) {
+            ended = true;
+            exitCode = event.exitCode;
+        }
+    });
+    try {
+        await action();
+        await eventually(async () => ended, value => value, `${name} task ends`);
+        return exitCode;
+    } finally {
+        listener.dispose();
+    }
+}
+
+/** Build modes beside a Gradle build and repeated runs; registered after console input to keep catalog order. */
+export function buildModeCases(): void {
+    playbook('X288', async (workspace, data) => {
+        const folder = vscode.workspace.workspaceFolders?.[0];
+        assert.ok(folder, 'The playbook opens a folder');
+        // a Gradle build at the folder root, with a wrapper that records what it is asked to do
+        const root = (file: string) => path.join(folder.uri.fsPath, file);
+        const rootFiles = [data.gradleFile, data.wrapper, data.windowsWrapper, data.invocations].map(root);
+        const invocations = async () => (await fs.readFile(root(data.invocations), 'utf8').catch(() => '')).split('\n').filter(line => line);
+        const settings = vscode.workspace.getConfiguration('xtc');
+        const original = settings.inspect<string>('build.mode')?.workspaceValue;
+        const executions = new Executions();
+        try {
+            await fs.writeFile(root(data.gradleFile), data.gradleSource);
+            await fs.writeFile(root(data.wrapper), data.wrapperSource, { mode: 0o755 });
+            await fs.writeFile(root(data.windowsWrapper), data.windowsWrapperSource);
+            await settings.update('build.mode', undefined, vscode.ConfigurationTarget.Workspace);
+            const document = await workspace.open(data.file, data.source);
+            await configureModules(workspace, [{ name: data.module, file: data.file }]);
+            await noErrors(document.uri);
+
+            // the default is embedded, also beside a Gradle build, and says the build's settings do not apply
+            assert.strictEqual(buildMode(folder), 'embedded');
+            await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build');
+            const built = await executions.start('build', 'all Ecstasy modules', () => vscode.commands.executeCommand('xtc.build'), finished, 'Embedded build finishes');
+            assert.strictEqual(built.exitCode, 0, built.text);
+            assert.ok(built.text.includes(data.notice), built.text);
+            const run = await executions.start('run', data.module,
+                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, 'Embedded run finishes');
+            assert.strictEqual(run.exitCode, 0, run.text);
+            assert.ok(run.text.includes(data.output), run.text);
+            assert.deepStrictEqual(await invocations(), [], 'Embedded mode does not call Gradle');
+
+            // Gradle, chosen the way the command and the status bar choose it
+            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
+            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+            assert.strictEqual(await shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build')), 0, 'Gradle build exit code');
+            assert.deepStrictEqual(await invocations(), [data.gradleBuild], 'Build calls the Gradle wrapper');
+            assert.strictEqual(await shellTaskExit(`Run ${data.module}`,
+                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module)), 0, 'Gradle run exit code');
+            const calls = await invocations();
+            assert.strictEqual(calls.length, 2, calls.join('\n'));
+            assert.ok(calls[1].includes(data.gradleRun), calls.join('\n'));
+
+            // and back: Run is embedded again
+            await vscode.commands.executeCommand('xtc.selectBuildMode', 'embedded', folder.uri);
+            await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build again');
+            const again = await executions.start('run', data.module,
+                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, 'Embedded run after switching back finishes');
+            assert.strictEqual(again.exitCode, 0, again.text);
+            assert.ok(again.text.includes(data.output), again.text);
+            assert.strictEqual((await invocations()).length, 2, 'No Gradle call after switching back');
+        } finally {
+            executions.dispose();
+            await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
+            await Promise.all(rootFiles.map(file => fs.rm(file, { force: true })));
+        }
+    });
+
+    playbook('X289', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const runOnce = async (message: string) => {
+                const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
+                const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
+                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                return run.text;
+            };
+            assert.ok((await runOnce('First run finishes')).includes(data.first));
+            assert.ok((await runOnce('Second run of the unchanged module finishes')).includes(data.first));
+            // edited and not saved: the run saves first and runs the edit, not the earlier build
+            await workspace.replace(document, data.edited);
+            assert.ok(document.isDirty, 'The edit is unsaved before the run');
+            const edited = await runOnce('Run of the edited module finishes');
+            assert.ok(edited.includes(data.second), edited);
+            assert.ok(!edited.includes(data.first), edited);
+            assert.ok(!document.isDirty, 'The run saved the edit');
         });
     });
 }

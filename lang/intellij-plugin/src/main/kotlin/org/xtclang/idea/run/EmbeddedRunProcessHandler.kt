@@ -30,6 +30,8 @@ internal class EmbeddedRunProcessHandler(
     private val server: () -> CompletableFuture<XtcLanguageServer>,
     request: RunParams,
     private val label: String,
+    /** Shown after the first line, e.g. that the project's Gradle settings do not apply. */
+    private val notice: String? = null,
     /** The console writes typed input in its configured encoding. */
     private val consoleCharset: () -> Charset = { EncodingManager.getInstance().defaultConsoleEncoding },
 ) : ProcessHandler(),
@@ -59,6 +61,7 @@ internal class EmbeddedRunProcessHandler(
         // registered before the request, because output can arrive before the response
         sessions.register(runId, this)
         system("Building and running $label with the embedded compiler...\n")
+        notice?.let { system("$it\n") }
         server()
             .thenCompose { connected ->
                 connection.set(connected)
