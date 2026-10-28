@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ChildFilter
 import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
 import org.xvm.debug.DebugSetup
@@ -169,13 +170,33 @@ internal class DebugSessions(
         override fun variables(
             runId: String,
             reference: Int,
-        ) = runs.variables(runId, reference)
+            hex: Boolean,
+            filter: ChildFilter,
+            start: Int,
+            count: Int,
+        ) = runs.variables(runId, reference, hex, filter, start, count)
 
         override fun evaluate(
             runId: String,
             frameId: Int,
             expression: String,
-        ) = runs.evaluate(runId, frameId, expression)
+            hex: Boolean,
+        ) = runs.evaluate(runId, frameId, expression, hex)
+
+        override fun setVariable(
+            runId: String,
+            reference: Int,
+            name: String,
+            expression: String,
+            hex: Boolean,
+        ) = runs.setVariable(runId, reference, name, expression, hex)
+
+        override fun completions(
+            runId: String,
+            frameId: Int,
+            text: String,
+            offset: Int,
+        ) = runs.completions(runId, frameId, text, offset)
 
         override fun run(
             runId: String,
@@ -183,7 +204,8 @@ internal class DebugSessions(
             expression: String,
             limit: Duration,
             program: Boolean,
-        ) = runs.runCode(runId, frameId, expression, limit, program)
+            hex: Boolean,
+        ) = runs.runCode(runId, frameId, expression, limit, program, hex)
 
         override fun exceptionInfo(
             runId: String,

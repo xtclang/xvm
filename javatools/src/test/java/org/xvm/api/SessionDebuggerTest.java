@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,10 @@ import org.xvm.asm.ModuleRepository;
 
 import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
+import org.xvm.runtime.SessionDebugger.Completion;
+import org.xvm.runtime.SessionDebugger.Completions;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
+import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
@@ -396,6 +400,156 @@ public class SessionDebuggerTest {
                     @Inject Console console;
                     console.print($"box {box.count}");
                     return n;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints the sum of a Point and the count of a Box on line 34, and returns
+     * the count. Point's sum is computed, and its toString() is its own; of Box's computed
+     * properties, twice reads count, bumped adds one to it, spin never ends, and fail throws.
+     */
+    private static final String VALUES = """
+            module Values {
+                const Point(Int x, Int y) {
+                    Int sum.get() = x + y;
+
+                    @Override
+                    String toString() = $"({x}, {y})";
+                }
+
+                class Box {
+                    Int count;
+
+                    Int twice.get() = count * 2;
+
+                    Int spin.get() {
+                        Int i = 0;
+                        while (i >= 0) {
+                            ++i;
+                        }
+                        return i;
+                    }
+
+                    Int fail.get() {
+                        throw new IllegalState("no");
+                    }
+
+                    Int bumped.get() = ++count;
+                }
+
+                Int run() {
+                    @Inject Console console;
+                    Point point = new Point(3, 4);
+                    Box   box   = new Box();
+                    box.count = 5;
+                    console.print($"{point.sum} {box.count}");
+                    return box.count;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints, on line 23, integers of several sizes and signs, two Boxes with
+     * the same fields, a const Pair, and an array it adds to.
+     */
+    private static final String FORMATS = """
+            module Formats {
+                class Box {
+                    Int count;
+                    Int twice.get() = count * 2;
+                }
+
+                const Pair(Int a, Int b);
+
+                Int run() {
+                    Int    big   = 255;
+                    Int    minus = -1;
+                    Int8   small = -1;
+                    UInt8  octet = 200;
+                    Int128 wide  = -2;
+                    UInt64 top   = UInt64.MaxValue;
+                    Box    one   = new Box();
+                    Box    two   = new Box();
+                    Pair   pair  = new Pair(1, 2);
+                    Int[]  list  = new Int[];
+                    one.count = 8;
+                    list.add(1);
+                    @Inject Console console;
+                    console.print($"{big} {minus} {small} {octet} {wide} {top} {one.count} {two.count} {pair} {list}");
+                    return 0;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints, on line 5, the size of an array of the squares of 0 to 249, and
+     * returns the last one.
+     */
+    private static final String PAGES = """
+            module Pages {
+                Int run() {
+                    Int[] squares = new Int[250](i -> i * i);
+                    @Inject Console console;
+                    console.print(squares.size);
+                    return squares[249];
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() prints, on line 18, its locals, a Box's count, a mutable array and a
+     * const Point's x, and returns n + box.count + list[1].
+     */
+    private static final String SETS = """
+            module Sets {
+                class Box {
+                    Int count;
+                    Int twice.get() = count * 2;
+                }
+
+                const Point(Int x, Int y);
+
+                Int run() {
+                    Int    n     = 20;
+                    Int8   small = 1;
+                    String text  = "hi";
+                    Box    box   = new Box();
+                    Point  point = new Point(1, 2);
+                    Int[]  list  = new Int[3](i -> i);
+                    Int[]  fixed = [1, 2, 3];
+                    @Inject Console console;
+                    console.print($"{n} {small} {text} {box.count} {list} {point.x} {fixed}");
+                    return n + box.count + list[1];
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() bumps a Box, on line 7, and prints, on line 18, its count, the Box's
+     * count, the size of an array of the Box and a text, and returns the count; a Box has a field,
+     * a private one, a computed property and a method.
+     */
+    private static final String COMPLETES = """
+            module Completes {
+                class Box {
+                    Int count;
+                    private Int hidden = 1;
+                    Int twice.get() = count * 2;
+                    void bump() {
+                        count += hidden;
+                    }
+                }
+
+                Int run() {
+                    Int    count = 3;
+                    Box    box   = new Box();
+                    Box[]  boxes = [box];
+                    String text  = "hi";
+                    box.bump();
+                    @Inject Console console;
+                    console.print($"{count} {box.count} {boxes.size} {text}");
+                    return count;
                 }
             }
             """;
@@ -1404,6 +1558,258 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void anObjectsComputedPropertiesAndToStringAreLazyVariablesWhoseReadRunsTheirCode() throws Exception {
+        Path  source  = compile("Values", VALUES);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Values"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 34)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Values", output, session);
+        try (control) {
+            Stop stop   = stops.next();
+            int  frame  = session.stackTrace(stop.threadId()).getFirst().id();
+            var  locals = byName(read(session, session.scopes(frame).getFirst().variablesReference()));
+
+            // a const's fields come first, then its computed property and its toString(), which are lazy
+            List<Variable> point = read(session, locals.get("point").variablesReference());
+            assertEquals(List.of("x", "y", "sum", SessionDebugger.TO_STRING), point.stream().map(Variable::name).toList());
+            assertFalse(point.get(0).lazy());
+            Variable sum = point.get(2);
+            assertTrue(sum.lazy());
+            assertEquals(SessionDebugger.LAZY, sum.value());
+            assertEquals("", sum.type());
+
+            // reading a lazy variable runs its code, the getter or toString(), and answers with its value
+            assertEquals(List.of(new Variable("sum", "7", "Int", 0)), read(session, sum.variablesReference()));
+            assertEquals(List.of(new Variable(SessionDebugger.TO_STRING, "\"(3, 4)\"", "String", 0)),
+                    read(session, point.get(3).variablesReference()));
+
+            // what a getter changes stays changed; one that throws, or does not end in time, says why
+            var box = byName(read(session, locals.get("box").variablesReference()));
+            assertEquals(List.of("count", "twice", "spin", "fail", "bumped", SessionDebugger.TO_STRING),
+                    read(session, locals.get("box").variablesReference()).stream().map(Variable::name).toList());
+            assertEquals("10", read(session, box.get("twice").variablesReference()).getFirst().value());
+            assertEquals("6", read(session, box.get("bumped").variablesReference()).getFirst().value());
+            assertEquals("6", evaluate(session, frame, "box.count").value());
+            assertFails("fail threw IllegalState: no.", session.variables(box.get("fail").variablesReference()));
+            assertFails("spin did not finish within 1 second, so it was ended.",
+                    session.variables(box.get("spin").variablesReference()));
+            assertEquals("\"Box\"", read(session, box.get(SessionDebugger.TO_STRING).variablesReference()).getFirst().value());
+
+            // the program is stopped where it was, and goes on with what the getters changed
+            assertTrue(session.isStopped());
+            session.resume();
+            assertEquals(List.of(), read(session, sum.variablesReference()));
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("7 6"), output.toString());
+            assertEquals(6L, control.result());
+            assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
+    public void integersShowInHexadecimalWhenAskedAndMutableObjectsHaveIdentityCodes() throws Exception {
+        Path  source  = compile("Formats", FORMATS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Formats"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 23)));
+
+        Control control = run("Formats", new StringWriter(), session);
+        try (control) {
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+            int  scope = session.scopes(frame).getFirst().variablesReference();
+            var  plain = byName(read(session, scope));
+            var  hex   = byName(session.variables(scope, true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+
+            // in decimal by default, and in hexadecimal when asked: a negative value of a type of fixed size in its
+            // two's complement
+            assertEquals(List.of("255", "-1", "-1", "200", "-2", "18446744073709551615"),
+                    Stream.of("big", "minus", "small", "octet", "wide", "top").map(name -> plain.get(name).value()).toList());
+            assertEquals(List.of("0xFF", "0xFFFFFFFFFFFFFFFF", "0xFF", "0xC8", "0x" + "F".repeat(31) + "E", "0xFFFFFFFFFFFFFFFF"),
+                    Stream.of("big", "minus", "small", "octet", "wide", "top").map(name -> hex.get(name).value()).toList());
+            assertEquals("Int8", hex.get("small").type());
+
+            // an evaluation, a run, a field and a lazy variable's value too
+            assertEquals("0x100", session.evaluate(frame, "big + 1", true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("0x1FE", session.run(frame, "big * 2", RUN_LIMIT, false, true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("510", runCode(session, frame, "big * 2").value());
+            var one = byName(session.variables(plain.get("one").variablesReference(), true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            assertEquals("0x8", one.get("count").value());
+            assertEquals("0x10", session.variables(one.get("twice").variablesReference(), true)
+                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).getFirst().value());
+
+            // a mutable object or array has an identity code that tells it from another with the same fields, the
+            // same at each read; a const has none
+            String first  = plain.get("one").value();
+            String second = plain.get("two").value();
+            assertTrue(first.matches(".+ #\\d+"), first);
+            assertTrue(second.matches(".+ #\\d+"), second);
+            assertNotEquals(first, second);
+            assertEquals(first, byName(read(session, scope)).get("one").value());
+            assertTrue(plain.get("list").value().matches("Int\\[1] #\\d+"), plain.get("list").value());
+            assertFalse(plain.get("pair").value().contains("#"), plain.get("pair").value());
+            assertFalse(plain.get("big").value().contains("#"), plain.get("big").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(0L, control.result());
+        }
+    }
+
+    @Test
+    public void aLargeArrayIsReadAPageAtATimeAndAFilterTakesTheNamedOrIndexedChildren() throws Exception {
+        Path  source  = compile("Pages", PAGES);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Pages"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
+
+        Control control = run("Pages", new StringWriter(), session);
+        try (control) {
+            Stop     stop    = stops.next();
+            int      frame   = session.stackTrace(stop.threadId()).getFirst().id();
+            int      scope   = session.scopes(frame).getFirst().variablesReference();
+            Variable squares = byName(read(session, scope)).get("squares");
+            assertEquals(250, squares.elements());
+            assertEquals(0, byName(read(session, scope)).get("console").elements());
+
+            // all of them, as before: the first 100, then how many more
+            List<Variable> first = read(session, squares.variablesReference());
+            assertEquals(101, first.size());
+            assertEquals(new Variable("...", "150 more", "", 0), first.getLast());
+
+            // a page, which may end at the array's end, and the elements are its indexed children only
+            List<Variable> page = page(session, squares.variablesReference(), Filter.INDEXED, 200, 50);
+            assertEquals(50, page.size());
+            assertEquals(List.of("[200]", "40000"), List.of(page.getFirst().name(), page.getFirst().value()));
+            assertEquals(List.of("[249]", "62001"), List.of(page.getLast().name(), page.getLast().value()));
+            assertEquals(10, page(session, squares.variablesReference(), Filter.ALL, 240, 100).size());
+            assertEquals(List.of(), page(session, squares.variablesReference(), Filter.NAMED, 0, 0));
+
+            // a frame's locals are its named children, a part of them at a time too
+            assertEquals(List.of(), page(session, scope, Filter.INDEXED, 0, 0));
+            assertEquals(read(session, scope).stream().map(Variable::name).toList().subList(1, 2),
+                    page(session, scope, Filter.NAMED, 1, 1).stream().map(Variable::name).toList());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(62001L, control.result());
+        }
+    }
+
+    @Test
+    public void aLocalAFieldOrAnElementTakesTheValueOfAnExpressionOfItsTypeAndTheProgramGoesOnWithIt() throws Exception {
+        Path  source  = compile("Sets", SETS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Sets"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 18)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Sets", output, session);
+        try (control) {
+            Stop stop   = stops.next();
+            int  frame  = session.stackTrace(stop.threadId()).getFirst().id();
+            int  scope  = session.scopes(frame).getFirst().variablesReference();
+            var  locals = byName(read(session, scope));
+
+            // a local takes the value of an expression, a literal of the local's type, such as an Int8's
+            assertEquals(new Variable("n", "41", "Int", 0), set(session, scope, "n", "n * 2 + 1"));
+            assertEquals("41", byName(read(session, scope)).get("n").value());
+            assertEquals(new Variable("small", "5", "Int8", 0), set(session, scope, "small", "5"));
+            assertEquals("\"bye\"", set(session, scope, "text", "\"bye\"").value());
+            assertFails("300: 300 is out of range for Int8.", session.setVariable(scope, "small", "300", false));
+            assertFails("\"text\" is String, not Int, so n cannot take it.", session.setVariable(scope, "n", "\"text\"", false));
+            assertFails("this cannot be changed.", session.setVariable(scope, "this", "n", false));
+            assertFails("There is no variable \"nope\" in this frame.", session.setVariable(scope, "nope", "1", false));
+
+            // a mutable object's field, and an element of a mutable array; not a computed property, nor what is immutable
+            int box = locals.get("box").variablesReference();
+            assertEquals("7", set(session, box, "count", "7").value());
+            assertFails("twice is computed by its getter, and has no field to change.", session.setVariable(box, "twice", "1", false));
+            assertFails("Sets:Box has no field nope.", session.setVariable(box, "nope", "1", false));
+            int list = locals.get("list").variablesReference();
+            assertEquals("9", set(session, list, "[1]", "9").value());
+            assertFails("[5] is not an element of the array, whose size is 3.", session.setVariable(list, "[5]", "9", false));
+            assertFails("x is a field of an immutable Sets:Point, which cannot be changed.",
+                    session.setVariable(locals.get("point").variablesReference(), "x", "5", false));
+            var refused = assertThrows(ExecutionException.class, () -> session.setVariable(locals.get("fixed").variablesReference(),
+                    "[0]", "5", false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            assertTrue(refused.getCause().getMessage().startsWith("[0] cannot be changed: "), refused.getCause().getMessage());
+
+            // the program goes on with the new values
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("41 5 bye 7 [0, 9, 2] 1 [1, 2, 3]"), output.toString());
+            assertEquals(57L, control.result());
+        }
+    }
+
+    @Test
+    public void aNameTypedInAStoppedFrameCompletesToItsVariablesOrToTheMembersOfTheValueBeforeADot() throws Exception {
+        Path  source  = compile("Completes", COMPLETES);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Completes"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7), new Line(2, 18)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Completes", output, session);
+        try (control) {
+            // in a Box's own method, the members of this are all of its own, the private ones too
+            Stop bumps  = stops.next();
+            int  inside = session.stackTrace(bumps.threadId()).getFirst().id();
+            var  hidden = new Completions(0, 2, List.of(new Completion("hidden", "field")));
+            assertEquals(hidden, complete(session, inside, "hi", 2));
+            assertEquals(new Completions(5, 2, hidden.items()), complete(session, inside, "this.hi", 7));
+            assertEquals(new Completions(0, 2, List.of(new Completion("count", "field"))), complete(session, inside, "co", 2));
+            session.resume();
+
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+            var  box   = new Completion("box", "variable");
+            var  boxes = new Completion("boxes", "variable");
+
+            // the frame's variables, innermost first, and the members of this, which is the module
+            assertEquals(new Completions(0, 2, List.of(boxes, box)), complete(session, frame, "bo", 2));
+            assertEquals(new Completions(0, 2, List.of(new Completion("text", "variable"))), complete(session, frame, "te", 2));
+            assertEquals(new Completions(0, 2, List.of(new Completion("run", "method"))), complete(session, frame, "ru", 2));
+
+            // after a dot, the public members of the value before it: fields, properties, then methods,
+            // and not the private field
+            assertEquals(new Completions(4, 0, List.of(new Completion("count", "field"), new Completion("twice", "property"),
+                    new Completion("bump", "method"), new Completion("equals", "method"),
+                    new Completion("makeImmutable", "method"), new Completion("toString", "method"))),
+                    complete(session, frame, "box.", 4));
+            assertEquals(new Completions(17, 2, List.of(new Completion("twice", "property"))),
+                    complete(session, frame, "count + boxes[0].tw", 19));
+            assertEquals(new Completions(5, 3, List.of(new Completion("toUppercase", "method"))),
+                    complete(session, frame, "text.toU", 8));
+            assertEquals(new Completions(5, 2, List.of(new Completion("run", "method"))), complete(session, frame, "this.ru", 7));
+
+            // the name ends at the offset, wherever that is in the text, and a path that cannot be
+            // evaluated has no members
+            assertEquals(new Completions(4, 3, List.of(new Completion("count", "field"))),
+                    complete(session, frame, "box.cou + 1", 7));
+            assertEquals(new Completions(5, 1, List.of()), complete(session, frame, "nope.x", 6));
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
+                    session.completions(frame + 1000, "bo", 2));
+
+            // nothing of the program ran, and once it resumes, its frames are not stopped ones
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertTrue(output.toString().contains("3 1 1 hi"), output.toString());
+            assertEquals(3L, control.result());
+            assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
+                    session.completions(frame, "bo", 2));
+        }
+    }
+
+    @Test
     public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
         Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
         Stops stops   = new Stops();
@@ -1802,6 +2208,19 @@ public class SessionDebuggerTest {
         return session.variables(reference).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
 
+    private static List<Variable> page(SessionDebugger session, int reference, Filter filter, int start, int count)
+            throws Exception {
+        return session.variables(reference, false, filter, start, count).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    private static Variable set(SessionDebugger session, int reference, String name, String expression) throws Exception {
+        return session.setVariable(reference, name, expression, false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    private static Completions complete(SessionDebugger session, int frame, String text, int offset) throws Exception {
+        return session.completions(frame, text, offset).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
     private static Variable evaluate(SessionDebugger session, int frame, String path) throws Exception {
         return session.evaluate(frame, path).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
     }
@@ -1825,9 +2244,9 @@ public class SessionDebuggerTest {
     }
 
     /**
-     * Assert that the evaluation fails with the specified reason.
+     * Assert that the evaluation, run or read fails with the specified reason.
      */
-    private static void assertFails(String reason, CompletableFuture<Variable> evaluation) {
+    private static void assertFails(String reason, CompletableFuture<?> evaluation) {
         var failure = assertThrows(ExecutionException.class,
                 () -> evaluation.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
         Throwable cause = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
