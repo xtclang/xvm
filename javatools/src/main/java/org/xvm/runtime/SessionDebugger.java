@@ -12,10 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -42,14 +45,17 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.runtime.template.text.xString.StringHandle;
+
 /**
  * A debugger that its host drives through calls rather than a terminal, for hosts such as an IDE's
  * debug adapter. The host makes the program's modules known ({@link #addModule}), sets breakpoints
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
  * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables}), and
- * resumes it ({@link #resume}) or steps one of its fibers ({@link #step}). It debugs the runtime it
- * is set on with {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
+ * resumes it ({@link #resume}), steps one of its fibers ({@link #step}) or pauses it
+ * ({@link #pause}, {@link #stopOnEntry}). It debugs the runtime it is set on with
+ * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
  *
  * <p>A stop holds the whole runtime: the fiber that stops waits on its interpreter thread, and so
  * does every other fiber that reaches a line while the program is stopped. Each takes a snapshot
@@ -62,6 +68,18 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * calls or is called by; out of one, once its frame returns. A frame that returns, or that an
  * exception leaves, during a step over continues it as a step into, so it stops at its caller's
  * next line. Any other stop, such as a breakpoint, ends the step.
+ *
+ * <p>A pause stops the program at the next line any of its fibers reaches, with the reason "pause",
+ * or, asked for before the program starts, at its first line, with the reason "entry": the first
+ * line of a module the host made known, not of the libraries that run before it, or of any code if
+ * none is known. A program whose fibers all wait, for input or for each other, stops when one of
+ * them next runs.
+ *
+ * <p>A thrown exception stops the program, with the reason "exception", at the frame that throws
+ * it, when the host asks for every thrown exception, or for those that no frame will catch: no
+ * frame of the throwing fiber, nor of the fibers that called it, has a "catch" for it then. The
+ * exception is that frame's first variable, {@link #EXCEPTION}, while the program is stopped
+ * there; it stops the program once, not again as it leaves each frame.
  *
  * <p>Variables are read on the interpreter thread of the waiting fiber whose frame holds them,
  * which reads them while it waits, so a read never races the program; {@link #variables} answers
@@ -79,15 +97,137 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * the program is stopped for good ({@link #terminate}), its waiting fibers end without running
  * more of it, and so does any fiber that reaches a line afterwards.
  */
-public final class SessionDebugger
-        implements Debugger {
+public final class SessionDebugger implements Debugger {
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The name of a frame's scope of local variables.
+     */
+    public static final String LOCALS = "Locals";
+
+    /**
+     * The name of the variable that holds the exception a frame is throwing.
+     */
+    public static final String EXCEPTION = "<exception>";
+
+    /**
+     * The value of a variable that has not been assigned.
+     */
+    public static final String UNASSIGNED = "<unassigned>";
+
+    /**
+     * The most elements of an array that {@link #variables} reads; a last entry says how many more
+     * there are.
+     */
+    public static final int MAX_ELEMENTS = 100;
+
+    /**
+     * The message of a breakpoint in a file that none of the program's known modules came from.
+     */
+    public static final String NOT_IN_PROGRAM = "No code of the program was compiled from this file.";
+
+    /**
+     * The message of a breakpoint on a line that has no code and is followed by none in its
+     * method.
+     */
+    public static final String NO_CODE = "There is no code on this line.";
+
+    /**
+     * The longest value text {@link #variables} returns; longer text is cut off.
+     */
+    private static final int MAX_TEXT = 1000;
+
+    private static final Integer[] NO_BREAKS = new Integer[0];
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The host's listener.
+     */
+    private final Listener listener;
+
+    /**
+     * The names of the known modules.
+     */
+    private final Set<String> moduleNames = ConcurrentHashMap.newKeySet();
+
+    /**
+     * The methods compiled from each source file, by real path, from the known modules; guarded
+     * by this debugger's monitor.
+     */
+    private final Map<String, List<MethodLines>> methodsByFile = new HashMap<>();
+
+    /**
+     * The real paths of the files looked up, by path.
+     */
+    private final Map<String, String> realPaths = new ConcurrentHashMap<>();
+
+    /**
+     * The last frame ID or variables reference handed out: they share one count, so none is ever
+     * reused.
+     */
+    private final AtomicInteger handles = new AtomicInteger();
+
+    /**
+     * The installed breakpoints, replaced as a whole when they change.
+     */
+    private volatile Installed installed = new Installed(Map.of());
+
+    /**
+     * The thrown exceptions that stop the program.
+     */
+    private volatile ExceptionStops exceptionStops = ExceptionStops.NONE;
+
+    /**
+     * The program's stop while it is stopped, or null while it runs.
+     */
+    private volatile Halt halt;
+
+    /**
+     * The step that runs, or null.
+     */
+    private volatile Stepping stepping;
+
+    /**
+     * The pause that is pending, or null.
+     */
+    private volatile Pause pendingPause;
+
+    /**
+     * The last exception the program stopped at, which does not stop it again as it unwinds.
+     */
+    private volatile ExceptionHandle stoppedException;
+
+    /**
+     * The runtime this debugger is attached to, or null.
+     */
+    private volatile Runtime runtime;
+
+    /**
+     * The container of the host's own code, which this debugger leaves alone, or null.
+     */
+    private volatile Container hostContainer;
+
+    /**
+     * True once another debugger has replaced this one.
+     */
+    private volatile boolean detached;
+
+    /**
+     * True once the program is being stopped: its fibers end at their next line.
+     */
+    private volatile boolean terminating;
+
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a debugger that reports to the specified listener.
      *
      * @param listener  the host's listener
      */
     public SessionDebugger(Listener listener) {
-        f_listener = Objects.requireNonNull(listener);
+        this.listener = Objects.requireNonNull(listener);
     }
 
     // ----- host API ------------------------------------------------------------------------------
@@ -169,38 +309,12 @@ public final class SessionDebugger
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint" or "step"), what stopped it in
-     * words, the fiber that stopped, and the IDs of the breakpoints it stopped at.
+     * Why and where the program stopped: the reason ("breakpoint", "step", "exception", "pause" or
+     * "entry"), what stopped it in words (an exception's type and text), the fiber that stopped,
+     * and the IDs of the breakpoints it stopped at.
      */
     public record Stop(String reason, String description, int threadId, List<Integer> breakpointIds) {
     }
-
-    /**
-     * The name of a frame's scope of local variables.
-     */
-    public static final String LOCALS = "Locals";
-
-    /**
-     * The value of a variable that has not been assigned.
-     */
-    public static final String UNASSIGNED = "<unassigned>";
-
-    /**
-     * The most elements of an array that {@link #variables} reads; a last entry says how many more
-     * there are.
-     */
-    public static final int MAX_ELEMENTS = 100;
-
-    /**
-     * The message of a breakpoint in a file that none of the program's known modules came from.
-     */
-    public static final String NOT_IN_PROGRAM = "No code of the program was compiled from this file.";
-
-    /**
-     * The message of a breakpoint on a line that has no code and is followed by none in its
-     * method.
-     */
-    public static final String NO_CODE = "There is no code on this line.";
 
     /**
      * Make the code of a module known, so that breakpoints in its source files can be verified.
@@ -209,6 +323,7 @@ public final class SessionDebugger
      * @param module  a module of the program
      */
     public synchronized void addModule(ModuleStructure module) {
+        moduleNames.add(module.getName());
         index(module);
     }
 
@@ -216,44 +331,53 @@ public final class SessionDebugger
      * Replace the breakpoints of one source file. A line without code of its own is moved to the
      * next line with code in the same method.
      *
-     * @param sPath      the source file
-     * @param listLines  the breakpoints of that file; none removes them all
+     * @param path   the source file
+     * @param lines  the breakpoints of that file; none removes them all
      *
      * @return each breakpoint as installed, in the order requested
      */
-    public synchronized List<Breakpoint> setBreakpoints(String sPath, List<Line> listLines) {
-        String                sKey        = canonical(sPath);
-        List<MethodLines>     listMethods = f_mapSources.get(sKey);
-        Map<Integer, Integer> mapLines    = new HashMap<>();
-        List<Breakpoint>      listResult  = new ArrayList<>(listLines.size());
-        for (Line line : listLines) {
-            int nLine = listMethods == null ? -1 : breakableLine(listMethods, line.line());
-            if (nLine < 0) {
-                listResult.add(new Breakpoint(line.id(), line.line(), false,
-                        listMethods == null ? NOT_IN_PROGRAM : NO_CODE));
+    public synchronized List<Breakpoint> setBreakpoints(String path, List<Line> lines) {
+        String            file      = canonical(path);
+        List<MethodLines> methods   = methodsByFile.get(file);
+        var               idsByLine = new HashMap<Integer, Integer>();
+        var               result    = new ArrayList<Breakpoint>(lines.size());
+        for (Line request : lines) {
+            int line = methods == null ? -1 : breakableLine(methods, request.line());
+            if (line < 0) {
+                result.add(new Breakpoint(request.id(), request.line(), false, methods == null ? NOT_IN_PROGRAM : NO_CODE));
             } else {
-                mapLines.putIfAbsent(nLine, line.id());
-                listResult.add(new Breakpoint(line.id(), nLine, true, null));
+                idsByLine.putIfAbsent(line, request.id());
+                result.add(new Breakpoint(request.id(), line, true, null));
             }
         }
 
-        Map<String, Map<Integer, Integer>> mapBreaks = new HashMap<>(m_mapBreaks);
-        if (mapLines.isEmpty()) {
-            mapBreaks.remove(sKey);
+        var idsByFile = new HashMap<>(installed.idsByFile());
+        if (idsByLine.isEmpty()) {
+            idsByFile.remove(file);
         } else {
-            mapBreaks.put(sKey, Map.copyOf(mapLines));
+            idsByFile.put(file, Map.copyOf(idsByLine));
         }
-        m_mapBreaks = Map.copyOf(mapBreaks);
-        m_mapCache  = new ConcurrentHashMap<>();
+        installed = new Installed(Map.copyOf(idsByFile));
         updateActive();
-        return listResult;
+        return result;
+    }
+
+    /**
+     * Choose which thrown exceptions stop the program, at the frame that throws them.
+     *
+     * @param all       true to stop at every thrown exception
+     * @param uncaught  true to stop at the exceptions that no frame will catch
+     */
+    public synchronized void setExceptionStops(boolean all, boolean uncaught) {
+        exceptionStops = new ExceptionStops(all, uncaught);
+        updateActive();
     }
 
     /**
      * @return true while the program is stopped
      */
     public boolean isStopped() {
-        return m_fStopped;
+        return halt != null;
     }
 
     /**
@@ -261,33 +385,38 @@ public final class SessionDebugger
      *         that reached a line since; none while the program runs
      */
     public synchronized List<ThreadInfo> threads() {
-        List<ThreadInfo> list = new ArrayList<>(f_mapStacks.size());
-        f_mapStacks.forEach((nThread, snapshot) -> list.add(new ThreadInfo(nThread, snapshot.name())));
-        return list;
+        Halt current = halt;
+        if (current == null) {
+            return List.of();
+        }
+        return current.stacks.entrySet().stream().map(entry -> new ThreadInfo(entry.getKey(), entry.getValue().name())).toList();
     }
 
     /**
-     * @param nThread  the ID of a fiber that {@link #threads} returned
+     * @param threadId  the ID of a fiber that {@link #threads} returned
      *
      * @return the fiber's stack, innermost frame first; empty if the fiber is not waiting
      */
-    public synchronized List<StackFrameInfo> stackTrace(int nThread) {
-        Snapshot snapshot = f_mapStacks.get(nThread);
+    public synchronized List<StackFrameInfo> stackTrace(int threadId) {
+        Snapshot snapshot = snapshotOf(threadId);
         return snapshot == null ? List.of() : snapshot.frames();
     }
 
     /**
-     * @param nFrame  the ID of a frame that {@link #stackTrace} returned
+     * @param frameId  the ID of a frame that {@link #stackTrace} returned
      *
      * @return the frame's scopes, which are its local variables; none if the frame is not one of
      *         this stop's, or its fiber called it from another fiber's frame
      */
-    public synchronized List<Scope> scopes(int nFrame) {
-        FrameAt at = f_mapFrames.get(nFrame);
-        return at == null
-                ? List.of()
-                : List.of(new Scope(LOCALS, f_mapLocals.computeIfAbsent(nFrame,
-                        _ -> reference(new Target(at.thread(), at.frame(), null)))));
+    public synchronized List<Scope> scopes(int frameId) {
+        Halt    current = halt;
+        FrameAt at      = current == null ? null : current.frames.get(frameId);
+        if (at == null) {
+            return List.of();
+        }
+        var target    = new Locals(at.thread(), at.frame());
+        int reference = current.localsReferences.computeIfAbsent(frameId, _ -> reference(current, target));
+        return List.of(new Scope(LOCALS, reference));
     }
 
     /**
@@ -295,24 +424,24 @@ public final class SessionDebugger
      * holds them reads them on its own thread; the listener may ask from there too. The answer
      * comes on another thread, never while this debugger holds its lock.
      *
-     * @param nReference  a reference that {@link #scopes} or an earlier read returned
+     * @param reference  a reference that {@link #scopes} or an earlier read returned
      *
      * @return the variables, in order: a frame's {@code this} and its named registers, a value's
      *         fields, or an array's elements; none if the reference is not one of this stop's, or
      *         the program resumes first. Fails if a value cannot be read.
      */
-    public CompletableFuture<List<Variable>> variables(int nReference) {
-        CompletableFuture<List<Variable>> future = new CompletableFuture<>();
+    public CompletableFuture<List<Variable>> variables(int reference) {
+        var future = new CompletableFuture<List<Variable>>();
         synchronized (this) {
-            Target   target   = f_mapTargets.get(nReference);
-            Snapshot snapshot = target == null ? null : f_mapStacks.get(target.thread());
+            Halt     current  = halt;
+            Target   target   = current == null ? null : current.targets.get(reference);
+            Snapshot snapshot = target == null ? null : current.stacks.get(target.thread());
             if (snapshot == null) {
                 future.complete(List.of());
             } else if (snapshot.thread() == Thread.currentThread()) {
-                read(snapshot.frame(), target, future);
+                read(current, snapshot.frame(), target, future);
             } else {
-                f_mapReads.computeIfAbsent(target.thread(), _ -> new ArrayList<>())
-                        .add(new Read(target, future));
+                current.reads.computeIfAbsent(target.thread(), _ -> new ArrayList<>()).add(new Read(target, future));
                 notifyAll();
             }
         }
@@ -323,22 +452,42 @@ public final class SessionDebugger
      * Resume the stopped program, stepping the specified fiber: the program stops again, with the
      * reason "step", at the line where the step ends.
      *
-     * @param nThread  the ID of a fiber that {@link #threads} returned
-     * @param step     how to step it
+     * @param threadId  the ID of a fiber that {@link #threads} returned
+     * @param step      how to step it
      *
      * @return false if the program runs, or the fiber does not wait; then nothing changes
      */
-    public synchronized boolean step(int nThread, Step step) {
-        Snapshot snapshot = m_fStopped ? f_mapStacks.get(nThread) : null;
+    public synchronized boolean step(int threadId, Step step) {
+        Snapshot snapshot = snapshotOf(threadId);
         if (snapshot == null) {
             return false;
         }
 
         // set first, so lines stay checked as the fibers resume
         Frame frame = snapshot.frame();
-        m_stepping = new Stepping(Objects.requireNonNull(step), frame, frame.f_fiber);
+        stepping = new Stepping(Objects.requireNonNull(step), frame, frame.f_fiber);
         release();
         return true;
+    }
+
+    /**
+     * Stop the program at the next line any of its fibers reaches, with the reason "pause"; does
+     * nothing while it is stopped.
+     */
+    public synchronized void pause() {
+        if (halt == null) {
+            pendingPause = new Pause("pause", false);
+            updateActive();
+        }
+    }
+
+    /**
+     * Stop the program at its first line, with the reason "entry"; called before it starts, and
+     * after the program's modules are made known.
+     */
+    public synchronized void stopOnEntry() {
+        pendingPause = new Pause("entry", true);
+        updateActive();
     }
 
     /**
@@ -348,52 +497,35 @@ public final class SessionDebugger
         release();
     }
 
-    /**
-     * Let the stopped program run on: the waiting fibers resume, and what they held is discarded.
-     */
-    private void release() {
-        if (m_fStopped) {
-            m_fStopped = false;
-            ++m_cGeneration;
-            f_mapStacks.clear();
-            f_mapFrames.clear();
-            f_mapLocals.clear();
-            f_mapTargets.clear();
-            f_mapReads.values().forEach(SessionDebugger::abandon);
-            f_mapReads.clear();
-            updateActive();
-            notifyAll();
-        }
-    }
-
     // ----- Debugger interface --------------------------------------------------------------------
 
     @Override
     public synchronized void attach(Runtime runtime) {
-        m_runtime = runtime;
+        this.runtime = runtime;
         updateActive();
     }
 
     @Override
     public void setHost(Container container) {
-        m_containerHost = container;
+        hostContainer = container;
     }
 
     @Override
     public synchronized void terminate() {
-        m_fTerminating = true;
-        m_stepping     = null;
-        resume();
+        terminating  = true;
+        stepping     = null;
+        pendingPause = null;
+        release();
     }
 
     @Override
     public synchronized void detach() {
-        m_fDetached = true;
-        m_mapBreaks = Map.of();
-        m_mapCache  = new ConcurrentHashMap<>();
-        m_stepping  = null;
-        resume();
-        m_runtime = null;
+        detached     = true;
+        installed    = new Installed(Map.of());
+        stepping     = null;
+        pendingPause = null;
+        release();
+        runtime = null;
     }
 
     @Override
@@ -402,38 +534,41 @@ public final class SessionDebugger
     }
 
     @Override
-    public int activate(Frame frame, int iPC) {
+    public int activate(Frame frame, int pc) {
         if (isHost(frame)) {
-            return iPC + 1;
+            return pc + 1;
         }
 
         // assert:debug stops the program as a breakpoint does
         stop(frame, "breakpoint", "assert:debug", List.of(), null);
-        return m_fTerminating ? end(frame) : iPC + 1;
+        return terminating ? end(frame) : pc + 1;
     }
 
     @Override
-    public int checkBreakPoint(Frame frame, int iPC) {
+    public int checkBreakPoint(Frame frame, int pc) {
         if (isHost(frame)) {
-            return iPC + 1;
+            return pc + 1;
         }
 
-        if (m_fStopped) {
+        if (halt != null) {
             park(frame);
         }
-        if (m_fTerminating) {
+        if (terminating) {
             return end(frame);
         }
 
-        // a breakpoint on the line where a step ends is reported as the breakpoint
-        Integer[] anBreak  = breaksOf(frame);
-        Stepping  stepping = m_stepping;
-        if (iPC < anBreak.length && anBreak[iPC] != null) {
-            stop(frame, "breakpoint", null, List.of(anBreak[iPC]), null);
-        } else if (stepping != null && stepping.endsAt(frame) && startsLine(frame, iPC)) {
-            stop(frame, "step", null, List.of(), stepping);
+        // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint
+        Integer[] breaks = breaksOf(frame);
+        Stepping  step   = stepping;
+        Pause     pause  = pendingPause;
+        if (pc < breaks.length && breaks[pc] != null) {
+            stop(frame, "breakpoint", null, List.of(breaks[pc]), null);
+        } else if (step != null && step.endsAt(frame) && startsLine(frame, pc)) {
+            stop(frame, "step", null, List.of(), step);
+        } else if (pause != null && startsLine(frame, pc) && (!pause.program() || isProgram(frame))) {
+            stop(frame, pause.reason(), null, List.of(), pause);
         }
-        return m_fTerminating ? end(frame) : iPC + 1;
+        return terminating ? end(frame) : pc + 1;
     }
 
     @Override
@@ -442,10 +577,18 @@ public final class SessionDebugger
     }
 
     @Override
-    public int checkBreakPoint(Frame frame, ExceptionHandle hEx) {
-        // exceptions are not stopped at; unwind this one without asking again
+    public int checkBreakPoint(Frame frame, ExceptionHandle exception) {
         leave(frame);
-        return Op.R_EXCEPTION;
+
+        // an exception stops the program once, at the first frame of the program that throws it
+        if (exception != stoppedException && !frame.isNative() && !isHost(frame) && stopsAt(exception, frame)) {
+            stoppedException = exception;
+            stop(frame, "exception", describe(exception), List.of(), null);
+        }
+
+        // asked again at each frame the exception leaves, so a step learns that its frame is left;
+        // a fiber that is ending meanwhile ends at its next line
+        return Op.R_NEXT;
     }
 
     // ----- stopping ------------------------------------------------------------------------------
@@ -454,8 +597,8 @@ public final class SessionDebugger
      * @return true if the frame runs the host's own code, which this debugger leaves alone
      */
     private boolean isHost(Frame frame) {
-        Container containerHost = m_containerHost;
-        return containerHost != null && frame.f_context.f_container == containerHost;
+        Container host = hostContainer;
+        return host != null && frame.f_context.f_container == host;
     }
 
     /**
@@ -473,66 +616,103 @@ public final class SessionDebugger
      * one.
      */
     private void leave(Frame frame) {
-        Stepping stepping = m_stepping;
-        if (stepping != null && stepping.frame() == frame && stepping.step() != Step.IN) {
-            m_stepping = new Stepping(Step.IN, frame, frame.f_fiber);
+        Stepping step = stepping;
+        if (step != null && step.frame() == frame && step.step() != Step.IN) {
+            stepping = new Stepping(Step.IN, frame, frame.f_fiber);
         }
+    }
+
+    /**
+     * @return true if the exception stops the program as thrown at the specified frame
+     */
+    private boolean stopsAt(ExceptionHandle exception, Frame frame) {
+        ExceptionStops stops = exceptionStops;
+        return stops.all() || stops.uncaught() && !isCaught(frame, exception);
+    }
+
+    /**
+     * @return true if a frame of the fiber at the specified frame, or of a fiber that called it,
+     *         will catch the exception
+     */
+    private static boolean isCaught(Frame frame, ExceptionHandle exception) {
+        for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
+            Frame caller = stackFrame.frame;
+            if (caller != null && !caller.isNative() && caller.catches(exception)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return the exception's type and its text, if it has one
+     */
+    private static String describe(ExceptionHandle exception) {
+        String       type = exception.getType().getValueString();
+        ObjectHandle text = exception.getField(null, "text");
+        return text instanceof StringHandle string ? type + ": " + string.getStringValue() : type;
+    }
+
+    /**
+     * @return true if the frame runs code of a module the host made known, or if none is known
+     */
+    private boolean isProgram(Frame frame) {
+        ClassStructure clazz = frame.getContainingClass();
+        return moduleNames.isEmpty() || clazz != null && moduleNames.contains(clazz.getFileStructure().getModule().getName());
     }
 
     /**
      * @return true if the op at the specified index starts a line, as a step ends at
      */
-    private static boolean startsLine(Frame frame, int iPC) {
-        Op[] aOp = frame.f_aOp;
-        return aOp != null && iPC < aOp.length
-                && aOp[iPC] instanceof Nop nop && nop.getLineCount() != 0;
+    private static boolean startsLine(Frame frame, int pc) {
+        Op[] ops = frame.getOps();
+        return ops != null && pc < ops.length && ops[pc] instanceof Nop nop && nop.getLineCount() != 0;
     }
 
     /**
      * Stop the program at the specified frame, tell the listener, and wait until the host resumes
-     * it. If the program is already stopped, wait for that stop to end first; a step's stop is then
-     * not made, unless the step still runs.
+     * it. If the program is already stopped, wait for that stop to end first; the stop a step or a
+     * pause asked for is then not made, unless that step or pause is still pending.
      *
-     * @param stepping  the step that ends here, or null for any other stop
+     * @param request  the step or pause that ends here, or null for any other stop
      */
-    private void stop(Frame frame, String sReason, String sDescription, List<Integer> listIds,
-                      Stepping stepping) {
+    private void stop(Frame frame, String reason, String description, List<Integer> breakpointIds, Object request) {
         Stop stop;
-        long cGeneration;
+        Halt current;
         synchronized (this) {
             // another fiber's stop comes first; this one waits for it like any other fiber
-            while (m_fStopped && !m_fDetached) {
-                f_mapStacks.computeIfAbsent(threadId(frame.f_fiber), _ -> snapshot(frame));
-                if (!waitWhileStopped(frame, m_cGeneration)) {
+            for (Halt other = halt; other != null && !detached; other = halt) {
+                waitAt(other, frame);
+                if (!waitWhile(other, frame)) {
                     return;
                 }
             }
-            if (m_fDetached || m_fTerminating || stepping != null && m_stepping != stepping) {
+            if (detached || terminating || request != null && request != stepping && request != pendingPause) {
                 return;
             }
 
-            // any stop ends the step
-            m_stepping  = null;
-            m_fStopped  = true;
-            cGeneration = ++m_cGeneration;
-            f_mapStacks.clear();
-            int nThread = threadId(frame.f_fiber);
-            f_mapStacks.put(nThread, snapshot(frame));
+            // any stop ends the step and the pause
+            stepping     = null;
+            pendingPause = null;
+            current      = new Halt();
+            halt         = current;
+            int threadId = threadId(frame.f_fiber);
+            current.stacks.put(threadId, snapshot(current, frame));
             updateActive();
-            stop = new Stop(sReason, sDescription, nThread, listIds);
+            stop = new Stop(reason, description, threadId, breakpointIds);
         }
 
         // the program's clocks stand still while it is stopped
-        Container containerNative = frame.f_context.f_container.getNativeContainer();
-        boolean   fUnfreeze       = containerNative.freezeTime();
+        Container nativeContainer = frame.f_context.f_container.getNativeContainer();
+        boolean   unfreeze        = nativeContainer.freezeTime();
         try {
-            f_listener.stopped(stop);
+            listener.stopped(stop);
             synchronized (this) {
-                waitWhileStopped(frame, cGeneration);
+                waitWhile(current, frame);
             }
         } finally {
-            if (fUnfreeze) {
-                containerNative.unfreezeTime();
+            if (unfreeze) {
+                nativeContainer.unfreezeTime();
             }
         }
     }
@@ -541,26 +721,33 @@ public final class SessionDebugger
      * Wait at a line while the program is stopped, as one of its fibers.
      */
     private synchronized void park(Frame frame) {
-        if (m_fStopped) {
-            f_mapStacks.computeIfAbsent(threadId(frame.f_fiber), _ -> snapshot(frame));
-            waitWhileStopped(frame, m_cGeneration);
+        Halt current = halt;
+        if (current != null) {
+            waitAt(current, frame);
+            waitWhile(current, frame);
         }
+    }
+
+    /**
+     * Take part in the specified stop as a fiber that waits at the specified frame. Called while
+     * holding this debugger's monitor.
+     */
+    private void waitAt(Halt current, Frame frame) {
+        current.stacks.computeIfAbsent(threadId(frame.f_fiber), _ -> snapshot(current, frame));
     }
 
     /**
      * Wait until the specified stop ends, reading the variables the host asks for meanwhile. Called
      * while holding this debugger's monitor.
      *
-     * @param cGeneration  the stop's generation
-     *
      * @return false if the thread was interrupted, which lets it run on
      */
-    private boolean waitWhileStopped(Frame frame, long cGeneration) {
-        int nThread = threadId(frame.f_fiber);
-        while (m_fStopped && m_cGeneration == cGeneration) {
-            List<Read> listReads = f_mapReads.remove(nThread);
-            if (listReads != null) {
-                listReads.forEach(read -> read(frame, read.target(), read.future()));
+    private boolean waitWhile(Halt current, Frame frame) {
+        int threadId = threadId(frame.f_fiber);
+        while (halt == current) {
+            List<Read> reads = current.reads.remove(threadId);
+            if (reads != null) {
+                reads.forEach(read -> read(current, frame, read.target(), read.future()));
                 continue;
             }
 
@@ -568,8 +755,8 @@ public final class SessionDebugger
                 wait();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                f_mapStacks.remove(nThread);
-                abandon(f_mapReads.remove(nThread));
+                current.stacks.remove(threadId);
+                abandon(current.reads.remove(threadId));
                 return false;
             }
         }
@@ -577,13 +764,38 @@ public final class SessionDebugger
     }
 
     /**
-     * Turn the runtime's "debugger is active" flag on while there are breakpoints, the program is
-     * stopped or a fiber steps, so that every line is checked; otherwise lines run at full speed.
+     * Let the stopped program run on: the waiting fibers resume, and what they held is discarded.
+     * Called while holding this debugger's monitor.
+     */
+    private void release() {
+        Halt current = halt;
+        if (current != null) {
+            halt = null;
+            current.reads.values().forEach(SessionDebugger::abandon);
+            updateActive();
+            notifyAll();
+        }
+    }
+
+    /**
+     * @return the snapshot of the specified fiber, if the program is stopped and the fiber waits
+     */
+    private Snapshot snapshotOf(int threadId) {
+        Halt current = halt;
+        return current == null ? null : current.stacks.get(threadId);
+    }
+
+    /**
+     * Turn the runtime's "debugger is active" flag on while there are breakpoints or exception
+     * stops, the program is stopped, a fiber steps or a pause is pending, so that every line and
+     * thrown exception is checked; otherwise lines run at full speed.
      */
     private void updateActive() {
-        Runtime runtime = m_runtime;
-        if (runtime != null) {
-            runtime.setDebuggerActive(m_fStopped || m_stepping != null || !m_mapBreaks.isEmpty());
+        Runtime attached = runtime;
+        if (attached != null) {
+            boolean stopping = halt != null || stepping != null || pendingPause != null;
+            boolean watching = !installed.idsByFile().isEmpty() || exceptionStops.any();
+            attached.setDebuggerActive(stopping || watching);
         }
     }
 
@@ -591,25 +803,23 @@ public final class SessionDebugger
      * Take a snapshot of the stack of the fiber at the specified frame, on its own thread, and
      * remember the frames of that fiber, whose variables it reads while it waits.
      */
-    private Snapshot snapshot(Frame frame) {
-        int                  nThread    = threadId(frame.f_fiber);
-        List<StackFrameInfo> listFrames = new ArrayList<>();
+    private Snapshot snapshot(Halt current, Frame frame) {
+        int threadId = threadId(frame.f_fiber);
+        var stack    = new ArrayList<StackFrameInfo>();
         for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
             MethodStructure function = stackFrame.function;
             if (function == null || stackFrame.frame != null && stackFrame.frame.isNative()) {
                 continue;
             }
 
-            int nFrame = ++m_nLastFrame;
-            int nLine  = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
-            listFrames.add(new StackFrameInfo(nFrame, functionName(function),
-                    sourcePath(function), nLine));
+            int frameId = handles.incrementAndGet();
+            int line    = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
+            stack.add(new StackFrameInfo(frameId, functionName(function), sourcePath(function), line));
             if (stackFrame.frame != null && stackFrame.frame.f_fiber == frame.f_fiber) {
-                f_mapFrames.put(nFrame, new FrameAt(nThread, stackFrame.frame));
+                current.frames.put(frameId, new FrameAt(threadId, stackFrame.frame));
             }
         }
-        return new Snapshot(frame.f_context.f_sName, List.copyOf(listFrames),
-                Thread.currentThread(), frame);
+        return new Snapshot(frame.f_context.f_sName, List.copyOf(stack), Thread.currentThread(), frame);
     }
 
     private static int threadId(Fiber fiber) {
@@ -617,11 +827,12 @@ public final class SessionDebugger
     }
 
     private static String functionName(MethodStructure function) {
-        ClassStructure clz   = function.getContainingClass();
-        String         sName = clz instanceof ModuleStructure module ? module.getSimpleName()
-                             : clz == null                           ? null
-                                                                     : clz.getName();
-        return sName == null ? function.getName() : sName + '.' + function.getName();
+        String className = switch (function.getContainingClass()) {
+            case null                   -> null;
+            case ModuleStructure module -> module.getSimpleName();
+            case ClassStructure clazz   -> clazz.getName();
+        };
+        return className == null ? function.getName() : className + '.' + function.getName();
     }
 
     // ----- variables -----------------------------------------------------------------------------
@@ -632,12 +843,13 @@ public final class SessionDebugger
      * host's actions on the answer must not run while this debugger's monitor is held. Called
      * while holding this debugger's monitor.
      */
-    private void read(Frame frame, Target target, CompletableFuture<List<Variable>> future) {
-        List<Variable> listVars;
+    private void read(Halt current, Frame frame, Target target, CompletableFuture<List<Variable>> future) {
+        List<Variable> vars;
         try {
-            listVars = target.value() == null
-                    ? locals(frame, target.frame())
-                    : children(frame, target.value());
+            vars = switch (target) {
+                case Locals(int _, Frame scope)          -> locals(current, frame, scope);
+                case Children(int _, ObjectHandle value) -> children(current, frame, value);
+            };
         } catch (RuntimeException e) {
             // a value the debugger cannot read fails the read, not the program
             future.completeAsync(() -> {
@@ -645,95 +857,113 @@ public final class SessionDebugger
             });
             return;
         }
-        future.completeAsync(() -> listVars);
+        future.completeAsync(() -> vars);
     }
 
     /**
-     * @return the frame's {@code this} and its named registers in scope
+     * @return the exception the frame is throwing, if any, then its {@code this} and its named
+     *         registers in scope
      */
-    private List<Variable> locals(Frame frameWait, Frame frame) {
-        List<Variable> listVars = new ArrayList<>();
-        ObjectHandle   hThis    = frame.f_hThis;
-        if (hThis != null) {
-            listVars.add(variable(frameWait, "this", hThis));
+    private List<Variable> locals(Halt current, Frame waitingFrame, Frame frame) {
+        var             vars      = new ArrayList<Variable>();
+        ExceptionHandle exception = frame.m_hException;
+        if (exception != null) {
+            vars.add(variable(current, waitingFrame, EXCEPTION, exception));
         }
 
-        for (int i = 0, c = frame.getCurrentVarCount(); i < c; i++) {
-            VarInfo info  = frame.getVarInfo(i);
-            String  sName = info == null ? "" : info.getName();
-            if (!sName.isEmpty()) {
-                listVars.add(variable(frameWait, sName, frame.f_ahVar[i]));
+        ObjectHandle self = frame.f_hThis;
+        if (self != null) {
+            vars.add(variable(current, waitingFrame, "this", self));
+        }
+
+        for (int i = 0, count = frame.getCurrentVarCount(); i < count; i++) {
+            VarInfo info = frame.getVarInfo(i);
+            String  name = info == null ? "" : info.getName();
+            if (!name.isEmpty()) {
+                vars.add(variable(current, waitingFrame, name, frame.f_ahVar[i]));
             }
         }
-        return listVars;
+        return vars;
     }
 
     /**
-     * @return an array's elements, at most {@link #MAX_ELEMENTS} of them, or an object's fields
+     * @return an array's elements, or an object's fields
      */
-    private List<Variable> children(Frame frameWait, ObjectHandle hValue) {
-        List<Variable> listVars = new ArrayList<>();
-        if (hValue instanceof ArrayHandle hArray) {
-            long   cSize    = hArray.m_hDelegate.m_cSize;
-            xArray template = (xArray) hArray.getTemplate();
-            for (int i = 0, c = (int) Math.min(cSize, MAX_ELEMENTS); i < c; i++) {
-                // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds), which
-                // must not stay on the waiting frame
-                ExceptionHandle hExPrev = frameWait.m_hException;
-                if (template.extractArrayValue(frameWait, hArray, i, Op.A_STACK) != Op.R_NEXT) {
-                    frameWait.m_hException = hExPrev;
-                    break;
-                }
-                listVars.add(variable(frameWait, "[" + i + "]", frameWait.popStack()));
+    private List<Variable> children(Halt current, Frame waitingFrame, ObjectHandle value) {
+        return switch (value) {
+            case ArrayHandle array    -> elements(current, waitingFrame, array);
+            case GenericHandle object -> fields(current, waitingFrame, object);
+            default                   -> List.of();
+        };
+    }
+
+    /**
+     * @return the array's elements, at most {@link #MAX_ELEMENTS} of them, then how many more
+     *         there are
+     */
+    private List<Variable> elements(Halt current, Frame waitingFrame, ArrayHandle array) {
+        var  vars     = new ArrayList<Variable>();
+        long size     = array.m_hDelegate.m_cSize;
+        var  template = (xArray) array.getTemplate();
+        for (int i = 0, count = (int) Math.min(size, MAX_ELEMENTS); i < count; i++) {
+            // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds), which must not
+            // stay on the waiting frame
+            ExceptionHandle pending = waitingFrame.m_hException;
+            if (template.extractArrayValue(waitingFrame, array, i, Op.A_STACK) != Op.R_NEXT) {
+                waitingFrame.m_hException = pending;
+                break;
             }
-            if (cSize > MAX_ELEMENTS) {
-                listVars.add(new Variable("...", (cSize - MAX_ELEMENTS) + " more", "", 0));
-            }
-        } else if (hValue instanceof GenericHandle hGeneric) {
-            for (Map.Entry<String, FieldInfo> entry :
-                    DebugConsole.getFieldLayout(hGeneric.getComposition()).entrySet()) {
-                listVars.add(variable(frameWait, entry.getKey(),
-                        hGeneric.getField(entry.getValue().getIndex())));
-            }
+            vars.add(variable(current, waitingFrame, "[" + i + "]", waitingFrame.popStack()));
         }
-        return listVars;
+        if (size > MAX_ELEMENTS) {
+            vars.add(new Variable("...", (size - MAX_ELEMENTS) + " more", "", 0));
+        }
+        return vars;
+    }
+
+    /**
+     * @return the object's fields
+     */
+    private List<Variable> fields(Halt current, Frame waitingFrame, GenericHandle object) {
+        var vars = new ArrayList<Variable>();
+        for (Map.Entry<String, FieldInfo> entry : DebugConsole.getFieldLayout(object.getComposition()).entrySet()) {
+            vars.add(variable(current, waitingFrame, entry.getKey(), object.getField(entry.getValue().getIndex())));
+        }
+        return vars;
     }
 
     /**
      * @return the variable of the specified value, with a reference to its fields or elements if
      *         it has any that the waiting fiber may read
      */
-    private Variable variable(Frame frameWait, String sName, ObjectHandle hValue) {
-        if (hValue instanceof RefHandle hRef) {
-            hValue = hRef.getReferent();
-        }
-        if (hValue == null) {
-            return new Variable(sName, UNASSIGNED, "", 0);
+    private Variable variable(Halt current, Frame waitingFrame, String name, ObjectHandle value) {
+        ObjectHandle shown = value instanceof RefHandle ref ? ref.getReferent() : value;
+        if (shown == null) {
+            return new Variable(name, UNASSIGNED, "", 0);
         }
 
-        int nReference = hasChildren(frameWait, hValue)
-                ? reference(new Target(threadId(frameWait.f_fiber), null, hValue))
-                : 0;
-        return new Variable(sName, valueText(hValue), typeText(hValue), nReference);
+        int thread   = threadId(waitingFrame.f_fiber);
+        int children = hasChildren(waitingFrame, shown) ? reference(current, new Children(thread, shown)) : 0;
+        return new Variable(name, valueText(shown), typeText(shown), children);
     }
 
     /**
      * @return true if the value has fields or elements to show that belong to the waiting fiber's
      *         service or are immutable; another service's state is read only on its own thread
      */
-    private static boolean hasChildren(Frame frameWait, ObjectHandle hValue) {
-        TypeComposition composition = hValue.getComposition();
-        if (composition == null || composition instanceof ProxyComposition
-                || hValue instanceof EnumHandle
-                || hValue instanceof ServiceHandle hService
-                        && hService.f_context != frameWait.f_context) {
+    private static boolean hasChildren(Frame waitingFrame, ObjectHandle value) {
+        TypeComposition composition = value.getComposition();
+        if (composition == null || composition instanceof ProxyComposition) {
             return false;
         }
 
-        return hValue instanceof ArrayHandle hArray
-                ? hArray.m_hDelegate.m_cSize > 0
-                : hValue instanceof GenericHandle
-                        && !DebugConsole.getFieldLayout(composition).isEmpty();
+        return switch (value) {
+            case EnumHandle _ -> false;
+            case ServiceHandle service when service.f_context != waitingFrame.f_context -> false;
+            case ArrayHandle array -> array.m_hDelegate.m_cSize > 0;
+            case GenericHandle _ -> !DebugConsole.getFieldLayout(composition).isEmpty();
+            default -> false;
+        };
     }
 
     /**
@@ -741,53 +971,58 @@ public final class SessionDebugger
      *         arrays, else the runtime's own text of the value without the type it starts with,
      *         or the type alone for an object
      */
-    private static String valueText(ObjectHandle hValue) {
-        if (hValue instanceof ArrayHandle hArray) {
-            TypeConstant typeElement = hArray.getType().resolveGenericType("Element");
-            return (typeElement == null ? "" : typeElement.getValueString())
-                    + '[' + hArray.m_hDelegate.m_cSize + ']';
+    private static String valueText(ObjectHandle value) {
+        if (value instanceof ArrayHandle array) {
+            TypeConstant elementType = array.getType().resolveGenericType("Element");
+            return (elementType == null ? "" : elementType.getValueString()) + '[' + array.m_hDelegate.m_cSize + ']';
         }
 
-        // ObjectHandle.toString() starts with the type in parentheses, followed by a space
-        String sText = hValue.toString();
-        if (sText.startsWith("(")) {
-            for (int i = 0, cDepth = 0, c = sText.length(); i < c; i++) {
-                char ch = sText.charAt(i);
+        String text = withoutType(value.toString());
+        if (text.isEmpty()) {
+            return typeText(value);
+        }
+        return text.length() > MAX_TEXT ? text.substring(0, MAX_TEXT) + "..." : text;
+    }
+
+    /**
+     * @return the text without the type in parentheses, and the space after it, that
+     *         ObjectHandle.toString() starts with
+     */
+    private static String withoutType(String text) {
+        if (text.startsWith("(")) {
+            for (int i = 0, depth = 0, length = text.length(); i < length; i++) {
+                char ch = text.charAt(i);
                 if (ch == '(') {
-                    ++cDepth;
-                } else if (ch == ')' && --cDepth == 0) {
-                    sText = sText.substring(sText.startsWith(" ", i + 1) ? i + 2 : i + 1);
-                    break;
+                    ++depth;
+                } else if (ch == ')' && --depth == 0) {
+                    return text.substring(text.startsWith(" ", i + 1) ? i + 2 : i + 1);
                 }
             }
         }
-        if (sText.isEmpty()) {
-            return typeText(hValue);
-        }
-        return sText.length() > MAX_TEXT ? sText.substring(0, MAX_TEXT) + "..." : sText;
+        return text;
     }
 
-    private static String typeText(ObjectHandle hValue) {
+    private static String typeText(ObjectHandle value) {
         // a deferred value has no composition yet
-        return hValue.getComposition() == null ? "" : hValue.getType().getValueString();
+        return value.getComposition() == null ? "" : value.getType().getValueString();
     }
 
     /**
      * @return a new reference to the specified target, which lasts until the program resumes
      */
-    private int reference(Target target) {
-        int nReference = ++m_nLastReference;
-        f_mapTargets.put(nReference, target);
-        return nReference;
+    private int reference(Halt current, Target target) {
+        int reference = handles.incrementAndGet();
+        current.targets.put(reference, target);
+        return reference;
     }
 
     /**
      * Answer reads that will not be made, because their fiber no longer waits, with no variables,
      * on another thread.
      */
-    private static void abandon(List<Read> listReads) {
-        if (listReads != null) {
-            listReads.forEach(read -> read.future().completeAsync(List::of));
+    private static void abandon(List<Read> reads) {
+        if (reads != null) {
+            reads.forEach(read -> read.future().completeAsync(List::of));
         }
     }
 
@@ -798,69 +1033,63 @@ public final class SessionDebugger
      *         method has none; computed once per method and set of breakpoints
      */
     private Integer[] breaksOf(Frame frame) {
-        Op[]            aOp      = frame.f_aOp;
-        MethodStructure function = frame.f_function;
-        if (aOp == null || function == null) {
+        Op[]            ops      = frame.getOps();
+        MethodStructure function = frame.getFunction();
+        if (ops == null || function == null) {
             return NO_BREAKS;
         }
 
         // the op array identifies the method: structures compare by their identity constants
-        Map<Op[], Integer[]> mapCache = m_mapCache;
-        Integer[]            anBreak  = mapCache.get(aOp);
-        if (anBreak == null) {
-            anBreak = computeBreaks(function, aOp);
-            mapCache.putIfAbsent(aOp, anBreak);
-        }
-        return anBreak;
+        Installed current = installed;
+        return current.idsByOps().computeIfAbsent(ops, _ -> computeBreaks(current, function, ops));
     }
 
-    private Integer[] computeBreaks(MethodStructure function, Op[] aOp) {
-        Map<String, Map<Integer, Integer>> mapBreaks = m_mapBreaks;
-        if (mapBreaks.isEmpty()) {
+    private Integer[] computeBreaks(Installed current, MethodStructure function, Op[] ops) {
+        if (current.idsByFile().isEmpty()) {
             return NO_BREAKS;
         }
 
-        String                sPath    = sourcePath(function);
-        Map<Integer, Integer> mapLines = sPath == null ? null : mapBreaks.get(canonical(sPath));
-        if (mapLines == null) {
+        String                path      = sourcePath(function);
+        Map<Integer, Integer> idsByLine = path == null ? null : current.idsByFile().get(canonical(path));
+        if (idsByLine == null) {
             return NO_BREAKS;
         }
 
         // a line starts at the Nop after which calculateLineNumber() reports it
-        Integer[] anBreak = null;
-        int       nLine   = 1;
-        for (int i = 0, c = aOp.length; i < c; i++) {
-            if (aOp[i].ensureOp() instanceof Nop nop) {
-                nLine += nop.getLineCount();
-                Integer nId = mapLines.get(nLine);
-                if (nId != null) {
-                    if (anBreak == null) {
-                        anBreak = new Integer[c];
+        Integer[] breaks = null;
+        int       line   = 1;
+        for (int i = 0, count = ops.length; i < count; i++) {
+            if (ops[i].ensureOp() instanceof Nop nop) {
+                line += nop.getLineCount();
+                Integer id = idsByLine.get(line);
+                if (id != null) {
+                    if (breaks == null) {
+                        breaks = new Integer[count];
                     }
-                    anBreak[i] = nId;
+                    breaks[i] = id;
                 }
             }
         }
-        return anBreak == null ? NO_BREAKS : anBreak;
+        return breaks == null ? NO_BREAKS : breaks;
     }
 
     // ----- source index --------------------------------------------------------------------------
 
     private void index(Component component) {
         if (component instanceof MethodStructure method && method.getOps() != null) {
-            String sPath = sourcePath(method);
-            if (sPath != null) {
-                NavigableSet<Integer> setLines = new TreeSet<>();
-                int                   nLine    = 1;
+            String path = sourcePath(method);
+            if (path != null) {
+                var codeLines = new TreeSet<Integer>();
+                int line      = 1;
                 for (Op op : method.getOps()) {
                     if (op.ensureOp() instanceof Nop nop) {
-                        nLine += nop.getLineCount();
-                        setLines.add(nLine);
+                        line += nop.getLineCount();
+                        codeLines.add(line);
                     }
                 }
-                int nFirst = method.getSourceLineNumber() + 1;
-                f_mapSources.computeIfAbsent(canonical(sPath), _ -> new ArrayList<>())
-                        .add(new MethodLines(nFirst, nFirst + method.getSourceLineCount() - 1, setLines));
+                int first = method.getSourceLineNumber() + 1;
+                var spans = new MethodLines(first, first + method.getSourceLineCount() - 1, codeLines);
+                methodsByFile.computeIfAbsent(canonical(path), _ -> new ArrayList<>()).add(spans);
             }
         }
 
@@ -874,58 +1103,92 @@ public final class SessionDebugger
      *         code starts on it, else the next line where code starts in a method that spans it,
      *         or -1
      */
-    private static int breakableLine(List<MethodLines> listMethods, int nLine) {
-        int nBest = -1;
-        for (MethodLines method : listMethods) {
-            if (method.lines().contains(nLine)) {
-                return nLine;
+    private static int breakableLine(List<MethodLines> methods, int line) {
+        int best = -1;
+        for (MethodLines method : methods) {
+            if (method.lines().contains(line)) {
+                return line;
             }
-            if (method.first() <= nLine && nLine <= method.last()) {
-                Integer nNext = method.lines().ceiling(nLine);
-                if (nNext != null && (nBest < 0 || nNext < nBest)) {
-                    nBest = nNext;
+            if (method.first() <= line && line <= method.last()) {
+                Integer next = method.lines().ceiling(line);
+                if (next != null && (best < 0 || next < best)) {
+                    best = next;
                 }
             }
         }
-        return nBest;
+        return best;
     }
 
     /**
      * @return the source file of the method, as the compiler recorded it, or null
      */
     private static String sourcePath(MethodStructure function) {
-        ClassStructure clz = function.getContainingClass();
-        if (clz == null) {
+        ClassStructure clazz = function.getContainingClass();
+        if (clazz == null) {
             return null;
         }
 
-        LiteralConstant constPath = clz.getSourcePath();
-        LiteralConstant constDir  = clz.getFileStructure().getModule().getSourceDir();
-        return constPath == null || constDir == null
-                ? null
-                : constDir.getValue() + constPath.getValue();
+        LiteralConstant path = clazz.getSourcePath();
+        LiteralConstant dir  = clazz.getFileStructure().getModule().getSourceDir();
+        return path == null || dir == null ? null : dir.getValue() + path.getValue();
     }
 
     /**
      * @return the real path of the specified file, or its normalized absolute path if it does not
      *         exist
      */
-    private String canonical(String sPath) {
-        return f_mapCanonical.computeIfAbsent(sPath, s -> {
+    private String canonical(String path) {
+        return realPaths.computeIfAbsent(path, given -> {
             try {
-                Path path = Path.of(s).toAbsolutePath().normalize();
+                Path absolute = Path.of(given).toAbsolutePath().normalize();
                 try {
-                    return path.toRealPath().toString();
+                    return absolute.toRealPath().toString();
                 } catch (IOException | SecurityException e) {
-                    return path.toString();
+                    return absolute.toString();
                 }
             } catch (InvalidPathException e) {
-                return s;
+                return given;
             }
         });
     }
 
-    // ----- inner records -------------------------------------------------------------------------
+    // ----- inner types ---------------------------------------------------------------------------
+
+    /**
+     * A stop of the program, and what the host reads while it lasts: the stacks of the waiting
+     * fibers, the stopping fiber first; the frames that have variables, by frame ID; the reference
+     * to each frame's locals that {@link #scopes} handed out; what each reference reads; and the
+     * reads each waiting fiber has yet to make, by fiber ID. Guarded by the debugger's monitor,
+     * and dropped as a whole when the program resumes.
+     */
+    private static final class Halt {
+        final Map<Integer, Snapshot>   stacks           = new LinkedHashMap<>();
+        final Map<Integer, FrameAt>    frames           = new HashMap<>();
+        final Map<Integer, Integer>    localsReferences = new HashMap<>();
+        final Map<Integer, Target>     targets          = new HashMap<>();
+        final Map<Integer, List<Read>> reads            = new HashMap<>();
+    }
+
+    /**
+     * The installed breakpoints: by real path, the ID of the breakpoint on each line; and the
+     * breakpoint IDs of each method seen, by op index, computed for these breakpoints.
+     */
+    private record Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<Op[], Integer[]> idsByOps) {
+        Installed(Map<String, Map<Integer, Integer>> idsByFile) {
+            this(idsByFile, new ConcurrentHashMap<>());
+        }
+    }
+
+    /**
+     * The thrown exceptions that stop the program: every one, or those that no frame will catch.
+     */
+    private record ExceptionStops(boolean all, boolean uncaught) {
+        static final ExceptionStops NONE = new ExceptionStops(false, false);
+
+        boolean any() {
+            return all || uncaught;
+        }
+    }
 
     /**
      * A waiting fiber's service name and stack, the thread it waits on, and the frame it waits at.
@@ -940,13 +1203,20 @@ public final class SessionDebugger
         /**
          * @return true if the step ends at a line of the specified frame
          */
-        boolean endsAt(Frame frameAt) {
+        boolean endsAt(Frame at) {
             return switch (step) {
-                case OVER -> frameAt == frame;
-                case IN   -> !frameAt.isNative() && frameAt.f_fiber.isAssociated(fiber);
+                case OVER -> at == frame;
+                case IN   -> !at.isNative() && at.f_fiber.isAssociated(fiber);
                 case OUT  -> false;
             };
         }
+    }
+
+    /**
+     * A pause that is pending: the reason of the stop it asks for, and whether it stops only in
+     * the program's own modules.
+     */
+    private record Pause(String reason, boolean program) {
     }
 
     /**
@@ -956,10 +1226,22 @@ public final class SessionDebugger
     }
 
     /**
-     * What a reference reads, on the thread of the fiber with the specified ID: the frame's locals
-     * when there is no value, else the value's fields or elements.
+     * What a reference reads, on the thread of the waiting fiber with the specified ID.
      */
-    private record Target(int thread, Frame frame, ObjectHandle value) {
+    private sealed interface Target {
+        int thread();
+    }
+
+    /**
+     * A frame's locals.
+     */
+    private record Locals(int thread, Frame frame) implements Target {
+    }
+
+    /**
+     * A value's fields or elements.
+     */
+    private record Children(int thread, ObjectHandle value) implements Target {
     }
 
     /**
@@ -973,109 +1255,4 @@ public final class SessionDebugger
      */
     private record MethodLines(int first, int last, NavigableSet<Integer> lines) {
     }
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    private static final Integer[] NO_BREAKS = new Integer[0];
-
-    /**
-     * The longest value text {@link #variables} returns; longer text is cut off.
-     */
-    private static final int MAX_TEXT = 1000;
-
-    /**
-     * The host's listener.
-     */
-    private final Listener f_listener;
-
-    /**
-     * The methods compiled from each source file, by real path, from the known modules.
-     */
-    private final Map<String, List<MethodLines>> f_mapSources = new HashMap<>();
-
-    /**
-     * The real paths of the files looked up, by path.
-     */
-    private final Map<String, String> f_mapCanonical = new ConcurrentHashMap<>();
-
-    /**
-     * The stacks of the waiting fibers while the program is stopped, the stopping fiber first.
-     */
-    private final Map<Integer, Snapshot> f_mapStacks = new LinkedHashMap<>();
-
-    /**
-     * The frames of the waiting fibers that have variables, by frame ID, while the program is
-     * stopped.
-     */
-    private final Map<Integer, FrameAt> f_mapFrames = new HashMap<>();
-
-    /**
-     * The reference to each frame's locals that {@link #scopes} handed out, by frame ID.
-     */
-    private final Map<Integer, Integer> f_mapLocals = new HashMap<>();
-
-    /**
-     * What each reference handed out while the program is stopped reads.
-     */
-    private final Map<Integer, Target> f_mapTargets = new HashMap<>();
-
-    /**
-     * The reads that each waiting fiber has yet to make, by fiber ID.
-     */
-    private final Map<Integer, List<Read>> f_mapReads = new HashMap<>();
-
-    /**
-     * The installed breakpoints: by real path, the ID of the breakpoint on each line.
-     */
-    private volatile Map<String, Map<Integer, Integer>> m_mapBreaks = Map.of();
-
-    /**
-     * The breakpoint IDs of each method seen, by op index; replaced when the breakpoints change.
-     */
-    private volatile Map<Op[], Integer[]> m_mapCache = new ConcurrentHashMap<>();
-
-    /**
-     * The runtime this debugger is attached to, or null.
-     */
-    private volatile Runtime m_runtime;
-
-    /**
-     * True while the program is stopped.
-     */
-    private volatile boolean m_fStopped;
-
-    /**
-     * True once another debugger has replaced this one.
-     */
-    private volatile boolean m_fDetached;
-
-    /**
-     * True once the program is being stopped: its fibers end at their next line.
-     */
-    private volatile boolean m_fTerminating;
-
-    /**
-     * The container of the host's own code, which this debugger leaves alone, or null.
-     */
-    private volatile Container m_containerHost;
-
-    /**
-     * The step that runs, or null.
-     */
-    private volatile Stepping m_stepping;
-
-    /**
-     * Counts the stops and resumes, so a waiting fiber knows which stop it waits for.
-     */
-    private long m_cGeneration;
-
-    /**
-     * The last frame ID handed out.
-     */
-    private int m_nLastFrame;
-
-    /**
-     * The last variables reference handed out.
-     */
-    private int m_nLastReference;
 }
