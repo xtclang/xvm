@@ -107,6 +107,25 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
         check(closed.get())
     }
 
+    // LSP4IJ sends an edit once IntelliJ commits the document; a protocol request sent before that reads the old text
+    fun flush(
+        client: ClientProtocol,
+        file: Path,
+    ) {
+        val pending =
+            requireNotNull(
+                client
+                    .server()
+                    .getOpenedDocuments()
+                    .singleOrNull { it.getFile().getPath() == file.toString() }
+                    ?.getSynchronizer(),
+            ) {
+                "No document synchronizer for $file"
+            }.flushPendingChanges()
+        awaitUi("client sends the edited ${file.parent.fileName}/${file.fileName}", 45.seconds) { pending.isDone() }
+        check(!pending.isCompletedExceptionally()) { "Document synchronization failed for $file" }
+    }
+
     fun workload(
         type: String,
         value: String,
@@ -128,8 +147,10 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     val firstPendingText = workload("Int", "7") + "// unsaved primary\n"
     val secondPendingText = workload("String", "\"second\"") + "// pending close\n"
     edit(primary, firstFile, firstPendingText)
+    flush(first, firstFile)
     val firstPending = first.request("textDocument/references", params(firstFile) + mapOf("context" to mapOf("includeDeclaration" to true)))
     edit(secondary, secondFile, secondPendingText)
+    flush(second, secondFile)
     val secondPending =
         second.request(
             "textDocument/references",
