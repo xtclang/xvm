@@ -375,7 +375,9 @@ No upstream publication or production dependency change is part of this checkpoi
 Fifty LSP4IJ pull requests had been filed from `lagergren/lsp4ij` by 2026-10-26, and all are merged:
 ten on 2026-10-25 and 2026-10-26 (UP30-UP37, UP40 and UP42), and the last,
 [#1771](https://github.com/redhat-developer/lsp4ij/pull/1771) (UP14's other half), on 2026-10-27. Eight LSP4J pull requests have been filed from `lagergren/lsp4j`; five are merged (#991, #999, #1003, #1004 and #1005), and #997 (UP15), #1008, #1004's follow-up, and the draft #1009 (UP41's LSP4J part) are open. The latest LSP4J release is still 1.0.0 (2026-02-10). The latest
-LSP4IJ release is still 0.21.0 (2026-08-31), so merged fixes are on upstream `main` only. XVM pins
+LSP4IJ release is still 0.21.0 (2026-08-31), so merged fixes are on upstream `main` only. The next is
+0.30.0: `main` is 0.30.0-SNAPSHOT since 2026-10-28 (`873f439e`), and the open items of its milestone
+are our #1788, #1790 and #1791, and #1651. XVM pins
 0.21.0, and every bridge stays until a release contains the fix and native acceptance passes with
 the bridge removed.
 
