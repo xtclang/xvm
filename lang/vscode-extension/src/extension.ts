@@ -14,6 +14,7 @@ import * as vscode from 'vscode';
 import { createStatusBar, updateStatusBar } from './status-bar';
 import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
 import { selectLanguageAdapter } from './adapter-selection';
+import { createBuildModeStatus, selectBuildMode } from './build-mode-selection';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
@@ -109,6 +110,8 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         outputChannel,
         statusBar,
+        createBuildModeStatus(),
+        vscode.commands.registerCommand('xtc.selectBuildMode', selectBuildMode),
         vscode.tasks.registerTaskProvider(XtcTaskProvider.type, new XtcTaskProvider(getClient)),
         vscode.debug.registerDebugAdapterDescriptorFactory('xtc', new XtcDebugAdapterDescriptorFactory(context)),
         vscode.debug.registerDebugConfigurationProvider('xtc', new XtcDebugConfigurationProvider(getClient))
