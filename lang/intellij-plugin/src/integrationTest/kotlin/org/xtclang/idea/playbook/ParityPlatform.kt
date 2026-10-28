@@ -1064,6 +1064,8 @@ internal fun ParityScenarios.platformCases() {
         check(resolvedLens["range"] == lens["range"])
         check(resolvedLens["command"].asJsonObject["arguments"].asJsonArray.size() == 2)
         val link = query("textDocument/documentLink", document).rows().single()
+        // before the case's own resolve, which the console's trace could show only after the click counts its resolves
+        nativeLinkClick(document, link, data.string("link"))
         val resolvedLink =
             if (link.has("data")) {
                 protocol.query("documentLink/resolve", link).asJsonObject
@@ -1071,7 +1073,6 @@ internal fun ParityScenarios.platformCases() {
                 link
             }
         check(resolvedLink.string("target") == data.string("link"))
-        nativeLinkClick(document, link, data.string("link"))
         val hints =
             query(
                 "textDocument/inlayHint",
