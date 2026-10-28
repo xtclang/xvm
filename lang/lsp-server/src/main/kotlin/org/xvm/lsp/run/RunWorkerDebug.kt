@@ -182,6 +182,7 @@ internal object RunWorkerDebug {
                         addProperty("line", frame.line)
                         frame.module?.let { addProperty("module", it) }
                         frame.source?.let { addProperty("source", it) }
+                        if (frame.restartable) addProperty("restartable", true)
                     },
                 )
             }
@@ -196,6 +197,7 @@ internal object RunWorkerDebug {
                 it["line"].asInt,
                 it["module"]?.asString,
                 it["source"]?.asString,
+                it["restartable"]?.asBoolean == true,
             )
         }
 
