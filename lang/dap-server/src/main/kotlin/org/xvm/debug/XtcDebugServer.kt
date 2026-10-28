@@ -49,6 +49,9 @@ import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StackTraceResponse
 import org.eclipse.lsp4j.debug.StepInArguments
+import org.eclipse.lsp4j.debug.StepInTarget
+import org.eclipse.lsp4j.debug.StepInTargetsArguments
+import org.eclipse.lsp4j.debug.StepInTargetsResponse
 import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason
@@ -293,6 +296,7 @@ class XtcDebugServer(
                 supportsCompletionsRequest = true
                 supportsModulesRequest = true
                 supportsLoadedSourcesRequest = true
+                supportsStepInTargetsRequest = true
                 completionTriggerCharacters = arrayOf(".")
                 exceptionBreakpointFilters =
                     arrayOf(
@@ -661,8 +665,34 @@ class XtcDebugServer(
     /** DAP: next. Steps the fiber over a call, to its next line; a return continues to the caller's next line. */
     override fun next(args: NextArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OVER)
 
-    /** DAP: stepIn. Steps the fiber to the next line it reaches, also in a method that it calls. */
-    override fun stepIn(args: StepInArguments): CompletableFuture<Void> = step(args.threadId, StepKind.IN)
+    /**
+     * DAP: stepIn. Steps the fiber to the next line it reaches, also in a method that it calls; with a `targetId`, into
+     * that call of its line, which [stepInTargets] gave.
+     */
+    override fun stepIn(args: StepInArguments): CompletableFuture<Void> {
+        val target = args.targetId ?: return step(args.threadId, StepKind.IN)
+        if (!debuggedRunning()) return failed(NOT_STOPPED)
+        return runs.stepInto(runId, args.threadId, target).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+    }
+
+    /** DAP: stepInTargets. The calls that a stopped frame's line makes, in the order of its code, which stepIn goes into. */
+    override fun stepInTargets(args: StepInTargetsArguments): CompletableFuture<StepInTargetsResponse> {
+        if (!debuggedRunning()) {
+            return CompletableFuture.completedFuture(StepInTargetsResponse().apply { targets = emptyArray() })
+        }
+        return runs.stepInTargets(runId, args.frameId).exceptionally { emptyList() }.thenApply { calls ->
+            StepInTargetsResponse().apply {
+                targets =
+                    calls
+                        .map { call ->
+                            StepInTarget().apply {
+                                id = call.id
+                                label = call.label
+                            }
+                        }.toTypedArray()
+            }
+        }
+    }
 
     /** DAP: stepOut. Steps the fiber until its method returns, to the caller's next line. */
     override fun stepOut(args: StepOutArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OUT)

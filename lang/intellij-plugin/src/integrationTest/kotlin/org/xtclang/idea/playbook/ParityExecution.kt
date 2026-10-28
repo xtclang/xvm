@@ -1248,6 +1248,48 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X327") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the line with two calls", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // the calls of the line, in the order it makes them, as Smart Step Into offers them
+                val targets = JsonParser.parseString(debugger.smartStepTargets(project, module)).asJsonArray.map { it.asString }
+                check(targets == data.strings("targets")) { "Smart Step Into variants: $targets" }
+
+                // into the second call: the first runs without stopping, and the step ends in the chosen one
+                debugger.smartStepInto(project, module, data.string("into"))
+                val (name, line) = data.getAsJsonArray("frame").let { it[0].asString to it[1].asInt }
+                debugger.awaitState(project, module, "the step stops in the chosen call", 60.seconds) {
+                    it["suspended"]?.asBoolean == true &&
+                        it["line"]?.asInt == line &&
+                        it
+                            .getAsJsonArray("frames")
+                            ?.firstOrNull()
+                            ?.asJsonObject
+                            ?.string("name")
+                            ?.contains(name) == true
+                }
+
+                debugger.clearBreakpoints(project)
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1373,6 +1415,17 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
     ): String
+
+    fun smartStepTargets(
+        project: Project,
+        module: String,
+    ): String
+
+    fun smartStepInto(
+        project: Project,
+        module: String,
+        text: String,
+    )
 
     fun evaluate(
         project: Project,

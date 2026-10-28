@@ -773,6 +773,34 @@ public class Frame
     }
 
     /**
+     * @return the index of the op this frame runs, or ran last before it called another frame
+     */
+    public int getPC() {
+        return m_iPC;
+    }
+
+    /**
+     * @return the fiber this frame runs on
+     */
+    public Fiber getFiber() {
+        return f_fiber;
+    }
+
+    /**
+     * @return the service context this frame runs in
+     */
+    public ServiceContext getContext() {
+        return f_context;
+    }
+
+    /**
+     * @return the frame that called this one, or null for the first frame of its fiber
+     */
+    public Frame getCaller() {
+        return f_framePrev;
+    }
+
+    /**
      * @return "private:this"
      */
     public ObjectHandle getThis() {

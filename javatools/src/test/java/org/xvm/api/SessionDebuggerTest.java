@@ -57,6 +57,7 @@ import org.xvm.runtime.SessionDebugger.Line;
 import org.xvm.runtime.SessionDebugger.ModuleInfo;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
+import org.xvm.runtime.SessionDebugger.StepTarget;
 import org.xvm.runtime.SessionDebugger.Step;
 import org.xvm.runtime.SessionDebugger.Stop;
 import org.xvm.runtime.SessionDebugger.ThreadInfo;
@@ -209,6 +210,30 @@ public class SessionDebuggerTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() makes two calls on line 4, add() and then twice() with its result, and
+     * on line 5 a call of twice() that it does not make; add() is on line 11, twice() on line 15.
+     */
+    private static final String TARGETS = """
+            module Targets {
+                Int run() {
+                    @Inject Console console;
+                    Int n = twice(add(1, 2));
+                    Int m = n > 100 ? twice(n) : n;
+                    console.print($"n={n} m={m}");
+                    return m;
+                }
+
+                Int add(Int a, Int b) {
+                    return a + b;
+                }
+
+                Int twice(Int n) {
+                    return n * 2;
                 }
             }
             """;
@@ -640,6 +665,50 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void aStepIntoACallOfTheLineStopsInThatCallOrAtTheNextLineIfTheLineDoesNotMakeIt()
+            throws Exception {
+        Path  source  = compile("Targets", TARGETS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Targets"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 4)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Targets", output, session);
+        try (control) {
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+
+            // the calls in the order the line makes them, the same when asked again
+            List<StepTarget> targets = session.stepInTargets(frame);
+            assertEquals(List.of("add(Int, Int)", "twice(Int)"), targets.stream().map(StepTarget::label).toList());
+            assertEquals(targets, session.stepInTargets(frame));
+
+            // into the second call: add() runs without stopping, and the step ends in twice()
+            assertTrue(session.stepInto(stop.threadId(), targets.get(1).id()));
+            Stop into = stops.next();
+            assertEquals("step", into.reason());
+            assertEquals("Targets.twice:15", where(session, into));
+            assertEquals(List.of(), session.stepInTargets(session.stackTrace(into.threadId()).get(1).id()));
+
+            // out to line 5, whose twice() the program does not call: the step ends at line 6
+            Stop out = step(session, stops, into, Step.OUT);
+            assertEquals("Targets.run:5", where(session, out));
+            List<StepTarget> line5 = session.stepInTargets(session.stackTrace(out.threadId()).getFirst().id());
+            assertEquals(List.of("twice(Int)"), line5.stream().map(StepTarget::label).toList());
+            assertTrue(session.stepInto(out.threadId(), line5.getFirst().id()));
+            assertEquals("Targets.run:6", where(session, stops.next()));
+
+            // a call that is not of the stopped fiber's line is refused
+            assertFalse(session.stepInto(out.threadId(), targets.getFirst().id()));
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
     public void aStopListsTheFibersThatDoNotWaitAtALineWithWhatTheyDoAndTheStacksOfThoseThatStandStill()
             throws Exception {
         Path  source  = compile("Waits", PROGRAM.replace("Program", "Waits"));
@@ -654,7 +723,11 @@ public class SessionDebuggerTest {
         try (control) {
             Stop             stop    = stops.next();
             List<ThreadInfo> threads = session.threads();
-            assertEquals(List.of("Worker", "Waits (waiting)"), threads.stream().map(ThreadInfo::name).toList());
+            List<String>     names   = threads.stream().map(ThreadInfo::name).toList();
+            // the stopped fiber, run()'s that waits, and the worker's fiber for that call, once it
+            // has taken it
+            assertEquals(List.of("Worker", "Waits (waiting)"), names.subList(0, 2));
+            assertTrue(names.subList(2, names.size()).stream().allMatch("Worker (not started)"::equals), names.toString());
             assertEquals(stop.threadId(), threads.getFirst().id());
 
             // the waiting fiber's own stack, the same when asked again, whose frames have no variables
