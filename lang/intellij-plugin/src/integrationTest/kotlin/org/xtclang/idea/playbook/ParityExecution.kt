@@ -1012,6 +1012,71 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X321") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val file = uri(data.string("file"))
+            try {
+                debugger.debug(project, module, file, data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+
+                // lines typed above the stop, which the program was not built with, reach the server unsaved
+                debugger.insert(project, file, data.int("insertLine"), data.strings("inserted").joinToString("") { "$it\n" })
+                settle(document)
+
+                // a breakpoint on a line that moved is placed on the line the program has for it, and the first one moved
+                // with its line; one on a typed line is refused with the reason
+                val (moved, typed, now) = listOf(data.int("moved"), data.int("typed"), data.int("stoppedNow"))
+                debugger.addBreakpoint(project, file, moved)
+                debugger.addBreakpoint(project, file, typed)
+                awaitUi(
+                    "the breakpoints are placed on the lines the program has, or refused",
+                    30.seconds,
+                    getter = {
+                        JsonParser
+                            .parseString(debugger.breakpoints(project, module, file))
+                            .asJsonArray
+                            .map { it.asJsonObject }
+                            .associateBy { it.int("line") }
+                    },
+                    checker = { states ->
+                        states[moved]?.string("state") == "verified" &&
+                            states[now]?.string("state") == "verified" &&
+                            states[typed]?.string("state") == "invalid" &&
+                            states[typed]?.string("message") == data.string("reason")
+                    },
+                )
+
+                // the next stop, on the moved line, shows its frames on their lines now
+                debugger.resume(project, module)
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops at the moved line", 60.seconds) {
+                        it["suspended"]?.asBoolean == true && it["line"]?.asInt == moved
+                    }
+                val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
+                    val frame = frames.getOrNull(index)
+                    check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
+                        "Frame $index is not ${expected[0].asString} at ${expected[1].asInt}: $frames"
+                    }
+                }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+                check(data.string("output") in exited.string("console")) { "Console after Resume: ${exited.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -1150,6 +1215,25 @@ internal interface DebugSessionProbe {
     )
 
     fun clearBreakpoints(project: Project)
+
+    fun addBreakpoint(
+        project: Project,
+        uri: String,
+        line: Int,
+    )
+
+    fun breakpoints(
+        project: Project,
+        module: String,
+        uri: String,
+    ): String
+
+    fun insert(
+        project: Project,
+        uri: String,
+        line: Int,
+        text: String,
+    )
 }
 
 /** The Run icons in an editor's gutter, as "Run Module@line", and a click on one. */

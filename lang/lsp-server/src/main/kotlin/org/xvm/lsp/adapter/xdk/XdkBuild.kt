@@ -24,7 +24,9 @@ data class XdkBuiltModule(
 /**
  * Outcome of compiling source modules to disk. [modulePath] lists the directories that together
  * hold the built modules and their binary dependencies, which is what a run needs, and
- * [workingDirectory] is the workspace folder that owns them.
+ * [workingDirectory] is the workspace folder that owns them. [compiled] is the text of each source
+ * file of the built modules exactly as compiled, by its canonical file, which a debugger matches to
+ * the editor's text once the file is edited.
  */
 data class XdkBuildResult(
     val succeeded: Boolean,
@@ -33,6 +35,7 @@ data class XdkBuildResult(
     val diagnostics: List<Diagnostic>,
     val modulePath: List<String>,
     val workingDirectory: String,
+    val compiled: Map<File, String> = emptyMap(),
 )
 
 /** What an embedded build keeps of one module from the closure compile. */
@@ -45,6 +48,8 @@ internal class XdkBuildModule(
     val reused: Boolean,
     /** SHA-256 of each source document's text, by URI, exactly as compiled. */
     val sources: Map<String, String>,
+    /** Each source file's text, by its canonical file, exactly as compiled. */
+    val texts: Map<File, String>,
     /** Revision of every module this one was compiled against, by name. */
     val dependencies: Map<String, String>,
 )
@@ -90,6 +95,7 @@ internal object XdkBuild {
             diagnostics = modules.flatMap { it.diagnostics },
             modulePath = listOf(lib.path, dependencies.path),
             workingDirectory = folder.path,
+            compiled = modules.flatMap { it.texts.entries }.associate { it.key to it.value },
         )
     }
 
