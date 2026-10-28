@@ -846,7 +846,8 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   recovery cases; UP24: formatting history without the write command; UP29: restart X137/X146/X259
   without `UiWaits`).
 - UP23 (VS Code overlapping-move Undo) has no fix; X218 stays a failed assertion and an accepted
-  exception unless the host gains an API for it. Filed as [microsoft/vscode#344765](https://github.com/microsoft/vscode/issues/344765) (2026-10-28).
+  exception unless the host gains an API for it. Filed as [microsoft/vscode#344765](https://github.com/microsoft/vscode/issues/344765), fixed by our
+  [microsoft/vscode#344772](https://github.com/microsoft/vscode/pull/344772) (2026-10-28). To do: get it merged; after a release, X218 passes with child-first moves.
 
 ## 5. Pull requests and the release
 
