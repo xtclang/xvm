@@ -69,7 +69,7 @@ class XdkGraphMoveTest {
             assertThat(proposal.sourceModules!!.single().resourceFiles).containsExactly(directory.resolve("old").toFile())
             assertThat(proposal.previousSourceModules!!.single().resourceRoots).isNull()
             apply(proposal.edit)
-            adapter.replaceSourceModules(proposal.sourceModules!!)
+            adapter.replaceSourceModules(proposal.sourceModules)
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
             assertThat(directory.resolve("old/data.txt")).exists()
         }
@@ -91,9 +91,9 @@ class XdkGraphMoveTest {
             val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
             assertThat(proposal.sourceModules!!.single { it.name == "App" }.resourceFiles)
                 .containsExactly(directory.resolve("new-assets").toFile(), directory.resolve("missing").toFile())
-            assertThat(proposal.sourceModules!!.single { it.name == "Disabled" }.resourceRoots).isEmpty()
+            assertThat(proposal.sourceModules.single { it.name == "Disabled" }.resourceRoots).isEmpty()
             apply(proposal.edit)
-            adapter.replaceSourceModules(proposal.sourceModules!!)
+            adapter.replaceSourceModules(proposal.sourceModules)
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
         }
     }

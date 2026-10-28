@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions.entry
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,6 +26,7 @@ import org.xvm.lsp.server.RunExitedParams
 import org.xvm.lsp.server.RunInputParams
 import org.xvm.lsp.server.RunOutputParams
 import org.xvm.lsp.server.RunParams
+import org.xvm.lsp.server.StopRunParams
 import org.xvm.lsp.server.XtcLanguageClient
 import org.xvm.lsp.server.XtcLanguageServer
 import org.xvm.lsp.server.launchStdio
@@ -48,7 +50,7 @@ class EmbeddedExecutionTest {
     @TempDir lateinit var directory: Path
 
     private lateinit var lib: File
-    private val worker = RunWorkerProcess()
+    private var worker = RunWorkerProcess()
 
     @BeforeAll
     fun compileProgramsOnce() {
@@ -92,6 +94,16 @@ class EmbeddedExecutionTest {
             FOREVER,
             ASK,
             """
+            module Breaker {
+                void run() {
+                    @Inject Console console;
+                    console.print("before");
+                    assert:debug;
+                    console.print("after");
+                }
+            }
+            """,
+            """
             module Waiter {
                 void run() {
                     @Inject Console console;
@@ -117,6 +129,18 @@ class EmbeddedExecutionTest {
     @BeforeEach
     fun canonicalDirectory() {
         directory = directory.toRealPath()
+    }
+
+    @AfterEach
+    fun freshWorkerAfterALeftoverRun() {
+        // a test that fails before its run or debug session ends leaves its program on the class's worker, where it
+        // would fail the tests after it; they get a fresh worker instead
+        val left = worker.tracked()
+        if (left != 0) {
+            println("a test left runs on the class's worker (tracked=$left), so the next test gets a fresh one")
+            worker.close()
+            worker = RunWorkerProcess()
+        }
     }
 
     @Test
@@ -157,13 +181,14 @@ class EmbeddedExecutionTest {
     }
 
     @Test
-    fun `after a run the worker reports the heap it keeps and its threads, within the limits`() {
+    fun `after a run the worker reports its heap in use and its threads, within the thread limit`() {
         assertThat(run("Exit").code).isEqualTo(42)
         soon(30).until { worker.usage().isNotEmpty() }
         val limits = RunWorkerProcess.Limits()
         assertThat(worker.usage().values).allSatisfy { usage ->
             println("execution worker after a run: $usage")
-            assertThat(usage.heapUsed).isPositive().isLessThan(limits.heap)
+            // not against the heap limit: the heap in use is what the JVM left after its own collections, if any yet
+            assertThat(usage.heapUsed).isNotNegative()
             assertThat(usage.heapMax).isGreaterThanOrEqualTo(usage.heapUsed)
             assertThat(usage.threads).isPositive().isLessThan(limits.threads)
         }
@@ -171,7 +196,9 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `repeated runs reuse one worker and leave no run, console or pool thread behind`() {
-        RunWorkerProcess().use { workers ->
+        // the heap a worker reports is what the JVM left after collections it runs when it chooses to, so no heap use
+        // retires this worker; what the test checks is counted
+        RunWorkerProcess(limits = RunWorkerProcess.Limits(heap = Long.MAX_VALUE)).use { workers ->
             val reports = mutableListOf<RunWorkerProcess.Usage>()
             val pids = mutableSetOf<Long>()
 
@@ -231,8 +258,6 @@ class EmbeddedExecutionTest {
                 assertThat(it.runs).isZero()
                 assertThat(it.poolThreads).isPositive().isEqualTo(reports.first().poolThreads)
             }
-            // after the first round has loaded what runs need, more runs retain nothing that adds up
-            assertThat(reports.last().heapUsed - reports[4].heapUsed).isLessThan(64L shl 20)
             assertThat(workers.tracked()).isZero()
         }
     }
@@ -280,13 +305,73 @@ class EmbeddedExecutionTest {
                             .toLong()
                     }.get(60, SECONDS)
             val worker = ProcessHandle.of(pid).orElseThrow()
-            // killed, as when the IDE or the operating system ends the server: nothing tells the worker
-            host.destroyForcibly()
-            assertThat(worker.onExit().get(30, SECONDS).isAlive).isFalse()
+            try {
+                // killed, as when the IDE or the operating system ends the server: nothing tells the worker
+                host.destroyForcibly()
+                val exited = runCatching { worker.onExit().get(30, SECONDS) }.isSuccess
+                assertThat(exited)
+                    .describedAs { "The worker still runs 30 s after its server died:\n${linuxState(pid)}\n${threadDump(pid)}" }
+                    .isTrue()
+            } finally {
+                worker.destroyForcibly()
+            }
         } finally {
             host.destroyForcibly()
         }
     }
+
+    /** What Linux says of a process that should have ended: its state and parent, and each thread's. */
+    private fun linuxState(pid: Long): String {
+        val proc = Path.of("/proc/$pid")
+
+        fun read(what: () -> String) = runCatching(what).getOrElse { "unreadable: $it" }
+        val status =
+            read {
+                Files
+                    .readAllLines(
+                        proc.resolve("status"),
+                    ).filter { it.startsWith("State:") || it.startsWith("PPid:") }
+                    .joinToString("; ")
+            }
+        val threads =
+            read {
+                Files.list(proc.resolve("task")).use { tasks ->
+                    tasks.toList().joinToString("\n") { task ->
+                        val state =
+                            read {
+                                Files
+                                    .readString(task.resolve("stat"))
+                                    .substringAfterLast(')')
+                                    .trim()
+                                    .substringBefore(' ')
+                            }
+                        "  ${task.fileName} ${read {
+                            Files
+                                .readString(
+                                    task.resolve("comm"),
+                                ).trim()
+                        }} $state ${read { Files.readString(task.resolve("wchan")) }}"
+                    }
+                }
+            }
+        return "$status\n$threads"
+    }
+
+    /** The threads of a JVM that should have ended, from the JDK's jcmd, or why there are none. */
+    private fun threadDump(pid: Long): String =
+        runCatching {
+            val jcmd =
+                Path
+                    .of(
+                        ProcessHandle
+                            .current()
+                            .info()
+                            .command()
+                            .orElseThrow(),
+                    ).resolveSibling("jcmd")
+            val dump = ProcessBuilder(jcmd.toString(), pid.toString(), "Thread.print").redirectErrorStream(true).start()
+            dump.inputReader().use { it.readText() }.also { dump.waitFor(30, SECONDS) }
+        }.getOrElse { "no thread dump: $it" }
 
     @Test
     fun `closing the editor ends the server's runs and their workers`() {
@@ -317,6 +402,16 @@ class EmbeddedExecutionTest {
         val run = run("Exit", args = listOf("ignored"))
         assertThat(run.code).isEqualTo(42)
         assertThat(run.output).contains("Warning: Method \"run\" does not take any parameters; ignoring the specified arguments.")
+    }
+
+    @Test
+    fun `assert debug does not stop a run, which has no debugger, and the worker serves the next run`() {
+        val run = run("Breaker")
+        assertThat(run.error).isNull()
+        assertThat(run.code).isEqualTo(0)
+        assertThat(run.output.lines().filter { it.isNotEmpty() }).containsExactly("before", "after")
+
+        assertThat(run("Exit").code).isEqualTo(42)
     }
 
     @Test
@@ -471,6 +566,28 @@ class EmbeddedExecutionTest {
                 assertThat(runs.tracked()).isZero()
                 assertThat(runs.input(RunInputParams("typed-early", "late\n"))).isFalse()
                 assertThat(runs.input(RunInputParams("no-such-run", "text\n"))).isFalse()
+            }
+        }
+    }
+
+    @Test
+    fun `a run stopped while its module builds never starts, and reports that it was stopped`() {
+        CompilerTestSupport.configure()
+        val greeter = source("Late.x", "module Late { void run() { @Inject Console console; console.print(\"started\"); } }")
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Late", greeter)))
+            // on the class's worker, which is already started; closing these runs would close it
+            EmbeddedRuns(adapter, { client }, worker).let { runs ->
+                val started = runs.run(RunParams(module = "Late", runId = "stopped-early"))
+                assertThat(runs.stop(StopRunParams("stopped-early"))).isTrue()
+
+                assertThat(started.get(60, SECONDS).runId).isEqualTo("stopped-early")
+                val exit = client.exits.poll(60, SECONDS)!!
+                assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED_BEFORE_START)
+                assertThat(client.output.toString()).doesNotContain("started")
+                assertThat(runs.tracked()).isZero()
             }
         }
     }

@@ -522,11 +522,11 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 |---------|-----------|---------|
 | `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
 | `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
-| `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
+| `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
 | `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
-| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
+| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. As with `xtc run`, a run ends once its entry method has returned and its services have nothing left to do: one still at work or waiting, or a server or `keepAlive` alarm, keeps it running until it is stopped, and then nothing of it runs on. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
 
 Builds compile the text the server holds when the build is requested, open documents included,
 saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
@@ -568,10 +568,10 @@ Shutting down the server shuts down every worker and ends active runs.
 A worker receives nothing until it reports its protocol version and the bundled XDK it runs, and
 these must be the server's own. They differ when the server's files are replaced while it runs, as
 by a plugin update; such a worker is ended, and its run says to restart the language server. After
-each run a worker reports the heap it still uses after a collection, its live threads, the threads
-of the runtime's own pool, and the consoles and runs it still holds for ended programs, which the
-server logs. A worker is not used again when it keeps more than 512 MB or 200 threads, when its heap
-grew more than 128 MB since its first run, when its runtime pool grew, or when it still holds a
+each run a worker reports the heap the JVM left in use after its own latest collections (the worker
+forces none), its live threads, the threads of the runtime's own pool, and the consoles and runs it
+still holds for ended programs, which the server logs. A worker is not used again when it keeps more
+than 512 MB after a collection or 200 threads, when its runtime pool grew, or when it still holds a
 console or run of an ended program. A worker exits when the server's pipe closes, also when the
 server process is killed. A program's output
 is sent in batches: text goes out 20 ms after it is printed, or as soon as 16,384 characters wait,
@@ -581,7 +581,8 @@ so a program printing faster than the client reads waits in its print rather tha
 `Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
 still building is held and delivered when the program starts. After `end`, or when the run is stopped,
 a program waiting for a line gets an empty one, as at the end of terminal input. Clients echo what the
-user types, so `readLine`'s `suppressEcho` is not honored.
+user types, so `readLine`'s `suppressEcho` is not honored. A run stopped while its module still builds
+never starts, and its exit says `Stopped before the program started.`
 
 ## Context-Aware Completion
 
