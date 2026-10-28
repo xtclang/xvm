@@ -39,6 +39,7 @@ class ParityScenarios(
         adapterChooserCases()
         executionInputCases()
         buildModeCases()
+        onTypeCases()
     }
 
     internal fun case(
