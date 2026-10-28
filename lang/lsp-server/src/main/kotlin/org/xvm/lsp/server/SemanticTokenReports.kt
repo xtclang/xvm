@@ -14,13 +14,13 @@ internal class SemanticTokenReports(
     private val maximumReports: Int = 128,
     private val maximumIntegers: Int = 1_000_000,
 ) {
+    private val reports = linkedMapOf<String, Report>()
+
     /** Previously returned token data retained for a later delta request on the same document. */
     private data class Report(
         val uri: String,
         val data: List<Int>,
     )
-
-    private val reports = linkedMapOf<String, Report>()
 
     fun full(
         uri: String,

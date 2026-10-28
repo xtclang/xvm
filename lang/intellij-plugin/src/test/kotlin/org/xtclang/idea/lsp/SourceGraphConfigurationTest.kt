@@ -11,6 +11,12 @@ import java.net.URI
  * empty/discovered states and unrelated settings when asynchronous proposals meet newer configuration edits.
  */
 class SourceGraphConfigurationTest {
+    private val base = URI("file:///workspace/")
+    private val before = listOf(SourceModuleConfiguration("Library", "file:///workspace/Library.x"))
+    private val after = listOf(SourceModuleConfiguration("Renamed", "file:///workspace/Renamed.x"))
+    private val original =
+        """{"xtc":{"compiler":{"sourceModules":[{"name":"Library","uri":"Library.x"}],"other":42},"formatting":null}}"""
+
     @Test
     fun `resource roots preserve order empty automatic and rename ownership`() {
         val base = URI.create("file:///workspace/")
@@ -82,12 +88,6 @@ class SourceGraphConfigurationTest {
             ),
         ).isEqualTo(before)
     }
-
-    private val base = URI("file:///workspace/")
-    private val before = listOf(SourceModuleConfiguration("Library", "file:///workspace/Library.x"))
-    private val after = listOf(SourceModuleConfiguration("Renamed", "file:///workspace/Renamed.x"))
-    private val original =
-        """{"xtc":{"compiler":{"sourceModules":[{"name":"Library","uri":"Library.x"}],"other":42},"formatting":null}}"""
 
     @Test
     fun `replacement and undo preserve unrelated settings and omitted dependency lists`() {

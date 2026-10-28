@@ -112,13 +112,13 @@ import java.util.jar.JarOutputStream
  */
 @Tag("compiler-stdio")
 class XdkStdioTest {
+    @TempDir lateinit var directory: Path
+
     /** Adds the language-service status request to the packaged server's test-side JSON-RPC proxy. */
     interface ServiceStatusServer : LanguageServer {
         @JsonRequest("xtc/languageServiceStatus")
         fun languageServiceStatus(): CompletableFuture<Map<String, Any?>>
     }
-
-    @TempDir lateinit var directory: Path
 
     @Test
     fun `packaged color prototype uses the opt in launcher and round trips picker edits`() {

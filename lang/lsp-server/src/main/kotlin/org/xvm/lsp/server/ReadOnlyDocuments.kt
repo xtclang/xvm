@@ -24,6 +24,9 @@ internal class ReadOnlyDocuments(
     private val adapter: Adapter,
     private val client: () -> LanguageClient?,
 ) : AutoCloseable {
+    private val state = AtomicReference(State())
+    private val refreshing = ConcurrentHashMap<String, CompletableFuture<Void>>()
+
     /** Connection readiness and published library documents, including which documents the client has fetched. */
     private data class State(
         val enabled: Boolean = false,
@@ -32,9 +35,6 @@ internal class ReadOnlyDocuments(
         val documents: Map<String, ReadOnlyDocument> = emptyMap(),
         val fetched: Set<String> = emptySet(),
     )
-
-    private val state = AtomicReference(State())
-    private val refreshing = ConcurrentHashMap<String, CompletableFuture<Void>>()
 
     fun configure(supported: Boolean) {
         state.updateAndGet { if (it.closed) it else it.copy(enabled = supported && adapter.readOnlyDocumentSchemes.isNotEmpty()) }
