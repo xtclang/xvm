@@ -160,7 +160,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
 | Definition / references | By spelling | Syntax and workspace index | Source identities across discovered/configured graphs; definitions also use host-supplied dependency source indices |
 | Symbol monikers | None | None | Artifact-versioned import/export/local identities; source, binary consumers and matching library declarations |
-| Library document content | None | None | Negotiated LSP 3.18 content/refresh; revision-owned bundled source; read-only file fallback |
+| Library document content | None | None | Negotiated LSP 3.18 content; revision-owned bundled source, whose URIs never change content, so no refresh; read-only file fallback |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
