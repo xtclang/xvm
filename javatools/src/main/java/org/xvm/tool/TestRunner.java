@@ -80,7 +80,7 @@ public class TestRunner extends Runner {
      *
      * @param options  the runner options (RunnerOptions or TestRunnerOptions)
      * @param console  representation of the terminal within which this command is run
-     * @param errs     optional error listener for programmatic error access
+     * @param errs     the ErrorListener to receive errors
      */
     public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errs) {
         super(options, console, errs);

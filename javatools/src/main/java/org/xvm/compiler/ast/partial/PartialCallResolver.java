@@ -28,8 +28,6 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.AstNode;
@@ -51,6 +49,8 @@ import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.compiler.ast.ThrowExpression;
 import org.xvm.compiler.ast.TupleExpression;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.PartialSyntax.ArgumentCursor;
 
 import org.xvm.util.PackedInteger;

@@ -102,7 +102,7 @@ public class CaseStatement
 
         if (exprs != null) {
             sb.append(' ')
-              .append(exprs.get(0));
+              .append(exprs.getFirst());
 
             for (int i = 1, c = exprs.size(); i < c; ++i) {
                 sb.append(", ")

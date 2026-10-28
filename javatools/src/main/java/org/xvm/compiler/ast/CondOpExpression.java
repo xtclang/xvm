@@ -321,6 +321,7 @@ public class CondOpExpression
     /**
      * @return the default name of the "@Op" method
      */
+    @SuppressWarnings("unused")
     public String getDefaultMethodName() {
         // it uses the same operator method name as the non-conditional operator, but this
         // expression type short-circuits

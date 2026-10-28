@@ -1,4 +1,4 @@
-package org.xvm.compiler;
+package org.xvm.compiler.ast.bindings;
 
 import java.util.ArrayList;
 import java.util.Collections;
