@@ -751,8 +751,11 @@ passes with the workaround disabled. The gates are in
   target to `documentLink/resolve` for any client that declares document links, so an HTTP(S) link
   in a comment very likely opens nothing in IntelliJ. X131 resolves links itself, so it can't show
   this. Fixed by our [#1785](https://github.com/redhat-developer/lsp4ij/pull/1785) (open, `e5e5608a`):
-  a clicked link without a target is resolved when the server has `resolveProvider`. To do: check §15
-  natively with 0.21.0 and with a plugin built from #1785; get #1785 merged.
+  a clicked link without a target is resolved when the server has `resolveProvider`. Checked natively
+  in IntelliJ's X131 (2026-10-28, `a521e2ebbf`): 0.21.0 opens nothing
+  (`run-2626450875688172472`), and a plugin built from #1785 resolves the link and opens it
+  (`run-8879176847449743226`, gate UP52 passed). To do: get #1785 merged; after a release with it,
+  make X131's UP52 step pass without the gate.
 
 ### LSP4IJ: no linked editing (UP53): not filed
 
