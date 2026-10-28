@@ -1402,8 +1402,9 @@ class XtcTextDocumentService(
                                     s.activeParameter.takeIf {
                                         server.presentation.signatureActiveParameters
                                     }
+                                // without parameter metadata, no parameters: an empty list would say the signature takes none
                                 parameters =
-                                    s.parameters.map { p ->
+                                    s.parameters.takeIf { it.isNotEmpty() }?.map { p ->
                                         ParameterInformation().apply {
                                             label = Either.forLeft(p.label)
                                             documentation =
