@@ -93,7 +93,6 @@ class XtcLspConnectionProvider(
     private val logger = logger<XtcLspConnectionProvider>()
     private val support = project.getService(ServerSupportLogs::class.java)
     private val launch = support.begin("Resolving the bundled Ecstasy server and Java runtime.\n")
-    private val lifetime = ConnectionLifetime({ super.start() }, { super.stop() })
     private val adapter = LanguageAdapter.fromSetting(LanguageServiceSettings.validated(project).adapter)
     private val adapterName = if (adapter == LanguageAdapter.DEFAULT) LspBuildProperties.adapter else adapter.setting
 
@@ -200,12 +199,10 @@ class XtcLspConnectionProvider(
 
     override fun start() {
         logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")
-        // TODO LSP4IJ: UP01 — make OS process start/stop atomic and reject starts after stop/disposal.
-        // LSP4IJ starts on a pooled thread: project disposal or cancellation can stop the
-        // provider first. Its OS provider otherwise starts even after its stop flag is set.
-        if (project.isDisposed) lifetime.stop()
+        // LSP4IJ starts on a pooled thread, so the project can be disposed first; a stopped provider refuses to start
+        if (project.isDisposed) super.stop()
         try {
-            lifetime.start()
+            super.start()
             pid?.let { support.process(launch, it) }
         } catch (failure: Exception) {
             support.append(launch, "Startup failed: ${failure.message}\n")
@@ -239,7 +236,7 @@ class XtcLspConnectionProvider(
 
     override fun stop() {
         logger.info("Stopping Ecstasy LSP Server")
-        lifetime.stop()
+        super.stop()
         support.append(launch, "\nConnection stopped.\n")
         logger.info("Ecstasy LSP Server stopped")
     }
