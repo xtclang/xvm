@@ -9,9 +9,12 @@ import org.xvm.compiler.Source;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.util.Severity.ERROR;
 
 /**
  * Recording a diagnostic and deciding to abandon the work are two questions.
@@ -89,6 +92,22 @@ public class ErrorListenerAbortTest {
         assertDoesNotThrow(() ->
                 runtime.error(CODE, in(source, 0, 1), "a", "b"));
         assertTrue(runtime.isAbortDesired(), "it still says the work should stop, when asked");
+    }
+
+    @Test
+    public void testRuntimeReportsReachTheSuppliedListener() {
+        ErrorList errors = new ErrorList();
+        var runtime = new ErrorListener.RuntimeErrorListener(errors);
+
+        runtime.warn(CODE, ErrorListener.NOWHERE, "a", "b");
+        assertFalse(runtime.isAbortDesired());
+        assertEquals(1, errors.getErrors().size());
+
+        var report = new ErrorListener.ErrorInfo(ERROR, CODE,
+                new Object[] {"c", "d"}, null);
+        runtime.log(report);
+        assertTrue(runtime.isAbortDesired());
+        assertSame(report, errors.getErrors().getLast(), "forward the original diagnostic intact");
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";
