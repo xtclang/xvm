@@ -217,7 +217,10 @@ internal fun ParityWorkspace.nativeLinkClick(
         awaitUi("Ctrl+Click opens the link's resolved URL", HANG_LIMIT, errorMessage = { "Opened: ${browser.opened()}" }) {
             url in browser.opened().lines()
         }
-        check(trace.requests("documentLink/resolve").size > resolves) { "Ctrl+Click opened $url without documentLink/resolve" }
+        // the console's trace can show the request a little after its answer
+        awaitUi("Ctrl+Click resolves the link", HANG_LIMIT, errorMessage = { "Ctrl+Click opened $url without documentLink/resolve" }) {
+            trace.requests("documentLink/resolve").size > resolves
+        }
     } finally {
         browser.restore()
     }
