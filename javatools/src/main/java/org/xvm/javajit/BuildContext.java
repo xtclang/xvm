@@ -715,7 +715,7 @@ public class BuildContext {
         }
 
         int            extraArgs = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
-        ClassDesc      CD_this   = builder.getThisClassDesc(this);
+        ClassDesc      CD_this   = builder.getThisCD(this);
         JitParamDesc[] params    = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
