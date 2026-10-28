@@ -9342,6 +9342,111 @@
         "limitations": []
       }
     },
+    "X305": {
+      "title": "a stopped frame's variables show their values and types, and a const's fields and an array's elements expand",
+      "manual": [
+        "How each editor lays out the Variables view and its hover values is checked manually; VS Code checks the scopes and variables the debug session answers, IntelliJ the Locals group of the paused frame and the children of its variables, as LSP4IJ gives them to the Variables view."
+      ],
+      "values": {
+        "file": "DebugVars.x",
+        "module": "DebugVars",
+        "source": "module DebugVars {\n    const Point(Int x, Int y);\n\n    Int run() {\n        Point  point = new Point(3, 4);\n        Int[]  ints  = [1, 2, 3];\n        String text  = \"hi\";\n        return report(point, ints, text);\n    }\n\n    Int report(Point point, Int[] ints, String text) {\n        Int sum = point.x + point.y;\n        @Inject Console console;\n        console.print($\"{text} {sum} {ints.size}\");\n        return sum;\n    }\n}\n",
+        "breakpointLine": 14,
+        "locals": [
+          [
+            "point",
+            "DebugVars:Point",
+            "DebugVars:Point"
+          ],
+          [
+            "ints",
+            "Int[3]",
+            "immutable Array<Int>"
+          ],
+          [
+            "text",
+            "\"hi\"",
+            "String"
+          ],
+          [
+            "sum",
+            "7",
+            "Int"
+          ]
+        ],
+        "fields": [
+          [
+            "x",
+            "3"
+          ],
+          [
+            "y",
+            "4"
+          ]
+        ],
+        "elements": [
+          [
+            "[0]",
+            "1"
+          ],
+          [
+            "[1]",
+            "2"
+          ],
+          [
+            "[2]",
+            "3"
+          ]
+        ],
+        "output": "hi 7 3",
+        "exitCode": 7
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "LSP4IJ presents String and numeric values without their type, as IntelliJ's Variables view then shows them, so the types of text and sum are checked in VS Code only."
+        ]
+      }
+    },
+    "X306": {
+      "title": "Step Over, Step Into and Step Out move a stopped debug session line by line, into a call and back to its caller",
+      "manual": [
+        "How each editor marks the line where a step ends and updates its call stack is checked manually; VS Code checks the stops its debug session reports and the stack it asks for after each, IntelliJ the paused session's position and frames."
+      ],
+      "values": {
+        "file": "DebugSteps.x",
+        "module": "DebugSteps",
+        "source": "module DebugSteps {\n    Int run() {\n        @Inject Console console;\n        Int a = add(1, 2);\n        Int b = add(a, 3);\n        console.print($\"{a} {b}\");\n        return b;\n    }\n\n    Int add(Int x, Int y) {\n        Int sum = x + y;\n        return sum;\n    }\n}\n",
+        "breakpointLine": 4,
+        "steps": [
+          [
+            "over",
+            "DebugSteps.run",
+            5
+          ],
+          [
+            "into",
+            "DebugSteps.add",
+            11
+          ],
+          [
+            "out",
+            "DebugSteps.run",
+            6
+          ]
+        ],
+        "caller": [
+          "DebugSteps.run",
+          5
+        ],
+        "output": "3 6",
+        "exitCode": 6
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

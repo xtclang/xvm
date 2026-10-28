@@ -455,6 +455,92 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X305") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val line = data.int("breakpointLine")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), line)
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                        it["suspended"]?.asBoolean == true
+                    }
+                check(stopped.int("line") == line) { "Stopped at: $stopped" }
+
+                fun shown(path: String) =
+                    JsonParser.parseString(debugger.variables(project, module, path)).asJsonArray.map { it.asJsonObject }
+                val locals = shown("")
+                data.getAsJsonArray("locals").map { it.asJsonArray }.forEach { expected ->
+                    val variable = locals.firstOrNull { it.string("name") == expected[0].asString }
+                    // LSP4IJ shows strings and numbers without their type
+                    val type = variable?.get("type")?.asString.orEmpty()
+                    check(
+                        variable != null && variable.string("value") == expected[1].asString && type in listOf("", expected[2].asString),
+                    ) {
+                        "${expected[0].asString} is not ${expected[1].asString} of ${expected[2].asString}: $locals"
+                    }
+                }
+                check(locals.single { it.string("name") == "sum" }["expands"].asBoolean.not()) { "sum does not expand: $locals" }
+                listOf("point" to "fields", "ints" to "elements").forEach { (name, key) ->
+                    val children = shown(name).map { listOf(it.string("name"), it.string("value")) }
+                    val expected = data.getAsJsonArray(key).map { pair -> pair.asJsonArray.map { it.asString } }
+                    check(children == expected) { "$name shows $children, not $expected" }
+                }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                check(data.string("output") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X306") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true && it["line"]?.asInt == data.int("breakpointLine")
+                }
+                data.getAsJsonArray("steps").map { it.asJsonArray }.forEach { step ->
+                    val (kind, name, line) = Triple(step[0].asString, step[1].asString, step[2].asInt)
+                    debugger.step(project, module, kind)
+                    val stopped =
+                        debugger.awaitState(project, module, "step $kind stops at $name:$line", 60.seconds) { state ->
+                            val top = state.getAsJsonArray("frames")?.firstOrNull()?.asJsonObject
+                            state["suspended"]?.asBoolean == true && state["line"]?.asInt == line && top != null &&
+                                name in top.string("name")
+                        }
+                    if (kind == "into") {
+                        val caller = stopped.getAsJsonArray("frames")[1].asJsonObject
+                        val expected = data.getAsJsonArray("caller")
+                        check(expected[0].asString in caller.string("name") && caller.int("line") == expected[1].asInt) {
+                            "Below $name: $caller"
+                        }
+                    }
+                }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                check(data.string("output") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -505,6 +591,18 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
     ): String
+
+    fun variables(
+        project: Project,
+        module: String,
+        path: String,
+    ): String
+
+    fun step(
+        project: Project,
+        module: String,
+        kind: String,
+    )
 
     fun resume(
         project: Project,

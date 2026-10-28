@@ -14,6 +14,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
@@ -23,26 +24,52 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
 
+import org.xvm.runtime.ClassComposition.FieldInfo;
+import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xService.ServiceHandle;
+
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 /**
  * A debugger that its host drives through calls rather than a terminal, for hosts such as an IDE's
  * debug adapter. The host makes the program's modules known ({@link #addModule}), sets breakpoints
  * by source file and line ({@link #setBreakpoints}), learns of each stop through its
  * {@link Listener}, reads the stopped program's threads and stacks ({@link #threads},
- * {@link #stackTrace}), and resumes it ({@link #resume}). It debugs the runtime it is set on with
- * {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
+ * {@link #stackTrace}) and the variables of their frames ({@link #scopes}, {@link #variables}), and
+ * resumes it ({@link #resume}) or steps one of its fibers ({@link #step}). It debugs the runtime it
+ * is set on with {@link Runtime#setDebugger}; the host's own protocol is the host's concern.
  *
  * <p>A stop holds the whole runtime: the fiber that stops waits on its interpreter thread, and so
  * does every other fiber that reaches a line while the program is stopped. Each takes a snapshot
  * of its stack before it waits, so the host reads immutable copies and never a running frame. The
  * snapshots are discarded when the program resumes. Fibers keep yielding to each other as they do
- * without a debugger, since this debugger does not step.
+ * without a debugger, also while one of them steps.
+ *
+ * <p>A step resumes the whole program and stops it again at the next line the stepped fiber
+ * reaches: over a call, in the same frame; into one, in any frame of a fiber that the stepped one
+ * calls or is called by; out of one, once its frame returns. A frame that returns, or that an
+ * exception leaves, during a step over continues it as a step into, so it stops at its caller's
+ * next line. Any other stop, such as a breakpoint, ends the step.
+ *
+ * <p>Variables are read on the interpreter thread of the waiting fiber whose frame holds them,
+ * which reads them while it waits, so a read never races the program; {@link #variables} answers
+ * once that thread has read them, on another thread, so what the host does with an answer never
+ * runs while this debugger holds its lock. Only the waiting fiber's own frames have variables,
+ * not those of the fiber that called it, and another service's state is not expanded: a read
+ * touches only the waiting service's state and immutable values. A variable's reference to its
+ * fields or elements, like a frame's ID, lasts until the program resumes.
  *
  * <p>A breakpoint is installed by file and line: it stops every fiber that reaches the first op of
  * that line in any method compiled from that file. A file is the module's source directory and
@@ -107,11 +134,62 @@ public final class SessionDebugger
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint"), what stopped it in words,
-     * the fiber that stopped, and the IDs of the breakpoints it stopped at.
+     * A scope of a stopped frame: its name, and the reference that {@link #variables} reads its
+     * variables by.
+     */
+    public record Scope(String name, int variablesReference) {
+    }
+
+    /**
+     * A variable of a scope, or a field or element of a value: its name, its value and its type in
+     * words, and the reference that {@link #variables} reads its fields or elements by, or 0 if it
+     * has none.
+     */
+    public record Variable(String name, String value, String type, int variablesReference) {
+    }
+
+    /**
+     * How the host steps a stopped fiber.
+     */
+    public enum Step {
+        /**
+         * To the next line of the same frame, or of its caller once it returns.
+         */
+        OVER,
+
+        /**
+         * To the next line the fiber reaches, also in a method that it calls.
+         */
+        IN,
+
+        /**
+         * To the next line of the frame's caller.
+         */
+        OUT
+    }
+
+    /**
+     * Why and where the program stopped: the reason ("breakpoint" or "step"), what stopped it in
+     * words, the fiber that stopped, and the IDs of the breakpoints it stopped at.
      */
     public record Stop(String reason, String description, int threadId, List<Integer> breakpointIds) {
     }
+
+    /**
+     * The name of a frame's scope of local variables.
+     */
+    public static final String LOCALS = "Locals";
+
+    /**
+     * The value of a variable that has not been assigned.
+     */
+    public static final String UNASSIGNED = "<unassigned>";
+
+    /**
+     * The most elements of an array that {@link #variables} reads; a last entry says how many more
+     * there are.
+     */
+    public static final int MAX_ELEMENTS = 100;
 
     /**
      * The message of a breakpoint in a file that none of the program's known modules came from.
@@ -199,13 +277,90 @@ public final class SessionDebugger
     }
 
     /**
+     * @param nFrame  the ID of a frame that {@link #stackTrace} returned
+     *
+     * @return the frame's scopes, which are its local variables; none if the frame is not one of
+     *         this stop's, or its fiber called it from another fiber's frame
+     */
+    public synchronized List<Scope> scopes(int nFrame) {
+        FrameAt at = f_mapFrames.get(nFrame);
+        return at == null
+                ? List.of()
+                : List.of(new Scope(LOCALS, f_mapLocals.computeIfAbsent(nFrame,
+                        _ -> reference(new Target(at.thread(), at.frame(), null)))));
+    }
+
+    /**
+     * Read the variables of a scope, or the fields or elements of a value. The waiting fiber that
+     * holds them reads them on its own thread; the listener may ask from there too. The answer
+     * comes on another thread, never while this debugger holds its lock.
+     *
+     * @param nReference  a reference that {@link #scopes} or an earlier read returned
+     *
+     * @return the variables, in order: a frame's {@code this} and its named registers, a value's
+     *         fields, or an array's elements; none if the reference is not one of this stop's, or
+     *         the program resumes first. Fails if a value cannot be read.
+     */
+    public CompletableFuture<List<Variable>> variables(int nReference) {
+        CompletableFuture<List<Variable>> future = new CompletableFuture<>();
+        synchronized (this) {
+            Target   target   = f_mapTargets.get(nReference);
+            Snapshot snapshot = target == null ? null : f_mapStacks.get(target.thread());
+            if (snapshot == null) {
+                future.complete(List.of());
+            } else if (snapshot.thread() == Thread.currentThread()) {
+                read(snapshot.frame(), target, future);
+            } else {
+                f_mapReads.computeIfAbsent(target.thread(), _ -> new ArrayList<>())
+                        .add(new Read(target, future));
+                notifyAll();
+            }
+        }
+        return future;
+    }
+
+    /**
+     * Resume the stopped program, stepping the specified fiber: the program stops again, with the
+     * reason "step", at the line where the step ends.
+     *
+     * @param nThread  the ID of a fiber that {@link #threads} returned
+     * @param step     how to step it
+     *
+     * @return false if the program runs, or the fiber does not wait; then nothing changes
+     */
+    public synchronized boolean step(int nThread, Step step) {
+        Snapshot snapshot = m_fStopped ? f_mapStacks.get(nThread) : null;
+        if (snapshot == null) {
+            return false;
+        }
+
+        // set first, so lines stay checked as the fibers resume
+        Frame frame = snapshot.frame();
+        m_stepping = new Stepping(Objects.requireNonNull(step), frame, frame.f_fiber);
+        release();
+        return true;
+    }
+
+    /**
      * Resume the stopped program; does nothing while it runs.
      */
     public synchronized void resume() {
+        release();
+    }
+
+    /**
+     * Let the stopped program run on: the waiting fibers resume, and what they held is discarded.
+     */
+    private void release() {
         if (m_fStopped) {
             m_fStopped = false;
             ++m_cGeneration;
             f_mapStacks.clear();
+            f_mapFrames.clear();
+            f_mapLocals.clear();
+            f_mapTargets.clear();
+            f_mapReads.values().forEach(SessionDebugger::abandon);
+            f_mapReads.clear();
             updateActive();
             notifyAll();
         }
@@ -227,6 +382,7 @@ public final class SessionDebugger
     @Override
     public synchronized void terminate() {
         m_fTerminating = true;
+        m_stepping     = null;
         resume();
     }
 
@@ -235,6 +391,7 @@ public final class SessionDebugger
         m_fDetached = true;
         m_mapBreaks = Map.of();
         m_mapCache  = new ConcurrentHashMap<>();
+        m_stepping  = null;
         resume();
         m_runtime = null;
     }
@@ -251,7 +408,7 @@ public final class SessionDebugger
         }
 
         // assert:debug stops the program as a breakpoint does
-        stop(frame, "breakpoint", "assert:debug", List.of());
+        stop(frame, "breakpoint", "assert:debug", List.of(), null);
         return m_fTerminating ? end(frame) : iPC + 1;
     }
 
@@ -268,23 +425,26 @@ public final class SessionDebugger
             return end(frame);
         }
 
-        Integer[] anBreak = breaksOf(frame);
+        // a breakpoint on the line where a step ends is reported as the breakpoint
+        Integer[] anBreak  = breaksOf(frame);
+        Stepping  stepping = m_stepping;
         if (iPC < anBreak.length && anBreak[iPC] != null) {
-            stop(frame, "breakpoint", null, List.of(anBreak[iPC]));
-            if (m_fTerminating) {
-                return end(frame);
-            }
+            stop(frame, "breakpoint", null, List.of(anBreak[iPC]), null);
+        } else if (stepping != null && stepping.endsAt(frame) && startsLine(frame, iPC)) {
+            stop(frame, "step", null, List.of(), stepping);
         }
-        return iPC + 1;
+        return m_fTerminating ? end(frame) : iPC + 1;
     }
 
     @Override
     public void onReturn(Frame frame) {
+        leave(frame);
     }
 
     @Override
     public int checkBreakPoint(Frame frame, ExceptionHandle hEx) {
         // exceptions are not stopped at; unwind this one without asking again
+        leave(frame);
         return Op.R_EXCEPTION;
     }
 
@@ -308,24 +468,51 @@ public final class SessionDebugger
     }
 
     /**
-     * Stop the program at the specified frame, tell the listener, and wait until the host resumes
-     * it. If the program is already stopped, wait for that stop to end first.
+     * The frame returns, or an exception leaves it: a step over or out of it continues as a step
+     * into, to stop at the next line of its caller, which may run on the fiber that called this
+     * one.
      */
-    private void stop(Frame frame, String sReason, String sDescription, List<Integer> listIds) {
+    private void leave(Frame frame) {
+        Stepping stepping = m_stepping;
+        if (stepping != null && stepping.frame() == frame && stepping.step() != Step.IN) {
+            m_stepping = new Stepping(Step.IN, frame, frame.f_fiber);
+        }
+    }
+
+    /**
+     * @return true if the op at the specified index starts a line, as a step ends at
+     */
+    private static boolean startsLine(Frame frame, int iPC) {
+        Op[] aOp = frame.f_aOp;
+        return aOp != null && iPC < aOp.length
+                && aOp[iPC] instanceof Nop nop && nop.getLineCount() != 0;
+    }
+
+    /**
+     * Stop the program at the specified frame, tell the listener, and wait until the host resumes
+     * it. If the program is already stopped, wait for that stop to end first; a step's stop is then
+     * not made, unless the step still runs.
+     *
+     * @param stepping  the step that ends here, or null for any other stop
+     */
+    private void stop(Frame frame, String sReason, String sDescription, List<Integer> listIds,
+                      Stepping stepping) {
         Stop stop;
         long cGeneration;
         synchronized (this) {
             // another fiber's stop comes first; this one waits for it like any other fiber
             while (m_fStopped && !m_fDetached) {
-                f_mapStacks.putIfAbsent(threadId(frame.f_fiber), snapshot(frame));
+                f_mapStacks.computeIfAbsent(threadId(frame.f_fiber), _ -> snapshot(frame));
                 if (!waitWhileStopped(frame, m_cGeneration)) {
                     return;
                 }
             }
-            if (m_fDetached || m_fTerminating) {
+            if (m_fDetached || m_fTerminating || stepping != null && m_stepping != stepping) {
                 return;
             }
 
+            // any stop ends the step
+            m_stepping  = null;
             m_fStopped  = true;
             cGeneration = ++m_cGeneration;
             f_mapStacks.clear();
@@ -355,25 +542,34 @@ public final class SessionDebugger
      */
     private synchronized void park(Frame frame) {
         if (m_fStopped) {
-            f_mapStacks.putIfAbsent(threadId(frame.f_fiber), snapshot(frame));
+            f_mapStacks.computeIfAbsent(threadId(frame.f_fiber), _ -> snapshot(frame));
             waitWhileStopped(frame, m_cGeneration);
         }
     }
 
     /**
-     * Wait until the specified stop ends. Called while holding this debugger's monitor.
+     * Wait until the specified stop ends, reading the variables the host asks for meanwhile. Called
+     * while holding this debugger's monitor.
      *
      * @param cGeneration  the stop's generation
      *
      * @return false if the thread was interrupted, which lets it run on
      */
     private boolean waitWhileStopped(Frame frame, long cGeneration) {
+        int nThread = threadId(frame.f_fiber);
         while (m_fStopped && m_cGeneration == cGeneration) {
+            List<Read> listReads = f_mapReads.remove(nThread);
+            if (listReads != null) {
+                listReads.forEach(read -> read(frame, read.target(), read.future()));
+                continue;
+            }
+
             try {
                 wait();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                f_mapStacks.remove(threadId(frame.f_fiber));
+                f_mapStacks.remove(nThread);
+                abandon(f_mapReads.remove(nThread));
                 return false;
             }
         }
@@ -381,20 +577,22 @@ public final class SessionDebugger
     }
 
     /**
-     * Turn the runtime's "debugger is active" flag on while there are breakpoints or the program
-     * is stopped, so that every line is checked; otherwise lines run at full speed.
+     * Turn the runtime's "debugger is active" flag on while there are breakpoints, the program is
+     * stopped or a fiber steps, so that every line is checked; otherwise lines run at full speed.
      */
     private void updateActive() {
         Runtime runtime = m_runtime;
         if (runtime != null) {
-            runtime.setDebuggerActive(m_fStopped || !m_mapBreaks.isEmpty());
+            runtime.setDebuggerActive(m_fStopped || m_stepping != null || !m_mapBreaks.isEmpty());
         }
     }
 
     /**
-     * Take a snapshot of the stack of the fiber at the specified frame, on its own thread.
+     * Take a snapshot of the stack of the fiber at the specified frame, on its own thread, and
+     * remember the frames of that fiber, whose variables it reads while it waits.
      */
     private Snapshot snapshot(Frame frame) {
+        int                  nThread    = threadId(frame.f_fiber);
         List<StackFrameInfo> listFrames = new ArrayList<>();
         for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
             MethodStructure function = stackFrame.function;
@@ -402,11 +600,16 @@ public final class SessionDebugger
                 continue;
             }
 
-            int nLine = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
-            listFrames.add(new StackFrameInfo(++m_nLastFrame, functionName(function),
+            int nFrame = ++m_nLastFrame;
+            int nLine  = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
+            listFrames.add(new StackFrameInfo(nFrame, functionName(function),
                     sourcePath(function), nLine));
+            if (stackFrame.frame != null && stackFrame.frame.f_fiber == frame.f_fiber) {
+                f_mapFrames.put(nFrame, new FrameAt(nThread, stackFrame.frame));
+            }
         }
-        return new Snapshot(frame.f_context.f_sName, List.copyOf(listFrames));
+        return new Snapshot(frame.f_context.f_sName, List.copyOf(listFrames),
+                Thread.currentThread(), frame);
     }
 
     private static int threadId(Fiber fiber) {
@@ -419,6 +622,173 @@ public final class SessionDebugger
                              : clz == null                           ? null
                                                                      : clz.getName();
         return sName == null ? function.getName() : sName + '.' + function.getName();
+    }
+
+    // ----- variables -----------------------------------------------------------------------------
+
+    /**
+     * Read the target's variables on the thread of the fiber waiting at the specified frame, whose
+     * stack holds the array elements it reads, and answer the read on another thread, since the
+     * host's actions on the answer must not run while this debugger's monitor is held. Called
+     * while holding this debugger's monitor.
+     */
+    private void read(Frame frame, Target target, CompletableFuture<List<Variable>> future) {
+        List<Variable> listVars;
+        try {
+            listVars = target.value() == null
+                    ? locals(frame, target.frame())
+                    : children(frame, target.value());
+        } catch (RuntimeException e) {
+            // a value the debugger cannot read fails the read, not the program
+            future.completeAsync(() -> {
+                throw e;
+            });
+            return;
+        }
+        future.completeAsync(() -> listVars);
+    }
+
+    /**
+     * @return the frame's {@code this} and its named registers in scope
+     */
+    private List<Variable> locals(Frame frameWait, Frame frame) {
+        List<Variable> listVars = new ArrayList<>();
+        ObjectHandle   hThis    = frame.f_hThis;
+        if (hThis != null) {
+            listVars.add(variable(frameWait, "this", hThis));
+        }
+
+        for (int i = 0, c = frame.getCurrentVarCount(); i < c; i++) {
+            VarInfo info  = frame.getVarInfo(i);
+            String  sName = info == null ? "" : info.getName();
+            if (!sName.isEmpty()) {
+                listVars.add(variable(frameWait, sName, frame.f_ahVar[i]));
+            }
+        }
+        return listVars;
+    }
+
+    /**
+     * @return an array's elements, at most {@link #MAX_ELEMENTS} of them, or an object's fields
+     */
+    private List<Variable> children(Frame frameWait, ObjectHandle hValue) {
+        List<Variable> listVars = new ArrayList<>();
+        if (hValue instanceof ArrayHandle hArray) {
+            long   cSize    = hArray.m_hDelegate.m_cSize;
+            xArray template = (xArray) hArray.getTemplate();
+            for (int i = 0, c = (int) Math.min(cSize, MAX_ELEMENTS); i < c; i++) {
+                // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds), which
+                // must not stay on the waiting frame
+                ExceptionHandle hExPrev = frameWait.m_hException;
+                if (template.extractArrayValue(frameWait, hArray, i, Op.A_STACK) != Op.R_NEXT) {
+                    frameWait.m_hException = hExPrev;
+                    break;
+                }
+                listVars.add(variable(frameWait, "[" + i + "]", frameWait.popStack()));
+            }
+            if (cSize > MAX_ELEMENTS) {
+                listVars.add(new Variable("...", (cSize - MAX_ELEMENTS) + " more", "", 0));
+            }
+        } else if (hValue instanceof GenericHandle hGeneric) {
+            for (Map.Entry<String, FieldInfo> entry :
+                    DebugConsole.getFieldLayout(hGeneric.getComposition()).entrySet()) {
+                listVars.add(variable(frameWait, entry.getKey(),
+                        hGeneric.getField(entry.getValue().getIndex())));
+            }
+        }
+        return listVars;
+    }
+
+    /**
+     * @return the variable of the specified value, with a reference to its fields or elements if
+     *         it has any that the waiting fiber may read
+     */
+    private Variable variable(Frame frameWait, String sName, ObjectHandle hValue) {
+        if (hValue instanceof RefHandle hRef) {
+            hValue = hRef.getReferent();
+        }
+        if (hValue == null) {
+            return new Variable(sName, UNASSIGNED, "", 0);
+        }
+
+        int nReference = hasChildren(frameWait, hValue)
+                ? reference(new Target(threadId(frameWait.f_fiber), null, hValue))
+                : 0;
+        return new Variable(sName, valueText(hValue), typeText(hValue), nReference);
+    }
+
+    /**
+     * @return true if the value has fields or elements to show that belong to the waiting fiber's
+     *         service or are immutable; another service's state is read only on its own thread
+     */
+    private static boolean hasChildren(Frame frameWait, ObjectHandle hValue) {
+        TypeComposition composition = hValue.getComposition();
+        if (composition == null || composition instanceof ProxyComposition
+                || hValue instanceof EnumHandle
+                || hValue instanceof ServiceHandle hService
+                        && hService.f_context != frameWait.f_context) {
+            return false;
+        }
+
+        return hValue instanceof ArrayHandle hArray
+                ? hArray.m_hDelegate.m_cSize > 0
+                : hValue instanceof GenericHandle
+                        && !DebugConsole.getFieldLayout(composition).isEmpty();
+    }
+
+    /**
+     * @return the value in words: an array's element type and size, as Java debuggers show
+     *         arrays, else the runtime's own text of the value without the type it starts with,
+     *         or the type alone for an object
+     */
+    private static String valueText(ObjectHandle hValue) {
+        if (hValue instanceof ArrayHandle hArray) {
+            TypeConstant typeElement = hArray.getType().resolveGenericType("Element");
+            return (typeElement == null ? "" : typeElement.getValueString())
+                    + '[' + hArray.m_hDelegate.m_cSize + ']';
+        }
+
+        // ObjectHandle.toString() starts with the type in parentheses, followed by a space
+        String sText = hValue.toString();
+        if (sText.startsWith("(")) {
+            for (int i = 0, cDepth = 0, c = sText.length(); i < c; i++) {
+                char ch = sText.charAt(i);
+                if (ch == '(') {
+                    ++cDepth;
+                } else if (ch == ')' && --cDepth == 0) {
+                    sText = sText.substring(sText.startsWith(" ", i + 1) ? i + 2 : i + 1);
+                    break;
+                }
+            }
+        }
+        if (sText.isEmpty()) {
+            return typeText(hValue);
+        }
+        return sText.length() > MAX_TEXT ? sText.substring(0, MAX_TEXT) + "..." : sText;
+    }
+
+    private static String typeText(ObjectHandle hValue) {
+        // a deferred value has no composition yet
+        return hValue.getComposition() == null ? "" : hValue.getType().getValueString();
+    }
+
+    /**
+     * @return a new reference to the specified target, which lasts until the program resumes
+     */
+    private int reference(Target target) {
+        int nReference = ++m_nLastReference;
+        f_mapTargets.put(nReference, target);
+        return nReference;
+    }
+
+    /**
+     * Answer reads that will not be made, because their fiber no longer waits, with no variables,
+     * on another thread.
+     */
+    private static void abandon(List<Read> listReads) {
+        if (listReads != null) {
+            listReads.forEach(read -> read.future().completeAsync(List::of));
+        }
     }
 
     // ----- breakpoint lookup ---------------------------------------------------------------------
@@ -558,9 +928,44 @@ public final class SessionDebugger
     // ----- inner records -------------------------------------------------------------------------
 
     /**
-     * A waiting fiber's service name and stack.
+     * A waiting fiber's service name and stack, the thread it waits on, and the frame it waits at.
      */
-    private record Snapshot(String name, List<StackFrameInfo> frames) {
+    private record Snapshot(String name, List<StackFrameInfo> frames, Thread thread, Frame frame) {
+    }
+
+    /**
+     * A step that runs: how, and the frame and fiber it started at.
+     */
+    private record Stepping(Step step, Frame frame, Fiber fiber) {
+        /**
+         * @return true if the step ends at a line of the specified frame
+         */
+        boolean endsAt(Frame frameAt) {
+            return switch (step) {
+                case OVER -> frameAt == frame;
+                case IN   -> !frameAt.isNative() && frameAt.f_fiber.isAssociated(fiber);
+                case OUT  -> false;
+            };
+        }
+    }
+
+    /**
+     * A frame of a waiting fiber, by that fiber's ID.
+     */
+    private record FrameAt(int thread, Frame frame) {
+    }
+
+    /**
+     * What a reference reads, on the thread of the fiber with the specified ID: the frame's locals
+     * when there is no value, else the value's fields or elements.
+     */
+    private record Target(int thread, Frame frame, ObjectHandle value) {
+    }
+
+    /**
+     * A read the host asked for, which the waiting fiber makes on its thread.
+     */
+    private record Read(Target target, CompletableFuture<List<Variable>> future) {
     }
 
     /**
@@ -572,6 +977,11 @@ public final class SessionDebugger
     // ----- fields --------------------------------------------------------------------------------
 
     private static final Integer[] NO_BREAKS = new Integer[0];
+
+    /**
+     * The longest value text {@link #variables} returns; longer text is cut off.
+     */
+    private static final int MAX_TEXT = 1000;
 
     /**
      * The host's listener.
@@ -592,6 +1002,27 @@ public final class SessionDebugger
      * The stacks of the waiting fibers while the program is stopped, the stopping fiber first.
      */
     private final Map<Integer, Snapshot> f_mapStacks = new LinkedHashMap<>();
+
+    /**
+     * The frames of the waiting fibers that have variables, by frame ID, while the program is
+     * stopped.
+     */
+    private final Map<Integer, FrameAt> f_mapFrames = new HashMap<>();
+
+    /**
+     * The reference to each frame's locals that {@link #scopes} handed out, by frame ID.
+     */
+    private final Map<Integer, Integer> f_mapLocals = new HashMap<>();
+
+    /**
+     * What each reference handed out while the program is stopped reads.
+     */
+    private final Map<Integer, Target> f_mapTargets = new HashMap<>();
+
+    /**
+     * The reads that each waiting fiber has yet to make, by fiber ID.
+     */
+    private final Map<Integer, List<Read>> f_mapReads = new HashMap<>();
 
     /**
      * The installed breakpoints: by real path, the ID of the breakpoint on each line.
@@ -629,6 +1060,11 @@ public final class SessionDebugger
     private volatile Container m_containerHost;
 
     /**
+     * The step that runs, or null.
+     */
+    private volatile Stepping m_stepping;
+
+    /**
      * Counts the stops and resumes, so a waiting fiber knows which stop it waits for.
      */
     private long m_cGeneration;
@@ -637,4 +1073,9 @@ public final class SessionDebugger
      * The last frame ID handed out.
      */
     private int m_nLastFrame;
+
+    /**
+     * The last variables reference handed out.
+     */
+    private int m_nLastReference;
 }
