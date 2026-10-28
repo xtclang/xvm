@@ -16,13 +16,13 @@ import java.util.HexFormat
 
 /** Navigation-only snapshots: attachments never become writable project modules. */
 internal object XdkAttachedSources {
+    private val directory by lazy { Files.createTempDirectory("xtc-attached-sources-") }
+
     /** Mapping from dependency symbols to attached source locations and read-only source documents. */
     data class Index(
         val declarations: Map<Int, SemanticModel.SourceLocation>,
         val documents: Map<String, ReadOnlyDocument>,
     )
-
-    private val directory by lazy { Files.createTempDirectory("xtc-attached-sources-") }
 
     fun read(
         dependency: XdkDependency,

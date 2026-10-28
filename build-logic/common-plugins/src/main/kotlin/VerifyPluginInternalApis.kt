@@ -40,6 +40,12 @@ abstract class VerifyPluginInternalApis : DefaultTask() {
 
 /** Matches full API signatures, never package wildcards; unfamiliar report lines fail closed. */
 internal object InternalApiPolicy {
+    private val API = Regex("Internal (?:class|interface|method|constructor) com\\.redhat\\.devtools\\.lsp4ij\\.[^*]+")
+    private val PARAMETERS = Regex("\\(([^()]*)\\)")
+    private val PARAMETER_NAME = Regex("^([\\w.$]+(?:\\[\\])*) [\\w$]+$")
+    private val COUNT = Regex("(\\d+) usages? of internal API")
+    private val DEPENDENCY = Regex("com\\.redhat\\.devtools\\.lsp4ij:([^\\s]+)")
+
     fun verify(reports: Path, policy: List<String>, version: String): Int {
         val entries = policy.map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }
         require(entries.firstOrNull() == "lsp4ij=$version") {
@@ -73,10 +79,4 @@ internal object InternalApiPolicy {
             PARAMETER_NAME.replace(parameter.trim(), "$1")
         }
     }
-
-    private val API = Regex("Internal (?:class|interface|method|constructor) com\\.redhat\\.devtools\\.lsp4ij\\.[^*]+")
-    private val PARAMETERS = Regex("\\(([^()]*)\\)")
-    private val PARAMETER_NAME = Regex("^([\\w.$]+(?:\\[\\])*) [\\w$]+$")
-    private val COUNT = Regex("(\\d+) usages? of internal API")
-    private val DEPENDENCY = Regex("com\\.redhat\\.devtools\\.lsp4ij:([^\\s]+)")
 }

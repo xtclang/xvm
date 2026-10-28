@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit.SECONDS
  * distinct from discovery.
  */
 class CompilerConfigurationTest {
+    @TempDir lateinit var directory: Path
+
     @Test
     fun `unchanged library settings preserve discovered resource inputs and cached compilation`() {
         Session().use { session ->
@@ -93,8 +95,6 @@ class CompilerConfigurationTest {
             session.expect(true)
         }
     }
-
-    @TempDir lateinit var directory: Path
 
     @Test
     fun `explicit source graph overrides build imports and absent reports retain discovery`() {

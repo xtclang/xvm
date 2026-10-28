@@ -143,6 +143,8 @@ internal object BuildSettingsLink : Filter {
  */
 @Service(Service.Level.PROJECT)
 class EmbeddedRunSessions {
+    private val sessions = ConcurrentHashMap<String, Session>()
+
     interface Session {
         fun output(text: String)
 
@@ -151,8 +153,6 @@ class EmbeddedRunSessions {
             error: String?,
         )
     }
-
-    private val sessions = ConcurrentHashMap<String, Session>()
 
     fun register(
         runId: String,

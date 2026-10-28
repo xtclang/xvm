@@ -50,6 +50,15 @@ internal class XdkArtifactSymbols private constructor(
         }
 
     companion object {
+        private val FORMATS =
+            setOf(
+                Constant.Format.Module,
+                Constant.Format.Package,
+                Constant.Format.Class,
+                Constant.Format.Method,
+                Constant.Format.Property,
+            )
+
         fun capture(bytes: ByteArray): XdkArtifactSymbols =
             ExecutionTrace.api("FileStructure.symbolIdentities") {
                 val file = FileStructure(bytes.inputStream())
@@ -88,15 +97,6 @@ internal class XdkArtifactSymbols private constructor(
                     XdkArtifactSymbols(revision, entries)
                 }
             }
-
-        private val FORMATS =
-            setOf(
-                Constant.Format.Module,
-                Constant.Format.Package,
-                Constant.Format.Class,
-                Constant.Format.Method,
-                Constant.Format.Property,
-            )
     }
 }
 

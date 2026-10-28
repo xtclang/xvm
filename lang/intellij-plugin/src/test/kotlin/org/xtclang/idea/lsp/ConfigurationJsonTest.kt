@@ -14,6 +14,19 @@ import org.junit.jupiter.api.Test
  * without changing normal omission of unrelated optional protocol fields.
  */
 class ConfigurationJsonTest {
+    private val json =
+        MessageJsonHandler(
+            mapOf(
+                "workspace/didChangeConfiguration" to
+                    JsonRpcMethod.notification(
+                        "workspace/didChangeConfiguration",
+                        DidChangeConfigurationParams::class.java,
+                    ),
+            ),
+        ) {
+            it.registerTypeAdapterFactory(ConfigurationJson)
+        }
+
     @Test
     fun `configuration notification preserves explicit discovery reset on the wire`() {
         val settings = JsonParser.parseString("""{"xtc":{"compiler":{"sourceModules":null}}}""")
@@ -41,17 +54,4 @@ class ConfigurationJsonTest {
             .isEqualTo(MessageJsonHandler(emptyMap()).serialize(message))
         assertThat(json.serialize(message)).doesNotContain("version")
     }
-
-    private val json =
-        MessageJsonHandler(
-            mapOf(
-                "workspace/didChangeConfiguration" to
-                    JsonRpcMethod.notification(
-                        "workspace/didChangeConfiguration",
-                        DidChangeConfigurationParams::class.java,
-                    ),
-            ),
-        ) {
-            it.registerTypeAdapterFactory(ConfigurationJson)
-        }
 }

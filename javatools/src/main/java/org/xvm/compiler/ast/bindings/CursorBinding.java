@@ -577,13 +577,19 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     /** Attempt-owned scratch space; no context or collector is stored on a syntax node. */
     public static final class Collector {
+        public static final Collector NONE = new Collector(false);
+
+        private final boolean enabled;
+
+        private final Map<IncompleteStatement, CursorBinding> bindings = new IdentityHashMap<>();
+
         /** Create an enabled cursor-fact collector for one compilation attempt. */
         public Collector() {
             this(true);
         }
 
         private Collector(boolean enabled) {
-            f_enabled = enabled;
+            this.enabled = enabled;
         }
 
         /**
@@ -592,7 +598,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
          * @return whether this collector records cursor facts
          */
         public boolean isEnabled() {
-            return f_enabled;
+            return enabled;
         }
 
         /**
@@ -601,8 +607,8 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
          * @param site  the retained incomplete source site
          */
         public void begin(IncompleteStatement site) {
-            if (f_enabled) {
-                f_bindings.remove(site);
+            if (enabled) {
+                bindings.remove(site);
             }
         }
 
@@ -613,8 +619,8 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
          * @param binding  the successfully established facts for this source node
          */
         public void record(IncompleteStatement site, CursorBinding binding) {
-            if (f_enabled) {
-                f_bindings.put(site, binding);
+            if (enabled) {
+                bindings.put(site, binding);
             }
         }
 
@@ -630,9 +636,9 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
             roots.stream().flatMap(Collector::nodes)
                     .filter(IncompleteStatement.class::isInstance)
                     .map(IncompleteStatement.class::cast)
-                    .filter(f_bindings::containsKey)
-                    .forEach(site -> result.put(site, f_bindings.get(site)));
-            f_bindings.clear();
+                    .filter(bindings::containsKey)
+                    .forEach(site -> result.put(site, bindings.get(site)));
+            bindings.clear();
             return Collections.unmodifiableMap(result);
         }
 
@@ -640,11 +646,5 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
             return Stream.concat(Stream.of(node), StreamSupport.stream(node.children().spliterator(), false)
                     .flatMap(Collector::nodes));
         }
-
-        public static final Collector NONE = new Collector(false);
-
-        private final boolean f_enabled;
-
-        private final Map<IncompleteStatement, CursorBinding> f_bindings = new IdentityHashMap<>();
     }
 }

@@ -27,6 +27,12 @@ import static org.xvm.asm.ErrorListener.in;
  * Only the selected header type participates in partial analysis, in the enclosing scope.
  */
 public final class IncompleteTypeCompositionStatement extends TypeCompositionStatement {
+    // Immutable syntax children; copyTree constructs and adopts fresh lists.
+    private final List<IncompleteStatement> cursors;
+
+    private final List<Parameter> formals;
+
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteTypeCompositionStatement.class, "body", "cursors", "formals");
 
     /**
      * Retain a written type header and its query sites without making the declaration emittable.
@@ -166,11 +172,4 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
     public String toString() {
         return toSignatureString() + " <incomplete>";
     }
-
-    // Immutable syntax children; copyTree constructs and adopts fresh lists.
-    private final List<IncompleteStatement> cursors;
-
-    private final List<Parameter> formals;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteTypeCompositionStatement.class, "body", "cursors", "formals");
 }
