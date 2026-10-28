@@ -154,13 +154,13 @@ export function completionCases(): void {
 
     playbook('X20', async (workspace, data) => {
         const incomplete = await workspace.editing(data.body);
-        // LSP defaults the active index to zero. The server suppresses parameter metadata
+        // LSP defaults the active index to zero. The server leaves out parameter metadata
         // in this ambiguous slot, retaining the signature label without a guessed highlight.
         const result = await client().sendRequest<SignatureHelp | null>('textDocument/signatureHelp', {
             textDocument: { uri: incomplete.document.uri.toString() }, position: incomplete.at
         });
         assert.ok(result?.signatures.length);
-        assert.deepStrictEqual(result.signatures[0].parameters, []);
+        assert.strictEqual(result.signatures[0].parameters, undefined);
         const locations = [];
         for (const body of data.bodies) {
             const { document } = await workspace.editing(body);
