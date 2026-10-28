@@ -7,7 +7,6 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.problems.ProblemListener
 import com.intellij.psi.PsiManager
 import com.intellij.psi.codeStyle.CodeStyleSettingsListener
@@ -141,11 +140,6 @@ class XtcLanguageClient(
 
     override fun setServerWrapper(wrapper: LanguageServerWrapper) {
         super.setServerWrapper(wrapper)
-        ApplicationManager
-            .getApplication()
-            .messageBus
-            .connect(this)
-            .subscribe(VirtualFileManager.VFS_CHANGES, DirectoryDocumentMoves(wrapper) { isDisposed })
         // TODO LSP4IJ: UP70 — as a file closes, LSP4IJ clears its problem mark in a background task that nothing orders
         // with the report of the errors then published for its closed document, so the clear can come last and leave a
         // closed file with errors unmarked. Each clear is announced; report the file again then, from what LSP4IJ holds,
