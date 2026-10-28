@@ -627,6 +627,22 @@ object DebugSessionUi {
         checkNotNull(session(project, module)) { "No debug session of $module" }.resume()
     }
 
+    /** Runs the module's paused session to the 1-based [line] of the file [uri], as Run to Cursor does. */
+    @JvmStatic
+    fun runToCursor(
+        project: Project,
+        module: String,
+        uri: String,
+        line: Int,
+    ) {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            val position = checkNotNull(XDebuggerUtil.getInstance().createPosition(file, line - 1)) { "No line $line in $uri" }
+            session.runToPosition(position, false)
+        }
+    }
+
     /** Sets a line breakpoint with a [condition] on the 1-based [breakpointLine] of the module's source, and starts Debug. */
     @JvmStatic
     fun debugWhen(
