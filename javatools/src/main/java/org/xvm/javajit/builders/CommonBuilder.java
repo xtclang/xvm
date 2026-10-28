@@ -656,7 +656,7 @@ public class CommonBuilder
         boolean done  = false;
 
         switch (classStruct.getFormat()) {
-            case CLASS, CONST, SERVICE, ENUMVALUE:
+            case CLASS, CONST, SERVICE, ENUMVALUE, PACKAGE:
                 flags |= ClassFile.ACC_SUPER; // see JLS 4.1
                 classBuilder.withSuperclass(getSuperCD());
                 break;
