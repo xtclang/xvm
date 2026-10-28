@@ -12,6 +12,8 @@ const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
 const EXPECTED_COMMANDS = [
     'xtc.createProject',
     'xtc.runModule',
+    'xtc.build',
+    'xtc.rebuild',
     'xtc.restartServer',
     'xtc.selectLanguageAdapter',
     'xtc.showServerOutput',
