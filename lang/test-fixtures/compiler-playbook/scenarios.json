@@ -10102,6 +10102,35 @@
         "limitations": []
       }
     },
+    "X328": {
+      "title": "a function breakpoint stops where the program enters a method of its name, once its condition holds",
+      "manual": [
+        "How VS Code's Breakpoints view adds a function breakpoint, with its + button, is checked manually; VS Code adds one through its API."
+      ],
+      "values": {
+        "file": "Entered.x",
+        "module": "Entered",
+        "source": "module Entered {\n    Int run() {\n        @Inject Console console;\n        Int n = twice(add(1, 2));\n        Int m = twice(n);\n        console.print($\"n={n} m={m}\");\n        return m;\n    }\n\n    Int add(Int a, Int b) {\n        return a + b;\n    }\n\n    Int twice(Int n) {\n        return n * 2;\n    }\n}\n",
+        "function": "Entered.twice",
+        "condition": "n > 5",
+        "frame": [
+          "Entered.twice",
+          15
+        ],
+        "caller": [
+          "Entered.run",
+          5
+        ],
+        "output": "n=6 m=12",
+        "exitCode": 12
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, has no function breakpoints: it never sends setFunctionBreakpoints (UP46), so IntelliJ has none to check."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
