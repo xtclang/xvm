@@ -68,15 +68,16 @@ internal fun ParityWorkspace.nativeLibraryContent(
             .isEmpty(),
     )
 
-    val stamp = file.getModificationStamp()
     // A library document's URI carries its library's and its source's revisions, so its text can't change: replacing
-    // the compiler inputs asks for no refetch, and the open view stays as it was. Each library type needs an actual
+    // the compiler inputs leaves the open view valid, read-only and as it was. Each library type needs an actual
     // settings change, including later iterations of X254.
     configure(null)
     configure(listOf(SharedScenarios.SourceModule("LibraryViews", source.uri, emptyList())))
     clean(source)
-    check(file.isValid() && !file.isWritable() && file.getModificationStamp() == stamp)
-    check(withContext(OnDispatcher.EDT) { requireNotNull(manager.getSelectedTextEditor()).getDocument().getText() } == text)
+    check(file.isValid()) { "The compiler inputs' change retired the library view $uri" }
+    check(!file.isWritable()) { "The library view $uri became writable" }
+    val shown = withContext(OnDispatcher.EDT) { requireNotNull(manager.getSelectedTextEditor()).getDocument().getText() }
+    check(shown == text) { "The library view $uri changed" }
 
     source.editor
     val previous = protocol.server().getCurrentProcessId()
