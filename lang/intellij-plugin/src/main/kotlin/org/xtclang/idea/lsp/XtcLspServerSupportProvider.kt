@@ -153,7 +153,7 @@ class XtcLspConnectionProvider(
                     "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
                     "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens",
                 ) +
-                listOf("xtc.trace.directory", "xtc.trace.level", "xtc.logs.directory", "xtc.lsp.colorPrototype").mapNotNull { key ->
+                listOf("xtc.trace.directory", "xtc.trace.level", "xtc.logs.directory").mapNotNull { key ->
                     System.getProperty(key)?.let { "-D$key=$it" }
                 },
         )
