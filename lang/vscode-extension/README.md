@@ -69,14 +69,13 @@ clearing after unsaved edits. Runtime function targets and interface-valued dele
 
 ## Installation
 
-### From the Marketplace
-
-Search for **Ecstasy Language Support** in the Extensions view (`Cmd+Shift+X` / `Ctrl+Shift+X`) and click **Install**.
+The extension is not on the Visual Studio Marketplace yet, so it is installed from a VSIX file.
 
 ### From a VSIX
 
-1. Download `xtc-language-<version>.vsix` from the [releases page](https://github.com/xtclang/xvm/releases), or build it locally (see [Building](#building-from-source)).
-2. In VS Code: open the Extensions view → `···` menu → **Install from VSIX…** → select the file.
+1. Download `xtc-language-<version>.vsix` from the [VS Code extension snapshots release](https://github.com/xtclang/xvm/releases/tag/vscode-extension-snapshots), or build it locally (see [Building](#building-from-source)).
+2. In VS Code: open the Extensions view → `···` menu → **Install from VSIX…** → select the file,
+   or run `code --install-extension xtc-language-<version>.vsix` in a terminal.
 3. Reload VS Code when prompted.
 
 ### Building from Source
@@ -142,12 +141,14 @@ Once the status bar shows `✓ Ecstasy`:
 ### Building and running
 
 `xtc.build.mode` chooses how a workspace folder builds and runs, like IntelliJ's
-*Build and run using* setting:
+*Build and run using* setting. **Ecstasy: Select Build Mode** chooses it from a list for the
+active folder; in a folder with a Gradle build, the status bar shows the mode (**Embedded build** or
+**Gradle build**), and clicking it opens the same list.
 
 | Mode | Build / Rebuild | Run |
 |------|-----------------|-----|
-| `auto` (default) | Gradle when the folder has `build.gradle(.kts)` or `settings.gradle(.kts)`, embedded otherwise | Same choice |
-| `embedded` | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/` | The server builds the module, then runs it in its execution worker JVM |
+| `embedded` (default) | The language server's compiler builds every source module in dependency order into `build/xtc/embedded/` | The server builds the module, then runs it in its execution worker JVM |
+| `auto` | Gradle when the folder has `build.gradle(.kts)` or `settings.gradle(.kts)`, embedded otherwise | Same choice |
 | `gradle` | `./gradlew build` (Rebuild: `clean build`) | `./gradlew runXtc` |
 
 | Action | How |
@@ -156,6 +157,13 @@ Once the status bar shows `✓ Ecstasy`:
 | Rebuild | **Ecstasy: Rebuild** |
 | Run the module | The **▶ Run** lens above the `module` declaration, the editor title Run button, `Ctrl+Shift+R` (macOS) / `Ctrl+Shift+F10`, **Ecstasy: Run Module**, an `xtc` task, or `F5` |
 | Stop | Close the run's terminal, or terminate its task |
+
+Embedded is the default also in a folder with a Gradle build. It builds with the language server's
+compiler and bundled XDK, so the Gradle build's own settings, such as `runXtc` arguments, JVM options
+or its XDK version, do not apply; embedded builds and runs in such a folder say so in their terminal.
+Choose **Gradle** with **Ecstasy: Select Build Mode** or the status bar, or set `xtc.build.mode` to
+`gradle`, to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
+available in embedded mode, since it has no counterpart for them.
 
 Embedded builds and runs first save all open files, so the build matches the sources on disk.
 Build output lists each module (built, failed, or skipped because a dependency failed) and each
@@ -231,6 +239,7 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecsta
 | `Ecstasy: Run Module`                    | Build and run the editor's module, per `xtc.build.mode` |
 | `Ecstasy: Build`                         | Build the folder's modules, per `xtc.build.mode`        |
 | `Ecstasy: Rebuild`                       | Rebuild the folder's modules from scratch               |
+| `Ecstasy: Select Build Mode`             | Choose embedded, Gradle or automatic for the folder     |
 | `Ecstasy: Restart Language Server`       | Stop and restart the LSP server                        |
 | `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
 
@@ -264,7 +273,7 @@ All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 | Setting                                | Type      | Default | Description                                                                                              |
 |----------------------------------------|-----------|---------|----------------------------------------------------------------------------------------------------------|
 | `xtc.java.home`                        | string    | `""`    | Java 25+ install path. Overrides automatic discovery.                                                    |
-| `xtc.build.mode`                       | enum      | `"auto"`| How Build, Run and Rebuild work: `auto`, `embedded` or `gradle`. See [Building and running](#building-and-running). |
+| `xtc.build.mode`                       | enum      | `"embedded"`| How Build, Run and Rebuild work: `embedded`, `auto` or `gradle`. See [Building and running](#building-and-running). |
 | `xtc.trace.server`                     | enum      | `"off"` | LSP wire tracing: `off`, `messages`, `verbose`.                                                          |
 | `xtc.inlayHints.enabled`               | boolean   | `true`  | Show inlay hints from the language server.                                                               |
 | `xtc.sourceRoots`                      | string[]  | `[]`    | Extra absolute directories indexed by the language server (e.g. XDK standard-library sources).           |
@@ -371,7 +380,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 292 shared cases (X1–X287, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 294 shared cases (X1–X289, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -408,7 +417,7 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 292 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 294 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its

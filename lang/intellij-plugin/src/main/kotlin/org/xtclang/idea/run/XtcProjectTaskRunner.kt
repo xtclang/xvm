@@ -22,6 +22,7 @@ import org.jetbrains.concurrency.Promise
 import org.xtclang.idea.XtcFileType
 import org.xtclang.idea.lsp.BuildParams
 import org.xtclang.idea.lsp.BuildResponse
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 
@@ -65,7 +66,9 @@ internal class EmbeddedBuild(
     fun start(): CompletableFuture<TaskRunnerResults> {
         EmbeddedExecution.saveAll()
         val title = if (rebuild) "Rebuild Ecstasy modules" else "Build Ecstasy modules"
-        val descriptor = DefaultBuildDescriptor(Any(), title, project.basePath.orEmpty(), System.currentTimeMillis())
+        val descriptor =
+            DefaultBuildDescriptor(Any(), title, project.basePath.orEmpty(), System.currentTimeMillis())
+                .withExecutionFilter(BuildSettingsLink)
         val progress =
             BuildViewManager.createBuildProgress(project).start(
                 object : BuildProgressDescriptor {
@@ -75,6 +78,7 @@ internal class EmbeddedBuild(
                 },
             )
         progress.output("${if (rebuild) "Rebuilding" else "Building"} with the embedded compiler...\n", ProcessOutputType.STDOUT)
+        XtcBuildSettings.gradleNotUsed(project.basePath?.let(Path::of))?.let { progress.output("$it\n", ProcessOutputType.STDOUT) }
         return EmbeddedExecution
             .server(project)
             .thenCompose { it.build(BuildParams(rebuild = rebuild)) }
