@@ -32,6 +32,8 @@ internal object XdkWorkspaceDiscovery {
      */
     class Catalog(
         private val files: Map<File, Header> = emptyMap(),
+        // A file the last events added with exactly the text of a file they removed: a rename or move.
+        private val moved: Map<File, File> = emptyMap(),
     ) {
         fun withSource(
             file: File,
@@ -41,14 +43,14 @@ internal object XdkWorkspaceDiscovery {
             if (text == null) {
                 Catalog(files - file)
             } else {
-                Catalog(files + (file to header(file, text, files[file], cancelled)))
+                Catalog(withoutLeftBuffers(files + (file to header(file, text, files[file], cancelled)), mapOf(file to text)))
             }
 
         fun modules(previous: Collection<XdkSourceModule>): List<XdkSourceModule> {
             val roots =
                 files
                     .mapNotNull { (file, header) ->
-                        val name = header.module ?: previous.firstOrNull { it.root == file }?.name
+                        val name = header.module ?: previousAt(file, previous)?.name
                         name?.takeUnless(XdkLibraries.moduleNames::contains)?.let { file to it }
                     }.toMap()
             val names = roots.values.toSet()
@@ -61,7 +63,7 @@ internal object XdkWorkspaceDiscovery {
                     val imports =
                         headers.flatMap { it.imports } +
                             if (headers.any { it.incomplete }) {
-                                previous.firstOrNull { it.root == root }?.dependencies.orEmpty()
+                                previousAt(root, previous)?.dependencies.orEmpty()
                             } else {
                                 emptySet()
                             }
@@ -72,6 +74,16 @@ internal object XdkWorkspaceDiscovery {
                     )
                 }
         }
+
+        /**
+         * The module [previous] had at [file], or at the path [file] was moved from. A header that does not parse
+         * keeps the name and imports it had, also after a rename, until it parses again.
+         */
+        private fun previousAt(
+            file: File,
+            previous: Collection<XdkSourceModule>,
+        ): XdkSourceModule? =
+            previous.firstOrNull { it.root == file } ?: moved[file]?.let { from -> previous.firstOrNull { it.root == from } }
 
         fun rescan(
             folders: List<File>,
@@ -86,10 +98,13 @@ internal object XdkWorkspaceDiscovery {
                         if (!folder.isDirectory) emptyList() else walk(folder, cancelled)
                     }.toSet() + buffers.keys.filter { includes(folders, it) }
             return Catalog(
-                sources.associateWith { file ->
-                    checkCurrent(cancelled)
-                    header(file, buffers[file] ?: file.readText(), files[file], cancelled)
-                },
+                withoutLeftBuffers(
+                    sources.associateWith { file ->
+                        checkCurrent(cancelled)
+                        header(file, buffers[file] ?: file.readText(), files[file], cancelled)
+                    },
+                    buffers,
+                ),
             )
         }
 
@@ -106,6 +121,7 @@ internal object XdkWorkspaceDiscovery {
         ): Catalog {
             val buffers = buffers(overlays)
             val sources = files.toMutableMap()
+            val before = files.toMap()
             for (path in paths) {
                 checkCurrent(cancelled)
                 sources.keys.removeIf { (it == path || it.toPath().startsWith(path.toPath())) && it !in buffers }
@@ -121,8 +137,27 @@ internal object XdkWorkspaceDiscovery {
                     sources[file] = header(file, buffers[file] ?: file.readText(), files[file], cancelled)
                 }
             }
-            return Catalog(sources)
+            val current = withoutLeftBuffers(sources, buffers)
+            val removed = (before.keys - current.keys).groupBy { before.getValue(it).text }
+            val moves =
+                (current.keys - before.keys)
+                    .mapNotNull { file -> removed[current.getValue(file).text]?.singleOrNull()?.let { file to it } }
+                    .toMap()
+            return Catalog(current, moves)
         }
+    }
+
+    /**
+     * Drops an open buffer whose file is gone when a file on disk has exactly its text: an editor left open on a file
+     * renamed or moved outside the IDE, which would otherwise declare the module a second time. Once its text changes
+     * it is a source again, like any unsaved buffer.
+     */
+    private fun withoutLeftBuffers(
+        sources: Map<File, Header>,
+        buffers: Map<File, String>,
+    ): Map<File, Header> {
+        val onDisk = sources.filterKeys { it !in buffers || it.isFile }.values.mapTo(mutableSetOf()) { it.text }
+        return sources.filter { (file, header) -> file !in buffers || file.isFile || header.text !in onDisk }
     }
 
     private fun buffers(overlays: Map<String, String>): Map<File, String> =
