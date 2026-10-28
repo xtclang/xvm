@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.debug.ExceptionBreakMode
 import org.eclipse.lsp4j.debug.ExceptionFilterOptions
 import org.eclipse.lsp4j.debug.ExceptionInfoArguments
 import org.eclipse.lsp4j.debug.ExitedEventArguments
+import org.eclipse.lsp4j.debug.FunctionBreakpoint
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InvalidatedEventArguments
 import org.eclipse.lsp4j.debug.LoadedSourcesArguments
@@ -27,6 +28,7 @@ import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetFunctionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetVariableArguments
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
@@ -85,6 +87,7 @@ class XtcDebugServerTest {
                 "supportsEvaluateForHovers",
                 "supportsConditionalBreakpoints",
                 "supportsHitConditionalBreakpoints",
+                "supportsFunctionBreakpoints",
                 "supportsLogPoints",
                 "supportsExceptionInfoRequest",
                 "supportsExceptionFilterOptions",
@@ -169,6 +172,58 @@ class XtcDebugServerTest {
         val response = server.setBreakpoints(breakpoints("/work/A.x", 5)).get(10, SECONDS)
         assertThat(response.breakpoints.single().isVerified).isTrue()
         assertThat(runs.installed.map { it.path }).containsExactly("/work/B.x", "/work/A.x")
+    }
+
+    @Test
+    fun `function breakpoints are pending before the start, installed with the program, and at once while it runs`() {
+        val launched = server.launch(mutableMapOf("module" to "App"))
+        val pending =
+            server
+                .setFunctionBreakpoints(
+                    functionBreakpoints(
+                        FunctionBreakpoint().apply { name = "twice" },
+                        FunctionBreakpoint().apply {
+                            name = "Point.move"
+                            condition = "x > 0"
+                            hitCondition = "2"
+                        },
+                    ),
+                ).get(10, SECONDS)
+                .breakpoints
+        assertThat(pending.map { it.isVerified to it.message }).containsOnly(false to XtcDebugServer.PENDING)
+
+        server.configurationDone(null)
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .get(10, SECONDS)
+                ?.functions,
+        ).containsExactly(
+            FunctionBreakpointRequest(pending[0].id, "twice"),
+            FunctionBreakpointRequest(pending[1].id, "Point.move", "x > 0", "2"),
+        )
+        launched.get(10, SECONDS)
+        assertThat(runs.installedFunctions).isEmpty()
+        runs.events.functionBreakpoints(
+            listOf(BreakpointState(pending[0].id, 15, true, path = "/work/App.x"), BreakpointState(pending[1].id, 0, false, "No method")),
+        )
+        assertThat(client.breakpoints.map { Triple(it.breakpoint.id, it.breakpoint.line, it.breakpoint.source?.path) })
+            .containsExactly(Triple(pending[0].id, 15, "/work/App.x"), Triple(pending[1].id, null, null))
+        assertThat(client.breakpoints.map { it.breakpoint.isVerified }).containsExactly(true, false)
+
+        // while it runs, at once, at the line of the method of the name
+        val running = server.setFunctionBreakpoints(functionBreakpoints(FunctionBreakpoint().apply { name = "add" })).get(10, SECONDS)
+        assertThat(runs.installedFunctions.single().map { it.name }).containsExactly("add")
+        assertThat(running.breakpoints.single().line).isEqualTo(20)
+        assertThat(
+            running.breakpoints
+                .single()
+                .source.path,
+        ).isEqualTo("/work/App.x")
+
+        runs.events.stopped(StopState("function breakpoint", null, 12, listOf(running.breakpoints.single().id)))
+        assertThat(client.stops.single().reason).isEqualTo("function breakpoint")
+        assertThat(client.stops.single().hitBreakpointIds).containsExactly(running.breakpoints.single().id)
     }
 
     @Test
@@ -902,6 +957,9 @@ class XtcDebugServerTest {
         breakpoints = lines.map { line -> SourceBreakpoint().apply { this.line = line } }.toTypedArray()
     }
 
+    private fun functionBreakpoints(vararg breakpoints: FunctionBreakpoint) =
+        SetFunctionBreakpointsArguments().apply { this.breakpoints = arrayOf(*breakpoints) }
+
     private fun filterOption(
         filter: String,
         types: String,
@@ -1095,6 +1153,17 @@ class XtcDebugServerTest {
         ): CompletableFuture<List<BreakpointState>> {
             installed.add(breakpoints)
             return CompletableFuture.completedFuture(breakpoints.breakpoints.map { BreakpointState(it.id, it.line, true) })
+        }
+
+        val installedFunctions = CopyOnWriteArrayList<List<FunctionBreakpointRequest>>()
+
+        /** Each name is a method whose code starts on line 20 of App.x. */
+        override fun setFunctionBreakpoints(
+            runId: String,
+            breakpoints: List<FunctionBreakpointRequest>,
+        ): CompletableFuture<List<BreakpointState>> {
+            installedFunctions.add(breakpoints)
+            return CompletableFuture.completedFuture(breakpoints.map { BreakpointState(it.id, 20, true, path = "/work/App.x") })
         }
 
         var fibers = listOf(ThreadState(12, "App"))
