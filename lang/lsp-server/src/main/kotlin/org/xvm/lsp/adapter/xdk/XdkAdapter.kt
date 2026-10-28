@@ -29,6 +29,7 @@ import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.InlayHint
 import org.xvm.lsp.adapter.InlineCompletionContext
+import org.xvm.lsp.adapter.InlineValue
 import org.xvm.lsp.adapter.LinkedEditingRanges
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.PrepareRenameResult
@@ -165,6 +166,7 @@ class XdkAdapter
                 AdapterCapability.SIGNATURE_HELP,
                 AdapterCapability.SEMANTIC_TOKENS,
                 AdapterCapability.INLAY_HINT,
+                AdapterCapability.INLINE_VALUE,
                 AdapterCapability.RENAME,
                 AdapterCapability.CODE_ACTION,
                 AdapterCapability.FORMATTING,
@@ -2039,6 +2041,12 @@ class XdkAdapter
             uri: String,
             range: Range,
         ): List<InlayHint> = analysis(uri)?.semantics?.let { XdkPresentation.hints(it, range) }.orEmpty()
+
+        override fun getInlineValues(
+            uri: String,
+            range: Range,
+            stopped: Position,
+        ): List<InlineValue> = analysis(uri)?.semantics?.let { XdkPresentation.inlineValues(it, range, stopped) }.orEmpty()
 
         /**
          * Blocks and declarations that span more than one line. An editor offers a fold per region, so

@@ -835,7 +835,6 @@
       "values": {
         "file": "Navigation.x",
         "unsupportedCapabilities": [
-          "inlineValueProvider",
           "colorProvider"
         ],
         "tabSize": 4,
@@ -845,7 +844,8 @@
           "documentRangeFormattingProvider",
           "codeActionProvider",
           "codeLensProvider",
-          "monikerProvider"
+          "monikerProvider",
+          "inlineValueProvider"
         ],
         "unformatted": "module Navigation {\nInt value=1;\n}\n"
       },
@@ -10195,6 +10195,47 @@
         "coverage": "not-implemented",
         "limitations": [
           "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48), so IntelliJ has none to check."
+        ]
+      }
+    },
+    "X331": {
+      "title": "the inline values of a stopped method are its parameters and locals up to the stopped line, which the stopped frame's variables give values",
+      "manual": [
+        "How VS Code shows the values beside the code is checked manually, with debug.inlineValues on its default, auto; VS Code checks the provider's answer through vscode.executeInlineValueProvider and that each name has a value in the stopped frame."
+      ],
+      "values": {
+        "file": "Inline.x",
+        "module": "Inline",
+        "source": "module Inline {\n    Int run() {\n        Counter counter = new Counter();\n        return counter.add(2);\n    }\n\n    class Counter {\n        Int count = 3;\n\n        Int add(Int n) {\n            Int before = count;\n            count = before + n;\n            Int after = count;\n            return after;\n        }\n    }\n}\n",
+        "breakpointLine": 12,
+        "inlineValues": [
+          [
+            "n",
+            10
+          ],
+          [
+            "before",
+            11
+          ],
+          [
+            "before",
+            12
+          ],
+          [
+            "n",
+            12
+          ]
+        ],
+        "frameValues": {
+          "n": "2",
+          "before": "3"
+        },
+        "exitCode": 5
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, never sends textDocument/inlineValue, and shows no inline values for Ecstasy at all: its scan of the editor's TextMate tokens finds none of the frame's variables, and it leaves the frame's Locals group collapsed, so IntelliJ computes no inline data until it is expanded (UP50, LSP4IJ issue #1432). IntelliJ's case passes with a plugin built from our local LSP4IJ branch, which asks the language server and expands the locals (run-1069392384661177323)."
         ]
       }
     },
