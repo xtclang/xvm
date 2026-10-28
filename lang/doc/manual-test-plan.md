@@ -1275,8 +1275,8 @@ module Hello {
 | 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Build, Execution, Deployment › Ecstasy; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
 | 18a.14 | Switching modes (VS Code) | In that folder, click **Embedded build** in the status bar and choose **Gradle**; Build; then choose **Ecstasy compiler (embedded)** with **Ecstasy: Select Build Mode** and Build again | The status bar shows **Gradle build**, and Build runs `./gradlew build`; after switching back it shows **Embedded build** and builds with the embedded compiler. The choice is stored in the folder's `xtc.build.mode`. A folder without a Gradle build shows no build mode in the status bar. X288 automates the switch through the command and checks the status bar text; the quick pick and the click are manual |
 
-Known limits: one program at a time per server (a second concurrent run reports "Another program is
-still running"); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
+Known limits: up to four programs at a time per server, each in its own execution worker (a fifth run
+reports that four programs are already running); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
 *Build Module* builds every Ecstasy module; no IntelliJ gutter Run icon.
 
 ---
