@@ -1,15 +1,10 @@
 package org.xtclang.idea.lsp
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
 import com.intellij.psi.PsiFile
-import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams
-import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueHandler
@@ -22,15 +17,11 @@ import org.xtclang.idea.dap.DebugSessions
 import org.xtclang.idea.run.EmbeddedRunSessions
 import java.io.InputStream
 import java.net.URI
-import java.util.concurrent.Callable
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
-/** Client features and the document ownership of the current transport. */
+/** Client features, and the rename and request ownership and the diagnostic reports of the current transport. */
 class XtcClientFeatures : LSPClientFeatures() {
     internal val preflightedRenames = PreflightedRenames()
-    internal val documents = AtomicReference<DocumentStartupMessages?>()
 
     /** The current connection's pull-diagnostic results, which say what each document's latest report was asked for. */
     internal val diagnosticResults = AtomicReference<DiagnosticResultMessages?>()
@@ -46,42 +37,6 @@ class XtcClientFeatures : LSPClientFeatures() {
         return results.currentItems(uri)
     }
 
-    private val edits = ConcurrentHashMap.newKeySet<CompletableFuture<ApplyWorkspaceEditResponse>>()
-
-    // TODO LSP4IJ: UP04 — expose transmitted document versions and validate workspace/applyEdit inside
-    // its write command. Reuse our existing transport ownership until upstream provides this.
-    fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {
-        val result = CompletableFuture<ApplyWorkspaceEditResponse>()
-        edits.add(result)
-        result.whenComplete { _, _ -> edits.remove(result) }
-        CompletableFuture.runAsync {
-            try {
-                // Preparing an edit loads each target's document. A cancellable read lets the editor's
-                // write actions go first; the preparation has no side effects, so it is simply repeated.
-                val edit =
-                    ReadAction
-                        .nonBlocking(Callable { ServerWorkspaceEdit.prepare(this, params) })
-                        .executeSynchronously()
-                ApplicationManager.getApplication().invokeLater {
-                    if (!result.isDone) {
-                        try {
-                            result.complete(edit.apply())
-                        } catch (failure: RuntimeException) {
-                            result.complete(
-                                ServerWorkspaceEdit.refused(failure.message ?: "Edit failed"),
-                            )
-                        }
-                    }
-                }
-            } catch (failure: RuntimeException) {
-                result.complete(
-                    ServerWorkspaceEdit.refused(failure.message ?: "Edit cannot be verified"),
-                )
-            }
-        }
-        return result
-    }
-
     /**
      * The project's embedded runs and debug sessions run in the language server, so it stays up while one does, also
      * with no Ecstasy file open: LSP4IJ stops a server a few seconds after its last open file closes, which ended them.
@@ -94,9 +49,7 @@ class XtcClientFeatures : LSPClientFeatures() {
             )
 
     override fun dispose() {
-        documents.set(null)
         diagnosticResults.set(null)
-        edits.forEach { it.cancel(false) }
         super.dispose()
     }
 
@@ -123,23 +76,11 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
-            private val documents =
-                DocumentStartupMessages(::snapshot, ::reached).also {
-                    this@XtcClientFeatures.documents.set(it)
-                }
             private val diagnostics =
                 DiagnosticResultMessages(::snapshot).also {
                     this@XtcClientFeatures.diagnosticResults.set(it)
                 }
             private val pending = PendingRequests()
-
-            // TODO LSP4IJ: UP09 — 0.21.0 keeps the version a document synchronizer has reached
-            // package-private. Reflect only this getter, never the synchronizer's fields.
-            private val synchronizerVersion by lazy {
-                DocumentContentSynchronizer::class.java
-                    .getDeclaredMethod("getVersion")
-                    .apply { check(trySetAccessible()) { "LSP4IJ document version is inaccessible" } }
-            }
 
             @Suppress("UNCHECKED_CAST") // LSP4J's multiple-interface proxy factory returns Object.
             override fun createProxy(remoteEndpoint: RemoteEndpoint): S {
@@ -153,24 +94,18 @@ class XtcClientFeatures : LSPClientFeatures() {
                 }
             }
 
-            private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
+            private fun snapshot(uri: String): DiagnosticResultMessages.Snapshot? {
                 if (project.isDisposed || serverWrapper.isDisposed) return null
                 val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return null
                 val document = opened.synchronizer?.document ?: return null
                 // File rename waits for didOpen while holding the IDE write lock.
                 // Transport hooks must use the document's lock-free immutable text;
                 // acquiring a read action here deadlocks that rename on the EDT.
-                return DocumentStartupMessages.Snapshot(
+                return DiagnosticResultMessages.Snapshot(
                     opened,
                     document.modificationStamp,
                     document.immutableCharSequence.toString(),
                 )
-            }
-
-            private fun reached(uri: String): Int? {
-                if (project.isDisposed || serverWrapper.isDisposed) return null
-                val synchronizer = serverWrapper.getOpenedDocument(URI(uri))?.synchronizer ?: return null
-                return synchronizerVersion.invoke(synchronizer) as Int
             }
 
             override fun createMessageProducer(
@@ -181,13 +116,7 @@ class XtcClientFeatures : LSPClientFeatures() {
 
             override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
                 val wrapped = super.wrapMessageConsumer(consumer)
-                return if (consumer is RemoteEndpoint) {
-                    documents.incoming(
-                        diagnostics.incoming(wrapped),
-                    )
-                } else {
-                    documents.outgoing(diagnostics.outgoing(wrapped))
-                }
+                return if (consumer is RemoteEndpoint) diagnostics.incoming(wrapped) else diagnostics.outgoing(wrapped)
             }
         }
 }
