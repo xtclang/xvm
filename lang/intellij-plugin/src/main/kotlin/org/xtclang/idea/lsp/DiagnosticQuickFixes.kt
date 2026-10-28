@@ -33,8 +33,8 @@ internal object DiagnosticQuickFixes {
         if (full.items.isEmpty()) return message
         val gson = JSONUtils.getLsp4jGson()
         val revision = UUID.randomUUID()
-        // TODO LSP4IJ: UP06 — the shared Gson lacks our related-report discriminator. Preserve
-        // already decoded companion reports instead of sending them through that decoder again.
+        // TODO LSP4IJ: UP06 — the shared Gson lacks the compatibility adapters that decode related
+        // reports. Preserve already decoded companion reports instead of sending them through it again.
         val copy =
             RelatedFullDocumentDiagnosticReport(
                 full.items.map { diagnostic ->

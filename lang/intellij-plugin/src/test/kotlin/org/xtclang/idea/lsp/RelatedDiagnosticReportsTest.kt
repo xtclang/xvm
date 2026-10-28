@@ -14,9 +14,10 @@ import org.junit.jupiter.api.Test
 
 /**
  * Exercises full, unchanged and related pull-diagnostic report decoding with the client JSON configuration. A
- * valid report shape must not terminate the message reader or lose related-document updates.
+ * valid report shape must not terminate the message reader or lose related-document updates. LSP4J 1.0.0 can't
+ * decode the related reports (UP06); LSP4IJ's compatibility adapters do, since LSP4IJ #1723.
  */
-class DiagnosticReportJsonTest {
+class RelatedDiagnosticReportsTest {
     private val json = handler(true)
 
     private val wire =
@@ -32,7 +33,8 @@ class DiagnosticReportJsonTest {
 
     @Test
     fun `related full and unchanged reports decode without killing the message reader`() {
-        // Include the real method's response adapter as well as the client's Gson configuration.
+        // Include the real method's response adapter as well as the client's Gson configuration. LSP4J alone
+        // still fails, so the client must keep LSP4IJ's adapters.
         assertThatThrownBy { read(handler(false), wire) }
             .isInstanceOf(JsonParseException::class.java)
             .hasMessageContaining("Ambiguous Either")
@@ -71,8 +73,7 @@ class DiagnosticReportJsonTest {
 
     private fun handler(compatible: Boolean) =
         MessageJsonHandler(ServiceEndpoints.getSupportedMethods(TextDocumentService::class.java)) {
-            JSONUtils.configureCompatibilityAdapters(it)
-            if (compatible) it.registerTypeAdapterFactory(DiagnosticReportJson)
+            if (compatible) JSONUtils.configureCompatibilityAdapters(it)
         }.apply { setMethodProvider { "textDocument/diagnostic" } }
 
     private fun read(
