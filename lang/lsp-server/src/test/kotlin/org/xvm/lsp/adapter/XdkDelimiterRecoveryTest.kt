@@ -16,6 +16,10 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises completion and signature help with missing enclosing delimiters. Recovery must preserve the
+ * innermost real context without inventing separators or altering surrounding source.
+ */
 class XdkDelimiterRecoveryTest {
     @TempDir lateinit var directory: Path
 

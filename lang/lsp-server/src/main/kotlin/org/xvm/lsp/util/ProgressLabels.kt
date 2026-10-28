@@ -13,13 +13,9 @@ internal object ProgressLabels {
         val root = roots.mapNotNull(::path).filter { source?.startsWith("$it/") == true }.maxByOrNull { it.length }
         val label =
             when {
-                source.isNullOrEmpty() -> {
-                    uri.substringBefore('?').substringBefore('#')
-                }
+                source.isNullOrEmpty() -> uri.substringBefore('?').substringBefore('#')
 
-                root != null -> {
-                    source.removePrefix("$root/")
-                }
+                root != null -> source.removePrefix("$root/")
 
                 else -> {
                     source

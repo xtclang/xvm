@@ -1,14 +1,11 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.math.BigDecimal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -35,18 +32,38 @@ import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.Expression;
+import org.xvm.compiler.ast.LabeledExpression;
+import org.xvm.compiler.ast.LambdaExpression;
+import org.xvm.compiler.ast.ListExpression;
+import org.xvm.compiler.ast.LiteralExpression;
+import org.xvm.compiler.ast.MapExpression;
+import org.xvm.compiler.ast.NameExpression;
+import org.xvm.compiler.ast.NamedTypeExpression;
+import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.NonBindingExpression;
+import org.xvm.compiler.ast.PartialAst;
+import org.xvm.compiler.ast.ReturnStatement;
+import org.xvm.compiler.ast.StageMgr;
+import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
-import org.xvm.compiler.ast.partial.IncompleteStatement;
-import org.xvm.compiler.ast.partial.PartialSyntax;
+import org.xvm.compiler.ast.ThrowExpression;
+import org.xvm.compiler.ast.TupleExpression;
 import org.xvm.compiler.ast.partial.PartialSyntax.ArgumentCursor;
-import org.xvm.compiler.ast.partial.ProposedLiteralToken;
 
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
 
-/** Explicit incomplete-call inspection on the compiler worker, while the lexical context exists. */
+/**
+ * Inspects incomplete calls on the compiler worker while their lexical contexts still exist.
+ * Reuses ordinary member lookup and argument fitting through {@link PartialAst}; the bridge
+ * keeps compiler internals out of the embedding API.
+ * Candidates remain possibilities; inspection does not select an emittable call.
+ */
 final class PartialCallResolver {
     static CursorBinding inspect(IncompleteStatement site, Context ctx, TypeConstant required, ErrorListener errs) {
         if (site.getTarget() instanceof NewExpression creation) {
@@ -121,32 +138,27 @@ final class PartialCallResolver {
     static List<CursorBinding.Candidate> probeCallCandidate(AstNode site, Context ctx, TypeConstant target, TypeInfo info,
             MethodConstant method, List<Expression> arguments, ErrorListener errs) {
         var written = arguments.stream().map(argument -> (Expression) argument.clone()).toList();
-        var named = site.collectNamedArgs(written, errs);
-        if (named == null || errs.isAbortDesired()) {
-            return List.of();
-        }
-        Set<MethodConstant> direct = new HashSet<>();
-        Set<MethodConstant> converting = new HashSet<>();
         List<CursorBinding.Candidate> result = new ArrayList<>();
-        site.collectMatchingMethods(ctx.enter(), target, info, Set.of(method), written, false, named,
-                null, direct, converting, new HashMap<>(), errs, (signature, ordered) -> {
-                    var resolved = signature.resolveGenericTypes(site.pool(), target);
-                    var original = info.getMethodById(method).getSignature();
-                    // A pending method formal is not a concrete expected type. Retain its written
-                    // formal instead of leaking PendingTypeConstant or substituting Object.
-                    var params = IntStream.range(0, resolved.getParamCount())
-                            .mapToObj(i -> resolved.getRawParams()[i].containsUnresolved()
-                                    ? original.getRawParams()[i] : resolved.getRawParams()[i])
-                            .toArray(TypeConstant[]::new);
-                    var returns = IntStream.range(0, resolved.getReturnCount())
-                            .mapToObj(i -> resolved.getRawReturns()[i].containsUnresolved()
-                                    ? original.getRawReturns()[i] : resolved.getRawReturns()[i])
-                            .toArray(TypeConstant[]::new);
-                    var copied = site.pool().ensureSignatureConstant(resolved.getName(), params, returns);
-                    var declaration = info.getMethodById(method).getTopmostMethodStructure(info).getIdentityConstant();
-                    InvocationBinding.arguments(written, ordered).ifPresent(mapping ->
-                            result.add(new CursorBinding.Candidate(declaration, copied, mapping, converting.contains(method))));
-                });
+        PartialAst.matchMethod(site, ctx, target, info, method, written, errs, match -> {
+            var signature = match.signature();
+            var ordered = match.arguments();
+            var resolved = signature.resolveGenericTypes(PartialAst.pool(site), target);
+            var original = info.getMethodById(method).getSignature();
+            // A pending method formal is not a concrete expected type. Retain its written
+            // formal instead of leaking PendingTypeConstant or substituting Object.
+            var params = IntStream.range(0, resolved.getParamCount())
+                    .mapToObj(i -> resolved.getRawParams()[i].containsUnresolved()
+                            ? original.getRawParams()[i] : resolved.getRawParams()[i])
+                    .toArray(TypeConstant[]::new);
+            var returns = IntStream.range(0, resolved.getReturnCount())
+                    .mapToObj(i -> resolved.getRawReturns()[i].containsUnresolved()
+                            ? original.getRawReturns()[i] : resolved.getRawReturns()[i])
+                    .toArray(TypeConstant[]::new);
+            var copied = PartialAst.pool(site).ensureSignatureConstant(resolved.getName(), params, returns);
+            var declaration = info.getMethodById(method).getTopmostMethodStructure(info).getIdentityConstant();
+            InvocationBinding.arguments(written, ordered).ifPresent(mapping ->
+                    result.add(new CursorBinding.Candidate(declaration, copied, mapping, match.converting())));
+        });
         return List.copyOf(result);
     }
 
@@ -165,7 +177,7 @@ final class PartialCallResolver {
             }
             var expected = candidate.signature().getRawParams()[formals + mapping.orElseThrow().parameterIndex()];
             Expression value = written instanceof LabeledExpression label ? label.getUnderlyingExpression() : written;
-            Expression validated = ((Expression) value.clone()).validate(trial, expected, probe);
+            Expression validated = PartialAst.validate((Expression) value.clone(), trial, expected, probe);
             return validated != null && validated.getTypeFit().isFit()
                     && !probe.hasSeriousErrors() && !probe.isAbortDesired();
         });
@@ -202,8 +214,7 @@ final class PartialCallResolver {
             }
             Expression argument = site.getPendingArgumentName()
                     .<Expression>map(label -> new LabeledExpression(label, value)).orElse(value);
-            argument.setParent(site);
-            argument.introduceParentage();
+            PartialAst.parentTree(argument, site);
             var arguments = new ArrayList<>(written);
             arguments.add(argument);
             return fits.test(arguments);
@@ -225,10 +236,10 @@ final class PartialCallResolver {
                 .filter(text -> fitsValue.test(proposedInstance(cursor, text))).toList();
         var templates = qualified || !prefix.isEmpty() ? List.<String>of()
                 : Stream.concat(scope.candidates().stream().flatMap(candidate -> Arrays.stream(candidate.signature().getRawParams())),
-                        scope.functions().stream().flatMap(function -> Arrays.stream(site.pool().extractFunctionParams(function.type()))))
+                        scope.functions().stream().flatMap(function -> Arrays.stream(PartialAst.pool(site).extractFunctionParams(function.type()))))
                     .map(TypeConstant::resolveTypedefs).map(TypeConstant::removeNullable)
                     .filter(TypeConstant::isFunction)
-                    .map(site.pool()::extractFunctionParams).filter(Objects::nonNull)
+                    .map(PartialAst.pool(site)::extractFunctionParams).filter(Objects::nonNull)
                     .map(parameters -> parameters.length).distinct().sorted()
                     .takeWhile(arity -> !errs.isAbortDesired())
                     .filter(arity -> fitsValue.test(proposedLambda(cursor, arity)))
@@ -241,8 +252,7 @@ final class PartialCallResolver {
             return result;
         }
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(errs::log), errs::isAbortDesired);
-        var receiver = qualified ? ((Expression) cursor.getReceiver().orElseThrow().clone())
-                .validate(ctx.enter(), null, lookup) : null;
+        var receiver = qualified ? PartialAst.validate((Expression) cursor.getReceiver().orElseThrow().clone(), ctx.enter(), null, lookup) : null;
         if (qualified && (receiver == null || !receiver.getTypeFit().isFit())) {
             return result;
         }
@@ -278,8 +288,7 @@ final class PartialCallResolver {
         var returns = new ReturnStatement(new Token(cursor, cursor, Id.RETURN), body);
         var lambda = new LambdaExpression(names, new Token(cursor, cursor, Id.LAMBDA),
                 new StatementBlock(new ArrayList<>(List.of(returns)), cursor, cursor), cursor);
-        lambda.setParent(site);
-        lambda.introduceParentage();
+        PartialAst.parentTree(lambda, site);
         return lambda;
     }
 
@@ -296,8 +305,7 @@ final class PartialCallResolver {
                 var map = new MapExpression(new NamedTypeExpression(null,
                         List.of(new Token(cursor, cursor, Id.IDENTIFIER, "Map")), null, null, null, cursor),
                         new ArrayList<>(), new ArrayList<>(), cursor);
-                map.setParent(site);
-                map.introduceParentage();
+                PartialAst.parentTree(map, site);
                 var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
                 yield new StageMgr(map, Stage.Resolved, probe).fastForward(20)
                         && !probe.hasSeriousErrors() && !probe.isAbortDesired() ? map : null;
@@ -325,8 +333,7 @@ final class PartialCallResolver {
         long cursor = site.getEndPosition();
         var expression = new NameExpression(new NameExpression(new Token(cursor, cursor, Id.IDENTIFIER, "this")),
                 null, new Token(cursor, cursor, Id.IDENTIFIER, text.substring("this.".length())), null, cursor);
-        expression.setParent(site);
-        expression.introduceParentage();
+        PartialAst.parentTree(expression, site);
         return expression;
     }
 
@@ -335,7 +342,7 @@ final class PartialCallResolver {
                                                         String name, ErrorListener errs) {
         var validation = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         var expression = proposedName(site, name);
-        var value = expression.validate(ctx.enter(), null, validation);
+        var value = PartialAst.validate(expression, ctx.enter(), null, validation);
         return value != null && value.getTypeFit().isFit()
                 && !validation.hasSeriousErrors() && !validation.isAbortDesired()
                 && expression.getResolvedTarget() instanceof PropertyConstant identity
@@ -348,8 +355,7 @@ final class PartialCallResolver {
         var expression = !site.isCall() && site.getReceiver().isPresent()
                 ? new NameExpression((Expression) site.getReceiver().orElseThrow().clone(), null, token, null, cursor)
                 : new NameExpression(token);
-        expression.setParent(site);
-        expression.introduceParentage();
+        PartialAst.parentTree(expression, site);
         return expression;
     }
 
@@ -375,7 +381,7 @@ final class PartialCallResolver {
         }
         var validation = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         var trial = ctx.enter();
-        var callee = ((Expression) site.getTarget().clone()).validate(trial, null, validation);
+        var callee = PartialAst.validate((Expression) site.getTarget().clone(), trial, null, validation);
         if (callee == null || !callee.getTypeFit().isFit() || validation.hasSeriousErrors() || validation.isAbortDesired()) {
             return List.of();
         }
@@ -383,7 +389,7 @@ final class PartialCallResolver {
         if (!type.isFunction()) {
             return List.of();
         }
-        var parameters = site.pool().extractFunctionParams(type);
+        var parameters = PartialAst.pool(site).extractFunctionParams(type);
         if (parameters == null || parameters.length < written.size()) {
             return List.of();
         }
@@ -394,7 +400,7 @@ final class PartialCallResolver {
             if (argument instanceof NonBindingExpression && PartialSyntax.argument(site).isPresent()) {
                 return true;
             }
-            var value = argument.validate(trial, parameters[index], validation);
+            var value = PartialAst.validate(argument, trial, parameters[index], validation);
             return value != null && value.isSingle() && value.getTypeFit().isFit()
                     && !validation.hasSeriousErrors() && !validation.isAbortDesired();
         });
@@ -444,6 +450,7 @@ final class PartialCallResolver {
         return new Target(receiver.getType(), MethodKind.Method);
     }
 
+    /** Receiver type and lookup mode, including whether the receiver becomes the first argument. */
     private record Target(TypeConstant type, MethodKind kind, boolean receiverArgument) {
         private Target(TypeConstant type, MethodKind kind) {
             this(type, kind, false);

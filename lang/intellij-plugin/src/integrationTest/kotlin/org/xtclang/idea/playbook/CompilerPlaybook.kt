@@ -29,6 +29,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+/** Selects the harness workload, including feature checks and focused lifecycle or responsiveness runs. */
 enum class PlaybookMode {
     FEATURES,
     STARTUP,
@@ -47,6 +48,7 @@ class CompilerPlaybook(
     private val mode: PlaybookMode = PlaybookMode.FEATURES,
     private val onResult: (Result) -> Unit = {},
 ) {
+    /** Records one scenario's identity, outcome and elapsed time for the playbook report. */
     data class Result(
         val id: String,
         val description: String,

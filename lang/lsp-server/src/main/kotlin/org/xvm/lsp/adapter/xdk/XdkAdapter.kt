@@ -173,6 +173,7 @@ class XdkAdapter
                 AdapterCapability.LINKED_EDITING,
             ) + if (colorPrototype) setOf(AdapterCapability.DOCUMENT_COLOR) else emptySet()
 
+        /** Workspace discovery inputs and the catalog built from them, including any configuration problem. */
         private data class Discovery(
             val folders: List<File> = emptyList(),
             val explicit: Boolean = false,
@@ -574,6 +575,7 @@ class XdkAdapter
             return request.result
         }
 
+        /** Cursor query category used when coalescing work for the same document. */
         private enum class CursorKind {
             PROBE,
             COMPLETION,
@@ -581,20 +583,24 @@ class XdkAdapter
             SIGNATURE,
         }
 
+        /** Document and query category whose pending cursor request can supersede an older request. */
         private data class CursorKey(
             val uri: String,
             val kind: CursorKind,
         )
 
+        /** Cancelable result and queued compiler work owned by a dependent query. */
         private sealed interface QueryWork {
             val result: CompletableFuture<*>
             val task: CompilerQueueTrace.Work
         }
 
+        /** Query work tied to the compilation request whose snapshot it consumes. */
         private sealed interface QueryRequest : QueryWork {
             val compilation: Request
         }
 
+        /** Project-wide query categories with separate scheduling and cancellation identities. */
         private enum class ProjectQueryKind {
             REFERENCES,
             CODE_LENSES,
@@ -609,6 +615,7 @@ class XdkAdapter
             DIAGNOSTICS,
         }
 
+        /** Identity used to coalesce equivalent project queries without conflating distinct operations. */
         private data class ProjectQueryKey(
             val uri: String,
             val kind: ProjectQueryKind,
@@ -616,6 +623,10 @@ class XdkAdapter
             val requestId: UUID? = null,
         )
 
+        /**
+         * Project query with captured dependencies and overlays, executed against those inputs on the
+         * compiler worker.
+         */
         private class ProjectRequest<T>(
             val key: ProjectQueryKey,
             val project: XdkProject,
@@ -628,6 +639,7 @@ class XdkAdapter
             override val task = trace.task("project-${key.kind}", key.uri, result) { work(this) }
         }
 
+        /** Cursor query and source position bound to one compilation request. */
         private class CursorRequest(
             override val compilation: Request,
             val key: CursorKey,
@@ -642,6 +654,7 @@ class XdkAdapter
             override val task = trace.task("cursor-${key.kind}", uri, result) { work(this) }
         }
 
+        /** Rename query bound to the compilation, module and position on which its proof depends. */
         private class RenameRequest(
             override val compilation: Request,
             val module: ModuleAnalysis,
@@ -831,6 +844,10 @@ class XdkAdapter
         override fun getCachedResult(uri: String): CompilationResult? =
             analysis(uri)?.let { CompilationResult.withDiagnostics(uri, it.diagnostics, it.symbols) }
 
+        /**
+         * Captured compilation inputs and scheduling state for one module analysis. Later workspace changes
+         * create a new request rather than mutating these inputs.
+         */
         private class Request(
             val scope: String,
             val uri: String,
@@ -845,6 +862,7 @@ class XdkAdapter
             val task = trace.task("compile", scope, result) { work(this) }
         }
 
+        /** New compilation request together with the superseded work that must be retired. */
         private data class Submission(
             val request: Request,
             val retired: List<Request>,
@@ -885,6 +903,10 @@ class XdkAdapter
                     ?: XdkLibrarySources.sourceUri(name)
         }
 
+        /**
+         * Compiler output assembled for publication; AST and semantic data may be absent after a failed
+         * attempt.
+         */
         private data class Analysis(
             val diagnostics: List<Diagnostic> = emptyList(),
             val symbols: List<SymbolInfo> = emptyList(),
@@ -1145,11 +1167,13 @@ class XdkAdapter
                     XdkSources.capture(root, request.overlays, resources, cancelled)
                 }
 
+        /** Exact source inputs and dependency revisions that determine whether a compiled module can be reused. */
         private data class BuildKey(
             val sources: XdkSources.Inputs,
             val dependencies: Map<String, String>,
         )
 
+        /** Reusable build output and diagnostics indexed by the exact inputs that produced them. */
         private data class CachedBuild(
             val key: BuildKey,
             val artifact: XdkDependency?,
@@ -1250,9 +1274,7 @@ class XdkAdapter
                                     )
                                 }
 
-                                else -> {
-                                    compileOne(request, uri, sources, inputs, module.name)
-                                }
+                                else -> compileOne(request, uri, sources, inputs, module.name)
                             }
                         synchronized(lifecycle) {
                             if (isStale(request)) throw CancellationException()

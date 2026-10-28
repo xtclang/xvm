@@ -9,6 +9,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks the compatibility bridge for deferred code actions. Listing an action must retain its opaque server
+ * data without resolving or applying its edit before the user selects it.
+ */
 class CodeActionMessagesTest {
     @Test
     fun `lazy selection carries original action without resolving or applying while listing`() {

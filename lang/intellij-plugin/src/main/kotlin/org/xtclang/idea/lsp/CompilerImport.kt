@@ -10,24 +10,29 @@ internal class CompilerImport(
     private val importId: (String) -> String? = { null },
     private val validate: (String) -> Unit,
 ) {
+    /** Terminal outcome displayed for a compiler-model import operation. */
     enum class Outcome { SUCCEEDED, CANCELLED, FAILED }
 
+    /** Identity of one preparation or import attempt, used to reject superseded completions. */
     class Operation(
         val prepare: Boolean,
     ) {
         val id: String = UUID.randomUUID().toString()
     }
 
+    /** Last completed import outcome and its user-facing explanation. */
     data class Result(
         val outcome: Outcome,
         val message: String,
         val finished: Instant = Instant.now(),
     )
 
+    /** An observed model-file state; a null text records that the file was absent. */
     private data class Observed(
         val text: String?,
     )
 
+    /** Atomic import state tying the accepted model to the observation and operation that produced it. */
     private data class State(
         val accepted: String? = null,
         val observed: Observed? = null,
@@ -105,9 +110,7 @@ internal class CompilerImport(
                     )
                 }
 
-                outcome == Outcome.FAILED -> {
-                    Result(outcome, detail ?: "Gradle import failed; previous compiler configuration retained.")
-                }
+                outcome == Outcome.FAILED -> Result(outcome, detail ?: "Gradle import failed; previous compiler configuration retained.")
 
                 validation.isFailure -> {
                     Result(
@@ -116,9 +119,7 @@ internal class CompilerImport(
                     )
                 }
 
-                else -> {
-                    Result(Outcome.SUCCEEDED, "Ecstasy compiler inputs imported.")
-                }
+                else -> Result(Outcome.SUCCEEDED, "Ecstasy compiler inputs imported.")
             }
         val after =
             before.copy(

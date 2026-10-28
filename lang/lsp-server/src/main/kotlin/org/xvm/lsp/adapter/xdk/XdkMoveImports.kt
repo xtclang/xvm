@@ -10,6 +10,7 @@ import org.xvm.compiler.ast.TypeCompositionStatement
 
 /** Fresh, capture-free module aliases for a proposed ownership change. No compiler state escapes. */
 internal object XdkMoveImports {
+    /** Resolved import aliases and the edit needed to preserve them after moving a source. */
     data class Imports(
         val aliases: Map<String, String>,
         val edit: XdkRename.Edit,

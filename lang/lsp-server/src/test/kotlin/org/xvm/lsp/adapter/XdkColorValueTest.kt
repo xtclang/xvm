@@ -13,6 +13,11 @@ import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 import kotlin.io.path.readText
 
+/**
+ * Exercises the opt-in literal color-constructor experiment and source-preserving picker edits. Unrelated
+ * types, dynamic expressions and stale documents must not acquire swatches or rewriteable color
+ * presentations.
+ */
 class XdkColorValueTest {
     @Test
     fun `fixture exposes initializers and reordered named channels only when enabled`() {

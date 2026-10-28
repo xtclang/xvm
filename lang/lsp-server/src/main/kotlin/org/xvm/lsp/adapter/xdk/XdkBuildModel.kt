@@ -8,6 +8,7 @@ import java.io.IOException
 internal class XdkBuildModel private constructor(
     private val sourceSets: List<SourceSet>,
 ) {
+    /** Sources, resources and dependency paths exported for one Gradle source set. */
     data class SourceSet(
         val project: String,
         val name: String,
@@ -18,6 +19,7 @@ internal class XdkBuildModel private constructor(
         val modulePath: List<File>,
     )
 
+    /** Source modules and binary dependencies assembled from an accepted Gradle build model. */
     data class Inputs(
         val modules: List<XdkSourceModule>,
         val binaries: List<XdkDependency>,
@@ -84,17 +86,9 @@ internal class XdkBuildModel private constructor(
                 .distinct()
                 .flatMap { root ->
                     when {
-                        root.isDirectory -> {
-                            root.listFiles().orEmpty().filter { it.isFile && it.extension == "xtc" }
-                        }
-
-                        root.isFile && root.extension == "xtc" -> {
-                            listOf(root)
-                        }
-
-                        else -> {
-                            emptyList()
-                        }
+                        root.isDirectory -> root.listFiles().orEmpty().filter { it.isFile && it.extension == "xtc" }
+                        root.isFile && root.extension == "xtc" -> listOf(root)
+                        else -> emptyList()
                     }
                 }.distinct()
                 .map { XdkDependency.fromBinary(it.readBytes()) }

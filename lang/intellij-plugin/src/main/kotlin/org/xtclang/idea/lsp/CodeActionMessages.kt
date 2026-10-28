@@ -10,6 +10,11 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 // TODO LSP4IJ: UP11 — resolved action edits need a version-checked write command, not an undo-transparent
 // action. Route selection through the supported client-command extension until upstream preserves
 // import/member-generation Undo/Redo (X105/X122). Listing or resolving alone never applies edits.
+
+/**
+ * Adapts unresolved server code actions to a client command that resolves them on invocation. Preserves the
+ * original action data so expensive edits can remain deferred with the supported LSP4IJ version.
+ */
 internal object CodeActionMessages {
     const val COMMAND = "xtc.resolveCodeAction"
 

@@ -4,6 +4,10 @@ import com.intellij.util.xmlb.XmlSerializer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
+/**
+ * Round-trips runtime options and support-session metadata through IntelliJ XML serialization. Guards against
+ * settings that work in memory but disappear or change after an IDE restart.
+ */
 class ServerSettingsPersistenceTest {
     @Test fun `runtime options survive IntelliJ XML serialization`() {
         val options = ServerRuntimeSettings.Options("-Xmx768M", 2, 1, 3, 2)

@@ -23,6 +23,10 @@ internal class CompilerRootWatches(
     private val watch: (Set<Path>) -> AutoCloseable,
     private val refresh: (Set<Path>) -> CompletableFuture<Void>,
 ) : AutoCloseable {
+    /**
+     * Watch registrations and their shared lease, replaced together when roots change or the connection
+     * closes.
+     */
     private data class State(
         val registrations: Map<String, Set<Path>> = emptyMap(),
         val lease: AutoCloseable = AutoCloseable {},

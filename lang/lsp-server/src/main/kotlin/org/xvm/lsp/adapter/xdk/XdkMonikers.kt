@@ -27,6 +27,7 @@ internal class XdkArtifactSymbols private constructor(
 ) {
     private val entries = immutableMap(entries)
 
+    /** Dependency constant index and whether the corresponding moniker is exported. */
     private data class Entry(
         val index: Int,
         val exported: Boolean,

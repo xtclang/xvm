@@ -162,6 +162,7 @@ internal fun ParityScenarios.runtimeSettingsCases() {
     }
 }
 
+/** Edits runtime launch and logging options through the native settings probe. */
 @Remote("org.xtclang.idea.playbook.probe.ServerRuntimePage", plugin = "org.xtclang.playbook.probe")
 interface ServerRuntimePage {
     fun content(): String

@@ -37,6 +37,7 @@ internal class XdkQualifiedName private constructor(
         return XdkRename.Edit(0, end, prefix + extra)
     }
 
+    /** Token and offsets forming one component of a written qualified name. */
     private data class Part(
         val id: Token.Id,
         val start: Int,

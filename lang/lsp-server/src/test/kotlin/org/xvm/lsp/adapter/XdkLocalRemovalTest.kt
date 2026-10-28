@@ -10,6 +10,11 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Checks removal of unused compiler constants while preserving comments and surviving bindings. Runtime
+ * initializers, storage annotations, reads and writes must prevent an apparently unused declaration from
+ * being deleted.
+ */
 class XdkLocalRemovalTest {
     @TempDir lateinit var directory: Path
 

@@ -16,6 +16,7 @@ internal class PartialResults(
     private val dispatcher: ExecutorService =
         Executors.newSingleThreadExecutor(Thread.ofVirtual().name("lsp-partial-results").factory()),
 ) : AutoCloseable {
+    /** Batches to publish as partial results and the final response remaining after those batches. */
     data class Plan<T>(
         val batches: List<Any>,
         val remainder: T,

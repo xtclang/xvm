@@ -33,6 +33,10 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 
+/**
+ * Checks protocol presentation for clients with reduced capabilities. Avoids unnegotiated requests and
+ * metadata while preserving UTF-16 positions, plain hover and legacy symbol forms.
+ */
 class ClientPresentationTest {
     @Test
     fun `minimal client receives no unnegotiated configuration or refresh requests`() {

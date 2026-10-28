@@ -51,21 +51,10 @@ internal object XtcFileOperations {
                 if (project.isDisposed || future.isCancelled) return@invokeLater
                 val failure =
                     when {
-                        error != null -> {
-                            "$title failed: ${error.cause?.message ?: error.message}"
-                        }
-
-                        edit == null -> {
-                            "The compiler cannot safely apply this operation. No changes were made."
-                        }
-
-                        !edit.apply() -> {
-                            "Sources or paths changed; invoke the operation again."
-                        }
-
-                        else -> {
-                            null
-                        }
+                        error != null -> "$title failed: ${error.cause?.message ?: error.message}"
+                        edit == null -> "The compiler cannot safely apply this operation. No changes were made."
+                        !edit.apply() -> "Sources or paths changed; invoke the operation again."
+                        else -> null
                     }
                 if (failure == null) {
                     completed()

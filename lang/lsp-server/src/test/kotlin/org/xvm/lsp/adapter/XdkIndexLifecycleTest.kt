@@ -14,6 +14,10 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 
+/**
+ * Checks replacement of dependency and source indices without losing detached semantic facts. Old hierarchy
+ * handles must expire when the underlying graph or source authority changes.
+ */
 class XdkIndexLifecycleTest {
     @TempDir lateinit var directory: Path
 

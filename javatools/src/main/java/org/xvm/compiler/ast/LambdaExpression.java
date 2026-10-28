@@ -114,7 +114,11 @@ public class LambdaExpression
         return m_lambda;
     }
 
-    /** The written arrow token, for source-position consumers. */
+    /**
+     * The written arrow token, for source-position consumers.
+     *
+     * @return the lambda's written arrow token
+     */
     public Token getOperator() {
         return operator;
     }
@@ -124,8 +128,7 @@ public class LambdaExpression
      *         its generated method has been validated
      */
     public LambdaBindings getSourceBindings() {
-        return m_ctxLambda == null || !m_ctxLambda.f_bindings.isFor(m_lambda)
-                ? null : m_ctxLambda.f_bindings;
+        return m_ctxLambda == null || !m_ctxLambda.f_bindings.isFor(m_lambda) ? null : m_ctxLambda.f_bindings;
     }
 
     /** Record a generated parameter through the context that owns its source associations. */
