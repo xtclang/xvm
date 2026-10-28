@@ -18,8 +18,6 @@ import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticUtils
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams
-import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
@@ -177,13 +175,6 @@ class XtcLanguageClient(
             }
         }
     }
-
-    override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> =
-        if (isDisposed || project.isDisposed) {
-            CompletableFuture.completedFuture(ServerWorkspaceEdit.refused("Connection is closed"))
-        } else {
-            (clientFeatures as XtcClientFeatures).applyEdit(params)
-        }
 
     // Rename/file-operation listeners can hold the IDE write lock while awaiting an LSP reply.
     // Never acquire a read lock on the transport thread. Use the shared application pool and
