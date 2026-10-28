@@ -120,10 +120,11 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 Compiler mode has implementations for all 27 capabilities in this project's adapter interface,
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Debug inline values, notebooks and broader
-refactorings remain incomplete. Color values have an opt-in, fixture-only constructor prototype;
-a public Ecstasy color-library contract remains deferred. See the [feature boundaries below](#supported-lsp-features)
-and [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
+bounded; the interface does not cover every LSP feature. Notebooks and broader refactorings
+remain incomplete. The fixture-only color constructor prototype was removed; a public Ecstasy
+color-library contract remains deferred. See the
+[feature boundaries below](#supported-lsp-features) and
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
 Compiler code actions include expression/local extraction, private helper extraction for contiguous
 call statements and nested expressions, adjacent single-evaluation local inline, wider constant-local
@@ -524,8 +525,12 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
+| `xtc/runLenses` `{uri}` | request | The document's Run lenses, each its `module` and zero-based `line`; IntelliJ marks these lines with its gutter Run icons |
 | `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
 | `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. As with `xtc run`, a run ends once its entry method has returned and its services have nothing left to do: one still at work or waiting, or a server or `keepAlive` alarm, keeps it running until it is stopped, and then nothing of it runs on. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
+| `xtc/debugStart` | request | Starts a Debug Adapter Protocol (DAP) session carried by this connection, and returns its `sessionId` |
+| `xtc/debugMessage` `{sessionId, message}` | notification, both ways | One DAP message of the session: the client's requests, the server's responses and events |
+| `xtc/debugEnd` `{sessionId}` | notification | Ends the session, which stops the program it launched |
 
 Builds compile the text the server holds when the build is requested, open documents included,
 saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
@@ -583,6 +588,96 @@ a program waiting for a line gets an empty one, as at the end of terminal input.
 user types, so `readLine`'s `suppressEcho` is not honored. A run stopped while its module still builds
 never starts, and its exit says `Stopped before the program started.`
 
+A debug session's `launch` builds and runs the module the same way, in the same execution workers.
+Its arguments are `module` (a name), `moduleUri` (a source URI of the module, used in place of the
+name when given), `method`, `args` (an array passed as given, or a comma-separated string), `cwd` (the
+program's root directory) and `noDebug`. The program starts after the client's `configurationDone`,
+or two seconds after its build when the client sends none, and the launch is answered once it has
+started. Its output arrives as DAP `output` events and its exit as `exited` and `terminated`; a failed
+build reports its diagnostics as output and fails the launch. The session owns the program it
+launched: `terminate` and `disconnect` stop it, also while it still builds, and so do `xtc/debugEnd`
+and the server shutting down. A line the client sends as a `repl` `evaluate` while the program runs
+is its console input.
+
+A launch without `noDebug` runs the program under the runtime debugger (`SessionDebugger`), in the
+execution worker beside it. The breakpoints the client sets before the program starts are
+answered as pending and installed before its first line, and `breakpoint` events then report each
+as installed, on the line it was put on, or not installed, with the reason. A breakpoint on a line
+without code moves to the next line with code in its method. Breakpoints set later are installed
+at once. A breakpoint or `assert:debug` stops the program with every fiber stopped:
+`threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
+frame's file and line, and `continue` resumes it. A frame of a bundled XDK library's code is in the
+library's bundled source, the read-only copy that navigation opens, since the source directory the
+library records is the one it was built in. `scopes` gives a stopped frame's Locals, and
+`variables` its `this` and named variables, an object's fields and an array's elements (the first
+100, or the part a request's `start` and `count` name, as its `filter` of `named` or `indexed`
+takes them; an array's variable has `indexedVariables`, its size), each with its value and type in words; they are read on the waiting fiber's own thread, and a
+reference lasts until the program resumes. An object's fields are followed by lazy variables
+(`presentationHint.lazy`), its computed properties and its `toString()`, valued `(...)`: `variables`
+of a lazy variable's reference runs its code on the waiting fiber, for at most a second, and answers
+with one variable that has the value, or fails with the reason. A mutable object's or array's value
+ends with its identity code, such as `#1023456`. With `supportsValueFormattingOptions`, a `variables`
+or `evaluate` request's `format` with `hex` shows integers in hexadecimal (`0xFF`, a negative one in
+its type's two's complement); the session's own request `xtc/valueFormat` (`{"hex": true}`) sets the
+format of the requests that name none, which VS Code's Variables view uses, since VS Code never sends
+a format, and is followed by `invalidated` for `variables`. `setVariable` (`supportsSetVariable`)
+gives a local, a field or an array element the value of an expression, evaluated as a watch is, a
+literal of the variable's type; a value of another type, `this`, a field of an immutable object, a
+computed property or what a `Ref` holds is refused with the reason. `completions`
+(`supportsCompletionsRequest`, triggered by `.`) completes the name that ends at the request's
+column: after a dot, with the public fields, properties and methods of the value of the path before
+it, evaluated as a watch is; otherwise with the frame's variables, innermost first, `this` and its
+members; only the names that start with what is typed of it. Each replaces what is typed, its
+`length` before the cursor, and has no `start`, which LSP4IJ and VS Code read as a 0-based index
+although `columnsStartAt1` says otherwise. A frame of a fiber that called the stopped one has no
+scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
+over a call, into one, or out of its method, and the program stops again with the reason `step`;
+a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the
+way ends the step. A breakpoint may have a condition, an expression whose `Boolean` value must be
+`True`; a hit condition, `N` to stop at the Nth hit or `>= N`, `> N` or `% N`, counting the hits
+whose condition holds; and a log message, which makes it a logpoint: the message, with each
+`{expression}` in it replaced by its value, is console output, and the program runs on. A condition
+that cannot be evaluated stops the program and says why; one that is not such an expression leaves
+the breakpoint unverified, with the reason. Breakpoints and stacks follow the text the program was
+built from: once a debugged file is edited, saved or not, a breakpoint's line is matched to that
+text, line by line, ignoring whitespace at a line's ends, and a frame's line to where it is now; a
+breakpoint on a line changed since the build is unverified, with the reason. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
+stop the program where such an exception is thrown, with the reason `exception` and the exception's
+type and text; it is the frame's first variable, `<exception>`. Each filter takes exception classes,
+separated by commas, as its condition (`filterOptions`), and then stops only at them and the classes
+that extend them. `exceptionInfo` answers the exception's type, text and stack trace, `unhandled`
+when no frame catches it and `always` otherwise. `pause` stops a running program at
+the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at the first line
+of its own modules, with the reason `entry`; while it runs and no fiber is stopped, `threads` shows
+one thread, named after the module, for an editor's Pause to act on. `evaluate` in a stopped frame,
+for a watch, a hover or a line typed in the debug console, evaluates an expression without running
+the program's code: names (`this`, `<exception>`, the frame's innermost variable of that name, or
+else a field of `this`), their fields (`.name`) and array elements (`[i - 1]`); integer, decimal,
+character and string literals, `True`, `False` and `Null`; and Ecstasy's operators with its
+precedence, such as `point.x + 1` or `0 < i && ints[i] > 0`, which run the runtime's own native
+operations, so they compute what the program would. The value expands like a variable, and what
+cannot be evaluated fails with the reason, such as `There is no variable "nope" in this frame.`, or,
+for an operation that would run the program's code, the method it would run: `s + i would run
+Stringable.toString(), which the debugger does not run here.` A line typed in the debug console
+that this refuses, such as a call, runs as code, compiled in the frame, on the fiber that waits
+there, for at most two seconds; only the fibers of the services it calls run meanwhile, and the
+program stays stopped. Its answer is its value's `toString()`, `(no value)` for a statement, or the
+reason it failed: a compile error, what it threw, or its time limit. `cancel` ends it sooner, and
+it answers `cancelled`. What the code changes stays changed, and once it has run, an `invalidated`
+event for the `variables` area tells a client that takes it to read the variables again. A launch
+with `evaluationRunsProgram` lets the whole program run while such code does, for code that waits
+on work that the program's other fibers do: they run without stopping at breakpoints, exceptions or
+pauses, its clocks run, and once the code has run they wait again at their next line, so the
+`invalidated` event is then for `all` areas. Without a
+frame, a line typed in the debug console is the program's input. What
+the program printed before it stopped is sent before the stop. Terminating or disconnecting a
+stopped program ends it where it is, without running more of it. The session advertises
+`configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
+logpoints, `exceptionInfo`, `cancel`, value formatting options, `setVariable`, `completions` with `.`
+as its trigger character, and its exception filters with their options, and refuses `attach`. A
+run without the debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an
+embedding host has no terminal for the command-line debugger.
+
 ## Context-Aware Completion
 
 The tree-sitter adapter classifies the cursor context before returning completions,
@@ -637,6 +732,7 @@ precise supported contexts and exclusions.
 | `XdkDependency` | Immutable module bytes, revisioned symbol keys and optional detached source locations |
 | `XdkBuild` | Embedded build of a source-module order into `build/xtc/embedded`, with per-module outcomes |
 | `EmbeddedRuns` | `xtc/build`/`xtc/run` service: builds on the compile queue, then runs in the execution worker |
+| `DebugSessions` | DAP sessions over the client connection; each is `dap-server`'s `XtcDebugServer`, launching through `EmbeddedRuns` |
 | `RunWorkerProcess` / `RunWorker` | The execution worker JVM and its JSON-lines control protocol |
 
 ## Building
@@ -795,6 +891,29 @@ subdirectories there so their traces survive temporary workspace cleanup. Intell
 place each child server's trace in their report's `server-trace/` directory, preserving restarts as
 separate files.
 The IntelliJ provider forwards the trace directory/level JVM properties to its child server.
+
+### Following a run through the logs
+
+Embedded builds, runs and the execution workers log lines with the same `key=value` fields, so one
+run can be followed from its build to the worker that ran it:
+
+- `XdkAdapter`: `embedded build: build=28 scope=... outcome=succeeded modules=Logged@614fdb35d3c9`.
+  A build's ID is that of its compiler queue job, the `id` of the trace's `embedded-build` events.
+  Each module is given with the start of its artifact's revision (SHA-256), and `(reused)` when an
+  earlier compile supplied it.
+- `DebugSessions`: `debug session launches a run: session=... run=...`, for a debug session's run.
+- `EmbeddedRuns`: `run starting: run=correlated build=28 artifact=Logged@614fdb35d3c9 debug=false`;
+  instead `run not started` when the build failed, or `run stopped before it started`.
+- `RunWorkerProcess`: `run assigned: workerRun=1 run=correlated worker=87623 generation=1 module=Logged
+  method=run`, then `run exited: ... code=7` (or `error=...`) and `execution worker after a run:` with
+  what the worker kept. `worker` is the worker's process ID, `generation` counts the workers this
+  server started, from 1, and `workerRun` is the worker's own number for the run. A worker's
+  `started`, `ready`, `serves no further run` and `exited` lines give the same `worker` and
+  `generation`.
+
+```bash
+grep -E 'run=correlated|build=28 |worker=87623 ' ~/.xtc/logs/lsp/server-*/server.log
+```
 
 ### Tailing Logs
 
