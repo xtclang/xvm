@@ -630,6 +630,14 @@ passes with the workaround disabled. The gates are in
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 
+### LSP4IJ: LSP4J's debug modules at 0.21.0 (UP63): our #1793, open
+
+- [ ] UP63 (2026-10-28): LSP4IJ bundles LSP4J's LSP modules at 1.0.0 and its debug modules at 0.21.0,
+  so no fix to LSP4J's DAP endpoint since 0.21.0 reaches IntelliJ, our LSP4J #1004, #1008 and #1009
+  among them, and LSP4IJ's DAP model stays at DAP 1.60. Our
+  [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (open, 2026-10-28) bundles them at
+  LSP4J's one version. To do: get it merged; UP41's LSP4J part needs it to reach IntelliJ.
+
 ### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): LSP4J part our draft #1009
 
 - [ ] UP41 (2026-10-24, cause found 2026-10-26): an IntelliJ evaluation that runs code cannot be ended
@@ -834,9 +842,11 @@ passes with the workaround disabled. The gates are in
 - [ ] UP15: get LSP4J #997 reviewed and merged. @pisv was asked on 2026-10-20; no reply yet.
 - [ ] UP15: after an LSP4J release with #997, adopt it and change `XdkStdioTest`'s assertion to
   `ResponseErrorCode.InvalidParams`, keeping reader recovery.
-- [ ] UP06: after an LSP4J release with #991 (latest is still 1.0.0, 2026-02-10) and an LSP4IJ
-  release with #1723, remove the `DiagnosticReportJson` adapter; gate: full and unchanged reports
-  round-trip in the bundled client.
+- [ ] UP06: after an LSP4IJ release with #1723 (0.30.0), remove the `DiagnosticReportJson` adapter;
+  gate: full and unchanged reports round-trip in the bundled client. No LSP4J release is needed:
+  #1723 registers its own adapter in `configureCompatibilityAdapters`, which the client's Gson applies
+  (checked 2026-10-28 against LSP4IJ's `main`; done on the local branch `lagergren/lsp4ij-0.30.0`,
+  `cf21a1ed54`).
 
 ### vscode-languageclient
 
