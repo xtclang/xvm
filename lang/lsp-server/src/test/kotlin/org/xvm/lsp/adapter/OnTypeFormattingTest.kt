@@ -236,6 +236,55 @@ class OnTypeFormattingTest {
         }
 
         @Test
+        @DisplayName("after 'case' -> indent 4 from the case, which aligns with its switch")
+        fun afterCaseLabel() {
+            val source =
+                """
+                module myapp {
+                    void run(Int x) {
+                        switch (x) {
+                        case 1:
+
+                        }
+                    }
+                }
+                """.trimIndent()
+            val indent = formatAfterTrigger(source, line = 4, column = 0, ch = "\n")
+            assertThat(indent).isEqualTo(12)
+        }
+
+        @Test
+        @DisplayName("after a '//' comment -> maintain the comment's indent")
+        fun afterLineComment() {
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        // a note
+
+                    }
+                }
+                """.trimIndent()
+            val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
+            assertThat(indent).isEqualTo(8)
+        }
+
+        @Test
+        @DisplayName("inside a string -> no edit")
+        fun insideStringLiteral() {
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        String s = "hel
+                        lo";
+                    }
+                }
+                """.trimIndent()
+            assertThat(formatEdits(source, line = 3, column = 8, ch = "\n")).isEmpty()
+        }
+
+        @Test
         @DisplayName("no edit when tree is missing")
         fun noTreeReturnsEmpty() {
             val edits =
@@ -264,6 +313,21 @@ class OnTypeFormattingTest {
     // ========================================================================
 
     @Nested
+    @DisplayName("Large file")
+    inner class LargeFileTests {
+        @Test
+        @DisplayName("a request in a large file is quick")
+        fun requestInLargeFile() {
+            val source = XdkOnTypeFormattingTest.largeSource()
+            val uri = freshUri()
+            ts.compile(uri, source)
+            val times = XdkOnTypeFormattingTest.timeRequests(source) { line -> ts.onTypeFormatting(uri, line, 0, "\n", defaultOptions) }
+            println("tree-sitter on-type formatting, ${source.lines().size} lines: median ${times.median} ms, slowest ${times.slowest} ms")
+            assertThat(times.median).isLessThan(5.0)
+        }
+    }
+
+    @Nested
     @DisplayName("Closing brace (})")
     inner class CloseBraceTests {
         @Test
@@ -288,6 +352,41 @@ class OnTypeFormattingTest {
             // '}' on line 2 has 8 spaces but should be at 4
             val indent = formatAfterTrigger(source, line = 2, column = 8, ch = "}")
             assertThat(indent).isEqualTo(4)
+        }
+
+        @Test
+        @DisplayName("close if block -> indent of the if")
+        fun closeIfBlock() {
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        if (True) {
+                            Int x = 1;
+                            }
+                    }
+                }
+                """.trimIndent()
+            val indent = formatAfterTrigger(source, line = 4, column = 13, ch = "}")
+            assertThat(indent).isEqualTo(8)
+        }
+
+        @Test
+        @DisplayName("close switch -> indent of the switch")
+        fun closeSwitch() {
+            val source =
+                """
+                module myapp {
+                    void run(Int x) {
+                        switch (x) {
+                        case 1:
+                            return;
+                            }
+                    }
+                }
+                """.trimIndent()
+            val indent = formatAfterTrigger(source, line = 5, column = 13, ch = "}")
+            assertThat(indent).isEqualTo(8)
         }
 
         @Test
