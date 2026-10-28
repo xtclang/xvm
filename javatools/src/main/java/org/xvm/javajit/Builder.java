@@ -112,6 +112,24 @@ public abstract class Builder {
     }
 
     /**
+     * Compute the type supplying the Java superclass implementation.
+     */
+    public TypeConstant getSuperType() {
+        return getThisType().ensureTypeInfo().getExtends();
+    }
+
+    /**
+     * Compute the ClassDesc for the super class of the class built by this builder.
+     */
+    public ClassDesc getSuperCD() {
+        TypeConstant thisType  = getThisType();
+        TypeConstant superType = getSuperType();
+        return superType == null
+            ? thisType.isConst() ? CD_nConst : CD_nObject
+            : getImplDesc(superType);
+    }
+
+    /**
      * Resolve a CONSTR_* call target after its declaring contribution and JIT name have been
      * selected.
      *
@@ -120,41 +138,6 @@ public abstract class Builder {
     public JitCallDesc resolveConstructorCall(MethodInfo constructor, TypeConstant targetType,
                                               ClassDesc targetCD, String name) {
         return JitCallDesc.static_(targetCD, name, constructor.getJitDesc(this, targetType), false);
-    }
-
-    /**
-     * Ensure the backing-field target used by an accessor super call.
-     *
-     * @param body  the Field implementation of a property getter or setter
-     *
-     * @return the call descriptor for accessing the backing field without re-entering
-     *         the custom accessor
-     */
-    public JitCallDesc ensureFieldAccessor(MethodBody body) {
-        throw new UnsupportedOperationException("Field super: " + body);
-    }
-
-    /**
-     * Load a backing field without invoking an Ecstasy property getter. Virtual-child contracts
-     * expose raw accessors because the declaring JIC need not be a Java ancestor of the receiver.
-     */
-    public void loadField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
-        if (owner.isDerivedVirtualChildClass()) {
-            code.invokeinterface(getCCDesc(owner), FieldGet + name, md(cd));
-        } else {
-            code.getfield(getCCDesc(owner), name, cd);
-        }
-    }
-
-    /**
-     * Store a backing field without invoking an Ecstasy property setter or its mutability check.
-     */
-    public void storeField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
-        if (owner.isDerivedVirtualChildClass()) {
-            code.invokeinterface(getCCDesc(owner), FieldSet + name, md(CD_void, cd));
-        } else {
-            code.putfield(getCCDesc(owner), name, cd);
-        }
     }
 
     /**
@@ -179,15 +162,59 @@ public abstract class Builder {
     }
 
     /**
-     * Compute the ClassDesc for the super class of the class built by this builder.
+     * Ensure the backing-field target used by an accessor super call.
+     *
+     * @param body  the Field implementation of a property getter or setter
+     *
+     * @return the call descriptor for accessing the backing field without re-entering
+     *         the custom accessor
      */
-    public ClassDesc getSuperCD() {
-        TypeConstant thisType  = getThisType();
-        TypeInfo     typeInfo  = thisType.ensureTypeInfo();
-        TypeConstant superType = typeInfo.getExtends();
-        return superType == null
-            ? thisType.isConst() ? CD_nConst : CD_nObject
-            : getCCDesc(superType);
+    public JitCallDesc ensureFieldAccessor(MethodBody body) {
+        throw new UnsupportedOperationException("Field super: " + body);
+    }
+
+    /**
+     * Load a backing field without invoking an Ecstasy property getter. Virtual-child contracts
+     * expose raw accessors because the declaring JIC need not be a Java ancestor of the receiver.
+     */
+    public void loadField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
+        if (shouldInvokeFieldAccessor(owner)) {
+            code.invokeinterface(getCCDesc(owner), FieldGet + name, md(cd));
+        } else {
+            code.getfield(getCCDesc(owner), name, cd);
+        }
+    }
+
+    /**
+     * Store a backing field without invoking an Ecstasy property setter or its mutability check.
+     */
+    public void storeField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
+        if (shouldInvokeFieldAccessor(owner)) {
+            code.invokeinterface(getCCDesc(owner), FieldSet + name, md(CD_void, cd));
+        } else {
+            code.putfield(getCCDesc(owner), name, cd);
+        }
+    }
+
+    /**
+     * @return true iff backing fields owned by the specified type should be accessed through
+     *         synthetic virtual calls instead of JVM getfield/putfield instructions
+     */
+    protected boolean shouldInvokeFieldAccessor(TypeConstant owner) {
+        return owner.isDerivedVirtualChildClass();
+    }
+
+    /**
+     * @return true iff the code for the specified method or property accessors should be generated
+     *         inside this class
+     */
+    public boolean shouldGenerate(IdentityConstant id) {
+        IdentityConstant containerId = id instanceof PropertyConstant
+                ? id.getClassIdentity()
+                : id.getNamespace();
+
+        return containerId.equals(getThisType().getSingleUnderlyingClass(true)) ||
+                isEmbedded(containerId.getComponent().getFormat());
     }
 
     /**
@@ -260,7 +287,14 @@ public abstract class Builder {
     }
 
     /**
-     * Obtain the Java descriptor of the specified type's implementation (Impl) shape.
+     * Obtain the ClassDesc that represents the "JIT Instance Class Name" for this type.
+     */
+    public ClassDesc getICDesc(TypeConstant type) {
+        return type.getJitICDesc(typeSystem);
+    }
+
+    /**
+     * Obtain the ClassDesc that represents the specified type's implementation (Impl) shape.
      */
     public ClassDesc getImplDesc(TypeConstant type) {
         return type.getJitImplDesc(typeSystem);
@@ -291,7 +325,6 @@ public abstract class Builder {
      * @see "doc/jit_class_names.txt"
      */
     public String getICName(TypeConstant type) {
-        // TODO
         return type.getJitICName(typeSystem);
     }
 
@@ -2142,7 +2175,7 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     targetCD = getCCDesc(targetType);
+        ClassDesc     targetCD = getICDesc(targetType);
         JitMethodDesc instorMD;
 
         if (targetJIC.isVirtualChild()) {

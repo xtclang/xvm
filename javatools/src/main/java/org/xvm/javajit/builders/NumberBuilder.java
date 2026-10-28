@@ -164,7 +164,7 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected boolean shouldGenerate(IdentityConstant id) {
+    public boolean shouldGenerate(IdentityConstant id) {
         if (thisType.isJitPrimitive() && id instanceof MethodConstant &&
                 !(id.getNamespace() instanceof PropertyConstant)) {
             // property accessors are handled by assembleProperties()
