@@ -1356,7 +1356,7 @@ public class CommonBuilder
         code.aload(0)
             .aload(code.parameterSlot(0));
 
-        TypeConstant superType = typeInfo.getExtends();
+        TypeConstant superType = getSuperType();
         boolean      hasOuter  = superType != null &&
                 superType.getSingleUnderlyingClass(true).getComponent()
                         instanceof ClassStructure superClass && superClass.isInstanceChild();
@@ -3639,12 +3639,8 @@ public class CommonBuilder
     /**
      * Assemble a "standard" routing call from a cap to its target method.
      */
-    private void assembleStandardCap(
-            ClassBuilder  classBuilder,
-            String        srcName,
-            String        dstName,
-            JitMethodDesc jmdSrc,
-            JitMethodDesc jmdDst) {
+    private void assembleStandardCap(ClassBuilder classBuilder, String srcName, String dstName,
+                                     JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
         classBuilder.withMethodBody(srcName, jmdSrc.standardMD, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0); // this
 
@@ -3698,12 +3694,8 @@ public class CommonBuilder
     /**
      * Assemble an "optimized" routing call from one method signature to another.
      */
-    protected void assembleOptimizedCap(
-            ClassBuilder  classBuilder,
-            String        srcName,
-            String        dstName,
-            JitMethodDesc jmdSrc,
-            JitMethodDesc jmdDst) {
+    protected void assembleOptimizedCap(ClassBuilder classBuilder, String srcName, String dstName,
+                                        JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
         int flags = ClassFile.ACC_PUBLIC;
         if (jmdSrc.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
@@ -3926,10 +3918,8 @@ public class CommonBuilder
     /**
      * Assemble the "routing" method for a capped method.
      */
-    protected void assemblePropertyDelegation(
-            ClassBuilder     classBuilder,
-            MethodInfo       srcMethod,
-            PropertyConstant propDelegate) {
+    protected void assemblePropertyDelegation(ClassBuilder classBuilder, MethodInfo srcMethod,
+                                              PropertyConstant propDelegate) {
         String        srcName   = srcMethod.ensureJitMethodName(typeSystem);
         JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
@@ -4123,11 +4113,8 @@ public class CommonBuilder
      * }
      * </code></pre>
      */
-    protected void assembleNew(
-            ClassBuilder  classBuilder,
-            MethodInfo    constructor,
-            String        jitName,
-            JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd) {
         boolean   isSingleton = typeInfo.isSingleton();
         boolean   hasType     = typeInfo.hasGenericTypes();
         boolean   hasOuter    = classStruct.isInstanceChild();
@@ -4231,7 +4218,7 @@ public class CommonBuilder
             }
 
             // step 6: call the constructor
-            // construct$17(ctx, [cctx], [type], thi$, x, y, z);
+            // construct$17(ctx, [cctx], thi$, x, y, z);
             String ctorName = constructor.ensureJitMethodName(typeSystem);
 
             code.aload(ctxSlot);
@@ -4304,12 +4291,8 @@ public class CommonBuilder
     /**
      * Assemble the property accessor (optimized if possible, standard otherwise).
      */
-    protected void assemblePropertyAccessor(
-            ClassBuilder  classBuilder,
-            PropertyInfo  prop,
-            String        jitName,
-            JitMethodDesc jmd,
-            boolean       isGetter) {
+    protected void assemblePropertyAccessor(ClassBuilder classBuilder, PropertyInfo prop,
+                                            String jitName, JitMethodDesc jmd, boolean isGetter) {
         int flags = ClassFile.ACC_PUBLIC;
         if (jmd.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
@@ -4334,11 +4317,8 @@ public class CommonBuilder
     /**
      * Assemble the method and any deferred methods.
      */
-    protected void assembleMethod(
-            ClassBuilder  classBuilder,
-            MethodInfo    method,
-            String        jitName,
-            JitMethodDesc jmd) {
+    protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method, String jitName,
+                                  JitMethodDesc jmd) {
         int flags = ClassFile.ACC_PUBLIC;
         if (!method.getHead().getMethodStructure().hasCode()) {
             if (method.isAbstract()) {
@@ -4469,20 +4449,6 @@ public class CommonBuilder
 
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());
-    }
-
-    // ----- helper methods ------------------------------------------------------------------------
-
-    /**
-     * @return true iff the code for the specified method or property accessors should be generated
-     *         inside this class
-     */
-    protected boolean shouldGenerate(IdentityConstant id) {
-        IdentityConstant containerId = id instanceof PropertyConstant
-                ? id.getClassIdentity()
-                : id.getNamespace();
-
-        return containerId.equals(thisId) || isEmbedded(containerId.getComponent().getFormat());
     }
 
     // ----- debugging support ---------------------------------------------------------------------

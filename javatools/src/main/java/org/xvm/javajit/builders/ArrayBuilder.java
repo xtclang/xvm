@@ -55,6 +55,14 @@ public class ArrayBuilder extends AugmentingBuilder {
         return super.getCCName(type);
     }
 
+    @Override
+    public ClassDesc getICDesc(TypeConstant type) {
+        if (isBaseArrayType(type)) {
+            return CD_Array;
+        }
+        return super.getICDesc(type);
+    }
+
     protected boolean isBaseArrayType(TypeConstant type) {
         if (!type.isArray()) {
             // not an array
