@@ -2884,7 +2884,10 @@ On 2026-10-28 the user decided that #693 takes everything that completes the LSP
 implementation, the debugger track included, distilled into one commit per feature and without
 temporaries, tracking documents, plans or saved output. The bursts above, and the R8–R12 and L79
 work after them, went onto #693's branch `errs/full-testable-lsp-20261009` as 24 commits on
-`b80a36e050`, from `9b3b802eb2` to `6f5f5fde1b`, pushed the same day.
+`b80a36e050`, from `9b3b802eb2` to `6f5f5fde1b`, pushed the same day. Later that day #693 was
+regrouped and rebased onto master; the hashes below are from before that, and
+[the regroup map](errs-693-regroup-2026-10-28.tsv) gives each one's new commit (see
+[#693 regrouped](#693-regrouped-and-rebased-onto-master-2026-10-28)).
 
 How it was done, in a worktree of #693's branch:
 - Each feature's errs commits were cherry-picked in this branch's order, then squashed into one
@@ -2955,6 +2958,61 @@ experimental API usages, the last LSP4IJ's DAP API). Native playbooks for X31, X
 X304–X331: VS Code `run-t9cdiK`, 40 of 40; IntelliJ `run-16354350350821117767` (LSP4IJ 0.21.0),
 21 passed and 12 partial as the catalog declares, the 8 not implemented there not run, and no IDE
 errors.
+
+### #693 regrouped and rebased onto master (2026-10-28)
+
+At the user's request, #693's 230 commits were regrouped into 70 on master `6c025c0426` (#739), and
+its plans were dropped: `plan-embedded-execution.md`, its changes to `plan-dap-debugging.md` and the
+plans index, which now match master. Before the rewrite, the branch was backed up as the local branch
+`backup/693-before-regroup-20261028` (`6f5f5fde1b`) and the bundle
+`../xtclang2-backups/2026-10-28/693-before-regroup.bundle` (sha256
+`9e4d04ea131a97aa73f9ce21a9382be4d88d3e07906f913e304416af97593a44`, verified).
+
+[errs-693-regroup-2026-10-28.tsv](errs-693-regroup-2026-10-28.tsv) maps each new #693 commit to the
+old #693 commits it holds, and, for the debugger track, the errs commits as well; the old #693
+commits' own origins are in the sections above. The first 206 commits became 45 feature commits:
+contiguous runs of related commits, a few moved within a short window where they applied
+unchanged. Four commits that only touched the plans dropped out (`f0cb918f9d`, `d31bb2ef47`,
+`6cbf46e43f`, `4e95b7f6a6`). The 24 debugger commits stayed as they were, the references commit
+also unlinking the dropped plan from `lang/doc/README.md` and the server README.
+
+Every commit now compiles (javatools, dap-server, lsp-server, the IntelliJ plugin with its
+integration tests, and the VS Code extension), which the old history did not: from the listener
+contract's second slice on, its commits dropped master's embedded run code that they were cut before
+(`runMethod` with its entry point and console input, its imports, the `EMB-6` and `EMB-7` codes),
+and only the later run commits put it back; and its lsp-server tests used the binary AST that master
+removed (#692) until the binary AST commit. The repairs:
+- From the listener contract's migration on, master's run code stays, reporting in the new form
+  (`errs.error`, `errs.warn`, with `at`); no commit after it uses the deprecated `Object[]` overloads
+  or a null-listener guard (checked per commit). `ErrorListTest`, #693's copy of master's #717 test,
+  reports through `errs.error` too.
+- The module-source error is `EMB-8` from the commit that adds it, after master's `EMB-6` and
+  `EMB-7`.
+- The binary AST commit's test rewrites come with the tests they change.
+- Where the embedded run commits carried errs' older run API (`runMethod(methodName, args)`, a
+  `BufferedReader` console, the runner's older `runner.x`), master's form is kept, and the worker
+  calls it with an `EntryPoint` and a `ConsoleInput`; `InterpreterControl` keeps master's code and
+  the new-form reports until the debugger adds to it.
+
+The final tree is that of a merge of master and the old #693 tip, with the conflict in
+`EmbeddingSupportTest` resolved by keeping both sides, less the plans and the two unlinked
+references, and with `ErrorListTest` in the new form.
+
+One commit was added after the regroup, `c77de154c9` (errs `a8264753db`): with master's #737, the
+mixin fixture that `XdkManualCompositionRenameTest` borrows has `extends Base(value)`, whose `value`
+the semantic model resolves to the synthetic constructor's register, with no declaration or
+identity, and the rename proof refused every rename in the module. Such an occurrence is now left
+out of the comparison on both sides, as an unresolved name is; the edited source must still
+compile, and a new binding of the name is still a difference.
+
+Receipts on the tip `c77de154c9`: `spotlessCheck` and `:lang:spotlessCheck`; `:javatools:test` 661
+tests, 0 failures, the 42 existing skips (`ErrorListTest`, `EmbeddingSupportTest` 30,
+`SessionDebuggerTest` 48 among them); `:lang:dap-server:test` 38; `:lang:lsp-server:test` 2,419, 0
+failures, the 2 existing skips (before the fix, 1 failure: the covariant self family rename);
+`compilerStdioTest` 83; `:lang:intellij-plugin:test` 151; the VS Code headless suite 70;
+`verifyPlugin` Compatible with IU-262.10968.63. The suites other than the language server's ran on
+`3d1e3e640c`, which the fix commit follows with a change to `XdkRename.kt` only. Native playbooks for
+X31, X131, X280–X289 and X304–X331: VS Code `run-d4YjJI`, 40 of 40; IntelliJ `run-2510657446416640089` (LSP4IJ 0.21.0), 21 passed and 12 partial as the catalog declares, the 7 not implemented there not run, and no IDE errors. #693 was force-pushed with a lease from `6f5f5fde1b` to `c77de154c9` the same day.
 
 ### IntelliJ parity backlog (L60)
 
