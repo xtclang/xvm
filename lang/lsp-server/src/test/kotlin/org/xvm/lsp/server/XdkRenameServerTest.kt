@@ -182,6 +182,74 @@ class XdkRenameServerTest {
     }
 
     @Test
+    fun `a file event reaches the module graph before the next request, without waiting for the workspace walk`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val root =
+            directory.resolve("App.x").toFile().apply {
+                writeText("module App { Box make() = new Box(); }")
+            }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        val hold = AtomicBoolean()
+        val walking = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val server =
+            XtcLanguageServer(XdkAdapter(), rescans = { rescan ->
+                if (hold.get()) {
+                    walking.countDown()
+                    check(release.await(20, SECONDS))
+                }
+                rescan()
+            })
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server
+                .initialize(
+                    parameters().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(directory.toUri().toString(), "workspace"))
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations =
+                            FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    },
+                ).get(20, SECONDS)
+            val uri = root.toURI().toString()
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, root.readText())))
+            server.textDocumentService
+                .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                .get(30, SECONDS)
+
+            // as when IntelliJ undoes a rename: a watcher event, then at once willRenameFiles
+            hold.set(true)
+            val other = directory.resolve("Other.x").toFile().apply { writeText("module Other { package app import App; }") }
+            server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(listOf(FileEvent(other.toURI().toString(), FileChangeType.Created))),
+            )
+            assertThat(walking.await(20, SECONDS)).isTrue()
+            assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name })
+                .describedAs("The event is in the graph while the workspace walk is held")
+                .contains("Other")
+            val rename =
+                server.willRenameFiles(
+                    RenameFilesParams(
+                        listOf(FileRename(member.toURI().toString(), directory.resolve("App/Crate.x").toUri().toString())),
+                    ),
+                )
+            // the walk finds nothing the event did not already apply, so it retires nothing
+            release.countDown()
+            assertThat(rename.get(30, SECONDS)?.documentChanges).isNotEmpty()
+            server.discoveryIdle().get(20, SECONDS)
+            assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name }).contains("App", "Other")
+        } finally {
+            release.countDown()
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
     fun `file move proposal includes the configured graph and all resource operations without applying them`() {
         directory = directory.toRealPath()
         val root =

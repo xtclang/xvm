@@ -475,10 +475,19 @@ diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
 
 This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
 declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
-settings. After startup, rescans for file events and workspace-folder changes run on a background
-`xtc-discovery` thread: the notification returns at once, a burst of events costs one or two walks,
-and no lock is held while the walk reads the disk. A walk is adopted only if no edit or newer graph
-changed what it read; otherwise it walks again. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
+settings. After startup, a file event updates discovery before the server reads its next message, so
+a request sent after the event sees it: only the paths the event names are read (a source file again,
+a new folder walked, anything deleted dropped with what was under it). A walk of the whole workspace
+then runs on a background `xtc-discovery` thread to catch events the watcher missed; a burst of events
+costs one or two walks, no lock is held while the walk reads the disk, and it changes the graph only if
+it finds a difference. A walk is adopted only if no edit or newer graph changed what it read; otherwise
+it walks again. Workspace folders a client adds are walked on that thread too, and workspace-wide
+requests sent after the change start once the walk has finished. Unsaved import-edge edits and
+document close also refresh discovery.
+
+A file event for a module whose analysis is still running is judged against the sources that analysis
+reads: one that has not read them yet already includes the change, so the watcher reporting a file or
+folder the editor has just created does not cancel the first compile or the requests waiting for it.
 It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
 
