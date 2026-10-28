@@ -2,29 +2,25 @@ package org.xvm.lsp.adapter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
-import org.xvm.lsp.adapter.Position
-import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.adapter.TextEdit
-import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.index.WorkspaceIndex
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 
 /**
- * Backend-agnostic code action provider that works with any [AdapterTree]/[AdapterNode] implementation.
+ * Backend-agnostic code action provider that works with any [AdapterTree]/[AdapterNode]
+ * implementation.
  *
- * Currently offers:
+ * Currently, offers:
  * - Organize imports (sort alphabetically)
  * - Remove unused imports (names not referenced elsewhere in the file)
  * - Generate documentation comment (insert skeleton with @param entries)
  * - Auto-import (add import for unresolved type names found in workspace index)
  *
- * Query-engine-specific data (imports, declarations, identifier lookups) is passed
- * via [CodeActionQueryData] so that both tree-sitter and compiler adapters can
- * provide the same information from their own backends.
+ * Query-engine-specific data (imports, declarations, identifier lookups) is passed via
+ * [CodeActionQueryData] so that both tree-sitter and compiler adapters can provide the same
+ * information from their own backends.
  *
  * Stateless — a single instance is shared across all code action requests.
  */
@@ -53,9 +49,7 @@ class AdapterCodeActions {
             )
     }
 
-    /**
-     * Build all available code actions for the given document.
-     */
+    /** Build all available code actions for the given document. */
     fun getCodeActions(
         tree: AdapterTree,
         uri: String,
@@ -71,7 +65,10 @@ class AdapterCodeActions {
             } ?: logger.info("getCodeActions: organize-imports not applicable")
 
             val removeUnused = buildRemoveUnusedImportActions(uri, queryData)
-            logger.info("getCodeActions: remove-unused-import candidates={}", removeUnused.map { it.title })
+            logger.info(
+                "getCodeActions: remove-unused-import candidates={}",
+                removeUnused.map { it.title },
+            )
             addAll(removeUnused)
 
             val docComments = buildGenerateDocCommentActions(tree, uri, range, queryData.declarations)
@@ -91,7 +88,10 @@ class AdapterCodeActions {
     ): CodeAction? {
         val importNodes = tree.root.children.filter { it.type == "import_statement" }
         if (importNodes.size < 2) {
-            logger.info("getCodeActions: organize-imports skipped, import count={}", importNodes.size)
+            logger.info(
+                "getCodeActions: organize-imports skipped, import count={}",
+                importNodes.size,
+            )
             return null
         }
 
@@ -109,7 +109,10 @@ class AdapterCodeActions {
                 Position(firstImport.startLine, firstImport.startColumn),
                 Position(lastImport.endLine, lastImport.endColumn),
             )
-        val edit = WorkspaceEdit(mapOf(uri to listOf(TextEdit(replaceRange, sortedTexts.joinToString("\n")))))
+        val edit =
+            WorkspaceEdit(
+                mapOf(uri to listOf(TextEdit(replaceRange, sortedTexts.joinToString("\n")))),
+            )
         return CodeAction("Organize Imports", CodeActionKind.SOURCE_ORGANIZE_IMPORTS, edit = edit)
     }
 
@@ -135,7 +138,11 @@ class AdapterCodeActions {
 
             val deleteRange = Range(Position(loc.startLine, 0), Position(loc.startLine + 1, 0))
             val edit = WorkspaceEdit(mapOf(uri to listOf(TextEdit(deleteRange, ""))))
-            logger.info("getCodeActions: import '{}' marked unused at line {}", simpleName, loc.startLine)
+            logger.info(
+                "getCodeActions: import '{}' marked unused at line {}",
+                simpleName,
+                loc.startLine,
+            )
             CodeAction("Remove unused import '$simpleName'", CodeActionKind.SOURCE, edit = edit)
         }
     }
@@ -151,7 +158,10 @@ class AdapterCodeActions {
         declarations: List<SymbolInfo>,
     ): List<CodeAction> {
         val lines = tree.source.split("\n")
-        val filtered = declarations.filter { it.location.startLine in range.start.line..range.end.line }
+        val filtered =
+            declarations.filter {
+                it.location.startLine in range.start.line..range.end.line
+            }
         logger.info(
             "getCodeActions: doc-comment scan range={}..{} declarationsInRange={}",
             range.start.line,
@@ -164,7 +174,11 @@ class AdapterCodeActions {
             // Check if there is already a doc comment above
             val prevLine = if (declLine > 0) lines[declLine - 1].trimEnd() else ""
             if (prevLine.endsWith("*/")) {
-                logger.info("getCodeActions: doc-comment skipped for '{}' at line {}, already documented", decl.name, declLine)
+                logger.info(
+                    "getCodeActions: doc-comment skipped for '{}' at line {}, already documented",
+                    decl.name,
+                    declLine,
+                )
                 return@mapNotNull null
             }
 
@@ -200,7 +214,9 @@ class AdapterCodeActions {
             val methodNode =
                 node?.let {
                     generateSequence(it) { n -> n.parent }
-                        .firstOrNull { n -> n.type == "method_declaration" || n.type == "constructor_declaration" }
+                        .firstOrNull { n ->
+                            n.type == "method_declaration" || n.type == "constructor_declaration"
+                        }
                 }
             val paramsNode = methodNode?.childByFieldName("parameters")
             paramsNode
@@ -253,7 +269,10 @@ class AdapterCodeActions {
                 indexed.map { it.qualifiedName },
             )
             if (indexed.isEmpty()) {
-                logger.info("getCodeActions: no indexed candidates available for unresolved type '{}'", name)
+                logger.info(
+                    "getCodeActions: no indexed candidates available for unresolved type '{}'",
+                    name,
+                )
             }
             indexed.map { symbol ->
                 val importText = "import ${symbol.qualifiedName};"
@@ -291,8 +310,8 @@ class AdapterCodeActions {
     }
 
     /**
-     * Find the line where a new import statement should be inserted.
-     * Inserts after the last existing import, or at line 0 if there are none.
+     * Find the line where a new import statement should be inserted. Inserts after the last
+     * existing import, or at line 0 if there are none.
      */
     private fun findImportInsertLine(tree: AdapterTree): Int {
         val importNodes = tree.root.children.filter { it.type == "import_statement" }
@@ -305,16 +324,16 @@ class AdapterCodeActions {
 }
 
 /**
- * Pre-computed query data passed to [AdapterCodeActions] to decouple it from
- * any specific query engine implementation.
+ * Pre-computed query data passed to [AdapterCodeActions] to decouple it from any specific query
+ * engine implementation.
  *
- * The adapter (tree-sitter, compiler, etc.) populates this from its own backend
- * before calling code action methods.
+ * The adapter (tree-sitter, compiler, etc.) populates this from its own backend before calling code
+ * action methods.
  *
- * @property imports            All import paths in the document (e.g., "ecstasy.collections.List")
- * @property importLocations    Import path → source location pairs for each import statement
- * @property declarations       All declarations found in the document
- * @property findIdentifiers    Callback to find all occurrences of a given identifier name
+ * @property imports All import paths in the document (e.g., "ecstasy.collections.List")
+ * @property importLocations Import path → source location pairs for each import statement
+ * @property declarations All declarations found in the document
+ * @property findIdentifiers Callback to find all occurrences of a given identifier name
  */
 data class CodeActionQueryData(
     val imports: List<String>,

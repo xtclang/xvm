@@ -6,9 +6,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import javax.swing.Icon
 
-/**
- * Provides custom icons for XTC files (.x extension).
- */
+/** Provides custom icons for XTC files (.x extension). */
 class XtcIconProvider : IconProvider() {
     override fun getIcon(
         element: PsiElement,
@@ -17,7 +15,8 @@ class XtcIconProvider : IconProvider() {
 
     companion object {
         val XTC_ICON: Icon? by lazy {
-            runCatching { IconLoader.getIcon("/icons/xtc.svg", XtcIconProvider::class.java) }.getOrNull()
+            runCatching { IconLoader.getIcon("/icons/xtc.svg", XtcIconProvider::class.java) }
+                .getOrNull()
         }
     }
 }

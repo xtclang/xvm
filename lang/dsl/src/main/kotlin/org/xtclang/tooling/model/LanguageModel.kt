@@ -32,9 +32,7 @@ import kotlinx.serialization.Serializable
 // ENUMS
 // =============================================================================
 
-/**
- * Operator associativity - how operators of the same precedence bind.
- */
+/** Operator associativity - how operators of the same precedence bind. */
 enum class Associativity {
     /** Left-to-right: a op b op c = (a op b) op c */
     LEFT,
@@ -46,9 +44,7 @@ enum class Associativity {
     NONE,
 }
 
-/**
- * Operator category for semantic grouping and styling.
- */
+/** Operator category for semantic grouping and styling. */
 enum class OperatorCategory {
     /** Assignment operators: =, +=, -=, etc. */
     ASSIGNMENT,
@@ -72,9 +68,7 @@ enum class OperatorCategory {
     OTHER,
 }
 
-/**
- * Keyword category for semantic grouping and styling.
- */
+/** Keyword category for semantic grouping and styling. */
 enum class KeywordCategory {
     /** Control flow: if, else, for, while, switch, case, break, continue, return, etc. */
     CONTROL,
@@ -95,9 +89,7 @@ enum class KeywordCategory {
     OTHER,
 }
 
-/**
- * Cardinality for AST node children.
- */
+/** Cardinality for AST node children. */
 enum class Cardinality {
     /** Exactly one child, must be present */
     REQUIRED,
@@ -113,9 +105,7 @@ enum class Cardinality {
 // DATA CLASSES - The model types
 // =============================================================================
 
-/**
- * Keyword definition with category for semantic grouping.
- */
+/** Keyword definition with category for semantic grouping. */
 @Serializable
 data class KeywordDefinition(
     val word: String,
@@ -124,9 +114,7 @@ data class KeywordDefinition(
     val reserved: Boolean,
 )
 
-/**
- * Complete language model containing all definitions.
- */
+/** Complete language model containing all definitions. */
 @Serializable
 data class LanguageModel(
     val name: String,
@@ -145,67 +133,54 @@ data class LanguageModel(
     val visibilityKeywords: List<String>,
     val concepts: List<ConceptDefinition>,
 ) {
-    /**
-     * Get all keywords (reserved + context-sensitive).
-     */
+    /** Get all keywords (reserved + context-sensitive). */
     val allKeywords: List<String>
         get() = keywords + contextKeywords
 
-    /**
-     * Get keywords by category.
-     */
+    /** Get keywords by category. */
     fun keywordsByCategory(category: KeywordCategory): List<String> = categorizedKeywords.filter { it.category == category }.map { it.word }
 
-    /**
-     * Get a concept by name.
-     */
+    /** Get a concept by name. */
     fun getConcept(name: String): ConceptDefinition? = concepts.find { it.name == name }
 
-    /**
-     * Get all concrete (non-abstract) concepts.
-     */
+    /** Get all concrete (non-abstract) concepts. */
     val concreteConcepts: List<ConceptDefinition>
         get() = concepts.filter { !it.isAbstract }
 
-    /**
-     * Get all abstract concepts.
-     */
+    /** Get all abstract concepts. */
     val abstractConcepts: List<ConceptDefinition>
         get() = concepts.filter { it.isAbstract }
 
-    /**
-     * Get operators sorted by precedence (lowest to highest).
-     */
+    /** Get operators sorted by precedence (lowest to highest). */
     val operatorsByPrecedence: List<OperatorDefinition>
         get() = operators.sortedBy { it.precedence }
 
-    /**
-     * Get constants by category (e.g., "boolean", "null").
-     */
-    fun constantsByCategory(category: String): List<ConstantDefinition> = constants.filter { it.category == category }
+    /** Get constants by category (e.g., "boolean", "null"). */
+    fun constantsByCategory(category: String): List<ConstantDefinition> =
+        constants.filter {
+            it.category == category
+        }
 
-    /**
-     * Get boolean constant literals (e.g., ["True", "False"]).
-     */
+    /** Get boolean constant literals (e.g., ["True", "False"]). */
     val booleanLiterals: List<String>
         get() = constantsByCategory("boolean").map { it.literal }
 
-    /**
-     * Get null constant literal (e.g., "Null").
-     */
+    /** Get null constant literal (e.g., "Null"). */
     val nullLiteral: String?
         get() = constantsByCategory("null").firstOrNull()?.literal
 
-    /**
-     * Get bracket pairs from punctuation (for editor config).
-     */
+    /** Get bracket pairs from punctuation (for editor config). */
     val bracketPairs: List<Pair<String, String>>
         get() =
             listOf(
-                punctuation.find { it.name == "L_PAREN" }?.symbol to punctuation.find { it.name == "R_PAREN" }?.symbol,
-                punctuation.find { it.name == "L_SQUARE" }?.symbol to punctuation.find { it.name == "R_SQUARE" }?.symbol,
-                punctuation.find { it.name == "L_CURLY" }?.symbol to punctuation.find { it.name == "R_CURLY" }?.symbol,
-                punctuation.find { it.name == "L_ANGLE" }?.symbol to punctuation.find { it.name == "R_ANGLE" }?.symbol,
+                punctuation.find { it.name == "L_PAREN" }?.symbol to
+                    punctuation.find { it.name == "R_PAREN" }?.symbol,
+                punctuation.find { it.name == "L_SQUARE" }?.symbol to
+                    punctuation.find { it.name == "R_SQUARE" }?.symbol,
+                punctuation.find { it.name == "L_CURLY" }?.symbol to
+                    punctuation.find { it.name == "R_CURLY" }?.symbol,
+                punctuation.find { it.name == "L_ANGLE" }?.symbol to
+                    punctuation.find { it.name == "R_ANGLE" }?.symbol,
             ).filter { it.first != null && it.second != null }
                 .map { it.first!! to it.second!! }
 }
@@ -234,9 +209,7 @@ data class ScopeDefinition(
     val treeSitter: String?,
 )
 
-/**
- * Token rule for lexical analysis.
- */
+/** Token rule for lexical analysis. */
 @Serializable
 data class TokenRule(
     val name: String,
@@ -246,9 +219,7 @@ data class TokenRule(
     val textMateScope: String,
 )
 
-/**
- * Operator definition with precedence and associativity.
- */
+/** Operator definition with precedence and associativity. */
 @Serializable
 data class OperatorDefinition(
     val symbol: String,
@@ -258,9 +229,7 @@ data class OperatorDefinition(
     val category: OperatorCategory,
 )
 
-/**
- * Punctuation/delimiter definition.
- */
+/** Punctuation/delimiter definition. */
 @Serializable
 data class PunctuationDefinition(
     val symbol: String,
@@ -268,9 +237,7 @@ data class PunctuationDefinition(
     val name: String,
 )
 
-/**
- * Language constant definition (boolean literals, null, etc.).
- */
+/** Language constant definition (boolean literals, null, etc.). */
 @Serializable
 data class ConstantDefinition(
     val name: String,
@@ -280,9 +247,7 @@ data class ConstantDefinition(
     val category: String,
 )
 
-/**
- * Comment syntax definition.
- */
+/** Comment syntax definition. */
 @Serializable
 data class CommentSyntax(
     /** Line comment prefix, e.g. "//" */
@@ -297,9 +262,7 @@ data class CommentSyntax(
     val docCommentEnd: String,
 )
 
-/**
- * AST concept definition (represents a node type in the abstract syntax tree).
- */
+/** AST concept definition (represents a node type in the abstract syntax tree). */
 @Serializable
 data class ConceptDefinition(
     val name: String,
@@ -311,9 +274,7 @@ data class ConceptDefinition(
     /** Optional regex pattern for grammar generation */
     val syntaxPattern: String?,
 ) {
-    /**
-     * Check if this concept extends another (directly or indirectly).
-     */
+    /** Check if this concept extends another (directly or indirectly). */
     fun extendsFrom(
         conceptName: String,
         model: LanguageModel,
@@ -324,9 +285,7 @@ data class ConceptDefinition(
     }
 }
 
-/**
- * Scalar property of a concept.
- */
+/** Scalar property of a concept. */
 @Serializable
 data class PropertyDefinition(
     val name: String,
@@ -335,9 +294,7 @@ data class PropertyDefinition(
     val optional: Boolean,
 )
 
-/**
- * Child node of a concept.
- */
+/** Child node of a concept. */
 @Serializable
 data class ChildDefinition(
     val name: String,
@@ -345,9 +302,7 @@ data class ChildDefinition(
     val cardinality: Cardinality,
 )
 
-/**
- * Reference to another node.
- */
+/** Reference to another node. */
 @Serializable
 data class ReferenceDefinition(
     val name: String,
@@ -359,9 +314,7 @@ data class ReferenceDefinition(
 // BUILDER CLASSES - DSL implementation
 // =============================================================================
 
-/**
- * Builder for scope definitions.
- */
+/** Builder for scope definitions. */
 class ScopeBuilder(
     private val name: String,
 ) {
@@ -399,9 +352,7 @@ class ScopeBuilder(
         )
 }
 
-/**
- * Builder for concept definitions.
- */
+/** Builder for concept definitions. */
 class ConceptBuilder(
     private val name: String,
     private val isAbstract: Boolean,
@@ -412,16 +363,12 @@ class ConceptBuilder(
     private val references = mutableListOf<ReferenceDefinition>()
     private var syntaxPattern: String? = null
 
-    /**
-     * Inherit from another concept.
-     */
+    /** Inherit from another concept. */
     fun extends(parentConcept: String) {
         this.parentConcept = parentConcept
     }
 
-    /**
-     * Add a scalar property.
-     */
+    /** Add a scalar property. */
     fun property(
         name: String,
         type: String,
@@ -431,9 +378,7 @@ class ConceptBuilder(
         properties.add(PropertyDefinition(name, type, default, optional))
     }
 
-    /**
-     * Add a single child node.
-     */
+    /** Add a single child node. */
     fun child(
         name: String,
         type: String,
@@ -442,9 +387,7 @@ class ConceptBuilder(
         children.add(ChildDefinition(name, type, cardinality))
     }
 
-    /**
-     * Add a collection of child nodes (zero or more).
-     */
+    /** Add a collection of child nodes (zero or more). */
     fun children(
         name: String,
         type: String,
@@ -452,9 +395,7 @@ class ConceptBuilder(
         children.add(ChildDefinition(name, type, Cardinality.ZERO_OR_MORE))
     }
 
-    /**
-     * Add a reference to another node.
-     */
+    /** Add a reference to another node. */
     fun reference(
         name: String,
         type: String,
@@ -463,9 +404,7 @@ class ConceptBuilder(
         references.add(ReferenceDefinition(name, type, optional))
     }
 
-    /**
-     * Set a regex pattern for grammar generation.
-     */
+    /** Set a regex pattern for grammar generation. */
     fun syntax(pattern: String) {
         syntaxPattern = pattern
     }
@@ -482,9 +421,7 @@ class ConceptBuilder(
         )
 }
 
-/**
- * Main builder for language models.
- */
+/** Main builder for language models. */
 class LanguageModelBuilder(
     private val name: String,
     private val fileExtensions: List<String>,
@@ -503,9 +440,7 @@ class LanguageModelBuilder(
     private val visibilityKeywordsList = mutableListOf<String>()
     private val concepts = mutableListOf<ConceptDefinition>()
 
-    /**
-     * Define a scope mapping for editor styling.
-     */
+    /** Define a scope mapping for editor styling. */
     fun scope(
         name: String,
         block: ScopeBuilder.() -> Unit,
@@ -515,16 +450,12 @@ class LanguageModelBuilder(
         scopes.add(builder.build())
     }
 
-    /**
-     * Register reserved keywords (backward compatible, no category).
-     */
+    /** Register reserved keywords (backward compatible, no category). */
     fun keywords(vararg words: String) {
         keywordsList.addAll(words)
     }
 
-    /**
-     * Register reserved keywords with a category.
-     */
+    /** Register reserved keywords with a category. */
     fun keywords(
         category: KeywordCategory,
         vararg words: String,
@@ -535,16 +466,12 @@ class LanguageModelBuilder(
         }
     }
 
-    /**
-     * Register context-sensitive keywords (backward compatible, no category).
-     */
+    /** Register context-sensitive keywords (backward compatible, no category). */
     fun contextKeywords(vararg words: String) {
         contextKeywordsList.addAll(words)
     }
 
-    /**
-     * Register context-sensitive keywords with a category.
-     */
+    /** Register context-sensitive keywords with a category. */
     fun contextKeywords(
         category: KeywordCategory,
         vararg words: String,
@@ -555,16 +482,12 @@ class LanguageModelBuilder(
         }
     }
 
-    /**
-     * Register built-in types.
-     */
+    /** Register built-in types. */
     fun builtinTypes(vararg types: String) {
         builtinTypesList.addAll(types)
     }
 
-    /**
-     * Define a lexical token rule.
-     */
+    /** Define a lexical token rule. */
     fun token(
         name: String,
         pattern: String,
@@ -573,9 +496,7 @@ class LanguageModelBuilder(
         tokens.add(TokenRule(name, pattern, textMateScope))
     }
 
-    /**
-     * Define an operator with precedence information.
-     */
+    /** Define an operator with precedence information. */
     fun operator(
         symbol: String,
         precedence: Int,
@@ -585,9 +506,7 @@ class LanguageModelBuilder(
         operators.add(OperatorDefinition(symbol, precedence, associativity, category))
     }
 
-    /**
-     * Define a punctuation/delimiter token.
-     */
+    /** Define a punctuation/delimiter token. */
     fun punctuation(
         symbol: String,
         name: String,
@@ -595,9 +514,7 @@ class LanguageModelBuilder(
         punctuationList.add(PunctuationDefinition(symbol, name))
     }
 
-    /**
-     * Define a language constant (boolean, null, etc.).
-     */
+    /** Define a language constant (boolean, null, etc.). */
     fun constant(
         name: String,
         literal: String,
@@ -606,9 +523,7 @@ class LanguageModelBuilder(
         constantsList.add(ConstantDefinition(name, literal, category))
     }
 
-    /**
-     * Define boolean constants.
-     */
+    /** Define boolean constants. */
     fun booleanConstants(
         trueLiteral: String,
         falseLiteral: String,
@@ -617,16 +532,12 @@ class LanguageModelBuilder(
         constantsList.add(ConstantDefinition("FALSE", falseLiteral, "boolean"))
     }
 
-    /**
-     * Define the null constant.
-     */
+    /** Define the null constant. */
     fun nullConstant(literal: String) {
         constantsList.add(ConstantDefinition("NULL", literal, "null"))
     }
 
-    /**
-     * Define comment syntax.
-     */
+    /** Define comment syntax. */
     fun comments(
         lineComment: String = "//",
         blockCommentStart: String = "/*",
@@ -634,20 +545,25 @@ class LanguageModelBuilder(
         docCommentStart: String = "/**",
         docCommentEnd: String = "*/",
     ) {
-        commentSyntax = CommentSyntax(lineComment, blockCommentStart, blockCommentEnd, docCommentStart, docCommentEnd)
+        commentSyntax =
+            CommentSyntax(
+                lineComment,
+                blockCommentStart,
+                blockCommentEnd,
+                docCommentStart,
+                docCommentEnd,
+            )
     }
 
     /**
-     * Define visibility keywords (subset of modifiers that control access).
-     * These are typically "public", "protected", "private", "internal", etc.
+     * Define visibility keywords (subset of modifiers that control access). These are typically
+     * "public", "protected", "private", "internal", etc.
      */
     fun visibilityKeywords(vararg keywords: String) {
         visibilityKeywordsList.addAll(keywords)
     }
 
-    /**
-     * Define a concrete AST concept.
-     */
+    /** Define a concrete AST concept. */
     fun concept(
         name: String,
         block: ConceptBuilder.() -> Unit = {},
@@ -657,9 +573,7 @@ class LanguageModelBuilder(
         concepts.add(builder.build())
     }
 
-    /**
-     * Define an abstract AST concept (cannot be instantiated).
-     */
+    /** Define an abstract AST concept (cannot be instantiated). */
     fun abstractConcept(
         name: String,
         block: ConceptBuilder.() -> Unit = {},

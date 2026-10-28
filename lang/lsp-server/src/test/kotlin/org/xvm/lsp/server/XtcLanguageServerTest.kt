@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.mock.MockAdapter
 
@@ -86,17 +87,17 @@ class XtcLanguageServerTest {
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(params)
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
-            verify(mockClient).publishDiagnostics(captor.capture())
+            verify(mockClient, timeout(5000)).publishDiagnostics(captor.capture())
 
             val published = captor.value
             assertThat(published.uri).isEqualTo(uri)
-            assertThat(published.diagnostics)
-                .hasSize(1)
-                .allMatch { it.message?.left?.contains("test error") == true }
+            assertThat(published.diagnostics).hasSize(1).allMatch {
+                it.message?.left?.contains("test error") == true
+            }
         }
 
         @Test
@@ -113,11 +114,11 @@ class XtcLanguageServerTest {
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(params)
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
-            verify(mockClient).publishDiagnostics(captor.capture())
+            verify(mockClient, timeout(5000)).publishDiagnostics(captor.capture())
 
             assertThat(captor.value.diagnostics).isEmpty()
         }
@@ -134,7 +135,7 @@ class XtcLanguageServerTest {
                 }
                 """.trimIndent()
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
             )
@@ -158,7 +159,7 @@ class XtcLanguageServerTest {
                 }
                 """.trimIndent()
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
             )
@@ -184,7 +185,7 @@ class XtcLanguageServerTest {
 
         @BeforeEach
         fun initServer() {
-            val result = server.initialize(InitializeParams()).get()
+            val result = server.initialize(editorInitializeParams()).get()
             caps = result.capabilities
         }
 
@@ -199,19 +200,29 @@ class XtcLanguageServerTest {
             assertThat(caps.documentSymbolProvider?.left).describedAs("documentSymbol").isTrue()
 
             // Tree-sitter features
-            assertThat(caps.documentHighlightProvider?.left).describedAs("documentHighlight").isTrue()
+            assertThat(caps.documentHighlightProvider?.left)
+                .describedAs("documentHighlight")
+                .isTrue()
             assertThat(caps.selectionRangeProvider?.left).describedAs("selectionRange").isTrue()
             assertThat(caps.foldingRangeProvider?.left).describedAs("foldingRange").isTrue()
             assertThat(caps.documentLinkProvider).describedAs("documentLink").isNotNull()
             assertThat(caps.signatureHelpProvider).describedAs("signatureHelp").isNotNull()
 
             // Editing features
-            assertThat(caps.renameProvider?.right).describedAs("rename (with prepareProvider)").isNotNull()
-            assertThat(caps.renameProvider?.right?.prepareProvider).describedAs("rename prepareProvider").isTrue()
+            assertThat(caps.renameProvider?.right)
+                .describedAs("rename (with prepareProvider)")
+                .isNotNull()
+            assertThat(caps.renameProvider?.right?.prepareProvider)
+                .describedAs("rename prepareProvider")
+                .isTrue()
             assertThat(caps.codeActionProvider?.left).describedAs("codeAction").isTrue()
             assertThat(caps.documentFormattingProvider?.left).describedAs("formatting").isTrue()
-            assertThat(caps.documentRangeFormattingProvider?.left).describedAs("rangeFormatting").isTrue()
-            assertThat(caps.documentOnTypeFormattingProvider).describedAs("onTypeFormatting").isNotNull()
+            assertThat(caps.documentRangeFormattingProvider?.right?.rangesSupport)
+                .describedAs("rangeFormatting")
+                .isTrue()
+            assertThat(caps.documentOnTypeFormattingProvider)
+                .describedAs("onTypeFormatting")
+                .isNotNull()
             assertThat(caps.documentOnTypeFormattingProvider?.firstTriggerCharacter)
                 .describedAs("onTypeFormatting firstTrigger")
                 .isEqualTo("\n")
@@ -219,13 +230,15 @@ class XtcLanguageServerTest {
                 .describedAs("onTypeFormatting moreTriggers")
                 .containsExactly("}", ";", ")")
             assertThat(caps.codeLensProvider).describedAs("codeLens").isNotNull()
-            assertThat(caps.linkedEditingRangeProvider?.left).describedAs("linkedEditingRange").isTrue()
+            assertThat(caps.linkedEditingRangeProvider?.left)
+                .describedAs("linkedEditingRange")
+                .isTrue()
 
             // Workspace features
             assertThat(caps.workspaceSymbolProvider?.left).describedAs("workspaceSymbol").isTrue()
 
             // Sync
-            assertThat(caps.textDocumentSync?.left).describedAs("textDocumentSync").isNotNull()
+            assertThat(caps.textDocumentSync?.right).describedAs("textDocumentSync").isNotNull()
         }
 
         @Test
@@ -299,7 +312,7 @@ class XtcLanguageServerTest {
             }
             """.trimIndent()
 
-        server.initialize(InitializeParams()).get()
+        server.initialize(editorInitializeParams()).get()
         server.textDocumentService.didOpen(
             DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
         )
@@ -311,7 +324,7 @@ class XtcLanguageServerTest {
         val uri = "file:///dirty.x"
         val content = "module myapp {   \n    class Person {  \n    }\n}"
 
-        server.initialize(InitializeParams()).get()
+        server.initialize(editorInitializeParams()).get()
         server.textDocumentService.didOpen(
             DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
         )
@@ -376,8 +389,9 @@ class XtcLanguageServerTest {
 
             val highlights =
                 server.textDocumentService
-                    .documentHighlight(DocumentHighlightParams(TextDocumentIdentifier(uri), Position(3, 10)))
-                    .get()
+                    .documentHighlight(
+                        DocumentHighlightParams(TextDocumentIdentifier(uri), Position(3, 10)),
+                    ).get()
 
             assertThat(highlights).isNotEmpty()
         }
@@ -419,7 +433,10 @@ class XtcLanguageServerTest {
             val edits =
                 server.textDocumentService
                     .formatting(
-                        DocumentFormattingParams(TextDocumentIdentifier(uri), FormattingOptions(4, true)),
+                        DocumentFormattingParams(
+                            TextDocumentIdentifier(uri),
+                            FormattingOptions(4, true),
+                        ),
                     ).get()
 
             assertThat(edits).isNotEmpty()
@@ -432,7 +449,7 @@ class XtcLanguageServerTest {
             val uri = "file:///dirty2.x"
             val content = "module myapp {   \n    class Person {  \n    }\n}"
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
             )
@@ -461,8 +478,9 @@ class XtcLanguageServerTest {
 
             val result =
                 server.textDocumentService
-                    .prepareRename(PrepareRenameParams(TextDocumentIdentifier(uri), Position(3, 10)))
-                    .get()
+                    .prepareRename(
+                        PrepareRenameParams(TextDocumentIdentifier(uri), Position(3, 10)),
+                    ).get()
 
             assertThat(result).isNotNull()
             assertThat(result.second.placeholder).isEqualTo("Person")
@@ -521,8 +539,9 @@ class XtcLanguageServerTest {
 
             val result =
                 server.textDocumentService
-                    .signatureHelp(SignatureHelpParams(TextDocumentIdentifier(uri), Position(5, 10)))
-                    .get()
+                    .signatureHelp(
+                        SignatureHelpParams(TextDocumentIdentifier(uri), Position(5, 10)),
+                    ).get()
 
             assertThat(result).isNull()
         }
@@ -551,7 +570,7 @@ class XtcLanguageServerTest {
         @Test
         @DisplayName("should complete without error")
         fun shouldCompleteWithoutError() {
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
 
             val future = server.shutdown()
 

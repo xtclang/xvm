@@ -9,8 +9,8 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Formatting tests for [TreeSitterAdapter].
  *
- * Exercises whole-document formatting and range-based formatting, including
- * trailing whitespace removal and final newline insertion.
+ * Exercises whole-document formatting and range-based formatting, including trailing whitespace
+ * removal and final newline insertion.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -25,9 +25,9 @@ class FormattingTest : TreeSitterTestBase() {
     @DisplayName("formatDocument()")
     inner class FormatTests {
         /**
-         * Lines with trailing spaces ("myapp {   ") should produce edits that replace
-         * the trailing whitespace with empty strings. Two lines have trailing spaces,
-         * so we expect at least 2 edits.
+         * Lines with trailing spaces ("myapp { ") should produce edits that replace the trailing
+         * whitespace with empty strings. Two lines have trailing spaces, so we expect at least 2
+         * edits.
          */
         @Test
         @DisplayName("should remove trailing whitespace")
@@ -42,8 +42,8 @@ class FormattingTest : TreeSitterTestBase() {
         }
 
         /**
-         * When `insertFinalNewline` is true and the source doesn't end with `\n`,
-         * the formatter should append one via a zero-width insertion at EOF.
+         * When `insertFinalNewline` is true and the source doesn't end with `\n`, the formatter
+         * should append one via a zero-width insertion at EOF.
          */
         @Test
         @DisplayName("should insert final newline")
@@ -56,8 +56,8 @@ class FormattingTest : TreeSitterTestBase() {
         }
 
         /**
-         * A file that already ends with `\n` and has no trailing whitespace is
-         * "clean" -- the formatter should produce zero edits.
+         * A file that already ends with `\n` and has no trailing whitespace is "clean" -- the
+         * formatter should produce zero edits.
          */
         @Test
         @DisplayName("should return empty for clean file")
@@ -86,8 +86,8 @@ class FormattingTest : TreeSitterTestBase() {
     @DisplayName("formatRange()")
     inner class FormatRangeTests {
         /**
-         * Only lines 1-2 are inside the range, so edits must be confined to those lines.
-         * Lines 0 and 3 also have trailing whitespace but must be left untouched.
+         * Only lines 1-2 are inside the range, so edits must be confined to those lines. Lines 0
+         * and 3 also have trailing whitespace but must be left untouched.
          */
         @Test
         @DisplayName("should only format within range")
@@ -112,8 +112,8 @@ class FormattingTest : TreeSitterTestBase() {
         }
 
         /**
-         * `insertFinalNewline` is a whole-document concern. The adapter's `formatContent`
-         * skips it when a range is provided, so no `\n` edit should appear.
+         * `insertFinalNewline` is a whole-document concern. The adapter's `formatContent` skips it
+         * when a range is provided, so no `\n` edit should appear.
          */
         @Test
         @DisplayName("should not insert final newline for range")

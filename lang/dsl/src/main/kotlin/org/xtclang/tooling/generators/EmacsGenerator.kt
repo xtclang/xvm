@@ -25,14 +25,18 @@ class EmacsGenerator(
 ) {
     fun generate(): String =
         buildString {
-            appendLine(";;; xtc-mode.el --- Major mode for editing ${model.name} files -*- lexical-binding: t; -*-")
+            appendLine(
+                ";;; xtc-mode.el --- Major mode for editing ${model.name} files -*- lexical-binding: t; -*-",
+            )
             appendLine()
             appendLine(";; Generated from Ecstasy language model")
             appendLine(";; Language: ${model.name}")
             appendLine(";; File extensions: ${model.fileExtensions.joinToString(", ") { ".$it" }}")
             appendLine()
             appendLine(";;; Commentary:")
-            appendLine(";; This major mode provides syntax highlighting for ${model.name} (XTC) source files.")
+            appendLine(
+                ";; This major mode provides syntax highlighting for ${model.name} (XTC) source files.",
+            )
             appendLine(";; It is automatically generated from the Ecstasy language model.")
             appendLine()
             appendLine(";;; Code:")
@@ -47,9 +51,7 @@ class EmacsGenerator(
 
             // Exception keywords from model
             val exceptionKeywords =
-                model
-                    .keywordsByCategory(KeywordCategory.EXCEPTION)
-                    .filter { !it.contains(":") }
+                model.keywordsByCategory(KeywordCategory.EXCEPTION).filter { !it.contains(":") }
             appendLine("(defconst xtc-exception-keywords")
             appendLine("  '(${exceptionKeywords.joinToString(" ") { "\"$it\"" }})")
             appendLine("  \"Exception handling keywords in ${model.name}.\")")
@@ -119,7 +121,9 @@ class EmacsGenerator(
             // Declaration keywords
             if (declarationKeywords.isNotEmpty()) {
                 appendLine("   ;; Declaration keywords")
-                appendLine("   `(,(regexp-opt xtc-declaration-keywords 'words) . font-lock-keyword-face)")
+                appendLine(
+                    "   `(,(regexp-opt xtc-declaration-keywords 'words) . font-lock-keyword-face)",
+                )
             }
 
             // Modifier keywords
@@ -131,7 +135,9 @@ class EmacsGenerator(
             // Type relation keywords
             if (typeRelationKeywords.isNotEmpty()) {
                 appendLine("   ;; Type relation keywords")
-                appendLine("   `(,(regexp-opt xtc-type-relation-keywords 'words) . font-lock-keyword-face)")
+                appendLine(
+                    "   `(,(regexp-opt xtc-type-relation-keywords 'words) . font-lock-keyword-face)",
+                )
             }
 
             // Built-in types
@@ -150,7 +156,9 @@ class EmacsGenerator(
 
             // Function definitions
             appendLine("   ;; Function definitions")
-            appendLine("   '(\"\\\\b\\\\([a-z_][A-Za-z0-9_]*\\\\)\\\\s-*(\" 1 font-lock-function-name-face)")
+            appendLine(
+                "   '(\"\\\\b\\\\([a-z_][A-Za-z0-9_]*\\\\)\\\\s-*(\" 1 font-lock-function-name-face)",
+            )
 
             // Boolean constants
             if (booleans.isNotEmpty()) {

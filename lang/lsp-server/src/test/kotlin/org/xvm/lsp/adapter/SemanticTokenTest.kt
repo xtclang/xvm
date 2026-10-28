@@ -10,9 +10,8 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 /**
  * Semantic token tests for [TreeSitterAdapter].
  *
- * Exercises semantic token generation for various declaration types, type
- * references, call expressions, and regression scenarios involving document
- * edits that change document length.
+ * Exercises semantic token generation for various declaration types, type references, call
+ * expressions, and regression scenarios involving document edits that change document length.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -85,7 +84,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
 
             // "Person" should be classified as "class" with "declaration" modifier
             // IntArray: [line, column, length, tokenType, tokenModifiers]
-            val classToken = decoded.find { it[3] == semanticTypeIndex["class"] && it[2] == "Person".length }
+            val classToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["class"] && it[2] == "Person".length
+                }
             assertThat(classToken).isNotNull
             assertThat(hasSemanticModifier(classToken!![4], "declaration")).isTrue()
         }
@@ -108,7 +110,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
             assertThat(tokens).isNotNull
 
             val decoded = decodeSemanticTokens(tokens!!.data)
-            val ifaceToken = decoded.find { it[3] == semanticTypeIndex["interface"] && it[2] == "Runnable".length }
+            val ifaceToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["interface"] && it[2] == "Runnable".length
+                }
             assertThat(ifaceToken).isNotNull
             assertThat(hasSemanticModifier(ifaceToken!![4], "declaration")).isTrue()
         }
@@ -136,7 +141,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val decoded = decodeSemanticTokens(tokens!!.data)
             logger.info("[TEST] method decl tokens: {}", decoded.map { it.toList() })
 
-            val methodToken = decoded.find { it[3] == semanticTypeIndex["method"] && it[2] == "getName".length }
+            val methodToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["method"] && it[2] == "getName".length
+                }
             assertThat(methodToken).isNotNull
             assertThat(hasSemanticModifier(methodToken!![4], "declaration")).isTrue()
         }
@@ -162,7 +170,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val decoded = decodeSemanticTokens(tokens!!.data)
             logger.info("[TEST] property decl tokens: {}", decoded.map { it.toList() })
 
-            val propToken = decoded.find { it[3] == semanticTypeIndex["property"] && it[2] == "name".length }
+            val propToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["property"] && it[2] == "name".length
+                }
             assertThat(propToken).isNotNull
             assertThat(hasSemanticModifier(propToken!![4], "declaration")).isTrue()
         }
@@ -370,10 +381,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
         /**
          * Regression test for StringIndexOutOfBoundsException after rename.
          *
-         * Reproduces the exact bug: compile a document with "Console console", rename
-         * "console" to "apa" (making the document shorter), then request semantic tokens.
-         * Previously crashed because incremental parsing (passing oldTree without Tree.edit())
-         * produced nodes with stale byte offsets from the longer original source.
+         * Reproduces the exact bug: compile a document with "Console console", rename "console" to
+         * "apa" (making the document shorter), then request semantic tokens. Previously crashed
+         * because incremental parsing (passing oldTree without Tree.edit()) produced nodes with
+         * stale byte offsets from the longer original source.
          */
         @Test
         @DisplayName("should return semantic tokens after rename shortens document")
@@ -382,7 +393,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val originalSource =
                 """
                 module myapp {
-                    void run(String[] args=[]) {
+                    void run(String[] args = []) {
                         @Inject Console console;
                         if (args.empty) {
                             console.print("Hello!");
@@ -414,7 +425,8 @@ class SemanticTokenTest : TreeSitterTestBase() {
             assertThat(result2.success).isTrue()
 
             // Step 5: Semantic tokens on shorter document must NOT crash
-            // Previously threw: StringIndexOutOfBoundsException: Range [178, 178 + 238) out of bounds
+            // Previously threw: StringIndexOutOfBoundsException: Range [178, 178 + 238) out of
+            // bounds
             val tokens2 = ts.getSemanticTokens(uri)
             assertThat(tokens2).isNotNull
             assertThat(tokens2!!.data).isNotEmpty
@@ -426,9 +438,9 @@ class SemanticTokenTest : TreeSitterTestBase() {
         }
 
         /**
-         * Regression test: compile -> rename (longer) -> semantic tokens.
-         * The reverse case: document grows after rename. Verifies we don't
-         * have off-by-one errors in the opposite direction.
+         * Regression test: compile -> rename (longer) -> semantic tokens. The reverse case:
+         * document grows after rename. Verifies we don't have off-by-one errors in the opposite
+         * direction.
          */
         @Test
         @DisplayName("should return semantic tokens after rename lengthens document")
@@ -461,8 +473,8 @@ class SemanticTokenTest : TreeSitterTestBase() {
         }
 
         /**
-         * Regression test: multiple rapid edits on same URI.
-         * Simulates fast typing where compile is called many times in quick succession.
+         * Regression test: multiple rapid edits on same URI. Simulates fast typing where compile is
+         * called many times in quick succession.
          */
         @Test
         @DisplayName("should handle rapid sequential recompilations")
@@ -483,8 +495,8 @@ class SemanticTokenTest : TreeSitterTestBase() {
         }
 
         /**
-         * Verify folding ranges also work after rename (they use line/column, not byte offsets,
-         * so they should always work -- but good to verify the full adapter pipeline).
+         * Verify folding ranges also work after rename (they use line/column, not byte offsets, so
+         * they should always work -- but good to verify the full adapter pipeline).
          */
         @Test
         @DisplayName("should return folding ranges after rename")
@@ -493,7 +505,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val originalSource =
                 """
                 module myapp {
-                    void run(String[] args=[]) {
+                    void run(String[] args = []) {
                         @Inject Console console;
                         console.print("Hello!");
                     }

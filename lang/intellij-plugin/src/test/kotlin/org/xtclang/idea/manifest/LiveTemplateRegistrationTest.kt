@@ -8,16 +8,14 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Verifies that the live-template file referenced by plugin.xml's
- * `<defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>`
- * actually exists at the expected path, parses, and contains at least
- * the snippet shortcuts we expose to users in the README + manual test
- * plan.
+ * `<defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>` actually exists at the expected
+ * path, parses, and contains at least the snippet shortcuts we expose to users in the README +
+ * manual test plan.
  *
- * Counterpart to VS Code's `snippets.test.ts` — same failure mode: a
- * snippet vanishes from the bundled file or its shortcut gets renamed,
- * and users see the editor "still work" but tab-expansion silently
- * fails. Without this test the only catch would be someone noticing
- * during interactive QA.
+ * Counterpart to VS Code's `snippets.test.ts` — same failure mode: a snippet vanishes from the
+ * bundled file or its shortcut gets renamed, and users see the editor "still work" but
+ * tab-expansion silently fails. Without this test the only catch would be someone noticing during
+ * interactive QA.
  */
 @DisplayName("Live template registration (liveTemplates/XTC.xml)")
 class LiveTemplateRegistrationTest {
@@ -26,7 +24,9 @@ class LiveTemplateRegistrationTest {
         // classpath entries (see comment in PluginManifestTest).
         val resourceUrl =
             javaClass.classLoader.getResource("liveTemplates/XTC.xml")
-                ?: error("liveTemplates/XTC.xml not on test classpath — file path drifted from plugin.xml")
+                ?: error(
+                    "liveTemplates/XTC.xml not on test classpath — file path drifted from plugin.xml",
+                )
         DocumentBuilderFactory
             .newInstance()
             .apply { isNamespaceAware = false }
@@ -104,7 +104,8 @@ class LiveTemplateRegistrationTest {
                         val options = ctx.getElementsByTagName("option")
                         (0 until options.length).any { oi ->
                             val opt = options.item(oi) as Element
-                            opt.getAttribute("name") == "OTHER" && opt.getAttribute("value") == "true"
+                            opt.getAttribute("name") == "OTHER" &&
+                                opt.getAttribute("value") == "true"
                         }
                     }
                 }
