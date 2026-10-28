@@ -7,6 +7,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks persistence of ordered module paths and attached sources without replacing unrelated settings.
+ * Invalid, aliased or unsupported paths must fail before publication.
+ */
 class LibraryConfigurationTest {
     @TempDir lateinit var directory: Path
 

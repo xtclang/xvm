@@ -16,6 +16,10 @@ import org.xvm.lsp.adapter.xdk.toDependency
 import java.io.File
 import java.nio.file.Path
 
+/**
+ * Checks cross-module queries against declared dependency visibility and serialized identities. Closed
+ * consumers contribute facts without allowing unrelated roots to supply otherwise undeclared imports.
+ */
 class XdkProjectQueryTest {
     @TempDir lateinit var directory: Path
 

@@ -261,9 +261,7 @@ object CompilerBuildModel {
                     }
                 val output = outputs.firstOrNull { it.isCancelled || it.isTimeout || it.exitCode != 0 }
                 when {
-                    output?.isCancelled == true || indicator.isCanceled -> {
-                        model.finish(operation, CompilerImport.Outcome.CANCELLED)
-                    }
+                    output?.isCancelled == true || indicator.isCanceled -> model.finish(operation, CompilerImport.Outcome.CANCELLED)
 
                     output != null -> {
                         model.finish(
@@ -274,9 +272,7 @@ object CompilerBuildModel {
                         )
                     }
 
-                    else -> {
-                        model.finish(operation, CompilerImport.Outcome.SUCCEEDED, cancelled = { indicator.isCanceled })
-                    }
+                    else -> model.finish(operation, CompilerImport.Outcome.SUCCEEDED, cancelled = { indicator.isCanceled })
                 }
             } catch (cancelled: ProcessCanceledException) {
                 model.finish(operation, CompilerImport.Outcome.CANCELLED)

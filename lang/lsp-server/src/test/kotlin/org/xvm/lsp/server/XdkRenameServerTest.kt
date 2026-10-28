@@ -43,6 +43,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Checks versioned rename and move proposals at the server boundary. Captured graph and resource inputs
+ * authorize a proposal but do not apply it, and later changes must invalidate stale proof.
+ */
 class XdkRenameServerTest {
     @TempDir lateinit var directory: Path
 

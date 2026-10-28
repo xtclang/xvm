@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Exercises partial queries for specialized constructors using ordinary compiler contexts. Preserves expected
+ * types, implicit parents and source edits instead of substituting a simpler constructor model.
+ */
 class XdkSpecializedConstructorTest {
     @TempDir lateinit var directory: Path
 

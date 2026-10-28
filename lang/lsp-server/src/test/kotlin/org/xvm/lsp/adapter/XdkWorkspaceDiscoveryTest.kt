@@ -10,6 +10,10 @@ import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 
+/**
+ * Exercises source-module discovery, import graphs and open-buffer precedence. Healthy modules remain
+ * queryable beside damaged ones, generated sources are excluded and explicit configuration retains authority.
+ */
 class XdkWorkspaceDiscoveryTest {
     @TempDir lateinit var directory: Path
 

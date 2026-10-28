@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import com.google.gson.GsonBuilder
 
+/** Validates reference-CodeLens configuration, retaining the enabled default when the setting is absent. */
 internal object CodeLensSettings {
     fun references(raw: Any?): Boolean {
         val value = GsonBuilder().serializeNulls().create().toJsonTree(raw)

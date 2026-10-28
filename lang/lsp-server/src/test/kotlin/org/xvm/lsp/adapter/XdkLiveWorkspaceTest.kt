@@ -12,6 +12,10 @@ import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Exercises automatic workspace discovery as buffers, folders and closed files change. Unsaved source takes
+ * precedence, explicit graphs retain authority and failed graphs cannot leave stale semantic answers visible.
+ */
 class XdkLiveWorkspaceTest {
     @TempDir lateinit var directory: Path
 

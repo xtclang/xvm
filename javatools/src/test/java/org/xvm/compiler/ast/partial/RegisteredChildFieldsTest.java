@@ -90,6 +90,7 @@ public class RegisteredChildFieldsTest {
         return new NameExpression(new Token(0, name.length(), Id.IDENTIFIER, name));
     }
 
+    /** Supplies an inherited child field that must participate in traversal and copying. */
     private abstract static class Parent extends Statement {
         Parent(Expression receiver) {
             this.receiver = adopt(receiver);
@@ -123,6 +124,7 @@ public class RegisteredChildFieldsTest {
         private Expression receiver;
     }
 
+    /** Combines inherited and local registered children with a deliberately unregistered expression. */
     private static final class Child extends Parent {
         Child(Expression receiver, List<Expression> arguments) {
             super(receiver);

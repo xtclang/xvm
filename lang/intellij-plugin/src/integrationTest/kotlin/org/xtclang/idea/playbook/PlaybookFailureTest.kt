@@ -8,6 +8,10 @@ import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Checks which harness failures must stop an editor playbook. Wrapped timeouts, cancellation and failed
+ * cleanup cannot be treated as an ordinary failed case followed by unsafe further edits.
+ */
 class PlaybookFailureTest {
     @Test fun `timeouts stop the run including wrapped driver failures`() {
         assertTrue(WaitForException(1.seconds, "Editor did not change").mustStopPlaybook())

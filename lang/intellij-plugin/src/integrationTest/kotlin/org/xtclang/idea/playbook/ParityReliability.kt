@@ -161,6 +161,7 @@ internal fun ParityScenarios.reliabilityCases() {
     }
 }
 
+/** Observes server refresh requests through the installed client connection. */
 @Remote("org.xtclang.idea.playbook.probe.RefreshRequests", plugin = "org.xtclang.playbook.probe")
 interface RefreshRequests {
     fun listen(project: Project): RefreshRequests
@@ -178,6 +179,7 @@ interface RefreshRequests {
     fun dispose()
 }
 
+/** Reads the plugin's effective compiler configuration report. */
 @Remote("org.xtclang.idea.playbook.probe.CompilerReportPage", plugin = "org.xtclang.playbook.probe")
 interface CompilerReportPage {
     fun open(project: Project): CompilerReportPage
