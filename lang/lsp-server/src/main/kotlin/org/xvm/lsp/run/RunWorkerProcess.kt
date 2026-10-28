@@ -335,6 +335,12 @@ internal class RunWorkerProcess(
             addProperty("target", target)
         }.thenApply { it["stepped"].asBoolean }
 
+    /** Restarts a stopped frame, which its caller calls again. */
+    fun restartFrame(
+        id: Long,
+        frame: Int,
+    ): CompletableFuture<Boolean> = request("restartFrame", id) { addProperty("frame", frame) }.thenApply { it["restarted"].asBoolean }
+
     /** The modules of a debugged run, its own and the libraries it uses; none before it starts. */
     fun modules(id: Long): CompletableFuture<List<ModuleState>> =
         request("modules", id).thenApply { RunWorkerDebug.modulesOf(it.getAsJsonArray("modules")) }

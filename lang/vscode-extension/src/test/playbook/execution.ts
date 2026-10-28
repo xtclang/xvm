@@ -1577,6 +1577,61 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X329', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in inner()');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
+                const stack = async () => (await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; name: string; line: number; canRestart?: boolean }[];
+
+                // the frames that the Call Stack view offers Restart Frame on: not run(), which the runtime called
+                const frames = await stack();
+                assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
+                assert.deepStrictEqual(frames.map(frame => frame.canRestart === true), data.canRestart);
+
+                // as Restart Frame does: its caller calls it again, and it stops at its first line
+                vscode.debug.removeBreakpoints([breakpoint]);
+                await session.customRequest('restartFrame', { frameId: frames.find(frame => frame.name === data.restart)!.id });
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The restarted frame stops at its first line');
+                assert.strictEqual(dapEvents(sent, 'stopped')[1].body?.reason, 'restart');
+                const top = (await stack())[0];
+                assert.deepStrictEqual([top.name, top.line], data.frame);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                const output = dapOutput(sent);
+                assert.ok(output.includes(data.output), output);
+                assert.strictEqual(output.split(data.printed).length - 1, 2, output);
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1604,7 +1659,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X328 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X329 cases check. */
 interface DapMessage {
     seq?: number;
     request_seq?: number;

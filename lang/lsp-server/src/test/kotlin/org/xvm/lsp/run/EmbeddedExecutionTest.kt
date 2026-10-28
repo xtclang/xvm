@@ -963,6 +963,60 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a restarted frame is called again by its caller, which stops at its first line`() {
+        CompilerTestSupport.configure()
+        val module = source("Restarts.x", RESTARTS.trimIndent())
+        val path = directory.resolve("Restarts.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Restarts", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Restarts", "moduleUri": "$module"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 16}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val first = client.until(id) { it.event == "stopped" }
+            val thread = first.last()["body"].asJsonObject["threadId"].asInt
+
+            fun frames(seq: Int): List<JsonObject> {
+                sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
+                return client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            }
+            val stopped = frames(5)
+            assertThat(stopped.map { it["name"].asString }).containsExactly("Restarts.inner", "Restarts.outer", "Restarts.run")
+            // run() is called by the runtime, which cannot make the call again
+            assertThat(stopped.map { it["canRestart"]?.asBoolean == true }).containsExactly(true, true, false)
+
+            // outer() again, from run(): it stops at its first line and prints again
+            sessions.request(id, 6, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            client.until(id) { it.response == "setBreakpoints" }
+            sessions.request(id, 7, "restartFrame", """{"frameId": ${stopped[1]["id"].asInt}}""")
+            val restarted = client.until(id) { it.event == "stopped" }
+            assertThat(restarted.single { it.response == "restartFrame" }["success"].asBoolean).isTrue()
+            assertThat(restarted.last()["body"].asJsonObject["reason"].asString).isEqualTo("restart")
+            assertThat(frames(8).map { it["name"].asString to it["line"].asInt })
+                .containsExactly("Restarts.outer" to 10, "Restarts.run" to 4)
+
+            sessions.request(id, 9, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            val output =
+                (first + restarted + rest).filter { it.event == "output" }.joinToString(
+                    "",
+                ) { it["body"].asJsonObject["output"].asString }
+            assertThat(output.split("outer 20").size - 1).withFailMessage(output).isEqualTo(2)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a stop lists the fibers that do not wait at a line, with what they do, and the stack of one that waits`() {
         CompilerTestSupport.configure()
         val module = source("Waits.x", PROGRAM.trimIndent().replace("Program", "Waits"))
@@ -2416,6 +2470,32 @@ class EmbeddedExecutionTest {
                 }
 
                 Int twice(Int n) {
+                    return n * 2;
+                }
+            }
+            """
+
+        /**
+         * A module whose run() calls outer(20) on line 4, which prints "outer 20" on line 11 and calls inner() on line 12,
+         * whose code is on line 16; run() returns 42.
+         */
+        const val RESTARTS =
+            """
+            module Restarts {
+                Int run() {
+                    @Inject Console console;
+                    Int n = outer(20);
+                    console.print($"n={n}");
+                    return n;
+                }
+
+                Int outer(Int n) {
+                    @Inject Console console;
+                    console.print($"outer {n}");
+                    return inner(n + 1);
+                }
+
+                Int inner(Int n) {
                     return n * 2;
                 }
             }
