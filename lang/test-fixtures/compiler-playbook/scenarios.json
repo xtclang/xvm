@@ -10194,7 +10194,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48, implemented by our LSP4IJ #1782, open). IntelliJ's case, through Break on Value Change in the Variables view, passed with a plugin built from it (run-15563293796254899407) and runs once a release has it."
+          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48, implemented by our LSP4IJ #1782, merged 2026-10-28, unreleased). IntelliJ's case, through Break on Value Change in the Variables view, passed with a plugin built from it (run-15563293796254899407) and runs once a release has it."
         ]
       }
     },
@@ -10235,7 +10235,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, never sends textDocument/inlineValue, and shows no inline values for Ecstasy at all: its scan of the editor's TextMate tokens finds none of the frame's variables, and it leaves the frame's Locals group collapsed, so IntelliJ computes no inline data until it is expanded (UP50, LSP4IJ issue #1432). IntelliJ's case passes with a plugin built from our local LSP4IJ branch, which asks the language server and expands the locals (run-1069392384661177323)."
+          "LSP4IJ 0.21.0 never sends textDocument/inlineValue, and shows no inline values for Ecstasy at all: its scan of the editor's TextMate tokens finds none of the frame's variables, and it leaves the frame's Locals group collapsed, so IntelliJ computes no inline data until it is expanded (UP50, LSP4IJ issue #1432). Our LSP4IJ #1781 (merged 2026-10-28, unreleased) asks the language server and expands the locals; IntelliJ's case passed with a plugin built from it (run-4604772112093360200) and runs once a release has it."
         ]
       }
     },
