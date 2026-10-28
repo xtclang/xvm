@@ -497,8 +497,8 @@ and our matching bridge disabled; receipts are kept in the session scratchpad (`
 | UP24 | intellij-community `async-format-redo` `e7f0801a0` | The asynchronous result is applied in a "Reformat Code" command in the requesting command's group, not undo-transparently. | With `XtcFormattingService`'s write command removed: X249 and X250 fail at Redo on the stock IDE ("action is disabled", and the Redo text never appears) and pass with the change, with X132 and X139. |
 | UP29 | intellij-community `driver-waitfor-once` `5fe70a336` | `waitFor` checks each observation once and uses a monotonic deadline; `waitAny` returns the elements of the successful observation. | With `awaitUi` delegating to Driver's `waitFor`: `UiWaitsTest`'s "a successful readiness observation is not checked again" fails on driver-sdk 262.10968.63 and passes with the change; X137, X146 and X259 pass both ways (the race is rare). |
 
-Drafts of the YouTrack tickets, the PR descriptions and the comment for #219122 are in the session
-scratchpad (`up16/`, `up17/`, `up24/`, `up-driver/`). The JetBrains PRs need the ticket IDs first; Driver
+Drafts of the YouTrack tickets, the PR descriptions and the comment for #219122 are in
+`~/src/upstream-drafts/`, one file each (2026-10-28). The JetBrains PRs need the ticket IDs first; Driver
 commits upstream use the YouTrack project `AT`, which may not be public, so the Driver tickets may go
 to `IJPL`. The UP17 probe's decorated replacement started with about 36,000 of its 80,000 highlighters
 installed in both runs (626 and 540 ms), so it does not measure the decorated case; its readiness check
