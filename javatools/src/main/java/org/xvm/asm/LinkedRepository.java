@@ -1,12 +1,9 @@
 package org.xvm.asm;
 
-import java.io.File;
 import java.io.IOException;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -83,15 +80,6 @@ public class LinkedRepository
             names.addAll(repo.getModuleNames());
         }
         return names;
-    }
-
-    @Override
-    public Map<File, IOException> getReadFailures() {
-        Map<File, IOException> failures = new HashMap<>();
-        for (ModuleRepository repo : repos) {
-            failures.putAll(repo.getReadFailures());
-        }
-        return Map.copyOf(failures);
     }
 
     @Override
