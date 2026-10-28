@@ -1324,14 +1324,14 @@ After assembling with the same compiler flag, `npm run test:playbook` from `lang
 reruns just the editor suite. It reports existing host-test evidence without rebuilding/rerunning it.
 See the [extension testing notes](../vscode-extension/README.md#testing) for display/`xvfb` requirements.
 
-The host suite also includes `CompilerEmissionAuditTest`: it compiles atomic operations through
-qualified, singleton, enclosing-instance and generic receivers, deserializes their binary ASTs,
-checks source/dependency diagnostic delivery, and inspects dense-switch conversion metadata. These
-are compiler-output checks that the editor UI cannot establish. To run them without launching VS Code:
+The host suite also includes `CompilerAtomicEmissionTest` and `CompilerEmissionAuditTest`: they
+execute serialized atomic operations through qualified, implicit, enclosing-instance and generic
+receivers, check source/dependency diagnostic delivery, and inspect dense-switch bytecode conversions.
+These are compiler-output checks that the editor UI cannot establish. To run them without launching VS Code:
 
 ```bash
 ./gradlew :lang:lsp-server:test --tests org.xvm.lsp.adapter.CompilerEmissionAuditTest \
-    --rerun --no-build-cache \
+    --tests org.xvm.lsp.adapter.CompilerAtomicEmissionTest --rerun-tasks --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
