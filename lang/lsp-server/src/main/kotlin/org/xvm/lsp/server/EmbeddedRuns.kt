@@ -31,7 +31,9 @@ data class BuildResponse(
 )
 
 /**
- * `xtc/run` parameters. The client chooses [runId] so it can attach its console before any output arrives;
+ * `xtc/run` parameters. [module] is a module name or root URI; a client that sends a root URI also sends the
+ * module's name as [moduleName], which identifies the module when the URI no longer does, as after its root file
+ * was renamed or moved. The client chooses [runId] so it can attach its console before any output arrives;
  * [args] are passed to the entry method as given, never shell-parsed.
  */
 data class RunParams(
@@ -40,6 +42,7 @@ data class RunParams(
     val args: List<String>? = null,
     val workingDirectory: String? = null,
     val runId: String? = null,
+    val moduleName: String? = null,
 )
 
 /** `xtc/run` result: the build outcome, and the run's ID when the build succeeded and the run started. */
@@ -113,7 +116,7 @@ internal class EmbeddedRuns(
         val runId = params.runId ?: UUID.randomUUID().toString()
         synchronized(inputLock) { waiting[runId] = WaitingInput() }
         return compiler
-            .buildAsync(module, false)
+            .buildAsync(module, false, params.moduleName)
             .thenApply { result ->
                 val build = response(result)
                 val target = result.modules.lastOrNull()

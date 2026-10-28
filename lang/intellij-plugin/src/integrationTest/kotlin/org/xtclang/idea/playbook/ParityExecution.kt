@@ -55,7 +55,8 @@ internal fun ParityScenarios.executionCases() {
             check(Files.readString(file) == data.string("librarySource")) { "The broken library is unsaved before the build" }
             val failed = JsonParser.parseString(execution.build(project, 120)).asJsonObject
             val failure = failed.string("text")
-            check(Files.readString(file) == data.string("brokenLibrary")) { "Build saves all files first" }
+            // the build compiles the editor's text without saving it
+            check(Files.readString(file) == data.string("librarySource")) { "Build leaves the broken library unsaved" }
             check(failed["errors"].asBoolean) { "The build must fail: $failure" }
             check(data.string("failed") in failure) { failure }
             check(data.string("skipped") in failure) { failure }
@@ -252,13 +253,85 @@ internal fun ParityScenarios.buildModeCases() {
             }
             runOnce("first run finishes").let { check(data.string("first") in it) { it } }
             runOnce("second run of the unchanged module finishes").let { check(data.string("first") in it) { it } }
-            // edited and not saved: the run saves first and runs the edit, not the earlier build
+            // edited and not saved: the run builds and runs the edit, not the earlier build; IntelliJ itself saves
+            // the file before a run
             replace(document, data.string("edited"))
             val file = directory.resolve(data.string("file"))
             check(Files.readString(file) == data.string("source")) { "The edit is unsaved before the run" }
             val edited = runOnce("run of the edited module finishes")
             check(data.string("second") in edited && data.string("first") !in edited) { edited }
-            check(Files.readString(file) == data.string("edited")) { "The run saved the edit" }
+            check(Files.readString(file) == data.string("edited")) { "IntelliJ saved the edit before the run" }
+        }
+    }
+}
+
+/** Fresh program state, refused entry methods and dropped arguments; registered after the on-type cases, as the catalog orders X292–X294. */
+internal fun ParityScenarios.runEntryCases() {
+    case("X292") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val module = data.string("module")
+            repeat(2) { round ->
+                execution.run(project, module, uri(data.string("file")), "")
+                awaitUi("run ${round + 1} finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                val output = execution.output(module)
+                check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+                // the counter keeps its count within a run, and a run that went on from the run before it would
+                // print the counts after that run's
+                check(data.string("output") in output && data.string("carriedOver") !in output) { output }
+            }
+        }
+    }
+
+    case("X293") { data ->
+        val library = open(data.string("file"), data.string("source"))
+        val twoArguments = open(data.string("twoArgumentsFile"), data.string("twoArgumentsSource"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList()),
+                SharedScenarios.SourceModule(data.string("twoArgumentsModule"), uri(data.string("twoArgumentsFile")), emptyList()),
+            ),
+        )
+        clean(library)
+        clean(twoArguments)
+        embedded { execution, project ->
+            // neither module has a Run lens, so each runs from an Ecstasy run configuration
+            fun refused(
+                module: String,
+                file: String,
+                expected: String,
+            ): String {
+                execution.run(project, module, uri(file), "")
+                awaitUi("run of $module is refused", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                val output = execution.output(module)
+                check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+                check(expected in output) { output }
+                // the reason alone, as xtc run reports it, not a failure to create the program's container
+                check(data.string("containerFailure") !in output) { output }
+                return output
+            }
+            refused(data.string("module"), data.string("file"), data.string("message"))
+            val output = refused(data.string("twoArgumentsModule"), data.string("twoArgumentsFile"), data.string("twoArgumentsMessage"))
+            check(data.string("twoArgumentsOutput") !in output) { "Nothing ran: $output" }
+        }
+    }
+
+    case("X294") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { execution, project ->
+            val module = data.string("module")
+            execution.run(project, module, uri(data.string("file")), data.strings("args").joinToString(","))
+            awaitUi("run with dropped arguments finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+            val output = execution.output(module)
+            check(execution.exitCode(module) == data.int("exitCode")) { "Exit code ${execution.exitCode(module)}: $output" }
+            val warning = output.indexOf(data.string("warning"))
+            check(
+                warning >= 0 && warning < output.indexOf(data.string("output")),
+            ) { "The warning comes before the program's output: $output" }
         }
     }
 }

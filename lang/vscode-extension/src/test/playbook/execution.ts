@@ -6,6 +6,7 @@ import { buildModeStatus } from '../../build-mode-selection';
 import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
+import { discovered } from './liveWorkspace';
 import { client, eventually, noErrors, playbook, type Workspace } from './support';
 
 /** Records what each embedded build or run terminal shows, keyed by kind and label. */
@@ -45,6 +46,18 @@ async function embedded(body: (executions: Executions) => Promise<void>): Promis
     } finally {
         executions.dispose();
         await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
+    }
+}
+
+/** VS Code saves before a task unless told not to; the extension itself saves nothing. */
+async function withoutSavingBeforeTasks(body: () => Promise<void>): Promise<void> {
+    const settings = vscode.workspace.getConfiguration('task');
+    const original = settings.inspect<string>('saveBeforeRun')?.workspaceValue;
+    await settings.update('saveBeforeRun', 'never', vscode.ConfigurationTarget.Workspace);
+    try {
+        await body();
+    } finally {
+        await settings.update('saveBeforeRun', original, vscode.ConfigurationTarget.Workspace);
     }
 }
 
@@ -105,12 +118,15 @@ export function executionCases(): void {
 
             await workspace.replace(library, data.brokenLibrary);
             assert.ok(library.isDirty, 'The broken library is unsaved before the build');
-            const failed = await executions.start('build', label, () => vscode.commands.executeCommand('xtc.build'), finished, 'Failing build finishes');
-            assert.ok(!library.isDirty, 'Build saves all files first');
-            assert.strictEqual(failed.exitCode, 1, failed.text);
-            assert.ok(failed.text.includes(data.failed), failed.text);
-            assert.ok(failed.text.includes(data.skipped), failed.text);
-            assert.ok(failed.text.split('\n').some(line => line.includes(data.diagnostic) && line.includes(': error: ')), failed.text);
+            // the build compiles the editor's text, and only VS Code's task setting would save it
+            await withoutSavingBeforeTasks(async () => {
+                const failed = await executions.start('build', label, () => vscode.commands.executeCommand('xtc.build'), finished, 'Failing build finishes');
+                assert.ok(library.isDirty, 'Build leaves the broken library unsaved');
+                assert.strictEqual(failed.exitCode, 1, failed.text);
+                assert.ok(failed.text.includes(data.failed), failed.text);
+                assert.ok(failed.text.includes(data.skipped), failed.text);
+                assert.ok(failed.text.split('\n').some(line => line.includes(data.diagnostic) && line.includes(': error: ')), failed.text);
+            });
         });
     });
 
@@ -301,13 +317,104 @@ export function buildModeCases(): void {
             };
             assert.ok((await runOnce('First run finishes')).includes(data.first));
             assert.ok((await runOnce('Second run of the unchanged module finishes')).includes(data.first));
-            // edited and not saved: the run saves first and runs the edit, not the earlier build
+            // edited and not saved: the run builds and runs the editor's text, not the earlier build, and
+            // leaves the file unsaved when VS Code's task setting does not save it
             await workspace.replace(document, data.edited);
             assert.ok(document.isDirty, 'The edit is unsaved before the run');
-            const edited = await runOnce('Run of the edited module finishes');
-            assert.ok(edited.includes(data.second), edited);
-            assert.ok(!edited.includes(data.first), edited);
-            assert.ok(!document.isDirty, 'The run saved the edit');
+            await withoutSavingBeforeTasks(async () => {
+                const edited = await runOnce('Run of the edited module finishes');
+                assert.ok(edited.includes(data.second), edited);
+                assert.ok(!edited.includes(data.first), edited);
+                assert.ok(document.isDirty, 'The run leaves the edit unsaved');
+            });
+        });
+    });
+}
+
+/** Registered after the on-type cases, as the catalog orders X291 after X290. */
+export function renamedRootCases(): void {
+    playbook('X291', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await discovered(workspace, async () => {
+            await embedded(async executions => {
+                // a task saved with the module's root file, as tasks.json or Rerun keeps it
+                const runSaved = async (message: string) => {
+                    const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: workspace.uri(data.file).toString(), mode: 'embedded' }, getClient);
+                    const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
+                    assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                    assert.ok(run.text.includes(data.output), run.text);
+                };
+                await runSaved('Run before the rename finishes');
+                // renamed on disk, as by a terminal, with no editor open on it
+                await fs.rename(workspace.uri(data.file).fsPath, workspace.uri(data.destinationFile).fsPath);
+                const renamed = await vscode.workspace.openTextDocument(workspace.uri(data.destinationFile));
+                await vscode.window.showTextDocument(renamed);
+                await eventually(() => runLensTitles(renamed), titles => titles.includes(data.runTitle), 'Run lens on the renamed root');
+                await runSaved('Run of the saved task after the rename finishes');
+            });
+        });
+    });
+}
+
+/** Registered after the renamed-root case, as the catalog orders X292–X294 after X291. */
+export function runEntryCases(): void {
+    playbook('X292', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const runOnce = async (message: string) => {
+                const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
+                const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
+                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                // the counter keeps its count within a run, and a run that went on from the run before it would
+                // print the counts after that run's
+                assert.ok(run.text.includes(data.output), run.text);
+                assert.ok(!run.text.includes(data.carriedOver), run.text);
+            };
+            await runOnce('First run finishes');
+            await runOnce('Second run finishes');
+        });
+    });
+
+    playbook('X293', async (workspace, data) => {
+        const library = await workspace.open(data.file, data.source);
+        const twoArguments = await workspace.open(data.twoArgumentsFile, data.twoArgumentsSource);
+        await configureModules(workspace, [
+            { name: data.module, file: data.file },
+            { name: data.twoArgumentsModule, file: data.twoArgumentsFile },
+        ]);
+        await noErrors(library.uri);
+        await noErrors(twoArguments.uri);
+        await embedded(async executions => {
+            // neither module has a Run lens, so each runs from a task, as one saved in tasks.json
+            const refused = async (moduleName: string, uri: vscode.Uri, message: string, expected: string) => {
+                const task = createXtcRunTask({ type: 'xtc', moduleName, moduleUri: uri.toString(), mode: 'embedded' }, getClient);
+                const run = await executions.start('run', moduleName, () => vscode.tasks.executeTask(task), finished, message);
+                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+                assert.ok(run.text.includes(expected), run.text);
+                // the reason alone, as xtc run reports it, not a failure to create the program's container
+                assert.ok(!run.text.includes(data.containerFailure), run.text);
+                return run.text;
+            };
+            await refused(data.module, library.uri, 'Run of a module without run is refused', data.message);
+            const text = await refused(data.twoArgumentsModule, twoArguments.uri, 'Run of a run method requiring two arguments is refused',
+                data.twoArgumentsMessage);
+            assert.ok(!text.includes(data.twoArgumentsOutput), `Nothing ran: ${text}`);
+        });
+    });
+
+    playbook('X294', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args: data.args, mode: 'embedded' }, getClient);
+            const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, 'Run with dropped arguments finishes');
+            assert.strictEqual(run.exitCode, data.exitCode, run.text);
+            assert.ok(run.text.includes(data.warning), run.text);
+            assert.ok(run.text.includes(data.output), run.text);
+            assert.ok(run.text.indexOf(data.warning) < run.text.indexOf(data.output), `The warning comes before the program's output: ${run.text}`);
         });
     });
 }
