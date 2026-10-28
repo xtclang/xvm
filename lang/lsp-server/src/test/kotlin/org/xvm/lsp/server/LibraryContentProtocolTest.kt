@@ -36,7 +36,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
 /**
- * Exercises connection-owned virtual library content and refresh. Only registered current artifact URIs may
+ * Exercises connection-owned virtual library content. Only registered current artifact URIs may
  * be read; client-provided paths or presentations cannot replace authoritative source content.
  */
 class LibraryContentProtocolTest {
@@ -134,13 +134,12 @@ class LibraryContentProtocolTest {
     }
 
     @Test
-    fun `fetched library views refresh and untrusted client presentations never replace artifact content`() {
+    fun `a dependency change fetches no library view again and untrusted client presentations never replace artifact content`() {
         val notifications = LinkedBlockingQueue<TextDocumentContentRefreshParams>()
-        val reply = CompletableFuture<Void>()
         val client = mock(LanguageClient::class.java)
         doAnswer { invocation ->
             notifications.add(invocation.getArgument(0))
-            reply
+            CompletableFuture.completedFuture<Void>(null)
         }.`when`(client).refreshTextDocumentContent(any())
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(client)
@@ -153,8 +152,6 @@ class LibraryContentProtocolTest {
                 ).join()
             server.initialized(InitializedParams())
             val target = definition(server)
-            server.readOnlyDocuments.refresh()
-            assertThat(notifications).isEmpty() // Navigating alone does not fetch content.
             val workspace = server.workspaceService
             val params = TextDocumentContentParams(target.uri)
             val text = workspace.textDocumentContent(params).join().text
@@ -182,19 +179,10 @@ class LibraryContentProtocolTest {
                 DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 4), listOf(TextDocumentContentChangeEvent(text))),
             )
             assertThat(documents.moniker(moniker).get(30, SECONDS)).isEqualTo(original)
+            // A library URI's text cannot change, so a dependency change asks the client to fetch no view again.
             server.replaceCompilerDependencies(emptyList())
-            assertThat(notifications.poll(10, SECONDS)?.uri).isEqualTo(target.uri)
-            server.readOnlyDocuments.refresh()
-            assertThat(notifications).isEmpty()
+            assertThat(notifications.poll(2, SECONDS)).isNull()
             assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
-            val acknowledged = server.readOnlyDocuments.refresh()
-            reply.complete(null)
-            acknowledged.get(10, SECONDS)
-            server.readOnlyDocuments.refresh()
-            assertThat(notifications.poll(10, SECONDS)?.uri).isEqualTo(target.uri)
-            server.close()
-            server.readOnlyDocuments.refresh()
-            assertThat(notifications).isEmpty()
         }
     }
 
