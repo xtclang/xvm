@@ -837,14 +837,6 @@ width; the standalone window fits the selected page. Switching pages preserves u
 The Language Service page distinguishes saved machine runtime settings from the running server;
 stale replies cannot replace a newer report.
 
-### Experimental color-value picker
-
-The opt-in color-value prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
-fixture. It supplies native color swatches and picker edits separately from normal semantic
-highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
-Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
-See the [prototype recipe and acceptance](../doc/manual-test-plan.md#experimental-color-value-picker).
-
 ### Compiler documentation and reference counts
 
 The compiler adapter offers **Generate documentation comment** on written declaration headers.
