@@ -74,8 +74,8 @@ public class ModuleInfo {
      * @param moduleName  the module identity obtained from the host's source snapshot
      */
     protected ModuleInfo(File sourceFile, String moduleName) {
-        this.fileSpec      = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
-        this.moduleName    = Objects.requireNonNull(moduleName, "moduleName");
+        this.fileSpec   = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
         if (moduleName.isBlank() || !isExplicitSourceFile(this.fileSpec.getName())) {
             throw new IllegalArgumentException("A module name and .x source root are required");
         }
@@ -709,7 +709,7 @@ public class ModuleInfo {
      *         location, or if serious errors occur loading the source tree
      */
     public Node getSourceTree(ErrorListener errs) {
-        return getSourceTree(errs, (source, listener) -> new Parser(source, listener).parseSource());
+        return getSourceTree(errs, STANDARD_PARSER);
     }
 
     /**
@@ -1003,10 +1003,44 @@ public class ModuleInfo {
     }
 
     /**
+     * A source directory or file node. Its parsing goes through a caller-selected parser; the
+     * shorter entry points use the standard parser, and the no-argument form discards the
+     * diagnostics it would report.
+     */
+    public abstract class SourceNode
+            extends Node {
+        /**
+         * Construct a SourceNode.
+         *
+         * @param parent  the parent node
+         * @param file    the file that this node will represent
+         */
+        protected SourceNode(DirNode parent, File file) {
+            super(parent, file);
+        }
+
+        /**
+         * Parse this node and all nodes it contains.
+         */
+        @Override
+        public void parse() {
+            parse(silent(DISCARD));
+        }
+
+        @Override
+        public void parse(ErrorListener errs) {
+            parse(errs, STANDARD_PARSER);
+        }
+
+        @Override
+        public abstract void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse);
+    }
+
+    /**
      * A DirNode represents a source directory, which corresponds to a module or package.
      */
     public class DirNode
-            extends Node {
+            extends SourceNode {
         /**
          * Construct the root DirNode.
          *
@@ -1112,19 +1146,6 @@ public class ModuleInfo {
             String name = file().getName();
             int    dot  = name.indexOf('.');
             return dot >= 0 ? name.substring(0, dot) : name;
-        }
-
-        /**
-         * Parse this node and all nodes it contains.
-         */
-        @Override
-        public void parse() {
-            parse(silent(DISCARD));
-        }
-
-        @Override
-        public void parse(ErrorListener errs) {
-            parse(errs, (source, listener) -> new Parser(source, listener).parseSource());
         }
 
         @Override
@@ -1320,7 +1341,7 @@ public class ModuleInfo {
      * A FileNode represents an individual ".x" source file.
      */
     public class FileNode
-            extends Node {
+            extends SourceNode {
         /**
          * Construct a FileNode.
          *
@@ -1491,16 +1512,6 @@ public class ModuleInfo {
                 }
             }
             return dir;
-        }
-
-        @Override
-        public void parse() {
-            parse(silent(DISCARD));
-        }
-
-        @Override
-        public void parse(ErrorListener errs) {
-            parse(errs, (source, listener) -> new Parser(source, listener).parseSource());
         }
 
         @Override
@@ -1845,6 +1856,12 @@ public class ModuleInfo {
 
     private enum Status  {Unknown, NotExists, Exists}
     private enum Content {Unknown, Invalid, Module}
+
+    /**
+     * The parser used when a caller does not supply its own.
+     */
+    private static final BiFunction<Source, ErrorListener, StatementBlock> STANDARD_PARSER =
+            (source, listener) -> new Parser(source, listener).parseSource();
 
     private final File    fileSpec;       // original file spec that was used to create this info
     private final boolean deduce;         // use knowledge of common file layouts to find locations

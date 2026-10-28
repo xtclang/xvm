@@ -4,16 +4,12 @@ import com.intellij.ide.TitledHandler
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileTypes.FileTypes
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.refactoring.rename.RenameHandler
-import com.intellij.refactoring.ui.NameSuggestionsField
-import com.intellij.refactoring.ui.RefactoringDialog
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
-import javax.swing.JComponent
 
 /**
  * Request compiler proof before changing a file's physical path. IntelliJ's VFS before-event for
@@ -64,21 +60,10 @@ class XtcFileRenameHandler :
         project: Project,
         private val file: VirtualFile,
         private val wrapper: LanguageServerWrapper,
-    ) : RefactoringDialog(project, false) {
-        private val name =
-            NameSuggestionsField(arrayOf(file.name), project, FileTypes.PLAIN_TEXT, null)
-
+    ) : XtcRenameDialog(project, file.name, null) {
         init {
-            title = "Rename"
-            name.addDataChangedListener { validateButtons() }
-            init()
+            initDialog()
         }
-
-        override fun createCenterPanel(): JComponent = name
-
-        override fun getPreferredFocusedComponent(): JComponent = name.focusableComponent
-
-        override fun hasPreviewButton(): Boolean = false
 
         override fun areButtonsValid(): Boolean =
             name.enteredName.let {
