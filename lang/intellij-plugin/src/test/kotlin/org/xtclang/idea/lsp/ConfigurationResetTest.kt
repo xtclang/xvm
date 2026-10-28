@@ -1,6 +1,7 @@
 package org.xtclang.idea.lsp
 
 import com.google.gson.JsonParser
+import com.redhat.devtools.lsp4ij.JSONUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -10,10 +11,11 @@ import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.junit.jupiter.api.Test
 
 /**
- * Checks wire serialization of configuration resets. Explicit discovery reset must survive JSON encoding
- * without changing normal omission of unrelated optional protocol fields.
+ * Checks wire serialization of configuration resets with the client's JSON configuration. Explicit discovery
+ * reset must survive JSON encoding without changing normal omission of unrelated optional protocol fields. LSP4IJ's
+ * compatibility adapters keep the nulls since LSP4IJ #1710 (UP08).
  */
-class ConfigurationJsonTest {
+class ConfigurationResetTest {
     private val json =
         MessageJsonHandler(
             mapOf(
@@ -24,7 +26,7 @@ class ConfigurationJsonTest {
                     ),
             ),
         ) {
-            it.registerTypeAdapterFactory(ConfigurationJson)
+            JSONUtils.configureCompatibilityAdapters(it)
         }
 
     @Test
