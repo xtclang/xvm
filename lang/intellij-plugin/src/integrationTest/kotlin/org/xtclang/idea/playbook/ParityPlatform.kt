@@ -1101,6 +1101,20 @@ internal fun ParityScenarios.platformCases() {
                 symbol
             }
         check(resolvedSymbol["location"].asJsonObject.has("range"))
+        // LSP4IJ declares that it resolves a symbol's range, so the server leaves it to workspaceSymbol/resolve, and
+        // Go to Symbol resolves the symbol to open it at its range (our LSP4IJ #1788)
+        check(symbol.has("data") && !symbol["location"].asJsonObject.has("range")) { "The symbol's range is not resolved lazily: $symbol" }
+        val resolved = resolvedSymbol["location"].asJsonObject
+        val opened =
+            with(driver) {
+                JsonParser.parseString(utility(NativeEditorUi::class).goToSymbol(singleProject(), data.string("module"))).asJsonObject
+            }
+        check(!opened["range"].asBoolean && opened.string("path") == Path.of(URI(resolved.string("uri"))).toString()) {
+            "Go to Symbol opened $opened, not $resolved"
+        }
+        check(opened.int("offset") == ParityWorkspace.offset(document.text, resolved["range"].asJsonObject["start"].asJsonObject)) {
+            "Go to Symbol opened $opened, not $resolved"
+        }
         replace(document, "\n" + data.string("source"))
         listOf(
             "codeLens/resolve" to lens,
@@ -1156,6 +1170,37 @@ internal fun ParityScenarios.platformCases() {
             }
         }
         check(document.text == data.string("source"))
+        // IntelliJ formats two separate lines in one textDocument/rangesFormatting, both of them (our LSP4IJ #1786)
+        val lines = data["lines"].asJsonArray.map { it.asInt }
+        val source = data.string("source")
+        val ranges =
+            lines.map { line ->
+                val start = source.lines().take(line).sumOf { it.length + 1 }
+                listOf(start, start + source.lines()[line].length)
+            }
+        val sent = trace.requests("textDocument/rangesFormatting").size
+        val formatted =
+            source
+                .lines()
+                .mapIndexed { line, text ->
+                    if (line in
+                        lines
+                    ) {
+                        data.string("indent") + text
+                    } else {
+                        text
+                    }
+                }.joinToString("\n")
+        with(driver) {
+            utility(NativeEditorUi::class).reformatRanges(document.editor.editor, Gson().toJson(ranges))
+            awaitUi("both lines are formatted", HANG_LIMIT, { "Text: ${document.text}" }) { document.text == formatted }
+        }
+        val requests = trace.requests("textDocument/rangesFormatting").drop(sent)
+        check(requests.size == 1 && requests.single()["ranges"].asJsonArray.size() == lines.size) {
+            "Not one rangesFormatting with both ranges: $requests"
+        }
+        replace(document, source)
+        clean(document)
     }
     case("X133") { data ->
         write(data.string("file"), data.string("source"))
