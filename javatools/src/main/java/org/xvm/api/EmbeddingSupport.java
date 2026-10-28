@@ -59,6 +59,9 @@ import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
+import org.xvm.runtime.Debugger;
+import org.xvm.runtime.SessionDebugger;
+
 import org.xvm.runtime.template._native.io.xExternalConsole;
 
 import org.xvm.tool.Console;
@@ -1345,6 +1348,39 @@ public class EmbeddingSupport {
             ConsoleInput           consoleIn,
             File                   rootDir,
             @NotNull ErrorListener errs) {
+        return runMethod(input, moduleName, version, entry, console, consoleIn, rootDir, null, errs);
+    }
+
+    /**
+     * Create a runtime container and invoke the specified entry method of a module, as
+     * {@link #runMethod(ModuleRepository, String, Version, EntryPoint, PrintWriter, ConsoleInput, File, ErrorListener)}
+     * does, under a debugger.
+     *
+     * <p>The debugger, such as a {@link SessionDebugger}, is set on the runtime before the module
+     * starts, and replaced by {@link Debugger#NONE} when the run ends or is closed, which releases
+     * a program it holds stopped. Every run of this EmbeddingSupport shares that runtime, so a run
+     * with a debugger is meant to be its only run. Debugging needs the interpreter.
+     *
+     * @param debugger  (optional) the debugger for this run, or null to run without one
+     *
+     * @return a Control object for the running module, or null if it could not be started, in
+     *         which case the reason is reported to "errs"
+     *
+     * @throws UnsupportedOperationException  if a debugger is given and the JIT is used
+     */
+    public Control runMethod(
+            ModuleRepository       input,
+            String                 moduleName,
+            Version                version,
+            EntryPoint             entry,
+            PrintWriter            console,
+            ConsoleInput           consoleIn,
+            File                   rootDir,
+            Debugger               debugger,
+            @NotNull ErrorListener errs) {
+        if (debugger != null && useJit()) {
+            throw new UnsupportedOperationException("Debugging requires the interpreter");
+        }
         requireNonNull(entry, "entry");
         requireNonNull(consoleIn, "consoleIn");
         verifyConfigured();
@@ -1368,7 +1404,7 @@ public class EmbeddingSupport {
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
                     : InterpreterControl.create(connector, module, repository, entry, console,
-                            consoleIn, rootDir, errs);
+                            consoleIn, rootDir, debugger, errs);
         } catch (RuntimeException | AssertionError e) {
             // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
             // assertion in the structure code past this report and out to the host. Errors are

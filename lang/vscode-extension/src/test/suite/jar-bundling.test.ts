@@ -1,11 +1,12 @@
 // JAR-bundling sanity test. Mirrors lang/intellij-plugin's
 // LspServerJarResolutionTest: verifies that the build placed the LSP
-// and DAP server JARs at the paths the extension code resolves them
-// from, so an installed extension can actually start the servers.
+// server JAR at the path the extension code resolves it from, so an
+// installed extension can actually start the server. Debug sessions run
+// in the language server, so there is no separate DAP server JAR.
 //
 // This is the only integration test that catches a regression where
-// the `copyLspServer` / `copyDapServer` Gradle tasks fall out of sync
-// with extension.ts's `context.asAbsolutePath(...)` calls.
+// the `copyLspServer` Gradle task falls out of sync with extension.ts's
+// `context.asAbsolutePath(...)` calls.
 
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
@@ -13,7 +14,7 @@ import * as vscode from 'vscode';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
 
-suite('Bundled server JARs', () => {
+suite('Bundled server JAR', () => {
     let extensionRoot: string;
 
     suiteSetup(async () => {
@@ -32,13 +33,5 @@ suite('Bundled server JARs', () => {
         );
         const stat = fs.statSync(expected);
         assert.ok(stat.size > 1024 * 1024, `lsp-server.jar is suspiciously small (${stat.size} bytes) — expected a fat jar >1 MB`);
-    });
-
-    test('dap-server.jar is present at the expected runtime path', () => {
-        const expected = `${extensionRoot}/server/dap-server.jar`;
-        assert.ok(
-            fs.existsSync(expected),
-            `expected ${expected} to exist (produced by :lang:vscode-extension:copyDapServer)`,
-        );
     });
 });
