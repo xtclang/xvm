@@ -586,14 +586,12 @@ public abstract class Launcher<T extends LauncherOptions>
      * Displays via Console and forwards to external ErrorListener if provided.
      *
      * @param err the error information
-     * @return true if compilation should abort
      */
     @Override
-    public boolean log(ErrorInfo err) {
+    public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
         log(err.getSeverity(), err.toString());
         m_errors.log(err);
-        return isAbortDesired();
     }
 
     /**
