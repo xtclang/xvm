@@ -845,8 +845,9 @@ public class MethodBody {
 
     /**
      * Resolve this body's declaring class type using the target's generic bindings. For example,
-     * a body declared on D<Element>.C0 needs to be resolved to D<Int>.C0 for a D<Int>.C1 target.
-     * This identifies the declaring class of this body, not necessarily the head of its call chain.
+     * a body declared on {@code D<Element>.C0} needs to be resolved to {@code D<Int>.C0} for a
+     * {@code D<Int>.C1} target. This identifies the declaring class of this body, not necessarily
+     * the head of its call chain.
      *
      * @param pool        the ConstantPool for the resolved type
      * @param typeTarget  the target type that supplies the generic bindings

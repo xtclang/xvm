@@ -167,7 +167,7 @@ public class VersionTree<V>
      * needs to be the exact same version as specified, or it needs to unambiguously precede it.
      *
      * <p>Consider the following tree:
-     * <code><pre>
+     * <pre>
      * VersionTree
      * |- 1:                v1
      * |- 2:                v2
@@ -180,7 +180,7 @@ public class VersionTree<V>
      * |  |           |- 0: v2.1.0.1.0.0
      * |  |- 2:             v2.2
      * |- 4:                v4
-     * </pre></code>
+     * </pre>
      * Examples:
      * <ul>
      * <li>findClosestVersion(1) -> v1</li>

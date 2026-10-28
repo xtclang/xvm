@@ -652,7 +652,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the formal type (e.g. Map<Key, Value>)
+     * @return the formal type (e.g. {@code Map<Key, Value>})
      */
     public TypeConstant getFormalType() {
         TypeConstant typeFormal = m_typeFormal;
@@ -714,7 +714,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the normalized canonical type (e.g. Map<Object, Object>)
+     * @return the normalized canonical type (e.g. {@code Map<Object, Object>})
      */
     public TypeConstant getNormalizedType() {
         TypeConstant typeNormalized = m_typeNormalized;
@@ -1065,12 +1065,10 @@ public class ClassStructure
      *
      * <p>A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
-     * <code>
-     *   <pre>
+     * <pre>
      *     annotation Override
      *         into Class | Property | Method
-     *   </pre>
-     * </code>
+     * </pre>
      * In such a case it may be a "real" annotation, if it applies to the class itself.
      *
      * @param typeAnno  the annotation type

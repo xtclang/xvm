@@ -1583,12 +1583,12 @@ public abstract class ClassTemplate
      * Compare for identity equality two object handles that both associated with this template.
      *
      * <p>As documented at Ref.x equals() function:
-     * <pre><quote>
+     * <blockquote><pre>
      *   Specifically, two references are equal if they reference the same runtime object.
      *   Additionally, for optimization purposes, the runtime is *permitted* to indicate that two
      *   references to two separate runtime objects are equal, in the case where both references
      *   are to immutable objects whose structures are identical.
-     * </quote></pre>
+     * </pre></blockquote>
      *
      * <p>Note: this method is inherently native; it must be answered without calling any natural
      * code

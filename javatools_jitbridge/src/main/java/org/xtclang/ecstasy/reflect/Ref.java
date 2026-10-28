@@ -31,8 +31,8 @@ public interface Ref extends Object {
     }
 
     /**
-     * Native implementation of: "static <CompileType extends Ref> Boolean equals(CompileType
-     * value1, CompileType value2)".
+     * Native implementation of: "{@code static <CompileType extends Ref> Boolean
+     * equals(CompileType value1, CompileType value2)}".
      */
     static boolean equals$p(Ctx ctx, nType CompileType, Ref value1, Ref value2) {
         return nRef.equals$p(ctx, CompileType, value1, value2);

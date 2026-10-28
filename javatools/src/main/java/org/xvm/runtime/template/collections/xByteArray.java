@@ -136,7 +136,7 @@ public class xByteArray
     }
 
     /**
-     * Extract an array of bytes from the Array<Byte> handle.
+     * Extract an array of bytes from the {@code Array<Byte>} handle.
      */
     public static byte[] getBytes(ArrayHandle hArray) {
         DelegateHandle hDelegate = hArray.m_hDelegate;
@@ -158,7 +158,7 @@ public class xByteArray
     }
 
     /**
-     * Copy bytes from the Array<Byte> handle.
+     * Copy bytes from the {@code Array<Byte>} handle.
      *
      * @param abVal   the byte array to copy bytes into
      * @param ofSrc   the offset in the byte array to copy from

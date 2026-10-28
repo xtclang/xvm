@@ -57,7 +57,7 @@ public interface ErrorListener {
      * Handles the logging of an error that originates in an Ecstasy XVM structure.
      *
      * @param severity    the severity level of the error; one of
-     *                    {@link Severity#INFO}, {@link Severity#WARNING,
+     *                    {@link Severity#INFO}, {@link Severity#WARNING},
      *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
      * @param sCode       the error code that identifies the error message
      * @param aoParam     the parameters for the error message; may be null
@@ -187,7 +187,7 @@ public interface ErrorListener {
          * Construct an ErrorInfo object.
          *
          * @param severity    the severity level of the error; one of
-         *                    {@link Severity#INFO}, {@link Severity#WARNING,
+         *                    {@link Severity#INFO}, {@link Severity#WARNING},
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
          * @param aoParam     the parameters for the error message; may be null
@@ -209,7 +209,7 @@ public interface ErrorListener {
          * Construct an ErrorInfo object.
          *
          * @param severity    the severity level of the error; one of
-         *                    {@link Severity#INFO}, {@link Severity#WARNING,
+         *                    {@link Severity#INFO}, {@link Severity#WARNING},
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
          * @param aoParam     the parameters for the error message; may be null

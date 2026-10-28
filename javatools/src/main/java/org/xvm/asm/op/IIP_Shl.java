@@ -21,7 +21,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.template.IndexSupport;
 
 /**
- * IIP_SHL rvalue-target, rvalue-ix, rvalue2 ; T[ix] <<= T
+ * IIP_SHL rvalue-target, rvalue-ix, rvalue2 ; T[ix] &lt;&lt;= T
  */
 public class IIP_Shl
         extends OpIndexInPlace {

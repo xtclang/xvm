@@ -122,8 +122,9 @@ public class nCommandLineInjector {
      *
      * @return the enum value with the requested name
      *
-     * @throws org.xtclang.ecstasy.IllegalArgument if the enum type does not have a value with
-     *         the specified name
+     * @throws org.xtclang.ecstasy.nException wrapping an
+     *         {@link org.xtclang.ecstasy.IllegalArgument} if the enum type does not have a value
+     *         with the specified name
      */
     public static nEnum createEnumValue(Ctx ctx, TypeConstant type, java.lang.String value) {
         TypeSystem       typeSystem = ctx.container.typeSystem;

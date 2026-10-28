@@ -185,7 +185,7 @@ public class ArrayᐸCharᐳ
     }
 
     /**
-     * Native implementation of "Char[] slice(Range<Int> indexes)" for immutable arrays.
+     * Native implementation of "{@code Char[] slice(Range<Int> indexes)}" for immutable arrays.
      */
     @Override
     public ArrayᐸCharᐳ slice$p(Ctx ctx, long n1, long n2) {

@@ -7,7 +7,7 @@ import java.util.BitSet;
  * corresponding bit's id is calculated as:
  *  <pre><code>
  *    N0 + D0*(N1 + D1*(N2 + ...))
- *  </pre></code>
+ *  </code></pre>
  * where <i>Di</i> is a size of dimension <i>i</i>.
  */
 public class BitCube {

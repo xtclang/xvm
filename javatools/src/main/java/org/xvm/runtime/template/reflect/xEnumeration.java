@@ -56,7 +56,7 @@ public class xEnumeration
     }
 
     /**
-     * Implements property: @Lazy Map<String, EnumType> byName
+     * Implements property: {@code @Lazy Map<String, EnumType> byName}
      */
     protected int getPropertyByName(Frame frame, ClassHandle hClass, int iReturn) {
         RefHandle    hByName = (RefHandle) hClass.getField(frame, "byName");

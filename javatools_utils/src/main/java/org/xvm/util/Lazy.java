@@ -23,7 +23,7 @@ import static java.util.Objects.requireNonNull;
  * a supplier is expected. Additional methods like {@link #isComputed()}, {@link #orElse},
  * and {@link #map} provide a richer API for working with lazy values.
  *
- * <h3>Real-world example from ClassStructure.collectAnnotations():</h3>
+ * <h2>Real-world example from ClassStructure.collectAnnotations():</h2>
  * <pre>{@code
  * // Before (mutable, manual caching):
  * private transient Annotation[] m_aAnnoClass;
@@ -165,7 +165,7 @@ public abstract class Lazy<T> implements Supplier<T> {
      * <p>The supplier may return null, which will be wrapped as {@code Optional.empty()}.
      * Non-null values are wrapped as {@code Optional.of(value)}.
      *
-     * <h3>Example - replacing sentinel value patterns:</h3>
+     * <h4>Example - replacing sentinel value patterns:</h4>
      * <pre>{@code
      * // Before (using 0L as sentinel - bad because 0L could be valid):
      * private long timestamp;

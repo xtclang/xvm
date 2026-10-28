@@ -950,7 +950,7 @@ public class Frame
      *
      * @return R_NEXT, R_CALL, R_EXCEPTION
      *
-     * @see {@link Utils.AssignValues}
+     * @see Utils.AssignValues
      */
     public int assignValues(int[] anVar, ObjectHandle... ahValue) {
         int c = Math.min(anVar.length, ahValue.length);
@@ -1500,7 +1500,7 @@ public class Frame
     /**
      * @return an ObjectHandle (could be a DeferredCallHandle)
      *
-     * @throw ExceptionHandle.WrapperException if the value cannot be retrieved
+     * @throws ExceptionHandle.WrapperException if the value cannot be retrieved
      */
     public ObjectHandle getArgument(int iArg)
                 throws ExceptionHandle.WrapperException {
@@ -1574,7 +1574,7 @@ public class Frame
      *
      * @return an ObjectHandle (could be DeferredCallHandle)
      *
-     * @throw ExceptionHandle.WrapperException if the default value cannot be retrieved
+     * @throws ExceptionHandle.WrapperException if the default value cannot be retrieved
      */
     public ObjectHandle getReturnValue(int iArg)
             throws ExceptionHandle.WrapperException {

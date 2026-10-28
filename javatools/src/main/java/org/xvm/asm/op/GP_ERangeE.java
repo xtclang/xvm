@@ -10,7 +10,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 /**
- * GP_ERANGEE rvalue1, rvalue2, lvalue ; T >..< T -> Range<T>
+ * GP_ERANGEE rvalue1, rvalue2, lvalue ; T &gt;..&lt; T -> Range&lt;T&gt;
  */
 public class GP_ERangeE
         extends OpRange {

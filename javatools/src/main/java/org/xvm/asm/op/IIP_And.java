@@ -20,7 +20,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.template.IndexSupport;
 
 /**
- * IIP_AND rvalue-target, rvalue-ix, rvalue2 ; T[ix] &= T
+ * IIP_AND rvalue-target, rvalue-ix, rvalue2 ; T[ix] &amp;= T
  */
 public class IIP_And
         extends OpIndexInPlace {
