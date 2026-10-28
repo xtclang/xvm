@@ -195,6 +195,15 @@ data class InlayHint(
 }
 
 /**
+ * A variable whose value an editor shows beside the code while the program is stopped: an occurrence of it, and its
+ * name, by which the editor looks it up in the stopped frame.
+ */
+data class InlineValue(
+    val range: Range,
+    val name: String,
+)
+
+/**
  * Formatting options from client.
  *
  * Defaults are XTC conventions (trim trailing whitespace, insert final newline). The editor can

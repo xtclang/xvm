@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.lsp.adapter.InlayHint
+import org.xvm.lsp.adapter.InlineValue
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SemanticTokens
@@ -231,6 +232,43 @@ internal object XdkPresentation {
             return low > 0 && ends[low - 1] > SemanticModel.Position(token[0], token[1])
         }
     }
+
+    /**
+     * The parameters and local variables of the method or lambda where the program is stopped, at each occurrence in
+     * the range up to the stopped line, by the name the stopped frame has them by. Fields are left out, since a frame
+     * holds them in `this`, and so are variables that only later lines name; within a lambda, its own code's.
+     */
+    fun inlineValues(
+        model: SemanticModel,
+        range: Range,
+        stopped: Position,
+    ): List<InlineValue> {
+        // the innermost of the source's methods and lambdas whose lines hold the stopped line
+        val callable =
+            model.callables.values
+                .map { it.location }
+                .filter { it.sourceName == model.sourceName && stopped.line in it.range.start.line..it.range.end.line }
+                .map { it.range }
+                .minWithOrNull(compareByDescending<SemanticModel.Range> { it.start }.thenBy { it.end })
+                ?: return emptyList()
+        val shown = SemanticModel.Range(range.start.toSemantic(), range.end.toSemantic())
+        return model.occurrences
+            .asSequence()
+            .filter { it.range.start in callable && it.range.start.line <= stopped.line }
+            .filter { it.range.start < shown.end && shown.start < it.range.end }
+            .mapNotNull { occurrence ->
+                val symbol =
+                    occurrence.symbol
+                        ?.let(model::symbol)
+                        ?.takeIf { it.kind == SymbolKind.VARIABLE || it.kind == SymbolKind.PARAMETER }
+                        ?: return@mapNotNull null
+                InlineValue(Range(occurrence.range.start.toPosition(), occurrence.range.end.toPosition()), symbol.name)
+            }.distinct()
+            .sortedWith(compareBy({ it.range.start.line }, { it.range.start.column }))
+            .toList()
+    }
+
+    private fun Position.toSemantic(): SemanticModel.Position = SemanticModel.Position(line, column)
 
     private fun SemanticModel.Position.toPosition(): Position = Position(line, column)
 }

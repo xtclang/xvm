@@ -30,6 +30,8 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.wm.ToolWindowId
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.platform.debugger.impl.shared.proxy.XDebugManagerProxy
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.SimpleColoredText
@@ -953,6 +955,48 @@ object DebugSessionUi {
                 }
         }
         return states.toString()
+    }
+
+    /**
+     * The inline values that the debugger draws at the ends of the lines of the file [uri] while the session is paused:
+     * each one's 1-based `line` and its `text`, such as `n = 2`, in line order. IntelliJ's renderer is read by name,
+     * since its class is not API.
+     */
+    @JvmStatic
+    fun inlineValues(
+        project: Project,
+        uri: String,
+    ): String {
+        val values = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            // the Variables view, as the Debug tool window shows it on a stop, computes the values that are drawn inline
+            ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.DEBUG)?.show()
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            val document = checkNotNull(FileDocumentManager.getInstance().getDocument(file)) { "No document for $uri" }
+            EditorFactory
+                .getInstance()
+                .getEditors(document, project)
+                .firstOrNull()
+                ?.inlayModel
+                ?.getAfterLineEndElementsInRange(0, document.textLength)
+                .orEmpty()
+                .filter { it.renderer.javaClass.simpleName == "InlineDebugRenderer" }
+                .forEach { inlay ->
+                    val renderer = inlay.renderer
+                    val text =
+                        renderer.javaClass
+                            .getMethod("getPresentation")
+                            .invoke(renderer)
+                            .toString()
+                    values.add(
+                        JsonObject().apply {
+                            addProperty("line", document.getLineNumber(inlay.offset) + 1)
+                            addProperty("text", text)
+                        },
+                    )
+                }
+        }
+        return JsonArray().apply { values.sortedBy { it.asJsonObject["line"].asInt }.forEach(::add) }.toString()
     }
 
     /** The ID of LSP4IJ's DAP function breakpoint type (#1780). */
