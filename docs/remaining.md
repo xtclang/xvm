@@ -775,14 +775,14 @@ passes with the workaround disabled. The gates are in
   To do: make `XtcFormattingService` send every range too; after a release with #1786, a native case that
   formats two separate ranges.
 
-### LSP4IJ: no hit counts on line breakpoints (UP55): our #1787, open
+### LSP4IJ: no hit counts on line breakpoints (UP55): our #1787, merged
 
 - [ ] UP55 (2026-10-28): LSP4IJ's line breakpoints send a condition and a log message, never a hit
   condition; function and data breakpoints do (#1780, #1782). XVM's adapter supports hit conditions
   since R9. The R9 item above puts IntelliJ's hit counts under UP32, but our #1759 added logpoints
-  only. Fixed by our [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787) (open,
-  `f273e8ca`): a DAP line breakpoint has a `Hit condition`, sent as `hitCondition`. To do: get #1787
-  merged; then a native IntelliJ hit-count case.
+  only. Fixed by our [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787) (merged 2026-10-28,
+  unreleased, `0ecbcdeb`): a DAP line breakpoint has a `Hit condition`, sent as `hitCondition`. To do:
+  after a release with it, a native IntelliJ hit-count case.
 
 ### LSP4IJ: the `exited` event (UP56): bridged, not filed
 
