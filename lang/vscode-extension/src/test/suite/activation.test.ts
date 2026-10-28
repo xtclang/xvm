@@ -5,6 +5,7 @@
 
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import { configurationProperties } from '../../settings-report';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
 
@@ -12,7 +13,11 @@ const EXPECTED_COMMANDS = [
     'xtc.createProject',
     'xtc.runModule',
     'xtc.restartServer',
+    'xtc.selectLanguageAdapter',
     'xtc.showServerOutput',
+    'xtc.hideServerOutput',
+    'xtc.openLanguageSettings',
+    'xtc.showLanguageServiceStatus',
 ];
 
 suite('Extension activation surfaces', () => {
@@ -32,6 +37,18 @@ suite('Extension activation surfaces', () => {
             `commands declared in package.json's contributes.commands are not registered at runtime: ${missing.join(', ')}. ` +
                 'Check that registerCommands() in extension.ts wires every command ID listed in package.json.',
         );
+    });
+
+    test('connection preferences are window scoped and ineffective formatting fields are explicit', () => {
+        const properties = configurationProperties(vscode.extensions.getExtension(PUBLISHER_AND_NAME)!.packageJSON.contributes.configuration);
+        for (const key of ['adapter', 'textSynchronization', 'saveFormatting']) {
+            assert.strictEqual(properties[`xtc.languageService.${key}`].scope, 'window');
+        }
+        assert.strictEqual(properties['xtc.languageService.textSynchronization'].default, 'full');
+        assert.strictEqual(properties['xtc.languageService.saveFormatting'].default, 'editor');
+        assert.ok(properties['xtc.formatting.tabSize'].deprecationMessage);
+        assert.strictEqual(properties['xtc.formatting.maxLineWidth'].deprecationMessage, undefined);
+        assert.strictEqual(properties['xtc.formatting.maxLineWidth'].default, 120);
     });
 
     test('xtc.showServerOutput executes without throwing', async () => {

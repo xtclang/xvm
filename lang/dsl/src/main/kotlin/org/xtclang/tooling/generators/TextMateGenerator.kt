@@ -215,7 +215,12 @@ class TextMateGenerator(
                             if (assignmentOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.assignment.xtc")
-                                    put("match", assignmentOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        assignmentOps
+                                            .sortedByDescending { it.length }
+                                            .joinToString("|"),
+                                    )
                                 }
                             }
                             // Comparison operators from model
@@ -223,7 +228,12 @@ class TextMateGenerator(
                             if (comparisonOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.comparison.xtc")
-                                    put("match", comparisonOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        comparisonOps
+                                            .sortedByDescending { it.length }
+                                            .joinToString("|"),
+                                    )
                                 }
                             }
                             // Logical operators from model
@@ -231,7 +241,10 @@ class TextMateGenerator(
                             if (logicalOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.logical.xtc")
-                                    put("match", logicalOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        logicalOps.sortedByDescending { it.length }.joinToString("|"),
+                                    )
                                 }
                             }
                             // Bitwise operators from model
@@ -239,7 +252,10 @@ class TextMateGenerator(
                             if (bitwiseOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.bitwise.xtc")
-                                    put("match", bitwiseOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        bitwiseOps.sortedByDescending { it.length }.joinToString("|"),
+                                    )
                                 }
                             }
                             // Arithmetic operators from model
@@ -247,7 +263,12 @@ class TextMateGenerator(
                             if (arithmeticOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.arithmetic.xtc")
-                                    put("match", arithmeticOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        arithmeticOps
+                                            .sortedByDescending { it.length }
+                                            .joinToString("|"),
+                                    )
                                 }
                             }
                             // Member access operators from model
@@ -255,7 +276,12 @@ class TextMateGenerator(
                             if (memberAccessOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.access.xtc")
-                                    put("match", memberAccessOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        memberAccessOps
+                                            .sortedByDescending { it.length }
+                                            .joinToString("|"),
+                                    )
                                 }
                             }
                             // Other operators from model (range, etc.)
@@ -263,7 +289,10 @@ class TextMateGenerator(
                             if (otherOps.isNotEmpty()) {
                                 addJsonObject {
                                     put("name", "keyword.operator.other.xtc")
-                                    put("match", otherOps.sortedByDescending { it.length }.joinToString("|"))
+                                    put(
+                                        "match",
+                                        otherOps.sortedByDescending { it.length }.joinToString("|"),
+                                    )
                                 }
                             }
                         }
@@ -283,7 +312,10 @@ class TextMateGenerator(
                     // Class declarations
                     putJsonObject("class-declaration") {
                         put("name", "meta.class.xtc")
-                        put("begin", "\\b(class|interface|mixin|service|const|enum)\\s+([A-Z][a-zA-Z0-9_]*)")
+                        put(
+                            "begin",
+                            "\\b(class|interface|mixin|service|const|enum)\\s+([A-Z][a-zA-Z0-9_]*)",
+                        )
                         put("end", "(?=\\{|$)")
                         putJsonObject("beginCaptures") {
                             putJsonObject("1") {
@@ -316,7 +348,10 @@ class TextMateGenerator(
                     // Property declaration
                     putJsonObject("property-declaration") {
                         put("name", "meta.property.xtc")
-                        put("match", "\\b([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=[=;])")
+                        put(
+                            "match",
+                            "\\b([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=[=;])",
+                        )
                         putJsonObject("captures") {
                             putJsonObject("1") {
                                 put("name", "support.type.property.xtc")
@@ -365,7 +400,9 @@ class TextMateGenerator(
                                 "([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+" +
                                 "([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()",
                         )
-                        put("end", "(?=\\{|;)")
+                        // An expression body starts at =; leaving it in the header can strand
+                        // a template closing quote and miscolor following declarations.
+                        put("end", "(?=\\{|;|=)")
                         putJsonObject("beginCaptures") {
                             putJsonObject("1") {
                                 put("name", "storage.modifier.xtc")
@@ -418,7 +455,8 @@ class TextMateGenerator(
 
     private fun controlFlowKeywords(): List<String> {
         val control = model.keywordsByCategory(KeywordCategory.CONTROL)
-        val exception = model.keywordsByCategory(KeywordCategory.EXCEPTION).filter { !it.contains(":") }
+        val exception =
+            model.keywordsByCategory(KeywordCategory.EXCEPTION).filter { !it.contains(":") }
         return control + exception
     }
 

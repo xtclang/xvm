@@ -1,12 +1,20 @@
 # Ecstasy IntelliJ Plugin
 
-IntelliJ IDEA plugin for Ecstasy language support.
+The bundled language server uses the compiler adapter by default. Tree-sitter remains a selectable
+syntax-only alternative. Compiler features include diagnostics, navigation, references, completion,
+theme-based semantic highlighting and guarded refactorings over configured source and library inputs.
+See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundaries and native tests.
 
 ## Features
 
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
 - **Run Configurations** - Run XTC applications via Gradle or `xtc run`
-- **Syntax Highlighting** - Full syntax highlighting for `.x` files (via TextMate grammar)
+- **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
+  native file type through TextMate’s syntax factory and editor highlighter.
+- **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
+  annotations and bundled-library identities refine the editor's theme colors. String escapes,
+  interpolation, keywords and numeric literals retain their lexical scopes. See the
+  [highlighting playbook](../doc/manual-test-plan.md#19-semantic-tokens) for examples and opt-out settings.
 - **Language Features via LSP** - hover, completion, go-to-definition, find references, outline,
   auto-indent on type (see [LSP Server README](../lsp-server/README.md) for details)
 - **Code Style Settings** - Configurable indentation defaults under
@@ -56,7 +64,8 @@ Then install manually:
 
 ## Prerequisites
 
-- IntelliJ IDEA 2026.1 or later
+- IntelliJ IDEA 2026.2 or later (build 262+); development and acceptance tests target 2026.2.3
+- The free feature set is sufficient; no Ultimate subscription is required
 - XDK installed and `xtc` command available in PATH
 - Gradle plugin for IntelliJ (bundled with most editions)
 
@@ -109,6 +118,63 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 | `buildPlugin` | `build/distributions/*.zip` | Install in any IntelliJ instance |
 | `runIde` | Launches sandbox IDE | Quick testing during development |
 | `verifyPlugin` | Verification report | Check IDE compatibility |
+
+### Compiler playbook in IntelliJ
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
+Ultimate features and automatic trials are disabled. The 284-case catalog is shared with VS Code;
+see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](TESTING.md).
+
+The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
+Select a method with `--tests '*CompilerPlaybookTest.compilerPlaybook'`, or select feature cases with
+`-PintellijPlaybookCases=X145,X146,X147,X259`. Omit the case property for the full catalog.
+The large-file probe is separately enabled with `-PintellijLargeFileProbe=true`.
+
+The status bar displays the current case and completed/remaining counts. The harness may restore
+desktop focus; avoid typing into its fixtures. Failed operations stop that run, and timed-out
+mutations are not replayed. Unexpected IDE errors fail acceptance. X254/X257 retain explicit partial
+coverage for the [client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
+
+Results, live `progress.jsonl`, screenshots and server traces are written under
+`build/reports/compiler-playbook/run-*`. Inspect `results.json` and `ideFailures`, plus JUnit XML
+under `build/test-results/testCompilerPlaybook/`. `ide-paths.txt` identifies the disposable IDE logs.
+Tests use the signed native IDE distribution and JBR from the Starter cache; test-only probes are
+absent from the shipped plugin. Report cleanup retains five completed payloads by default.
+
+### Compiler source-module configuration
+
+Compiler mode bundles the full matching XDK library set as read-only dependencies and discovers
+source modules/import edges under workspace folders at startup and on watched-file changes.
+The configuration below overrides that discovered graph. Set `sourceModules` to `null` to
+restore discovery; `[]` disables it. Unsaved import edges, close and dynamic folder changes now refresh discovered graphs.
+
+With a compiler build, open **Settings → Languages & Frameworks → Language Servers**, select
+**XTC Language Server**, and edit its **Configuration** JSON:
+
+```json
+{
+  "xtc": {
+    "compiler": {
+      "sourceModules": [
+        { "name": "Library", "uri": "Library.x" },
+        { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
+      ]
+    }
+  }
+}
+```
+
+LSP4IJ stores these server settings at IDE scope. Relative paths resolve against the current
+single workspace folder; use absolute file URIs when needed. Applying settings notifies the
+running server. Setting `sourceModules` to `[]` clears the graph; omitting it preserves the
+current graph. This uses LSP4IJ's existing JSON editor, not a dedicated XTC project-settings UI.
+`XtcLanguageClient` delegates section lookup and configuration notifications to LSP4IJ; only
+`xtc.formatting` reads Ecstasy Code Style settings.
 
 ### Release-Grade Build And Publish
 
@@ -163,7 +229,7 @@ What matters is the Gradle task outcome:
 
 ### Installing the Built Plugin
 
-After running `buildPlugin`, you can install the ZIP in any IntelliJ IDEA 2025.1+ instance:
+After running `buildPlugin`, you can install the ZIP in an IntelliJ IDEA 2026.2+ instance:
 
 1. Locate the ZIP: `lang/intellij-plugin/build/distributions/intellij-plugin-<version>.zip`
 2. Open IntelliJ IDEA → **Settings/Preferences → Plugins**
@@ -224,10 +290,18 @@ feature:
 
 #### Testing LSP Features (Language Server)
 
-The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
+Use **Tools → Switch Ecstasy Language Adapter**, Find Action, or **Ctrl+Alt+X, then A**
+(**Control+Option+X, then A** on macOS) to select **Ecstasy Compiler**, **Tree-sitter** or
+**Bundled default**. The same choice is available in **Ecstasy Language Service** settings.
+Compiler provides semantic analysis; Tree-sitter provides syntax-based features without compiler
+type checking. Switching restarts the server and reopens unsaved buffers. Both adapters ship in
+the plugin, so switching does not require rebuilding or changing LSP4IJ.
+
+The default setting honors the server build's choice, normally Compiler. Development builds can
+still change that default. See [LSP Server README](../lsp-server/README.md) for details.
 
 ```bash
-# Run with default adapter (tree-sitter - AST-based)
+# Run with the default compiler adapter and bundled XDK
 ./gradlew :lang:intellij-plugin:runIde
 
 # Run with mock adapter (regex-based, no native dependencies)
@@ -250,15 +324,15 @@ stale sandbox state, or missing artifacts:
 
 ```
 [runIde] ─── Version Matrix (gradle/libs.versions.toml) ───
-[runIde]   IntelliJ IDEA: 2026.1 (sinceBuild=261)
-[runIde]   LSP4IJ:        0.19.2
+[runIde]   IntelliJ IDEA: 2026.2.3 (sinceBuild=262)
+[runIde]   LSP4IJ:        0.21.0
 [runIde]   XTC plugin:    0.4.4-SNAPSHOT
 [runIde] ─── Sandbox ───
-[runIde]   Path:      .../build/idea-sandbox/IC-2026.1
+[runIde]   Path:      .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3
 [runIde]   Status:    reused (existing sandbox with IDE caches/indices)
 [runIde]   Plugins:   [intellij-plugin, lsp4ij]
-[runIde]   IDE log:   .../build/idea-sandbox/IC-2026.1/log/idea.log
-[runIde]              tail -f .../build/idea-sandbox/IC-2026.1/log/idea.log
+[runIde]   IDE log:   .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
+[runIde]              tail -f .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
 [runIde] ─── mavenLocal XTC Artifacts ───
 [runIde]   ~/.m2/repository/org/xtclang
 [runIde]   xdk: 0.4.4-SNAPSHOT
@@ -266,7 +340,7 @@ stale sandbox state, or missing artifacts:
 [runIde] ─── Reset Commands ───
 [runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean
 [runIde]   Nuke cached IDE + metadata:         rm -rf lang/.intellijPlatform/localPlatformArtifacts
-[runIde] LSP log:  ~/.xtc/logs/lsp-server.log (tailing to console)
+[runIde] LSP log:  ~/.xtc/logs/lsp/server-*/server.log (tailing to console)
 ```
 
 Once the IDE is running and you open a `.x` file, LSP server logs are streamed
@@ -306,15 +380,15 @@ These appear with a `[lsp-server]` prefix whenever the LSP server is active.
 noisy (indexing, VFS, GC, etc.). To view them in a separate terminal:
 
 ```bash
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2026.1/log/idea.log
+tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
 # Or filter to XTC-related entries:
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2026.1/log/idea.log | grep -i "xtc\|lsp"
+tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log | grep -i "xtc\|lsp"
 ```
 
 **LSP server file log** (always available, even outside `runIde`):
 
 ```bash
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 #### Clearing Sandbox State
@@ -324,7 +398,7 @@ tail -f ~/.xtc/logs/lsp-server.log
 ./gradlew :lang:intellij-plugin:clean
 
 # Nuke everything including the downloaded IDE (re-downloads ~1.5 GB)
-rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2026.1
+rm -rf lang/.intellijPlatform/ides/IU-2026.2.3
 rm -rf lang/.intellijPlatform/localPlatformArtifacts
 ```
 
@@ -569,7 +643,7 @@ intellij-plugin/
 - Communication is via stdio (stdin/stdout) using JSON-RPC; logging goes to stderr
 - `XtcLanguageClient` bridges IntelliJ Code Style settings to the LSP server via `workspace/configuration`
 - LSP4IJ captures stderr and shows it in the Language Servers panel
-- The `runIde` task also tails `~/.xtc/logs/lsp-server.log` to the Gradle console
+- The `runIde` task also tails `~/.xtc/logs/lsp/server-*/server.log` to the Gradle console
 
 ## Troubleshooting
 
@@ -592,3 +666,111 @@ Ensure you have the Gradle plugin enabled in IntelliJ (bundled by default).
 ## License
 
 Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
+
+The native file-tree Move action now requests compiler proof before moving selected source files
+or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
+use Ecstasy; implementation names retain Xtc. Upstream compatibility bridges carry searchable
+`// TODO LSP4IJ:` comments with their removal conditions and stable UP identifiers in the
+[client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
+
+Lazy action selection now uses a registered client command to resolve and apply the edit in a
+version-checked undo command; selected native X105/X122/X127 acceptance passes. X131 adds protocol assertions
+for code-lens/link/inlay/symbol resolution through the installed client connection.
+
+L72 adds shared X132 for multiple-range formatting and negotiated save hooks; selected native
+acceptance and the backend/packaged transport regressions pass.
+The server defaults to full synchronization and no save-time edits; custom LSP hosts can set
+`initializationOptions.xtcDocumentSync` with independent `incremental` and `formatOnSave` booleans.
+No additional compiler process or compilation is needed for save formatting.
+
+### Quick server log access
+
+Press **Ctrl+Alt+X, then L** (**Control+Option+X, then L** on macOS) to show/hide the server log.
+The view retains its history while hidden. Change the shortcut in the editor's native keymap.
+See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
+steps and the distinction between server logs and protocol tracing.
+
+Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy Language
+Service**; **Ecstasy Language Service Defaults** supplies application defaults. Project overrides
+share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing the language adapter or
+Full/Incremental text transport restarts the service and restores unsaved buffers. Inlay changes and Code Style settings
+apply live. The read-only effective view includes PID, runtime, capabilities, bundled read-only XDK
+libraries and compiler queue names/count. Server save edits are unavailable in LSP4IJ 0.21.0; use
+native **Actions on Save → Reformat code**. Compiler mode wraps expressions/lists at safe token
+boundaries using the Code Style right margin; literal splitting and comment reflow are not supported.
+
+X142 verifies constant-initializer navigation and rename/Undo. X143 compares partial
+workspace-symbol batches with the ordinary response. These checks complement the protocol
+and lifecycle cases; see the [manual playbook](../doc/manual-test-plan.md).
+
+X145–X147 exercise cancellation, refresh and report ownership. X259 checks displayed consumer inlays while applying the real Language Service settings page,
+changing a dependency and restarting; the consumer text/version must remain unchanged.
+This complements the existing two-project lifetime check. See the
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
+
+### Ordered libraries and attached sources
+
+**Settings → Ecstasy Compiler → Libraries and sources** edits ordered external binary paths
+and per-module source-directory attachments. Use **Inherit binary libraries from Gradle** to keep
+build-model ownership, or clear the list to remove external libraries. The bundled XDK is always
+present and read-only. Apply persists the draft; Reset/Cancel discards pending changes. **Reload
+applied libraries** rereads saved paths without a restart. The source-module tab also offers
+**Order resource directories…** with native path selection and automatic-resource inheritance.
+
+Attachments supply navigation-only snapshots; they do not add compiler source modules. IntelliJ
+opens protected fallback files until LSP4IJ supports our virtual library editor (UP25). Use matching
+sources; available debug text is checked but is not a complete binary/source equivalence proof.
+Project settings survive server restart; invalid replacements retain accepted compiler inputs.
+Shared X266–X268 and their [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
+record automated coverage and the remaining acceptance boundaries.
+
+### Machine-local JVM tuning and log support
+
+Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+(e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
+button restarts running Ecstasy servers in this IDE using the saved settings.
+
+Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
+Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
+caps, active processes are protected and stopped sessions are pruned on the next server start.
+Legacy shared logs and the IDE's own protocol console are outside this policy.
+
+**Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
+the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
+logged diagnostics; it does not collect source files. When stopped, export uses only this project’s
+last recorded launch, including up to 64 KiB of launcher output. Its manifest identifies offline
+mode and truncation and lists included files; another project’s logs are never substituted. Shared
+X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
+launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
+layout and rollover stress remain manual checks. See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for
+how these checks are recorded.
+
+The **Ecstasy Compiler** page separates **Source modules**, **Libraries and sources** and
+**Build import**. Import buttons stay with their help; the detailed paths/report are expandable.
+Build import uses native Kotlin UI DSL groups, ordinary-width buttons, smaller help text and
+collapsed details, and a bordered vertical page list. Build actions are stacked at their normal
+width; the standalone window fits the selected page. Switching pages preserves unapplied edits.
+The Language Service page distinguishes saved machine runtime settings from the running server;
+stale replies cannot replace a newer report.
+
+### Experimental color-value picker
+
+The opt-in L77 prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
+fixture. It supplies native color swatches and picker edits separately from normal semantic
+highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
+Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
+See the [prototype recipe and acceptance](../doc/manual-test-plan.md#l77-color-value-prototype).
+
+### Compiler documentation and reference counts
+
+The compiler adapter offers **Generate documentation comment** on written declaration headers.
+It preserves indentation and line endings, derives method parameter/return entries from the
+compiler signature, and leaves existing comments intact. The edit participates in normal Undo/Redo.
+
+Reference CodeLens shows source type, method and property usage counts across the complete configured
+source graph, including unopened consumers. Counts exclude declarations and are omitted while the
+graph cannot be resolved. Clicking a count opens the editor's native references view. External
+consumers outside the configured graph are not counted. Run lenses remain independent.
+
+Use **Ecstasy Language Service → Show Ecstasy reference counts** to toggle counts live. The
+project can inherit the application preference. IntelliJ Code Vision settings still control rendering.

@@ -58,7 +58,10 @@ function configuredJavaHome(): string | null {
   }
   const javaExe = process.platform === "win32" ? "java.exe" : "java";
   const candidate = path.join(configured, "bin", javaExe);
-  return fs.existsSync(candidate) ? candidate : null;
+  if (!fs.existsSync(candidate)) {
+    throw new Error(`Ecstasy java.home has no ${javaExe} executable: ${configured}. Correct the setting or reset it to use automatic discovery.`);
+  }
+  return candidate;
 }
 
 function jreStorageDir(context: vscode.ExtensionContext): string {

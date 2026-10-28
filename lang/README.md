@@ -1,5 +1,11 @@
 # Ecstasy Language Tooling
 
+The compiler-backed LSP is the default server for the IntelliJ and VS Code integrations.
+It provides diagnostics, semantic highlighting, navigation, completion and compiler-checked
+refactorings, including analysis of incomplete source. Tree-sitter remains a selectable syntax-only
+adapter. See the [manual playbook](doc/manual-test-plan.md) for feature boundaries, test fixtures,
+native harness commands and client compatibility limits.
+
 Language tooling for the Ecstasy programming language, including LSP server, IDE plugins,
 and editor support.
 
@@ -30,7 +36,7 @@ you need to set two properties:
 ### Option 1: Command Line (Temporary)
 
 ```bash
-./gradlew build
+./gradlew build -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
 ### Option 2: Environment Variables (Session/Shell)
@@ -93,6 +99,26 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 ./gradlew :intellij-plugin:buildPlugin
 ./gradlew :vscode-extension:build
 ```
+
+## Kotlin Formatting
+
+Spotless runs ktlint's default rules over Kotlin sources, tests, IntelliJ integration tests
+and the `lang` Gradle scripts, using the same formatter versions as master. Versions are pinned in
+the shared version catalog. Generated build outputs are excluded. From the repository root:
+
+```bash
+# Format all lang Kotlin sources and Gradle scripts
+./gradlew :lang:spotlessApply -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+# Verify without modifying files
+./gradlew :lang:spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+For one module, use a task such as `:lang:lsp-server:spotlessCheck`. Local Kotlin compilation
+formats that module's sources before compiling, and local `check` also applies formatting first.
+When `CI` is set, compilation and checks only verify formatting. Explicit `spotlessCheck` is always
+read-only. Spotless invokes the ktlint engine directly; the separate ktlint Gradle plugin is not
+used. Formatting and ktlint's non-formatting rules (such as naming) are both checked.
 
 ## Native Library Build (Tree-sitter)
 
@@ -245,7 +271,7 @@ Generated files:
 │  │                  Adapter (interface)                    │    │
 │  │  ┌──────────────┬──────────────┬──────────────┐         │    │
 │  │  │ Mock         │ TreeSitter   │ Xdk          │         │    │
-│  │  │ (regex)      │ (syntax)     │ (future)     │         │    │
+│  │  │ (regex)      │ (syntax)     │ (compiler)   │         │    │
 │  │  └──────────────┴──────────────┴──────────────┘         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
@@ -254,15 +280,19 @@ Generated files:
 ### LSP Adapter Selection
 
 ```bash
-# Tree-sitter (default) - syntax-aware, ~70% LSP features
+# Tree-sitter (explicit syntax-only alternative) - syntax-aware features and workspace index
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=treesitter
 
 # Mock - regex-based, for testing without native libraries
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# XDK adapter stub - placeholder for future compiler / semantic integration
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
+# Compiler (default) - diagnostics and semantic features, with bundled XDK modules
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
+
+Compiler mode is the default. Its bounded semantic features and dependency host API are described in the
+[LSP server README](./lsp-server/README.md); the capability matrix below records supported requests
+and remaining project/workspace limits. No external XDK installation is required.
 
 ## Canonical Status Documents
 

@@ -3,18 +3,15 @@ package org.xvm.lsp.treesitter
 /**
  * Tree-sitter query patterns for Ecstasy language constructs.
  *
- * These S-expression queries match specific patterns in the syntax tree,
- * enabling extraction of declarations, references, and other language elements.
+ * These S-expression queries match specific patterns in the syntax tree, enabling extraction of
+ * declarations, references, and other language elements.
  *
- * The XTC grammar defines field names (via field() in grammar.js), enabling
- * field-based query syntax like `(class_declaration name: (type_name) @name)`.
- * This is more robust than positional matching and aligns with tree-sitter best practices.
+ * The XTC grammar defines field names (via field() in grammar.js), enabling field-based query
+ * syntax like `(class_declaration name: (type_name) @name)`. This is more robust than positional
+ * matching and aligns with tree-sitter best practices.
  */
 internal object XtcQueries {
-    /**
-     * Find all method declarations.
-     * Uses field-based matching on name and parameters fields.
-     */
+    /** Find all method declarations. Uses field-based matching on name and parameters fields. */
     val methodDeclarations =
         """
         (method_declaration
@@ -23,17 +20,13 @@ internal object XtcQueries {
         ) @declaration
         """.trimIndent()
 
-    /**
-     * Find all identifiers (for reference finding).
-     */
+    /** Find all identifiers (for reference finding). */
     val identifiers =
         """
         (identifier) @id
         """.trimIndent()
 
-    /**
-     * Find import statements.
-     */
+    /** Find import statements. */
     val imports =
         """
         (import_statement
@@ -42,8 +35,8 @@ internal object XtcQueries {
         """.trimIndent()
 
     /**
-     * Find comment and string-literal nodes -- the host nodes for free-text content
-     * (URLs, file paths, etc.) that may need document links.
+     * Find comment and string-literal nodes -- the host nodes for free-text content (URLs, file
+     * paths, etc.) that may need document links.
      */
     val commentsAndStrings =
         """
@@ -55,16 +48,15 @@ internal object XtcQueries {
         """.trimIndent()
 
     /**
-     * Combined query for all declarations (for document symbols).
-     * Uses field-based matching for robust, position-independent queries.
+     * Combined query for all declarations (for document symbols). Uses field-based matching for
+     * robust, position-independent queries.
      *
-     * Typedefs are declarations too (issue #459: cmd-click on `JsonArray` found
-     * nothing because typedefs were absent here and thus from the workspace index).
+     * Typedefs are declarations too (issue #459: cmd-click on `JsonArray` found nothing because
+     * typedefs were absent here and thus from the workspace index).
      *
-     * Shorthand constructor parameters of class-like declarations (`const
-     * Point(Int x, Int y)`) declare properties in Ecstasy, so each parameter
-     * name is captured as a @property. Issue #459: go-to-declaration on
-     * `structure.y` jumped to an unrelated `y` in doc/archive because the
+     * Shorthand constructor parameters of class-like declarations (`const Point(Int x, Int y)`)
+     * declare properties in Ecstasy, so each parameter name is captured as a @property. Issue #459:
+     * go-to-declaration on `structure.y` jumped to an unrelated `y` in doc/archive because the
      * shorthand-declared `y` was invisible to the same-file lookup.
      */
     val allDeclarations =
