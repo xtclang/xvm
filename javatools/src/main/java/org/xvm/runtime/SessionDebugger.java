@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -21,6 +22,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import java.util.concurrent.CompletableFuture;
@@ -42,6 +44,7 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -57,6 +60,7 @@ import org.xvm.asm.op.Nop;
 import org.xvm.compiler.EvalCompiler;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
+import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -324,6 +328,12 @@ public final class SessionDebugger implements Debugger {
     private final Set<String> moduleNames = ConcurrentHashMap.newKeySet();
 
     /**
+     * The source paths of each module's classes, by module name, once {@link #modules} has read
+     * them; they do not change while the program runs.
+     */
+    private final Map<String, List<String>> moduleSources = new ConcurrentHashMap<>();
+
+    /**
      * The methods compiled from each source file, by real path, from the known modules; guarded
      * by this debugger's monitor.
      */
@@ -496,29 +506,51 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A stopped or waiting fiber: its ID, and its service's name.
+     * A fiber of the stopped program: its ID, and its service's name, with what the fiber does if
+     * it does not wait at a line.
      *
      * @param id    the fiber's ID, the thread ID that the other methods take; it stays the same
      *              while the fiber lives
-     * @param name  the name of the fiber's service
+     * @param name  the name of the fiber's service, such as {@code "Counter"}; for a fiber that
+     *              does not wait at a line, followed by what it does, such as {@code "Counter
+     *              (waiting)"}; and for a service of another container than the stopped fiber's,
+     *              after that container's module, such as {@code "inner.example.org/Counter"}
      */
     public record ThreadInfo(int id, String name) {
     }
 
     /**
-     * One frame of a stopped fiber's stack: an ID unique within the stop, the method's name, the
-     * source file, or null when it is not known, and the 1-based line, or 0.
+     * A module of the program: its own or a library it uses.
      *
-     * @param id    the frame's ID, which {@link #scopes}, {@link #evaluate} and {@link #run} take,
-     *              until the stop ends; only the fiber's own frames have scopes, not those of the
-     *              fibers that called it
-     * @param name  the method's name after its class's, such as {@code "Point.toString"}, or after
-     *              its module's simple name for a method of a module
-     * @param path  the source file, as the compiler recorded it: the module's source directory and
-     *              the class's source path; null if it is not known
-     * @param line  the 1-based line where the frame is, or 0 if it is not known
+     * @param name       the module's name, such as {@code "ecstasy.xtclang.org"}
+     * @param version    the module's version, or null if it has none
+     * @param sourceDir  the source directory the module was compiled from, as it recorded it, or
+     *                   null if it is not known
+     * @param sources    the source paths of the module's classes within that directory, in order
+     * @param own        true for a module of the program's own, which {@link #addModule} made
+     *                   known, and false for a library
      */
-    public record StackFrameInfo(int id, String name, String path, int line) {
+    public record ModuleInfo(String name, String version, String sourceDir, List<String> sources, boolean own) {
+    }
+
+    /**
+     * One frame of a stopped fiber's stack: an ID unique within the stop, the method's name, the
+     * source file, or null when it is not known, the 1-based line, or 0, and the module and source
+     * path that the source file is made of.
+     *
+     * @param id      the frame's ID, which {@link #scopes}, {@link #evaluate} and {@link #run}
+     *                take, until the stop ends; only the fiber's own frames have scopes, not those
+     *                of the fibers that called it
+     * @param name    the method's name after its class's, such as {@code "Point.toString"}, or
+     *                after its module's simple name for a method of a module
+     * @param path    the source file, as the compiler recorded it: the source directory of the
+     *                class's own module and the class's source path; null if it is not known
+     * @param line    the 1-based line where the frame is, or 0 if it is not known
+     * @param module  the name of the class's module, such as {@code "ecstasy.xtclang.org"}, or null
+     * @param source  the class's source path within its module's source directory, such as
+     *                {@code "ecstasy/collections/Collection.x"}, or null
+     */
+    public record StackFrameInfo(int id, String name, String path, int line, String module, String source) {
     }
 
     /**
@@ -792,33 +824,104 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * The fibers of the stopped program that the host can read. A fiber joins them when it
-     * reaches a line during the stop; one that waits for something else meanwhile, such as an
-     * answer from another service, a timer or input, is not among them until it does.
+     * The modules of the program, while it runs or is stopped: those of its own that {@link
+     * #addModule} made known and the libraries they use, as the runtime linked them for the
+     * program, in name order; none before the program starts.
      *
-     * @return the fibers of the stopped program that wait: the one that stopped first, then those
-     *         that reached a line since; none while the program runs
+     * @return the program's modules
+     */
+    public List<ModuleInfo> modules() {
+        Runtime attached = runtime;
+        if (attached == null) {
+            return List.of();
+        }
+        var modules = new TreeMap<String, ModuleStructure>();
+        for (Container container : attached.containers()) {
+            if (moduleNames.contains(container.getModule().getName())) {
+                container.getConstantPool().getFileStructure().children().stream()
+                        .filter(module -> !module.isFingerprint())
+                        .forEach(module -> modules.putIfAbsent(module.getName(), module));
+            }
+        }
+        return modules.values().stream().map(module -> {
+            LiteralConstant dir     = module.getSourceDir();
+            Version         version = module.getVersion();
+            return new ModuleInfo(module.getName(), version == null ? null : version.toString(),
+                    dir == null ? null : dir.getValue(),
+                    moduleSources.computeIfAbsent(module.getName(), _ -> sources(module)),
+                    moduleNames.contains(module.getName()));
+        }).toList();
+    }
+
+    /**
+     * @return the source paths of the classes of a module, in order
+     */
+    private static List<String> sources(ModuleStructure module) {
+        var paths = new TreeSet<String>();
+        var todo  = new ArrayDeque<Component>(List.of(module));
+        while (!todo.isEmpty()) {
+            Component component = todo.pop();
+            if (component instanceof ClassStructure clazz && clazz.getSourcePath() != null) {
+                paths.add(clazz.getSourcePath().getValue());
+            }
+            todo.addAll(component.children());
+        }
+        return List.copyOf(paths);
+    }
+
+    /**
+     * The fibers of the stopped program. Those that wait at a line come first: the one that
+     * stopped the program, then those that reached a line since, which the host can read. The
+     * other fibers of the program's services follow, in every container but the host's and the
+     * native one, in the order their services were made, with what they do: waiting, as for an
+     * answer from another service, paused, not started, running, as in a native call, or ending.
+     * A fiber that reaches a line during the stop moves to the first ones.
+     *
+     * @return the fibers of the stopped program; none while the program runs
      */
     public synchronized List<ThreadInfo> threads() {
         Halt current = halt;
         if (current == null) {
             return List.of();
         }
-        return current.stacks.entrySet().stream().map(entry -> new ThreadInfo(entry.getKey(), entry.getValue().name())).toList();
+
+        var threads = new ArrayList<ThreadInfo>();
+        current.stacks.forEach((id, snapshot) -> threads.add(new ThreadInfo(id, snapshot.name())));
+        Container stopped = stoppedContainer(current);
+        for (Fiber fiber : programFibers(stopped)) {
+            int id = threadId(fiber);
+            if (!current.stacks.containsKey(id)) {
+                ServiceContext service   = fiber.getContext();
+                Container      container = service.getContainer();
+                String         name      = container == stopped ? service.getName()
+                                                                : container.getModule().getName() + '/' + service.getName();
+                threads.add(new ThreadInfo(id, name + " (" + doing(fiber.getStatus()) + ')'));
+            }
+        }
+        return List.copyOf(threads);
     }
 
     /**
-     * The stack of a waiting fiber, as it was when the fiber began to wait: its own frames, then
-     * those of the fibers that called it, in other services, down to where the host called the
-     * program. Native frames are left out, as are the host's.
+     * The stack of a fiber of the stopped program: its own frames, then those of the fibers that
+     * called it, in other services, down to where the host called the program. Native frames are
+     * left out, as are the host's. A fiber that waits at a line has the stack it had when it began
+     * to wait, whose frames have their variables; one that waits otherwise, is paused or ends has
+     * its stack without variables; one that runs or has not started has none.
      *
      * @param threadId  the ID of a fiber that {@link #threads} returned
      *
-     * @return the fiber's stack, innermost frame first; empty if the fiber is not waiting
+     * @return the fiber's stack, innermost frame first; empty if the program runs or the fiber has
+     *         no stack
      */
     public synchronized List<StackFrameInfo> stackTrace(int threadId) {
-        Snapshot snapshot = snapshotOf(threadId);
-        return snapshot == null ? List.of() : snapshot.frames();
+        Halt current = halt;
+        if (current == null) {
+            return List.of();
+        }
+        Snapshot snapshot = current.stacks.get(threadId);
+        return snapshot != null
+                ? snapshot.frames()
+                : current.others.computeIfAbsent(threadId, id -> othersStack(stoppedContainer(current), id));
     }
 
     /**
@@ -1941,6 +2044,14 @@ public final class SessionDebugger implements Debugger {
      * remember the frames of that fiber, whose variables it reads while it waits.
      */
     private Snapshot snapshot(Halt current, Frame frame) {
+        return new Snapshot(frame.f_context.getName(), frames(current, frame), Thread.currentThread(), frame);
+    }
+
+    /**
+     * @return the stack of the fiber at the specified frame, whose own frames have their variables
+     *         in the current stop if it is specified, and none otherwise
+     */
+    private List<StackFrameInfo> frames(Halt current, Frame frame) {
         int threadId = threadId(frame.f_fiber);
         var stack    = new ArrayList<StackFrameInfo>();
         for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
@@ -1953,14 +2064,99 @@ public final class SessionDebugger implements Debugger {
                 continue;
             }
 
-            int frameId = handles.incrementAndGet();
-            int line    = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
-            stack.add(new StackFrameInfo(frameId, functionName(function), sourcePath(function), line));
-            if (stackFrame.frame != null && stackFrame.frame.f_fiber == frame.f_fiber) {
+            int             frameId = handles.incrementAndGet();
+            int             line    = stackFrame.iPC >= 0 ? function.calculateLineNumber(stackFrame.iPC) : 0;
+            ClassStructure  clazz   = function.getContainingClass();
+            ModuleStructure module  = clazz == null ? null : module(clazz);
+            LiteralConstant source  = clazz == null ? null : clazz.getSourcePath();
+            stack.add(new StackFrameInfo(frameId, functionName(function), sourcePath(function), line,
+                    module == null ? null : module.getName(), source == null ? null : source.getValue()));
+            if (current != null && stackFrame.frame != null && stackFrame.frame.f_fiber == frame.f_fiber) {
                 current.frames.put(frameId, new FrameAt(threadId, stackFrame.frame));
             }
         }
-        return new Snapshot(frame.f_context.f_sName, List.copyOf(stack), Thread.currentThread(), frame);
+        return List.copyOf(stack);
+    }
+
+    /**
+     * @return the stack of a fiber of the stopped program that does not wait at a line, without
+     *         variables: one that waits otherwise, is paused or ends stands still, while one that
+     *         runs or has not started has no stack to read
+     */
+    private List<StackFrameInfo> othersStack(Container stopped, int threadId) {
+        for (Fiber fiber : programFibers(stopped)) {
+            if (threadId(fiber) == threadId) {
+                Frame frame = switch (fiber.getStatus()) {
+                    case Waiting, Paused, Terminating -> fiber.getFrame();
+                    case Initial, Running             -> null;
+                };
+                return frame == null ? List.of() : frames(null, frame);
+            }
+        }
+        return List.of();
+    }
+
+    /**
+     * @return the container of the fiber that stopped the program, or of another fiber that waits
+     *         at a line while that one runs code; null if none waits
+     */
+    private static Container stoppedContainer(Halt current) {
+        return current.stacks.values().stream()
+                .findFirst()
+                .map(snapshot -> snapshot.frame().f_context.getContainer())
+                .orElse(null);
+    }
+
+    /**
+     * @return the fibers of the stopped program's services, in the order the services were made:
+     *         those of the program's own container, the one below the host's, or the topmost one
+     *         without a host, and of the containers nested in it; not those of the host, of the
+     *         native container, or of another program that the runtime runs
+     */
+    private List<Fiber> programFibers(Container stopped) {
+        Runtime attached = runtime;
+        if (attached == null || stopped == null) {
+            return List.of();
+        }
+        Container host    = hostContainer;
+        Container program = stopped;
+        for (Container parent = program.getParent();
+                parent != null && parent != host && !(parent instanceof NativeContainer);
+                parent = parent.getParent()) {
+            program = parent;
+        }
+        Container root = program;
+        return attached.containers().stream()
+                .filter(container -> nestedIn(container, root))
+                .flatMap(container -> container.getServices().stream())
+                .sorted(Comparator.comparingLong(ServiceContext::getId))
+                .flatMap(service -> service.getFibers().stream())
+                .toList();
+    }
+
+    /**
+     * @return true if the container is the specified one or nested in it
+     */
+    private static boolean nestedIn(Container container, Container outer) {
+        for (Container each = container; each != null; each = each.getParent()) {
+            if (each == outer) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return what a fiber with the specified status does, as {@link #threads} names it
+     */
+    private static String doing(FiberStatus status) {
+        return switch (status) {
+            case Initial     -> "not started";
+            case Running     -> "running";
+            case Paused      -> "paused";
+            case Waiting     -> "waiting";
+            case Terminating -> "ending";
+        };
     }
 
     private static int threadId(Fiber fiber) {
@@ -2972,9 +3168,21 @@ public final class SessionDebugger implements Debugger {
             return null;
         }
 
-        LiteralConstant path = clazz.getSourcePath();
-        LiteralConstant dir  = clazz.getFileStructure().getModule().getSourceDir();
+        // the class's own module: the file structure's is the program's, also for a library's class
+        ModuleStructure module = module(clazz);
+        LiteralConstant path   = clazz.getSourcePath();
+        LiteralConstant dir    = module == null ? null : module.getSourceDir();
         return path == null || dir == null ? null : dir.getValue() + path.getValue();
+    }
+
+    /**
+     * @return the module that holds the class, whose source directory its source path is in, or
+     *         null
+     */
+    private static ModuleStructure module(ClassStructure clazz) {
+        return clazz.getIdentityConstant().getModuleConstant().getComponent() instanceof ModuleStructure module
+                ? module
+                : null;
     }
 
     /**
@@ -3017,6 +3225,11 @@ public final class SessionDebugger implements Debugger {
         final Map<Integer, Target>     targets          = new HashMap<>();
         final Map<Integer, List<Read>> reads            = new HashMap<>();
         final Map<Integer, Deque<Run>> runs             = new HashMap<>();
+
+        /**
+         * The stacks of the fibers that do not wait at a line, by thread ID, once asked for.
+         */
+        final Map<Integer, List<StackFrameInfo>> others = new HashMap<>();
 
         Halt(int threadId, ExceptionInfo exception, Container frozen) {
             this.threadId  = threadId;

@@ -627,6 +627,30 @@ object DebugSessionUi {
         checkNotNull(session(project, module)) { "No debug session of $module" }.resume()
     }
 
+    /**
+     * The paused session's threads, as the Frames view lists them: each one's `name`, and its `frames` with their names and
+     * lines, which LSP4IJ asks the debug adapter for once a thread's frames are wanted.
+     */
+    @JvmStatic
+    fun threads(
+        project: Project,
+        module: String,
+    ): String {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val context = checkNotNull(session.suspendContext) { "The debug session of $module is not paused" }
+        return JsonArray()
+            .apply {
+                context.executionStacks.forEach { stack ->
+                    add(
+                        JsonObject().apply {
+                            addProperty("name", stack.displayName)
+                            add("frames", frames(stack))
+                        },
+                    )
+                }
+            }.toString()
+    }
+
     /** Runs the module's paused session to the 1-based [line] of the file [uri], as Run to Cursor does. */
     @JvmStatic
     fun runToCursor(
