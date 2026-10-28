@@ -793,7 +793,8 @@ passes with the workaround disabled. The gates are in
 ### LSP4IJ: its support lists disagreed with its code (UP61): our #1784, merged
 
 - [x] UP61 (2026-10-28): LSP4IJ's `LSPSupport.md` and `DAPSupport.md` marked some supported
-  features as unsupported, listed two methods twice and left out others. Fixed by our
+  features as unsupported, listed pull diagnostics under two names and
+  `textDocument/publishDiagnostics` twice, and left out others. Fixed by our
   [#1784](https://github.com/redhat-developer/lsp4ij/pull/1784) (merged 2026-10-28, `e301a971`).
   The lists are read on `main`, so no release is needed.
 
