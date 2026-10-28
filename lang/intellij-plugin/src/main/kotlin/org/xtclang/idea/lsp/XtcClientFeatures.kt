@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
-import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
@@ -211,10 +210,5 @@ class XtcClientFeatures : LSPClientFeatures() {
                     documents.outgoing(diagnostics.outgoing(wrapped))
                 }
             }
-        }.configureGson {
-            // configureGson replaces the base callback; retain LSP4IJ's compatibility
-            // adapters.
-            JSONUtils.configureCompatibilityAdapters(it)
-            it.registerTypeAdapterFactory(ConfigurationJson)
         }
 }
