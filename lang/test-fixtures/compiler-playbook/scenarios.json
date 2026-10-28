@@ -9898,10 +9898,8 @@
         "exitCode": 6
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has the event system on, so an edit of it, as typing or a chosen completion is, fails IntelliJ's Document/PSI check (UP37, fixed by LSP4IJ #1763): IntelliJ checks the names Evaluate Expression's Basic Completion offers, and with #1763 also the text a chosen one makes."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X321": {

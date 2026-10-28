@@ -496,7 +496,6 @@ object DebugSessionUi {
      * Completes [text] in Evaluate Expression, which opens on the paused fiber's top frame as its action opens it:
      * Basic Completion at the end of the text, then [pick] chosen from the lookup, which always shows, even for one
      * completion. Answers the lookup's `items`, whether the pick was `inserted`, and the expression's `text` after it.
-     * With an expression fragment that is not physical, the lookup closes without a pick, which would edit it.
      */
     @JvmStatic
     fun complete(
@@ -519,12 +518,11 @@ object DebugSessionUi {
         try {
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
             val editor = expressionEditor(project, dialog, deadline)
-            // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has
-            //  the event system on, so an edit of it fails IntelliJ's Document/PSI check; the pick is inserted only
-            //  into a physical one, as #1763 and the plugin's PhysicalExpressionFragments make it
-            var physical = false
             boundedEdt(ModalityState.defaultModalityState()) {
-                physical = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)?.isPhysical == true
+                // an edit of a fragment that isn't physical fails IntelliJ's Document/PSI check
+                check(PsiDocumentManager.getInstance(project).getPsiFile(editor.document)?.isPhysical == true) {
+                    "The expression fragment is not physical"
+                }
                 settings.AUTOCOMPLETE_ON_CODE_COMPLETION = false
                 editor.selectionModel.removeSelection()
                 editor.caretModel.moveToOffset(editor.document.textLength)
@@ -555,13 +553,9 @@ object DebugSessionUi {
                     val item = lookup?.items?.firstOrNull { it.lookupString == pick }
                     if (lookup != null && item != null) {
                         lookup.items.forEach { items.add(it.lookupString) }
-                        if (physical) {
-                            lookup.currentItem = item
-                            lookup.finishLookup(Lookup.NORMAL_SELECT_CHAR)
-                            inserted = true
-                        } else {
-                            lookup.hideLookup(true)
-                        }
+                        lookup.currentItem = item
+                        lookup.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+                        inserted = true
                         done = true
                     }
                 }
