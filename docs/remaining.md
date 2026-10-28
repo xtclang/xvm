@@ -816,8 +816,12 @@ passes with the workaround disabled. The gates are in
 ### Not filed yet: fixes ready locally
 
 Each is a local commit with an upstream-style test, verified natively on 2026-10-20. Nothing is
-pushed. The drafts of the tickets, PR descriptions and the #219122 comment were written to the
-2026-10-20 session's scratchpad (`up16/`, `up17/`, `up24/`, `up-driver/`).
+pushed. The drafts of the tickets, PR descriptions and the #219122 comment are in
+`~/src/upstream-drafts/`, outside the repository, one file each (written again 2026-10-28: the
+2026-10-20 session's scratchpad held only harnesses). Filing needs, besides: a YouTrack account for
+the JetBrains tickets, forks `lagergren/intellij-community` and `lagergren/vscode`, each project's
+contributor agreement, and the branches rebased. UP17's commit message quotes 14.6 s with 80,000
+highlighters in an editor, which its probe never measured: check or drop it before filing.
 
 - [ ] UP17 (IntelliJ Platform): file a YouTrack ticket (IJPL), then a PR from intellij-community
   `interval-tree-bulk-removal` (`9e4fa930d`).
