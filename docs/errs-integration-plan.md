@@ -150,8 +150,22 @@ errs keep only what #716 does not have: the language server README's line. The c
 `InterpreterConnector` (errs' `replaceDebugger` before #716's `isRuntimeIdle`), `ServiceContext`,
 `Container`, `xContainerControl`, `EmbeddingSupport`, `EmbeddingSupportTest` and runner.x, all
 resolve to #716's final form. #693 replayed without a conflict; its commit 39 no longer carries
-#716's changes, and its commits 1 to 38, which now sit on #716, are compiled again before it is
-pushed.
+#716's changes, and its commits 1 to 38, which now sit on #716, were compiled again.
+
+- #693's receipts, on `f7f8620d0c`: every one of its 71 commits compiles (javatools, dap-server,
+  lsp-server, the IntelliJ plugin with its integration tests, and the VS Code extension);
+  `spotlessCheck` and `:lang:spotlessCheck`; `:javatools:test` 660, 0 failures, the 42 existing
+  skips (#736 made `RuntimeDebuggerTest`'s two tests one; `SessionDebuggerTest` 48 and
+  `EmbeddingSupportTest` 30 among them); `:lang:dap-server:test` 38; `:lang:lsp-server:test` 2,420,
+  the 2 existing skips; `compilerStdioTest` 83; `:lang:intellij-plugin:test` 151; the VS Code
+  headless suite 70; `verifyPlugin` Compatible with IU-262.10968.63. One language server case, a
+  Debug Console line in a stopped frame, failed once in the full run at a load average of about
+  100: a value's `toString()` went past its one-second limit. Its class then passed, 54 of 54, and
+  the case three times on its own. On `d3aceb5785`, commits 1 to 38 compile again, and commits 39 to
+  71 have the trees of `f7f8620d0c`'s.
+- #693 was force-pushed with leases from `c77de154c9` to `f7f8620d0c`, then from `f7f8620d0c` to
+  `d3aceb5785`. [errs-693-rebase-2026-10-28.tsv](errs-693-rebase-2026-10-28.tsv) maps the regroup's
+  commits to both.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
