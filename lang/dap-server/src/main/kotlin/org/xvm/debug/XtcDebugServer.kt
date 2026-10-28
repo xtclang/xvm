@@ -73,16 +73,17 @@ import java.util.concurrent.atomic.AtomicInteger
  * stopped; `threads` lists the fibers that wait, `stackTrace` their stacks, `scopes` a frame's local variables,
  * `variables` their values and the fields and elements of objects and arrays; `next`, `stepIn` and `stepOut` step a
  * fiber, and the program stops again with the reason `step`, and `continue` resumes it. A breakpoint may have a
- * condition, a path to a Boolean that must be True, a hit condition (`N` for the Nth hit, `>= N`, `> N` or `% N`),
- * and a log message, which makes it a logpoint: its message, with each `{path}` replaced by that value, goes to the
- * console, and the program runs on. The exception filters stop the program where an exception that nothing catches,
+ * condition, an expression whose Boolean value must be True, a hit condition (`N` for the Nth hit, `>= N`, `> N` or
+ * `% N`), and a log message, which makes it a logpoint: its message, with each `{expression}` replaced by its value,
+ * goes to the console, and the program runs on. The exception filters stop the program where an exception that nothing catches,
  * or any exception, is thrown, with the reason `exception`, and each may name exception classes, separated by
  * commas, to stop only for them and the classes that extend them; `exceptionInfo` tells of the exception. They are
  * installed before the program's first line as breakpoints are. `pause` stops a running
  * program at the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at its first line,
- * with the reason `entry`. `evaluate` in a stopped frame evaluates paths to values, such as `point.x` or `ints[1]`,
- * for watches, hovers and the console, without running the program's code; general expressions are R7's bounded
- * evaluation, still to come (lang/doc/plans/plan-embedded-execution.md).
+ * with the reason `entry`. `evaluate` in a stopped frame evaluates expressions, such as `point.x + 1` or
+ * `ints[i] > 0`, for watches, hovers and the console, without running the program's code: variables, their fields and
+ * elements, literals, and operators that the runtime computes natively. Expressions that run code, such as calls, are
+ * the rest of R7's bounded evaluation, still to come (lang/doc/plans/plan-bounded-evaluation.md).
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -548,8 +549,9 @@ class XtcDebugServer(
     /**
      * DAP: evaluate
      *
-     * In a stopped frame, a watch, a hover or a line typed in the debug console evaluates a path to a value, such as
-     * `point.x` or `ints[1]`, without running the program's code; what cannot be evaluated fails with the reason.
+     * In a stopped frame, a watch, a hover or a line typed in the debug console evaluates an expression, such as
+     * `point.x + 1` or `ints[i] > 0`, without running the program's code; what cannot be evaluated fails with the
+     * reason.
      * Without a frame, as while the program runs, a line typed in the debug console is the program's console input.
      */
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {

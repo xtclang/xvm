@@ -13,6 +13,7 @@ import java.nio.file.Path;
 
 import java.time.Duration;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -71,6 +72,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class SessionDebuggerTest {
     private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
+
+    /**
+     * Why text that is not an expression the debugger evaluates is not evaluated, after the text.
+     */
+    private static final String NOT_EVALUATED = " is not evaluated: only variables, their fields and array elements,"
+            + " literals and operators are, such as point.x + 1 or ints[i] > 0.";
 
     @TempDir
     static Path outputDir;
@@ -197,6 +204,40 @@ public class SessionDebuggerTest {
      * A module whose run() loops five times over line 7, with i from 0 to 4 and even true when i
      * is, prints "sum 10" and returns 10.
      */
+    private static final String EXPRS = """
+            module Exprs {
+                enum Color {Red, Green}
+
+                const Point(Int x, Int y);
+
+                const Named(String name) {
+                    @Override
+                    String toString() = $"<{name}>";
+                }
+
+                Int run() {
+                    @Inject Console console;
+                    Int     i       = 7;
+                    Int8    small   = 120;
+                    Int8    wrapped = small + 10;
+                    UInt8   octet   = 250;
+                    Float64 f       = 1.5;
+                    Float64 product = f * 3;
+                    Dec64   d       = 0.1;
+                    Dec64   sum     = d + d + d;
+                    Char    c       = 'x';
+                    String  s       = "ab";
+                    Boolean flag    = True;
+                    Color   color   = Color.Green;
+                    String? none    = Null;
+                    Int[]   ints    = [1, 2, 3];
+                    Point   point   = new Point(3, 4);
+                    Named   named   = new Named("n");
+                    console.print($"{i} {wrapped} {octet} {product} {sum} {c} {s} {flag} {color} {none} {ints} {point} {named}");
+                    return i;
+                }
+            }
+            """;
     private static final String LOOP = """
             module Loop {
                 Int run() {
@@ -359,12 +400,10 @@ public class SessionDebuggerTest {
             // what cannot be evaluated says why
             assertFails("There is no variable \"nope\" in this frame.", session, report, "nope");
             assertFails("ints[3]: index 3 is out of bounds for size 3.", session, report, "ints[3]");
-            assertFails("\"ints[1]x\" is not evaluated: only variables, their fields and array elements are,"
-                    + " such as point.x or ints[1].", session, report, "ints[1]x");
+            assertFails("\"ints[1]x\"" + NOT_EVALUATED, session, report, "ints[1]x");
             assertFails("point.z: Paths:Point has no field \"z\".", session, report, "point.z");
             assertFails("sum.x: Int has no fields to read.", session, report, "sum.x");
-            assertFails("\"point.x + 1\" is not evaluated: only variables, their fields and array elements are,"
-                    + " such as point.x or ints[1].", session, report, "point.x + 1");
+            assertFails("\"report(point, ints, text)\"" + NOT_EVALUATED, session, report, "report(point, ints, text)");
 
             // the caller's frame: another service's state is not read
             int run = frames.get(1).id();
@@ -375,6 +414,83 @@ public class SessionDebuggerTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
             assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.", session,
                     report, "sum");
+        }
+    }
+
+    @Test
+    public void operatorsRunTheRuntimesOwnOperationsAndComputeWhatTheProgramDoes() throws Exception {
+        Path  source  = compile("Exprs", EXPRS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Exprs"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 29)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Exprs", output, session);
+        try (control) {
+            Stop stop  = stops.next();
+            int  frame = session.stackTrace(stop.threadId()).getFirst().id();
+
+            // what the program computed, and the same operations evaluated
+            assertEquals(evaluate(session, frame, "wrapped").value(), evaluate(session, frame, "small + 10").value());
+            assertEquals("Int8", evaluate(session, frame, "small + 10").type());
+            assertEquals(evaluate(session, frame, "product").value(), evaluate(session, frame, "f * 3").value());
+            assertEquals(evaluate(session, frame, "sum").value(), evaluate(session, frame, "d + d + d").value());
+
+            // Ecstasy's precedence, and each operator
+            Map<String, String> values = new LinkedHashMap<>();
+            values.put("i + 1", "8");
+            values.put("i * 2 - 3 % 2", "13");
+            values.put("(i + 1) * 2", "16");
+            values.put("-i", "-7");
+            values.put("~i", "-8");
+            values.put("i << 2", "28");
+            values.put("i & 3 | 8", "11");
+            values.put("i ^ 1", "6");
+            values.put("1 + 2", "3");
+            values.put("octet > 200", "True");
+            values.put("c == 'x' && c < 'y'", "True");
+            values.put("s == \"ab\" && s < \"b\"", "True");
+            values.put("flag && i > 5", "True");
+            values.put("!flag || i < 0", "False");
+            values.put("flag & False", "False");
+            values.put("color == color && color != Null", "True");
+            values.put("none == Null", "True");
+            values.put("none ?: s", "\"ab\"");
+            values.put("i > 5 ? i : 0", "7");
+            values.put("1 < i < 10", "True");
+            values.put("ints[i - 6]", "2");
+            values.put("ints[1] + ints[2]", "5");
+            values.put("point.x * point.y", "12");
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                assertEquals(entry.getValue(), evaluate(session, frame, entry.getKey()).value(), entry.getKey());
+            }
+            assertEquals("IntLiteral", evaluate(session, frame, "1 + 2").type());
+
+            // what is not evaluated says why
+            assertFails("i / 0 throws OutOfBounds: numbers.Int64 overflow", session, frame, "i / 0");
+            assertFails("small + i: + takes two values of the same type, not Int8 and Int.", session, frame, "small + i");
+            assertFails("small + 1000: 1000 is out of range for Int8.", session, frame, "small + 1000");
+            assertFails("point + 1: + is not evaluated on Exprs:Point without running the program's code.", session,
+                    frame, "point + 1");
+            assertFails("point == point: == is not evaluated on Exprs:Point without running the program's code.", session,
+                    frame, "point == point");
+            assertFails("i is Int, not a Boolean.", session, frame, "!i");
+            assertFails("\"1 < i > 0\"" + NOT_EVALUATED, session, frame, "1 < i > 0");
+            assertFails("\"i = 3\"" + NOT_EVALUATED, session, frame, "i = 3");
+
+            // code that an operation would run is not run, and leaves no trace: a toString() of the
+            // program's own, and those the runtime does not make natively, which a string's + calls
+            assertFails("s + named would run Named.toString(), which the debugger does not run here.", session, frame,
+                    "s + named");
+            assertFails("s + i would run Stringable.toString(), which the debugger does not run here.", session, frame,
+                    "s + i");
+            assertFails("s + s would run String.toString(), which the debugger does not run here.", session, frame, "s + s");
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(7L, control.result());
+            assertTrue(output.toString().contains("(x=3, y=4) <n>"), output.toString());
         }
     }
 
@@ -620,6 +736,29 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void conditionsAndLogMessagesAreExpressions() throws Exception {
+        Path  source  = compile("Operators", LOOP.replace("Loop", "Operators"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Operators"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "i % 2 == 0 && i > 0", null, null),
+                new Line(2, 6, null, null, "i={i}, twice={i * 2}, odd={i % 2 != 0}")));
+
+        try (Control control = run("Operators", new StringWriter(), session)) {
+            for (String i : List.of("2", "4")) {
+                Stop stop = stops.next();
+                assertEquals(i, evaluate(session, session.stackTrace(stop.threadId()).getFirst().id(), "i").value());
+                session.resume();
+            }
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(10L, control.result());
+            assertEquals(null, stops.poll());
+            assertEquals(List.of("i=0, twice=0, odd=False", "i=1, twice=2, odd=True", "i=2, twice=4, odd=False",
+                                 "i=3, twice=6, odd=True", "i=4, twice=8, odd=False"), stops.logged);
+        }
+    }
+
+    @Test
     public void aLogpointLogsItsMessageWithTheValuesOfItsPathsAndDoesNotStop() throws Exception {
         Path  source  = compile("Logs", LOOP.replace("Loop", "Logs"));
         Stops stops   = new Stops();
@@ -666,17 +805,16 @@ public class SessionDebuggerTest {
         var  session = new SessionDebugger(_ -> {});
         session.addModule(input().loadModule("NotUnderstood"));
 
-        String paths = " is not evaluated: only variables, their fields and array elements are, such as point.x or ints[1].";
-        assertEquals(List.of(new Breakpoint(1, 7, false, "The condition \"i > 1\"" + paths),
+        assertEquals(List.of(new Breakpoint(1, 7, false, "The condition \"i >\"" + NOT_EVALUATED),
                              new Breakpoint(2, 7, false, "The hit count \"often\" is not N, to stop at the Nth hit,"
                                      + " or >= N, > N or % N, for a number N."),
                              new Breakpoint(3, 7, false, "The hit count \"% 0\" is not N, to stop at the Nth hit,"
                                      + " or >= N, > N or % N, for a number N."),
-                             new Breakpoint(4, 7, false, "In the log message, \"i + 1\"" + paths),
+                             new Breakpoint(4, 7, false, "In the log message, \"i +\"" + NOT_EVALUATED),
                              new Breakpoint(5, 7, true, null)),
-                session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "i > 1", null, null),
+                session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "i >", null, null),
                         new Line(2, 7, null, "often", null), new Line(3, 7, null, "% 0", null),
-                        new Line(4, 7, null, null, "{i + 1}"), new Line(5, 7, "", " ", ""))));
+                        new Line(4, 7, null, null, "{i +}"), new Line(5, 7, "", " ", ""))));
     }
 
     @Test
