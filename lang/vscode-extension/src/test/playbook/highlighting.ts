@@ -4,8 +4,13 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { SemanticTokens, SemanticTokensOptions } from 'vscode-languageclient/node';
 import { WorkbenchUi } from '../workbenchUi';
-import { captureColorTheme } from './colors';
 import { client, diagnostics, eventually, noErrors, playbook } from './support';
+
+/** Capture the startup theme without repainting the workbench through other themes. */
+async function captureColorTheme(ui: WorkbenchUi, id: string): Promise<void> {
+    const theme = vscode.workspace.getConfiguration('workbench').get<string>('colorTheme', 'current');
+    await ui.screenshot(`${id}-${theme.replace(/ /g, '-')}`);
+}
 
 async function tokens(document: vscode.TextDocument) {
     const legend = (client().initializeResult!.capabilities.semanticTokensProvider as SemanticTokensOptions).legend;
