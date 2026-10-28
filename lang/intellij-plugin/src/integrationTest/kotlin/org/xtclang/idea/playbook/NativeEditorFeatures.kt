@@ -73,7 +73,9 @@ internal fun ParityWorkspace.nativeLibraryContent(
     // settings change, including later iterations of X254.
     configure(null)
     configure(listOf(SharedScenarios.SourceModule("LibraryViews", source.uri, emptyList())))
-    clean(source)
+    // the server answers after the configuration changes before it; waiting on the source would select its tab
+    val served = protocol.query("workspace/textDocumentContent", mapOf("uri" to uri)).asJsonObject.string("text")
+    check(served == text) { "The server's text of $uri changed" }
     check(file.isValid()) { "The compiler inputs' change retired the library view $uri" }
     check(!file.isWritable()) { "The library view $uri became writable" }
     val shown = withContext(OnDispatcher.EDT) { requireNotNull(manager.getSelectedTextEditor()).getDocument().getText() }
