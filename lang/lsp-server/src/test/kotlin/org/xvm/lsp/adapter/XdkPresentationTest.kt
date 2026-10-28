@@ -7,6 +7,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 
+/**
+ * Verifies compiler-derived hover, token and inlay presentation with source-accurate ranges. Covers Unicode,
+ * writes and recovery so semantic overlays do not corrupt lexical highlighting.
+ */
 class XdkPresentationTest {
     @ParameterizedTest
     @ValueSource(strings = ["plain", "😀"])

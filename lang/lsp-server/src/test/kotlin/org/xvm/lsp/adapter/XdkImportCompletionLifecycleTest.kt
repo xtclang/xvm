@@ -12,6 +12,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Forces retirement while import-completion proof is pending. Neither the import edit nor ordinary completion
+ * items may escape from the obsolete request.
+ */
 class XdkImportCompletionLifecycleTest {
     @TempDir lateinit var directory: Path
 

@@ -3,6 +3,7 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Remote
 import com.intellij.driver.sdk.Project
 
+/** Updates the IDE-side playbook progress display from the driver process. */
 @Remote("org.xtclang.idea.playbook.probe.PlaybookProgress", plugin = "org.xtclang.playbook.probe")
 internal interface PlaybookProgress {
     fun install(project: Project)

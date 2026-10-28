@@ -6,6 +6,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks visible names at empty and incomplete statement positions. Uses actual compiler scope and assignment
+ * state while leaving the original source unchanged during inspection.
+ */
 class XdkScopeCompletionTest {
     @TempDir lateinit var directory: Path
 

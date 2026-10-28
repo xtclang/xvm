@@ -15,6 +15,10 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 import java.nio.file.Path
 import kotlin.io.path.readText
 
+/**
+ * Protects semantic highlighting improvements over the lexical grammar. Resolved identity controls annotation
+ * and library classification, and damage/repair must preserve lexical gaps without invented semantics.
+ */
 class XdkSemanticColorTest {
     @Test
     fun `shared highlighting improvements preserve lexical gaps through damage and repair`() {
@@ -278,6 +282,7 @@ class XdkSemanticColorTest {
         }
     }
 
+    /** Decodes token text, classification and modifiers for exact semantic-highlighting assertions. */
     private data class Token(
         val line: Int,
         val column: Int,

@@ -112,6 +112,7 @@ import java.util.jar.JarOutputStream
  */
 @Tag("compiler-stdio")
 class XdkStdioTest {
+    /** Adds the language-service status request to the packaged server's test-side JSON-RPC proxy. */
     interface ServiceStatusServer : LanguageServer {
         @JsonRequest("xtc/languageServiceStatus")
         fun languageServiceStatus(): CompletableFuture<Map<String, Any?>>
@@ -1767,6 +1768,10 @@ class XdkStdioTest {
         }
     }
 
+    /**
+     * Owns the packaged server process, protocol connection and captured events, closing them together after
+     * each test.
+     */
     private class Session(
         jar: Path,
         directory: Path,

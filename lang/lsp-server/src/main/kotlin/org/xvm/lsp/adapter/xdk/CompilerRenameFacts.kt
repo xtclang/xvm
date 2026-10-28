@@ -17,12 +17,14 @@ import java.util.UUID
 
 /** Compiler-proven identities copied before an attempt's pool and AST can be released. */
 internal sealed interface ProofIdentity {
+    /** Declaration identity detached from an AST and constant pool, anchored to its source location. */
     data class Source(
         val location: SemanticModel.SourceLocation,
         val format: Constant.Format,
         val name: String,
     ) : ProofIdentity
 
+    /** Declaration identity anchored to a particular immutable dependency artifact revision. */
     data class Binary(
         val key: XdkDependency.SymbolKey,
     ) : ProofIdentity
@@ -33,6 +35,7 @@ internal sealed interface ProofIdentity {
         val signature: XdkDependency.SymbolKey,
     ) : ProofIdentity
 
+    /** Value parameter identified by its owning method and parameter slot. */
     data class Parameter(
         val method: ProofIdentity,
         val index: Int,
@@ -97,15 +100,21 @@ internal sealed interface ProofIdentity {
     ) : ProofIdentity
 }
 
+/** Attempt-owned receiver identity and compiler register used to establish dispatch. */
 internal data class CompilerReceiver(
     val owner: IdentityConstant,
     val register: Int,
 )
 
+/**
+ * Detached declarations and contribution chains used to compare bindings across compilation attempts.
+ * Contains no compiler constants, so retaining proof data does not retain an attempt's constant pool.
+ */
 internal class ProofRelations(
     val declarations: Set<ProofIdentity> = emptySet(),
     val chains: List<Chain> = emptyList(),
 ) {
+    /** Owner and ordered member proofs, including unsupported, cyclic and alternative contributions. */
     data class Chain(
         val owner: ProofIdentity,
         val members: List<ProofIdentity>,
@@ -242,15 +251,16 @@ internal fun captureRenameFacts(
                     (host in declarations || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
-                constant is TypeParameterConstant -> {
-                    ProofIdentity.MethodFormal(identity(constant.method), constant.register)
-                }
+                constant is TypeParameterConstant -> ProofIdentity.MethodFormal(identity(constant.method), constant.register)
 
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.
-                location != null && module !in XdkLibraries.moduleNames -> {
-                    ProofIdentity.Source(location, constant.format, requireNotNull(value).name)
-                }
+                location != null && module !in XdkLibraries.moduleNames ->
+                    ProofIdentity.Source(
+                        location,
+                        constant.format,
+                        requireNotNull(value).name,
+                    )
 
                 constant is PackageConstant &&
                     module !in XdkLibraries.moduleNames &&
@@ -266,9 +276,7 @@ internal fun captureRenameFacts(
                                 }
                             }
 
-                            is ProofIdentity.Directory -> {
-                                File(packageParent.path)
-                            }
+                            is ProofIdentity.Directory -> File(packageParent.path)
                         }
                     directory?.let { ProofIdentity.Directory(File(it, constant.name).path) }
                         ?: ProofIdentity.Unproven()
@@ -278,9 +286,7 @@ internal fun captureRenameFacts(
                     sourceHost &&
                     (constant.component as? MethodStructure)?.let {
                         it.isSynthetic && it.isShorthandConstructor
-                    } == true -> {
-                    ProofIdentity.PrimaryConstructor(identity(host))
-                }
+                    } == true -> ProofIdentity.PrimaryConstructor(identity(host))
 
                 constant is MethodConstant &&
                     module !in XdkLibraries.moduleNames &&
@@ -348,9 +354,7 @@ internal fun captureRenameFacts(
                             }
                         }
 
-                        else -> {
-                            ProofIdentity.Unproven()
-                        }
+                        else -> ProofIdentity.Unproven()
                     }
                 }
 
@@ -374,9 +378,7 @@ internal fun captureRenameFacts(
                     }
                 }
 
-                else -> {
-                    ProofIdentity.Unproven()
-                }
+                else -> ProofIdentity.Unproven()
             }
         }
 

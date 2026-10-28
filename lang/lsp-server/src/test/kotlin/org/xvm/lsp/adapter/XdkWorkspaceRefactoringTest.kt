@@ -9,6 +9,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 
+/**
+ * Checks graph-wide edits through unopened consumers with full compiler proof. Binary-only targets, broken
+ * graphs and unsafe import cleanup cannot yield source refactoring edits.
+ */
 class XdkWorkspaceRefactoringTest {
     @TempDir lateinit var directory: Path
 

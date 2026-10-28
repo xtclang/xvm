@@ -9,6 +9,7 @@ internal class XdkResourceMoves(
     private val changedSources: Set<String>,
     private val incoming: Map<String, String> = emptyMap(),
 ) {
+    /** Stops a trial move when the resource value cannot be established from the captured inputs. */
     class UnprovenResource(
         reason: String,
     ) : RuntimeException(reason)
@@ -43,6 +44,7 @@ internal class XdkResourceMoves(
         return Directory(null, "", resources.roots.map(::path), entries)
     }
 
+    /** Resource-directory view translating proposed paths back to the captured source roots. */
     private inner class Directory(
         parent: ResourceDir?,
         name: String,

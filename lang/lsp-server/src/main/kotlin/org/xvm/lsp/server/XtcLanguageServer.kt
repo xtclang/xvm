@@ -126,6 +126,7 @@ class XtcLanguageServer(
 
     override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
 
+    /** Negotiated support for versioned edits, resource renames and file-watch registrations. */
     private data class EditCapabilities(
         val versioned: Boolean = false,
         val renameFiles: Boolean = false,
@@ -193,6 +194,7 @@ class XtcLanguageServer(
     internal val supportsFileRenames: Boolean
         get() = editCapabilities.get().renameFiles
 
+    /** Negotiated diagnostic transport and refresh features for this client connection. */
     private data class DiagnosticCapabilities(
         val pull: Boolean = false,
         val related: Boolean = false,
@@ -225,6 +227,7 @@ class XtcLanguageServer(
         val closed: Boolean = false,
     )
 
+    /** Response fields the client permits the server to populate lazily through resolve requests. */
     private data class ResolveCapabilities(
         val completionDocumentation: Boolean = false,
         val actionEdit: Boolean = false,
@@ -275,6 +278,7 @@ class XtcLanguageServer(
     internal fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> =
         textDocumentService.resolveWorkspaceSymbol(symbol)
 
+    /** Negotiated semantic-token range, delta and refresh support. */
     private data class TokenCapabilities(
         val range: Boolean = false,
         val delta: Boolean = false,

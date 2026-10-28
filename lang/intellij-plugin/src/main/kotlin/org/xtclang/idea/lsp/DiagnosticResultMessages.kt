@@ -21,16 +21,19 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 internal class DiagnosticResultMessages(
     private val snapshot: (String) -> DocumentStartupMessages.Snapshot?,
 ) {
+    /** Diagnostic result namespace for one document and optional provider identifier. */
     private data class Key(
         val uri: String,
         val identifier: String?,
     )
 
+    /** Document snapshot captured when a pull-diagnostic request is sent. */
     private data class Pending(
         val key: Key,
         val snapshot: DocumentStartupMessages.Snapshot,
     )
 
+    /** Cached result ID tied to the exact document snapshot that produced it. */
     private data class Result(
         val snapshot: DocumentStartupMessages.Snapshot,
         val id: String,

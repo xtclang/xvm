@@ -132,9 +132,7 @@ internal fun TypeInfo.methodImplementation(
     return when (body.implementation) {
         Implementation.Explicit,
         Implementation.Default,
-        -> {
-            body.methodStructure?.takeUnless { it.isSynthetic || it.isNative || it.isAbstract }?.identityConstant
-        }
+        -> body.methodStructure?.takeUnless { it.isSynthetic || it.isNative || it.isAbstract }?.identityConstant
 
         Implementation.Delegating -> {
             val delegate = delegateType(body.propertyConstant ?: return null, errors) ?: return null
@@ -142,17 +140,11 @@ internal fun TypeInfo.methodImplementation(
             delegate.methodImplementation(selected, errors, visited + key)
         }
 
-        Implementation.FromInto -> {
-            body.intoMethodInfo?.let { methodImplementation(it, errors, visited + key) }
-        }
+        Implementation.FromInto -> body.intoMethodInfo?.let { methodImplementation(it, errors, visited + key) }
 
-        Implementation.Capped -> {
-            getNarrowingMethod(method)?.let { methodImplementation(it, errors, visited + key) }
-        }
+        Implementation.Capped -> getNarrowingMethod(method)?.let { methodImplementation(it, errors, visited + key) }
 
-        else -> {
-            null
-        }
+        else -> null
     }
 }
 
@@ -210,6 +202,7 @@ private fun TypeInfo.accessorImplementation(
         ?.identity ?: property.sourceField()
 }
 
+/** Written property accessor and the implementation that contributed it to dispatch. */
 private data class WrittenAccessor(
     val implementation: Implementation,
     val identity: IdentityConstant,

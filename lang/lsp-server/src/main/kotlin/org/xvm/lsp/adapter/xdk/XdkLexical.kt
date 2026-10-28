@@ -16,6 +16,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Java-lexer editing helpers. A failed lex never authorizes a source rewrite. */
 internal object XdkLexical {
+    /** Compiler token with source offsets and editor range for syntax-aware edits. */
     private data class Span(
         val id: Token.Id,
         val range: Range,
@@ -46,6 +47,7 @@ internal object XdkLexical {
                 )
         } ?: true
 
+    /** Brace, parenthesis and bracket depths used while scanning a token sequence. */
     private data class Nesting(
         val braces: Int = 0,
         val parentheses: Int = 0,

@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.util.ProgressLabels
 
+/**
+ * Checks that progress text identifies the useful source or workspace path. Nested roots must select the most
+ * specific owner so users can identify the work they are canceling.
+ */
 class ProgressLabelsTest {
     @Test
     fun `source labels retain useful paths and select the most specific workspace root`() {

@@ -27,6 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Exercises directory repository reads with corrupt, incompatible and repaired candidates. Protects both
+ * best-effort fallback to usable modules and delivery of the original read failure to an observing host.
+ */
 class DirRepositoryFailureTest {
     @TempDir
     Path directory;
