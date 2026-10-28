@@ -243,7 +243,7 @@ class CompilerPlaybook(
                             items.isNotEmpty() &&
                                 items.all {
                                     it.code?.startsWith(expected.codePrefix) == true &&
-                                        it.source == "xtc" &&
+                                        it.source == "Ecstasy" &&
                                         it.start.first > 0 &&
                                         it.start != it.end
                                 }
@@ -318,7 +318,7 @@ class CompilerPlaybook(
                         items.size == scenario.count &&
                             items.all {
                                 it.code == scenario.code &&
-                                    it.source == "xtc" &&
+                                    it.source == "Ecstasy" &&
                                     it.severity == "Warning" &&
                                     it.start.first == it.end.first &&
                                     it.end.second - it.start.second ==

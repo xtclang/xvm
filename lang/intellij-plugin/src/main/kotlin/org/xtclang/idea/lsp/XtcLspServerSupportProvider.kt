@@ -234,7 +234,7 @@ class XtcLspConnectionProvider(
         content: String,
         type: NotificationType,
     ) {
-        object : Notification("XTC Language Server", title, content, type) {
+        object : Notification("Ecstasy Language Server", title, content, type) {
             override fun setBalloon(balloon: Balloon) {
                 super.setBalloon(balloon)
                 // The IDE timer pauses during interaction and hides only the balloon, keeping

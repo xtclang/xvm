@@ -33,7 +33,7 @@ export function navigationCases(): void {
             const end = scenarioOffset(text, expected.rangeEnd);
             assert.ok(errors.some(item => document.offsetAt(item.range.start) >= start && document.offsetAt(item.range.start) <= end));
             assert.ok(errors.every(item => item.range.start.line > 0));
-            assert.ok(errors.every(item => !item.range.isEmpty && item.source === 'xtc'));
+            assert.ok(errors.every(item => !item.range.isEmpty && item.source === 'Ecstasy'));
             await nextProblem(document, errors);
             await workspace.replace(document, fixture(scenario.file));
             await noErrors(document.uri);
