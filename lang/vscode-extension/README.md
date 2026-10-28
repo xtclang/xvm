@@ -17,6 +17,7 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 - **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Resolved annotation uses are decorators; bundled ownership adds `defaultLibrary`. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Fine string/escape/keyword/literal scopes remain with the editor grammar. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
 - **Build and run** — build and run modules with the language server's embedded compiler, or with Gradle, per folder ([details](#building-and-running)); Run lens, editor Run button, `Cmd+F9`/`Ctrl+F9` build and Run shortcuts
+- **Debugging** — breakpoints, stepping, variables, watches and Debug Console evaluation in embedded runs, through a debug session in the language server ([details](#debugging))
 - **Tasks** — embedded Build / Rebuild tasks, or Gradle Build / Test / Clean tasks for a workspace that contains a `build.gradle.kts`
 - **Project scaffolding** — `Ecstasy: Create New Project` command to bootstrap a new Ecstasy application, library, or service
 - **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
@@ -178,19 +179,58 @@ adapter cannot build.
 The Run lens appears only on modules that declare a `run` method the runner can call: exactly one
 method of that name, with at most one required parameter. Arguments reach the method as a
 `String[]` when it requires one, or when arguments are given and it accepts a parameter. Each run
-gets a fresh application container in one worker JVM that is reused across runs and restarted if it
-dies; programs never run inside the language server. Output streams into a dedicated terminal and
-ends with the program's exit code. A program that reads console input reads what you type into
-that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty line ends the input and
-`Ctrl+C` stops the program. Lines typed while the module still builds reach it when it starts.
+gets a fresh application container. Each running program has an execution worker JVM of its own, so
+up to four programs run at once; one idle worker is kept for the next run, and after a worker dies
+the next run gets a new one. Programs never run inside the language server. Output streams into a
+dedicated terminal and ends with the program's exit code. A program that reads console input reads
+what you type into that terminal: Enter sends the line, Backspace edits it, `Ctrl+D` on an empty
+line ends the input and `Ctrl+C` stops the program. Lines typed while the module still builds reach
+it when it starts.
 
 ### Debugging
 
-There is no Ecstasy debugger yet. `F5` (**Run → Start Debugging**) and `launch.json` configurations
-run the module the same way the Run button does, following `xtc.build.mode`, and say that the
-debugger is not available. Breakpoints are not hit. The bundled `dap-server.jar` is a placeholder
-that says the same thing if a session reaches it: breakpoints stay unverified with that reason, and
-launch and attach fail with it.
+`F5` (**Run → Start Debugging**), `Ctrl+F5` and `launch.json` configurations start a debug session in
+the language server, which builds and runs the module as the Run button does in embedded mode, in the
+same execution workers. The Debug Console shows the build, the program's output and its exit code; the
+debug toolbar's Stop ends the program, also while it still builds, and a line typed in the Debug
+Console while the program runs is its console input. Breakpoints are verified when the program
+starts, and a breakpoint or `assert:debug` stops the program: the editor shows the line, and the
+Call Stack view the stopped fiber's frames and the other fibers that wait. The running program keeps
+the code it was built from, so once the file is edited a breakpoint is placed on the line it was
+built with, and one on a line changed since stays unverified, saying why. The Variables view shows
+the selected frame's locals, and expands objects into their fields and arrays into their elements;
+a large array's elements come in ranges of 100, such as `[200..249]`, each read when expanded.
+An object's computed properties and its `toString()` follow its fields as lazy variables: their
+values run the program's code, for at most a second, so they show only once you click them. A
+mutable object's value ends with its identity code, such as `#1023456`, which tells two objects with
+the same fields apart. Right-click in the Variables or Watch view and choose **Show Values as
+Hexadecimal** to see integers as `0xFF`, a negative one in its type's two's complement; choose it
+again for decimals. **Set Value** on a local, a field or an array element gives it the value of an
+expression such as `5`, `n * 2` or `"text"`, computed without running the program's code; one of
+another type, or a field of an immutable object, is refused with the reason. As you type in the
+Debug Console, it completes the name: after a dot, with the fields, properties and methods of the
+value before it, otherwise with the frame's variables and the members of `this`; nothing of the
+program runs to find them.
+Step Over, Step Into and Step Out move the stopped fiber line by line, into a call and back to its
+caller. A breakpoint can have a condition, an expression such as `done` or `i % 2 == 0 && i > 0`, and
+a hit count (`N`, `>= N`, `> N` or `% N`), and a logpoint writes its message to the Debug Console, with
+each `{expression}` replaced by its value, without stopping. The Breakpoints view's exception filters stop
+the program where an uncaught exception, on by default, or any exception is thrown, with the exception
+shown first among the frame's variables and in the exception widget, its stack trace included. Edit
+Condition on a filter names the exception classes it stops at, such as `IllegalArgument, OutOfBounds`,
+which also stop the classes that extend them.
+Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
+first line. While the program is stopped, the Watch view and hovers evaluate expressions such as
+`point.x + 1` or `ints[i] > 0` in the selected frame, without running the program's code, and expand
+their values like variables; what is not evaluated, such as a call or a name the frame does not
+have, shows why. The Debug Console evaluates them so too, and runs what that refuses, such as
+`box.bump(n)`, as code on the stopped fiber, for at most two seconds: it answers with the value as
+its `toString()` makes it, or the reason it failed, and what the code changed stays changed, which
+the Variables view shows as it reads the variables again. Only that code, and the services it calls, run
+meanwhile, so code that waits on work the program's other fibers do waits out its time; with a
+configuration's `evaluationRunsProgram`, the rest of the program runs too while it does, without
+stopping at breakpoints, and its threads and stacks may then have moved. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
+says that debugging is not available.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
 
@@ -202,7 +242,9 @@ A launch configuration in `.vscode/launch.json` selects the module, entry method
     "module": "MyApp",
     "method": "run",          // optional, defaults to "run"
     "args": "arg1,arg2",      // optional: comma-separated, or an array passed exactly as given
-    "cwd": "${workspaceFolder}"  // not used yet; runs use the folder that owns the module
+    "cwd": "${workspaceFolder}",  // optional: the program's root directory; the folder that owns the module by default
+    "stopOnEntry": false,       // optional: stop at the program's first line
+    "evaluationRunsProgram": false  // optional: let the program run while Debug Console code does
 }
 ```
 
@@ -345,7 +387,7 @@ vscode-extension/
 ├── src/
 │   ├── extension.ts                # Activation / deactivation entry point
 │   ├── commands.ts                 # Ecstasy: ... command registrations
-│   ├── debug-adapter.ts            # DAP descriptor factory and config provider
+│   ├── debug-adapter.ts            # Debug sessions carried over the language client, and config provider
 │   ├── java.ts                     # Java 25+ discovery and JVM argument construction
 │   ├── lsp-client.ts               # LSP client lifecycle and crash recovery
 │   ├── status-bar.ts               # Status bar state management
@@ -356,8 +398,7 @@ vscode-extension/
 │   └── xtc.json                    # Code snippets
 ├── language-configuration.json     # Brackets, comments, surrounding pairs
 ├── server/
-│   ├── lsp-server.jar              # LSP server (copied from :lang:lsp-server)
-│   └── dap-server.jar              # DAP server (copied from :lang:dap-server)
+│   └── lsp-server.jar              # LSP server, which also hosts debug sessions (copied from :lang:lsp-server)
 └── icons/
     ├── xtc.png                     # Marketplace / extension icon (256×256)
     ├── xtc-file.png                # File icon for .x files
@@ -384,7 +425,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 305 shared cases (X1–X303 except the retired X273–X275, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 333 shared cases (X1–X331 except the retired X273–X275, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -421,7 +462,7 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 305 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 333 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its
