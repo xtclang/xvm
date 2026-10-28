@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
@@ -31,6 +32,9 @@ internal object RunWorkerDebug {
                             JsonObject().apply {
                                 addProperty("id", request.id)
                                 addProperty("line", request.line)
+                                request.condition?.let { addProperty("condition", it) }
+                                request.hitCondition?.let { addProperty("hitCondition", it) }
+                                request.logMessage?.let { addProperty("logMessage", it) }
                             },
                         )
                     }
@@ -43,7 +47,15 @@ internal object RunWorkerDebug {
     fun sourceOf(json: JsonObject) =
         SourceBreakpoints(
             json["path"].asString,
-            json.getAsJsonArray("breakpoints").map { BreakpointRequest(it.asJsonObject["id"].asInt, it.asJsonObject["line"].asInt) },
+            json.getAsJsonArray("breakpoints").map { it.asJsonObject }.map {
+                BreakpointRequest(
+                    it["id"].asInt,
+                    it["line"].asInt,
+                    it["condition"]?.asString,
+                    it["hitCondition"]?.asString,
+                    it["logMessage"]?.asString,
+                )
+            },
         )
 
     fun states(states: List<BreakpointState>) =
@@ -134,13 +146,31 @@ internal object RunWorkerDebug {
         JsonObject().apply {
             addProperty("all", stops.all)
             addProperty("uncaught", stops.uncaught)
+            add("allTypes", JsonArray().apply { stops.allTypes.forEach(::add) })
+            add("uncaughtTypes", JsonArray().apply { stops.uncaughtTypes.forEach(::add) })
         }
 
     /** The exception stops of a command, none when it has none. */
     fun exceptionsOf(json: JsonElement?): ExceptionStops =
         json?.takeIf { it.isJsonObject }?.asJsonObject?.let {
-            ExceptionStops(all = it["all"]?.asBoolean == true, uncaught = it["uncaught"]?.asBoolean == true)
+            ExceptionStops(
+                all = it["all"]?.asBoolean == true,
+                uncaught = it["uncaught"]?.asBoolean == true,
+                allTypes = it.getAsJsonArray("allTypes")?.map { type -> type.asString }.orEmpty(),
+                uncaughtTypes = it.getAsJsonArray("uncaughtTypes")?.map { type -> type.asString }.orEmpty(),
+            )
         } ?: ExceptionStops()
+
+    fun exceptionInfo(info: ExceptionInfoState) =
+        JsonObject().apply {
+            addProperty("type", info.type)
+            info.text?.let { addProperty("text", it) }
+            info.stackTrace?.let { addProperty("stackTrace", it) }
+            addProperty("uncaught", info.uncaught)
+        }
+
+    fun exceptionInfoOf(json: JsonObject) =
+        ExceptionInfoState(json["type"].asString, json["text"]?.asString, json["stackTrace"]?.asString, json["uncaught"].asBoolean)
 
     fun stop(
         event: JsonObject,
