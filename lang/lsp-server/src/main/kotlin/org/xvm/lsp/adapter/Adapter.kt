@@ -63,7 +63,6 @@ interface Adapter : Closeable {
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
                             AdapterCapability.INLINE_COMPLETION,
-                            AdapterCapability.DOCUMENT_COLOR,
                         )
                 }.toSet()
 
@@ -682,16 +681,6 @@ interface Adapter : Closeable {
      * @return semantic tokens data
      */
     fun getSemanticTokens(uri: String): SemanticTokens?
-
-    /** Recognized color values, independent of source-code semantic highlighting. */
-    fun getDocumentColors(uri: String): List<DocumentColor> = emptyList()
-
-    /** Offer an edit only for a currently recognized color expression at exactly this range. */
-    fun getColorPresentations(
-        uri: String,
-        range: Range,
-        color: ColorValue,
-    ): List<ColorPresentation> = emptyList()
 
     /**
      * Get inlay hints (inline type annotations, parameter names).

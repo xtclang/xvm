@@ -188,50 +188,17 @@
         "-Xmx1K"
       ]
     },
-    "colorPrototype": {
-      "cases": [
-        "X273",
-        "X274",
-        "X275"
+    "themes": {
+      "vscode": [
+        "Default Dark Modern",
+        "Default Light Modern",
+        "Default High Contrast"
       ],
-      "file": "ColorPrototype.x",
-      "source": "/**\n * L77 fixture only: byte-valued sRGB with straight (unpremultiplied) alpha.\n * This is not a public XDK graphics/color API.\n */\nmodule ColorPrototype {\n    const Rgba(UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha = 255) {}\n\n    Rgba accent = new Rgba(255, 128, 0);\n\n    Rgba translucent() {\n        return new Rgba(blue = 40, red = 200, alpha = 128, green = 80);\n    }\n\n    // Dynamic values and color-looking text deliberately have no swatch.\n    Rgba dynamic(UInt8 red) = new Rgba(red, 128, 0);\n    String ordinaryText = \"#ff8000\";\n}\n",
-      "colors": [
-        {
-          "anchor": "new Rgba(255, 128, 0)",
-          "rgba": [
-            255,
-            128,
-            0,
-            255
-          ]
-        },
-        {
-          "anchor": "new Rgba(blue = 40, red = 200, alpha = 128, green = 80)",
-          "rgba": [
-            200,
-            80,
-            40,
-            128
-          ]
-        }
-      ],
-      "invalid": {
-        "from": "new Rgba(255, 128, 0)",
-        "to": "new Rgba(256, 128, 0)"
-      },
-      "themes": {
-        "vscode": [
-          "Default Dark Modern",
-          "Default Light Modern",
-          "Default High Contrast"
-        ],
-        "intellij": [
-          "Darcula",
-          "IntelliJ Light",
-          "High contrast"
-        ]
-      }
+      "intellij": [
+        "Darcula",
+        "IntelliJ Light",
+        "High contrast"
+      ]
     }
   },
   "cases": {
@@ -868,9 +835,9 @@
       "values": {
         "file": "Navigation.x",
         "unsupportedCapabilities": [
-          "inlineValueProvider"
+          "inlineValueProvider",
+          "colorProvider"
         ],
-        "prototypeCapability": "colorProvider",
         "tabSize": 4,
         "supportedCapabilities": [
           "declarationProvider",
@@ -8604,39 +8571,6 @@
       "title": "failed JVM launch exports support details and corrected settings recover",
       "manual": [],
       "values": {},
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X273": {
-      "title": "color swatches and native picker edits preserve positional and named arguments",
-      "manual": [],
-      "values": {
-        "mode": "apply"
-      },
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X274": {
-      "title": "dismiss the color picker without edits and verify native Undo and Redo",
-      "manual": [],
-      "values": {
-        "mode": "history"
-      },
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X275": {
-      "title": "invalid color source removes stale swatches and repair restores them",
-      "manual": [],
-      "values": {
-        "mode": "recovery"
-      },
       "intellij": {
         "coverage": "full",
         "limitations": []
