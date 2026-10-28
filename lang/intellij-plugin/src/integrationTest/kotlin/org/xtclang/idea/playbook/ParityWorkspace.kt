@@ -310,6 +310,10 @@ class ParityWorkspace(
                 ?.getSynchronizer()
                 ?.getDocument()
                 ?.getText()
+                // LSP4IJ connects a library view only after navigation opens it; the server serves its text before
+                ?: uri.takeUnless { it.startsWith("file:") }?.let {
+                    protocol.query("workspace/textDocumentContent", mapOf("uri" to it)).asJsonObject.string("text")
+                }
         }
 
     fun hierarchy(
