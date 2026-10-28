@@ -102,6 +102,14 @@ public abstract class Connector {
      */
     public abstract int join() throws InterruptedException;
 
+    /**
+     * Release this connector's runtime once nothing is to run in it any more, so that a host that
+     * makes another connector does not keep this one's runtime: what holds it, such as pending
+     * timers and worker threads, lets it go. By default there is nothing to release.
+     */
+    public void shutdown() {
+    }
+
     // ----- data fields ---------------------------------------------------------------------------
 
     /**

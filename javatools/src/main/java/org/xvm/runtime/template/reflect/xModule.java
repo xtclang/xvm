@@ -328,10 +328,10 @@ public class xModule
      * @return the TypeConstant for {@code ListMap<String, Module>}
      */
     private static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
+        TypeConstant type = INSTANCE.m_typeListMap;
         if (type == null) {
             ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
+            INSTANCE.m_typeListMap = type = pool.ensureParameterizedTypeConstant(
                     pool.typeListMap(),
                     pool.typeString(), pool.typeModule());
         }
@@ -342,6 +342,7 @@ public class xModule
 
     private static TypeConstant    MODULE_ARRAY_TYPE;
     private static ArrayConstant   EMPTY_MODULE_ARRAY;
-    private static TypeConstant    LISTMAP_TYPE;
     private static VersionConstant VERSION_DEFAULT;
+
+    private TypeConstant m_typeListMap;
 }

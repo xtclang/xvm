@@ -66,7 +66,7 @@ internal class DebugSessions(
     ) {
         val messages: ExecutorService =
             Executors.newSingleThreadExecutor { task -> Thread(task, "xtc-debug-$id").apply { isDaemon = true } }
-        val server = XtcDebugServer(Launches(), messages)
+        val server = XtcDebugServer(Launches(id), messages)
         val endpoint =
             DebugMessageEndpoint(server) { message ->
                 (client() as? XtcLanguageClient)?.debugMessage(DebugMessageParams(id, JsonParser.parseString(message).asJsonObject))
@@ -107,15 +107,21 @@ internal class DebugSessions(
         sessions.clear()
     }
 
+    /** Sessions started and not yet ended, for tests. */
+    internal fun tracked(): Int = sessions.size
+
     /** A session's launches, as embedded runs. */
-    private inner class Launches : DebugRuns {
+    private inner class Launches(
+        private val session: String,
+    ) : DebugRuns {
         override fun launch(
             runId: String,
             target: LaunchTarget,
             events: ProgramEvents,
             ready: CompletionStage<out DebugSetup?>,
-        ): CompletableFuture<LaunchResult> =
-            runs
+        ): CompletableFuture<LaunchResult> {
+            logger.info("debug session launches a run: session={} run={}", session, runId)
+            return runs
                 .launch(
                     RunParams(target.module, target.method, target.args, target.workingDirectory, runId, target.moduleName),
                     object : RunWorkerProcess.Listener {
@@ -137,6 +143,7 @@ internal class DebugSessions(
                     },
                     ready,
                 ).thenApply { LaunchResult(it.runId, describe(it.build)) }
+        }
 
         override fun input(
             runId: String,
