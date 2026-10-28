@@ -78,8 +78,10 @@ public class xContainerControl
             return getPropertyTypeSystem(frame, container, iReturn);
 
         case "statusIndicator":
-            // the container's services taken together, not only its main service
-            return Utils.assignInitializedEnum(frame, SERVICE_STATUS.getEnumByName(container.getStatus().name()), iReturn);
+            // the status of the container; this overrides the "statusIndicator" property of the
+            // main service implemented by xRTServiceControl
+            return Utils.assignInitializedEnum(frame,
+                    SERVICE_STATUS.getEnumByName(container.getStatus().name()), iReturn);
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

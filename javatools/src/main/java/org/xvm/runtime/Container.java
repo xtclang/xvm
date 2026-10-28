@@ -561,12 +561,8 @@ public abstract class Container
     }
 
     /**
-     * Determine how busy this container's own services are, taken together, which is what a
-     * container's "statusIndicator" reports: terminated once the container has been killed; busy
-     * while work is scheduled or any of its services is busy; waiting while any of them waits, or
-     * while a native callback that keeps the container alive, such as a "keepAlive" alarm or a
-     * server, is registered; otherwise idle. Unlike {@link #isIdle()}, the parent container does
-     * not count, and neither do the containers nested in this one.
+     * Compute the status indicator of the container based on the statuses of its services. Unlike
+     * {@link #isIdle()}, neither the parent container nor the containers nested in this one count.
      *
      * @return the status of this container's services
      */
