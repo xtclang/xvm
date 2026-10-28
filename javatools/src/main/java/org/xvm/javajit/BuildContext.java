@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -1687,9 +1686,9 @@ public class BuildContext {
         ClassDesc        cd;
         String           methodName;
         boolean          isIface;
-        if (owner.getComponent().getFormat() == Format.MIXIN) {
+        if (Builder.isEmbedded(owner.getComponent().getFormat())) {
             // we need to generate a synthetic super
-            cd         = builder.art.CD();
+            cd         = builder.getThisCD(this);
             isIface    = false;
             methodName = MethodInfo.getJitIdentity(callChain).ensureJitMethodName(typeSystem) + HASH + depth;
             buildSuper(methodName, depth);
@@ -2110,11 +2109,8 @@ public class BuildContext {
      *
      * @param typeTarget if not null, the call represents a "new" call for the specified target
      */
-    public void loadCallArguments(
-            CodeBuilder   code,
-            JitMethodDesc jmd,
-            int[]         anArgValue,
-            TypeConstant  typeTarget) {
+    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue,
+                                  TypeConstant typeTarget) {
         boolean isOptimized = jmd.isOptimized;
         int     argCount    = anArgValue.length;
 
@@ -3176,7 +3172,7 @@ public class BuildContext {
     public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
                                   MethodConstant idCtor, int outerId, int[] argIds) {
         RegisterInfo outer = outerId == Op.A_IGNORE ? null : ensureRegister(code, outerId);
-        return builder.buildNew(this, code, typeTarget, idCtor, outer,
+        return builder.callNew(this, code, typeTarget, idCtor, outer,
                 jmdNew -> loadCallArguments(code, jmdNew, argIds, typeTarget), ctxSlot(code));
     }
 
@@ -3188,7 +3184,7 @@ public class BuildContext {
      */
     public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
                                   MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader) {
-        return builder.buildNew(this, code, typeTarget, idCtor, argsLoader, ctxSlot(code));
+        return builder.callNew(this, code, typeTarget, idCtor, argsLoader, ctxSlot(code));
     }
 
     /**

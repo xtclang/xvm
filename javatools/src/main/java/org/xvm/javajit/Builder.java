@@ -2143,10 +2143,10 @@ public abstract class Builder {
      * @param argsLoader the function (consumer) that is responsible for loading the arguments
      *                   on the Java stack
      */
-    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
-                                  MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
-                                  int ctxSlot) {
-        return buildNew(bctx, code, typeTarget, idCtor, null, argsLoader, ctxSlot);
+    public JitMethodDesc callNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
+                                 MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
+                                 int ctxSlot) {
+        return callNew(bctx, code, typeTarget, idCtor, null, argsLoader, ctxSlot);
     }
 
     /**
@@ -2157,9 +2157,9 @@ public abstract class Builder {
      *
      * @see "doc/jit_class_names.txt"
      */
-    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
-                                  MethodConstant ctorId, RegisterInfo outer,
-                                  Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
+    public JitMethodDesc callNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
+                                 MethodConstant ctorId, RegisterInfo outer,
+                                 Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
         TypeConstant targetJIC  = targetType.getJitICType();
         TypeInfo     targetInfo = targetJIC.ensureTypeInfo();
         MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
