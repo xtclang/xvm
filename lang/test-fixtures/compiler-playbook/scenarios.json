@@ -9070,6 +9070,83 @@
         "limitations": []
       }
     },
+    "X291": {
+      "title": "a discovered module whose root file was renamed on disk runs again from a run target saved with the old file",
+      "manual": [
+        "Renaming the root file while its editor is still open is not covered: the open buffer stays a source under the old path, and builds report a duplicate module until it is closed."
+      ],
+      "values": {
+        "file": "MovedRoot.x",
+        "destinationFile": "RenamedRoot.x",
+        "module": "MovedRoot",
+        "source": "module MovedRoot {\n    void run() {\n        @Inject Console console;\n        console.print(\"moved root runs\");\n    }\n}\n",
+        "runTitle": "\u25b6 Run MovedRoot",
+        "output": "moved root runs",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X292": {
+      "title": "a module run twice starts each run with fresh program state",
+      "manual": [
+        "The editors cannot see which execution worker ran a program; the server's EmbeddedExecutionTest checks that one worker serves both runs."
+      ],
+      "values": {
+        "file": "RunFresh.x",
+        "module": "RunFresh",
+        "source": "module RunFresh {\n    static service Calls {\n        Int count = 0;\n        Int next() = ++count;\n    }\n\n    void run() {\n        @Inject Console console;\n        console.print($\"calls={Calls.next()},{Calls.next()}\");\n    }\n}\n",
+        "output": "calls=1,2",
+        "carriedOver": "calls=3,4",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X293": {
+      "title": "a run of a module without a callable run method reports why and runs nothing",
+      "manual": [],
+      "values": {
+        "file": "RunLibrary.x",
+        "module": "RunLibrary",
+        "source": "module RunLibrary {\n    Int value() = 1;\n}\n",
+        "message": "Missing method \"run\" in module RunLibrary",
+        "twoArgumentsFile": "RunTwoArguments.x",
+        "twoArgumentsModule": "RunTwoArguments",
+        "twoArgumentsSource": "module RunTwoArguments {\n    void run(String first, String second) {\n        @Inject Console console;\n        console.print(\"two arguments ran\");\n    }\n}\n",
+        "twoArgumentsMessage": "Unsupported arguments for method \"run\"",
+        "twoArgumentsOutput": "two arguments ran",
+        "containerFailure": "Unable to create the application container",
+        "exitCode": 1
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X294": {
+      "title": "arguments for a run method without parameters are dropped with a warning, and the program runs",
+      "manual": [],
+      "values": {
+        "file": "RunNoParameters.x",
+        "module": "RunNoParameters",
+        "source": "module RunNoParameters {\n    void run() {\n        @Inject Console console;\n        console.print(\"ran without parameters\");\n    }\n}\n",
+        "args": [
+          "ignored"
+        ],
+        "warning": "Warning: Method \"run\" does not take any parameters; ignoring the specified arguments.",
+        "output": "ran without parameters",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

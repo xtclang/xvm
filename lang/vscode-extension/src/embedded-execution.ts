@@ -198,9 +198,11 @@ abstract class ExecutionTerminal implements vscode.Pseudoterminal {
         }
     }
 
-    /** Builds always start from saved files, so the artifacts on disk match the sources. */
+    /**
+     * The server builds the editor's text, saved or not, so the extension saves nothing; VS Code saves before a
+     * task as `task.saveBeforeRun` says. The language client sends every edit before a later request.
+     */
     protected async connection(): Promise<LanguageClient | undefined> {
-        await vscode.workspace.saveAll(false);
         const client = this.client();
         if (!client?.isRunning()) {
             this.line('The Ecstasy language server is not running.');
@@ -253,6 +255,8 @@ class BuildTerminal extends ExecutionTerminal {
 /** What an embedded run executes: a module name or any of its source URIs, and its entry point. */
 export interface RunTarget {
     module: string;
+    /** The module's name, which the server uses when [module] is a root URI that no longer names a module. */
+    moduleName?: string;
     label: string;
     method?: string;
     args?: string[];
@@ -350,6 +354,7 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
         try {
             const response = await client.sendRequest<RunResponse>('xtc/run', {
                 module: this.target.module,
+                moduleName: this.target.moduleName,
                 method: this.target.method,
                 args: this.target.args ?? [],
                 workingDirectory: this.target.workingDirectory,

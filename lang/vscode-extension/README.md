@@ -165,7 +165,8 @@ Choose **Gradle** with **Ecstasy: Select Build Mode** or the status bar, or set 
 `gradle`, to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
 available in embedded mode, since it has no counterpart for them.
 
-Embedded builds and runs first save all open files, so the build matches the sources on disk.
+Embedded builds and runs compile the editor's text, saved or not; the extension saves no files. VS Code
+saves them before the build or run task as `task.saveBeforeRun` says (`always` by default).
 Build output lists each module (built, failed, or skipped because a dependency failed) and each
 diagnostic as `file:line:column`, which the terminal links to the source. Open files show the same
 errors as editor diagnostics. Embedded mode needs the compiler language service; the Tree-sitter
@@ -380,7 +381,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 295 shared cases (X1–X290, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 299 shared cases (X1–X294, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -417,7 +418,7 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 295 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 299 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its

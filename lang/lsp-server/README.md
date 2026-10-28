@@ -514,15 +514,16 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
-| `xtc/run` `{module, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
+| `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
 | `xtc/stopRun` `{runId}` | request | Stops a run; `xtc/runExited` still follows. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
-| `xtc/runOutput` `{runId, text}` | notification | Program output, in order |
-| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome |
+| `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
+| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
 
 Builds compile the text the server holds when the build is requested, open documents included,
-saved or not (both clients save first anyway); edits made after that belong to the next build. They
+saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
+IntelliJ saves before a run). Edits made after that belong to the next build. They
 run on the same serialized compile queue and through the same module-closure compile as editor
 analysis, and write `build/xtc/embedded/lib` and `build/xtc/embedded/dependencies` in the workspace
 folder that owns the module. A module whose sources and dependency revisions are exactly those of an
@@ -536,6 +537,9 @@ no longer declares the requested entry method is refused by the runner's entry c
 its code runs.
 
 Clients choose `runId` so they can route output that arrives before the `xtc/run` response.
+`module` is a module name or root URI. Both clients send a saved run target's root URI there and
+its name as `moduleName`, which the server uses when the URI no longer names a source module, as
+after the root file was renamed or moved; a module renamed in its source is still found by its URI.
 `args` reach the method exactly as given, never shell-parsed. The entry method follows the
 command-line runner's rule: exactly one method of that name on the module's type, including methods
 its annotations contribute (a function of that name is not an entry point, since the runtime calls
