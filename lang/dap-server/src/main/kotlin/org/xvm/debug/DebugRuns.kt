@@ -70,6 +70,22 @@ data class VariableState(
     val variablesReference: Int,
 )
 
+/** Which thrown exceptions stop a debugged program: every one, or those that no frame will catch. */
+data class ExceptionStops(
+    val all: Boolean = false,
+    val uncaught: Boolean = false,
+)
+
+/**
+ * What a debugged program starts with: the breakpoints installed before its first line, its exception stops, and
+ * whether it stops at its first line.
+ */
+data class DebugSetup(
+    val breakpoints: List<SourceBreakpoints>,
+    val exceptions: ExceptionStops = ExceptionStops(),
+    val stopOnEntry: Boolean = false,
+)
+
 /** How a stopped fiber is stepped: over a call, into one, or out of the current method. */
 enum class StepKind {
     OVER,
@@ -118,14 +134,14 @@ data class LaunchResult(
 interface DebugRuns {
     /**
      * Builds [target] and, if the build succeeds, starts it under [runId] once [ready] completes. [ready]'s value is
-     * the breakpoints to install before the program's first line, or null to run it without a debugger. [events]
-     * receives the program's output and its exit, also when it is stopped before it starts.
+     * the debugger's setup before the program's first line, or null to run it without a debugger. [events] receives
+     * the program's output and its exit, also when it is stopped before it starts.
      */
     fun launch(
         runId: String,
         target: LaunchTarget,
         events: ProgramEvents,
-        ready: CompletionStage<out List<SourceBreakpoints>?>,
+        ready: CompletionStage<out DebugSetup?>,
     ): CompletableFuture<LaunchResult>
 
     /** Console input for the run, with its line end. False when no such run is building or running. */
@@ -136,6 +152,12 @@ interface DebugRuns {
 
     /** Stops the run, or keeps it from starting if it is still building. False when no such run is active. */
     fun stop(runId: String): Boolean
+
+    /** Replaces the exception stops of a debugged program that runs. False when no such run is active. */
+    fun setExceptionStops(
+        runId: String,
+        stops: ExceptionStops,
+    ): Boolean
 
     /** Replaces one file's breakpoints in a debugged program that runs. */
     fun setBreakpoints(
@@ -176,6 +198,12 @@ interface DebugRuns {
         threadId: Int,
         kind: StepKind,
     ): CompletableFuture<Boolean>
+
+    /**
+     * Pauses the running program: it stops, with the reason `pause`, at the next line any of its fibers reaches.
+     * False when no such run is active.
+     */
+    fun pause(runId: String): Boolean
 
     /** Resumes the stopped program. False when no such run is active. */
     fun resume(runId: String): Boolean
