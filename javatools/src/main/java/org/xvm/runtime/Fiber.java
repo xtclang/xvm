@@ -157,6 +157,14 @@ public class Fiber
         return that.isAssociated(fiberCaller);
     }
 
+    /**
+     * @return the ID of the next fiber to be created; every fiber created from now on has this ID
+     *         or a greater one
+     */
+    static long nextId() {
+        return s_counter.get();
+    }
+
     public long getId() {
         return f_lId;
     }

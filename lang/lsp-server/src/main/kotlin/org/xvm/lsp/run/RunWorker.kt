@@ -32,6 +32,7 @@ import java.io.Reader
 import java.io.Writer
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryType
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -54,7 +55,9 @@ import kotlin.time.toJavaDuration
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions` and
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
  * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
- * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`), `exceptionInfo` (`id`, `request`, `thread`),
+ * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`), `runCode` (`id`, `request`, `frame`, `expression`,
+ * `limit` in milliseconds, `program`), `cancel` (`id`, `request` of a `runCode`), `exceptionInfo` (`id`, `request`,
+ * `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -100,6 +103,8 @@ object RunWorker {
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
                     "evaluate" -> runs.evaluate(command)
+                    "runCode" -> runs.runCode(command)
+                    "cancel" -> runs.cancel(command)
                     "exceptionInfo" -> runs.exceptionInfo(command)
                     "step" -> runs.step(command)
                     "exceptionStops" -> runs.exceptionStops(command)
@@ -128,6 +133,9 @@ object RunWorker {
 
         /** The runtime debugger of each run started with breakpoints. */
         private val debuggers = ConcurrentHashMap<Long, SessionDebugger>()
+
+        /** Code that runs on a stopped fiber, by the request that ran it, which a `cancel` names. */
+        private val running = ConcurrentHashMap<Long, CompletableFuture<SessionDebugger.Variable>>()
 
         /** The running program's output, which text the runtime prints directly joins in order. */
         @Volatile
@@ -336,6 +344,38 @@ object RunWorker {
                     }
                 }
             }
+        }
+
+        /**
+         * Answers, as `evaluate` does, with the value of code run on the fiber that waits at the frame, for at most
+         * the request's `limit` in milliseconds, which the server chooses, and with `program`, the whole program
+         * meanwhile.
+         */
+        fun runCode(command: JsonObject) {
+            val run =
+                debuggers[command["id"].asLong]?.run(
+                    command["frame"].asInt,
+                    command["expression"].asString,
+                    command["limit"].asLong.milliseconds.toJavaDuration(),
+                    command["program"]?.asBoolean == true,
+                ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
+            val request = command["request"].asLong
+            running[request] = run
+            run.whenComplete { variable, failure ->
+                running.remove(request)
+                answer(command) {
+                    if (failure != null) {
+                        addProperty("error", reason(failure))
+                    } else {
+                        add("variable", RunWorkerDebug.variable(state(variable)))
+                    }
+                }
+            }
+        }
+
+        /** Ends the code that the `request` of a `runCode` runs, before its limit; it then answers that it was cancelled. */
+        fun cancel(command: JsonObject) {
+            running[command["request"].asLong]?.cancel(false)
         }
 
         private fun state(variable: SessionDebugger.Variable) =
@@ -605,7 +645,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 9
+        const val PROTOCOL = 11
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
