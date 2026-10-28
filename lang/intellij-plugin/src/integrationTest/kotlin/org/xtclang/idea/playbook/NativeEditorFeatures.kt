@@ -13,7 +13,7 @@ import java.nio.file.Path
 
 /**
  * A bundled library source that Go to Declaration opens: the server's virtual document, which LSP4IJ opens read-only
- * from `workspace/textDocumentContent`, refreshes when the server says it changed, and retires with the server.
+ * from `workspace/textDocumentContent`, keeps while the compiler inputs change, and retires with the server.
  */
 internal fun ParityWorkspace.nativeLibraryContent(
     source: ParityWorkspace.Document,
@@ -69,12 +69,13 @@ internal fun ParityWorkspace.nativeLibraryContent(
     )
 
     val stamp = file.getModificationStamp()
-    // Replacing compiler inputs sends a real server-to-client content refresh for fetched views.
-    // Each library type needs an actual settings change, including later iterations of X254.
+    // A library document's URI carries its library's and its source's revisions, so its text can't change: replacing
+    // the compiler inputs asks for no refetch, and the open view stays as it was. Each library type needs an actual
+    // settings change, including later iterations of X254.
     configure(null)
     configure(listOf(SharedScenarios.SourceModule("LibraryViews", source.uri, emptyList())))
-    awaitUi("server refresh reloads the existing virtual library", HANG_LIMIT) { file.getModificationStamp() != stamp }
-    check(file.isValid() && !file.isWritable())
+    clean(source)
+    check(file.isValid() && !file.isWritable() && file.getModificationStamp() == stamp)
     check(withContext(OnDispatcher.EDT) { requireNotNull(manager.getSelectedTextEditor()).getDocument().getText() } == text)
 
     source.editor
