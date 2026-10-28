@@ -649,7 +649,7 @@ class EmbeddedExecutionTest {
     }
 
     @Test
-    fun `a breakpoint stops a debugged program, which shows its threads and stack, and continue runs it to its exit`() {
+    fun `a breakpoint stops a debugged program, which shows its threads, stack and variables, and continue runs it to its exit`() {
         CompilerTestSupport.configure()
         val stops = source("Stops.x", STOPS.trimIndent())
         val path = directory.resolve("Stops.x").toString()
@@ -663,7 +663,9 @@ class EmbeddedExecutionTest {
             sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
             sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
             sessions.request(id, 4, "configurationDone")
-            val untilStop = client.until(id) { it.event == "stopped" }
+            // output events can come between any of the replies
+            val seen = mutableListOf<JsonObject>()
+            val untilStop = client.until(id) { it.event == "stopped" }.also(seen::addAll)
 
             val pending =
                 untilStop
@@ -679,6 +681,9 @@ class EmbeddedExecutionTest {
             assertThat(installed["line"].asInt).isEqualTo(11)
             val stopped = untilStop.last()["body"].asJsonObject
             assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+            // what the program printed before it stopped arrives before the stop
+            assertThat(untilStop.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("before")
             assertThat(stopped["hitBreakpointIds"].asJsonArray.map { it.asInt }).containsExactly(pending["id"].asInt)
             val thread = stopped["threadId"].asInt
 
@@ -686,6 +691,7 @@ class EmbeddedExecutionTest {
             val threads =
                 client
                     .until(id) { it.response == "threads" }
+                    .also(seen::addAll)
                     .last()["body"]
                     .asJsonObject["threads"]
                     .asJsonArray
@@ -696,6 +702,7 @@ class EmbeddedExecutionTest {
                     .until(
                         id,
                     ) { it.response == "stackTrace" }
+                    .also(seen::addAll)
                     .last()["body"]
                     .asJsonObject["stackFrames"]
                     .asJsonArray
@@ -705,11 +712,84 @@ class EmbeddedExecutionTest {
             ).containsExactly("Stops.twice" to 11, "Stops.run" to 5)
             assertThat(frames.first()["source"].asJsonObject["path"].asString).isEqualTo(path)
 
-            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            sessions.request(id, 7, "scopes", """{"frameId": ${frames.first()["id"].asInt}}""")
+            val scope =
+                client
+                    .until(id) { it.response == "scopes" }
+                    .also(seen::addAll)
+                    .last()["body"]
+                    .asJsonObject["scopes"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject
+            assertThat(scope["name"].asString).isEqualTo("Locals")
+            sessions.request(id, 8, "variables", """{"variablesReference": ${scope["variablesReference"].asInt}}""")
+            val n =
+                client
+                    .until(id) { it.response == "variables" }
+                    .also(seen::addAll)
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .single { it["name"].asString == "n" }
+            assertThat(n["value"].asString).isEqualTo("21")
+            assertThat(n["type"].asString).isEqualTo("Int")
+
+            sessions.request(id, 9, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }.also(seen::addAll)
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            val output = seen.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+            assertThat(output).contains("before").contains("after 42")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `a stopped program steps into a call and out of it, and continue runs it to its exit`() {
+        CompilerTestSupport.configure()
+        val stops = source("Stops.x", STOPS.trimIndent())
+        val path = directory.resolve("Stops.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 5}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            var request = 5
+
+            /** Steps the fiber and returns the reason of the stop where the step ends, and its stack. */
+            fun step(command: String): Pair<String, List<Pair<String, Int>>> {
+                sessions.request(id, request++, command, """{"threadId": $thread}""")
+                val stopped = client.until(id) { it.event == "stopped" }
+                assertThat(stopped.single { it.response == command }["success"].asBoolean).isTrue()
+                sessions.request(id, request++, "stackTrace", """{"threadId": $thread}""")
+                val frames =
+                    client
+                        .until(id) { it.response == "stackTrace" }
+                        .last()["body"]
+                        .asJsonObject["stackFrames"]
+                        .asJsonArray
+                        .map { it.asJsonObject["name"].asString to it.asJsonObject["line"].asInt }
+                return stopped.last()["body"].asJsonObject["reason"].asString to frames.take(2)
+            }
+
+            assertThat(step("stepIn")).isEqualTo("step" to listOf("Stops.twice" to 11, "Stops.run" to 5))
+            assertThat(step("stepOut").let { (reason, frames) -> reason to frames.first() }).isEqualTo("step" to ("Stops.run" to 6))
+
+            sessions.request(id, request, "continue", """{"threadId": $thread}""")
             val rest = client.until(id) { it.event == "terminated" }
             assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
-            val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
-            assertThat(output).contains("before").contains("after 42")
             sessions.end(DebugSessionParams(id))
         }
     }
