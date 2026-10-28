@@ -16,6 +16,12 @@ export const catalog: Catalog = JSON.parse(contents);
 assert.strictEqual(catalog.schemaVersion, 2, 'Unsupported shared playbook schema');
 export const sharedScenarioIds = Object.keys(catalog.cases) as ScenarioId[];
 
+/** Tags such as `slow`, defined by the catalog's `tagDefinitions`; most cases have none. */
+export function scenarioTags(id: ScenarioId): string[] {
+    const scenario = catalog.cases[id];
+    return 'tags' in scenario ? scenario.tags : [];
+}
+
 /** Exact IDs only: a typo or empty selection must fail before opening the editor. */
 export function selectedScenarioIds(selection: string | undefined): ScenarioId[] {
     if (selection === undefined) return sharedScenarioIds;
@@ -25,12 +31,15 @@ export function selectedScenarioIds(selection: string | undefined): ScenarioId[]
     return sharedScenarioIds.filter(id => requested.includes(id));
 }
 
-const expectedIds = [...Array.from({ length: 279 }, (_, index) => `X${index + 1}`), 'CFG1', 'CFG2', 'CFG3', '7a.8', '7a.9'];
+const expectedIds = [...Array.from({ length: 286 }, (_, index) => `X${index + 1}`), 'CFG1', 'CFG2', 'CFG3', '7a.8', '7a.9'];
 assert.deepStrictEqual(sharedScenarioIds, expectedIds, 'The catalog must describe the complete playbook in order');
 for (const [id, scenario] of Object.entries(catalog.cases)) {
     assert.ok(scenario.title && scenario.values && Array.isArray(scenario.manual), `Invalid scenario ${id}`);
     assert.ok(['full', 'partial', 'not-implemented'].includes(scenario.intellij.coverage), `Missing IntelliJ coverage for ${id}`);
     assert.ok(scenario.intellij.coverage === 'full' || scenario.intellij.limitations.length > 0, `Explain the IntelliJ gap for ${id}`);
+    for (const tag of scenarioTags(id as ScenarioId)) {
+        assert.ok(tag in catalog.tagDefinitions, `Undefined tag ${tag} in ${id}`);
+    }
 }
 
 export function scenarioRegex(pattern: { source: string; flags: string }): RegExp {
