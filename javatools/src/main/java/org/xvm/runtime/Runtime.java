@@ -150,7 +150,14 @@ public class Runtime {
      * @param debugger  the debugger to use
      */
     public void setDebugger(Debugger debugger) {
-        m_debugger = Objects.requireNonNull(debugger);
+        Objects.requireNonNull(debugger);
+        Debugger previous = m_debugger;
+        m_debugger = debugger;
+        if (previous != null && previous != debugger) {
+            previous.detach();
+        }
+        m_fDebugger = false;
+        debugger.attach(this);
     }
 
     // ----- constants and fields ------------------------------------------------------------------
@@ -181,9 +188,9 @@ public class Runtime {
     private volatile long m_lastXvmSubmitNanos;
 
     /**
-     * The "debugger is active" flag.
+     * The "debugger is active" flag; a host's debugger sets it from the host's own threads.
      */
-    private boolean m_fDebugger;
+    private volatile boolean m_fDebugger;
 
     /**
      * The debugger instance; null until it is set explicitly or lazily assigned.

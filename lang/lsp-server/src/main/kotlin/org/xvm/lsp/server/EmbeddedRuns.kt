@@ -3,6 +3,11 @@ package org.xvm.lsp.server
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
+import org.xvm.debug.BreakpointState
+import org.xvm.debug.FrameState
+import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StopState
+import org.xvm.debug.ThreadState
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
@@ -12,6 +17,7 @@ import org.xvm.lsp.run.RunWorkerProcess
 import java.io.Closeable
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -90,6 +96,10 @@ interface XtcLanguageClient : LanguageClient {
 
     @JsonNotification("xtc/runExited")
     fun runExited(params: RunExitedParams)
+
+    /** One DAP message from a debug session to the client; see [DebugSessions]. */
+    @JsonNotification("xtc/debugMessage")
+    fun debugMessage(params: DebugMessageParams) {}
 }
 
 /**
@@ -120,67 +130,115 @@ internal class EmbeddedRuns(
         compiler()?.buildAsync(params.module, params.rebuild == true)?.thenApply(::response) ?: unsupported()
 
     fun run(params: RunParams): CompletableFuture<RunResponse> {
+        val runId = params.runId ?: UUID.randomUUID().toString()
+        return launch(
+            params.copy(runId = runId),
+            object : RunWorkerProcess.Listener {
+                override fun output(text: String) {
+                    (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
+                }
+
+                override fun exited(
+                    code: Long?,
+                    error: String?,
+                ) {
+                    (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
+                }
+            },
+        )
+    }
+
+    /**
+     * Builds the module and, if the build succeeds, runs it once [ready] completes, as `xtc/run` does at once and a
+     * debug session does after its client's configuration. [ready]'s value is the breakpoints to install before the
+     * program's first line, or null to run it without the debugger. [events] receives the program's output and its
+     * single exit, also when the run is stopped before the program starts, and a debugged run's breakpoints and stops.
+     */
+    internal fun launch(
+        params: RunParams,
+        events: RunWorkerProcess.Listener,
+        ready: CompletionStage<out List<SourceBreakpoints>?> = CompletableFuture.completedFuture(null),
+    ): CompletableFuture<RunResponse> {
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
         val compiler = compiler() ?: return unsupported()
         val runId = params.runId ?: UUID.randomUUID().toString()
         synchronized(inputLock) { waiting[runId] = WaitingInput() }
         return compiler
             .buildAsync(module, false, params.moduleName)
-            .thenApply { result ->
+            .thenCompose { result ->
                 val build = response(result)
                 val target = result.modules.lastOrNull()
                 if (!result.succeeded || target == null) {
                     synchronized(inputLock) { waiting.remove(runId) }
-                    return@thenApply RunResponse(null, build)
+                    return@thenCompose CompletableFuture.completedFuture(RunResponse(null, build))
                 }
-                val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
-                if (stoppedEarly) {
-                    (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, null, STOPPED_BEFORE_START))
-                    return@thenApply RunResponse(runId, build)
+                ready.thenApply { breakpoints ->
+                    start(runId, params, result, target.name, breakpoints, events)
+                    RunResponse(runId, build)
                 }
-                // a run can end before start returns, e.g. while another program still runs
-                val ended = AtomicBoolean()
-                val id =
-                    worker.start(
-                        RunWorkerProcess.Request(
-                            result.modulePath,
-                            target.name,
-                            params.method ?: "run",
-                            params.args.orEmpty(),
-                            params.workingDirectory ?: result.workingDirectory,
-                        ),
-                        object : RunWorkerProcess.Listener {
-                            override fun output(text: String) {
-                                (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
-                            }
-
-                            override fun exited(
-                                code: Long?,
-                                error: String?,
-                            ) {
-                                synchronized(inputLock) {
-                                    ended.set(true)
-                                    waiting.remove(runId)
-                                    workerIds.remove(runId)
-                                }
-                                (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
-                            }
-                        },
-                    )
-                // input typed while the module built goes to the program, unless the run was stopped meanwhile
-                val stop =
-                    synchronized(inputLock) {
-                        if (!ended.get()) workerIds[runId] = id
-                        val typed = waiting.remove(runId)?.takeUnless { ended.get() } ?: return@synchronized false
-                        if (!typed.stopped) {
-                            if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
-                            if (typed.ended) worker.endInput(id)
-                        }
-                        typed.stopped
-                    }
-                if (stop) worker.stop(id)
-                RunResponse(runId, build)
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
+    }
+
+    private fun start(
+        runId: String,
+        params: RunParams,
+        result: XdkBuildResult,
+        module: String,
+        breakpoints: List<SourceBreakpoints>?,
+        events: RunWorkerProcess.Listener,
+    ) {
+        val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
+        if (stoppedEarly) {
+            events.exited(null, STOPPED_BEFORE_START)
+            return
+        }
+        // a run can end before start returns, e.g. while another program still runs
+        val ended = AtomicBoolean()
+        val id =
+            worker.start(
+                RunWorkerProcess.Request(
+                    result.modulePath,
+                    module,
+                    params.method ?: "run",
+                    params.args.orEmpty(),
+                    params.workingDirectory ?: result.workingDirectory,
+                    breakpoints,
+                ),
+                object : RunWorkerProcess.Listener {
+                    override fun output(text: String) = events.output(text)
+
+                    override fun breakpoints(
+                        path: String,
+                        states: List<BreakpointState>,
+                    ) = events.breakpoints(path, states)
+
+                    override fun stopped(stop: StopState) = events.stopped(stop)
+
+                    override fun exited(
+                        code: Long?,
+                        error: String?,
+                    ) {
+                        synchronized(inputLock) {
+                            ended.set(true)
+                            waiting.remove(runId)
+                            workerIds.remove(runId)
+                        }
+                        events.exited(code, error)
+                    }
+                },
+            )
+        // input typed while the module built goes to the program, unless the run was stopped meanwhile
+        val stop =
+            synchronized(inputLock) {
+                if (!ended.get()) workerIds[runId] = id
+                val typed = waiting.remove(runId)?.takeUnless { ended.get() } ?: return@synchronized false
+                if (!typed.stopped) {
+                    if (typed.text.isNotEmpty()) worker.input(id, typed.text.toString())
+                    if (typed.ended) worker.endInput(id)
+                }
+                typed.stopped
+            }
+        if (stop) worker.stop(id)
     }
 
     /** Forwards console input to the run, or holds it while the run is still building. */
@@ -216,6 +274,34 @@ internal class EmbeddedRuns(
         worker.stop(id)
         return true
     }
+
+    /** Replaces one file's breakpoints in a running program under the debugger. */
+    internal fun setBreakpoints(
+        runId: String,
+        breakpoints: SourceBreakpoints,
+    ): CompletableFuture<List<BreakpointState>> = debugged(runId) { worker.setBreakpoints(it, breakpoints) }
+
+    /** The fibers of a stopped program under the debugger. */
+    internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
+
+    /** A stopped fiber's stack. */
+    internal fun stackTrace(
+        runId: String,
+        thread: Int,
+    ): CompletableFuture<List<FrameState>> = debugged(runId) { worker.stackTrace(it, thread) }
+
+    /** Resumes a stopped program under the debugger. False when no such run is active. */
+    internal fun resume(runId: String): Boolean {
+        val id = workerIds[runId] ?: return false
+        worker.resume(id)
+        return true
+    }
+
+    private fun <T> debugged(
+        runId: String,
+        request: (Long) -> CompletableFuture<T>,
+    ): CompletableFuture<T> =
+        workerIds[runId]?.let(request) ?: CompletableFuture.failedFuture(IllegalStateException("The program is not running"))
 
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
     internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + worker.tracked()

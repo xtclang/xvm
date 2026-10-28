@@ -23,6 +23,7 @@ import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.UnregistrationParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.xtclang.idea.XtcIntelliJLanguage
+import org.xtclang.idea.dap.DebugSessions
 import org.xtclang.idea.run.EmbeddedRunSessions
 import org.xtclang.idea.run.RunGutterIcons
 import java.util.concurrent.CompletableFuture
@@ -92,7 +93,11 @@ class XtcLanguageClient(
     override fun dispose() {
         settingsStores.forEach { it.removeSettingsListener(settingsListener) }
         compilerWatches.dispose()
-        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).endAll("The Ecstasy language server stopped")
+        if (!project.isDisposed) {
+            EmbeddedRunSessions.getInstance(project).endAll("The Ecstasy language server stopped")
+            // a project that never debugged has no sessions, and its service is not created while it closes
+            project.getServiceIfCreated(DebugSessions::class.java)?.endAll("The Ecstasy language server stopped, ending the debug session")
+        }
         super.dispose()
     }
 
@@ -105,6 +110,12 @@ class XtcLanguageClient(
     @JsonNotification("xtc/runExited")
     fun runExited(params: RunExitedParams) {
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).exited(params)
+    }
+
+    /** A DAP message of a debug session, for the process its debugger connects through. */
+    @JsonNotification("xtc/debugMessage")
+    fun debugMessage(params: DebugMessageParams) {
+        if (!project.isDisposed) DebugSessions.getInstance(project).receive(params)
     }
 
     override fun setServerWrapper(wrapper: LanguageServerWrapper) {

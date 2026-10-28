@@ -66,12 +66,14 @@ class InterpreterControl
      * @param entry       the entry method to invoke and its arguments
      * @param consoleIn   the console's input, or {@link EmbeddingSupport.ConsoleInput#NONE};
      *                    used only with a console
+     * @param debugger    the run's debugger, or null; it is set before the task starts and
+     *                    replaced by {@link Debugger#NONE} when the run ends or is closed
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
                                            ModuleRepository repository,
                                            EmbeddingSupport.EntryPoint entry, PrintWriter console,
                                            EmbeddingSupport.ConsoleInput consoleIn, File rootDir,
-                                           ErrorListener errs) {
+                                           Debugger debugger, ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }
@@ -121,7 +123,13 @@ class InterpreterControl
 
             CompletableFuture<Void> completion = new CompletableFuture<>();
             InterpreterControl      control    = new InterpreterControl(interpreter, module, rootDir,
-                    errs, taskId, consoleId, started, completion);
+                    errs, taskId, consoleId, debugger, started, completion);
+            if (debugger != null) {
+                // the runner's own code is not the program; breakpoints are in place before the
+                // program's first op
+                debugger.setHost(main);
+                interpreter.setDebugger(debugger);
+            }
 
             postRequest(interpreter, "startTask", hTaskId).whenComplete((r, e) -> {
                 if (e == null) {
@@ -173,15 +181,27 @@ class InterpreterControl
 
     private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
                                File rootDir, ErrorListener errs, long taskId, Long consoleId,
-                               Instant started, CompletableFuture<Void> completion) {
+                               Debugger debugger, Instant started,
+                               CompletableFuture<Void> completion) {
         this.connector  = connector;
         this.module     = module;
         this.rootDir    = rootDir;
         this.errs       = errs;
         this.taskId     = taskId;
         this.consoleId  = consoleId;
+        this.debugger   = debugger;
         this.started    = started;
         this.completion = completion;
+    }
+
+    /**
+     * Replace this run's debugger, if it still is the runtime's, by {@link Debugger#NONE}, which
+     * releases a program it holds stopped.
+     */
+    private void releaseDebugger() {
+        if (debugger != null) {
+            connector.replaceDebugger(debugger, Debugger.NONE);
+        }
     }
 
     private void finish(long result, String failure) {
@@ -196,6 +216,7 @@ class InterpreterControl
             this.stopped = Instant.now();
             this.running = false;
             unregisterConsole(connector, consoleId);
+            releaseDebugger();
         }
     }
 
@@ -240,6 +261,11 @@ class InterpreterControl
         }
 
         try {
+            if (debugger != null) {
+                // a stopped program ends where it is, without running on until the runner kills it
+                debugger.terminate();
+            }
+            releaseDebugger();
             if (running) {
                 try {
                     postRequest(connector, "killTask", xInt64.makeHandle(taskId)).join();
@@ -278,6 +304,7 @@ class InterpreterControl
     private final ErrorListener           errs;
     private final long                    taskId;
     private final Long                    consoleId;
+    private final Debugger                debugger;
     private final Instant                 started;
     private final CompletableFuture<Void> completion;
     private final AtomicBoolean           closed   = new AtomicBoolean();

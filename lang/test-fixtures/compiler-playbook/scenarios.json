@@ -8820,15 +8820,22 @@
       }
     },
     "X285": {
-      "title": "debug launches start no fake debugger: VS Code runs the module, IntelliJ offers no Debug runner",
+      "title": "a debug launch builds and runs the module in a debug session in the language server, to its exit code; in VS Code a line typed in the Debug Console is the program's input",
       "manual": [
-        "The VS Code notice that Ecstasy debugging is not available is checked manually."
+        "VS Code sends a line typed into the Debug Console as an evaluate request in the repl context; the case sends that request itself, so typing into the Debug Console is checked manually. IntelliJ's case does not send console input to a debug session."
       ],
       "values": {
         "file": "DebugRun.x",
         "module": "DebugRun",
         "source": "module DebugRun {\n    Int run() = 4;\n}\n",
-        "exitCode": 4
+        "exitCode": 4,
+        "finished": "Process finished with exit code 4",
+        "inputFile": "DebugAsk.x",
+        "inputModule": "DebugAsk",
+        "inputSource": "module DebugAsk {\n    void run() {\n        @Inject Console console;\n        String name = console.readLine(\"Name? \");\n        console.print($\"Hello, {name}!\");\n    }\n}\n",
+        "prompt": "Name? ",
+        "input": "Ada",
+        "greeting": "Hello, Ada!"
       },
       "intellij": {
         "coverage": "full",
@@ -9304,6 +9311,35 @@
         "limitations": [
           "The project is made by the New Project wizard's project creator with the plugin's own version, not through the wizard's pages, and copied into the open project. Build Project in Gradle mode goes to the IDE's builder, which needs the Gradle project imported, so the case uses Run: the Ecstasy Application configuration calls ./gradlew runXtc, which compiles the module first."
         ]
+      }
+    },
+    "X304": {
+      "title": "a breakpoint stops a debug session at its line, with the call stack, and Continue (IntelliJ: Resume) runs the program to its exit",
+      "manual": [
+        "How each editor shows the stopped line, the call stack and the verified breakpoint in its views is checked manually; VS Code checks the protocol messages it receives and the stack it asks for, IntelliJ the paused session's position, frames and console."
+      ],
+      "values": {
+        "file": "DebugStops.x",
+        "module": "DebugStops",
+        "source": "module DebugStops {\n    Int run() {\n        @Inject Console console;\n        console.print(\"before\");\n        Int n = twice(21);\n        console.print($\"after {n}\");\n        return n;\n    }\n\n    Int twice(Int n) {\n        Int result = n * 2;\n        return result;\n    }\n}\n",
+        "breakpointLine": 11,
+        "frames": [
+          [
+            "DebugStops.twice",
+            11
+          ],
+          [
+            "DebugStops.run",
+            5
+          ]
+        ],
+        "before": "before",
+        "after": "after 42",
+        "exitCode": 42
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
       }
     },
     "CFG1": {
