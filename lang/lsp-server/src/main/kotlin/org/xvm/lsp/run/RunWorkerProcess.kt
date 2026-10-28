@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugSetup
+import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
@@ -68,6 +69,9 @@ internal class RunWorkerProcess(
 
         /** A run under the debugger stopped; it waits until [resume]. */
         fun stopped(stop: StopState) {}
+
+        /** A logpoint of a debugged run logged a message. */
+        fun logged(text: String) {}
     }
 
     /**
@@ -315,6 +319,14 @@ internal class RunWorkerProcess(
             addProperty("expression", expression)
         }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
 
+    /** The exception a stopped run's fiber stopped it at; null when it stopped it for another reason. */
+    fun exceptionInfo(
+        id: Long,
+        thread: Int,
+    ): CompletableFuture<ExceptionInfoState?> =
+        request("exceptionInfo", id) { addProperty("thread", thread) }
+            .thenApply { reply -> reply.getAsJsonObject("exception")?.let(RunWorkerDebug::exceptionInfoOf) }
+
     /** Steps a stopped run's fiber; false when that fiber does not wait. */
     fun step(
         id: Long,
@@ -475,6 +487,8 @@ internal class RunWorkerProcess(
                                 )?.breakpoints(event["path"].asString, RunWorkerDebug.statesOf(event.getAsJsonArray("breakpoints")))
 
                         "stopped" -> id?.let(listeners::get)?.stopped(RunWorkerDebug.stopOf(event))
+
+                        "logged" -> id?.let(listeners::get)?.logged(event["text"].asString)
 
                         "reply" ->
                             event["request"]?.asLong?.let(pending::remove)?.reply?.let { reply ->

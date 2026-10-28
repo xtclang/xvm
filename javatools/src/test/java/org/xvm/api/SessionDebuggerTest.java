@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +43,7 @@ import org.xvm.asm.ModuleRepository;
 
 import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
+import org.xvm.runtime.SessionDebugger.ExceptionInfo;
 import org.xvm.runtime.SessionDebugger.Line;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
@@ -60,8 +62,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Runs modules compiled from source files under a {@link SessionDebugger}: breakpoints by file and
  * line, how they are verified, the stack of a stop, the variables of its frames and paths to
- * values in them, stepping over,
- * into and out of calls, stops at thrown exceptions, pausing and stopping on entry, assert:debug,
+ * values in them, conditions, hit counts and logpoints, stepping over,
+ * into and out of calls, stops at thrown exceptions, of all classes or some, and what they tell of
+ * the exception, pausing and stopping on entry, assert:debug,
  * other fibers waiting while the program is stopped, fibers yielding to each other while
  * breakpoints are set, and closing a stopped run. The compiled XDK modules come from the test
  * resources, as for {@link EmbeddingSupportTest}.
@@ -186,6 +189,25 @@ public class SessionDebuggerTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() loops five times over line 7, with i from 0 to 4 and even true when i
+     * is, prints "sum 10" and returns 10.
+     */
+    private static final String LOOP = """
+            module Loop {
+                Int run() {
+                    @Inject Console console;
+                    Int sum = 0;
+                    for (Int i : 0 ..< 5) {
+                        Boolean even = i % 2 == 0;
+                        sum += i;
+                    }
+                    console.print($"sum {sum}");
+                    return sum;
                 }
             }
             """;
@@ -558,6 +580,171 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void aConditionalBreakpointStopsOnlyWhereItsConditionIsTrueAndItsHitCountIsReached()
+            throws Exception {
+        Path  source  = compile("Conditions", LOOP.replace("Loop", "Conditions"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Conditions"));
+        assertEquals(List.of(new Breakpoint(1, 7, true, null)),
+                session.setBreakpoints(source.toString(), List.of(new Line(1, 7, " even ", null, null))));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Conditions", output, session);
+        try (control) {
+            // the hits where i is even: 0, 2 and 4
+            for (String i : List.of("0", "2", "4")) {
+                Stop stop = stops.next();
+                assertEquals(List.of(1), stop.breakpointIds());
+                assertEquals(i, evaluate(session, session.stackTrace(stop.threadId()).getFirst().id(), "i").value());
+                session.resume();
+            }
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(10L, control.result());
+            assertEquals(null, stops.poll());
+        }
+
+        // the hit count counts the hits whose condition holds: the second even i is 2
+        compile("Counts", LOOP.replace("Loop", "Counts"));
+        Stops counted = new Stops();
+        var   again   = new SessionDebugger(counted);
+        again.addModule(input().loadModule("Counts"));
+        again.setBreakpoints(sourceDir.resolve("Counts.x").toString(), List.of(new Line(2, 7, "even", "2", null)));
+        try (Control second = run("Counts", new StringWriter(), again)) {
+            Stop stop = counted.next();
+            assertEquals("2", evaluate(again, again.stackTrace(stop.threadId()).getFirst().id(), "i").value());
+            again.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, second::join);
+            assertEquals(null, counted.poll());
+        }
+    }
+
+    @Test
+    public void aLogpointLogsItsMessageWithTheValuesOfItsPathsAndDoesNotStop() throws Exception {
+        Path  source  = compile("Logs", LOOP.replace("Loop", "Logs"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Logs"));
+        session.setBreakpoints(source.toString(),
+                List.of(new Line(1, 7, null, null, "i={i}, sum={sum} {nope}"), new Line(2, 9, null, null, "sum {sum")));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Logs", output, session);
+        try (control) {
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(10L, control.result());
+            assertEquals(null, stops.poll());
+
+            // a path that names nothing says why, and a brace without its pair is text
+            String nope = "<There is no variable \"nope\" in this frame.>";
+            assertEquals(List.of("i=0, sum=0 " + nope, "i=1, sum=0 " + nope, "i=2, sum=1 " + nope,
+                                 "i=3, sum=3 " + nope, "i=4, sum=6 " + nope, "sum {sum"), stops.logged);
+            assertTrue(output.toString().contains("sum 10"), output.toString());
+        }
+    }
+
+    @Test
+    public void aConditionThatCannotBeEvaluatedStopsAndSaysWhy() throws Exception {
+        Path  source  = compile("BadCondition", LOOP.replace("Loop", "BadCondition"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("BadCondition"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "sum", null, null)));
+
+        try (Control control = run("BadCondition", new StringWriter(), session)) {
+            Stop stop = stops.next();
+            assertEquals("breakpoint", stop.reason());
+            assertEquals("The condition cannot be evaluated: sum is Int, not a Boolean.", stop.description());
+            session.terminate();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+    }
+
+    @Test
+    public void aConditionHitCountOrLogMessageThatIsNotUnderstoodIsNotInstalled() throws Exception {
+        Path source  = compile("NotUnderstood", LOOP.replace("Loop", "NotUnderstood"));
+        var  session = new SessionDebugger(_ -> {});
+        session.addModule(input().loadModule("NotUnderstood"));
+
+        String paths = " is not evaluated: only variables, their fields and array elements are, such as point.x or ints[1].";
+        assertEquals(List.of(new Breakpoint(1, 7, false, "The condition \"i > 1\"" + paths),
+                             new Breakpoint(2, 7, false, "The hit count \"often\" is not N, to stop at the Nth hit,"
+                                     + " or >= N, > N or % N, for a number N."),
+                             new Breakpoint(3, 7, false, "The hit count \"% 0\" is not N, to stop at the Nth hit,"
+                                     + " or >= N, > N or % N, for a number N."),
+                             new Breakpoint(4, 7, false, "In the log message, \"i + 1\"" + paths),
+                             new Breakpoint(5, 7, true, null)),
+                session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "i > 1", null, null),
+                        new Line(2, 7, null, "often", null), new Line(3, 7, null, "% 0", null),
+                        new Line(4, 7, null, null, "{i + 1}"), new Line(5, 7, "", " ", ""))));
+    }
+
+    @Test
+    public void theExceptionThatStoppedTheProgramHasItsTypeTextStackTraceAndWhetherItIsCaught()
+            throws Exception {
+        compile("ThrowsInfo", THROWS.replace("Throws", "ThrowsInfo"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("ThrowsInfo"));
+        session.setExceptionStops(true, false);
+
+        try (Control control = run("ThrowsInfo", new StringWriter(), session)) {
+            Stop          stop   = stops.next();
+            ExceptionInfo caught = session.exceptionInfo(stop.threadId());
+            assertEquals("IllegalState", caught.type());
+            assertEquals("caught one", caught.text());
+            assertTrue(caught.stackTrace().contains("check"), caught.stackTrace());
+            assertFalse(caught.uncaught());
+            assertEquals(null, session.exceptionInfo(stop.threadId() + 1));
+
+            session.resume();
+            stop = stops.next();
+            ExceptionInfo uncaught = session.exceptionInfo(stop.threadId());
+            assertEquals("IllegalArgument", uncaught.type());
+            assertEquals("uncaught one", uncaught.text());
+            assertTrue(uncaught.uncaught());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(null, session.exceptionInfo(stop.threadId()));
+        }
+    }
+
+    @Test
+    public void exceptionStopsForSomeClassesStopForThemAndTheClassesThatExtendThem() throws Exception {
+        // every thrown IllegalArgument: the caught IllegalState does not stop the program
+        compile("ThrowsTyped", THROWS.replace("Throws", "ThrowsTyped"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("ThrowsTyped"));
+        session.setExceptionStops(true, List.of("IllegalArgument", "OutOfBounds"), false, List.of());
+
+        StringWriter output = new StringWriter();
+        try (Control control = run("ThrowsTyped", output, session)) {
+            Stop stop = stops.next();
+            assertEquals("ThrowsTyped.check:16", where(session, stop));
+            assertTrue(output.toString().contains("caught"), output.toString());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(null, stops.poll());
+        }
+
+        // an uncaught Exception: IllegalArgument extends it
+        compile("ThrowsBase", THROWS.replace("Throws", "ThrowsBase"));
+        Stops based = new Stops();
+        var   again = new SessionDebugger(based);
+        again.addModule(input().loadModule("ThrowsBase"));
+        again.setExceptionStops(false, List.of(), true, List.of("Exception"));
+        try (Control control = run("ThrowsBase", new StringWriter(), again)) {
+            Stop stop = based.next();
+            assertEquals("ThrowsBase.check:16", where(again, stop));
+            again.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(null, based.poll());
+        }
+    }
+
+    @Test
     public void pauseStopsARunningProgramAtTheNextLineItReaches() throws Exception {
         compile("Spins", SPINS);
         Stops        stops   = new Stops();
@@ -719,14 +906,20 @@ public class SessionDebuggerTest {
     }
 
     /**
-     * The stops a session reports, in order.
+     * The stops a session reports, in order, and the messages its logpoints log.
      */
     private static class Stops implements SessionDebugger.Listener {
-        private final BlockingQueue<Stop> queue = new LinkedBlockingQueue<>();
+        private final BlockingQueue<Stop> queue  = new LinkedBlockingQueue<>();
+        private final List<String>        logged = new CopyOnWriteArrayList<>();
 
         @Override
         public void stopped(Stop stop) {
             queue.add(stop);
+        }
+
+        @Override
+        public void logged(String message) {
+            logged.add(message);
         }
 
         /**
