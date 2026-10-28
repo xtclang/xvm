@@ -7,9 +7,7 @@ import org.xvm.asm.Op;
  */
 public interface Debugger {
     /**
-     * The debugger of a host that has none, such as an embedding host without a terminal for the
-     * {@link DebugConsole}: {@code assert:debug} continues with the next op, and since this
-     * debugger never becomes active, no breakpoint is checked.
+     * The debugger stub that performs no actions.
      */
     Debugger NONE = new Debugger() {
         @Override

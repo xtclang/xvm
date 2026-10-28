@@ -63,8 +63,7 @@ public class InterpreterConnector
     }
 
     /**
-     * Set the debugger that {@code assert:debug} and breakpoints use, which is the terminal's
-     * console debugger unless a host sets another.
+     * Set the debugger that {@code assert:debug} and breakpoints use.
      *
      * @param debugger  the debugger for this connector's runtime
      */

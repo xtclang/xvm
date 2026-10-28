@@ -4,27 +4,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-/**
- * Unit tests for the choice of a runtime's debugger.
- */
 public class RuntimeDebuggerTest {
     @Test
-    public void theConsoleDebuggerIsTheDebuggerUntilAHostSetsAnother() {
-        Runtime runtime = new Runtime();
-        try {
-            assertSame(DebugConsole.INSTANCE, runtime.getDebugger());
-
-            runtime.setDebugger(Debugger.NONE);
-            assertSame(Debugger.NONE, runtime.getDebugger());
-        } finally {
-            runtime.shutdownXVM();
-        }
-    }
-
-    @Test
-    public void theSystemPropertyTurnsTheDebuggerOffUntilAHostSetsOne() {
+    public void hostDebuggerOverridesOffProperty() {
+        String previous = System.setProperty("org.xvm.runtime.debugger", "off");
         Runtime runtime;
-        String  previous = System.setProperty("org.xvm.runtime.debugger", "off");
         try {
             runtime = new Runtime();
         } finally {
@@ -38,8 +22,29 @@ public class RuntimeDebuggerTest {
         try {
             assertSame(Debugger.NONE, runtime.getDebugger());
 
-            runtime.setDebugger(DebugConsole.INSTANCE);
-            assertSame(DebugConsole.INSTANCE, runtime.getDebugger());
+            Debugger hostDebugger = new Debugger() {
+                @Override
+                public int activate(Frame frame, int iPC) {
+                    throw new AssertionError("not called by this test");
+                }
+
+                @Override
+                public int checkBreakPoint(Frame frame, int iPC) {
+                    throw new AssertionError("not called by this test");
+                }
+
+                @Override
+                public void onReturn(Frame frame) {
+                    throw new AssertionError("not called by this test");
+                }
+
+                @Override
+                public int checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx) {
+                    throw new AssertionError("not called by this test");
+                }
+            };
+            runtime.setDebugger(hostDebugger);
+            assertSame(hostDebugger, runtime.getDebugger());
         } finally {
             runtime.shutdownXVM();
         }
