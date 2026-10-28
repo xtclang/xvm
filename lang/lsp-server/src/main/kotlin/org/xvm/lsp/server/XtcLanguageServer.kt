@@ -56,6 +56,7 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
@@ -130,6 +131,7 @@ class XtcLanguageServer(
     internal val clientTrace = ClientTrace { client }
     internal val partialResults = PartialResults(client = { client })
     private val embeddedRuns = EmbeddedRuns(adapter, { client })
+    private val debugSessions = DebugSessions(embeddedRuns, { client })
 
     /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
     private val discoveryRefresh = CoalescingTask("xtc-discovery") { rescans(::rediscover) }
@@ -1167,6 +1169,7 @@ class XtcLanguageServer(
         clientReady.cancel(false)
         indexing.cancel(false)
         discoveryRefresh.close()
+        debugSessions.close()
         embeddedRuns.close()
         formattingState.close()
         resourceFileWatchers.close()
@@ -1290,6 +1293,21 @@ class XtcLanguageServer(
     /** Console input for a run, or its end. False when no such run is building or running. */
     @JsonRequest("xtc/runInput")
     fun runInput(params: RunInputParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.input(params))
+
+    /**
+     * Starts a Debug Adapter Protocol session carried by this connection: its messages travel as `xtc/debugMessage`
+     * notifications in both directions, and a launch builds and runs the module as `xtc/run` does.
+     */
+    @JsonRequest("xtc/debugStart")
+    fun debugStart(): CompletableFuture<DebugSessionResponse> = CompletableFuture.completedFuture(debugSessions.start())
+
+    /** One DAP message from the client to a debug session. */
+    @JsonNotification("xtc/debugMessage")
+    fun debugMessage(params: DebugMessageParams) = debugSessions.receive(params)
+
+    /** Ends a debug session, which stops the program it launched. */
+    @JsonNotification("xtc/debugEnd")
+    fun debugEnd(params: DebugSessionParams) = debugSessions.end(params)
 
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
     @JsonRequest("xtc/rename")

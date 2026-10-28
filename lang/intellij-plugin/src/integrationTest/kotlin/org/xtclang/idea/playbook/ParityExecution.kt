@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
@@ -8,6 +9,7 @@ import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /** Embedded build and run through Build Project, Ecstasy run configurations, Stop, console input and the Run lens. */
@@ -173,12 +175,18 @@ internal fun ParityScenarios.executionCases() {
                         with(driver) { withContext(OnDispatcher.EDT) { execution.runners(project, module) } },
                     ).asJsonObject
             check(runners["run"].asBoolean) { "Run must be available: $runners" }
-            check(!runners["debug"].asBoolean) { "Without a debugger, Debug must not be offered: $runners" }
+            check(runners["debug"].asBoolean) { "Debug must be offered with the embedded compiler: $runners" }
             execution.run(project, module, uri(data.string("file")), "")
             awaitUi("embedded run finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
             check(
                 execution.exitCode(module) == data.int("exitCode"),
             ) { "Exit code ${execution.exitCode(module)}: ${execution.output(module)}" }
+
+            // Debug runs the module in a debug session in the language server, to the same exit code
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            debugger.debug(project, module, uri(data.string("file")), 0)
+            val ended = debugger.awaitState(project, module, "debug session ends with the program", 60.seconds) { it.has("exitCode") }
+            check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
         }
     }
 }
@@ -412,6 +420,57 @@ internal fun ParityScenarios.runEntryCases() {
             generated.toFile().deleteRecursively()
         }
     }
+
+    case("X304") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            val line = data.int("breakpointLine")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), line)
+                val stopped =
+                    debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                        it["suspended"]?.asBoolean == true
+                    }
+                check(stopped.int("line") == line && stopped.string("file").endsWith(data.string("file"))) { "Stopped at: $stopped" }
+                val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
+                    val frame = frames.getOrNull(index)
+                    check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
+                        "Frame $index is not ${expected[0].asString} at ${expected[1].asInt}: $frames"
+                    }
+                }
+                val console = stopped.string("console")
+                check(data.string("before") in console && data.string("after") !in console) { "Console while paused: $console" }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                check(data.string("after") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+}
+
+/** Waits until the module's debug session satisfies [accept], and returns that state. */
+private fun DebugSessionProbe.awaitState(
+    project: Project,
+    module: String,
+    message: String,
+    timeout: Duration,
+    accept: (JsonObject) -> Boolean,
+): JsonObject {
+    var state = JsonObject()
+    awaitUi(message, timeout, { "Debug session: $state" }) {
+        state = JsonParser.parseString(state(project, module)).asJsonObject
+        accept(state)
+    }
+    return state
 }
 
 /** What the Build tool window shows when the embedded compiler takes Build Project. */
@@ -430,6 +489,29 @@ private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> 
     } finally {
         with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, previous) } }
     }
+}
+
+/** Debug of an Ecstasy Application configuration, through LSP4IJ's DAP client, recorded by the IDE-side probe. */
+@Remote("org.xtclang.idea.playbook.probe.DebugSessionUi", plugin = "org.xtclang.playbook.probe")
+internal interface DebugSessionProbe {
+    fun debug(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+    )
+
+    fun state(
+        project: Project,
+        module: String,
+    ): String
+
+    fun resume(
+        project: Project,
+        module: String,
+    )
+
+    fun clearBreakpoints(project: Project)
 }
 
 /** The Run icons in an editor's gutter, as "Run Module@line", and a click on one. */

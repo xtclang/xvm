@@ -4,6 +4,11 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
+import org.xvm.debug.BreakpointState
+import org.xvm.debug.FrameState
+import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StopState
+import org.xvm.debug.ThreadState
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.IOException
@@ -49,15 +54,28 @@ internal class RunWorkerProcess(
             code: Long?,
             error: String?,
         )
+
+        /** How one file's breakpoints were installed, before a run under the debugger started. */
+        fun breakpoints(
+            path: String,
+            states: List<BreakpointState>,
+        ) {}
+
+        /** A run under the debugger stopped; it waits until [resume]. */
+        fun stopped(stop: StopState) {}
     }
 
-    /** What to run: the directories holding the module and its dependencies, and its entry point. */
+    /**
+     * What to run: the directories holding the module and its dependencies, and its entry point; with [breakpoints],
+     * the run is under the runtime debugger, with those breakpoints installed before its first line.
+     */
     data class Request(
         val modulePath: List<String>,
         val module: String,
         val method: String,
         val args: List<String>,
         val rootDir: String?,
+        val breakpoints: List<SourceBreakpoints>? = null,
     )
 
     /**
@@ -145,6 +163,16 @@ internal class RunWorkerProcess(
     private val listeners = ConcurrentHashMap<Long, Listener>()
     private val hosts = ConcurrentHashMap<Long, Worker>()
     private val nextId = AtomicLong(1)
+
+    /** Requests to a run's debugger that wait for the worker's reply, by request number. */
+    private val pending = ConcurrentHashMap<Long, Pending>()
+    private val nextRequest = AtomicLong(1)
+
+    private class Pending(
+        val run: Long,
+        val reply: CompletableFuture<JsonObject>,
+    )
+
     private val expected by lazy(expected)
     private val timers =
         Executors.newSingleThreadScheduledExecutor { Thread(it, "xtc-run-worker-timers").apply { isDaemon = true } }
@@ -185,6 +213,7 @@ internal class RunWorkerProcess(
                             addProperty("method", request.method)
                             add("args", JsonArray().apply { request.args.forEach(::add) })
                             request.rootDir?.let { addProperty("rootDir", it) }
+                            request.breakpoints?.let { add("breakpoints", RunWorkerDebug.sources(it)) }
                         },
                     )
                 if (sent) null else "The execution worker could not be started".also { worker.end(it) }
@@ -217,6 +246,66 @@ internal class RunWorkerProcess(
                 logger.warn("run {} did not stop within {}; ending its execution worker", id, limits.stop)
                 worker.end("The program did not stop within ${limits.stop}, so its execution worker was ended")
             }
+        }
+    }
+
+    /** Replaces one file's breakpoints in a run under the debugger; answers how they were installed. */
+    fun setBreakpoints(
+        id: Long,
+        breakpoints: SourceBreakpoints,
+    ): CompletableFuture<List<BreakpointState>> =
+        request("setBreakpoints", id) {
+            val source = RunWorkerDebug.source(breakpoints)
+            source.keySet().forEach { add(it, source[it]) }
+        }.thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
+
+    /** The fibers of a stopped run; none while it runs. */
+    fun threads(id: Long): CompletableFuture<List<ThreadState>> =
+        request("threads", id).thenApply { RunWorkerDebug.threadsOf(it.getAsJsonArray("threads")) }
+
+    /** A stopped fiber's stack, innermost frame first. */
+    fun stackTrace(
+        id: Long,
+        thread: Int,
+    ): CompletableFuture<List<FrameState>> =
+        request("stackTrace", id) { addProperty("thread", thread) }.thenApply { RunWorkerDebug.framesOf(it.getAsJsonArray("frames")) }
+
+    /** Resumes a stopped run. */
+    fun resume(id: Long) = command("continue", id)
+
+    /**
+     * Sends a request to a run's debugger and answers with the worker's reply; fails when the run has no live
+     * worker, ends before the reply, or its worker answers with an error.
+     */
+    private fun request(
+        name: String,
+        id: Long,
+        fill: JsonObject.() -> Unit = {},
+    ): CompletableFuture<JsonObject> {
+        val number = nextRequest.getAndIncrement()
+        val reply = CompletableFuture<JsonObject>()
+        pending[number] = Pending(id, reply)
+        val sent =
+            synchronized(lock) {
+                val worker = hosts[id]?.takeIf { it.process.isAlive }
+                worker != null &&
+                    worker.send(
+                        JsonObject().apply {
+                            addProperty("command", name)
+                            addProperty("id", id)
+                            addProperty("request", number)
+                            fill()
+                        },
+                    )
+            }
+        if (!sent) pending.remove(number)?.reply?.completeExceptionally(IllegalStateException("The program is not running"))
+        return reply
+    }
+
+    /** Fails the requests still waiting for a reply from a run that has ended. */
+    private fun abandon(id: Long) {
+        pending.entries.removeIf { (_, request) ->
+            (request.run == id).also { if (it) request.reply.completeExceptionally(IllegalStateException("The program has ended")) }
         }
     }
 
@@ -313,10 +402,25 @@ internal class RunWorkerProcess(
                         "exit" ->
                             if (id != null) {
                                 finished(worker, id)
+                                abandon(id)
                                 listeners.remove(id)?.exited(
                                     event["code"]?.asLong,
                                     event["error"]?.takeUnless { it.isJsonNull }?.asString,
                                 )
+                            }
+
+                        "breakpoints" ->
+                            id
+                                ?.let(
+                                    listeners::get,
+                                )?.breakpoints(event["path"].asString, RunWorkerDebug.statesOf(event.getAsJsonArray("breakpoints")))
+
+                        "stopped" -> id?.let(listeners::get)?.stopped(RunWorkerDebug.stopOf(event))
+
+                        "reply" ->
+                            event["request"]?.asLong?.let(pending::remove)?.reply?.let { reply ->
+                                val error = event["error"]?.asString
+                                if (error == null) reply.complete(event) else reply.completeExceptionally(IllegalStateException(error))
                             }
 
                         "usage" ->
@@ -467,7 +571,10 @@ internal class RunWorkerProcess(
         ids: Collection<Long>,
         reason: String,
     ) {
-        ids.forEach { id -> listeners.remove(id)?.exited(null, reason) }
+        ids.forEach { id ->
+            abandon(id)
+            listeners.remove(id)?.exited(null, reason)
+        }
     }
 
     private companion object {
