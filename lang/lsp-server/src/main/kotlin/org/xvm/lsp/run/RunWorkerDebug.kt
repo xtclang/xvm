@@ -10,6 +10,7 @@ import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
@@ -91,6 +92,32 @@ internal object RunWorkerDebug {
             }
         }
 
+    fun modules(modules: List<ModuleState>) =
+        JsonArray().apply {
+            modules.forEach { module ->
+                add(
+                    JsonObject().apply {
+                        addProperty("name", module.name)
+                        module.version?.let { addProperty("version", it) }
+                        module.sourceDir?.let { addProperty("sourceDir", it) }
+                        add("sources", JsonArray().apply { module.sources.forEach(::add) })
+                        addProperty("own", module.own)
+                    },
+                )
+            }
+        }
+
+    fun modulesOf(json: JsonArray): List<ModuleState> =
+        json.map { it.asJsonObject }.map { module ->
+            ModuleState(
+                module["name"].asString,
+                module["version"]?.asString,
+                module["sourceDir"]?.asString,
+                module["sources"].asJsonArray.map { it.asString },
+                module["own"].asBoolean,
+            )
+        }
+
     fun threadsOf(json: JsonArray): List<ThreadState> =
         json.map { it.asJsonObject }.map { ThreadState(it["id"].asInt, it["name"].asString) }
 
@@ -103,13 +130,24 @@ internal object RunWorkerDebug {
                         addProperty("name", frame.name)
                         frame.path?.let { addProperty("path", it) }
                         addProperty("line", frame.line)
+                        frame.module?.let { addProperty("module", it) }
+                        frame.source?.let { addProperty("source", it) }
                     },
                 )
             }
         }
 
     fun framesOf(json: JsonArray): List<FrameState> =
-        json.map { it.asJsonObject }.map { FrameState(it["id"].asInt, it["name"].asString, it["path"]?.asString, it["line"].asInt) }
+        json.map { it.asJsonObject }.map {
+            FrameState(
+                it["id"].asInt,
+                it["name"].asString,
+                it["path"]?.asString,
+                it["line"].asInt,
+                it["module"]?.asString,
+                it["source"]?.asString,
+            )
+        }
 
     fun scopes(scopes: List<ScopeState>) =
         JsonArray().apply {

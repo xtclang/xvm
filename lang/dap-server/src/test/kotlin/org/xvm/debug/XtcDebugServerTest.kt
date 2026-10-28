@@ -18,6 +18,8 @@ import org.eclipse.lsp4j.debug.ExceptionInfoArguments
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InvalidatedEventArguments
+import org.eclipse.lsp4j.debug.LoadedSourcesArguments
+import org.eclipse.lsp4j.debug.ModulesArguments
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
@@ -58,6 +60,10 @@ class XtcDebugServerTest {
     private companion object {
         /** The event that tells a client to read the variables again. */
         const val INVALIDATED = "invalidated variables"
+
+        /** A bundled library's module, and one of its source paths. */
+        const val ECSTASY = "ecstasy.xtclang.org"
+        const val COLLECTION = "ecstasy/collections/Collection.x"
     }
 
     private val runs = Runs()
@@ -86,6 +92,8 @@ class XtcDebugServerTest {
                 "supportsSetVariable",
                 "supportsCompletionsRequest",
                 "completionTriggerCharacters",
+                "supportsModulesRequest",
+                "supportsLoadedSourcesRequest",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -578,6 +586,64 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a frame of a bundled library's code shows the source bundled with it, and the program's frame its own file`() {
+        runs.frames =
+            listOf(
+                FrameState(1, "Collection.forEach", "/build/lib_ecstasy/ecstasy/collections/Collection.x", 222, ECSTASY, COLLECTION),
+                FrameState(2, "App.run", "/work/App.x", 5, "App", "App.x"),
+            )
+        runs.libraries = mapOf((ECSTASY to COLLECTION) to "/bundled/ecstasy/collections/Collection.x")
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).get(10, SECONDS).stackFrames
+        assertThat(frames.map { it.source.path to it.source.name })
+            .containsExactly("/bundled/ecstasy/collections/Collection.x" to "Collection.x", "/work/App.x" to "App.x")
+        assertThat(frames.map { it.line }).containsExactly(222, 5)
+    }
+
+    @Test
+    fun `modules and loaded sources are the program's own and its libraries', a bundled library's sources bundled with it`() {
+        runs.modules =
+            listOf(
+                ModuleState("App", null, "/work/", listOf("App.x"), true),
+                ModuleState(ECSTASY, "1.0", "/build/lib_ecstasy/", listOf(COLLECTION, "ecstasy/Object.x"), false),
+            )
+        runs.libraries = mapOf((ECSTASY to COLLECTION) to "/bundled/ecstasy/collections/Collection.x")
+        val capabilities = server.initialize(InitializeRequestArguments()).get(10, SECONDS)
+        assertThat(capabilities.supportsModulesRequest).isTrue()
+        assertThat(capabilities.supportsLoadedSourcesRequest).isTrue()
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        // a page of one, the second
+        val modules =
+            server
+                .modules(
+                    ModulesArguments().apply {
+                        startModule = 1
+                        moduleCount = 1
+                    },
+                ).get(10, SECONDS)
+        assertThat(modules.totalModules).isEqualTo(2)
+        assertThat(modules.modules.map { listOf(it.id.right, it.name, it.path, it.version, it.isUserCode) })
+            .containsExactly(listOf(ECSTASY, ECSTASY, "/build/lib_ecstasy/", "1.0", false))
+
+        // a library source that is not bundled is where the library was built
+        assertThat(
+            server
+                .loadedSources(LoadedSourcesArguments())
+                .get(10, SECONDS)
+                .sources
+                .map { it.path to it.name },
+        ).containsExactly(
+            "/work/App.x" to "App.x",
+            "/bundled/ecstasy/collections/Collection.x" to "Collection.x",
+            "/build/lib_ecstasy/ecstasy/Object.x" to "Object.x",
+        )
+    }
+
+    @Test
     fun `a failed build reports its diagnostics and fails the launch, which runs nothing`() {
         runs.result = LaunchResult(null, "/work/App.x:2:5: error: no such type [COMPILER-42]")
         server.configurationDone(ConfigurationDoneArguments())
@@ -641,6 +707,9 @@ class XtcDebugServerTest {
     fun `requests whose arguments are optional work without them, as VS Code sends configurationDone`() {
         server.configurationDone(null).get(10, SECONDS)
         server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        // VS Code sends a custom request with empty arguments as one without them
+        assertThat(server.modules(null).get(10, SECONDS).modules).isNotNull()
+        assertThat(server.loadedSources(null).get(10, SECONDS).sources).isNotNull()
         server.terminate(null).get(10, SECONDS)
         runs.events.exited(null, "Stopped.")
         server.disconnect(null).get(10, SECONDS)
@@ -997,12 +1066,24 @@ class XtcDebugServerTest {
 
         override fun threads(runId: String) = CompletableFuture.completedFuture(fibers)
 
+        var frames = listOf(FrameState(1, "App.twice", "/work/App.x", 11), FrameState(2, "App.run", "/work/App.x", 5))
+
+        /** The bundled source files of library sources, by module and source path. */
+        var libraries = mapOf<Pair<String, String>, String>()
+
         override fun stackTrace(
             runId: String,
             threadId: Int,
-        ) = CompletableFuture.completedFuture(
-            listOf(FrameState(1, "App.twice", "/work/App.x", 11), FrameState(2, "App.run", "/work/App.x", 5)),
-        )
+        ) = CompletableFuture.completedFuture(frames)
+
+        override fun librarySource(
+            module: String,
+            path: String,
+        ) = libraries[module to path]
+
+        var modules = listOf<ModuleState>()
+
+        override fun modules(runId: String) = CompletableFuture.completedFuture(modules)
 
         override fun scopes(
             runId: String,
