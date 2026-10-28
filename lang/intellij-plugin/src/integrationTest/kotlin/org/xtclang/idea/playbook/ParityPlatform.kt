@@ -844,6 +844,9 @@ internal fun ParityScenarios.platformCases() {
     case("X129") { data ->
         val root = with(driver) { Path.of(singleProject().getBasePath()) }
         val report = root.resolve(".gradle/xtc/lsp-model.json")
+        // Gradle's project cache, which holds the report; X303 makes its project in a project root without it.
+        val cache = root.resolve(".gradle")
+        val made = !Files.exists(cache)
         val model =
             JsonParser
                 .parseString(
@@ -915,6 +918,7 @@ internal fun ParityScenarios.platformCases() {
             clean(document)
         } finally {
             Files.deleteIfExists(report)
+            if (made) cache.toFile().deleteRecursively()
             with(driver) {
                 withContext(OnDispatcher.EDT) {
                     utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
