@@ -59,7 +59,7 @@ fun Driver.signature(
             val labels =
                 help?.getSignatures()?.map { item ->
                     "${item.getLabel()} active=${item.getActiveParameter()} parameters=" +
-                        item.getParameters().map { it.getLabel().getLeft() }
+                        item.getParameters()?.map { it.getLabel().getLeft() }
                 }
             "Native future: $future; signatures=$labels activeSignature=${help?.getActiveSignature()} " +
                 "global=${help?.getActiveParameter()}; rendered hints: ${renderedHints()}"
@@ -76,7 +76,8 @@ fun Driver.signature(
                 val label = item.getLabel()
                 Signature(
                     label,
-                    item.getParameters().map { parameter ->
+                    // a signature without parameter metadata has no parameters
+                    item.getParameters().orEmpty().map { parameter ->
                         val name = parameter.getLabel()
                         name.getLeft()
                             ?: name.getRight().let {

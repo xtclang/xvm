@@ -125,7 +125,7 @@ interface SignatureInformation {
 
     fun getActiveParameter(): Int?
 
-    fun getParameters(): List<ParameterInformation>
+    fun getParameters(): List<ParameterInformation>?
 }
 
 /** Exposes a signature parameter's label through the IDE driver. */
