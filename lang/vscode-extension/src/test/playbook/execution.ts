@@ -1193,6 +1193,67 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X322', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const started = (update: ExecutionUpdate) => update.text.includes(data.started) && !finished(update);
+            for (let round = 1; round <= data.rounds; round++) {
+                // a run to its exit, from the Run lens command
+                const done = await executions.start('run', data.module,
+                    () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, `Run ${round} finishes`);
+                assert.strictEqual(done.exitCode, 0, done.text);
+                assert.ok(done.text.includes(data.done), done.text);
+
+                // a run that loops until Stop ends it
+                const task = createXtcRunTask(
+                    { type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args: [data.spin], mode: 'embedded' }, getClient);
+                await executions.start('run', data.module, () => vscode.tasks.executeTask(task), started, `Looping run ${round} starts`);
+                const execution = vscode.tasks.taskExecutions.find(item => item.task.name === `Run ${data.module}`);
+                assert.ok(execution, `Looping run ${round} is an active task`);
+                execution.terminate();
+                const stopped = await executions.await('run', data.module, finished, `Stopped run ${round} reports its exit`);
+                assert.ok(!stopped.text.includes(data.done), stopped.text);
+
+                // a debug session that stops at a breakpoint and continues to its exit
+                const sent: DapMessage[] = [];
+                const tracker = trackDebugSessions(sent);
+                let ended = false;
+                const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                    if (session.type === 'xtc') ended = true;
+                });
+                const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+                vscode.debug.addBreakpoints([breakpoint]);
+                try {
+                    assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                        { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                    await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, `Debug session ${round} stops at the breakpoint`);
+                    // VS Code focuses the stopped fiber once it has its stack, which Continue then resumes
+                    await eventually(async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace').length,
+                        count => count > 0, `VS Code shows debug session ${round}'s stack`);
+                    assert.ok(vscode.debug.activeDebugSession, `Debug session ${round} is open while it is stopped`);
+                    await vscode.commands.executeCommand('workbench.action.debug.continue');
+                    await eventually(async () => ended, value => value, `Debug session ${round} runs to its exit`);
+                    assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, 0, JSON.stringify(sent));
+                    assert.ok(dapOutput(sent).includes(data.done), dapOutput(sent));
+                } finally {
+                    vscode.debug.removeBreakpoints([breakpoint]);
+                    // a round that fails while its program is stopped leaves no session for the next case
+                    const open = vscode.debug.activeDebugSession;
+                    if (!ended && open) await vscode.debug.stopDebugging(open);
+                    termination.dispose();
+                    tracker.dispose();
+                }
+
+                // the round leaves no run task and no debug session open
+                await eventually(async () => vscode.tasks.taskExecutions.filter(item => item.task.definition.type === 'xtc').length,
+                    count => count === 0, `Round ${round} leaves no run task`);
+                await eventually(async () => vscode.debug.activeDebugSession, session => session === undefined, `Round ${round} leaves no debug session`);
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1220,7 +1281,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X321 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X322 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;

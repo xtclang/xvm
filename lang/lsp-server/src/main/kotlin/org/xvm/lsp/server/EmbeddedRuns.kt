@@ -3,6 +3,7 @@ package org.xvm.lsp.server
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
+import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
 import org.xvm.debug.CompletionsState
@@ -181,6 +182,12 @@ internal class EmbeddedRuns(
                 val build = response(result)
                 val target = result.modules.lastOrNull()
                 if (!result.succeeded || target == null) {
+                    logger.info(
+                        "run not started: run={} build={} outcome={}",
+                        runId,
+                        result.id,
+                        if (result.cancelled) "cancelled" else "failed",
+                    )
                     synchronized(inputLock) { waiting.remove(runId) }
                     return@thenCompose CompletableFuture.completedFuture(RunResponse(null, build))
                 }
@@ -201,6 +208,7 @@ internal class EmbeddedRuns(
     ) {
         val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
         if (stoppedEarly) {
+            logger.info("run stopped before it started: run={} build={}", runId, result.id)
             events.exited(null, STOPPED_BEFORE_START)
             return
         }
@@ -222,6 +230,13 @@ internal class EmbeddedRuns(
                         placed(file, lines)
                     },
             )
+        logger.info(
+            "run starting: run={} build={} artifact={} debug={}",
+            runId,
+            result.id,
+            result.modules.lastOrNull { it.name == module }?.logged ?: module,
+            setup != null,
+        )
         // a run can end before start returns, e.g. while another program still runs
         val ended = AtomicBoolean()
         val id =
@@ -233,6 +248,7 @@ internal class EmbeddedRuns(
                     params.args.orEmpty(),
                     params.workingDirectory ?: result.workingDirectory,
                     placed,
+                    runId,
                 ),
                 object : RunWorkerProcess.Listener {
                     override fun output(text: String) = events.output(text)
@@ -471,7 +487,7 @@ internal class EmbeddedRuns(
         workerIds[runId]?.let(request) ?: CompletableFuture.failedFuture(IllegalStateException("The program is not running"))
 
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
-    internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + worker.tracked()
+    internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + worker.tracked()
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun workerPids(): List<Long> = worker.workerPids()
@@ -498,6 +514,8 @@ internal class EmbeddedRuns(
         )
 
     companion object {
+        private val logger = LoggerFactory.getLogger(EmbeddedRuns::class.java)
+
         /** The exit of a run stopped while its module was still building. */
         const val STOPPED_BEFORE_START = "Stopped before the program started."
 
