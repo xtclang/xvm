@@ -160,10 +160,7 @@ open class LanguageServiceConfigurable(
         val editable = project == null || !inherit.isSelected
         adapter.isEnabled = editable
         synchronization.isEnabled = editable
-        // TODO LSP4IJ: UP02 — enable server save formatting when native willSaveWaitUntil is implemented.
-        saving.isEnabled = false
-        saving.toolTipText =
-            "LSP4IJ does not implement server save edits. Use native Actions on Save."
+        saving.isEnabled = editable
         hints.isEnabled = editable
         references.isEnabled = editable
     }

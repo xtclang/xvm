@@ -1,5 +1,6 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.codeInsight.actions.onSave.FormatOnSaveOptions
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
@@ -17,6 +18,7 @@ import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
+import org.xtclang.idea.XtcFileType
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
@@ -191,9 +193,10 @@ class XtcLspConnectionProvider(
     override fun getInitializationOptions(rootUri: VirtualFile?): Any =
         LanguageServiceSettings
             .validated(project)
-            // TODO LSP4IJ: UP02 — native willSaveWaitUntil is absent; keep server save edits disabled.
-            .copy(saveFormatting = "editor")
-            .initializationOptions() + LSP4IJ_CODE_ACTIONS
+            .initializationOptions(
+                // native Actions on Save owns formatting while it reformats Ecstasy files
+                FormatOnSaveOptions.getInstance(project).let { it.isRunOnSaveEnabled && it.isFileTypeSelected(XtcFileType) },
+            ) + LSP4IJ_CODE_ACTIONS
 
     override fun start() {
         logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")
