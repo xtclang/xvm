@@ -1048,13 +1048,11 @@ internal fun ParityScenarios.runEntryCases() {
                 val chosen = JsonParser.parseString(debugger.complete(project, module, typed, name)).asJsonObject
                 val filtered = chosen.getAsJsonArray("items").map { it.asString }
                 check(name in filtered && members.drop(1).filter { it != name }.none { it in filtered }) { "$typed offers $filtered" }
-                // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment fails IntelliJ's Document/PSI check once it is
-                //  edited, so the chosen name replaces what is typed only in a physical fragment, which LSP4IJ #1763
-                //  and the plugin's PhysicalExpressionFragments make
-                if (chosen["inserted"].asBoolean) {
-                    check(offered.string("text") == members.first() + members[1]) { "Choosing ${members[1]}: $offered" }
-                    check(chosen.string("text") == completed) { "Completing $typed with $name: $chosen" }
+                // the chosen name replaces what is typed of it
+                check(offered["inserted"].asBoolean && offered.string("text") == members.first() + members[1]) {
+                    "Choosing ${members[1]}: $offered"
                 }
+                check(chosen["inserted"].asBoolean && chosen.string("text") == completed) { "Completing $typed with $name: $chosen" }
 
                 debugger.resume(project, module)
                 val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", HANG_LIMIT) { it.has("exitCode") }
