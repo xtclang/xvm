@@ -549,8 +549,8 @@ passes with the workaround disabled. The gates are in
   full for the run, and so do X259, X74 and X150. The UP25 gate passes. Failed: X323, as its UP44
   gate does once #1773 is in; X257 (the UP26 gate) and X324, which fail only in the full run (see
   [test harness stability](#test-harness-stability)). No IDE exception.
-- [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0` (34 commits on errs
-  `4e3b1b65e7`, tip `d5d64a8caf`, 2026-10-28). It pins 0.30.0 and removes, each in its own commit,
+- [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0` (35 commits on errs
+  `4e3b1b65e7`, tip `a67965ede2`, 2026-10-28). It pins 0.30.0 and removes, each in its own commit,
   the bridges 0.30.0 makes unnecessary; the items below name them. It is checked against a plugin
   built from LSP4IJ `main` `44675cb3` with #1790 and #1791 before their CodeRabbit fixes. Full
   IntelliJ run at `56c699eb5a` (`run-11663425380226624296`): 307 passed, 4 partial (X286-X288,
@@ -563,11 +563,12 @@ passes with the workaround disabled. The gates are in
   `e317d03c11`, which also retires the replacement gates); X132 formats two ranges, X131 opens a
   symbol with Go to Symbol and X42 shows inlay tooltips (UP54, UP59, UP60, `a901032102`). The server
   now omits a signature's `parameters` without their metadata, which X20 needs with LSP4IJ's handler
-  (`df11487151`). Kept on purpose: UP03, UP04's rename guard, UP12, UP13 and both halves of UP14.
-  `verifyPlugin` resolves LSP4IJ from the Marketplace, so it can check the branch only after the
-  release; against 0.21.0 it fails on #1786's `LSPFormattingParams` constructor. The internal API
-  list is reviewed against the candidate's source (`c81995303f`). To do after the release: build
-  against it, pass `verifyPlugin` and a full native run, and merge the branch.
+  (`df11487151`); VS Code's X20 expects that, and X15-X20 pass in VS Code (`a67965ede2`). Kept on
+  purpose: UP03, UP04's rename guard, UP12, UP13 and both halves of UP14. `verifyPlugin` resolves
+  LSP4IJ from the Marketplace, so it can check the branch only after the release; against 0.21.0 it
+  fails on #1786's `LSPFormattingParams` constructor. The internal API list is reviewed against the
+  candidate's source (`c81995303f`). To do after the release: build against it, pass `verifyPlugin`
+  and a full native run, and merge the branch.
 - [ ] UP01 (#1696): remove the `ConnectionLifetime` guard in `XtcLspServerSupportProvider`; gate:
   `ConnectionLifetimeTest`, the packaged process regressions, START/STARTUP and
   START/START_PROJECTS. On the 0.30.0 branch: `9ca54e5fe4`; `ConnectionProcessTest` drives the
