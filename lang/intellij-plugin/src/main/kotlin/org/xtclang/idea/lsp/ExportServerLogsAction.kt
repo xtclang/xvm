@@ -41,7 +41,7 @@ class ExportServerLogsAction : DumbAwareAction() {
             ApplicationManager.getApplication().invokeLater {
                 if (!project.isDisposed) {
                     Notification(
-                        "XTC Language Server",
+                        "Ecstasy Language Server",
                         "Ecstasy server logs",
                         if (failure ==
                             null
