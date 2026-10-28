@@ -1698,6 +1698,62 @@ export function debugSessionCases(): void {
             }
         });
     });
+
+    playbook('X331', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in add()');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
+                const frame = ((await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; line: number }[])[0];
+
+                // what VS Code asks the language server for as it shows the values beside the code
+                const stopped = new vscode.Range(frame.line - 1, 0, frame.line - 1, 0);
+                const all = new vscode.Range(0, 0, document.lineCount, 0);
+                const values = await vscode.commands.executeCommand<vscode.InlineValue[]>('vscode.executeInlineValueProvider',
+                    document.uri, all, { frameId: frame.id, stoppedLocation: stopped });
+                const lookups = values.map(value => value as vscode.InlineValueVariableLookup);
+                assert.deepStrictEqual(lookups.map(lookup => [lookup.variableName, lookup.range.start.line + 1]), data.inlineValues);
+                assert.ok(lookups.every(lookup => lookup.caseSensitiveLookup), JSON.stringify(lookups));
+
+                // each name has its value in the stopped frame, where VS Code looks it up
+                const scopes = (await session.customRequest('scopes', { frameId: frame.id })).scopes as { variablesReference: number }[];
+                const locals = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables as DapVariable[];
+                for (const [name, value] of Object.entries(data.frameValues as Record<string, string>)) {
+                    assert.strictEqual(locals.find(variable => variable.name === name)?.value, value, JSON.stringify(locals));
+                }
+
+                vscode.debug.removeBreakpoints([breakpoint]);
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1725,7 +1781,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X330 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X331 cases check. */
 interface DapMessage {
     seq?: number;
     request_seq?: number;
