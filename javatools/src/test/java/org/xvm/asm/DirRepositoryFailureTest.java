@@ -1,5 +1,6 @@
 package org.xvm.asm;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.nio.ByteBuffer;
@@ -8,6 +9,8 @@ import java.nio.file.Path;
 
 import java.time.Duration;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -19,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,24 +31,24 @@ class DirRepositoryFailureTest {
     @TempDir
     Path directory;
 
+    private final Map<File, IOException> reports = new HashMap<>();
+
     @Test
-    void corruptModuleRetainsItsFailureAndCanBeRepaired() throws IOException {
+    void unreadableCandidateIsReportedAndCanBeRepaired() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new DirRepository(directory.toFile(), true);
+        var repository = new DirRepository(directory.toFile(), true, reports::put);
 
-        assertTrue(repository.getReadFailures().isEmpty(), "inspection must not initiate a scan");
+        assertTrue(reports.isEmpty(), "construction must not initiate a scan");
         assertTrue(repository.getModuleNames().isEmpty());
         assertNull(repository.loadModule("Broken"));
-        var failures = repository.getReadFailures();
-        assertEquals(Set.of(file.toFile()), failures.keySet());
-        assertNotNull(failures.get(file.toFile()));
-        assertThrows(UnsupportedOperationException.class, failures::clear);
+        assertEquals(Set.of(file.toFile()), reports.keySet());
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         new FileStructure("Broken").writeTo(file.toFile());
         assertNotNull(repository.loadModule("Broken"));
-        assertTrue(repository.getReadFailures().isEmpty());
-        assertEquals(1, failures.size(), "an earlier snapshot must not change");
+        assertTrue(reports.isEmpty());
     }
 
     @Test
@@ -52,12 +56,12 @@ class DirRepositoryFailureTest {
         Path old = directory.resolve("Old.xtc");
         writeUnsupportedModule(old, "Old");
         new FileStructure("Good").writeTo(directory.resolve("Good.xtc").toFile());
-        var repository = new DirRepository(directory.toFile(), true);
+        var repository = new DirRepository(directory.toFile(), true, reports::put);
 
         assertNotNull(repository.loadModule("Good"));
         assertEquals(Set.of("Good"), repository.getModuleNames());
         assertNull(repository.loadModule("Unknown"));
-        assertTrue(repository.getReadFailures().get(old.toFile()).getMessage()
+        assertTrue(reports.get(old.toFile()).getMessage()
                 .contains("Unsupported .xtc version"));
     }
 
@@ -73,47 +77,47 @@ class DirRepositoryFailureTest {
         good.getModule().setVersion(version);
         good.writeTo(second.resolve("Good.xtc").toFile());
         ModuleRepository candidate = singleFile
-                ? new FileRepository(old.toFile(), true)
-                : new DirRepository(first.toFile(), true);
-        var repository = new LinkedRepository(candidate, new DirRepository(second.toFile(), true));
+                ? new FileRepository(old.toFile(), true, reports::put)
+                : new DirRepository(first.toFile(), true, reports::put);
+        var repository = new LinkedRepository(candidate, new DirRepository(second.toFile(), true, reports::put));
 
         assertNotNull(repository.loadModule("Good"));
         assertEquals(Set.of("Good"), repository.getModuleNames());
         assertTrue(repository.getAvailableVersions("Good").contains(version));
         assertNotNull(repository.loadModule("Good", version, true));
-        var failures = repository.getReadFailures();
-        assertEquals(Set.of(old.toFile()), failures.keySet());
-        assertTrue(failures.get(old.toFile()).getMessage().contains("Unsupported .xtc version"));
-        assertThrows(UnsupportedOperationException.class, failures::clear);
+        assertEquals(Set.of(old.toFile()), reports.keySet());
+        assertTrue(reports.get(old.toFile()).getMessage().contains("Unsupported .xtc version"));
     }
 
     @Test
-    void unsuccessfulLinkedSearchRetainsFailuresFromAllCandidates() throws IOException {
+    void linkedSearchReportsCandidateReadsWithoutAttributingTheMissingModule() throws IOException {
         Path first = Files.createDirectory(directory.resolve("first"));
         Path second = Files.createDirectory(directory.resolve("second"));
         Path old = first.resolve("Old.xtc");
         Path broken = second.resolve("Broken.xtc");
         writeUnsupportedModule(old, "Old");
         Files.writeString(broken, "not a compiled module");
-        var repository = new LinkedRepository(new DirRepository(first.toFile(), true),
-                new DirRepository(second.toFile(), true));
+        var repository = new LinkedRepository(new DirRepository(first.toFile(), true, reports::put),
+                new DirRepository(second.toFile(), true, reports::put));
 
         assertNull(repository.loadModule("Missing"));
-        assertEquals(Set.of(old.toFile(), broken.toFile()), repository.getReadFailures().keySet());
+        assertEquals(Set.of(old.toFile(), broken.toFile()), reports.keySet());
     }
 
     @Test
-    void cachedFailureIsRereadByANewRepositoryInstance() throws IOException {
+    void cachedFailureIsRetriedAndReportedByANewRepositoryInstance() throws IOException {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
-        assertTrue(new DirRepository(directory.toFile(), true).getModuleNames().isEmpty());
-        var repository = new DirRepository(directory.toFile(), true);
+        assertTrue(new DirRepository(directory.toFile(), true, reports::put).getModuleNames().isEmpty());
+        reports.clear();
+        var repository = new DirRepository(directory.toFile(), true, reports::put);
 
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
+        reports.clear();
         new FileStructure("Broken").writeTo(file.toFile());
         assertNotNull(repository.loadModule("Broken"));
-        assertTrue(repository.getReadFailures().isEmpty());
+        assertTrue(reports.isEmpty());
     }
 
     @Test
@@ -123,10 +127,11 @@ class DirRepositoryFailureTest {
         byte[] valid = Files.readAllBytes(file);
         writeUnsupportedModule(file, "Good");
         var timestamp = Files.getLastModifiedTime(file);
-        var repository = new DirRepository(directory.toFile(), true);
+        var repository = new DirRepository(directory.toFile(), true, reports::put);
         assertNull(repository.loadModule("Good"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         Files.write(file, valid);
         Files.setLastModifiedTime(file, timestamp);
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
@@ -134,20 +139,32 @@ class DirRepositoryFailureTest {
                 Thread.sleep(10);
             }
         });
-        assertTrue(repository.getReadFailures().isEmpty());
+        assertTrue(reports.isEmpty());
     }
 
     @Test
-    void removingAnUnreadableFileClearsItsFailure() throws IOException {
+    void removedCandidatesProduceNoFurtherReports() throws IOException {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new DirRepository(directory.toFile(), true);
+        var repository = new DirRepository(directory.toFile(), true, reports::put);
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         Files.delete(file);
         assertTrue(repository.getModuleNames().isEmpty());
-        assertTrue(repository.getReadFailures().isEmpty());
+        assertTrue(reports.isEmpty());
+    }
+
+    @Test
+    void observerFailuresAreNotSwallowedAsUnavailableModules() throws IOException {
+        Files.writeString(directory.resolve("Broken.xtc"), "unreadable candidate");
+        var failure = new IllegalStateException("observer failed");
+        var repository = new DirRepository(directory.toFile(), true, (file, cause) -> {
+            throw failure;
+        });
+
+        assertSame(failure, assertThrows(IllegalStateException.class, () -> repository.loadModule("Missing")));
     }
 
     private static void writeUnsupportedModule(Path file, String name) throws IOException {
