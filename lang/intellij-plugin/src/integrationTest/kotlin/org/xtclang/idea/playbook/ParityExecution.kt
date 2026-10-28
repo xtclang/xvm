@@ -589,6 +589,30 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
+    case("X309") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            // no breakpoint, and the program throws nothing, so a stop is the configuration's stop on entry
+            debugger.debugFromEntry(project, module, uri(data.string("file")))
+            val stopped =
+                debugger.awaitState(project, module, "the program stops at its first line", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+            val top = stopped.getAsJsonArray("frames").first().asJsonObject
+            check(data.string("frame") in top.string("name") && top.int("line") <= data.int("lastLine")) { "Stopped at: $stopped" }
+            check(data.string("output") !in stopped.string("console")) { "Nothing has run yet: ${stopped.string("console")}" }
+
+            debugger.resume(project, module)
+            val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+            check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+            check(data.string("output") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
+        }
+    }
+
     case("X310") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -814,6 +838,12 @@ internal interface DebugSessionProbe {
         module: String,
         uri: String,
         breakpointLine: Int,
+    )
+
+    fun debugFromEntry(
+        project: Project,
+        module: String,
+        uri: String,
     )
 
     fun state(
