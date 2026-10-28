@@ -1229,10 +1229,50 @@ and VS Code render them automatically from the LSP server response — no plugin
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 18.1 | Run lens on module | Open a `.x` file with `module myapp { }` | "▶ Run myapp" appears above the module declaration |
+| 18.1 | Run lens on module | Open a `.x` file with `module myapp { void run() {} }` | "▶ Run myapp" appears above the module declaration |
 | 18.2 | No lens on class | Open a file with only `class Foo { }` (no module) | No code lens appears |
 | 18.3 | Lens position | Check the lens annotation position | Aligned with the `module` keyword line |
-| 18.4 | Multiple files | Open two `.x` files with different modules | Each shows its own module's Run lens |
+| 18.4 | Multiple files | Open two `.x` runnable modules | Each shows its own module's Run lens |
+| 18.5 | No entry point (compiler adapter) | Open `module mylib { Int f() = 1; }` | No Run lens; a module needs exactly one `run` method with at most one required parameter |
+| 18.6 | Lens runs the module | Click the lens | The module builds and runs as in [18a](#18a-embedded-build-and-run) |
+
+---
+
+### 18a. Embedded build and run
+
+**Requests:** `xtc/build`, `xtc/run`, `xtc/stopRun`; notifications `xtc/runOutput`, `xtc/runExited`
+**Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
+**Mode:** VS Code `xtc.build.mode`; IntelliJ Settings › Build, Execution, Deployment › Ecstasy
+
+Use a folder **without** a Gradle build (automatic mode picks embedded), or set the mode to embedded.
+Fixture: `Hello.x` containing
+
+```ecstasy
+module Hello {
+    void run(String[] args) {
+        @Inject Console console;
+        console.print($"Hello {args}");
+    }
+}
+```
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 18a.1 | Build | VS Code `Cmd`/`Ctrl+F9`; IntelliJ **Build → Build Project** | Output lists `✓ Hello -> …/build/xtc/embedded/lib/Hello.xtc`; IntelliJ shows it in the Build tool window |
+| 18a.2 | Build error | Break the source, save, build again | The diagnostic is listed as `file:line:column`; clicking it opens the source; the build fails |
+| 18a.3 | Unsaved edits | Edit without saving, then build | All files are saved first; the build reflects the edit |
+| 18a.4 | Run | Run lens, VS Code editor Run button or IntelliJ Run Context Configuration (`Ctrl+Shift+R` macOS / `Ctrl+Shift+F10`) | `Hello …` printed, then the exit code (VS Code: "Process finished with exit code 0") |
+| 18a.5 | Arguments | Configure arguments `a b,ü` (IntelliJ *Module arguments*; VS Code task `"args": ["a b", "ü"]`) | The program receives them unchanged, without shell parsing |
+| 18a.6 | Stop | Run `module Loop { void run() { while (True) {} } }`, then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
+| 18a.7 | Rerun | IntelliJ **Rerun** while a run is active | The old run stops and a new one starts in the same console |
+| 18a.8 | Failed build skips the run | Run a module that does not compile | The diagnostics print and nothing runs |
+| 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before |
+| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs |
+| 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
+
+Known limits: no console input; one program at a time per server (a second concurrent run reports
+"Another program is still running"); IntelliJ *Build Module* builds every Ecstasy module; no IntelliJ
+gutter Run icon.
 
 ---
 
@@ -2571,7 +2611,7 @@ These have no IntelliJ analogue (or are surfaced differently). They round out th
 | V6 | Java discovery fallback | Unset `JAVA_HOME`, leave `xtc.java.home` empty → restart VS Code | Extension finds Java via `jdk-utils` (SDKMAN, mise, Homebrew, Gradle cache, etc.) — log line `Java home: …` at startup |
 | V7 | Java auto-download | On a machine with no Java 25+: same as V6, but `jdk-utils` finds nothing | Progress notification `Downloading Java 25 JRE for Ecstasy Language Support`; subsequent restart uses the cached JRE silently |
 | V8 | Tasks (Gradle build / test / clean / run) | In a workspace with a `build.gradle.kts`, open Terminal → Run Task… | "Build", "Test", "Clean" tasks listed under "xtc"; selecting runs `./gradlew build/test/clean` |
-| V9 | Custom task (`xtc.runModule`) | Add a `tasks.json` entry of type `"xtc"` with `moduleName: "TestModule"` → Terminal → Run Task → pick it | Runs `./gradlew runXtc -PmoduleName=TestModule` (or `xtc run TestModule` if `useGradle: false`) |
+| V9 | Custom task (`xtc.runModule`) | Add a `tasks.json` entry of type `"xtc"` with `moduleName: "TestModule"` → Terminal → Run Task → pick it | Follows `xtc.build.mode` (or the task's `mode`): embedded builds and runs in a dedicated terminal ([18a](#18a-embedded-build-and-run)); Gradle runs `./gradlew runXtc --module=TestModule`; legacy `useGradle: false` runs `xtc run TestModule` |
 | V10 | DAP launch from defaults | Open a `.x` with `void run()` → press `F5` | Launches "Debug Ecstasy Module"; auto-detects the module name from `module Foo {}` declaration |
 | V11 | DAP launch from `launch.json` | Add a `"type": "xtc"` config → set breakpoint → `F5` | Stops at breakpoint; variables / call stack visible in Debug panel |
 | V12 | Create-project command | Cmd Palette → "Ecstasy: Create New Project" → pick `class` / `library` / `service`, pick a folder, enter a name | Terminal labeled "XTC" opens and runs `xtc init <name> --type <kind> --dir <folder>`; new project skeleton appears |
@@ -2628,7 +2668,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Inlay hints | X42/X131 | Enable/disable through native controls, inspect tooltip rendering for locals/parameters/lambdas, verify no misleading names for unnamed function calls, named arguments or omitted defaults. A protocol tooltip does not prove the UI renders it. |
 | Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. X138 verifies live indent settings; X249/X250 verify continuation/comment margins and bounded width wrapping with native history. Backend regressions cover custom indentation and tabs. Not every variant is a shared-driver scenario. |
 | Document links | X131 plus lexical unit tests; section 15 | Click HTTP(S) URLs in comments/strings; verify exact ranges and absence of invented import/file/unsupported-scheme links. Malformed/partial literals must not create arbitrary targets. External browser launching is a manual action, separate from resolving a URI. |
-| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Successful persistent execution/rerun is **R1–R8 work**, not established by showing a Run lens. |
+| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Lenses appear only on modules with a callable `run`. Embedded build/run/stop/rerun is manual in [section 18a](#18a-embedded-build-and-run) and backed by worker regressions; shared native playbook cases and the R6–R8 debugging and soak gates remain **open**. A Run lens alone does not establish execution. |
 | Semantic tokens | X41/X126, existing token tests; section 19 | Inspect theme fallback, enable/disable behavior, UTF-16/range clipping, edits/close/restart with old result IDs and refresh. Audit per-token claims (e.g. deprecated tags) against actual modifiers rather than claiming every row for every adapter. |
 | Rename, actions and resource edits | X53–X63/X102–X105/X109–X122/X127–X130 | Collision/capture refusals, cancellation, stale documents, graph persistence, closed consumers, one Undo/Redo and source text plus filesystem bytes; see the batch matrix. Explorer drag/drop and arbitrary third-party edit application are separate host paths. |
 | Discovery, paths and build settings | CFG1–CFG3/X99/X100/X124/X129/X134 | Multiple roots, Unicode/space-containing paths, symlinks, project close/reopen and external shared watch leases. Gradle-import failure, missing generated resources and no-Gradle projects must retain usable last-valid inputs and show actionable status. |
