@@ -259,3 +259,19 @@ val versionOutputTest = tasks.register<Test>("versionOutputTest") {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
+
+// The error listeners' tests, which javatools/lsp-compiler.md runs on their own; they need no installed XDK modules
+tasks.register<Test>("errorListenerTest") {
+    description = "Test the error listeners: branches, sites, silence, aborts, cancellation, the host boundary and the launcher"
+    group = VERIFICATION_GROUP
+
+    val testSourceSet = sourceSets.test.get()
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching("org.xvm.asm.ErrorListener*Test")
+        includeTestsMatching("org.xvm.api.ErrorListenerBoundaryTest")
+        includeTestsMatching("org.xvm.tool.LauncherErrorHandlingTest")
+    }
+}
