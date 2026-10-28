@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **294 scenarios**: X1–X289, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **295 scenarios**: X1–X290, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 294 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 295 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -818,7 +818,7 @@ these rules; on-type formatting only indents and cleans whitespace. See X102/X10
 Tree-sitter mode uses AST context for auto-indentation. Compiler mode uses the Java lexer for
 current-line indentation/whitespace; it does not use Tree-sitter. Trigger characters are `Enter`,
 `}`, and `;`. The cases below describe intended editing behavior; bounded compiler formatting
-and native IntelliJ Enter handling must be checked separately (X102/X107).
+and native Enter handling in both editors are checked by shared case X290.
 
 **How it works:** Automatic — indentation is adjusted immediately when you type a trigger
 character. No manual action needed.
@@ -837,6 +837,8 @@ character. No manual action needed.
 | 13a.10 | No indent inside string | Press Enter inside a string literal | No indentation adjustment |
 | 13a.11 | Nested constructs (3+ levels) | Class > method > if > Enter after `{` | Correct cumulative indent (e.g. 12 for 3 levels) |
 | 13a.12 | After `}` line | Press Enter after a `}` line | New line at same indent as `}` |
+| 13a.12a | After `case` | Inside a `switch`, press Enter after `case 1:` | New line indented +4 from `case`; cases align with their `switch` |
+| 13a.12b | After a `//` comment | Press Enter after `    // a note` | New line at the comment's indent (VS Code also continues the `// `) |
 | 13a.13 | Large file performance | Open a `.x` file > 1000 lines, type normally | < 5ms per formatting request (check LSP log) |
 | 13a.14 | Doc comment continuation | Type `/**` then Enter | New line gets ` * ` prefix aligned with `/**` |
 | 13a.15 | Doc comment mid-line | Press Enter on a ` * existing text` line inside `/** */` | New line gets ` * ` prefix |
@@ -1418,7 +1420,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X289 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X290 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1566,7 +1568,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 294 scenarios: X1–X289, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 295 scenarios: X1–X290, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1580,7 +1582,7 @@ focused runs still include them. A future fast profile could exclude them for qu
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 294 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 295 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3589,7 +3591,7 @@ Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation an
 | X246 | Request linked editing for private/public method and primary constructor parameters. | No linked ranges: named callers and property contracts require graph Rename. |
 | X247 | Request linked ranges for `import types.Box as Box` in each method. | Include the explicit alias and its uses, excluding the imported target and other lexical scopes. |
 | X248 | Inspect outline, folds and selection in the shared damaged header/call/list/tuple variants, then repair. | Alias/current/later remain in the outline; method folds stay within source; selection strictly expands without duplicate spans; repair removes stale structure. |
-| X249 | Format continuation expressions and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable; literal contents and relative comment layout remain intact. |
+| X249 | Format continuation expressions, a switch statement and a switch expression, and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable: the switch statement's `case` and `default` align with its `switch` and its closing brace, with their statements one level in; the switch expression's labels are one level inside it. Literal contents and relative comment layout remain intact. |
 | X250 | Format the shared long concatenation, repeat, then Undo/Redo/Undo. | Wrap at token boundaries at the configured 120-column margin; preserve every literal and native history. |
 
 ### Graph-index acceptance
@@ -3890,6 +3892,7 @@ Like X280–X287, this case switches to the embedded build mode for its duration
 | ID | Actions | Expected result |
 |---|---|---|
 | X289 | Run RunAgain, then run it again without changes. Edit it to print `second version`, do not save, and run it a third time. | The first two runs print `first version` and exit with code 0. The third run saves the edit first and prints `second version`, not `first version`. |
+| X290 | In OnType.x, for each scenario put the cursor where it shows and type: Enter after `{` in a class, in a method, after a continued declaration's `{` and three levels deep; Enter after a statement, after `case 1:`, after a `//` comment and inside a string; `}` on the blank last line of a class and of an if block. | The cursor line ends at the indentation the code gives: 8 after a class's or method's `{`, a continued declaration's `{`, a statement, a comment and inside a string; 12 after `case 1:` (cases align with their `switch`); 16 three levels deep; the typed `}` at 4 for the class and 8 for the if block. The server's on-type edits for the same keystroke leave that indentation unchanged. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
