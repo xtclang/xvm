@@ -113,7 +113,8 @@ The compiler's callable typing and fitting corrections serve both ordinary compi
 cursor probes. Boolean operand corrections preserve evaluation and side effects even when the
 result is constant. These are compiler correctness rules, not alternate semantics enabled by an
 LSP flag. The separate removal of the abandoned binary AST does not remove the source AST used
-by tooling; legacy `.xtc` slots are still read or skipped as required for format compatibility.
+by tooling. The serialized format contains no BAST metadata slot; older `.xtc` files must be
+recompiled with the current compiler.
 
 Repository lookup remains tolerant: an unreadable candidate can be skipped while another file
 or repository supplies the module. An unrelated failed candidate does not establish why an import
