@@ -18,8 +18,8 @@ export function client() {
     return result;
 }
 
-export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string): Promise<T> {
-    return withTestWait(message, () => waitFor(read, accept, message));
+export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs?: number): Promise<T> {
+    return withTestWait(message, () => waitFor(read, accept, message, timeoutMs));
 }
 
 export async function loadFixtures(): Promise<void> {
@@ -243,14 +243,14 @@ export class Workspace {
     }
 }
 
-export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspace, data: ScenarioValues<K>) => Promise<void>): void {
+export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspace, data: ScenarioValues<K>) => Promise<void>, timeoutMs = 90_000): void {
     const scenario = catalog.cases[id];
     assert.ok(scenario, `Case ${id} is missing from the shared catalog`);
     const { title, manual } = scenario;
     assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
     cases.set(id, { title, manual, tags: scenarioTags(id) });
     test(`${id}: ${title}`, async function () {
-        this.timeout(90_000);
+        this.timeout(timeoutMs);
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));

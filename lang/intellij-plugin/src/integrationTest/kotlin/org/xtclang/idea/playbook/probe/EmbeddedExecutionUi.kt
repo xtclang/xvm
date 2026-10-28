@@ -31,11 +31,14 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.encoding.EncodingManager
 import com.intellij.task.ProjectTaskManager
 import org.jetbrains.concurrency.Promise
+import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.run.XtcBuildMode
 import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
+import org.xvm.tool.XtcProjectCreator
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
@@ -78,6 +81,24 @@ object EmbeddedExecutionUi {
         val previous = settings.mode
         settings.mode = XtcBuildMode.valueOf(value)
         return previous.name
+    }
+
+    /**
+     * Makes an Ecstasy application project [name] in [parent] as the New Project wizard does, with the plugin's own
+     * version, and returns the creator's result.
+     */
+    @JvmStatic
+    fun newProject(
+        parent: String,
+        name: String,
+    ): String {
+        val version = PluginPaths.selfDescriptor()?.version ?: XtcProjectCreator.DEFAULT_XTC_VERSION
+        val result = XtcProjectCreator(Path.of(parent, name), XtcProjectCreator.ProjectType.APPLICATION, false, version, null).create()
+        return JsonObject()
+            .apply {
+                addProperty("success", result.success)
+                addProperty("message", result.message)
+            }.toString()
     }
 
     /**
