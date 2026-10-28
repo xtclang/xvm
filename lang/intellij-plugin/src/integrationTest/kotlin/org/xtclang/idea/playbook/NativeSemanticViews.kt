@@ -75,7 +75,7 @@ internal fun Driver.nativeLocations(
     val expectedPoints =
         expected.map { target ->
             Triple(
-                Path.of(URI(target.string("uri"))).toString(),
+                editorPath(target.string("uri")),
                 target.getAsJsonObject("range").getAsJsonObject("start").int("line"),
                 target.getAsJsonObject("range").getAsJsonObject("start").int("character"),
             )

@@ -39,6 +39,18 @@ plugins {
 val xdkVersion: String = project.version.toString()
 val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.channel", "alpha")
 
+// Derive sinceBuild from IDE version: "2026.1" -> "261" (last 2 digits of year + major version)
+val intellijIdeVersion: String =
+    libs.versions.lang.intellij.ide
+        .get()
+val intellijSinceBuild: String =
+    run {
+        val parts = intellijIdeVersion.split(".")
+        val year = parts[0].takeLast(2)
+        val major = parts.getOrElse(1) { "0" }
+        "$year$major"
+    }
+
 // Explicit development override; Marketplace remains the default for ordinary builds.
 val localLsp4ijPlugin =
     providers.gradleProperty("lsp4ijPlugin").map { path ->
@@ -46,6 +58,32 @@ val localLsp4ijPlugin =
         require(File(path, "lib").isDirectory) { "lsp4ijPlugin must name a built plugin directory containing lib/: $path" }
         File(path)
     }
+
+// LSP4IJ from a Marketplace channel in place of the catalog's release, to test fixes that aren't released:
+// -Plsp4ijChannel=nightly takes the newest nightly this IDE line accepts (LSP4IJ's build publishes them),
+// and -Plsp4ijVersion names a version. Publishing stays on the reviewed release: verifyPluginInternalApis
+// accepts only the version its policy names.
+val namesMarketplaceLsp4ij = providers.gradleProperty("lsp4ijChannel").isPresent || providers.gradleProperty("lsp4ijVersion").isPresent
+require(!(localLsp4ijPlugin.isPresent && namesMarketplaceLsp4ij)) {
+    "-Plsp4ijPlugin names a local build, so it takes no -Plsp4ijChannel or -Plsp4ijVersion"
+}
+val marketplaceLsp4ijChannel: String = providers.gradleProperty("lsp4ijChannel").getOrElse("")
+val marketplaceLsp4ijVersion: String =
+    providers
+        .gradleProperty("lsp4ijVersion")
+        .orElse(
+            if (marketplaceLsp4ijChannel.isEmpty()) {
+                libs.versions.lang.intellij.lsp4ij
+            } else {
+                providers.of(MarketplaceChannelVersion::class.java) {
+                    parameters {
+                        pluginId.set("com.redhat.devtools.lsp4ij")
+                        channel.set(marketplaceLsp4ijChannel)
+                        build.set("IU-$intellijSinceBuild")
+                    }
+                }
+            },
+        ).get()
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
@@ -386,11 +424,9 @@ dependencies {
         if (localLsp4ijPlugin.isPresent) {
             localPlugin(localLsp4ijPlugin)
         } else {
-            plugin(
-                "com.redhat.devtools.lsp4ij",
-                libs.versions.lang.intellij.lsp4ij
-                    .get(),
-            )
+            // the Gradle plugin's notation for a Marketplace plugin, which takes "@channel" for a channel other than the default
+            val notation = "com.redhat.devtools.lsp4ij:$marketplaceLsp4ijVersion"
+            plugin(if (marketplaceLsp4ijChannel.isEmpty()) notation else "$notation@$marketplaceLsp4ijChannel")
         }
         pluginVerifier()
         testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
@@ -403,18 +439,6 @@ dependencies {
 // org.xtclang.build.xdk.properties convention plugin applied above. IntelliJ
 // 2026.1+ ships JBR 25, which matches the project's minimum JDK floor; the
 // binary verifier (verifyPlugin) catches any future since-build/JBR mismatch.
-
-// Derive sinceBuild from IDE version: "2026.1" -> "261" (last 2 digits of year + major version)
-val intellijIdeVersion: String =
-    libs.versions.lang.intellij.ide
-        .get()
-val intellijSinceBuild: String =
-    run {
-        val parts = intellijIdeVersion.split(".")
-        val year = parts[0].takeLast(2)
-        val major = parts.getOrElse(1) { "0" }
-        "$year$major"
-    }
 
 // Locally, IDEs are extracted by a Gradle artifact transform into the Gradle user home: one
 // copy per IDE version shared by every checkout and worktree, extracted under Gradle's
@@ -526,7 +550,8 @@ val verifyPluginInternalApis =
         description = "Reject unreviewed internal APIs in the IntelliJ Plugin Verifier reports."
         reportsDirectory.set(verifyPlugin.flatMap { it.verificationReportsDirectory })
         acceptedApis.set(layout.projectDirectory.file("verifier-lsp4ij-apis.txt"))
-        lsp4ijVersion.set(libs.versions.lang.intellij.lsp4ij)
+        // a channel's version fails here until its internal APIs are reviewed, so it can't be published
+        lsp4ijVersion.set(marketplaceLsp4ijVersion)
     }
 
 // A direct verifyPlugin invocation must enforce the same policy as publishing.
@@ -797,8 +822,11 @@ val runIdeCapturedIdeVersion = ideVersion
 val runIdeCapturedSinceBuild = intellijSinceBuild
 val runIdeCapturedLsp4ijVersion =
     localLsp4ijPlugin.map { "local plugin: $it" }.orElse(
-        libs.versions.lang.intellij.lsp4ij
-            .get(),
+        if (marketplaceLsp4ijChannel.isEmpty()) {
+            marketplaceLsp4ijVersion
+        } else {
+            "$marketplaceLsp4ijVersion ($marketplaceLsp4ijChannel channel)"
+        },
     )
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
@@ -940,11 +968,8 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
             inputs.dir(pluginDirectory).withPropertyName("localLsp4ijPlugin")
             systemProperty("xtc.playbook.lsp4ijPlugin", pluginDirectory.absolutePath)
         }
-        systemProperty(
-            "xtc.playbook.lsp4ijVersion",
-            libs.versions.lang.intellij.lsp4ij
-                .get(),
-        )
+        systemProperty("xtc.playbook.lsp4ijVersion", marketplaceLsp4ijVersion)
+        systemProperty("xtc.playbook.lsp4ijChannel", marketplaceLsp4ijChannel)
         systemProperty("xtc.playbook.adapter", xdkProperties.stringValue("lsp.adapter", "compiler"))
         systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
         systemProperty("xtc.playbook.replacementGates", providers.gradleProperty("intellijPlaybookReplacementGates").getOrElse(""))
