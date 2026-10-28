@@ -317,6 +317,13 @@ internal class EmbeddedRuns(
         reference: Int,
     ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference) }
 
+    /** Evaluates a path to a value in a frame of a stopped program under the debugger. */
+    internal fun evaluate(
+        runId: String,
+        frame: Int,
+        expression: String,
+    ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression) }
+
     /** Steps a fiber of a stopped program under the debugger; false when that fiber does not wait. */
     internal fun step(
         runId: String,

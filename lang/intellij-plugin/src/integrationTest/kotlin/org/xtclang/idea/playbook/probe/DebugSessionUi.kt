@@ -2,6 +2,7 @@ package org.xtclang.idea.playbook.probe
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.intellij.codeInsight.hint.HintManager
 import com.intellij.execution.ProgramRunnerUtil
 import com.intellij.execution.RunManager
 import com.intellij.execution.configurations.ConfigurationTypeUtil
@@ -18,6 +19,7 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
 import com.intellij.xdebugger.frame.XCompositeNode
 import com.intellij.xdebugger.frame.XDebuggerTreeNodeHyperlink
 import com.intellij.xdebugger.frame.XExecutionStack
@@ -108,6 +110,12 @@ object DebugSessionUi {
             state.addProperty("line", position.line + 1)
         }
         session.suspendContext?.activeExecutionStack?.let { stack -> state.add("frames", frames(stack)) }
+        // the exit code is read before the console, so a process that ended has printed everything the console shows;
+        // a session that is still starting has no process yet
+        val exitCode =
+            session.debugProcess.processHandler
+                ?.takeIf { it.isProcessTerminated }
+                ?.exitCode
         ApplicationManager.getApplication().invokeAndWait {
             (session.consoleView as? ConsoleViewImpl)?.let { console ->
                 // the console's editor is made with its component, which the Debug tool window may not have shown yet
@@ -116,10 +124,7 @@ object DebugSessionUi {
                 state.addProperty("console", console.text)
             }
         }
-        session.debugProcess.processHandler
-            .takeIf { it.isProcessTerminated }
-            ?.exitCode
-            ?.let { state.addProperty("exitCode", it) }
+        exitCode?.let { state.addProperty("exitCode", it) }
         return state.toString()
     }
 
@@ -161,6 +166,43 @@ object DebugSessionUi {
                 else -> error("No step $kind")
             }
         }
+    }
+
+    /**
+     * Evaluates an expression in the paused fiber's top frame, as the Watches view does: its `value`, `type` and
+     * whether it `expands`, or the `error` the evaluator reports.
+     */
+    @JvmStatic
+    fun evaluate(
+        project: Project,
+        module: String,
+        expression: String,
+    ): String {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val evaluator = checkNotNull(session.currentStackFrame?.evaluator) { "The debug session of $module has no frame evaluator" }
+        val result = CompletableFuture<JsonObject>()
+        evaluator.evaluate(
+            expression,
+            object : XDebuggerEvaluator.XEvaluationCallback {
+                override fun evaluated(value: XValue) {
+                    result.complete(presentation(expression, value))
+                }
+
+                override fun errorOccurred(errorMessage: String) {
+                    result.complete(JsonObject().apply { addProperty("error", errorMessage) })
+                }
+            },
+            null,
+        )
+        return result.get(30, TimeUnit.SECONDS).toString()
+    }
+
+    /** True while an editor hint shows, such as the one LSP4IJ shows where an exception stopped the program. */
+    @JvmStatic
+    fun hintShown(): Boolean {
+        var shown = false
+        ApplicationManager.getApplication().invokeAndWait { shown = HintManager.getInstance().hasShownHintsThatWillHideByOtherHint(false) }
+        return shown
     }
 
     /** Resumes the module's paused session, as the Resume Program action does. */

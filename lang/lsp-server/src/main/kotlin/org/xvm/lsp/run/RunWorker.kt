@@ -31,6 +31,7 @@ import java.io.Reader
 import java.io.Writer
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryType
+import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -51,7 +52,8 @@ import kotlin.time.toJavaDuration
  *
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions` and
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
- * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`), `pause` (`id`),
+ * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`), `pause` (`id`), `evaluate` (`id`,
+ * `request`, `frame`, `expression`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -95,6 +97,7 @@ object RunWorker {
                     "stackTrace" -> runs.stackTrace(command)
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
+                    "evaluate" -> runs.evaluate(command)
                     "step" -> runs.step(command)
                     "exceptionStops" -> runs.exceptionStops(command)
                     "pause" -> runs.pause(command["id"].asLong)
@@ -292,13 +295,37 @@ object RunWorker {
             read.whenComplete { variables, failure ->
                 answer(command) {
                     if (failure != null) {
-                        addProperty("error", failure.message ?: failure.toString())
+                        addProperty("error", reason(failure))
                     } else {
-                        val states = variables.map { VariableState(it.name(), it.value(), it.type(), it.variablesReference()) }
-                        add("variables", RunWorkerDebug.variables(states))
+                        add("variables", RunWorkerDebug.variables(variables.map(::state)))
                     }
                 }
             }
+        }
+
+        /** Answers, as `variables` does, with the value a path names, or the reason it cannot be evaluated. */
+        fun evaluate(command: JsonObject) {
+            val read =
+                debuggers[command["id"].asLong]?.evaluate(command["frame"].asInt, command["expression"].asString)
+                    ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
+            read.whenComplete { variable, failure ->
+                answer(command) {
+                    if (failure != null) {
+                        addProperty("error", reason(failure))
+                    } else {
+                        add("variable", RunWorkerDebug.variable(state(variable)))
+                    }
+                }
+            }
+        }
+
+        private fun state(variable: SessionDebugger.Variable) =
+            VariableState(variable.name(), variable.value(), variable.type(), variable.variablesReference())
+
+        /** A failed read's reason, as the runtime debugger put it. */
+        private fun reason(failure: Throwable): String {
+            val cause = (failure as? CompletionException)?.cause ?: failure
+            return cause.message ?: cause.toString()
         }
 
         /** Answers whether the fiber was stepped; one that does not wait is not, and the program stays stopped. */
@@ -546,7 +573,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 7
+        const val PROTOCOL = 8
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
