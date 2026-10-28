@@ -1419,7 +1419,9 @@ public class EmbeddingSupport {
      * does. The arguments are a single value, an array for the first parameter, so any further
      * parameters must have default values. The array is passed when the method requires it, or
      * when it is not empty and the method has a parameter. Otherwise nothing is passed, and a
-     * default value of the parameter applies.
+     * default value of the parameter applies. Arguments for a method without parameters are
+     * dropped, and {@link #runMethod} reports {@link #WARN_ARGUMENTS_IGNORED}, as the command-line
+     * runner warns of them.
      *
      * @param method  the entry method, as found by {@link #entryMethod}
      * @param entry   the entry method's name and the supplied arguments

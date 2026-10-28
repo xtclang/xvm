@@ -87,6 +87,16 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a run request names the module's source and also its name, which finds it after the source moved`() {
+        val uri = "file:///work/App.x"
+        assertThat(XtcRunConfiguration.embeddedRequest("App", uri, "greet", "one, two"))
+            .isEqualTo(RunParams(module = uri, method = "greet", args = listOf("one", "two"), moduleName = "App"))
+        // a configuration without a source sends only the name
+        assertThat(XtcRunConfiguration.embeddedRequest("App", "", "", ""))
+            .isEqualTo(RunParams(module = "App", method = null, args = emptyList(), moduleName = null))
+    }
+
+    @Test
     fun `build reports list module outcomes and one-based diagnostic locations`(
         @TempDir root: Path,
     ) {

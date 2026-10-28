@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **295 scenarios**: X1–X290, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **299 scenarios**: X1–X294, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 295 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 299 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1264,7 +1264,7 @@ module Hello {
 |---|------|-------|-----------------|
 | 18a.1 | Build | VS Code `Cmd`/`Ctrl+F9`; IntelliJ **Build → Build Project** | Output lists `✓ Hello -> …/build/xtc/embedded/lib/Hello.xtc`; IntelliJ shows it in the Build tool window |
 | 18a.2 | Build error | Break the source, save, build again | The diagnostic is listed as `file:line:column`; clicking it opens the source; the build fails |
-| 18a.3 | Unsaved edits | Edit without saving, then build | All files are saved first; the build reflects the edit |
+| 18a.3 | Unsaved edits | Edit without saving, then build | The build reflects the edit; the plugin saves nothing (VS Code saves per `task.saveBeforeRun`, IntelliJ before a run) |
 | 18a.4 | Run | Run lens, VS Code editor Run button or IntelliJ Run Context Configuration (`Ctrl+Shift+R` macOS / `Ctrl+Shift+F10`) | `Hello …` printed, then the exit code (VS Code: "Process finished with exit code 0") |
 | 18a.5 | Arguments | Configure arguments `a b,ü` (IntelliJ *Module arguments*; VS Code task `"args": ["a b", "ü"]`) | The program receives them unchanged, without shell parsing |
 | 18a.6 | Stop | Run `module Loop { void run() { for (Int count = 0; count >= 0; ++count) {} } }` (an empty `while (True)` is rejected as non-terminating), then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
@@ -1276,6 +1276,9 @@ module Hello {
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
 | 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Build, Execution, Deployment › Ecstasy; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
 | 18a.14 | Switching modes (VS Code) | In that folder, click **Embedded build** in the status bar and choose **Gradle**; Build; then choose **Ecstasy compiler (embedded)** with **Ecstasy: Select Build Mode** and Build again | The status bar shows **Gradle build**, and Build runs `./gradlew build`; after switching back it shows **Embedded build** and builds with the embedded compiler. The choice is stored in the folder's `xtc.build.mode`. A folder without a Gradle build shows no build mode in the status bar. X288 automates the switch through the command and checks the status bar text; the quick pick and the click are manual |
+| 18a.15 | Fresh program state | Run a module twice whose static service counts the calls made to it in a run | Each run counts from the start; nothing carries over from the run before (automated in X292) |
+| 18a.16 | No callable entry method | Run a module without a `run` method, or one whose `run` requires two parameters, from a run configuration or task | The build succeeds, the run is refused with the reason and exit code 1, and no user code runs (automated in X293) |
+| 18a.17 | Arguments a run method does not take | Run a module whose `run` has no parameters with the argument `ignored` | A warning that the method does not take any parameters and the arguments are ignored, then the program's output; it exits with code 0 (automated in X294) |
 
 Known limits: up to four programs at a time per server, each in its own execution worker (a fifth run
 reports that four programs are already running); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
@@ -1420,7 +1423,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X290 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X294 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1568,7 +1571,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 295 scenarios: X1–X290, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 299 scenarios: X1–X294, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1582,7 +1585,7 @@ focused runs still include them. A future fast profile could exclude them for qu
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 295 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 299 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3853,7 +3856,7 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 | ID | Actions | Expected result |
 |---|---|---|
 | X280 | Open LensRunnable and LensOnlyLibrary. Give LensOnlyLibrary a `run(String, String)`, then a `run()`. | Only LensRunnable has a **▶ Run** lens at first. Two required parameters still give no lens; adding `run()` adds the LensOnlyLibrary lens. |
-| X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second saves the edit first, fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
+| X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second builds the unsaved edit and leaves it unsaved (VS Code with `task.saveBeforeRun` set to `never`), fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
 | X282 | Run RunEcho with the arguments `a b` and `ü`. | Output `args=2:a b\|ü`, unchanged arguments without shell parsing, and exit code 3. |
 | X283 | Run RunForever; after it prints `started`, Rerun it (IntelliJ **Rerun**, VS Code **Tasks: Restart Running Task**); after the new run prints `started`, Stop it. Then run RunNext from its Run lens. | Rerun stops the first run and starts a new one that prints `started` again. The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
 | X284 | Run RunBroken, whose `run` returns a String as an Int. | The run prints the `RunBroken.x:2:` diagnostic and "Build failed; nothing was run.", runs nothing and ends with exit code 1. |
@@ -3891,8 +3894,20 @@ Like X280–X287, this case switches to the embedded build mode for its duration
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X289 | Run RunAgain, then run it again without changes. Edit it to print `second version`, do not save, and run it a third time. | The first two runs print `first version` and exit with code 0. The third run saves the edit first and prints `second version`, not `first version`. |
+| X289 | Run RunAgain, then run it again without changes. Edit it to print `second version`, do not save, and run it a third time. | The first two runs print `first version` and exit with code 0. The third run prints `second version`, not `first version`. VS Code, with `task.saveBeforeRun` set to `never`, leaves the edit unsaved; IntelliJ saves it before the run. |
 | X290 | In OnType.x, for each scenario put the cursor where it shows and type: Enter after `{` in a class, in a method, after a continued declaration's `{` and three levels deep; Enter after a statement, after `case 1:`, after a `//` comment and inside a string; `}` on the blank last line of a class and of an if block. | The cursor line ends at the indentation the code gives: 8 after a class's or method's `{`, a continued declaration's `{`, a statement, a comment and inside a string; 12 after `case 1:` (cases align with their `switch`); 16 three levels deep; the typed `}` at 4 for the class and 8 for the if block. The server's on-type edits for the same keystroke leave that indentation unchanged. |
+| X291 | With no source settings, Run MovedRoot from a run target saved with `MovedRoot.x` (a VS Code task or an IntelliJ Ecstasy Application with that *Module source*). Close its editor, rename the file to `RenamedRoot.x` outside the IDE, and run the same target again. | Both runs print `moved root runs` and exit with code 0: the target names the module as well as its old file, and discovery finds the module in `RenamedRoot.x`. Renaming the file while its editor is open is not covered; that buffer stays a source until it is closed. |
+
+### Fresh program state, refused entry methods and dropped arguments (X292–X294)
+
+Like X280–X289, these cases switch to the embedded build mode for their duration. Manual steps are
+rows 18a.15–18a.17 in [section 18a](#18a-embedded-build-and-run).
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X292 | Run RunFresh, then run it again. | Each run prints `calls=1,2` and exits with code 0: its static service keeps its count within a run, and the second run starts with fresh program state instead of going on to `calls=3,4`. Which execution worker ran each program is not visible in the editors; the server's `EmbeddedExecutionTest` checks that one worker served both. |
+| X293 | Run RunLibrary, which has no `run` method, and RunTwoArguments, whose `run` requires two parameters, each from a run target (a VS Code task or an IntelliJ Ecstasy Application), since neither has a Run lens. | Both modules build, and each run is refused before user code runs: the output gives the reason (`Missing method "run" in module RunLibrary`, `Unsupported arguments for method "run"`), the run ends with exit code 1, and RunTwoArguments prints nothing. The reason is shown alone, as `xtc run` shows it, not as a failure to create the application container. |
+| X294 | Run RunNoParameters, whose `run` has no parameters, with the argument `ignored` (a VS Code task's `args`, IntelliJ's *Module arguments*). | The output shows `Warning: Method "run" does not take any parameters; ignoring the specified arguments.`, then `ran without parameters`, and the run exits with code 0, as `xtc run` warns and runs. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
