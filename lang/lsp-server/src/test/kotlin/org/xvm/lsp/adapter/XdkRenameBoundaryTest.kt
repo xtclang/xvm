@@ -100,6 +100,55 @@ class XdkRenameBoundaryTest {
         }
     }
 
+    @Test
+    fun `abstract written contract renames with its override and callers`() {
+        val text =
+            "module App { @Abstract class Base { @Abstract Int read(); } class Actual extends Base { @Override Int read() = 1; } " +
+                "Int use(Base target) = target.read(); }"
+        workspace(text) { adapter, uri ->
+            val changed = renamed(text, requireNotNull(adapter.rename(uri, 0, text.indexOf("read"), "fetch")), uri)
+            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `adopted interface property renames its written declaration and every adopter's reads`() {
+        val text =
+            "module App { interface Named { @RO String name { @Override String get() = \"default\"; } } " +
+                "class First implements Named {} class Inherited extends First {} " +
+                "String use(First first, Inherited inherited) = first.name + inherited.name; }"
+        workspace(text) { adapter, uri ->
+            val edit = requireNotNull(adapter.rename(uri, 0, text.indexOf("first.name") + "first.".length, "label"))
+            val changed = renamed(text, edit, uri)
+            assertThat(changed).isEqualTo(text.replace("name", "label"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `union typed property reads stay refused while a single receiver renames`() {
+        val union = "module App { class First { Int value = 1; } class Second { Int value = 2; } Int use(First | Second t) = t.value; }"
+        workspace(union) { adapter, uri ->
+            assertThat(adapter.rename(uri, 0, union.indexOf("value"), "count")).isNull()
+        }
+        val single = "module App { class First { Int value = 1; } class Second { Int value = 2; } Int use(First t) = t.value; }"
+        workspace(single) { adapter, uri ->
+            val edit = requireNotNull(adapter.rename(uri, 0, single.indexOf("value"), "count"))
+            assertThat(edit.changes.getValue(uri)).hasSize(2).allMatch { it.newText == "count" }
+        }
+    }
+
+    private fun renamed(
+        text: String,
+        edit: WorkspaceEdit,
+        uri: String,
+    ): String =
+        edit.changes
+            .getValue(uri)
+            .sortedByDescending { it.range.start.column }
+            .fold(text) { value, change -> value.replaceRange(change.range.start.column, change.range.end.column, change.newText) }
+
     private fun workspace(
         text: String,
         check: (XdkAdapter, String) -> Unit,
