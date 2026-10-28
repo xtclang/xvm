@@ -21,6 +21,19 @@ class XdkMemberActionsTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `semicolon-only declarations preserve code actions for a neighboring class`() {
+        val text =
+            "module App { const Key(String name); class Empty; " +
+                "class Base { Int count() = 1; } class Box extends Base {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Override Int64 count()" }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains("const Key(String name);", "class Empty;")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
     fun `recursive inherited signatures do not suppress unrelated member actions`() {
         val text =
             """

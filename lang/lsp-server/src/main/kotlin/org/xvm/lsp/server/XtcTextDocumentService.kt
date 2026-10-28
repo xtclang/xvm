@@ -279,7 +279,15 @@ class XtcTextDocumentService(
         // Release that thread before entering either the document or compiler lifecycle.
         result.whenCompleteAsync { _, failure ->
             synchronized(lifecycle) { pendingQueries.remove(result) }
-            val outcome = if (failure == null) "completed" else "canceled or failed"
+            val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.lastOrNull()
+            val outcome =
+                when {
+                    cause == null -> "completed"
+                    cause is CancellationException -> "canceled"
+                    cause is ResponseErrorException && cause.responseError.code != ResponseErrorCode.InternalError.value -> "rejected"
+                    else -> "failed"
+                }
+            if (outcome == "failed") logger.error("$method: request failed for $uri", cause)
             ExecutionTrace.event(trace, "end", mapOf("outcome" to outcome))
             logger.info(
                 "{}: {} in {}",
@@ -1232,7 +1240,11 @@ class XtcTextDocumentService(
                 ?: throw ResponseErrorException(
                     ResponseError(
                         ResponseErrorCode.InvalidParams,
-                        "Rename not allowed at this position",
+                        if (adapter.readOnlyDocument(params.textDocument.uri) != null) {
+                            "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it."
+                        } else {
+                            "Rename not allowed at this position"
+                        },
                         null,
                     ),
                 )
