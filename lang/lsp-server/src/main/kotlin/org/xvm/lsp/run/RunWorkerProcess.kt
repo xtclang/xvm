@@ -32,10 +32,9 @@ import kotlin.time.Duration.Companion.seconds
  * the next run until it has been idle for [Limits.idle], and any other worker exits when its run ends.
  * A worker receives nothing until it reports the identity the server expects (the protocol version and
  * the bundled XDK, see [RunWorkerIdentity]); one that reports another is ended and its run says why.
- * After each run a worker reports the heap it still uses, its threads, and what the run left behind;
- * one past [Limits.heap] or [Limits.threads], whose heap grew more than [Limits.growth] since its first
- * run, whose runtime pool grew, or that still holds a console or run of an ended program serves no
- * further run.
+ * After each run a worker reports the heap the JVM left in use after its own latest collections, its
+ * threads, and what the run left behind; one past [Limits.heap] or [Limits.threads], whose runtime pool
+ * grew, or that still holds a console or run of an ended program serves no further run.
  */
 internal class RunWorkerProcess(
     private val command: () -> List<String> = ::defaultCommand,
@@ -63,8 +62,8 @@ internal class RunWorkerProcess(
 
     /**
      * How many programs run at once; how long a worker may take to start, to stop, or stay idle; and how much
-     * heap in use (in bytes), growth of it since the worker's first run, and how many threads a worker may
-     * keep after a run and still serve the next.
+     * heap in use after the JVM's collections (in bytes) and how many threads a worker may keep after a run and
+     * still serve the next.
      */
     data class Limits(
         val running: Int = 4,
@@ -72,12 +71,12 @@ internal class RunWorkerProcess(
         val stop: Duration = 10.seconds,
         val idle: Duration = 10.minutes,
         val heap: Long = 512L * MB,
-        val growth: Long = 128L * MB,
         val threads: Int = 200,
     )
 
     /**
-     * What a worker keeps after a run: the heap in use after a collection, the heap's maximum, its threads,
+     * What a worker keeps after a run: the heap the JVM left in use after its latest collections, which may be
+     * from before the run, the heap's maximum, its threads,
      * the threads of the runtime's own pool, and the consoles and runs it still holds for ended programs;
      * [run] is the run this report follows.
      */
@@ -381,8 +380,9 @@ internal class RunWorkerProcess(
 
     /**
      * The worker reports what it kept after a run. Past a limit, it serves no further run: each limit bounds
-     * one thing on its own, so what is left of ended programs, retained growth and the runtime's pool are
-     * not hidden in the heap and thread totals.
+     * one thing on its own, so what is left of ended programs and the runtime's pool are not hidden in the heap
+     * and thread totals. The heap is not compared with an earlier run's: each is what the JVM left after a
+     * collection it ran when it chose to, so the difference between two says nothing about what runs retain.
      */
     private fun measured(
         worker: Worker,
@@ -390,7 +390,7 @@ internal class RunWorkerProcess(
     ) {
         val pid = worker.process.pid()
         logger.info(
-            "execution worker {} after run {}: {} MB heap in use of {} MB, {} threads ({} in the runtime's pool), {} consoles, {} runs",
+            "execution worker {} after run {}: {} MB heap in use after its collections, of {} MB, {} threads ({} in the runtime's pool), {} consoles, {} runs",
             pid,
             usage.run,
             usage.heapUsed / MB,
@@ -409,10 +409,7 @@ internal class RunWorkerProcess(
 
                     usage.runs > 0 -> "${usage.runs} ended runs still tracked"
 
-                    usage.heapUsed > limits.heap -> "${usage.heapUsed / MB} MB heap in use after a run, over ${limits.heap / MB} MB"
-
-                    usage.heapUsed - first.heapUsed > limits.growth ->
-                        "${(usage.heapUsed - first.heapUsed) / MB} MB more heap in use than after its first run, over ${limits.growth / MB} MB"
+                    usage.heapUsed > limits.heap -> "${usage.heapUsed / MB} MB heap in use after a collection, over ${limits.heap / MB} MB"
 
                     usage.threads > limits.threads -> "${usage.threads} threads after a run, over ${limits.threads}"
 

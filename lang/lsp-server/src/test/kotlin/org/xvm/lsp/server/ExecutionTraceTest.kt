@@ -99,7 +99,7 @@ class ExecutionTraceTest {
                             ExecutionTrace.api("overlap-$index") {
                                 entered.countDown()
                                 check(release.await(10, SECONDS))
-                                ExecutionTrace.api("nested-$index") { Unit }
+                                ExecutionTrace.api("nested-$index") {}
                             }
                         }
                     }

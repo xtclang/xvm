@@ -1,7 +1,6 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -11,18 +10,17 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.util.Watched
 import java.io.File
-import java.lang.ref.WeakReference
 import java.net.URI
 import java.nio.file.Path
-import java.time.Duration
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.NANOSECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 
 /**
- * Verifies that dependency replacement, editing, renaming and cursor queries release compiler graphs.
- * The regular test covers every cursor/header variant; the heavy test repeats the workload longer
+ * Verifies that dependency replacement, editing, renaming and cursor queries release compiler graphs:
+ * nothing the adapter or the compiler holds still reaches them, which a walk of the object graph finds
+ * without waiting for a collection. The regular test covers every cursor/header variant; the heavy test repeats the workload longer
  * to expose accumulation across many requests. Neither test defines a performance SLA.
  */
 class XdkRetentionTest {
@@ -44,17 +42,13 @@ class XdkRetentionTest {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         val support = EmbeddingSupport.instance()
-        val observed = CopyOnWriteArrayList<WeakReference<Any>>()
-
-        fun observe(value: Any?) {
-            if (value != null) observed.add(WeakReference(value))
-        }
+        val watched = Watched()
 
         fun EmbeddingSupport.Compilation.observe(): EmbeddingSupport.Compilation =
             also {
-                observe(it)
-                observe(it.pool())
-                it.sourceTrees().forEach(::observe)
+                watched.add(it)
+                watched.add(it.pool())
+                it.sourceTrees().forEach(watched::add)
             }
         val artifacts =
             (1..2).map { version ->
@@ -91,9 +85,9 @@ class XdkRetentionTest {
                             repository,
                             errors,
                         ).also {
-                            observe(it)
-                            observe(it.pool())
-                            it.sourceTrees().forEach(::observe)
+                            watched.add(it)
+                            watched.add(it.pool())
+                            it.sourceTrees().forEach(watched::add)
                         }
                 },
             )
@@ -174,25 +168,27 @@ class XdkRetentionTest {
                 assertThat(rename.isCancelled).isTrue()
                 assertThat(adapter.getCachedResult(uri)).isNull()
             }
-            assertReleased(observed)
+            assertReleased(watched, adapter, support)
         } finally {
             adapter.close()
         }
-        assertReleased(observed)
+        assertReleased(watched, adapter, support)
         val millis = timings.map(NANOSECONDS::toMillis).sorted()
         println(
-            "Retention workload: cycles=$cycles, edit requests=${cycles * 8}, weak references=${observed.size}, retained=0, " +
+            "Retention workload: cycles=$cycles, edit requests=${cycles * 8}, compiler objects=${watched.size}, reached=0, " +
                 "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms (includes debounce)",
         )
     }
 
-    private fun assertReleased(observed: List<WeakReference<Any>>) {
-        await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofMillis(100)).untilAsserted {
-            System.gc()
-            assertThat(observed.count { it.get() != null })
-                .describedAs("compiler attempts, roots and pools still strongly reachable")
-                .isZero()
-        }
+    /** Whether the adapter or the compiler still reaches a compiler attempt, without waiting for a collection. */
+    private fun assertReleased(
+        watched: Watched,
+        adapter: XdkAdapter,
+        support: EmbeddingSupport,
+    ) {
+        assertThat(watched.reachedFrom(adapter, support))
+            .describedAs("compiler attempts, roots and pools still reached")
+            .isEmpty()
     }
 
     private companion object {

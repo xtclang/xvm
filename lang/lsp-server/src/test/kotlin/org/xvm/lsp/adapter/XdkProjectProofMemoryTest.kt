@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -11,9 +10,8 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import java.lang.ref.WeakReference
+import org.xvm.lsp.util.Watched
 import java.nio.file.Path
-import java.time.Duration
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -33,7 +31,7 @@ class XdkProjectProofMemoryTest {
     @EnumSource(Outcome::class)
     fun `property rename across 24 independent roots releases proof attempts`(outcome: Outcome) {
         CompilerTestSupport.configure()
-        val observed = mutableListOf<WeakReference<Any>>()
+        val watched = Watched()
         val cancelled = AtomicBoolean()
         val modules =
             (0 until 24).map { index ->
@@ -53,10 +51,10 @@ class XdkProjectProofMemoryTest {
                     // roots just to leave their declarations and pools unused in this compilation.
                     assertThat(repository?.moduleNames).isEmpty()
                     EmbeddingSupport.instance().compileModule(sources, repository, errors).also { compilation ->
-                        observed += WeakReference(compilation)
-                        compilation.pool()?.let { observed += WeakReference(it) }
-                        compilation.sourceTrees().forEach { observed += WeakReference(it) }
-                        if (observed.size > 24 * 3) {
+                        watched.add(compilation)
+                        watched.add(compilation.pool())
+                        compilation.sourceTrees().forEach(watched::add)
+                        if (watched.size > 24 * 3) {
                             when (outcome) {
                                 Outcome.CANCELLED -> cancelled.set(true)
                                 Outcome.FAILURE -> error("proof compiler failure")
@@ -91,15 +89,14 @@ class XdkProjectProofMemoryTest {
                     .hasMessage("proof compiler failure")
             }
         }
-        assertThat(observed).hasSizeGreaterThanOrEqualTo(48)
-        await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofMillis(100)).untilAsserted {
-            System.gc()
-            assertThat(observed.count { it.get() != null })
-                .describedAs("retained graph proof attempts, pools and AST roots")
-                .isZero()
-        }
+        assertThat(watched.size).isGreaterThanOrEqualTo(48)
+        // what the query and the compiler still reach, with their classes' statics, without waiting for a collection
+        val started = System.nanoTime()
+        assertThat(watched.reachedFrom(query, EmbeddingSupport.instance()))
+            .describedAs("graph proof attempts, pools and AST roots still reached")
+            .isEmpty()
         println(
-            "24-root $outcome property proof: compiler objects released=${observed.size}, heap budget=${Runtime.getRuntime().maxMemory()} bytes",
+            "24-root $outcome property proof: ${watched.size} compiler objects released, walked in ${(System.nanoTime() - started) / 1_000_000} ms",
         )
     }
 }
