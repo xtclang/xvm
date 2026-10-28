@@ -217,7 +217,9 @@ internal fun ParityScenarios.refreshOverlapCases() {
         )
         val library = open(data.string("library"))
         val consumer = open(data.string("consumer"))
-        val version = version(consumer)
+        // the version of the consumer's text on the current connection; LSP4IJ's nightly reopens it with a new one
+        // after a restart, where 0.21.0 kept the old one, and the consumer stays untouched as long as it doesn't change
+        var version = version(consumer)
         with(driver) {
             val page = utility(LanguageServicePage::class)
             val settings = page.content(singleProject())
@@ -272,6 +274,7 @@ internal fun ParityScenarios.refreshOverlapCases() {
                     protocol.server().getCurrentProcessId()?.let { it != previous } == true &&
                         !ProcessHandle.of(previous).map { it.isAlive }.orElse(false)
                 }
+                version = version(consumer)
                 visible(data.string("after"))
                 clean(consumer)
                 hints(false)

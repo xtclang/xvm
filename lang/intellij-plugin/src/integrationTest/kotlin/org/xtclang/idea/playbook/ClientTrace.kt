@@ -8,6 +8,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.net.URI
 import java.nio.file.Files
@@ -148,23 +149,10 @@ class ClientTrace(
                     "Missing current client version; trace capture: $path"
                 },
                 timeout = 15.seconds,
-                getter = {
-                    (
-                        notifications("textDocument/didOpen", received = false).filter {
-                            it["textDocument"].asJsonObject.string("text") == text
-                        } +
-                            notifications("textDocument/didChange", received = false).filter {
-                                it["contentChanges"]
-                                    .rows()
-                                    .lastOrNull()
-                                    ?.get("text")
-                                    ?.asString ==
-                                    text
-                            }
-                    ).map { it["textDocument"].asJsonObject }
-                        .filter { sameUri(it.string("uri"), uri) }
-                        .maxOfOrNull { it.int("version") }
-                },
+                // the version LSP4IJ's synchronizer last sent, not the console's trace of it: library sources that
+                // the server serves as workspace/textDocumentContent (UP25) can fill the console's buffer before
+                // a version is read
+                getter = { utility(DocumentVersionsProbe::class).version(singleProject(), uri, text).takeIf { it >= 0 } },
                 checker = { it != null },
             )!!
         }
@@ -173,6 +161,16 @@ class ClientTrace(
         left: String,
         right: String,
     ): Boolean = URI(left) == URI(right)
+}
+
+/** Reads the versions LSP4IJ's document synchronizers last sent, in the IDE. */
+@Remote("org.xtclang.idea.playbook.probe.DocumentVersions", plugin = "org.xtclang.playbook.probe")
+interface DocumentVersionsProbe {
+    fun version(
+        project: Project,
+        uri: String,
+        text: String,
+    ): Int
 }
 
 /** Selects a native LSP4IJ trace level without duplicating its enum in the test classloader. */
