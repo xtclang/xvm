@@ -1277,6 +1277,11 @@ public class ConstantPool
         return IMPLICITS.byPath().get(sPath);
     }
 
+    /** The language's implicit import names, without resolving or loading their components. */
+    public static Set<String> getImplicitImportNames() {
+        return IMPLICITS.byName().keySet();
+    }
+
     /**
      * Given the specified typedef name and the context (module, package, class, method) within
      * which it exists, obtain a TypedefConstant that represents it.

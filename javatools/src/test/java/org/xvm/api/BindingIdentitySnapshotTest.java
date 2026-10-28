@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -19,6 +20,7 @@ import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NameExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,7 +40,8 @@ public class BindingIdentitySnapshotTest {
         assertEquals(new EqualInvocation(), new EqualInvocation());
         List.<UnaryOperator<Map<InvocationExpression, InvocationBinding>>>of(
                 methods -> new InvocationBinding.Facts(methods, Map.of()).methods(),
-                methods -> host.compilation(methods, Map.of()).callBindings())
+                methods -> host.compilation(methods, Map.of()).callBindings(),
+                methods -> host.partial(methods, Map.of(), Map.of()).callBindings())
                 .forEach(copy -> verifySnapshot(copy, EqualInvocation::new, binding));
     }
 
@@ -50,7 +53,8 @@ public class BindingIdentitySnapshotTest {
 
         List.<UnaryOperator<Map<InvocationExpression, InvocationBinding.FunctionCall>>>of(
                 functions -> new InvocationBinding.Facts(Map.of(), functions).functions(),
-                functions -> host.compilation(Map.of(), functions).functionBindings())
+                functions -> host.compilation(Map.of(), functions).functionBindings(),
+                functions -> host.partial(Map.of(), Map.of(), functions).functionBindings())
                 .forEach(copy -> verifySnapshot(copy, EqualInvocation::new, call));
     }
 
@@ -67,6 +71,15 @@ public class BindingIdentitySnapshotTest {
                 constructors -> new EmbeddingSupport.Compilation(host.file().getModule(), host.file(),
                         host.tree(), List.of(host.tree()), Map.of(), Map.of(), constructors).constructorBindings())
                 .forEach(copy -> verifySnapshot(copy, EqualConstruction::new, binding));
+    }
+
+    @Test
+    public void cursorFactsAreDetachedImmutableAndRejectNullEntries() {
+        var host    = new HostInputs();
+        var binding = new CursorBinding(List.of(), host.file().getModule().getIdentityConstant().getType(), false);
+
+        verifySnapshot(cursors -> host.partial(Map.of(), cursors, Map.of()).cursorBindings(),
+                () -> new IncompleteStatement(name(), 4, "TEST"), binding);
     }
 
     private static <K, V> void verifySnapshot(UnaryOperator<Map<K, V>> copy, Supplier<K> key, V value) {
@@ -140,5 +153,11 @@ public class BindingIdentitySnapshotTest {
             return new EmbeddingSupport.Compilation(file.getModule(), file, tree, List.of(tree), methods, functions);
         }
 
+        EmbeddingSupport.PartialAnalysis partial(Map<InvocationExpression, InvocationBinding> methods,
+                Map<IncompleteStatement, CursorBinding> cursors,
+                Map<InvocationExpression, InvocationBinding.FunctionCall> functions) {
+            return new EmbeddingSupport.PartialAnalysis(List.of(tree), List.of(),
+                    file.getConstantPool(), methods, cursors, functions);
+        }
     }
 }
