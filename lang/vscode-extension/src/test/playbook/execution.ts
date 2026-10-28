@@ -1130,6 +1130,69 @@ export function debugSessionCases(): void {
             }
         });
     });
+    playbook('X321', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const at = (line: number) => new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(line - 1, 0)));
+            const breakpoints = [at(data.breakpointLine)];
+            vscode.debug.addBreakpoints(breakpoints);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
+                const frames = async () => ((await session.customRequest('stackTrace', { threadId })).stackFrames as { name: string; line: number }[])
+                    .map(frame => [frame.name, frame.line]);
+
+                // lines typed above the stop, which the program was not built with; once the server has them, the stop
+                // shows on its line now
+                const edit = new vscode.WorkspaceEdit();
+                edit.insert(document.uri, new vscode.Position(data.insertLine - 1, 0), (data.inserted as string[]).map(line => `${line}\n`).join(''));
+                assert.ok(await vscode.workspace.applyEdit(edit));
+                await eventually(async () => (await frames())[0]?.[1], line => line === data.stoppedNow, 'The stop shows on its line now');
+
+                // a breakpoint on a line that moved is placed on the line the program has for it; one on a typed line
+                // is refused with the reason
+                const added = [at(data.moved), at(data.typed)];
+                vscode.debug.addBreakpoints(added);
+                breakpoints.push(...added);
+                const answer = await eventually(async () => sent.filter(message => message.type === 'response' && message.command === 'setBreakpoints')
+                    .map(message => message.body?.breakpoints ?? []).find(items => items.some(item => item.line === data.moved)),
+                found => found !== undefined, 'The new breakpoints are answered');
+                assert.ok(answer!.some(item => item.line === data.moved && item.verified), JSON.stringify(answer));
+                assert.ok(answer!.some(item => item.line === data.typed && !item.verified && item.message === data.reason), JSON.stringify(answer));
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The program stops at the moved line');
+                assert.deepStrictEqual(await frames(), data.frames);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, done => done, 'The program runs to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+            } finally {
+                vscode.debug.removeBreakpoints(breakpoints);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1157,7 +1220,7 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X320 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285 and X304-X321 cases check. */
 interface DapMessage {
     seq?: number;
     type: string;
@@ -1172,6 +1235,7 @@ interface DapMessage {
         text?: string;
         threadId?: number;
         breakpoint?: { verified: boolean; line?: number };
+        breakpoints?: { verified: boolean; line?: number; message?: string }[];
         stackFrames?: { name: string; line: number; source?: { path?: string } }[];
         totalFrames?: number;
     };
