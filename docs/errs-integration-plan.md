@@ -141,6 +141,18 @@ locally as `backup/errs-pre-rebase-20261028` (`8acc1eb92d`) and `backup/693-pre-
   by commit; its suites run on its tip before it is pushed.
 - errs was force-pushed with a lease from `8acc1eb92d`, with this record as its tip.
 
+**errs and #693 replayed onto master `22ec660f1f` (2026-10-28, later).** #716 merged while the
+receipts above ran, so both branches were replayed once more. Both already held all of #716, and both
+trees are byte for byte those validated above. [The map](errs-rebase-2026-10-28b.tsv) gives errs'
+1129 commits of `7db1c215b2` and their 1127 replays; #716 absorbed two, "Return a container's status
+in one statement line" and the review changes' mirror. The other commits that brought #716's fix to
+errs keep only what #716 does not have: the language server README's line. The conflicts, in
+`InterpreterConnector` (errs' `replaceDebugger` before #716's `isRuntimeIdle`), `ServiceContext`,
+`Container`, `xContainerControl`, `EmbeddingSupport`, `EmbeddingSupportTest` and runner.x, all
+resolve to #716's final form. #693 replayed without a conflict; its commit 39 no longer carries
+#716's changes, and its commits 1 to 38, which now sit on #716, are compiled again before it is
+pushed.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
