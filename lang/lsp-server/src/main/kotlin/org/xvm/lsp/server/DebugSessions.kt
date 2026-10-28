@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
+import org.xvm.debug.DataBreakpointRequest
 import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
 import org.xvm.debug.DebugSetup
@@ -160,6 +161,17 @@ internal class DebugSessions(
             runId: String,
             breakpoints: SourceBreakpoints,
         ) = runs.setBreakpoints(runId, breakpoints)
+
+        override fun dataBreakpointInfo(
+            runId: String,
+            reference: Int,
+            name: String,
+        ) = runs.dataBreakpointInfo(runId, reference, name)
+
+        override fun setDataBreakpoints(
+            runId: String,
+            breakpoints: List<DataBreakpointRequest>,
+        ) = runs.setDataBreakpoints(runId, breakpoints)
 
         override fun setFunctionBreakpoints(
             runId: String,

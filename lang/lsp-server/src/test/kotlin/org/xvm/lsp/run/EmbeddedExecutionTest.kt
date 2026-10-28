@@ -963,6 +963,74 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a data breakpoint on a field of an object stops at the next line once the field has changed`() {
+        CompilerTestSupport.configure()
+        val module = source("Watched.x", WATCHED.trimIndent())
+        val path = directory.resolve("Watched.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Watched", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Watched", "moduleUri": "$module"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 5}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+
+            fun body(
+                seq: Int,
+                command: String,
+                arguments: String,
+            ): JsonObject {
+                sessions.request(id, seq, command, arguments)
+                return client.until(id) { it.response == command }.last()["body"].asJsonObject
+            }
+
+            fun top(seq: Int) = body(seq, "stackTrace", """{"threadId": $thread}""")["stackFrames"].asJsonArray.first().asJsonObject
+
+            // the counter's count, from the variable of run()'s frame
+            val locals = body(6, "scopes", """{"frameId": ${top(5)["id"].asInt}}""")["scopes"].asJsonArray.first().asJsonObject
+            val counter =
+                body(7, "variables", """{"variablesReference": ${locals["variablesReference"].asInt}}""")["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .single { it["name"].asString == "counter" }
+            val info = body(8, "dataBreakpointInfo", """{"variablesReference": ${counter["variablesReference"].asInt}, "name": "count"}""")
+            assertThat(info["description"].asString).isEqualTo("Counter.count")
+            val installed = body(9, "setDataBreakpoints", """{"breakpoints": [{"dataId": "${info["dataId"].asString}"}]}""")
+            assertThat(
+                installed["breakpoints"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject["verified"]
+                    .asBoolean,
+            ).isTrue()
+
+            // the first add() stops at the line after the one that changed the count
+            body(10, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            sessions.request(id, 11, "continue", """{"threadId": $thread}""")
+            val stop = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+            assertThat(stop["reason"].asString).isEqualTo("data breakpoint")
+            assertThat(stop["description"].asString).isEqualTo("Counter.count changed from 0 to 2")
+            assertThat(top(12).let { it["name"].asString to it["line"].asInt }).isEqualTo("Counter.add" to 17)
+
+            body(13, "setDataBreakpoints", """{"breakpoints": []}""")
+            sessions.request(id, 14, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.none { it.event == "stopped" }).isTrue()
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(5)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a restarted frame is called again by its caller, which stops at its first line`() {
         CompilerTestSupport.configure()
         val module = source("Restarts.x", RESTARTS.trimIndent())
@@ -2471,6 +2539,34 @@ class EmbeddedExecutionTest {
 
                 Int twice(Int n) {
                     return n * 2;
+                }
+            }
+            """
+
+        /**
+         * A module whose run() makes a Counter on line 4 and adds 2 and then 3 to its count, on line 16 of Counter.add(),
+         * whose next line is 17; it prints "count=5" and returns 5.
+         */
+        const val WATCHED =
+            """
+            module Watched {
+                Int run() {
+                    @Inject Console console;
+                    Counter counter = new Counter();
+                    counter.add(2);
+                    counter.add(3);
+                    console.print($"count={counter.count}");
+                    return counter.count;
+                }
+
+                class Counter {
+                    Int count = 0;
+                    Int adds  = 0;
+
+                    void add(Int n) {
+                        count += n;
+                        ++adds;
+                    }
                 }
             }
             """
