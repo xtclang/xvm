@@ -1,5 +1,8 @@
 {
   "schemaVersion": 2,
+  "tagDefinitions": {
+    "slow": "Median of at least 10 s in either editor across the recorded passing playbook runs up to 2026-10-08 (most cases take 1-4 s). A future fast profile may exclude these; full and focused runs still include them."
+  },
   "common": {
     "sourceModules": [
       {
@@ -785,6 +788,9 @@
     },
     "X27": {
       "title": "real file-watcher creation and deletion refresh the module",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Project/Bad.x",
@@ -1243,6 +1249,9 @@
     },
     "X50": {
       "title": "unsaved and saved dependency members invalidate and recover consumers",
+      "tags": [
+        "slow"
+      ],
       "manual": [
         "Named unsaved member uses LSP didOpen/didClose; filesystem half uses the real VS Code watcher"
       ],
@@ -1563,6 +1572,9 @@
     },
     "X65": {
       "title": "property getters setters and default field overrides have distinct implementation sets",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Properties.x",
@@ -1665,6 +1677,9 @@
     },
     "X67": {
       "title": "closed property accessors track unsaved positions and recover after parse failure",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "original": "class Member implements Named<String> { @Override String name.get() = \"member\"; }",
@@ -2713,6 +2728,9 @@
     },
     "X97": {
       "title": "argument fitting through qualifiers and groups before later arguments",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Editing.x",
@@ -3593,6 +3611,9 @@
     },
     "X108": {
       "title": "multiple-return generic and package headers complete in the enclosing scope",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Editing.x",
@@ -4210,6 +4231,9 @@
     },
     "X122": {
       "title": "implement and override source and bundled methods with native Undo and Redo",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Actions.x",
@@ -4629,7 +4653,7 @@
       }
     },
     "X137": {
-      "title": "transport preference restarts one service and preserves unsaved buffers",
+      "title": "transport and adapter preferences restart one service and preserve unsaved buffers",
       "manual": [
         "Connection options are window/project scoped; remote filesystem execution is not enabled."
       ],
@@ -4713,6 +4737,9 @@
     },
     "X142": {
       "title": "constant property initializer retains semantic navigation and rename",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "X142/FoldedInitializer.x",
@@ -4731,6 +4758,9 @@
     },
     "X143": {
       "title": "partial workspace symbols have bounded batches and no duplicate final items",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "X143/PartialSymbols.x",
@@ -4747,6 +4777,9 @@
     },
     "X144": {
       "title": "installed client rejects stale versioned edits and preserves native Undo",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "GuardedEdit.x",
@@ -4765,6 +4798,9 @@
     },
     "X145": {
       "title": "visible compiler progress, native cancel and disconnect with pending work",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "ProgressWork.x",
@@ -4780,6 +4816,9 @@
     },
     "X146": {
       "title": "dependency edits refresh untouched consumer presentation",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "library": "RefreshLibrary.x",
@@ -4812,6 +4851,9 @@
     },
     "X148": {
       "title": "extract a literal return value with native undo and redo",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "Extract.x",
@@ -8484,6 +8526,9 @@
     },
     "X265": {
       "title": "Close a project or remove a workspace folder during compiler import",
+      "tags": [
+        "slow"
+      ],
       "manual": [
         "Start a gated import in a second project/folder and close/remove it. The producer must retire, late output must not restore its inputs, and the original project must remain usable."
       ],
@@ -8662,6 +8707,9 @@
     },
     "X277": {
       "title": "theme lexical detail survives semantic overlays and damaged source repair",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "file": "ThemeFallback.x",
@@ -8740,8 +8788,151 @@
         "limitations": []
       }
     },
+    "X280": {
+      "title": "Run lenses appear only on modules with a callable run method and follow edits",
+      "manual": [],
+      "values": {
+        "file": "LensRunnable.x",
+        "module": "LensRunnable",
+        "source": "module LensRunnable {\n    void run() {}\n}\n",
+        "libraryFile": "LensOnlyLibrary.x",
+        "libraryModule": "LensOnlyLibrary",
+        "librarySource": "module LensOnlyLibrary {\n    Int value() = 1;\n}\n",
+        "uncallable": "module LensOnlyLibrary {\n    Int value() = 1;\n    void run(String first, String second) {}\n}\n",
+        "runnableLibrary": "module LensOnlyLibrary {\n    Int value() = 1;\n    void run() {}\n}\n",
+        "runTitle": "▶ Run LensRunnable",
+        "libraryRunTitle": "▶ Run LensOnlyLibrary"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X281": {
+      "title": "embedded build saves edits, compiles the module graph and skips consumers of a failed dependency",
+      "manual": [
+        "The Build tool window and terminal links to diagnostics are inspected manually; the drivers check the reported lines."
+      ],
+      "values": {
+        "libraryFile": "BuildLibrary.x",
+        "libraryModule": "BuildLibrary",
+        "librarySource": "module BuildLibrary {\n    static Int value() = 7;\n}\n",
+        "appFile": "BuildApp.x",
+        "appModule": "BuildApp",
+        "appSource": "module BuildApp {\n    package lib import BuildLibrary;\n\n    Int run() = lib.value();\n}\n",
+        "brokenLibrary": "module BuildLibrary {\n    static Int value() = \"seven\";\n}\n",
+        "built": [
+          "✓ BuildLibrary",
+          "✓ BuildApp"
+        ],
+        "artifact": "build/xtc/embedded/lib/BuildLibrary.xtc",
+        "failed": "✗ BuildLibrary",
+        "skipped": "- BuildApp (not built: a dependency failed)",
+        "diagnostic": "BuildLibrary.x:2:"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X282": {
+      "title": "embedded run passes exact arguments, streams output and reports the exit code",
+      "manual": [
+        "Embedded runs do not forward console input."
+      ],
+      "values": {
+        "file": "RunEcho.x",
+        "module": "RunEcho",
+        "source": "module RunEcho {\n    Int run(String[] args) {\n        @Inject Console console;\n        console.print($\"args={args.size}:{args[0]}|{args[1]}\");\n        return 3;\n    }\n}\n",
+        "args": [
+          "a b",
+          "ü"
+        ],
+        "output": "args=2:a b|ü",
+        "exitCode": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X283": {
+      "title": "stopping or rerunning an embedded run ends it, and the worker runs the next program",
+      "manual": [],
+      "values": {
+        "file": "RunForever.x",
+        "module": "RunForever",
+        "source": "module RunForever {\n    void run() {\n        @Inject Console console;\n        console.print(\"started\");\n        for (Int count = 0; count >= 0; ++count) {}\n    }\n}\n",
+        "started": "started",
+        "nextFile": "RunNext.x",
+        "nextModule": "RunNext",
+        "nextSource": "module RunNext {\n    Int run() = 5;\n}\n",
+        "nextExitCode": 5
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X284": {
+      "title": "a module that does not build reports its diagnostics and runs nothing",
+      "manual": [],
+      "values": {
+        "file": "RunBroken.x",
+        "module": "RunBroken",
+        "source": "module RunBroken {\n    Int run() = \"five\";\n}\n",
+        "diagnostic": "RunBroken.x:2:",
+        "message": "Build failed; nothing was run."
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X285": {
+      "title": "debug launches start no fake debugger: VS Code runs the module, IntelliJ offers no Debug runner",
+      "manual": [
+        "The VS Code notice that Ecstasy debugging is not available is checked manually."
+      ],
+      "values": {
+        "file": "DebugRun.x",
+        "module": "DebugRun",
+        "source": "module DebugRun {\n    Int run() = 4;\n}\n",
+        "exitCode": 4
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X286": {
+      "title": "the adapter chooser opens from its shortcut, command and Tools menu, and each choice restarts the server",
+      "manual": [
+        "A physical desktop key press remains manual: VS Code sends the shortcut as renderer key events, and IntelliJ checks the keymap binding before invoking the action."
+      ],
+      "values": {
+        "file": "AdapterChooser.x",
+        "source": "module AdapterChooser {\n    Int value = 1;\n}\n",
+        "actionId": "xtc.selectLanguageAdapter",
+        "menuGroup": "ToolsMenu",
+        "commandTitle": "Ecstasy: Switch Language Adapter",
+        "chooserTitle": "Ecstasy: Switch Language Adapter",
+        "shortcut": "ctrl+alt+x a",
+        "treeSitterLabel": "Tree-sitter",
+        "compilerLabel": "Ecstasy Compiler"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "The shortcut is checked as an active keymap binding and the action is invoked from the editor; no key event is sent."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
+      "tags": [
+        "slow"
+      ],
       "manual": [],
       "values": {
         "consumer": "Consumer.x"
