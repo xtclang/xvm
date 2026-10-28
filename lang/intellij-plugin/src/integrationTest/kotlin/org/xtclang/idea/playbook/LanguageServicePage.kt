@@ -38,6 +38,11 @@ interface LanguageServicePage {
         value: String,
     )
 
+    fun saveOwner(
+        project: Project,
+        value: String,
+    )
+
     fun saveFormatting(
         project: Project,
         enabled: Boolean,

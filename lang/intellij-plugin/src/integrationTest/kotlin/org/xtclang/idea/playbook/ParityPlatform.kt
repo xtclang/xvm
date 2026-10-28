@@ -284,7 +284,7 @@ internal fun ParityScenarios.platformCases() {
             val status =
                 protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
             check(
-                !status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean,
+                status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean,
             )
             check(protocol.server().getCurrentProcessId() == previousPid)
             check(document.text == data.string("source"))
@@ -324,6 +324,55 @@ internal fun ParityScenarios.platformCases() {
             val status =
                 protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
             check(!status["serverSaveFormatting"].asBoolean)
+            // The server owns save formatting once native Actions on Save is off: its willSaveWaitUntil
+            // edits apply before the document is written.
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class).saveFormatting(singleProject(), false)
+                }
+            }
+            val original = with(driver) { utility(LanguageServicePage::class).content(singleProject()) }
+            var pid = protocol.server().getCurrentProcessId()
+            try {
+                with(driver) {
+                    withContext(OnDispatcher.EDT) {
+                        utility(LanguageServicePage::class).saveOwner(singleProject(), "server")
+                    }
+                    awaitUi("restart with server save formatting", HANG_LIMIT) {
+                        protocol.server().getCurrentProcessId()?.let { it != pid } == true
+                    }
+                }
+                pid = protocol.server().getCurrentProcessId()
+                check(
+                    protocol
+                        .query("xtc/languageServiceStatus", emptyMap<String, Any>())
+                        .asJsonObject["serverSaveFormatting"]
+                        .asBoolean,
+                )
+                replace(document, data.string("source"))
+                with(driver) {
+                    invokeAction("SaveAll", component = document.editor.component)
+                    awaitUi("server save edits", HANG_LIMIT) { document.text == data.string("formatted") }
+                }
+                check(
+                    Files.readString(
+                        Path.of(
+                            document.editor.editor
+                                .getVirtualFile()
+                                .getPath(),
+                        ),
+                    ) == data.string("formatted"),
+                )
+            } finally {
+                with(driver) {
+                    withContext(OnDispatcher.EDT) {
+                        utility(LanguageServicePage::class).restore(singleProject(), original)
+                    }
+                    awaitUi("restart with editor save formatting", HANG_LIMIT) {
+                        protocol.server().getCurrentProcessId()?.let { it != pid } == true
+                    }
+                }
+            }
         } finally {
             with(driver) {
                 withContext(OnDispatcher.EDT) {
