@@ -15,16 +15,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /** A resolver borrows its caller's listener only while making resolution callbacks. */
 class NameResolverReportingTest {
     @Test
-    void callbackReportsToCallerAndReleasesIt() {
+    void directResolutionAndCallbacksReportToTheSameCallerAndReleaseIt() {
         var errors = new ErrorList();
         var resolver = new NameResolver(new ResolvingNode((name, access, collector) -> {
             assertSame(errors, collector.getErrorListener());
-            collector.getErrorListener().error("TEST", ErrorListener.NOWHERE);
+            collector.getErrorListener().error("CALLBACK", ErrorListener.NOWHERE);
             return ResolutionResult.ERROR;
-        }), "missing");
+        }) {
+            @Override
+            protected ImportStatement resolveImportBySingleName(String name, ErrorListener errs) {
+                assertSame(errors, errs);
+                errs.error("DIRECT", ErrorListener.NOWHERE);
+                return null;
+            }
+        }, "missing");
         assertNull(resolver.getErrorListener());
         assertEquals(NameResolver.Result.ERROR, resolver.resolve(errors));
-        assertEquals(1, errors.getErrors().size());
+        assertEquals(2, errors.getErrors().size());
         assertNull(resolver.getErrorListener());
     }
 
