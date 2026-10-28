@@ -1101,6 +1101,16 @@ internal object XdkRename {
         }
     }
 
+    /** A variable the model resolved but cannot place: no declaration in source and no compiler identity. */
+    private fun unplaced(
+        facts: CompilerRenameFacts,
+        model: SemanticModel,
+        id: SemanticModel.SymbolId?,
+    ): Boolean {
+        val symbol = id?.let(model::symbol) ?: return false
+        return symbol.kind == SemanticModel.SymbolKind.VARIABLE && symbol.declaration == null && facts.constants[id] == null
+    }
+
     private fun edges(
         facts: CompilerRenameFacts,
         texts: Map<String, String>,
@@ -1182,17 +1192,23 @@ internal object XdkRename {
             .filter { it.sourceName != null }
             .forEach { model ->
                 val source = model.sourceName ?: return null
-                model.occurrences.forEach { occurrence ->
+                model.occurrences.forEach occurrences@{ occurrence ->
                     if (SemanticModel.SourceLocation(source, occurrence.range) !in ignored &&
                         (!allowUnresolved || occurrence.symbol != null)
                     ) {
                         val callable = facts.callables[SemanticModel.SourceLocation(source, occurrence.range)]
-                        result[site(source, occurrence.range) ?: return null] =
+                        val bound =
                             if (callable != null) {
                                 composedTarget(callable, texts, moved, translate) ?: return null
                             } else {
-                                target(model, occurrence.symbol) ?: return null
+                                target(model, occurrence.symbol)
+                                    // a register the model cannot place, such as a primary constructor's parameter
+                                    // passed in its own extends clause, is left out on both sides, as an unresolved
+                                    // name is: the edited source must still compile, and a new binding of the name
+                                    // is still a difference
+                                    ?: if (unplaced(facts, model, occurrence.symbol)) return@occurrences else return null
                             }
+                        result[site(source, occurrence.range) ?: return null] = bound
                     }
                 }
                 model.calls.filter { SemanticModel.SourceLocation(source, it.callee) !in ignoredCalls }.forEach { call ->
