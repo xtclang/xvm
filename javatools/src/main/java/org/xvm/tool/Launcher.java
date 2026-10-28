@@ -16,10 +16,8 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.BuildInfo;
-import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -703,9 +701,7 @@ public abstract class Launcher<T extends LauncherOptions>
         var repos = new java.util.ArrayList<ModuleRepository>(path.size() + 1);
         repos.add(makeBuildRepo());
         for (File file : path) {
-            repos.add(file.isDirectory()
-                ? new DirRepository(file, true)
-                : new FileRepository(file, true));
+            repos.add(ModuleRepository.of(file, true));
         }
         return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }
@@ -746,10 +742,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return a module repository that will store to the specified destination
      */
     protected ModuleRepository configureResultRepo(File fileDest) {
-        var resolved = resolveFile(fileDest);
-        return resolved.isDirectory()
-                ? new DirRepository(resolved, false)
-                : new FileRepository(resolved, false);
+        return ModuleRepository.of(resolveFile(fileDest), false);
     }
 
     /**
@@ -1022,7 +1015,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     public static final String MISSING_PKG_NODE = "LAUNCHER-03";
     /**
-     * Failure reading: {0}
+     * Failure reading: {0}; {1}
      */
     public static final String READ_FAILURE     = "LAUNCHER-04";
 
