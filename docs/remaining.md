@@ -833,7 +833,8 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   `interval-tree-bulk-removal` (`9e4fa930d`).
 - [ ] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
   of 80,000 highlighters installed, so it never measured the decorated case.
-- [ ] UP24 (IntelliJ Platform): ticket, then a PR from `async-format-redo` (`e7f0801a0`).
+- [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881) (2026-10-28); then a PR from `async-format-redo`
+  (`e7f0801a0`).
 - [ ] UP20 (IntelliJ test Driver): ticket (project `AT`, or `IJPL` if `AT` isn't public), then a PR
   from `driver-edt-modality` (`2c07e3ae4`).
 - [ ] UP29 (IntelliJ test Driver): ticket, then a PR from `driver-waitfor-once` (`5fe70a336`).
