@@ -5,9 +5,12 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.Color
 import org.eclipse.lsp4j.ColorPresentationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentColorParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Position
@@ -16,15 +19,20 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
+import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 
 /**
@@ -110,6 +118,65 @@ class ColorValueProtocolTest {
                         (failure.cause as ResponseErrorException).responseError.code,
                     ).isEqualTo(ResponseErrorCode.InvalidParams.value)
                 })
+        }
+    }
+
+    @Test
+    fun `a watcher event for files the first compile already read keeps the pending color request`(
+        @TempDir directory: Path,
+    ) {
+        CompilerTestSupport.configure()
+        val workspace = directory.toRealPath().toFile()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val support = EmbeddingSupport.instance()
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (entered.count > 0) {
+                        entered.countDown()
+                        check(release.await(20, SECONDS))
+                    }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+                colorPrototype = true,
+            )
+        XtcLanguageServer(adapter).use { server ->
+            server.connect(mock(LanguageClient::class.java))
+            server
+                .initialize(
+                    InitializeParams().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "workspace"))
+                    },
+                ).get(30, SECONDS)
+            server.initialized(InitializedParams())
+            try {
+                // as the VS Code playbook does: write a file in a new folder, then open it
+                val folder = workspace.resolve("Colors").apply { mkdirs() }
+                val file = folder.resolve("ColorPrototype.x").apply { writeText(SOURCE) }
+                val uri = file.toURI().toString()
+                val service = server.textDocumentService
+                service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, SOURCE)))
+                assertThat(entered.await(20, SECONDS)).isTrue()
+                val colors = service.documentColor(DocumentColorParams(TextDocumentIdentifier(uri)))
+
+                // the watcher reports the folder and the file while the first compile is still running
+                server.workspaceService.didChangeWatchedFiles(
+                    DidChangeWatchedFilesParams(
+                        listOf(
+                            FileEvent(folder.toURI().toString(), FileChangeType.Created),
+                            FileEvent(uri, FileChangeType.Created),
+                        ),
+                    ),
+                )
+                release.countDown()
+                // LSP has no color refresh: a request retired here would leave the editor without swatches
+                assertThat(colors.get(30, SECONDS).single().color).isEqualTo(Color(1.0, 128 / 255.0, 0.0, 1.0))
+            } finally {
+                release.countDown()
+            }
         }
     }
 

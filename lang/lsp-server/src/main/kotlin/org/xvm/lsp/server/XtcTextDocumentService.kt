@@ -271,6 +271,36 @@ class XtcTextDocumentService(
         partial: ((R) -> PartialResults.Plan<R>)? = null,
         convert: (T) -> R,
     ): CompletableFuture<R> {
+        // File events are applied before the next message is read, but the folders a client adds are walked off
+        // the reader thread. A workspace-wide request sent after them starts once they are discovered.
+        val folders = if (workspace) server.folderDiscovery() else null
+        if (folders != null && !folders.isDone) {
+            val deferred = CompletableFuture<R>()
+            folders.whenComplete { _, _ ->
+                if (deferred.isDone) return@whenComplete
+                val query = startQuery(method, uri, request, true, reportsOutOfSync, sourceOnly, progress, partial, convert)
+                // a client cancellation of the deferred request reaches the query
+                deferred.whenComplete { _, _ -> query.cancel(false) }
+                query.whenComplete { value, failure ->
+                    if (failure == null) deferred.complete(value) else deferred.completeExceptionally(failure)
+                }
+            }
+            return deferred
+        }
+        return startQuery(method, uri, request, workspace, reportsOutOfSync, sourceOnly, progress, partial, convert)
+    }
+
+    private fun <T, R> startQuery(
+        method: String,
+        uri: String,
+        request: () -> CompletableFuture<T>,
+        workspace: Boolean,
+        reportsOutOfSync: Boolean,
+        sourceOnly: Boolean,
+        progress: WorkDoneProgressParams?,
+        partial: ((R) -> PartialResults.Plan<R>)?,
+        convert: (T) -> R,
+    ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
         val trace = ExecutionTrace.span("lsp-query", method, uri)
         ExecutionTrace.event(trace, "start")
