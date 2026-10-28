@@ -15,7 +15,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
  * document's report.
  */
 internal class DiagnosticResultMessages(
-    private val snapshot: (String) -> DocumentStartupMessages.Snapshot?,
+    private val snapshot: (String) -> Snapshot?,
 ) {
     private val lock = Any()
     private val requests = mutableMapOf<String, Pending>()
@@ -23,15 +23,22 @@ internal class DiagnosticResultMessages(
     /** The latest report of each document, by URI, and the snapshot it was asked for. */
     private val reports = mutableMapOf<String, Report>()
 
+    /** An open document's owner, stamp and text, which tell whether a report is still the document's as it is now. */
+    data class Snapshot(
+        val owner: Any,
+        val stamp: Long,
+        val text: String,
+    )
+
     /** The document of a pull-diagnostic request, and its snapshot when the request is sent. */
     private data class Pending(
         val uri: String,
-        val snapshot: DocumentStartupMessages.Snapshot,
+        val snapshot: Snapshot,
     )
 
     /** The number of items of a document's latest report, and the snapshot that report was asked for. */
     private data class Report(
-        val snapshot: DocumentStartupMessages.Snapshot,
+        val snapshot: Snapshot,
         val items: Int,
     )
 

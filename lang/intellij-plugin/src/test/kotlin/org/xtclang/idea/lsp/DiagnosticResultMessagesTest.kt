@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class DiagnosticResultMessagesTest {
     private val uri = "file:///Diagnostics.x"
-    private val initial = DocumentStartupMessages.Snapshot(Any(), 1, "module Diagnostics {}")
+    private val initial = DiagnosticResultMessages.Snapshot(Any(), 1, "module Diagnostics {}")
     private val buffers = mutableMapOf(uri to initial)
     private val received = mutableListOf<Message>()
     private val guard = DiagnosticResultMessages(buffers::get)
