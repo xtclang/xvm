@@ -21,6 +21,9 @@ export function compilerImportCases(): void {
             const files = ['build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradlew', 'gradlew.bat',
                 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties'];
             for (const file of files) assert.ok(!await fs.stat(path.join(root, file)).then(() => true, () => false), `Isolated fixture must not replace ${file}`);
+            // Gradle's project cache, which holds the reports, and the wrapper's directory, when this case makes them.
+            const made: string[] = [];
+            for (const entry of ['.gradle', 'gradle']) if (!await fs.stat(path.join(root, entry)).then(() => true, () => false)) made.push(entry);
             const control = path.join(root, '.compiler-import-playbook');
             const report = path.join(root, modelPath);
             const aggregate = path.join(root, workspaceModelPath);
@@ -172,6 +175,8 @@ export function compilerImportCases(): void {
                 if (previousReport) await fs.writeFile(report, previousReport); else await fs.rm(report, { force: true });
                 if (previousAggregate) await fs.writeFile(aggregate, previousAggregate); else await fs.rm(aggregate, { force: true });
                 if ('included' in data) await fs.rm(path.join(root, 'included'), { recursive: true, force: true });
+                // X303 makes its project in a folder root without them.
+                for (const entry of made) await fs.rm(path.join(root, entry), { recursive: true, force: true });
                 await settings.update('sourceModules', previousGraph, vscode.ConfigurationTarget.Workspace);
                 await updateCompilerConfiguration();
             }
