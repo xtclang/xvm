@@ -107,7 +107,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * those named and the classes that extend them, and the host can read the exception that stopped
  * the program ({@link #exceptionInfo}).
  *
- * <p>The host's own code, in the container it names with {@link #setHost}, is not debugged. When
+ * <p>The host's own code, in the container it names with {@link #setHost}, is not debugged, and
+ * stacks, the exception's included, end where the host calls the program. When
  * the program is stopped for good ({@link #terminate}), its waiting fibers end without running
  * more of it, and so does any fiber that reaches a line afterwards.
  */
@@ -348,8 +349,9 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * The exception the program stopped at: its type and its text, if it has one, the stack trace
-     * it carries, and whether no frame will catch it.
+     * The exception the program stopped at: its type and its text, if it has one, the stack where
+     * it was thrown, as the runtime writes a stack trace but without the host's frames, and
+     * whether no frame will catch it.
      */
     public record ExceptionInfo(String type, String text, String stackTrace, boolean uncaught) {
     }
@@ -694,7 +696,7 @@ public final class SessionDebugger implements Debugger {
         // an exception stops the program once, at the first frame of the program that throws it
         if (exception != stoppedException && !frame.isNative() && !isHost(frame) && stopsAt(exception, frame)) {
             stoppedException = exception;
-            stop(frame, "exception", describe(exception), List.of(), null, infoOf(exception, !isCaught(frame, exception)));
+            stop(frame, "exception", describe(exception), List.of(), null, infoOf(frame, exception, !isCaught(frame, exception)));
         }
 
         // asked again at each frame the exception leaves, so a step learns that its frame is left;
@@ -710,6 +712,20 @@ public final class SessionDebugger implements Debugger {
     private boolean isHost(Frame frame) {
         Container host = hostContainer;
         return host != null && frame.f_context.f_container == host;
+    }
+
+    /**
+     * @return true if the stack's entry runs the host's own code: by its frame, or, for a caller
+     *         whose fiber has moved on so that only its method is known, by that method's module
+     */
+    private boolean isHost(Frame.StackFrame stackFrame) {
+        Container host = hostContainer;
+        if (host == null) {
+            return false;
+        }
+        return stackFrame.frame != null
+                ? isHost(stackFrame.frame)
+                : stackFrame.function != null && stackFrame.function.getIdentityConstant().getModuleConstant().equals(host.getModule());
     }
 
     /**
@@ -759,15 +775,35 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return what the host reads of the exception the program stops at
+     * @return what the host reads of the exception the program stops at, in the frame that throws it
      */
-    private static ExceptionInfo infoOf(ExceptionHandle exception, boolean uncaught) {
-        ObjectHandle text  = exception.getField(null, "text");
-        ObjectHandle stack = exception.getField(null, "stackTrace");
+    private ExceptionInfo infoOf(Frame frame, ExceptionHandle exception, boolean uncaught) {
+        ObjectHandle text = exception.getField(null, "text");
         return new ExceptionInfo(exception.getType().getValueString(),
-                text instanceof StringHandle string ? string.getStringValue() : null,
-                stack instanceof StringHandle string ? string.getStringValue() : null,
-                uncaught);
+                text instanceof StringHandle string ? string.getStringValue() : null, stackTraceOf(frame), uncaught);
+    }
+
+    /**
+     * @return the stack where the frame is, of its fiber and the fibers that called it, as the
+     *         runtime writes an exception's stack trace, up to the host's frames
+     */
+    private String stackTraceOf(Frame frame) {
+        var     trace     = new StringBuilder();
+        boolean fiberEnds = false;
+        for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
+            Frame at = stackFrame.frame;
+            if (isHost(stackFrame) || at == null && stackFrame.function == null) {
+                break;
+            }
+            if (fiberEnds) {
+                trace.append("\n\t    =========");
+            }
+            trace.append("\n\t").append(at == null
+                    ? Frame.formatFrameDetails(null, stackFrame.function, -1, null, null)
+                    : Frame.formatFrameDetails(at.f_context, stackFrame.function, stackFrame.iPC, at.getOps(), at.f_framePrev));
+            fiberEnds = stackFrame.boundary;
+        }
+        return trace.append('\n').toString();
     }
 
     /**
@@ -1021,6 +1057,10 @@ public final class SessionDebugger implements Debugger {
         var stack    = new ArrayList<StackFrameInfo>();
         for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
             MethodStructure function = stackFrame.function;
+            if (isHost(stackFrame)) {
+                // the host calls the program, so the rest of the stack is the host's own code
+                break;
+            }
             if (function == null || stackFrame.frame != null && stackFrame.frame.isNative()) {
                 continue;
             }
