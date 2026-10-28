@@ -735,6 +735,24 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a document's Run lenses name their module and line`() {
+        CompilerTestSupport.configure()
+        val text = "// the module is not on the first line\n\nmodule App {\n    void run() {}\n}"
+        val app = source("App.x", text)
+        val libraryText = "module Library { static Int value() = 7; }"
+        val library = source("Library.x", libraryText)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(app, text).success).isTrue()
+            assertThat(adapter.compile(library, libraryText).success).isTrue()
+            val lens = adapter.getCodeLensesAsync(app, false).get(30, SECONDS).single { it.command?.command == "xtc.runModule" }
+            assertThat(adapter.runLensLines(app)).containsExactly("App" to lens.range.start.line)
+            assertThat(lens.range.start.line).isEqualTo(2)
+            assertThat(adapter.runLensLines(library)).isEmpty()
+        }
+    }
+
+    @Test
     fun `a run method an annotation contributes gives its module a Run lens, and the module runs`() {
         CompilerTestSupport.configure()
         val contributionsText =
