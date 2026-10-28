@@ -1043,24 +1043,6 @@ public class EmbeddingSupport {
         }
 
         @Override
-        protected void prelinkSystemLibraries(ModuleRepository repository) {
-            try {
-                super.prelinkSystemLibraries(repository);
-            } catch (LauncherException e) {
-                ModuleCompiler.reportRepositoryReadFailures(repository, m_errors);
-                throw e;
-            }
-        }
-
-        @Override
-        public void log(ErrorInfo error) {
-            if (Compiler.MODULE_MISSING.equals(error.getCode())) {
-                ModuleCompiler.reportRepositoryReadFailures(ensureLibraryRepo(), m_errors);
-            }
-            super.log(error);
-        }
-
-        @Override
         protected ModuleRepository configureLibraryRepo(List<File> ignore) {
             BuildRepository build = new BuildRepository();
             return inRepo == null || inRepo == coreRepo
