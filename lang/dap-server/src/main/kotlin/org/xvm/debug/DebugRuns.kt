@@ -2,6 +2,7 @@ package org.xvm.debug
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import kotlin.time.Duration
 
 /**
  * What a debug session launches: the module to build and run, as the language server's `xtc/run` takes it.
@@ -223,6 +224,22 @@ interface DebugRuns {
         runId: String,
         frameId: Int,
         expression: String,
+    ): CompletableFuture<VariableState>
+
+    /**
+     * Runs code, such as a call, in a stopped frame, on the fiber that waits there, for at most [limit]: the value as
+     * a variable named by the expression, whose value is the value's `toString()`. What the code changes stays
+     * changed, and the program stays stopped. Fails, with the reason as its message, if the code does not compile,
+     * throws, or does not end within [limit]. Cancelling the answer ends the run. With [program], the program's other
+     * fibers run meanwhile too, without stopping, and wait again at their next line once the run ends, so the stop's
+     * threads, stacks and variables may have changed.
+     */
+    fun run(
+        runId: String,
+        frameId: Int,
+        expression: String,
+        limit: Duration,
+        program: Boolean,
     ): CompletableFuture<VariableState>
 
     /** The exception that the stopped fiber stopped the program at; null when it stopped it for another reason. */
