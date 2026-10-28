@@ -942,12 +942,14 @@ steps and the distinction between server logs and protocol tracing.
 
 Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy Language
 Service**; **Ecstasy Language Service Defaults** supplies application defaults. Project overrides
-share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing the language adapter or
-Full/Incremental text transport restarts the service and restores unsaved buffers. Inlay changes and Code Style settings
-apply live. The read-only effective view includes PID, runtime, capabilities, bundled read-only XDK
-libraries and compiler queue names/count. Server save edits are unavailable in LSP4IJ 0.21.0; use
-native **Actions on Save → Reformat code**. Compiler mode wraps expressions/lists at safe token
-boundaries using the Code Style right margin; literal splitting and comment reflow are not supported.
+share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing the language adapter,
+Full/Incremental text transport or the save formatting owner restarts the service and restores
+unsaved buffers. Inlay changes and Code Style settings apply live. The read-only effective view
+includes PID, runtime, capabilities, bundled read-only XDK libraries and compiler queue names/count.
+The editor formats on save through native **Actions on Save → Reformat code**, or the server does,
+through LSP4IJ's `willSaveWaitUntil`, while Actions on Save doesn't reformat Ecstasy files. Compiler
+mode wraps expressions/lists at safe token boundaries using the Code Style right margin; literal
+splitting and comment reflow are not supported.
 
 X142 verifies constant-initializer navigation and rename/Undo. X143 compares partial
 workspace-symbol batches with the ordinary response. These checks complement the protocol
