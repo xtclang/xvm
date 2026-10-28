@@ -8130,14 +8130,14 @@
       }
     },
     "X249": {
-      "title": "format continuation and standalone comment margins without changing literals",
+      "title": "format continuation, switches and standalone comment margins without changing literals",
       "manual": [
         "Run Format Document, inspect the shared expected layout, repeat to check stability, then Undo/Redo/Undo. Literal contents must stay unchanged."
       ],
       "values": {
         "file": "Layout.x",
-        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nreturn value;\n}\n}\n",
-        "expected": "module Layout {\n    Int run() {\n        String literal = \"two  spaces\";\n        Int value =\n                1 +\n                2;\n        /* comment\n         * keep relative layout and { braces }\n         */\n        return value;\n    }\n}\n"
+        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nswitch (value) {\ncase 3:\nvalue = 4;\nbreak;\ndefault:\nbreak;\n}\nreturn switch (value) {\ncase 4: 1;\ndefault: 0;\n};\n}\n}\n",
+        "expected": "module Layout {\n    Int run() {\n        String literal = \"two  spaces\";\n        Int value =\n                1 +\n                2;\n        /* comment\n         * keep relative layout and { braces }\n         */\n        switch (value) {\n        case 3:\n            value = 4;\n            break;\n        default:\n            break;\n        }\n        return switch (value) {\n            case 4: 1;\n            default: 0;\n        };\n    }\n}\n"
       },
       "intellij": {
         "coverage": "full",
@@ -8989,6 +8989,81 @@
         "first": "first version",
         "second": "second version",
         "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X290": {
+      "title": "typing keeps indentation as the code nests: Enter after an opening brace, a statement, a case, a comment or inside a string, and a closing brace",
+      "manual": [
+        "How typing feels, and on-type formatting speed in a large file (13a.13), are checked manually; the server's request time is measured by OnTypeFormattingTest."
+      ],
+      "values": {
+        "file": "OnType.x",
+        "scenarios": [
+          {
+            "name": "Enter after '{' in a class",
+            "source": "module OnType {\n    class Point {§\n    }\n}\n",
+            "keys": "\n",
+            "indent": 8
+          },
+          {
+            "name": "Enter after '{' in a method",
+            "source": "module OnType {\n    void run() {§\n    }\n}\n",
+            "keys": "\n",
+            "indent": 8
+          },
+          {
+            "name": "Enter after a statement",
+            "source": "module OnType {\n    void run() {\n        Int x = 1;§\n    }\n}\n",
+            "keys": "\n",
+            "indent": 8
+          },
+          {
+            "name": "'}' closing a class",
+            "source": "module OnType {\n    class Point {\n        Int x = 1;\n        §\n}\n",
+            "keys": "}",
+            "indent": 4
+          },
+          {
+            "name": "'}' closing an if block",
+            "source": "module OnType {\n    void run() {\n        if (True) {\n            Int x = 1;\n            §\n    }\n}\n",
+            "keys": "}",
+            "indent": 8
+          },
+          {
+            "name": "Enter after the '{' of a continued declaration",
+            "source": "module OnType {\n    class Point\n            implements Const {§\n    }\n}\n",
+            "keys": "\n",
+            "indent": 8
+          },
+          {
+            "name": "Enter after 'case'",
+            "source": "module OnType {\n    void run(Int x) {\n        switch (x) {\n        case 1:§\n        }\n    }\n}\n",
+            "keys": "\n",
+            "indent": 12
+          },
+          {
+            "name": "Enter after '{' three levels deep",
+            "source": "module OnType {\n    class Point {\n        void run() {\n            if (True) {§\n            }\n        }\n    }\n}\n",
+            "keys": "\n",
+            "indent": 16
+          },
+          {
+            "name": "Enter inside a string",
+            "source": "module OnType {\n    void run() {\n        String s = \"hel§lo\";\n    }\n}\n",
+            "keys": "\n",
+            "indent": 8
+          },
+          {
+            "name": "Enter after a '//' comment",
+            "source": "module OnType {\n    void run() {\n        // a note§\n    }\n}\n",
+            "keys": "\n",
+            "indent": 8
+          }
+        ]
       },
       "intellij": {
         "coverage": "full",
