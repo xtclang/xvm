@@ -79,6 +79,12 @@ data class ModuleState(
     val own: Boolean,
 )
 
+/** A call that the line of a stopped frame makes, which a step into it goes into: its ID, and what it calls. */
+data class StepTargetState(
+    val id: Int,
+    val label: String,
+)
+
 /** A scope of a stopped frame: its name, and the reference its variables are read by. */
 data class ScopeState(
     val name: String,
@@ -365,4 +371,20 @@ interface DebugRuns {
 
     /** The modules of the debugged program, its own and the libraries it uses; none before it starts. */
     fun modules(runId: String): CompletableFuture<List<ModuleState>> = CompletableFuture.completedFuture(emptyList())
+
+    /** The calls that the line of a stopped frame makes, in the order of its code; none for a frame that is not the first. */
+    fun stepInTargets(
+        runId: String,
+        frameId: Int,
+    ): CompletableFuture<List<StepTargetState>> = CompletableFuture.completedFuture(emptyList())
+
+    /**
+     * Steps the stopped fiber into one of the calls of its line, which [stepInTargets] gave: the program stops again in
+     * that call's code, or at the next line if the line does not make it. False when no such fiber or call waits.
+     */
+    fun stepInto(
+        runId: String,
+        threadId: Int,
+        targetId: Int,
+    ): CompletableFuture<Boolean> = CompletableFuture.completedFuture(false)
 }

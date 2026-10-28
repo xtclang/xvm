@@ -16,6 +16,7 @@ import org.xvm.debug.FrameState
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -63,7 +64,7 @@ import kotlin.time.toJavaDuration
  * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
  * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
- * `stackTrace` (`id`,
+ * `stepInTargets` (`id`, `request`, `frame`), `stepInto` (`id`, `request`, `thread`, `target`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`,
  * `filter`: `ALL`, `NAMED` or `INDEXED`, `start`, `count`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -106,6 +107,8 @@ object RunWorker {
                     "setBreakpoints" -> runs.setBreakpoints(command)
                     "threads" -> runs.threads(command)
                     "modules" -> runs.modules(command)
+                    "stepInTargets" -> runs.stepInTargets(command)
+                    "stepInto" -> runs.stepInto(command)
                     "stackTrace" -> runs.stackTrace(command)
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
@@ -487,6 +490,15 @@ object RunWorker {
                 addProperty("stepped", debugger.step(command["thread"].asInt, step))
             }
 
+        fun stepInTargets(command: JsonObject) =
+            reply(command) { debugger ->
+                val targets = debugger.stepInTargets(command["frame"].asInt).map { StepTargetState(it.id(), it.label()) }
+                add("targets", RunWorkerDebug.stepTargets(targets))
+            }
+
+        fun stepInto(command: JsonObject) =
+            reply(command) { debugger -> addProperty("stepped", debugger.stepInto(command["thread"].asInt, command["target"].asInt)) }
+
         fun exceptionStops(command: JsonObject) {
             val stops = RunWorkerDebug.exceptionsOf(command)
             debuggers[command["id"].asLong]?.setExceptionStops(stops.all, stops.allTypes, stops.uncaught, stops.uncaughtTypes)
@@ -738,7 +750,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 18
+        const val PROTOCOL = 19
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

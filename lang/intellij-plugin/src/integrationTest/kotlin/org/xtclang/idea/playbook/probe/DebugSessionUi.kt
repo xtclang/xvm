@@ -59,6 +59,8 @@ import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl
 import com.intellij.xdebugger.impl.evaluate.XDebuggerEvaluationDialog
 import com.intellij.xdebugger.impl.evaluate.XEvaluationOrigin
 import com.intellij.xdebugger.impl.ui.tree.nodes.XEvaluationCallbackWithOrigin
+import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
+import com.intellij.xdebugger.stepping.XSmartStepIntoVariant
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
@@ -649,6 +651,43 @@ object DebugSessionUi {
                     )
                 }
             }.toString()
+    }
+
+    /** The texts of the Smart Step Into variants where the module's paused session stopped, as Shift+F7 offers them. */
+    @JvmStatic
+    fun smartStepTargets(
+        project: Project,
+        module: String,
+    ): String = JsonArray().apply { smartStepVariants(project, module).forEach { add(it.text) } }.toString()
+
+    /** Steps the module's paused session into the Smart Step Into variant with the given [text], as choosing it does. */
+    @JvmStatic
+    fun smartStepInto(
+        project: Project,
+        module: String,
+        text: String,
+    ) {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val handler = smartStepHandler(session)
+        val variant = smartStepVariants(project, module).single { it.text == text }
+        ApplicationManager.getApplication().invokeAndWait { session.smartStepInto(handler, variant) }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun smartStepHandler(session: XDebugSession) =
+        checkNotNull(
+            session.debugProcess.smartStepIntoHandler,
+        ) { "No Smart Step Into handler" } as XSmartStepIntoHandler<XSmartStepIntoVariant>
+
+    private fun smartStepVariants(
+        project: Project,
+        module: String,
+    ): List<XSmartStepIntoVariant> {
+        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
+        val position = checkNotNull(session.currentPosition) { "The debug session of $module is not paused" }
+        return checkNotNull(smartStepHandler(session).computeSmartStepVariantsAsync(position).blockingGet(30_000)) {
+            "No Smart Step Into variants"
+        }
     }
 
     /** Runs the module's paused session to the 1-based [line] of the file [uri], as Run to Cursor does. */
