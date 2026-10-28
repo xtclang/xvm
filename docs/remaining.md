@@ -630,13 +630,13 @@ passes with the workaround disabled. The gates are in
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 
-### LSP4IJ: LSP4J's debug modules at 0.21.0 (UP63): our #1793, open
+### LSP4IJ: LSP4J's debug modules at 0.21.0 (UP63): our #1793, merged
 
 - [ ] UP63 (2026-10-28): LSP4IJ bundles LSP4J's LSP modules at 1.0.0 and its debug modules at 0.21.0,
   so no fix to LSP4J's DAP endpoint since 0.21.0 reaches IntelliJ, our LSP4J #1004, #1008 and #1009
   among them, and LSP4IJ's DAP model stays at DAP 1.60. Our
-  [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (open, 2026-10-28) bundles them at
-  LSP4J's one version. To do: get it merged; UP41's LSP4J part needs it to reach IntelliJ.
+  [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (merged 2026-10-28, unreleased, `2afdaf45`)
+  bundles them at LSP4J's one version. UP41's LSP4J part needs it to reach IntelliJ.
 
 ### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): LSP4J part our draft #1009
 
