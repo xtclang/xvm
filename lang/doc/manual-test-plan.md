@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **292 scenarios**: X1–X287, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **294 scenarios**: X1–X289, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 292 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 294 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1242,9 +1242,11 @@ and VS Code render them automatically from the LSP server response — no plugin
 
 **Requests:** `xtc/build`, `xtc/run`, `xtc/stopRun`; notifications `xtc/runOutput`, `xtc/runExited`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
-**Mode:** VS Code `xtc.build.mode`; IntelliJ Settings › Build, Execution, Deployment › Ecstasy
+**Mode:** VS Code `xtc.build.mode`, **Ecstasy: Select Build Mode** or the status bar's build mode (shown in a folder
+with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy
 
-Use a folder **without** a Gradle build (automatic mode picks embedded), or set the mode to embedded.
+Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying the
+Gradle build's own settings do not apply.
 Fixture: `Hello.x` containing
 
 ```ecstasy
@@ -1270,6 +1272,8 @@ module Hello {
 | 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs (the run is automated in X285) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
+| 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Build, Execution, Deployment › Ecstasy; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
+| 18a.14 | Switching modes (VS Code) | In that folder, click **Embedded build** in the status bar and choose **Gradle**; Build; then choose **Ecstasy compiler (embedded)** with **Ecstasy: Select Build Mode** and Build again | The status bar shows **Gradle build**, and Build runs `./gradlew build`; after switching back it shows **Embedded build** and builds with the embedded compiler. The choice is stored in the folder's `xtc.build.mode`. A folder without a Gradle build shows no build mode in the status bar. X288 automates the switch through the command and checks the status bar text; the quick pick and the click are manual |
 
 Known limits: one program at a time per server (a second concurrent run reports "Another program is
 still running"); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
@@ -1414,7 +1418,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X287 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X289 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1562,7 +1566,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 292 scenarios: X1–X287, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 294 scenarios: X1–X289, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1576,7 +1580,7 @@ focused runs still include them. A future fast profile could exclude them for qu
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 292 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 294 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3867,6 +3871,25 @@ row 18a.12 in [section 18a](#18a-embedded-build-and-run).
 | ID | Actions | Expected result |
 |---|---|---|
 | X287 | Run RunAsk. When it prints `Name? `, type `Grace Hopper ✓` and Enter (VS Code: in the run's terminal; IntelliJ: in the Run console), then end the input (VS Code `Ctrl+D` on the empty line; IntelliJ **Send EOF**). | The program prints `Hello, Grace Hopper ✓!`, its second `readLine` gets an empty line and prints `next=[]`, and it exits with code 0. The IntelliJ driver writes to the run's process input, the stream the console uses, rather than pressing keys in the console. |
+
+### Build modes beside a Gradle build (X288)
+
+The case puts `settings.gradle.kts` and a stub Gradle wrapper (`gradlew`, `gradlew.bat`) at the
+workspace root; the wrapper records its arguments in `gradle-invocations.txt` and prints them, so no
+Gradle build runs. All three files are removed afterwards. Manual mode switching is row 18a.14 in
+[section 18a](#18a-embedded-build-and-run).
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X288 | With no build mode chosen, Build, then Run BuildModes. Choose **Gradle** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Build, Execution, Deployment › Ecstasy), Build, then Run it. Choose the embedded compiler again and Run it. | First both use the embedded compiler: the build output says the Gradle build's settings do not apply (in IntelliJ with a link to the settings page), the program prints `built and run embedded`, and the wrapper records nothing. In Gradle mode VS Code's Build calls `./gradlew build` and Run calls `./gradlew -q runXtc --module=BuildModes`; IntelliJ's Build Project is not taken by the embedded compiler and Run calls the wrapper the same way. After switching back, Run is embedded again and the wrapper records nothing more. VS Code's status bar shows **Embedded build**, then **Gradle build**, then **Embedded build**. The IntelliJ driver sets the mode through the project's build settings rather than the Settings page. |
+
+### Running a module again (X289)
+
+Like X280–X287, this case switches to the embedded build mode for its duration.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X289 | Run RunAgain, then run it again without changes. Edit it to print `second version`, do not save, and run it a third time. | The first two runs print `first version` and exit with code 0. The third run saves the edit first and prints `second version`, not `first version`. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

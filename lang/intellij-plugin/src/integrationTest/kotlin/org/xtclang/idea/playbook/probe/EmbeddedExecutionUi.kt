@@ -1,11 +1,14 @@
 package org.xtclang.idea.playbook.probe
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.intellij.build.BuildProgressListener
 import com.intellij.build.BuildViewManager
+import com.intellij.build.DefaultBuildDescriptor
 import com.intellij.build.events.FileMessageEvent
 import com.intellij.build.events.MessageEvent
 import com.intellij.build.events.OutputBuildEvent
+import com.intellij.build.events.StartBuildEvent
 import com.intellij.execution.ExecutionListener
 import com.intellij.execution.ExecutionManager
 import com.intellij.execution.ProgramRunnerUtil
@@ -13,6 +16,7 @@ import com.intellij.execution.RunManager
 import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.executors.DefaultRunExecutor
+import com.intellij.execution.filters.Filter
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
@@ -33,6 +37,7 @@ import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 
 /**
@@ -75,18 +80,27 @@ object EmbeddedExecutionUi {
         return previous.name
     }
 
-    /** Runs Build Project and returns its result and the Build tool window's output and file messages. */
+    /**
+     * Runs Build Project and returns its result, the Build tool window's output and file messages, and the
+     * output text its console filters link.
+     */
     @JvmStatic
     fun build(
         project: Project,
         timeoutSeconds: Int,
     ): String {
         val text = StringBuffer()
+        val links = ConcurrentLinkedQueue<String>()
+        val filters = ConcurrentLinkedQueue<Filter>()
         val disposable = Disposer.newDisposable("Ecstasy playbook build")
         try {
             project.getService(BuildViewManager::class.java).addListener(
                 BuildProgressListener { _, event ->
                     when (event) {
+                        is StartBuildEvent -> {
+                            (event.buildDescriptor as? DefaultBuildDescriptor)?.executionFilters?.let(filters::addAll)
+                        }
+
                         is FileMessageEvent -> {
                             val position = event.filePosition
                             val kind = if (event.kind == MessageEvent.Kind.ERROR) "error" else event.kind.name.lowercase()
@@ -96,6 +110,13 @@ object EmbeddedExecutionUi {
 
                         is OutputBuildEvent -> {
                             text.append(event.message)
+                            event.message.lines().forEach { line ->
+                                filters.forEach { filter ->
+                                    filter.applyFilter(line, line.length)?.resultItems?.forEach {
+                                        links += line.substring(it.highlightStartOffset, it.highlightEndOffset)
+                                    }
+                                }
+                            }
                         }
                     }
                 },
@@ -109,6 +130,7 @@ object EmbeddedExecutionUi {
                     addProperty("aborted", result?.isAborted ?: true)
                     addProperty("errors", result?.hasErrors() ?: true)
                     addProperty("text", text.toString())
+                    add("links", JsonArray().apply { links.forEach(::add) })
                 }.toString()
         } finally {
             Disposer.dispose(disposable)
