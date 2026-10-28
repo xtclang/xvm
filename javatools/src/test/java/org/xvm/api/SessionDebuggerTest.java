@@ -54,6 +54,7 @@ import org.xvm.runtime.SessionDebugger.Completions;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
 import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
+import org.xvm.runtime.SessionDebugger.Method;
 import org.xvm.runtime.SessionDebugger.ModuleInfo;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
@@ -862,6 +863,44 @@ public class SessionDebuggerTest {
                 session.setBreakpoints(source.toString(), List.of(new Line(1, 2), new Line(2, 9), new Line(3, 13))));
         assertEquals(List.of(new Breakpoint(4, 1, false, SessionDebugger.NOT_IN_PROGRAM)),
                 session.setBreakpoints(sourceDir.resolve("Other.x").toString(), List.of(new Line(4, 1))));
+    }
+
+    @Test
+    public void aMethodsBreakpointStopsAtTheFirstLineOfTheProgramsMethodsOfItsNameWhereItsConditionHolds()
+            throws Exception {
+        Path  source  = compile("Entered", TARGETS.replace("Targets", "Entered"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Entered"));
+
+        // by the method's own name or after its module's; the library's forEach is not the
+        // program's, and a condition that is not understood is not installed
+        String           path      = source.toRealPath().toString();
+        List<Breakpoint> installed = session.setMethodBreakpoints(List.of(new Method(1, "twice"),
+                new Method(2, "Entered.add", "a > 5", null), new Method(3, "forEach"), new Method(4, "add", "a >", null)));
+        assertEquals(List.of(new Breakpoint(1, 15, true, null, path),
+                             new Breakpoint(2, 11, true, null, path),
+                             new Breakpoint(3, 0, false, SessionDebugger.NO_METHOD, null)),
+                installed.subList(0, 3));
+        assertFalse(installed.get(3).verified());
+        assertTrue(installed.get(3).message().startsWith("The condition"), installed.get(3).message());
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Entered", output, session);
+        try (control) {
+            // add(1, 2) does not stop, since a is not more than 5; twice(3) does
+            Stop stop = stops.next();
+            assertEquals("function breakpoint", stop.reason());
+            assertEquals(List.of(1), stop.breakpointIds());
+            assertEquals("Entered.twice:15", where(session, stop));
+            assertEquals("3", evaluate(session, session.stackTrace(stop.threadId()).getFirst().id(), "n").value());
+
+            session.setMethodBreakpoints(List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(6L, control.result());
+            assertEquals(null, stops.poll());
+        }
     }
 
     @Test

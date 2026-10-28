@@ -10,6 +10,7 @@ import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -48,6 +49,32 @@ internal object RunWorkerDebug {
 
     fun sourcesOf(json: JsonArray): List<SourceBreakpoints> = json.map { sourceOf(it.asJsonObject) }
 
+    fun functions(functions: List<FunctionBreakpointRequest>) =
+        JsonArray().apply {
+            functions.forEach { request ->
+                add(
+                    JsonObject().apply {
+                        addProperty("id", request.id)
+                        addProperty("name", request.name)
+                        request.condition?.let { addProperty("condition", it) }
+                        request.hitCondition?.let { addProperty("hitCondition", it) }
+                    },
+                )
+            }
+        }
+
+    fun functionsOf(json: JsonArray?): List<FunctionBreakpointRequest> =
+        json
+            ?.map { it.asJsonObject }
+            ?.map {
+                FunctionBreakpointRequest(
+                    it["id"].asInt,
+                    it["name"].asString,
+                    it["condition"]?.asString,
+                    it["hitCondition"]?.asString,
+                )
+            }.orEmpty()
+
     fun sourceOf(json: JsonObject) =
         SourceBreakpoints(
             json["path"].asString,
@@ -71,6 +98,7 @@ internal object RunWorkerDebug {
                         addProperty("line", state.line)
                         addProperty("verified", state.verified)
                         state.message?.let { addProperty("message", it) }
+                        state.path?.let { addProperty("path", it) }
                     },
                 )
             }
@@ -78,7 +106,13 @@ internal object RunWorkerDebug {
 
     fun statesOf(json: JsonArray): List<BreakpointState> =
         json.map { it.asJsonObject }.map { state ->
-            BreakpointState(state["id"].asInt, state["line"].asInt, state["verified"].asBoolean, state["message"]?.asString)
+            BreakpointState(
+                state["id"].asInt,
+                state["line"].asInt,
+                state["verified"].asBoolean,
+                state["message"]?.asString,
+                state["path"]?.asString,
+            )
         }
 
     fun threads(threads: List<ThreadState>) =
