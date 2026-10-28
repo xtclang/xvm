@@ -803,12 +803,13 @@ passes with the workaround disabled. The gates are in
   and shows it when the adapter's process ends. To do: after a release with it, have our handler take
   the exit code from that key instead of reading `exited`.
 
-### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, open
+### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, merged
 
 - UP57, UP58 (2026-10-28): LSP4IJ declares neither inline-value nor (LSP 3.18) folding-range
   refresh. XVM's server sends each only to a client that declares it, so nothing is lost in
-  IntelliJ. Our [#1790](https://github.com/redhat-developer/lsp4ij/pull/1790) (open, 2026-10-28)
-  declares both and handles them.
+  IntelliJ. Our [#1790](https://github.com/redhat-developer/lsp4ij/pull/1790) (merged 2026-10-28,
+  unreleased, `436a4db5`) declares both and handles them; CodeRabbit's finding, a race on a stack
+  frame's variables context, was fixed in it first.
 
 ### LSP4IJ: no workspace symbol resolve (UP59): our #1788, merged
 
