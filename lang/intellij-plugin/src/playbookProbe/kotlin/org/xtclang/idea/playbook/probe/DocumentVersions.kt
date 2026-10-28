@@ -31,11 +31,7 @@ object DocumentVersions {
                 .firstOrNull { it.file.path == path }
                 ?.synchronizer ?: return -1
         if (synchronizer.document.text != text || pendingChanges(synchronizer)) return -1
-        // package-private in LSP4IJ 0.21.0, public on its main branch
-        return DocumentContentSynchronizer::class.java
-            .getDeclaredMethod("getVersion")
-            .apply { isAccessible = true }
-            .invoke(synchronizer) as Int
+        return synchronizer.version
     }
 
     private fun pendingChanges(synchronizer: DocumentContentSynchronizer): Boolean {
