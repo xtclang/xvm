@@ -202,7 +202,6 @@ internal fun ParityWorkspace.nativeLinkClick(
 ) = with(driver) {
     check(link.has("data") && !link.has("target")) { "The server leaves the link's target to documentLink/resolve: $link" }
     val browser = utility(BrowserRequestsProbe::class)
-    val hints = utility(DebugSessionProbe::class)
     val editor = document.editor
     val at = ParityWorkspace.offset(document.text, link["range"].asJsonObject["start"].asJsonObject) + 1
     val resolves = trace.requests("documentLink/resolve").size
@@ -211,28 +210,14 @@ internal fun ParityWorkspace.nativeLinkClick(
         focusEditor(editor)
         withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
         invokeAction("GotoDeclaration", component = editor.component)
-        if (replacementGate("UP52")) {
-            awaitUi("Ctrl+Click opens the link's resolved URL", HANG_LIMIT, errorMessage = { "Opened: ${browser.opened()}" }) {
-                url in browser.opened().lines()
-            }
-            check(trace.requests("documentLink/resolve").size > resolves) { "Ctrl+Click opened $url without documentLink/resolve" }
-            return@with
+        awaitUi("Ctrl+Click opens the link's resolved URL", HANG_LIMIT, errorMessage = { "Opened: ${browser.opened()}" }) {
+            url in browser.opened().lines()
         }
-        // TODO LSP4IJ: UP52 — LSP4IJ never sends documentLink/resolve, and its Ctrl+Click ignores a link without a
-        //  target, which the server leaves to resolve, so it finds nothing to open; with #1785 it resolves the link
-        awaitUi(
-            "Ctrl+Click on the link finds nothing to go to",
-            HANG_LIMIT,
-            errorMessage = { "Hints: ${hints.hintTexts()}; opened: ${browser.opened()}" },
-        ) { browser.opened().isNotEmpty() || NOTHING_TO_GO_TO in hints.hintTexts() }
-        check(browser.opened().isEmpty()) { "UP52 is fixed, so X131 checks that Ctrl+Click opens the link: ${browser.opened()}" }
+        check(trace.requests("documentLink/resolve").size > resolves) { "Ctrl+Click opened $url without documentLink/resolve" }
     } finally {
         browser.restore()
     }
 }
-
-/** What IntelliJ's Go to Declaration shows where it finds nothing. */
-private const val NOTHING_TO_GO_TO = "Cannot find declaration to go to"
 
 /** Records, in the IDE, the URLs it is asked to open in a browser, instead of starting one. */
 @Remote("org.xtclang.idea.playbook.probe.BrowserRequests", plugin = "org.xtclang.playbook.probe")

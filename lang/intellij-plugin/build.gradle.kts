@@ -1106,7 +1106,6 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         systemProperty("xtc.tour.visible", providers.gradleProperty("intellijTourVisible").getOrElse("false"))
         // a shorter hang bound for the tour's waits, in seconds, for a quicker look at failing checks; the playbook's without it
         systemProperty("xtc.tour.hang", providers.gradleProperty("intellijTourHang").getOrElse(""))
-        systemProperty("xtc.playbook.replacementGates", providers.gradleProperty("intellijPlaybookReplacementGates").getOrElse(""))
         systemProperty(
             "xtc.playbook.largeFileProbe",
             providers.gradleProperty("intellijLargeFileProbe").getOrElse("false"),
