@@ -542,11 +542,28 @@ a `String[]` is passed when the method requires one, or when arguments are given
 parameter. The Run lens appears only on modules whose registered module structure declares such a
 `run` method, so a module that does not build yet can still offer Run and report why it failed.
 
-Programs run in a separate execution worker JVM, started on the first run from the server's own
-classpath and Java runtime, reused across runs, and replaced after it dies; each run gets a fresh
-application container, and the runner's HTTP host is not started. The worker runs one program at a
-time: a second run fails with "Another program is still running" until the first ends. Shutting down
-the server shuts down the worker and ends active runs.
+Programs run in separate execution worker JVMs, started from the server's own classpath and Java
+runtime; each run gets a fresh application container, and the runner's HTTP host is not started.
+Each running program has a worker of its own, so up to four programs run at once; a fifth run
+fails with a message saying four are already running. A worker is reused for later runs: one idle
+worker is kept and exits after 10 minutes idle, any other exits when its run ends. The server
+supervises the workers: one that does not report ready within 60 seconds is ended and its run
+fails with that reason; a program still running 10 seconds after Stop has its worker ended, and the
+run reports why; a worker that dies ends its run with an error, and the next run gets a new worker.
+Shutting down the server shuts down every worker and ends active runs.
+
+A worker receives nothing until it reports its protocol version and the bundled XDK it runs, and
+these must be the server's own. They differ when the server's files are replaced while it runs, as
+by a plugin update; such a worker is ended, and its run says to restart the language server. After
+each run a worker reports the heap it still uses after a collection, its live threads, the threads
+of the runtime's own pool, and the consoles and runs it still holds for ended programs, which the
+server logs. A worker is not used again when it keeps more than 512 MB or 200 threads, when its heap
+grew more than 128 MB since its first run, when its runtime pool grew, or when it still holds a
+console or run of an ended program. A worker exits when the server's pipe closes, also when the
+server process is killed. A program's output
+is sent in batches: text goes out 20 ms after it is printed, or as soon as 16,384 characters wait,
+and no more than that waits in the worker. The server forwards output to the client as it reads it,
+so a program printing faster than the client reads waits in its print rather than piling up output.
 
 `Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
 still building is held and delivered when the program starts. After `end`, or when the run is stopped,
