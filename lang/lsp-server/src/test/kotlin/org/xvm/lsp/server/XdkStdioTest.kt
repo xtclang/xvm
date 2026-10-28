@@ -1,0 +1,2079 @@
+package org.xvm.lsp.server
+
+import com.google.gson.Gson
+import com.google.gson.JsonParser
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
+import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
+import org.eclipse.lsp4j.CallHierarchyPrepareParams
+import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.Color
+import org.eclipse.lsp4j.ColorPresentationParams
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.ConfigurationParams
+import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DiagnosticCapabilities
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidCloseTextDocumentParams
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentColorParams
+import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.DocumentHighlightParams
+import org.eclipse.lsp4j.DocumentLinkCapabilities
+import org.eclipse.lsp4j.DocumentLinkParams
+import org.eclipse.lsp4j.DocumentRangesFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolCapabilities
+import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.FormattingOptions
+import org.eclipse.lsp4j.HoverParams
+import org.eclipse.lsp4j.ImplementationParams
+import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.InlineCompletionCapabilities
+import org.eclipse.lsp4j.InlineCompletionContext
+import org.eclipse.lsp4j.InlineCompletionParams
+import org.eclipse.lsp4j.InlineCompletionTriggerKind
+import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MonikerKind
+import org.eclipse.lsp4j.MonikerParams
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
+import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.SelectionRangeParams
+import org.eclipse.lsp4j.SemanticTokensCapabilities
+import org.eclipse.lsp4j.SemanticTokensClientCapabilitiesRequests
+import org.eclipse.lsp4j.SemanticTokensClientCapabilitiesRequestsFull
+import org.eclipse.lsp4j.SemanticTokensDeltaParams
+import org.eclipse.lsp4j.SemanticTokensParams
+import org.eclipse.lsp4j.SemanticTokensRangeParams
+import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.SignatureHelpCapabilities
+import org.eclipse.lsp4j.SignatureHelpParams
+import org.eclipse.lsp4j.SignatureInformationCapabilities
+import org.eclipse.lsp4j.SynchronizationCapabilities
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
+import org.eclipse.lsp4j.TextDocumentContentCapabilities
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.eclipse.lsp4j.TextDocumentContentParams
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TextDocumentSaveReason
+import org.eclipse.lsp4j.TextDocumentSyncKind
+import org.eclipse.lsp4j.TypeDefinitionParams
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
+import org.eclipse.lsp4j.TypeHierarchySubtypesParams
+import org.eclipse.lsp4j.TypeHierarchySupertypesParams
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WillSaveTextDocumentParams
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceEditCapabilities
+import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.services.LanguageServer
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.NANOSECONDS
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
+
+/**
+ * Process tests consume the actual fat JAR, including its manifest, resources and logging setup.
+ */
+@Tag("compiler-stdio")
+class XdkStdioTest {
+    interface ServiceStatusServer : LanguageServer {
+        @JsonRequest("xtc/languageServiceStatus")
+        fun languageServiceStatus(): CompletableFuture<Map<String, Any?>>
+    }
+
+    @TempDir lateinit var directory: Path
+
+    @Test
+    fun `packaged color prototype uses the opt in launcher and round trips picker edits`() {
+        val source =
+            """
+            module ColorPrototype {
+                const Rgba(UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha = 255) {}
+                Rgba sample() = new Rgba(255, 128, 0);
+            }
+            """.trimIndent()
+        Session(packagedJar(), directory, colorPrototype = true).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val before = session.await(service.documentColor(DocumentColorParams(document))).single()
+            assertThat(before.color).isEqualTo(Color(1.0, 128 / 255.0, 0.0, 1.0))
+            val wanted = Color(0.0, 0.0, 1.0, 128 / 255.0)
+            val edit = session.await(service.colorPresentation(ColorPresentationParams(document, wanted, before.range))).single().textEdit
+            assertThat(edit.newText).isEqualTo("new Rgba(0, 0, 255, alpha = 128)")
+            assertThat(edit.range).isEqualTo(before.range)
+            session.change(source.replace("new Rgba(255, 128, 0)", edit.newText), 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            assertThat(session.await(service.documentColor(DocumentColorParams(document))).single().color).isEqualTo(wanted)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `packaged inline completion preserves UTF16 positions and source suffixes`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val text =
+                """
+                module Stdio {
+                    void run() {
+                        Int answer = 42;
+                        /* 😀 */ Int result = ans;
+                    }
+                }
+                """.trimIndent()
+            session.open(text)
+            val line = text.lines()[3]
+            val at = Position(3, line.indexOf("ans;") + 3)
+            val result =
+                session
+                    .await(
+                        session.server.textDocumentService.inlineCompletion(
+                            InlineCompletionParams(
+                                TextDocumentIdentifier(URI),
+                                at,
+                                InlineCompletionContext(InlineCompletionTriggerKind.Automatic),
+                            ),
+                        ),
+                    ).right.items
+                    .single()
+            assertThat(result.insertText.left).isEqualTo("answer")
+            assertThat(result.range.start).isEqualTo(Position(3, at.character - 3))
+            assertThat(result.range.end).isEqualTo(at)
+            assertThat(result.command).isNull()
+        }
+    }
+
+    @Test
+    fun `packaged library content and direct monikers use negotiated immutable virtual documents`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(libraryContent = true)
+            val text = "module Stdio { String text = \"value\"; }"
+            session.open(text)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val target =
+                session
+                    .await(
+                        documents.definition(DefinitionParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String")))),
+                    ).left
+                    .single()
+            assertThat(target.uri).startsWith("ecstasy-library:")
+            val workspace = session.server.workspaceService
+            val content = session.await(workspace.textDocumentContent(TextDocumentContentParams(target.uri))).text
+            assertThat(content.lines()[target.range.start.line]).contains("const String")
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, content)))
+            val imported =
+                session
+                    .await(
+                        documents.moniker(MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String")))),
+                    ).single()
+            val exported = session.await(documents.moniker(MonikerParams(TextDocumentIdentifier(target.uri), target.range.start))).single()
+            assertThat(exported.identifier).isEqualTo(imported.identifier)
+            assertThat(exported.kind).isEqualTo(MonikerKind.Export)
+            assertThatThrownBy { session.await(workspace.textDocumentContent(TextDocumentContentParams("ecstasy-library:///unknown.x"))) }
+                .hasCauseInstanceOf(ResponseErrorException::class.java)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `packaged monikers round trip stable identities partial results and changed artifacts`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val text = "module Stdio { Int value = 1; }"
+            session.open(text)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val params = MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("value")))
+            val documents = session.server.textDocumentService
+            val first = session.await(documents.moniker(params)).single()
+            assertThat(first.scheme).isEqualTo("ecstasy-artifact-v1")
+            assertThat(first.kind).isEqualTo(MonikerKind.Export)
+            params.partialResultToken = Either.forLeft("moniker-partial")
+            assertThat(session.await(documents.moniker(params))).isEmpty()
+            val parts = session.progress.filter { it.token.left == "moniker-partial" }
+            assertThat(parts).hasSize(1)
+            assertThat(Gson().toJsonTree(parts.single().value.right).asJsonArray.single())
+                .isEqualTo(Gson().toJsonTree(first))
+            params.partialResultToken = null
+            session.change(text, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            assertThat(session.await(documents.moniker(params))).containsExactly(first)
+            session.change(text.replace("= 1", "= 2"), 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            assertThat(session.await(documents.moniker(params)).single().identifier).isNotEqualTo(first.identifier)
+            session.change("module Stdio { Missing value; }", 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isNotEmpty()
+            params.position = Position(0, 23)
+            assertThat(session.await(documents.moniker(params))).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `separate connections isolate identical document URIs progress tokens and shutdown`() {
+        val jar = packagedJar()
+        Session(jar, Files.createDirectory(directory.resolve("first"))).use { first ->
+            Session(jar, Files.createDirectory(directory.resolve("second"))).use { second ->
+                first.initialize()
+                second.initialize()
+                val other = "module Stdio { String run() { String value = \"two\"; return value; } }"
+                first.open(VALID)
+                second.open(other)
+                assertThat(first.diagnosticsAt(1).diagnostics).isEmpty()
+                assertThat(second.diagnosticsAt(1).diagnostics).isEmpty()
+                assertThat(first.status()["pid"]).isNotEqualTo(second.status()["pid"])
+
+                fun references(
+                    session: Session,
+                    source: String,
+                ) = session.server.textDocumentService.references(
+                    ReferenceParams(TextDocumentIdentifier(URI), Position(0, source.indexOf("value")), ReferenceContext(true)).apply {
+                        workDoneToken = Either.forLeft("same-token")
+                        partialResultToken = Either.forLeft("same-partial-token")
+                    },
+                )
+                val one = references(first, VALID)
+                val two = references(second, other)
+                first.await(one)
+                second.await(two)
+                assertThat(first.progress.filter { it.token.left == "same-partial-token" }).isNotEmpty()
+                assertThat(second.progress.filter { it.token.left == "same-partial-token" }).isNotEmpty()
+                first.shutdownAndExit()
+                // The other connection still owns its buffer, semantic state and transport.
+                val hover =
+                    second.await(
+                        second.server.textDocumentService.hover(
+                            HoverParams(TextDocumentIdentifier(URI), Position(0, other.indexOf("value"))),
+                        ),
+                    )
+                assertThat(hover.contents.right.value).contains("String")
+                second.change(VALID, 2)
+                assertThat(second.diagnosticsAt(2).diagnostics).isEmpty()
+                second.verifySemantics(VALID, "value", "Int")
+                second.shutdownAndExit()
+            }
+        }
+    }
+
+    @Test
+    fun `unknown methods and malformed parameters cannot kill the packaged message reader`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            listOf(
+                Triple("xtc/unknownMethod", emptyMap<String, Any>(), ResponseErrorCode.MethodNotFound),
+                Triple(
+                    "textDocument/hover",
+                    mapOf(
+                        "textDocument" to mapOf("uri" to URI),
+                        "position" to mapOf("line" to "not-a-number", "character" to 0),
+                    ),
+                    // TODO LSP4IJ: UP15 — underlying LSP4J 1.0.0 labels valid JSON with bad parameter
+                    // types ParseError. Switch to InvalidParams after its decoder is repaired;
+                    // retain reader-recovery checks. See docs/errs-upstream-issues.md (UP15).
+                    ResponseErrorCode.ParseError,
+                ),
+            ).forEach { (method, params, code) ->
+                val failure = assertThrows<ExecutionException> { session.await(session.request(method, params)) }
+                assertThat(failure.cause).isInstanceOf(ResponseErrorException::class.java)
+                assertThat((failure.cause as ResponseErrorException).responseError.code).isEqualTo(code.value)
+                session.verifySemantics(VALID, "value", "Int")
+            }
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `optional signature and link fields follow negotiated capabilities over stdio`(richPresentation: Boolean) {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(richPresentation = richPresentation)
+            val source =
+                """
+                module Stdio {
+                    Int read(Int first, Int second) = first + second;
+                    void run() { Int result = read(1, 2); }
+                    // https://xtclang.org/
+                }
+                """.trimIndent()
+            session.open(source)
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            val help =
+                session.await(
+                    documents.signatureHelp(
+                        SignatureHelpParams(id, Position(2, source.lines()[2].indexOf("2)"))),
+                    ),
+                )!!
+            assertThat(help.activeParameter).isEqualTo(1)
+            assertThat<Int?>(help.signatures.single().activeParameter)
+                .isEqualTo(1.takeIf { richPresentation })
+            val link = session.await(documents.documentLink(DocumentLinkParams(id))).single()
+            val resolved =
+                if (richPresentation) {
+                    assertThat(link.target).isNull()
+                    session.await(documents.documentLinkResolve(link)).also {
+                        assertThat(it.tooltip).isNotBlank()
+                    }
+                } else {
+                    link.also { assertThat(it.tooltip).isNull() }
+                }
+            assertThat(resolved.target).isEqualTo("https://xtclang.org/")
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `partial references and workspace diagnostics cross the packaged transport without duplicate final items`(
+        @TempDir directory: Path,
+    ) {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(pullDiagnostics = true)
+            val source = "module Stdio { Int value = 1; Int copy = value; Int run() = value; }"
+            session.open(source)
+            val params =
+                ReferenceParams(
+                    TextDocumentIdentifier(URI),
+                    Position(0, source.lastIndexOf("value")),
+                    ReferenceContext(true),
+                ).apply { partialResultToken = Either.forLeft("references") }
+            assertThat(session.await(session.server.textDocumentService.references(params)))
+                .isEmpty()
+            val references =
+                session.progress
+                    .filter { it.token.left == "references" }
+                    .flatMap { Gson().toJsonTree(it.value.right).asJsonArray.toList() }
+            assertThat(references).hasSize(3)
+            assertThat(references.map { it.asJsonObject["uri"].asString }).containsOnly(URI)
+            val diagnostics =
+                WorkspaceDiagnosticParams().apply { partialResultToken = Either.forRight(17) }
+            assertThat(session.await(session.server.workspaceService.diagnostic(diagnostics)).items)
+                .isEmpty()
+            val reports =
+                session.progress
+                    .filter { it.token.isRight && it.token.right == 17 }
+                    .flatMap {
+                        Gson()
+                            .toJsonTree(it.value.right)
+                            .asJsonObject["items"]
+                            .asJsonArray
+                            .toList()
+                    }
+            assertThat(reports).hasSize(1)
+            assertThat(reports.single().asJsonObject["uri"].asString).isEqualTo(URI)
+            assertThat(reports.single().asJsonObject["items"].asJsonArray).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `packaged transport rejects requests outside the initialized lifecycle`() {
+        Session(packagedJar(), directory).use { session ->
+            fun rejected(
+                result: CompletableFuture<*>,
+                code: ResponseErrorCode,
+            ) {
+                val failure = assertThrows<ExecutionException> { session.await(result) }
+                val error = failure.cause as ResponseErrorException
+                assertThat(error.responseError.code).isEqualTo(code.value)
+            }
+
+            val hover = HoverParams(TextDocumentIdentifier(URI), Position(0, 0))
+            rejected(
+                session.server.textDocumentService.hover(hover),
+                ResponseErrorCode.ServerNotInitialized,
+            )
+            session.initialize()
+            rejected(
+                session.server.initialize(InitializeParams()),
+                ResponseErrorCode.InvalidRequest,
+            )
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            session.await(session.server.shutdown())
+            rejected(
+                session.server.textDocumentService.hover(hover),
+                ResponseErrorCode.InvalidRequest,
+            )
+            session.server.exit()
+            session.expectExit(0)
+        }
+    }
+
+    @Test
+    fun `incremental patches save hooks and formatting ranges round trip the packaged transport`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(documentSync = mapOf("incremental" to true, "formatOnSave" to true))
+            val status = session.status()
+            assertThat(status["textSynchronization"].asString).isEqualTo("incremental")
+            assertThat(status["serverSaveFormatting"].asBoolean).isTrue()
+            assertThat(status["pid"].asLong).isPositive()
+            assertThat(status["compilerQueue"].asJsonObject["queueSize"].asInt).isZero()
+            val heap = status["heap"].asJsonObject
+            assertThat(heap["usedBytes"].asLong)
+                .isPositive()
+                .isLessThanOrEqualTo(heap["committedBytes"].asLong)
+            assertThat(heap["committedBytes"].asLong).isLessThanOrEqualTo(heap["maxBytes"].asLong)
+            val source = "module Stdio { // 😀\r\nInt value = 1;\r\n}"
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(URI, 2),
+                    listOf(
+                        TextDocumentContentChangeEvent().apply {
+                            range = Range(Position(1, 0), Position(1, 3))
+                            text = "String"
+                        },
+                        TextDocumentContentChangeEvent().apply {
+                            range = Range(Position(1, 15), Position(1, 16))
+                            text = "\"text\""
+                        },
+                    ),
+                ),
+            )
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            val save = WillSaveTextDocumentParams(id, TextDocumentSaveReason.Manual)
+            documents.willSave(save)
+            val saved = session.await(documents.willSaveWaitUntil(save))
+            assertThat(saved.map { it.newText }).contains("    ", "\r\n")
+            val ranges =
+                listOf(Range(Position(1, 0), Position(2, 0)), Range(Position(1, 0), Position(1, 5)))
+            val edits =
+                session.await(
+                    documents.rangesFormatting(
+                        DocumentRangesFormattingParams(id, FormattingOptions(4, true), ranges),
+                    ),
+                )
+            assertThat(edits).hasSize(1)
+            assertThat(edits.single().newText).isEqualTo("    ")
+            // Resolving save edits never applies them; a second request sees the same source.
+            assertThat(session.await(documents.willSaveWaitUntil(save))).isEqualTo(saved)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `semantic token range and deltas round trip the packaged transport`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val source = "module Stdio { Int answer() = 42; }"
+            session.open(source)
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            val full = session.await(documents.semanticTokensFull(SemanticTokensParams(id)))
+            assertThat(full.data).isNotEmpty()
+            session.change("\n$source", 2)
+            val delta =
+                session
+                    .await(
+                        documents.semanticTokensFullDelta(
+                            SemanticTokensDeltaParams(id, full.resultId),
+                        ),
+                    ).right
+            val patched = full.data.toMutableList()
+            delta.edits
+                .sortedByDescending { it.start }
+                .forEach { edit ->
+                    patched.subList(edit.start, edit.start + edit.deleteCount).clear()
+                    patched.addAll(edit.start, edit.data.orEmpty())
+                }
+            assertThat(patched)
+                .isEqualTo(
+                    session.await(documents.semanticTokensFull(SemanticTokensParams(id))).data,
+                )
+            assertThat(
+                session
+                    .await(
+                        documents.semanticTokensRange(
+                            SemanticTokensRangeParams(id, Range(Position(1, 0), Position(2, 0))),
+                        ),
+                    ).data,
+            ).isEqualTo(patched)
+            documents.didClose(DidCloseTextDocumentParams(id))
+            session.open(source)
+            assertThat(
+                session
+                    .await(
+                        documents.semanticTokensFullDelta(
+                            SemanticTokensDeltaParams(id, full.resultId),
+                        ),
+                    ).isLeft,
+            ).isTrue()
+        }
+    }
+
+    @Test
+    fun `configured resource roots and resource-only changes round trip through packaged diagnostics`() {
+        val source =
+            directory.resolve("Assets.x").toFile().apply {
+                writeText("module Assets { static String text() = $./data.txt; }")
+            }
+        val root = directory.resolve("custom-resources").toFile().apply { mkdirs() }
+        val resource = root.resolve("data.txt").apply { writeText("template") }
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(
+                pullDiagnostics = true,
+                sourceModules =
+                    listOf(
+                        mapOf(
+                            "name" to "Assets",
+                            "uri" to source.toURI().toString(),
+                            "resourceRoots" to listOf(root.toURI().toString()),
+                        ),
+                    ),
+            )
+            val params = DocumentDiagnosticParams(TextDocumentIdentifier(source.toURI().toString()))
+
+            fun pull() = session.await(session.server.textDocumentService.diagnostic(params)).left
+            assertThat(pull().items).isEmpty()
+            Files.delete(resource.toPath())
+            assertThat(pull().items.map { it.code.left }).contains("PARSER-24")
+            resource.writeText("repaired")
+            assertThat(pull().items).isEmpty()
+        }
+    }
+
+    @Test
+    fun `packaged server records queue contents compiler calls and reply latency`() {
+        val traceDirectory =
+            Session(packagedJar(), directory).use { session ->
+                session.initialize()
+                session.open("module Stdio { Int answer() = 42; }")
+                assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+                session.await(
+                    session.server.textDocumentService.documentSymbol(
+                        DocumentSymbolParams(TextDocumentIdentifier(URI)),
+                    ),
+                )
+                session.traceDirectory
+            }
+        val entries =
+            Files.list(traceDirectory).use { files ->
+                files
+                    .filter { it.fileName.toString().startsWith("lsp-trace-") }
+                    .toList()
+                    .flatMap { Files.readAllLines(it) }
+                    .map { JsonParser.parseString(it).asJsonObject }
+            }
+        assertThat(entries).isNotEmpty()
+        val jobs = entries.filter { it["kind"].asString == "compiler-queue" }
+        assertThat(jobs).anySatisfy {
+            assertThat(it["event"].asString).isEqualTo("queued")
+            assertThat(it["queueSize"].asInt).isPositive()
+            assertThat(it["queuedJobs"].toString()).contains("compile", "Stdio.x")
+        }
+        assertThat(entries).anySatisfy {
+            assertThat(it["operation"]?.asString).startsWith("EmbeddingSupport.compileModule")
+            assertThat(it["event"].asString).isEqualTo("end")
+            assertThat(it["elapsedMs"].asDouble).isPositive()
+        }
+        assertThat(entries).anySatisfy {
+            assertThat(it["operation"]?.asString).isEqualTo("textDocument/documentSymbol")
+            assertThat(it["event"].asString).isEqualTo("end")
+            assertThat(it["boundary"].asString).isEqualTo("server-reply-written")
+        }
+        assertThat(entries.toString()).doesNotContain("Int answer() = 42")
+    }
+
+    @Test
+    fun `property implementations round trip fields and accessors through the packaged server`() {
+        val source =
+            "module Stdio { interface Named { @RO String name; } " +
+                "class Stored implements Named { @Override String name = \"stored\"; } " +
+                "class Computed implements Named { @Override String name.get() = \"computed\"; } " +
+                "class Unrelated { String name = \"other\"; } Int size(String text) = text.size; }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+
+            fun lookup(at: Int) =
+                session
+                    .await(documents.implementation(ImplementationParams(id, Position(0, at))))
+                    .left
+            val targets = lookup(source.indexOf("name;"))
+            assertThat(targets.map { it.uri }).containsOnly(URI)
+            assertThat(targets.map { it.range })
+                .containsExactlyInAnyOrder(
+                    Range(
+                        Position(0, source.indexOf("name =")),
+                        Position(0, source.indexOf("name =") + 4),
+                    ),
+                    Range(
+                        Position(0, source.indexOf("get()")),
+                        Position(0, source.indexOf("get()") + 3),
+                    ),
+                )
+            assertThat(lookup(source.lastIndexOf("size"))).isEmpty()
+            session.change("module Stdio {", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            assertThat(lookup(7)).isEmpty()
+            session.change(source, 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            assertThat(lookup(source.indexOf("name;"))).isEqualTo(targets)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `private parameter rename round trips versioned edits and rejects silent capture`() {
+        val source =
+            "module Stdio { private Int pick(Int input) = input; Int run() = pick(input = 1); }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(versionedEdits = true)
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val result =
+                requireNotNull(
+                    session.await(
+                        documents.rename(
+                            RenameParams(
+                                document,
+                                Position(0, source.lastIndexOf("input")),
+                                "value",
+                            ),
+                        ),
+                    ),
+                )
+            // LSP4J reconstructs its default empty map when the wire omits the changes member.
+            assertThat(result.changes).isNullOrEmpty()
+            val edit = result.documentChanges.single().left
+            assertThat(edit.textDocument.uri).isEqualTo(URI)
+            assertThat(edit.textDocument.version).isEqualTo(1)
+            assertThat(edit.edits.map { it.left.newText })
+                .containsExactly("value", "value", "value")
+            val changed =
+                edit.edits
+                    .map { it.left }
+                    .sortedByDescending { it.range.start.character }
+                    .fold(source) { text, change ->
+                        text.replaceRange(
+                            change.range.start.character,
+                            change.range.end.character,
+                            change.newText,
+                        )
+                    }
+            session.change(changed, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            val capture =
+                "module Stdio { Int value = 10; Int run() { Int local = 1; return local + value; } }"
+            session.change(capture, 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            assertThat(
+                session.await(
+                    documents.rename(
+                        RenameParams(document, Position(0, capture.indexOf("local")), "value"),
+                    ),
+                ),
+            ).isNull()
+        }
+    }
+
+    @Test
+    fun `compiler call hierarchy tokens and hints round trip and reject stale items`() {
+        val source =
+            "module Stdio { static Int leaf(Int input) = input; Int run() { var n = leaf(1); return n; } }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val leaf =
+                session
+                    .await(
+                        documents.prepareCallHierarchy(
+                            CallHierarchyPrepareParams(
+                                document,
+                                Position(0, source.indexOf("leaf")),
+                            ),
+                        ),
+                    ).single()
+            val incoming =
+                session
+                    .await(
+                        documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf)),
+                    ).single()
+            assertThat(incoming.from.name).isEqualTo("run")
+            assertThat(incoming.fromRanges)
+                .containsExactly(
+                    Range(
+                        Position(0, source.lastIndexOf("leaf")),
+                        Position(
+                            0,
+                            source.lastIndexOf("leaf") + 4,
+                        ),
+                    ),
+                )
+            val outgoing =
+                session
+                    .await(
+                        documents.callHierarchyOutgoingCalls(
+                            CallHierarchyOutgoingCallsParams(incoming.from),
+                        ),
+                    ).single()
+            assertThat(outgoing.to).isEqualTo(leaf)
+            val hints =
+                session.await(
+                    documents.inlayHint(
+                        InlayHintParams(document, Range(Position(0, 0), Position(1, 0))),
+                    ),
+                )
+            assertThat(hints.map { it.label.left }).containsExactly(": Int", "input:")
+            assertThat(
+                session.await(documents.semanticTokensFull(SemanticTokensParams(document))).data,
+            ).isNotEmpty()
+            session.change("\n$source", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            assertThat(
+                session.await(
+                    documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf)),
+                ),
+            ).isEmpty()
+            assertThat(
+                session.await(
+                    documents.callHierarchyOutgoingCalls(
+                        CallHierarchyOutgoingCallsParams(incoming.from),
+                    ),
+                ),
+            ).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `bundled compiler handles edits and shutdown without an external XDK`(invalidXdkHome: Boolean) {
+        Session(packagedJar(), directory, invalidXdkHome).use { session ->
+            session.initialize()
+            session.open(BROKEN)
+            val errors = session.diagnosticsAt(1).diagnostics
+            assertThat(errors).isNotEmpty()
+            assertThat(errors.map { it.code.left })
+                .doesNotContain("XDK-UNAVAILABLE", "ANALYSIS-FAILED", "EMB-5")
+            assertThat(errors.any { it.message.left.contains("missing") }).isTrue()
+
+            for (version in 2..101) {
+                session.change(if (version == 101) VALID else BROKEN, version)
+            }
+            assertThat(session.diagnosticsAt(101).diagnostics).isEmpty()
+            val symbols =
+                session.await(
+                    session.server.textDocumentService.documentSymbol(
+                        DocumentSymbolParams(TextDocumentIdentifier(URI)),
+                    ),
+                )
+            assertThat(symbols).isNotEmpty()
+            session.verifySemantics(VALID, "value", "Int")
+
+            session.server.textDocumentService.didClose(
+                DidCloseTextDocumentParams(TextDocumentIdentifier(URI)),
+            )
+            assertThat(session.diagnosticsAt(101).diagnostics).isEmpty()
+            session.open(REOPENED)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            session.verifySemantics(REOPENED, "label", "String")
+
+            for (version in 2..20) session.change(BROKEN, version)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `packaged module diagnostics cross file definitions and hierarchy round trip over stdio`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("Multi.x").toFile()
+        val member = directory.resolve("Multi/Child.x").toFile()
+        val source =
+            "module Multi { interface Named { String name(); } " +
+                "class Base implements Named { @Override String name() = \"base\"; } Child make() = new Child(); }"
+        root.writeText(source)
+        member.parentFile.mkdirs()
+        member.writeText("class Child extends Base { @Override String name() = \"child\"; }")
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val rootId = TextDocumentIdentifier(root.toURI().toString())
+            val memberId = TextDocumentIdentifier(member.toURI().toString())
+            val documents = session.server.textDocumentService
+            documents.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(rootId.uri, "xtc", 1, source)),
+            )
+            assertThat(session.diagnosticsFor(memberId.uri, null).diagnostics).isEmpty()
+            val definition =
+                session
+                    .await(
+                        documents.definition(
+                            DefinitionParams(rootId, Position(0, source.indexOf("Child"))),
+                        ),
+                    ).left
+                    .single()
+            assertThat(definition.uri).isEqualTo(memberId.uri)
+            val typeDefinition =
+                session
+                    .await(
+                        documents.typeDefinition(
+                            TypeDefinitionParams(rootId, Position(0, source.indexOf("make"))),
+                        ),
+                    ).left
+                    .single()
+            assertThat(typeDefinition.uri).isEqualTo(memberId.uri)
+            assertThat(typeDefinition.range).isEqualTo(Range(Position(0, 6), Position(0, 11)))
+            for (name in listOf("Named", "name")) {
+                val implementations =
+                    session
+                        .await(
+                            documents.implementation(
+                                ImplementationParams(rootId, Position(0, source.indexOf(name))),
+                            ),
+                        ).left
+                assertThat(implementations.map { it.uri })
+                    .containsExactlyInAnyOrder(rootId.uri, memberId.uri)
+            }
+            val base =
+                session
+                    .await(
+                        documents.prepareTypeHierarchy(
+                            TypeHierarchyPrepareParams(rootId, Position(0, source.indexOf("Base"))),
+                        ),
+                    ).single()
+            val child =
+                session
+                    .await(documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)))
+                    .single()
+            assertThat(child.uri).isEqualTo(memberId.uri)
+            assertThat(
+                session
+                    .await(
+                        documents.typeHierarchySupertypes(TypeHierarchySupertypesParams(child)),
+                    ).single()
+                    .uri,
+            ).isEqualTo(rootId.uri)
+            documents.didOpen(
+                DidOpenTextDocumentParams(
+                    TextDocumentItem(
+                        memberId.uri,
+                        "xtc",
+                        7,
+                        "class Child extends Base { MissingType absent; }",
+                    ),
+                ),
+            )
+            assertThat(session.diagnosticsFor(memberId.uri, 7).diagnostics).anyMatch {
+                it.code.left == "COMPILER-38"
+            }
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(memberId.uri, 8),
+                    listOf(TextDocumentContentChangeEvent(member.readText())),
+                ),
+            )
+            assertThat(session.diagnosticsFor(memberId.uri, 8).diagnostics).isEmpty()
+            assertThat(
+                session.await(
+                    documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)),
+                ),
+            ).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `type definition preserves multiple union targets over stdio and follows narrowing`() {
+        val source =
+            """
+            module Stdio {
+                class First {}
+                class Second {}
+                void run(First|Second value) {
+                    value.toString();
+                    if (value.is(First)) { value.toString(); }
+                }
+            }
+            """.trimIndent()
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            val union =
+                session
+                    .await(documents.typeDefinition(TypeDefinitionParams(id, Position(4, 8))))
+                    .left
+            assertThat(union.map { it.range.start.line }).containsExactly(1, 2)
+            assertThat(union.map { it.uri }).containsOnly(URI)
+            val narrowedPosition = Position(5, source.lines()[5].lastIndexOf("value"))
+            val narrowed =
+                session
+                    .await(documents.typeDefinition(TypeDefinitionParams(id, narrowedPosition)))
+                    .left
+            assertThat(narrowed).containsExactly(union.first())
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `Java only compiler preserves structure through incomplete edits over stdio`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val text = "module Stdio {\n    void editing() {\n        /* café 😀 */ console."
+            session.change(text, 2)
+            val errors = session.diagnosticsAt(2).diagnostics
+            assertThat(errors).isNotEmpty()
+            assertThat(errors.map { it.code.left }).doesNotContain("ANALYSIS-FAILED", "EMB-5")
+            val document = TextDocumentIdentifier(URI)
+            val service = session.server.textDocumentService
+            val symbols = session.await(service.documentSymbol(DocumentSymbolParams(document)))
+            assertThat(
+                symbols
+                    .single()
+                    .right.children
+                    .map { it.name },
+            ).containsExactly("editing")
+            val folds = session.await(service.foldingRange(FoldingRangeRequestParams(document)))
+            assertThat(folds).anySatisfy {
+                assertThat(it.startLine).isEqualTo(1)
+                assertThat(it.endLine).isEqualTo(2)
+                assertThat(it.endCharacter).isEqualTo(text.lines().last().length)
+            }
+            val cursor = Position(2, text.lines().last().length)
+            val selected =
+                session
+                    .await(service.selectionRange(SelectionRangeParams(document, listOf(cursor))))
+                    .single()
+            assertThat(selected.range.end).isEqualTo(cursor)
+            assertThat(selected.range.start.line).isLessThan(2)
+            assertThat(
+                session
+                    .await(service.definition(DefinitionParams(document, Position(1, 10))))
+                    .left,
+            ).isEmpty()
+            session.change(REOPENED, 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            session.verifySemantics(REOPENED, "label", "String")
+            session.shutdownAndExit()
+        }
+        assertThat(Files.readString(directory.resolve("stderr.log")))
+            .doesNotContain("loadXtcLanguage", "TreeSitterAdapter")
+    }
+
+    @Test
+    fun `recovered method fold boundaries survive transport without capturing following declarations`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            listOf("\n", "\r\n").forEachIndexed { index, newline ->
+                val closingLine = " /* 😀 */ } Int later = 1; }"
+                val text =
+                    listOf(
+                        "module Stdio {",
+                        " void damaged(Int) {",
+                        " Int hidden = 1;",
+                        closingLine,
+                    ).joinToString(newline)
+                val version = index + 2
+                session.change(text, version)
+                assertThat(session.diagnosticsAt(version).diagnostics).isNotEmpty()
+                val folds =
+                    session.await(
+                        session.server.textDocumentService.foldingRange(
+                            FoldingRangeRequestParams(TextDocumentIdentifier(URI)),
+                        ),
+                    )
+                val method = folds.single { it.startLine == 1 }
+                assertThat(method.endLine).isEqualTo(3)
+                assertThat<Int?>(method.startCharacter).isNull()
+                assertThat(method.endCharacter).isEqualTo(closingLine.indexOf('}'))
+            }
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `compiler completion and signature requests round trip over stdio`() {
+        val declarations =
+            "module Stdio { class Box<Element> { Element echo(Element value) { return value; } " +
+                "Int choose(Int n) { return n; } String choose(String text) { return text; } " +
+                "String label = \"box\"; private Int secret() { return 1; } } "
+        val prefix = "${declarations}void run(Box<String> box) { box."
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            session.open("$prefix } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val items =
+                session
+                    .await(
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
+            assertThat(items.map { it.label })
+                .contains("echo", "choose", "label")
+                .doesNotContain("secret")
+            assertThat(items.single { it.label == "echo" }.detail)
+                .isEqualTo("String echo(String value)")
+            assertThat(items.filter { it.label == "choose" }).hasSize(2)
+
+            val call = "${prefix}echo("
+            session.change("$call } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            val help =
+                session.await(
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
+                )
+            assertThat(help.signatures.single().label).isEqualTo("String echo(String value)")
+            assertThat(help.signatures.single().activeParameter).isZero()
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
+
+            val overloaded = "${prefix}choose("
+            session.change("$overloaded } }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
+            assertThat(
+                session
+                    .await(
+                        service.signatureHelp(
+                            SignatureHelpParams(document, Position(0, overloaded.length)),
+                        ),
+                    ).signatures,
+            ).hasSize(2)
+
+            val complete =
+                "module Stdio { <T> T echo(T value, T backup) { return value; } " +
+                    "void run() { String text = echo(backup = \"b\", value = \"a\"); } }"
+            session.change(complete, 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
+            val selected =
+                session.await(
+                    service.signatureHelp(
+                        SignatureHelpParams(
+                            document,
+                            Position(
+                                0,
+                                complete.indexOf("backup = \"b\"") + "backup = \"b\"".length,
+                            ),
+                        ),
+                    ),
+                )
+            assertThat(selected.signatures.single().label)
+                .isEqualTo("String echo(String value, String backup)")
+            assertThat(selected.activeParameter).isEqualTo(1)
+            assertThat(selected.signatures.single().activeParameter).isEqualTo(1)
+
+            session.change("$prefix } }", 5)
+            assertThat(session.diagnosticsAt(5).diagnostics).isNotEmpty()
+            repeat(10) {
+                service
+                    .completion(CompletionParams(document, Position(0, prefix.length)))
+                    .cancel(false)
+            }
+            val latest =
+                session
+                    .await(
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
+            assertThat(latest.map { it.label }).contains("echo")
+            session.shutdownAndExit()
+        }
+        assertThat(Files.readString(directory.resolve("stderr.log")))
+            .doesNotContain("TreeSitterAdapter", "loadXtcLanguage")
+    }
+
+    @Test
+    fun `completion documentation ordering and literal kinds round trip over stdio`() {
+        val header =
+            "module Stdio { /** Keeps the selected text. */ String choose(String value, String backup = \"\") = value; "
+        val prefix = "$header void run() { ch"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            session.open("$prefix; } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val items =
+                session
+                    .await(
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
+            val item = items.single { it.label == "choose" }
+            assertThat(item.documentation.left).contains("Keeps the selected text.")
+            assertThat(item.sortText).isNotBlank()
+            val call = "$header void run() { choose(value = "
+            session.change("$call); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            val cursor = Position(0, call.length)
+            val values = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(values.single { it.label == "\"\"" }.kind)
+                .isEqualTo(CompletionItemKind.Value)
+            val signature =
+                session
+                    .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+                    .signatures
+                    .single()
+            assertThat(signature.documentation.left)
+                .contains("Keeps the selected text.", "overload not selected")
+            assertThat(signature.activeParameter).isZero()
+            assertThat(signature.parameters[1].documentation.left).contains("Optional")
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `typed completion edits and auto-closed signature help round trip over stdio`() {
+        val prefix =
+            "module Stdio {\r\n Int run(Object value) {\r\n  if (value.is(String)) { /* 😀 */ return value.si"
+        val text = "$prefix; } return 0; }\r\n}"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            session.open(text)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val cursor = Position(2, prefix.lines().last().length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).contains("size")
+            assertThat(items).allSatisfy { assertThat(it.label).startsWith("si") }
+            val edit = items.single { it.label == "size" }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(2, cursor.character - 2), cursor))
+            assertThat(edit.newText).isEqualTo("size")
+            val changed = text.replaceRange(prefix.length - 2, prefix.length, edit.newText)
+            session.change(changed, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+
+            val call = "module Stdio { void run(String value) { value.indexOf("
+            session.change("$call); } Int later() = 42; }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
+            val help =
+                session.await(
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
+                )
+            assertThat(help.signatures).hasSize(2).allSatisfy {
+                assertThat(it.label).startsWith("conditional Int indexOf(")
+                assertThat(it.activeParameter).isZero()
+                assertThat(it.documentation.left).contains("overload not selected")
+            }
+            val completed = "$call\"x\""
+            session.change("$completed); } Int later() = 42; }", 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
+            val selected =
+                session.await(
+                    service.signatureHelp(
+                        SignatureHelpParams(document, Position(0, completed.length)),
+                    ),
+                )
+            assertThat(selected.signatures).hasSize(1)
+            assertThat(selected.signatures.single().documentation).isNull()
+            assertThat(selected.signatures.single().activeParameter).isZero()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            ["(values[value.si", "(1, value.si", "[1 = value.si", "Tuple<Int,Int>:(1, value.si"],
+    )
+    fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`(expression: String) {
+        val header =
+            "module Stdio { Int pair(Int first, Int second) = first; Object run(String value, Int[] values) { return "
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val prefix = header + expression
+            session.open("$prefix; } }")
+            val diagnostics = session.diagnosticsAt(1).diagnostics
+            assertThat(diagnostics).isNotEmpty()
+            val cursor = Position(0, prefix.length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            val edit = items.single { it.label == "size" }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+
+            val call = "$header(values[pair(1, "
+            session.change("$call; } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            val help =
+                session.await(
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
+                )
+            assertThat(help.signatures.single().label).isEqualTo("Int pair(Int first, Int second)")
+            assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
+            session.change("${call}2)]); } }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "take(first = 1, second =",
+                "fn(1, ",
+                "new Box<String>(",
+                "take(1, te",
+                "take(first = 1, second = te",
+                "fn(1, te",
+                "new Box<String>(te",
+                "new Box<String>(value = te",
+                "new String[2](te",
+                "new String[2](supply = te",
+                "Box<String> box = new Box(te",
+                "new @Tagged Box<String>(te",
+            ],
+    )
+    fun `argument value edits round trip and clear diagnostics after acceptance`(call: String) {
+        val prefix =
+            "module Stdio { annotation Tagged into Object {} void take(Int first, String second) {} " +
+                "class Box<T> { construct(T value) {} } " +
+                "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { Int textNumber = 1; /* 😀 */ $call"
+        val typed = if (call.endsWith("te")) 2 else 0
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open("$prefix); } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(0, prefix.length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label })
+                .containsExactlyInAnyOrderElementsOf(
+                    if (typed == 0) {
+                        listOf("text", "qualifiedName", "simpleName", "\"\"")
+                    } else {
+                        listOf("text")
+                    },
+                )
+            val edit = items.single { it.label == "text" }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - typed), cursor))
+            assertThat(edit.newText).isEqualTo("text")
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains(
+                if (call.startsWith("fn(")) {
+                    "runtime target unknown"
+                } else {
+                    "overload not selected"
+                },
+            )
+            if (call.startsWith("new String[2]")) {
+                assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            }
+            session.change("${prefix.dropLast(typed)}${edit.newText}); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "void damaged(Str§ value) {}",
+                "Str§ property;",
+                "void damaged(ecstasy.text.Str§ value) {}",
+                "ecstasy.text.Str§ property;",
+                "void damaged(Map<Int, List<Str§>> value) {}",
+                "List<ecstasy.text.Str§> property;",
+                "void damaged((Int | Str§) value) {}",
+                "interface Damaged extends List<Str§> {}",
+            ],
+    )
+    fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
+        val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('§')
+        val suffix = declaration.substringAfter('§') + "\r\n Int later = 1; }"
+        val selected = if (declaration.contains("ecstasy.text.")) "StringBuffer" else "String"
+        val column = prefix.substringAfterLast('\n').length
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(prefix + suffix)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(1, column)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            val edit = items.single { it.label == selected }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(1, column - 3), cursor))
+            assertThat(edit.newText).isEqualTo(selected)
+            assertThat(
+                session
+                    .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+                    ?.signatures
+                    .orEmpty(),
+            ).isEmpty()
+            session.change(prefix.dropLast(3) + edit.newText + suffix, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `generic header completions preserve whole token edits over stdio`() {
+        val variants =
+            listOf(
+                "List<§>" to "Element",
+                "List<Ele§>" to "Element",
+                "Owner<String>.Ali§" to "Alias",
+                "List<Str§ing>" to "String",
+                "Li§st<String>" to "List",
+                "Li§<String>" to "List",
+            )
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            variants.forEachIndexed { index, (marked, selected) ->
+                val prefix =
+                    "module Stdio {\r\n /* 😀 */ class Owner<T> { typedef T as Alias; } " +
+                        "class Container<Element> { void damaged(" +
+                        marked.substringBefore('§')
+                val suffix = marked.substringAfter('§') + " value) {} } }"
+                val version = index * 2 + 1
+                if (index == 0) {
+                    session.open(prefix + suffix)
+                } else {
+                    session.change(prefix + suffix, version)
+                }
+                session.diagnosticsAt(version)
+                val column = prefix.substringAfterLast('\n').length
+                val before = prefix.takeLastWhile { it.isLetterOrDigit() || it == '_' }.length
+                val after = suffix.takeWhile { it.isLetterOrDigit() || it == '_' }.length
+                val service = session.server.textDocumentService
+                val document = TextDocumentIdentifier(URI)
+                val cursor = Position(1, column)
+                val items =
+                    session.await(service.completion(CompletionParams(document, cursor))).left
+                val edit = items.single { it.label == selected }.textEdit.left
+                assertThat(edit.range)
+                    .isEqualTo(Range(Position(1, column - before), Position(1, column + after)))
+                assertThat(edit.newText).isEqualTo(selected)
+                assertThat(
+                    session
+                        .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+                        ?.signatures
+                        .orEmpty(),
+                ).isEmpty()
+                session.change(
+                    prefix.dropLast(before) + edit.newText + suffix.drop(after),
+                    version + 1,
+                )
+                assertThat(session.diagnosticsAt(version + 1).diagnostics).isEmpty()
+            }
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["new Int[nu|]", "new Int[nu|", "new String[nu|](\"x\")"])
+    fun `array size edits and signature fitting round trip over stdio`(expression: String) {
+        val prefix =
+            "module Stdio { void run(Int number, String numberText) { /* 😀 */ " +
+                expression.substringBefore('|')
+        val suffix = expression.substringAfter('|') + "; } }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(prefix + suffix)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(0, prefix.length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).containsExactly("number")
+            val edit = items.single().textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+            assertThat(edit.newText).isEqualTo("number")
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+            assertThat(
+                help.signatures
+                    .single()
+                    .parameters
+                    .first()
+                    .label.left,
+            ).isEqualTo("Int size")
+            assertThat(help.signatures.single().activeParameter).isZero()
+            val completedSuffix = if (']' in suffix) suffix else "]$suffix"
+            session.change(prefix.dropLast(2) + edit.newText + completedSuffix, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "new Box<String>(\"x\", te|) { String read() = text; }",
+                "new Reader(\"x\", te|) { construct(String first, String second) {} @Override String read() = text; }",
+            ],
+    )
+    fun `anonymous constructor edits and signatures round trip through the packaged server`(expression: String) {
+        val prefix =
+            "module Stdio { class Box<T> { construct(T first, T second) {} } interface Reader { String read(); } " +
+                "void run(String text, Int textNumber) { /* 😀 */ " +
+                expression.substringBefore('|')
+        val suffix = expression.substringAfter('|') + "; } }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(prefix + suffix)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(0, prefix.length)
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+            assertThat(help.signatures.single().label)
+                .contains("String first, String second")
+                .doesNotContain(":1")
+            assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).containsExactly("text")
+            val edit = items.single().textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+            session.change(prefix.dropLast(2) + edit.newText + suffix, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", "static "])
+    fun `property and constant argument edits preserve receiver rules over stdio`(modifier: String) {
+        val prefix =
+            "module Stdio { class Values { String textProperty = \"x\"; static String textConstant = \"c\"; " +
+                "Int textNumber = 1; static void take(String value) {} ${modifier}void run() { take(value = te"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open("$prefix); } } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val cursor = Position(0, prefix.length)
+            val items =
+                session
+                    .await(
+                        session.server.textDocumentService.completion(
+                            CompletionParams(TextDocumentIdentifier(URI), cursor),
+                        ),
+                    ).left
+            assertThat(items.map { it.label })
+                .containsExactlyInAnyOrderElementsOf(
+                    if (modifier.isEmpty()) {
+                        listOf("textProperty", "textConstant")
+                    } else {
+                        listOf("textConstant")
+                    },
+                )
+            val selected =
+                items.single {
+                    it.label == if (modifier.isEmpty()) "textProperty" else "textConstant"
+                }
+            assertThat(selected.detail).contains("String")
+            val edit = selected.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+            session.change("${prefix.dropLast(2)}${edit.newText}); } } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `scope completion and inferred named signatures round trip over stdio`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val prefix = "module Stdio { Int run(Int item) { return ite"
+            session.open("$prefix; } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val items =
+                session
+                    .await(
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
+            val item = items.single { it.label == "item" }
+            assertThat(item.detail).isEqualTo("Int item")
+            assertThat(item.textEdit.left.range)
+                .isEqualTo(Range(Position(0, prefix.length - 3), Position(0, prefix.length)))
+            session.change(prefix.dropLast(3) + item.textEdit.left.newText + "; } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+
+            val call =
+                "module Stdio { <T> T pair(T first, T second) = first; " +
+                    "void run() { pair(second = \"x\", first ="
+            session.change("$call); } }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
+            val help =
+                session.await(
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
+                )
+            assertThat(help.signatures).hasSize(1)
+            assertThat(help.signatures.single().label)
+                .isEqualTo("String pair(String first, String second)")
+            assertThat(help.signatures.single().activeParameter).isZero()
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
+            session.change("$call\"y\"); } }", 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["function", "constructor"])
+    fun `incomplete function and constructor signatures round trip over stdio`(kind: String) {
+        val prefix =
+            if (kind == "function") {
+                "module Stdio { void run(function Int(Int, String) fn) { fn(1, "
+            } else {
+                "module Stdio { class Box { construct(Int first, String second) {} } void run() { new Box(1, "
+            }
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open("$prefix); } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val help =
+                session.await(
+                    session.server.textDocumentService.signatureHelp(
+                        SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, prefix.length)),
+                    ),
+                )
+            assertThat(help.signatures.single().label)
+                .isEqualTo(
+                    if (kind == "function") {
+                        "Int fn(Int, String)"
+                    } else {
+                        "new Box(Int first, String second)"
+                    },
+                )
+            assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            session.change("$prefix\"x\"); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", "in"])
+    fun `module overlays feed completion and root edits invalidate member requests over stdio`(memberPrefix: String) {
+        directory = directory.toRealPath()
+        val root = directory.resolve("Multi.x").toFile()
+        val member = directory.resolve("Multi/Child.x").toFile()
+        root.writeText("module Multi { class Base { Int value = 1; } }")
+        member.parentFile.mkdirs()
+        val prefix = "class Child extends Base { Int run() { return value.$memberPrefix"
+        member.writeText("$prefix } }")
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val rootId = TextDocumentIdentifier(root.toURI().toString())
+            val memberId = TextDocumentIdentifier(member.toURI().toString())
+            val service = session.server.textDocumentService
+            service.didOpen(
+                DidOpenTextDocumentParams(
+                    TextDocumentItem(
+                        rootId.uri,
+                        "xtc",
+                        1,
+                        "module Multi { class Base { String value = \"overlay\"; } }",
+                    ),
+                ),
+            )
+            service.didOpen(
+                DidOpenTextDocumentParams(
+                    TextDocumentItem(memberId.uri, "xtc", 1, member.readText()),
+                ),
+            )
+            val before =
+                session
+                    .await(
+                        service.completion(CompletionParams(memberId, Position(0, prefix.length))),
+                    ).left
+            assertThat(before.map { it.label }).contains("indexOf")
+            service.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(rootId.uri, 2),
+                    listOf(TextDocumentContentChangeEvent(root.readText())),
+                ),
+            )
+            val after =
+                session
+                    .await(
+                        service.completion(CompletionParams(memberId, Position(0, prefix.length))),
+                    ).left
+            if (memberPrefix.isEmpty()) assertThat(after).isNotEmpty()
+            assertThat(after.map { it.label }).doesNotContain("indexOf")
+            assertThat(root.readText()).contains("Int value")
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `an invalid packaged backend setting fails startup explicitly`() {
+        val invalid = directory.resolve("invalid-setting.jar")
+        JarFile(packagedJar().toFile()).use { original ->
+            JarOutputStream(Files.newOutputStream(invalid)).use { output ->
+                for (entry in original.entries()) {
+                    output.putNextEntry(JarEntry(entry.name))
+                    original.getInputStream(entry).use { input ->
+                        if (entry.name == "lsp-version.properties") {
+                            Properties().apply {
+                                load(input)
+                                setProperty("lsp.adapter", "compielr")
+                                store(output, null)
+                            }
+                        } else {
+                            input.copyTo(output)
+                        }
+                    }
+                    output.closeEntry()
+                }
+            }
+        }
+        Session(invalid, directory).use { it.expectExit(1) }
+        assertThat(Files.readString(directory.resolve("stderr.log")))
+            .contains("Unknown lsp.adapter 'compielr'; expected treesitter, compiler or mock")
+    }
+
+    @Test
+    fun `a missing bundled bootstrap reports an analysis failure`() {
+        val damaged = directory.resolve("damaged.jar")
+        JarFile(packagedJar().toFile()).use { original ->
+            assertThat(original.getJarEntry(BOOTSTRAP)).isNotNull()
+            JarOutputStream(Files.newOutputStream(damaged)).use { output ->
+                for (entry in original.entries()) {
+                    if (entry.name == BOOTSTRAP) continue
+                    output.putNextEntry(JarEntry(entry.name))
+                    original.getInputStream(entry).use { it.copyTo(output) }
+                    output.closeEntry()
+                }
+            }
+        }
+        Session(damaged, directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            val errors = session.diagnosticsAt(1).diagnostics
+            assertThat(errors.map { it.code.left }).containsExactly("ANALYSIS-FAILED")
+            session.shutdownAndExit()
+        }
+        assertThat(Files.readString(directory.resolve("stderr.log")))
+            .contains("Bundled XDK resource is missing: mack.xtc")
+    }
+
+    @Test
+    fun `exit without shutdown terminates with failure status`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.server.exit()
+            session.expectExit(1)
+        }
+    }
+
+    private fun packagedJar(): Path {
+        val jar =
+            Path.of(
+                requireNotNull(System.getProperty("xtc.lsp.jar")) {
+                    "Run the compilerStdioTest Gradle task"
+                },
+            )
+        JarFile(jar.toFile()).use { archive ->
+            val properties = Properties()
+            archive.getInputStream(archive.getJarEntry("lsp-version.properties")).use {
+                properties.load(it)
+            }
+            assertThat(properties.getProperty("lsp.adapter"))
+                .describedAs("compilerStdioTest requires -Plsp.adapter=compiler")
+                .isIn("compiler", "xtc", "full")
+        }
+        return jar
+    }
+
+    @Test
+    fun `pull reports round trip full unchanged and repaired over packaged stdio`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(pullDiagnostics = true)
+            session.open(BROKEN)
+            val params = DocumentDiagnosticParams(TextDocumentIdentifier(URI))
+            val first = session.await(session.server.textDocumentService.diagnostic(params)).left
+            assertThat(first.items).isNotEmpty()
+            params.previousResultId = first.resultId
+            assertThat(
+                session
+                    .await(session.server.textDocumentService.diagnostic(params))
+                    .right
+                    .resultId,
+            ).isEqualTo(first.resultId)
+            session.change(VALID, 2)
+            val fixed = session.await(session.server.textDocumentService.diagnostic(params)).left
+            assertThat(fixed.items).isEmpty()
+            assertThat(fixed.resultId).isNotEqualTo(first.resultId)
+            session.shutdownAndExit()
+        }
+    }
+
+    private class Session(
+        jar: Path,
+        directory: Path,
+        invalidXdkHome: Boolean = false,
+        private val colorPrototype: Boolean = false,
+    ) : AutoCloseable {
+        // Keep child traces after JUnit deletes its temporary workspace, without mixing sessions.
+        val traceDirectory =
+            System.getProperty("xtc.trace.directory")?.let {
+                Path.of(it).resolve(directory.fileName)
+            } ?: directory.resolve(".xtc/logs")
+        private val stderr = directory.resolve("stderr.log")
+        private val published = LinkedBlockingQueue<PublishDiagnosticsParams>()
+        val progress = CopyOnWriteArrayList<ProgressParams>()
+        private val executor = Executors.newVirtualThreadPerTaskExecutor()
+        private val process =
+            ProcessBuilder(
+                ProcessHandle
+                    .current()
+                    .info()
+                    .command()
+                    .orElseThrow(),
+                "-ea",
+                "-Duser.home=$directory",
+                "-Dxtc.trace.directory=$traceDirectory",
+                "-Dxtc.trace.level=INFO",
+                "-jar",
+                jar.toString(),
+            ).apply {
+                directory(directory.toFile())
+                environment().remove("XDK_HOME")
+                environment()["XTC_LSP_COLOR_PROTOTYPE"] = colorPrototype.toString()
+                if (invalidXdkHome) {
+                    environment()["XDK_HOME"] = directory.resolve("absent-xdk").toString()
+                }
+                redirectError(stderr.toFile())
+            }.start()
+        private val client =
+            object : LanguageClient {
+                override fun publishDiagnostics(params: PublishDiagnosticsParams) {
+                    published.add(params)
+                }
+
+                override fun notifyProgress(params: ProgressParams) {
+                    progress.add(params)
+                }
+
+                override fun telemetryEvent(value: Any?) = Unit
+
+                override fun showMessage(params: MessageParams) = Unit
+
+                override fun showMessageRequest(params: ShowMessageRequestParams): CompletableFuture<MessageActionItem> =
+                    CompletableFuture.completedFuture(null)
+
+                override fun logMessage(params: MessageParams) = Unit
+
+                override fun configuration(params: ConfigurationParams): CompletableFuture<List<Any>> =
+                    CompletableFuture.completedFuture(params.items.map { emptyMap<String, Any>() })
+            }
+        private val launcher =
+            try {
+                Launcher
+                    .Builder<ServiceStatusServer>()
+                    .setLocalService(client)
+                    .setRemoteInterface(ServiceStatusServer::class.java)
+                    .setInput(process.inputStream)
+                    .setOutput(process.outputStream)
+                    .setExecutorService(executor)
+                    .create()
+            } catch (e: Exception) {
+                process.destroyForcibly()
+                process.waitFor(10, SECONDS)
+                executor.shutdownNow()
+                throw e
+            }
+        private val listening = launcher.startListening()
+        val server = launcher.remoteProxy
+
+        fun status() = Gson().toJsonTree(await(server.languageServiceStatus())).asJsonObject
+
+        fun request(
+            method: String,
+            params: Any,
+        ): CompletableFuture<Any> = launcher.remoteEndpoint.request(method, params)
+
+        fun initialize(
+            versionedEdits: Boolean = false,
+            pullDiagnostics: Boolean = false,
+            sourceModules: List<Map<String, Any>>? = null,
+            documentSync: Map<String, Boolean> = emptyMap(),
+            richPresentation: Boolean = true,
+            libraryContent: Boolean = false,
+        ) {
+            val initialized =
+                await(
+                    server.initialize(
+                        InitializeParams().apply {
+                            initializationOptions =
+                                buildMap {
+                                    sourceModules?.let {
+                                        put("xtcCompiler", mapOf("sourceModules" to it))
+                                    }
+                                    put("xtcDocumentSync", documentSync)
+                                }
+                            capabilities =
+                                ClientCapabilities().apply {
+                                    textDocument =
+                                        TextDocumentClientCapabilities().apply {
+                                            inlineCompletion = InlineCompletionCapabilities()
+                                            if (richPresentation) {
+                                                signatureHelp =
+                                                    SignatureHelpCapabilities().apply {
+                                                        signatureInformation =
+                                                            SignatureInformationCapabilities()
+                                                                .apply {
+                                                                    activeParameterSupport = true
+                                                                }
+                                                    }
+                                                documentLink =
+                                                    DocumentLinkCapabilities().apply {
+                                                        tooltipSupport = true
+                                                    }
+                                            }
+                                            documentSymbol =
+                                                DocumentSymbolCapabilities().apply {
+                                                    hierarchicalDocumentSymbolSupport = true
+                                                }
+                                            publishDiagnostics =
+                                                PublishDiagnosticsCapabilities().apply {
+                                                    versionSupport = true
+                                                    relatedInformation = true
+                                                }
+                                            if (documentSync.isNotEmpty()) {
+                                                synchronization =
+                                                    SynchronizationCapabilities(true, true, true)
+                                            }
+                                            if (pullDiagnostics) {
+                                                diagnostic = DiagnosticCapabilities()
+                                            }
+                                            semanticTokens =
+                                                SemanticTokensCapabilities().apply {
+                                                    requests =
+                                                        SemanticTokensClientCapabilitiesRequests(
+                                                            SemanticTokensClientCapabilitiesRequestsFull(
+                                                                true,
+                                                            ),
+                                                            true,
+                                                        )
+                                                }
+                                        }
+                                    workspace =
+                                        WorkspaceClientCapabilities().apply {
+                                            if (libraryContent) textDocumentContent = TextDocumentContentCapabilities()
+                                            workspaceEdit =
+                                                WorkspaceEditCapabilities().apply {
+                                                    documentChanges = versionedEdits
+                                                }
+                                        }
+                                }
+                        },
+                    ),
+                )
+            assertThat(initialized.capabilities.textDocumentSync.right.change)
+                .isEqualTo(
+                    if (documentSync["incremental"] == true) {
+                        TextDocumentSyncKind.Incremental
+                    } else {
+                        TextDocumentSyncKind.Full
+                    },
+                )
+            assertThat(initialized.capabilities.definitionProvider.left).isTrue()
+            assertThat(initialized.capabilities.typeDefinitionProvider.left).isTrue()
+            assertThat(initialized.capabilities.implementationProvider.left).isTrue()
+            assertThat(initialized.capabilities.monikerProvider.left).isTrue()
+            assertThat(initialized.capabilities.callHierarchyProvider.left).isTrue()
+            assertThat(initialized.capabilities.inlayHintProvider.left).isTrue()
+            if (colorPrototype) {
+                assertThat(initialized.capabilities.colorProvider.left).isTrue()
+            } else {
+                assertThat(initialized.capabilities.colorProvider).isNull()
+            }
+            assertThat(initialized.capabilities.semanticTokensProvider).isNotNull()
+            assertThat(initialized.capabilities.hoverProvider.left).isTrue()
+            assertThat(initialized.capabilities.referencesProvider.right.workDoneProgress).isTrue()
+            assertThat(initialized.capabilities.documentHighlightProvider.left).isTrue()
+            assertThat(initialized.capabilities.completionProvider).isNotNull()
+            if (versionedEdits) {
+                assertThat(initialized.capabilities.renameProvider.right.prepareProvider).isTrue()
+            } else {
+                assertThat(initialized.capabilities.renameProvider).isNull()
+            }
+            assertThat(initialized.capabilities.signatureHelpProvider).isNotNull()
+            assertThat(initialized.capabilities.signatureHelpProvider.triggerCharacters)
+                .contains("[")
+            server.initialized(InitializedParams())
+        }
+
+        fun verifySemantics(
+            content: String,
+            name: String,
+            type: String,
+        ) {
+            val document = TextDocumentIdentifier(URI)
+            val declaration = content.indexOf(name)
+            val reference = content.lastIndexOf(name)
+            val cursor = Position(0, reference)
+            val declaredRange =
+                Range(Position(0, declaration), Position(0, declaration + name.length))
+            val usedRange = Range(cursor, Position(0, reference + name.length))
+            val service = server.textDocumentService
+            val hover = await(service.hover(HoverParams(document, cursor)))
+            assertThat(hover.contents.right.value).contains(type)
+            val definitions = await(service.definition(DefinitionParams(document, cursor))).left
+            assertThat(definitions.map { it.uri }).containsExactly(URI)
+            assertThat(definitions.map { it.range }).containsExactly(declaredRange)
+            val references =
+                await(service.references(ReferenceParams(document, cursor, ReferenceContext(true))))
+            assertThat(references.map { it.uri }).containsOnly(URI)
+            assertThat(references.map { it.range }).containsExactly(declaredRange, usedRange)
+            val highlights =
+                await(service.documentHighlight(DocumentHighlightParams(document, cursor)))
+            assertThat(highlights.map { it.range }).containsExactly(declaredRange, usedRange)
+        }
+
+        fun open(content: String) =
+            server.textDocumentService.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, content)),
+            )
+
+        fun change(
+            content: String,
+            version: Int,
+        ) = server.textDocumentService.didChange(
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(URI, version),
+                listOf(TextDocumentContentChangeEvent(content)),
+            ),
+        )
+
+        fun diagnosticsAt(version: Int): PublishDiagnosticsParams {
+            val deadline = System.nanoTime() + SECONDS.toNanos(30)
+            while (true) {
+                val remaining = deadline - System.nanoTime()
+                val publication =
+                    if (remaining > 0) published.poll(remaining, NANOSECONDS) else null
+                checkNotNull(publication) { "No diagnostics for version $version. ${log()}" }
+                assertThat(publication.uri).isEqualTo(URI)
+                assertThat(publication.version).isLessThanOrEqualTo(version)
+                if (publication.version == version) return publication
+            }
+        }
+
+        fun diagnosticsFor(
+            uri: String,
+            version: Int?,
+        ): PublishDiagnosticsParams {
+            val deadline = System.nanoTime() + SECONDS.toNanos(30)
+            while (true) {
+                val remaining = deadline - System.nanoTime()
+                val publication =
+                    if (remaining > 0) published.poll(remaining, NANOSECONDS) else null
+                checkNotNull(publication) { "No diagnostics for $uri version $version. ${log()}" }
+                if (publication.uri == uri && publication.version == version) return publication
+            }
+        }
+
+        fun <T> await(future: Future<T>): T =
+            try {
+                future.get(30, SECONDS)
+            } catch (e: TimeoutException) {
+                throw AssertionError("LSP request timed out. ${log()}", e)
+            }
+
+        fun shutdownAndExit() {
+            await(server.shutdown())
+            server.exit()
+            expectExit(0)
+        }
+
+        fun expectExit(status: Int) {
+            assertThat(process.waitFor(10, SECONDS))
+                .describedAs("Server did not exit. ${log()}")
+                .isTrue()
+            assertThat(process.exitValue()).describedAs(log()).isEqualTo(status)
+        }
+
+        private fun log(): String = Files.readString(stderr).takeLast(8192)
+
+        override fun close() {
+            try {
+                if (process.isAlive) process.destroyForcibly()
+                check(process.waitFor(10, SECONDS)) { "Could not terminate test server. ${log()}" }
+            } finally {
+                listening.cancel(true)
+                executor.shutdownNow()
+                process.outputStream.close()
+                process.inputStream.close()
+            }
+        }
+    }
+
+    private companion object {
+        const val URI = "file:///Stdio.x"
+        const val VALID = "module Stdio { Int run() { Int value = 1; return value; } }"
+        const val REOPENED =
+            "module Stdio { String run() { String label = \"ok\"; return label; } }"
+        const val BROKEN = "module Stdio { Int run() { return missing; } }"
+        const val BOOTSTRAP = "org/xvm/lsp/xdk/mack.xtc"
+    }
+}

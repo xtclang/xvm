@@ -14,9 +14,11 @@ class ConnectionLifetimeTest {
     fun `stopping before asynchronous startup cannot spawn an orphan`() {
         val started = AtomicInteger()
         val stopped = AtomicInteger()
-        val lifetime = ConnectionLifetime({ started.incrementAndGet() }, { stopped.incrementAndGet() })
+        val lifetime =
+            ConnectionLifetime({ started.incrementAndGet() }, { stopped.incrementAndGet() })
         lifetime.stop()
-        assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+        assertThatThrownBy { lifetime.start() }
+            .isInstanceOf(CannotStartProcessException::class.java)
         lifetime.stop()
         assertThat(started.get()).isZero()
         assertThat(stopped.get()).isEqualTo(1)
@@ -26,13 +28,15 @@ class ConnectionLifetimeTest {
     fun `concurrent starts retain a single process and stop is final`() {
         val started = AtomicInteger()
         val stopped = AtomicInteger()
-        val lifetime = ConnectionLifetime({ started.incrementAndGet() }, { stopped.incrementAndGet() })
+        val lifetime =
+            ConnectionLifetime({ started.incrementAndGet() }, { stopped.incrementAndGet() })
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             (1..20).map { executor.submit { lifetime.start() } }.forEach { it.get(10, SECONDS) }
         }
         lifetime.stop()
         lifetime.stop()
-        assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+        assertThatThrownBy { lifetime.start() }
+            .isInstanceOf(CannotStartProcessException::class.java)
         assertThat(started.get()).isEqualTo(1)
         assertThat(stopped.get()).isEqualTo(1)
     }
@@ -83,9 +87,12 @@ class ConnectionLifetimeTest {
                 },
                 { children.decrementAndGet() },
             )
-        assertThatThrownBy { lifetime.start() }.isInstanceOf(IllegalStateException::class.java).hasMessage("listener setup failed")
+        assertThatThrownBy { lifetime.start() }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessage("listener setup failed")
         lifetime.stop()
         assertThat(children.get()).isZero()
-        assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+        assertThatThrownBy { lifetime.start() }
+            .isInstanceOf(CannotStartProcessException::class.java)
     }
 }

@@ -13,7 +13,6 @@ import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.HoverParams
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
@@ -34,8 +33,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.mockito.ArgumentCaptor
-import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
@@ -45,10 +44,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Integration test that exercises the LSP server against real `.x` source files from
- * the repository. Unlike [XtcLanguageServerTest], which uses synthetic inline snippets
- * with the [MockAdapter], this test opens actual XTC standard library and
- * manual test files and verifies that each LSP capability returns meaningful results.
+ * Integration test that exercises the LSP server against real `.x` source files from the
+ * repository. Unlike [XtcLanguageServerTest], which uses synthetic inline snippets with the
+ * [MockAdapter], this test opens actual XTC standard library and manual test files and verifies
+ * that each LSP capability returns meaningful results.
  *
  * ## How to run
  *
@@ -57,38 +56,37 @@ import java.nio.file.Paths
  *     --tests "org.xvm.lsp.server.LspIntegrationTest"
  * ```
  *
- * The test **must** be run via Gradle (not directly from IntelliJ) because the build
- * passes the system property `xtc.composite.root` to the test JVM. This property points
- * to the top-level project root (found via the `version.properties` marker file, using
- * the same approach as `XdkPropertiesService.compositeRootDirectory()`), which is needed
- * to locate the real `.x` source files in `lib_ecstasy/` and `manualTests/`.
+ * The test **must** be run via Gradle (not directly from IntelliJ) because the build passes the
+ * system property `xtc.composite.root` to the test JVM. This property points to the top-level
+ * project root (found via the `version.properties` marker file, using the same approach as
+ * `XdkPropertiesService.compositeRootDirectory()`), which is needed to locate the real `.x` source
+ * files in `lib_ecstasy/` and `manualTests/`.
  *
  * ## Adapter selection
  *
- * At startup (`@BeforeAll`), the test tries to instantiate a [TreeSitterAdapter]. If the
- * native tree-sitter library is available (which it is when the `tree-sitter` subproject
- * has been built), all tests run against the real syntax-aware parser. If the native lib
- * is unavailable (e.g. in a CI environment without native builds), the test falls back to
- * [MockAdapter] and the tests still pass -- they just exercise regex-based parsing.
+ * At startup (`@BeforeAll`), the test tries to instantiate a [TreeSitterAdapter]. If the native
+ * tree-sitter library is available (which it is when the `tree-sitter` subproject has been built),
+ * all tests run against the real syntax-aware parser. If the native lib is unavailable (e.g. in a
+ * CI environment without native builds), the test falls back to [MockAdapter] and the tests still
+ * pass -- they just exercise regex-based parsing.
  *
  * ## Test files
- *
- * | File | Path | Why |
- * |------|------|-----|
- * | `Boolean.x` | `lib_ecstasy/.../ecstasy/Boolean.x` | Enum with methods, `@Op` annotations, many self-references |
- * | `Exception.x` | `lib_ecstasy/.../ecstasy/Exception.x` | Const class, constructor, properties, methods |
- * | `Closeable.x` | `lib_ecstasy/.../ecstasy/Closeable.x` | Small interface with doc comments |
- * | `TestSimple.x` | `lang/lsp-server/src/test/resources/fixtures/TestSimple.x` | Stable local fixture for module with `@Inject`, local vars |
+ * |File          |Path                                                      |Why                                                       |
+ * |--------------|----------------------------------------------------------|----------------------------------------------------------|
+ * |`Boolean.x`   |`lib_ecstasy/.../ecstasy/Boolean.x`                       |Enum with methods, `@Op` annotations, many self-references|
+ * |`Exception.x` |`lib_ecstasy/.../ecstasy/Exception.x`                     |Const class, constructor, properties, methods             |
+ * |`Closeable.x` |`lib_ecstasy/.../ecstasy/Closeable.x`                     |Small interface with doc comments                         |
+ * |`TestSimple.x`|`lang/lsp-server/src/test/resources/fixtures/TestSimple.x`|Stable local fixture for module with `@Inject`, local vars|
  *
  * ## How it works
  *
- * Each test creates a fresh [XtcLanguageServer] with a mock [LanguageClient] (`@BeforeEach`),
- * then opens a real file via `didOpen` and calls the LSP method under test (hover, completion,
+ * Each test creates a fresh [XtcLanguageServer] with a mock [LanguageClient] (`@BeforeEach`), then
+ * opens a real file via `didOpen` and calls the LSP method under test (hover, completion,
  * definition, etc.). Assertions verify the server returns structurally correct, non-empty results.
  *
- * Symbol positions are found dynamically using [findPosition], which locates a string in the
- * file content and converts it to a 0-based `(line, column)` position. This makes the tests
- * resilient to edits in the test files.
+ * Symbol positions are found dynamically using [findPosition], which locates a string in the file
+ * content and converts it to a 0-based `(line, column)` position. This makes the tests resilient to
+ * edits in the test files.
  *
  * @see XtcLanguageServerTest for unit tests with synthetic snippets
  */
@@ -120,7 +118,8 @@ class LspIntegrationTest {
                 "Boolean.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Boolean.x"),
                 "Exception.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Exception.x"),
                 "Closeable.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Closeable.x"),
-                "TestSimple.x" to loadTestFile(root, "lang/lsp-server/src/test/resources/fixtures/TestSimple.x"),
+                "TestSimple.x" to
+                    loadTestFile(root, "lang/lsp-server/src/test/resources/fixtures/TestSimple.x"),
             )
     }
 
@@ -129,14 +128,17 @@ class LspIntegrationTest {
         server = XtcLanguageServer(adapter)
         mockClient = mock(LanguageClient::class.java)
         server.connect(mockClient)
-        server.initialize(InitializeParams()).get()
+        server.initialize(editorInitializeParams()).get()
     }
 
     // ========================================================================
     // Helpers
     // ========================================================================
 
-    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? = runCatching { TreeSitterAdapter() }.getOrNull()
+    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? =
+        runCatching {
+            TreeSitterAdapter()
+        }.getOrNull()
 
     private fun resolveProjectRoot(): Path {
         val root =
@@ -161,9 +163,9 @@ class LspIntegrationTest {
     }
 
     /**
-     * Find the 0-based (line, column) of an occurrence of [text] in [content].
-     * Starts searching from [startIndex] (default 0) so callers can skip past
-     * occurrences in comments or other non-code regions.
+     * Find the 0-based (line, column) of an occurrence of [text] in [content]. Starts searching
+     * from [startIndex] (default 0) so callers can skip past occurrences in comments or other
+     * non-code regions.
      */
     private fun findPosition(
         content: String,
@@ -171,7 +173,9 @@ class LspIntegrationTest {
         startIndex: Int = 0,
     ): Position {
         val idx = content.indexOf(text, startIndex)
-        assertThat(idx).describedAs("'$text' not found in content from index $startIndex").isGreaterThanOrEqualTo(0)
+        assertThat(idx)
+            .describedAs("'$text' not found in content from index $startIndex")
+            .isGreaterThanOrEqualTo(0)
         val line = content.substring(0, idx).count { it == '\n' }
         val lastNewline = content.lastIndexOf('\n', idx - 1)
         val col = idx - lastNewline - 1
@@ -207,7 +211,7 @@ class LspIntegrationTest {
             openFile("TestSimple.x")
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
-            verify(mockClient, atLeastOnce()).publishDiagnostics(captor.capture())
+            verify(mockClient, timeout(5000).atLeastOnce()).publishDiagnostics(captor.capture())
 
             val published = captor.value
             assertThat(published.uri).isEqualTo(testFiles.getValue("TestSimple.x").uri)
@@ -511,8 +515,9 @@ class LspIntegrationTest {
 
             val ranges =
                 server.textDocumentService
-                    .selectionRange(SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos)))
-                    .get()
+                    .selectionRange(
+                        SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos)),
+                    ).get()
 
             assertThat(ranges).isNotNull()
             assertThat(ranges).hasSize(1)

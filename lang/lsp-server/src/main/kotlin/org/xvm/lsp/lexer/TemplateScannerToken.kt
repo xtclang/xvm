@@ -42,44 +42,45 @@ data class TemplateScannerToken(
     val endOffset: Int,
     val value: String? = null,
 ) {
-    val length: Int get() = endOffset - startOffset
+    val length: Int
+        get() = endOffset - startOffset
 
     companion object {
         fun templateStart(
             start: Int,
             end: Int,
-        ) = TemplateScannerToken(TemplateTokenType.TEMPLATE_START, start, end)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.TEMPLATE_START, start, end)
 
         fun templateMultilineStart(
             start: Int,
             end: Int,
-        ) = TemplateScannerToken(TemplateTokenType.TEMPLATE_MULTILINE_START, start, end)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.TEMPLATE_MULTILINE_START, start, end)
 
         fun content(
             start: Int,
             end: Int,
             value: String,
-        ) = TemplateScannerToken(TemplateTokenType.TEMPLATE_CONTENT, start, end, value)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.TEMPLATE_CONTENT, start, end, value)
 
         fun exprStart(
             start: Int,
             end: Int,
-        ) = TemplateScannerToken(TemplateTokenType.TEMPLATE_EXPR_START, start, end)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.TEMPLATE_EXPR_START, start, end)
 
         fun exprEnd(
             start: Int,
             end: Int,
-        ) = TemplateScannerToken(TemplateTokenType.TEMPLATE_EXPR_END, start, end)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.TEMPLATE_EXPR_END, start, end)
 
         fun templateEnd(
             start: Int,
             end: Int,
-        ) = TemplateScannerToken(TemplateTokenType.TEMPLATE_END, start, end)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.TEMPLATE_END, start, end)
 
         fun error(
             start: Int,
             end: Int,
             message: String,
-        ) = TemplateScannerToken(TemplateTokenType.ERROR, start, end, message)
+        ): TemplateScannerToken = TemplateScannerToken(TemplateTokenType.ERROR, start, end, message)
     }
 }
