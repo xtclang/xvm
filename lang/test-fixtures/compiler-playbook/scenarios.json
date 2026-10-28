@@ -9586,13 +9586,13 @@
         "logLine": 8,
         "logMessage": "sum={sum}",
         "logged": "sum=6",
+        "logExpression": "sum",
+        "logValue": "6",
         "exitCode": 6
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "LSP4IJ sends only a breakpoint's condition (0.21.0), not its hit count, and a breakpoint whose Suspend is unchecked leaves the program stopped (UP32), so IntelliJ checks the condition alone: the breakpoint stops where i is 0 and 2. The hit condition and the logpoint are checked in VS Code."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X312": {
@@ -9661,13 +9661,13 @@
         "logLine": 7,
         "logMessage": "twice={sum * 2}",
         "logged": "twice=20",
+        "logExpression": "sum * 2",
+        "logValue": "20",
         "exitCode": 10
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "LSP4IJ sends only a breakpoint's condition (0.21.0), not a log message (UP32), so IntelliJ checks the condition and the watches: the breakpoint stops where i is 2 and 4. The logpoint is checked in VS Code."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X314": {
