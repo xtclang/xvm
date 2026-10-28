@@ -307,7 +307,7 @@ public class EmbeddingSupport {
          * @return true if the module is still running: until its entry method has returned and,
          *         as on the command line, its services have nothing left to do, none of them at
          *         work or waiting and nothing pending that keeps it alive, such as a "keepAlive"
-         *         alarm or a server
+         *         alarm or an HTTP server
          */
         boolean running();
 
