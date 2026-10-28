@@ -1437,9 +1437,7 @@ internal fun ParityScenarios.runEntryCases() {
             val module = data.string("module")
             try {
                 // as the Breakpoints dialog adds it, with a condition on the method's parameter
-                check(debugger.addFunctionBreakpoint(project, data.string("function"), data.string("condition"))) {
-                    "This LSP4IJ has no DAP function breakpoints"
-                }
+                debugger.addFunctionBreakpoint(project, data.string("function"), data.string("condition"))
                 debugger.debug(project, module, uri(data.string("file")), 0)
 
                 // the second call, the first whose n is more than 5, below run()'s line that makes it
@@ -1990,7 +1988,7 @@ internal interface DebugSessionProbe {
         project: Project,
         name: String,
         condition: String,
-    ): Boolean
+    )
 
     fun functionBreakpoints(
         project: Project,
