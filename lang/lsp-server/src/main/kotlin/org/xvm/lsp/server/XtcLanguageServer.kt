@@ -126,7 +126,7 @@ class XtcLanguageServer(
         get() = connectedClient.get()
 
     private val refresh = ClientRefresh { client }
-    internal val readOnlyDocuments = ReadOnlyDocuments(adapter) { client }
+    internal val readOnlyDocuments = ReadOnlyDocuments(adapter)
     internal val clientTrace = ClientTrace { client }
     internal val partialResults = PartialResults(client = { client })
     private val embeddedRuns = EmbeddedRuns(adapter, { client })
@@ -663,7 +663,6 @@ class XtcLanguageServer(
         progress.initialized(supportsProgress.get())
         clientReady.complete(null)
         refresh.initialized()
-        readOnlyDocuments.initialized()
         logger.info("initialized: handshake complete, requesting editor configuration")
         startupWarning?.let(::showWarning)
         if (
