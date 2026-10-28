@@ -86,9 +86,21 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 - [ ] X259 fails with LSP4IJ 0.21.0 at its last step: once the library is back to `Int`, the
   consumer's hints don't follow (`run-1660337404068710181`, twice); it passes with the nightly
-  (`run-481780523334095669`). A regression since its last full pass, to be bisected.
+  (`run-481780523334095669`). It then passed in both full 0.21.0 runs of 2026-10-28
+  (`run-7875402505096583343`, `run-17527198196716738382`), so it is intermittent; find the race.
 - [ ] X74 and X150 each stopped a full IntelliJ run, with the nightly, and pass alone with both
   LSP4IJs: X150's popup inspection saw the source change under it ("Before: cl; now: clhis lo").
+  Both passed in the three full IntelliJ runs of 2026-10-28.
+- [ ] X257 and X324 failed only in the full nightly run of 2026-10-28 (`run-793652569316991787`).
+  X257 (the UP26 gate) found no Invoked inline completion request for its document in the LSP
+  console, though the alternative showed; it passes alone (`run-266543211336496817`). X324's library
+  frame had no source position, though the read-only copy of `Collection.x` it named was written
+  36 s before; it passes alone, after X323, and after X304-X322 (`run-6424025512923475166`).
+- [ ] The server never deletes its `xtc-library-sources-*` temporary directories
+  (`XdkLibrarySources`); 2,037 had piled up in the system temporary directory by 2026-10-28.
+- [x] X283 failed once in a full run (`run-17527198196716738382`) when keystrokes typed in another
+  window reached its editor: the test IDE takes the focus to click a Run lens. It passes alone
+  (`run-891840089927042241`). Don't type elsewhere during an IntelliJ run.
 - [ ] The server re-announces every library document a client fetched after each dependency change
   (`ReadOnlyDocuments.refresh()`), though a URI's text can't change, and LSP4IJ fetches them all
   again; in X146 that filled the LSP console. Decide whether a refresh is needed at all.
@@ -520,6 +532,12 @@ passes with the workaround disabled. The gates are in
   A full run's IDE was killed by macOS in IDE Starter's thread dump of every minute; the playbook
   takes none on macOS (`ff06c86d0b`). A full run stopped in turn at X74, X150 and X285 (the IDE
   crash); X74 and X150 pass alone. Before the bump: pass a full run.
+- [x] Full IntelliJ run on the nightly 0.21.1-20261028-080211 (built from `7469aab9`, with UP48 and
+  UP50), 2026-10-28, at `c2a9b296d5` with the playbook fixes before it (`run-793652569316991787`):
+  317 passed, 13 partial, 1 not implemented, 3 failed. X308, X312, X326 and X328-X331 pass, made
+  full for the run, and so do X259, X74 and X150. The UP25 gate passes. Failed: X323, as its UP44
+  gate does once #1773 is in; X257 (the UP26 gate) and X324, which fail only in the full run (see
+  [test harness stability](#test-harness-stability)). No IDE exception.
 - [ ] UP01 (#1696): remove the `ConnectionLifetime` guard in `XtcLspServerSupportProvider`; gate:
   `ConnectionLifetimeTest`, the packaged process regressions, START/STARTUP and
   START/START_PROJECTS.
@@ -634,7 +652,8 @@ passes with the workaround disabled. The gates are in
   temporary breakpoint stays until the program next stops, and the session's end forgets it; with a
   plugin built from it, and again from `main` at `e9f8bb42` (`run-11586456472789120644`), X323 stops
   at the cursor in IntelliJ. To do: after a release with it, make X323
-  full in IntelliJ, its UP44 gate removed.
+  full in IntelliJ, its UP44 gate removed. The nightly 0.21.1-20261028-080211 has it: there X323
+  fails with its gate's message, "UP44 is fixed" (`run-793652569316991787`).
 
 ### LSP4IJ: no loaded sources or modules (UP45): our #1774, merged
 
@@ -792,6 +811,20 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] Then the compiler-backed LSP and editor integrations.
 - [ ] Build and test each extracted PR on its own; the integrated branch passing doesn't prove a
   slice.
+- [x] Full playbook runs, 2026-10-28:
+  - VS Code 1.140.0 at `5e6a0f2391` (`run-Pc161s`): 332 passed; X218 fails as UP23 records, now as
+    an assertion that names UP23, not a timeout that stopped the run (`a82a762d19`). Its
+    dependencies passed: `:lsp-server:test` (2,414, 2 skipped) and `compilerStdioTest` (81).
+  - IntelliJ 2026.2.3 with LSP4IJ 0.21.0 at `c2a9b296d5` (`run-17527198196716738382`): 310 passed,
+    15 partial, 8 not implemented; X283 failed once, to stray keystrokes, and passes alone. No IDE
+    exception. The run before it (`run-7875402505096583343`) failed X303, now fixed, and hit UP14's
+    cache race in LSP4IJ 0.21.0 (#1716, unreleased): IntelliJ's breadcrumbs got no document symbol
+    request and reported an `IllegalArgumentException` from `awaitWithCheckCanceled`.
+  - Fixed on the way: X303's root kept `.gradle` and `gradle` from X129 and the compiler-import
+    cases, in both editors (`95b4cfa2f1`, `5e6a0f2391`, `c2a9b296d5`); the server reported a module
+    container that moved away during discovery as an invalid `xtc.compiler` setting, seen in X130
+    (`f71c9cc0a5`).
+  - The nightly run is under [LSP4IJ](#lsp4ij-merged-on-main-waiting-for-a-release).
 - [ ] Release 0.5.0, the agreed boundary for the breaking listener and embedding API, with migration
   and recompilation notes.
 - [ ] Settle the reconciliation inventory in the roadmap's
