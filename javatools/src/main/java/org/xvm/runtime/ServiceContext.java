@@ -875,6 +875,9 @@ public class ServiceContext {
                 }
             }
 
+            // fibers that have been terminated earlier and still have pending requests may not be in the queue
+            setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
+
             assert setFibers.isEmpty() ||
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
@@ -914,6 +917,9 @@ public class ServiceContext {
 
             setFibers.remove(fiber);
         }
+
+        // fibers that have been terminated earlier and still have pending requests may not be in the queue
+        setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
 
         assert setFibers.isEmpty();
 

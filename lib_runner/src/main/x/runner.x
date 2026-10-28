@@ -279,14 +279,19 @@ module runner.xtclang.org {
                         taskConsole.print($"Unhandled exception: {failure}");
                     }
 
-                    running    = False;
-                    container  = Null;
-                    completion = (result, failure);
-                    TaskRegistry.unregisterTask^(id);
+                    // as on the command line, the program ends once its services have nothing left
+                    // to do: a service still at work, or waiting to be called back, keeps it going
+                    // until it is killed
+                    endWhenIdle(() -> {
+                        running    = False;
+                        container  = Null;
+                        completion = (result, failure);
+                        TaskRegistry.unregisterTask^(id);
 
-                    if (!retainStore) {
-                        TaskRegistry.deleteTaskDirectory^(id, template.name);
-                    }
+                        if (!retainStore) {
+                            TaskRegistry.deleteTaskDirectory^(id, template.name);
+                        }
+                    });
                 });
                 return completion;
             } catch (Exception e) {
@@ -297,6 +302,31 @@ module runner.xtclang.org {
                     TaskRegistry.deleteTaskDirectory(id, template.name);
                 }
                 throw e;
+            }
+
+            /**
+             * Call the specified function once the task's container is idle, and kill the
+             * container then, so that nothing of the program runs after it has ended, not even a
+             * daemon alarm; one already killed has ended.
+             */
+            void endWhenIdle(function void () end) {
+                if (Container container ?= this.container, running) {
+                    switch (container.statusIndicator) {
+                    case Busy, BusyWaiting:
+                        @Inject Clock clock;
+                        clock.schedule(clock.now + Duration.ofMillis(10), () -> endWhenIdle(end));
+                        return;
+
+                    case Idle, IdleWaiting:
+                        running = False;
+                        container.kill();
+                        break;
+
+                    default:
+                        break;
+                    }
+                }
+                end();
             }
         }
 

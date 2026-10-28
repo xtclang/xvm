@@ -29,6 +29,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.runtime.ServiceContext.ServiceStatus;
+
 import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -556,6 +558,44 @@ public abstract class Container
                f_callbackCount.get() == 0 &&
                m_contextMain.isIdle() &&
                (f_parent == null || f_parent.isIdle());
+    }
+
+    /**
+     * Compute the status indicator of the container based on the statuses of its services. Unlike
+     * {@link #isIdle()}, neither the parent container nor the containers nested in this one count.
+     *
+     * @return the status of this container's services
+     */
+    public ServiceStatus getStatus() {
+        CompletableFuture<Void> futureTermination = m_futureTermination;
+        if (futureTermination != null && futureTermination.isDone()) {
+            return ServiceStatus.Terminated;
+        }
+        if (f_pendingWorkCount.get() > 0) {
+            return ServiceStatus.Busy;
+        }
+
+        ServiceStatus status = f_callbackCount.get() > 0 ? ServiceStatus.BusyWaiting : ServiceStatus.Idle;
+        for (ServiceContext service : f_setServices) {
+            switch (service.getStatus()) {
+            case Busy:
+                return ServiceStatus.Busy;
+
+            case BusyWaiting:
+                status = ServiceStatus.BusyWaiting;
+                break;
+
+            case IdleWaiting:
+                if (status == ServiceStatus.Idle) {
+                    status = ServiceStatus.IdleWaiting;
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+        return status;
     }
 
     /**
