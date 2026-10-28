@@ -23,6 +23,28 @@ import java.util.IdentityHashMap
  */
 internal object XdkAst {
     /**
+     * Locate a written closing brace for a member insertion. Semicolon-only declarations can have
+     * compiler-generated bodies with zero positions; those bodies are not source edit destinations.
+     * Inspect existing children rather than creating a body with `ensureBody()`.
+     */
+    fun memberInsertion(node: TypeCompositionStatement): SemanticModel.Position? {
+        val body = node.childNodes().filterIsInstance<StatementBlock>().singleOrNull() ?: return null
+        if (body.endPosition <= body.startPosition ||
+            body.startPosition < node.startPosition || body.endPosition > node.endPosition
+        ) {
+            return null
+        }
+        val source = node.source.clone()
+        source.position = body.startPosition
+        if (!source.hasNext() || source.next() != '{') return null
+        source.position = body.endPosition
+        source.rewind()
+        val insertion = source.position
+        if (source.next() != '}') return null
+        return SemanticModel.Position(Source.calculateLine(insertion), Source.calculateOffset(insertion))
+    }
+
+    /**
      * Attempt-local structure ownership; binary structures cannot acquire a guessed source span.
      */
     fun declarationLocations(

@@ -127,6 +127,7 @@ internal fun compilerMissingMethods(
                     owner
                 }
             val external = destinations.entries.singleOrNull { it.value.location == receiver?.destination }
+            val insertion = external?.value?.insertion ?: destination?.let(XdkAst::memberInsertion) ?: return@mapNotNull null
             val structure = (destination?.component ?: external?.key?.component) as? ClassStructure ?: return@mapNotNull null
             val crossOwner = destination !== owner
             // Preserve concrete call types; never infer an owner's formal from equal actual types.
@@ -319,14 +320,12 @@ internal fun compilerMissingMethods(
                     MissingParameter("${rendered.source} $argumentName", rendered.proof, imports = rendered.imports)
                 }
 
-            fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
             val signature = parameters.joinToString(", ") { it.source }
             CompilerMissingMethod(
                 XdkMissingMethods.Candidate(
                     name.calleeLocation(),
                     name.name,
-                    external?.value?.insertion
-                        ?: position(requireNotNull(destination).ensureBody().endPosition).let { it.copy(column = it.column - 1) },
+                    insertion,
                     external?.value?.location ?: requireNotNull(destination).location(),
                     "${if (crossOwner) "public" else "private"} ${if (dispatch == Dispatch.STATIC) "static " else ""}" +
                         "$generic${if (conditional) "conditional " else ""}$result ${name.name}($signature)",
@@ -555,12 +554,12 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
                         aliases.filterKeys { it !in existing }.mapValues { (module, alias) ->
                             XdkMemberActions.Import(importAt, "    package $alias import $module;")
                         }
-                    val end = node.ensureBody().endPosition
+                    val insertion = XdkAst.memberInsertion(node) ?: return@mapNotNull null
                     val declaration = node.location(node.nameToken.startPosition, node.nameToken.endPosition)
                     declaration to
                         XdkMissingMethods.Destination(
                             node.location(),
-                            SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1),
+                            insertion,
                             aliases,
                             imports,
                             module.source.fileName,
