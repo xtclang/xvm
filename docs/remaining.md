@@ -763,14 +763,14 @@ passes with the workaround disabled. The gates are in
   rename-on-type for locals, which XVM's server answers. IntelliJ's X133 sends the request itself,
   a protocol check rather than native coverage.
 
-### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, open
+### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
 - [ ] UP54 (2026-10-28): when IntelliJ formats several ranges of a file at once, LSP4IJ formats the
   first and drops the rest, and never sends LSP 3.18's `rangesFormatting`, which XVM's server
   supports. Our `XtcFormattingService` takes the first range too. Fixed in LSP4IJ by our
-  [#1786](https://github.com/redhat-developer/lsp4ij/pull/1786) (open, `0343267f`): one
+  [#1786](https://github.com/redhat-developer/lsp4ij/pull/1786) (merged 2026-10-28, unreleased, `0616567a`): one
   `rangesFormatting` to a server with `rangesSupport`, otherwise one `rangeFormatting` per range.
-  To do: get #1786 merged; make `XtcFormattingService` send every range too; then a native case that
+  To do: make `XtcFormattingService` send every range too; after a release with #1786, a native case that
   formats two separate ranges.
 
 ### LSP4IJ: no hit counts on line breakpoints (UP55): our #1787, open
