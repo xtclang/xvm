@@ -831,7 +831,12 @@ public class SessionDebuggerTest {
             ExceptionInfo caught = session.exceptionInfo(stop.threadId());
             assertEquals("IllegalState", caught.type());
             assertEquals("caught one", caught.text());
-            assertTrue(caught.stackTrace().contains("check"), caught.stackTrace());
+            // the stack where it was thrown, as the call stack shows it, without the runner that
+            // hosts the program
+            assertEquals("\n\tat check(Int) (ThrowsInfo.x:14)\n\tat run() (ThrowsInfo.x:5)\n\tat ^ThrowsInfo (run())\n",
+                    caught.stackTrace());
+            assertEquals(List.of("ThrowsInfo.check", "ThrowsInfo.run"),
+                    session.stackTrace(stop.threadId()).stream().map(StackFrameInfo::name).toList());
             assertFalse(caught.uncaught());
             assertEquals(null, session.exceptionInfo(stop.threadId() + 1));
 

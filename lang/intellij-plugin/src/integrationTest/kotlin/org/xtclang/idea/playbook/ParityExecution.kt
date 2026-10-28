@@ -437,6 +437,8 @@ internal fun ParityScenarios.runEntryCases() {
                     }
                 check(stopped.int("line") == line && stopped.string("file").endsWith(data.string("file"))) { "Stopped at: $stopped" }
                 val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                // the program's frames are the whole stack, without the runner that hosts it
+                check(frames.size == data.getAsJsonArray("frames").size()) { "The stack is not the program's frames: $frames" }
                 data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
                     val frame = frames.getOrNull(index)
                     check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
@@ -557,6 +559,8 @@ internal fun ParityScenarios.runEntryCases() {
                         it["suspended"]?.asBoolean == true
                     }
                 val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                // the program's frames are the whole stack, without the runner that hosts it
+                check(frames.size == data.getAsJsonArray("frames").size()) { "The stack is not the program's frames: $frames" }
                 data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
                     val frame = frames.getOrNull(index)
                     check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
