@@ -8,7 +8,6 @@ import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 
 internal fun ParityScenarios.librarySettingsCases() {
@@ -72,19 +71,11 @@ internal fun ParityScenarios.librarySettingsCases() {
                             val target = query("textDocument/definition", document, document.at(data.string("anchor"))).rows().single()
                             check(target["range"].asJsonObject["start"].asJsonObject.int("line") == data.int("definitionLine"))
                             val uri = target.string("uri")
-                            if (URI(uri).scheme != "file") {
-                                // TODO LSP4IJ: UP25 — an LSP4IJ that declares workspace/textDocumentContent (#1749) is given
-                                // the attached source as the server's ecstasy-library: document, which it opens read-only
-                                // without a file; the server serves its text
-                                val content = protocol.query("workspace/textDocumentContent", mapOf("uri" to uri))
-                                check(content.asJsonObject["text"].asString == data.string("source"))
-                                return
-                            }
-                            val path = Path.of(URI(uri))
-                            check(!Files.isWritable(path))
-                            check(Files.readString(path) == data.string("source"))
-                            val library = open(path.toString())
-                            check(library.text == data.string("source"))
+                            // the attached source is the server's ecstasy-library: document, which LSP4IJ opens read-only
+                            // without a file; the server serves its text
+                            check(URI(uri).scheme != "file") { "An attached source is the server's virtual document: $uri" }
+                            val content = protocol.query("workspace/textDocumentContent", mapOf("uri" to uri))
+                            check(content.asJsonObject["text"].asString == data.string("source"))
                         }
                         definition()
                         if (id == "X267") {
