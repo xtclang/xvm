@@ -304,7 +304,7 @@ public class PropertyInfo
                     for (Annotation annotation : aAnnoBase) {
                         TypeConstant typeAnnoBase = annotation.getAnnotationType();
                         if (typeAnnoAdd.equals(typeAnnoBase)) {
-                            idProp.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
+                            that.getIdentity().log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
                                 that.getIdentity().getParentConstant().getValueString(),
                                 getName(),
                                 annoAdd.getAnnotationClass().getValueString());
@@ -312,7 +312,7 @@ public class PropertyInfo
                         }
 
                         if (typeAnnoAdd.isA(typeAnnoBase)) {
-                            idProp.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
+                            that.getIdentity().log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
                                 that.getIdentity().getParentConstant().getValueString(),
                                 getName(),
                                 typeAnnoAdd.getValueString(),
