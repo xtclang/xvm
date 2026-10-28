@@ -11,7 +11,10 @@ import org.eclipse.lsp4j.InlineCompletionTriggerKind
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Path
 
-/** Native acceptance for an explicitly selected upstream build; shipping expectations stay intact. */
+/**
+ * A bundled library source that Go to Declaration opens: the server's virtual document, which LSP4IJ opens read-only
+ * from `workspace/textDocumentContent`, refreshes when the server says it changed, and retires with the server.
+ */
 internal fun ParityWorkspace.nativeLibraryContent(
     source: ParityWorkspace.Document,
     at: Int,
