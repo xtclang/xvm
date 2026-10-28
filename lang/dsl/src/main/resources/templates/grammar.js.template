@@ -573,7 +573,9 @@ module.exports = grammar({
         // Clauses
         // Interfaces can extend multiple types: extends Part, Freezable
         extends_clause: $ => seq('extends', commaSep1($.type_expression)),
-        extends_clause_with_args: $ => seq('extends', $.type_expression, optional($.arguments)),
+        // Extends with arguments names one or more types, as the reference parser takes them: extends B(1), D
+        extends_clause_with_args: $ => seq('extends', commaSep1($._extended_type)),
+        _extended_type: $ => seq($.type_expression, optional($.arguments)),
         implements_clause: $ => seq('implements', commaSep1($.type_expression)),
         // Incorporates names one or more mixins, as the reference parser takes them: incorporates M1, M2("x")
         // Each can be conditional: incorporates conditional Mixin<Type extends Constraint>
@@ -585,8 +587,10 @@ module.exports = grammar({
             prec.right(seq('conditional', $._non_bi_type, optional($.arguments))),
             prec.right(seq($.type_expression, optional($.arguments))),
         ),
-        // Delegates clause: delegates Type(expr)
-        delegates_clause: $ => seq('delegates', $.type_expression, '(', $._expression, ')'),
+        // Delegates names one or more types, as the reference parser takes them: delegates A(a), B(b)
+        // Each has the expression it delegates to: delegates Type(expr)
+        delegates_clause: $ => seq('delegates', commaSep1($._delegated_type)),
+        _delegated_type: $ => seq($.type_expression, '(', $._expression, ')'),
         into_clause: $ => seq('into', $.type_expression),
 
         // Type parameters
