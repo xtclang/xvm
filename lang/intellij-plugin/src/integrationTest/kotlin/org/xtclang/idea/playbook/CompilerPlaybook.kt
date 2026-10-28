@@ -1408,17 +1408,21 @@ class CompilerPlaybook(
         }
     }
 
-    private fun Driver.renamedRootScenario() {
-        scenario("X291") { scenario ->
+    private fun Driver.renamedRootScenario() = listOf("X291", "X301").forEach { id -> renamedRootScenario(id) }
+
+    private fun Driver.renamedRootScenario(id: String) {
+        scenario(id) { scenario ->
             // written before discovery is limited to the case's folder, so its walk finds the module
-            val folder = Path.of(singleProject().getBasePath()).resolve("X291")
+            val folder = Path.of(singleProject().getBasePath()).resolve(id)
             val file = folder.resolve(scenario.text("file"))
             val renamed = folder.resolve(scenario.text("destinationFile"))
             val files = utility(ParityFiles::class).getInstance()
             Files.createDirectories(folder)
             Files.writeString(file, scenario.text("source"))
             files.refreshAndFindFileByPath(file.toString())
-            discovered("X291") { data ->
+            discovered(id) { data ->
+                // X301 leaves an editor open on the root while the file is renamed
+                if (data.values["editorOpen"]?.asBoolean == true) open(data.text("file"))
                 val project = singleProject()
                 val module = data.text("module")
                 val execution = utility(EmbeddedExecutionProbe::class)
@@ -1436,7 +1440,7 @@ class CompilerPlaybook(
                         check(data.text("output") in output) { output }
                     }
                     runSaved("run before the rename finishes")
-                    // renamed on disk, as by a terminal, with no editor open on it
+                    // renamed on disk, as by a terminal
                     Files.move(file, renamed)
                     files.refreshAndFindFileByPath(folder.toString())
                     files.refreshAndFindFileByPath(renamed.toString())
@@ -1453,7 +1457,7 @@ class CompilerPlaybook(
     }
 
     private fun Driver.workspaceScenarios() {
-        ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168", "X220")).forEach { id ->
+        ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168", "X220", "X300")).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val projectSettings = data.values["projectSettingsRoundTrip"]?.asBoolean == true
@@ -1693,6 +1697,11 @@ class CompilerPlaybook(
             "X240",
             "X241",
             "X242",
+            "X295",
+            "X296",
+            "X297",
+            "X298",
+            "X299",
         ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->

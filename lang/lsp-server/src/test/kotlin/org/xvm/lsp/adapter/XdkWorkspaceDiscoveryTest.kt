@@ -148,6 +148,62 @@ class XdkWorkspaceDiscoveryTest {
         }
     }
 
+    @Test
+    fun `a root whose header does not parse keeps its name and imports when it is renamed`() {
+        source("Base.x", "module Base {}")
+        val app = source("App.x", "module App { package lib import Base; }")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+
+            fun graph() = adapter.sourceModuleInputs().associate { it.name to (it.uri to it.dependencies) }
+            assertThat(graph()["App"]).isEqualTo(app to setOf("Base"))
+
+            // the header stops parsing: discovery keeps what it knew about the root
+            val file = directory.resolve("App.x").toFile()
+            file.writeText("modul App { package lib import Base; }")
+            assertThat(adapter.applyFileEvents(listOf(app))).isNotNull()
+            assertThat(graph()["App"]).isEqualTo(app to setOf("Base"))
+
+            // renamed while it still does not parse, as an IDE rename reports it: the old path deleted, the new created
+            val renamed = directory.resolve("Renamed.x").toFile()
+            assertThat(file.renameTo(renamed)).isTrue()
+            val uri = renamed.canonicalFile.toURI().toString()
+            assertThat(adapter.applyFileEvents(listOf(app, uri))).isNotNull()
+            assertThat(graph()["App"]).isEqualTo(uri to setOf("Base"))
+
+            // a full walk finds the same
+            adapter.refreshDiscoveredSources()
+            assertThat(graph()["App"]).isEqualTo(uri to setOf("Base"))
+        }
+    }
+
+    @Test
+    fun `an editor left open on a root renamed outside the IDE does not declare its module twice`() {
+        source("Base.x", "module Base {}")
+        val text = "module App { package lib import Base; }"
+        val app = source("App.x", text)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.updateDocument(app, text)
+
+            fun graph() = adapter.sourceModuleInputs().map { it.name to it.uri }
+
+            val renamed = directory.resolve("Renamed.x").toFile()
+            assertThat(directory.resolve("App.x").toFile().renameTo(renamed)).isTrue()
+            val uri = renamed.canonicalFile.toURI().toString()
+            assertThat(adapter.applyFileEvents(listOf(app, uri))).isNotNull()
+            assertThat(graph().filter { it.first == "App" }).containsExactly("App" to uri)
+
+            // a full walk still sees the open buffer, and leaves it out the same way
+            adapter.refreshDiscoveredSources()
+            assertThat(graph().filter { it.first == "App" }).containsExactly("App" to uri)
+
+            // an edit makes the buffer a source again, as any unsaved buffer is
+            adapter.updateDocument(app, "module Draft {}")
+            assertThat(graph()).contains("Draft" to app, "App" to uri)
+        }
+    }
+
     private fun source(
         name: String,
         text: String,

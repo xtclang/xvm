@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules } from '../../rename-proposal';
 import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
+import { discovered } from './liveWorkspace';
 import { client, eventually, noErrors, playbook, symbols } from './support';
 
 export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219')[] = ['X161', 'X162', 'X163']): void {
@@ -74,4 +75,45 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
             await verify(moved);
         }
     }));
+}
+
+/**
+ * X302: a module root moved to another folder in the discovered graph of the case's own folder. The server moves the
+ * companion folder with it; nothing is configured, so discovery alone must find the module afterwards.
+ */
+export function discoveredRootMoveCases(ids: readonly 'X302'[]): void {
+    for (const id of ids) playbook(id, async (workspace, data) => {
+        for (const file of data.files) await workspace.write(file.file, file.source);
+        for (const directory of data.directories) await vscode.workspace.fs.createDirectory(workspace.uri(directory));
+        await discovered(workspace, async () => {
+            const root = await workspace.open(data.root);
+            await symbols(root);
+            await noErrors(root.uri);
+            const move = new vscode.WorkspaceEdit();
+            move.renameFile(workspace.uri(data.from), workspace.uri(data.to), { overwrite: false });
+            assert.ok(await vscode.workspace.applyEdit(move, { isRefactoring: true }));
+            const verify = async (moved: boolean) => {
+                for (const file of data.files) {
+                    const path = workspace.uri(moved ? file.destination : file.file).fsPath;
+                    await eventually(() => fs.readFile(path, 'utf8').catch(() => ''), text => text === file.source,
+                        `${file.file} ${moved ? 'moved' : 'restored'} unchanged`);
+                    if (file.destination !== file.file) {
+                        assert.strictEqual(await fs.stat(workspace.uri(moved ? file.file : file.destination).fsPath).catch(() => null), null);
+                    }
+                }
+                await noErrors((await workspace.open(data.consumer)).uri);
+                // the root's editor stays active, so Undo and Redo act on the move, which involves its file
+                const current = await workspace.open(moved ? data.afterRoot : data.root);
+                await symbols(current);
+                await noErrors(current.uri);
+            };
+            await verify(true);
+            for (const [action, moved] of [['undo', false], ['redo', true]] as const) {
+                await focusTestWindow();
+                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                await vscode.commands.executeCommand(action);
+                await verify(moved);
+            }
+        });
+    });
 }
