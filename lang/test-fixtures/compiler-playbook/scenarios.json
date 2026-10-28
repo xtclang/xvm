@@ -9992,7 +9992,86 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
+          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44, fixed by our LSP4IJ #1773, open). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
+        ]
+      }
+    },
+    "X324": {
+      "title": "a stack frame in a bundled library's code shows the library's bundled source at its line, and the program then runs to its exit",
+      "manual": [
+        "How each editor shows the library frame's source, read-only, is checked manually; VS Code checks the frame's source and opens it at the frame's line, IntelliJ the frame's file and line."
+      ],
+      "values": {
+        "file": "LibraryFrame.x",
+        "module": "LibraryFrame",
+        "source": "module LibraryFrame {\n    void run() {\n        @Inject Console console;\n        Int[] numbers = [7];\n        numbers.forEach(n -> {\n            console.print($\"n={n}\");\n        });\n    }\n}\n",
+        "breakpointLine": 6,
+        "frames": [
+          "LibraryFrame.->",
+          "Collection.forEach",
+          "LibraryFrame.run"
+        ],
+        "librarySource": "ecstasy/collections/Collection.x",
+        "libraryText": "process(",
+        "output": "n=7",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X325": {
+      "title": "a stop lists every fiber of the program, with what one that does not wait at a line does, and the stack of a fiber that waits for another service",
+      "manual": [
+        "How each editor lists the threads and marks the stopped one is checked manually; VS Code checks the threads and stackTrace answers, IntelliJ the Frames view's threads and frames."
+      ],
+      "values": {
+        "file": "Waits.x",
+        "module": "Waits",
+        "source": "module Waits {\n    service Worker {\n        Int done;\n\n        void work() {\n            for (Int i : 0 ..< 200_000) {\n                ++done;\n            }\n        }\n\n        Int finished() = done;\n    }\n\n    Int run() {\n        Worker worker = new Worker();\n        worker.work^();\n        @Inject Console console;\n        console.print(\"working\");\n        Int done = worker.finished();\n        console.print($\"done {done}\");\n        return done % 256;\n    }\n}\n",
+        "breakpointLine": 7,
+        "condition": "done == 100000",
+        "threads": [
+          "Worker",
+          "Waits (waiting)"
+        ],
+        "waitingFrames": [
+          [
+            "Waits.run",
+            19
+          ]
+        ],
+        "output": "done 200000",
+        "exitCode": 64
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X326": {
+      "title": "a debugged program's loaded sources are its own files and its libraries' bundled sources, and its modules say which are its own",
+      "manual": [
+        "How VS Code's Loaded Scripts view groups the sources is checked manually; VS Code checks the loadedSources request it sends when the view shows, and the modules answer."
+      ],
+      "values": {
+        "file": "Loaded.x",
+        "module": "Loaded",
+        "source": "module Loaded {\n    void run() {\n        @Inject Console console;\n        Int[] numbers = [7];\n        numbers.forEach(n -> {\n            console.print($\"n={n}\");\n        });\n    }\n}\n",
+        "breakpointLine": 6,
+        "librarySource": "ecstasy/collections/Collection.x",
+        "modules": {
+          "Loaded": true,
+          "ecstasy.xtclang.org": false
+        },
+        "output": "n=7",
+        "exitCode": 0
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45, implemented by our LSP4IJ #1774, open), so IntelliJ has no loaded sources or modules to check."
         ]
       }
     },
