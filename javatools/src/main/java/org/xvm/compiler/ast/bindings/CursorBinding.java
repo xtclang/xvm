@@ -1,4 +1,4 @@
-package org.xvm.compiler;
+package org.xvm.compiler.ast.bindings;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -14,6 +14,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 

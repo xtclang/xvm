@@ -39,15 +39,14 @@ import org.xvm.asm.op.P_Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
-import org.xvm.compiler.InitializerBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.bindings.InitializerBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -136,16 +135,7 @@ public class PropertyDeclarationStatement
      * @return true iff the property is declared as static
      */
     public boolean isStatic() {
-        List<Token> list = modifiers;
-        if (list != null && !list.isEmpty()) {
-            for (Token token : list) {
-                if (token.getId() == Token.Id.STATIC) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return isStatic(modifiers);
     }
 
     @Override
@@ -359,7 +349,7 @@ public class PropertyDeclarationStatement
                 MethodStructure methodGetter = prop.getGetter();
                 if (methodGetter != null && !methodGetter.usesSuper()) {
                     // property marked as @Unassigned must not have a getter that doesn't "super()"
-                    AnnotationExpression exprAnno = annotations.get(0);
+                    AnnotationExpression exprAnno = annotations.getFirst();
                     exprAnno.log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
                             pool().clzUnassigned().getName(),
                             prop.getIdentityConstant().getValueString());
@@ -790,21 +780,8 @@ public class PropertyDeclarationStatement
     public String toSignatureString() {
         StringBuilder sb = new StringBuilder();
 
-        if (modifiers != null) {
-            for (Token token : modifiers) {
-                sb.append(token.getId().TEXT)
-                  .append(' ');
-            }
-        }
+        appendDeclarationPrefix(sb, modifiers, annotations);
 
-        // this is not quite correct; if there were annotations extracted from the type, we will
-        // see them doubled in the string; very rare inconvenience, not worth any effort atm
-        if (annotations != null) {
-            for (AnnotationExpression annotation : annotations) {
-                sb.append(annotation)
-                  .append(' ');
-            }
-        }
         sb.append(type)
                 .append(' ')
           .append(name.getValueText());
@@ -816,13 +793,7 @@ public class PropertyDeclarationStatement
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (doc != null) {
-            String sDoc = String.valueOf(doc.getValue());
-            if (sDoc.length() > 100) {
-                sDoc = sDoc.substring(0, 97) + "...";
-            }
-            appendString(sb.append("/*"), sDoc).append("*/\n");
-        }
+        appendDocComment(sb, doc);
 
         sb.append(toSignatureString());
 

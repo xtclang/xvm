@@ -11,6 +11,8 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 /**
  * A module compiler for Ecstasy code.

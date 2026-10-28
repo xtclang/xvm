@@ -62,7 +62,7 @@ public class NamedTypeExpression
         this.access     = access;
         this.nonnarrow  = nonnarrow;
         this.paramTypes = params;
-        this.lStartPos  = immutable == null ? names.get(0).getStartPosition() : immutable.getStartPosition();
+        this.lStartPos  = immutable == null ? names.getFirst().getStartPosition() : immutable.getStartPosition();
         this.lEndPos    = lEndPos;
     }
 
@@ -77,7 +77,7 @@ public class NamedTypeExpression
         this.access     = null;
         this.nonnarrow  = null;
         this.paramTypes = params;
-        this.lStartPos  = names.get(0).getStartPosition();
+        this.lStartPos  = names.getFirst().getStartPosition();
         this.lEndPos    = lEndPos;
     }
 
@@ -111,7 +111,7 @@ public class NamedTypeExpression
         this.access     = null;
         this.nonnarrow  = null;
         this.paramTypes = params;
-        this.lStartPos  = (module == null ? names : module).get(0).getStartPosition();
+        this.lStartPos  = (module == null ? names : module).getFirst().getStartPosition();
         this.lEndPos    = lEndPos;
     }
 
@@ -549,7 +549,7 @@ public class NamedTypeExpression
                     && immutable == null && paramTypes == null && getCodeContainer() != null) {
                 // assume that the type is "dynamic", for example:
                 // "that.Element" or "that.Key.Element"
-                NameExpression exprDyn = new NameExpression(names.get(0));
+                NameExpression exprDyn = new NameExpression(names.getFirst());
                 getParent().adopt(exprDyn);
 
                 for (int i = 1, cNames = names.size(); i < cNames; i++) {

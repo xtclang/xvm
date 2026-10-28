@@ -22,6 +22,8 @@ import java.util.function.BiConsumer;
 
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
@@ -48,13 +50,13 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Expression.TypeFit;
 import org.xvm.compiler.ast.NameExpression.Meaning;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -439,12 +441,15 @@ public abstract class AstNode
 
     /**
      * @return a unique counter in the context of the code container
+     *
+     * @throws IllegalStateException if this node has no enclosing code container
      */
     protected int getCodeContainerCounter() {
         AstNode parent = getParent();
-        return parent == null
-                ? null
-                : parent.getCodeContainerCounter();
+        if (parent == null) {
+            throw new IllegalStateException("No enclosing code container for " + getClass().getSimpleName());
+        }
+        return parent.getCodeContainerCounter();
     }
 
     /**
@@ -724,9 +729,9 @@ public abstract class AstNode
      * checking for errors that are obvious from "this point down" (no lateral evaluation of
      * structures, because we can't count on them even existing yet.)</li>
      *
-     * <li>The general idea is that this method recurses through the structure, allowing each node
-     * to introduce itself as the parent of each node under it, and that the nodes which will be
-     * structures in the resulting FileStructure will register themselves.</li>
+     * <li>This method recurses through the tree, establishing each node as the parent of its
+     * children. Nodes that represent structures in the resulting FileStructure also register
+     * themselves.</li>
      *
      * <li>Type parameters for the types must also be registered, because they are also types, and
      * they will be required to already be present when the second pass begins.</li>
@@ -747,9 +752,8 @@ public abstract class AstNode
      * compilation is not only unpredictable, but the potential exists for dependencies in either
      * direction (first to last and/or vice versa).
      *
-     * <p>As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
-     * resolve, in which case the caller (another AstNode) has to add itself to the list of nodes
-     * that require another pass.
+     * <p>A node may be asked to resolve a name before its dependencies are ready. In that case,
+     * the calling node must defer its own resolution to another pass.
      *
      * <ul>
      * <li>Packages that import modules are able to verify that those modules are available to
@@ -797,29 +801,20 @@ public abstract class AstNode
     /**
      * If any of the children of this node have been previously deferred, catch them up now.
      *
-     * @param errs  the error list to log to
+     * @param errs      the error list to log to
+     * @param bindings  the enclosing compilation attempt's invocation collector
+     * @param cursors   the enclosing compilation attempt's cursor collector
      *
      * @return true if the children got caught up; false if the catch-up aborted
      */
-    protected boolean catchUpChildren(ErrorListener errs) {
-        return catchUpChildren(errs, InvocationBinding.Collector.NONE);
-    }
-
-    /** Catch up children using the enclosing compilation attempt's collector. */
-    protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings) {
-        return catchUpChildren(errs, bindings, CursorBinding.Collector.NONE);
-    }
-
     protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings,
                                        CursorBinding.Collector cursors) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
-            // we want to catch up to the last target that this component completed, and not
-            // actually pass the stage that this component is at, which can be accomplished using
-            // StageMgr processChildrenExcept() or processChildren() if the children need to
-            // complete the stage that this node is currently working on (if this node is currently
-            // in a transition stage)
+            // catch up only to the last completed target stage
+            // use StageMgr.processChildrenExcept() or processChildren() when children must
+            // complete the stage this node is currently processing
             stageTarget = stageTarget.prevTarget();
             if (!stageTarget.isTargetable()) {
                 assert stageTarget == Stage.Initial;
@@ -898,9 +893,8 @@ public abstract class AstNode
             return !resolver.getNameResolver().isFirstTime();
         }
 
-        // for all other components (that don't override this method because they know more about
-        // whether or not they can resolve names), we'll assume that if they haven't been resolved,
-        // then they don't know how to resolve names
+        // other components must have reached name resolution before they can resolve names
+        // subclasses can override this method when they have more specific readiness checks
         return alreadyReached(Stage.Resolving);
     }
 
@@ -976,10 +970,10 @@ public abstract class AstNode
      * that are not explicitly specified are considered to be assigned to their default values. In
      * the case of a non-call, the default method parameters are treated in the same manner as
      * others, and any parameter that is not explicitly specified remains un-bound. For example,
-     * having a function void foo(Int a, Int b = 0, Boolean c = False, Int d = 1) a [call]
-     * expression "foo(1, c=True)" will result into a function call "foo(1, 0, True, 1)", while the
-     * equivalent [bind] expression {@code &foo(1, c=True)} will result into a function of type
-     * "function void (Int, Int)", where parameters "b" and "d" remain unbound.
+     * given {@code void foo(Int a, Int b = 0, Boolean c = False, Int d = 1)}, the call expression
+     * {@code foo(1, c=True)} invokes {@code foo(1, 0, True, 1)}, while the equivalent binding
+     * expression {@code &foo(1, c=True)} produces a function of type {@code function void (Int, Int)},
+     * where parameters {@code b} and {@code d} remain unbound.
      *
      * @param ctx           the compilation context
      * @param typeTarget    the type to search the method or function for
@@ -1047,7 +1041,7 @@ public abstract class AstNode
                     mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errsTemp);
 
             // now choose the best match
-            boolean fArgsComplete = cArgs == 0 || listExprArgs.stream().allMatch(Expression::isCompletable);
+            boolean fArgsComplete = listExprArgs == null || listExprArgs.stream().allMatch(Expression::isCompletable);
             if (!setIs.isEmpty()) {
                 return fArgsComplete
                         ? chooseBest(setIs, typeTarget, mapMethods, errs)
@@ -1149,7 +1143,7 @@ public abstract class AstNode
             Map<MethodConstant, MethodStructure> mapMethods,
             ErrorListener                        errs) {
         collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
-                mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errs, (signature, ordered) -> {});
+                mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errs, (_, _) -> {});
     }
 
     /**
@@ -1746,12 +1740,12 @@ public abstract class AstNode
             Object value = entry.getValue();
             switch (value) {
             case null -> iter.remove();
-            case Map map -> {
+            case Map<?, ?> map -> {
                 if (map.isEmpty()) {
                     iter.remove();
                 }
             }
-            case Collection coll -> {
+            case Collection<?> coll -> {
                 if (coll.isEmpty()) {
                     iter.remove();
                 }
@@ -1798,14 +1792,14 @@ public abstract class AstNode
             out.print(sIndentCat + sCat);
 
             // find the kids
-            int      cKids;
-            Iterator iterK;
+            int         cKids;
+            Iterator<?> iterK;
             switch (value) {
-            case Map kids -> {
+            case Map<?, ?> kids -> {
                 cKids = kids.size();
                 iterK = kids.entrySet().iterator();
             }
-            case Collection kids -> {
+            case Collection<?> kids -> {
                 cKids = kids.size();
                 iterK = kids.iterator();
             }
@@ -1831,7 +1825,7 @@ public abstract class AstNode
                         out.println();
                     }
                     node.dump(out, sIndent1, sIndent2);
-                } else if (kid instanceof Map.Entry) {
+                } else if (kid instanceof Map.Entry<?, ?>) {
                     if (fFirstK) {
                         out.println();
                     }
@@ -1870,11 +1864,9 @@ public abstract class AstNode
     /**
      * Build and return a map that allows the caller to navigate the children of this node.
      *
-     * <p>Assume some type T which represents either an AstNode instance, or an object that implements
-     * toString(). The keys of the map should be strings that describe the categories of the
-     * children, while the values should provide the info about the children of this AstNode,
-     * either as an object of type T, a Collection of type T, an array of type T, or a Map whose
-     * keys and values are of type T.
+     * <p>Keys describe the categories of children. Each value is a child, a collection or array
+     * of children, or a map whose keys and values describe children. A child can be an AstNode
+     * or another object with a useful {@code toString()} representation.
      *
      * @return a map containing all the child information to dump
      */
@@ -1915,7 +1907,7 @@ public abstract class AstNode
      * @return an ArrayList
      */
     protected static <T> ArrayList<T> ensureArrayList(List<T> list) {
-        return list instanceof ArrayList alist
+        return list instanceof ArrayList<T> alist
                 ? alist
                 : new ArrayList<>(list);
     }
@@ -1941,7 +1933,6 @@ public abstract class AstNode
             while (clzTry != null) {
                 try {
                     Field field = clzTry.getDeclaredField(names[i]);
-                    assert field != null;
                     Class<?> clzField = field.getType();
                     if (!AstNode.class.isAssignableFrom(clzField)
                             && !List.class.isAssignableFrom(clzField)) {
@@ -1988,6 +1979,7 @@ public abstract class AstNode
     public interface ChildIterator
             extends Iterable<AstNode>, Iterator<AstNode> {
         @Override
+        @NotNull
         default Iterator<AstNode> iterator() {
             return this;
         }
@@ -2015,6 +2007,7 @@ public abstract class AstNode
         };
     }
 
+    /** Traverses registered child fields, retaining their mutation cursor for replacement/removal. */
     protected final class ChildIteratorImpl
             implements ChildIterator {
         /**
@@ -2027,17 +2020,19 @@ public abstract class AstNode
             this.fields = fields;
         }
 
+        @Override
         public boolean hasNext() {
             return state == HAS_NEXT || prepareNextElement();
         }
 
+        @Override
         public AstNode next() {
             if (state == HAS_NEXT || prepareNextElement()) {
                 state = HAS_PREV;
                 if (value instanceof AstNode node) {
                     return node;
                 } else {
-                    return (AstNode) ((Iterator) value).next();
+                    return (AstNode) ((Iterator<?>) value).next();
                 }
             }
 
@@ -2045,7 +2040,7 @@ public abstract class AstNode
         }
 
         private boolean prepareNextElement() {
-            if (value instanceof Iterator iter && iter.hasNext()) {
+            if (value instanceof Iterator<?> iter && iter.hasNext()) {
                 state = HAS_NEXT;
                 return true;
             }
@@ -2069,12 +2064,12 @@ public abstract class AstNode
                 }
 
                 if (next != null) {
-                    if (next instanceof List list) {
+                    if (next instanceof List<?> list) {
                         if (!list.isEmpty()) {
                             value = list.listIterator();
                             return true;
                         }
-                    } else if (next instanceof Collection coll) {
+                    } else if (next instanceof Collection<?> coll) {
                         if (!coll.isEmpty()) {
                             value = coll.iterator();
                             return true;
@@ -2091,6 +2086,7 @@ public abstract class AstNode
             return false;
         }
 
+        @Override
         public void remove() {
             if (state == HAS_PREV) {
                 if (value instanceof AstNode) {
@@ -2104,7 +2100,7 @@ public abstract class AstNode
                     return;
                 }
 
-                if (value instanceof Iterator iter) {
+                if (value instanceof Iterator<?> iter) {
                     // tell the underlying iterator to remove the value
                     iter.remove();
                     state = NOT_PREP;
@@ -2115,6 +2111,7 @@ public abstract class AstNode
             throw new IllegalStateException();
         }
 
+        @Override
         public void replaceWith(AstNode newChild) {
             if (state == HAS_PREV) {
                 if (value instanceof AstNode) {
@@ -2127,8 +2124,11 @@ public abstract class AstNode
                     return;
                 }
 
-                if (value instanceof ListIterator iter) {
-                    iter.set(newChild);
+                if (value instanceof ListIterator<?> iter) {
+                    // Registered child lists contain AstNodes; reflection erases their element type.
+                    @SuppressWarnings("unchecked")
+                    var children = (ListIterator<AstNode>) iter;
+                    children.set(newChild);
                     return;
                 }
             }

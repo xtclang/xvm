@@ -546,7 +546,7 @@ public class RelOpExpression
         m_idOp = idOp;
 
         // only the Boolean type supports COND_XOR op ("^^")
-        if (operator.getId() == Id.COND_XOR && atypeResults != null && atypeResults.length > 0
+        if (operator.getId() == Id.COND_XOR
                 && !atypeResults[0].equals(pool().typeBoolean())) {
             operator.log(errs, getSource(), Severity.ERROR, Compiler.MISSING_OPERATOR,
                     operator.getValueText(), atypeResults[0].getValueString());
@@ -820,14 +820,7 @@ public class RelOpExpression
         }
 
         if (setOps != null) {
-            // find the best op method out of the multiple options
-            idBest = chooseBestMethod(setOps, type2);
-
-            if (idBest == null) {
-                operator.log(errs, getSource(), Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                                sOp, type1.getValueString());
-            }
-            return idBest;
+            return chooseOperator(setOps, type2, sOp, type1, errs);
         }
 
         if (idConv != null) {
@@ -835,15 +828,7 @@ public class RelOpExpression
         }
 
         if (setConvs != null) {
-            // find the best op method and conversion out of the multiple options
-            // find the best op method out of the multiple options
-            idBest = chooseBestMethod(setConvs, type2);
-
-            if (idBest == null) {
-                operator.log(errs, getSource(), Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                                sOp, type1.getValueString());
-            }
-            return idBest;
+            return chooseOperator(setConvs, type2, sOp, type1, errs);
         }
 
         // error: somehow, we got this far, but we couldn't find an op that matched the
@@ -853,6 +838,17 @@ public class RelOpExpression
                 type2.removeImmutable().removeAccess().getValueString(),
                 typeRequired == null ? type1.getValueString() : typeRequired.getValueString());
         return null;
+    }
+
+    /** Select an operator candidate and report ambiguity at the written operator token. */
+    private MethodConstant chooseOperator(Set<MethodConstant> candidates, TypeConstant argument,
+                                          String operatorName, TypeConstant receiver, ErrorListener errs) {
+        MethodConstant selected = chooseBestMethod(candidates, argument);
+        if (selected == null) {
+            operator.log(errs, getSource(), Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                    operatorName, receiver.getValueString());
+        }
+        return selected;
     }
 
     /**
@@ -988,9 +984,6 @@ public class RelOpExpression
     @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         switch (aLVal.length) {
-        default:
-            throw new IllegalStateException();
-
         case 2:
             if (operator.getId() != Id.DIVREM) {
                 throw new IllegalStateException();
@@ -1013,6 +1006,9 @@ public class RelOpExpression
         case 0:
             generateAssignment(ctx, code, new Assignable(), errs);
             break;
+
+        default:
+            throw new IllegalStateException();
         }
     }
 

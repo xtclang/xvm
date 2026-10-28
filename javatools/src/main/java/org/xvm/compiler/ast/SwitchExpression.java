@@ -162,7 +162,7 @@ public class SwitchExpression
                 TypeConstant[] atypeReqScoped = atypeRequest;
                 Context        ctxScope       = ctxCase.enter();
                 if (fValid && mgr.hasTypeConditions() && cCases == 1 &&
-                        mgr.addTypeInference(ctxScope, stmtPrev, errs)) {
+                        mgr.addTypeInference(ctxScope)) {
                     if (atypeReqScoped != null && atypeReqScoped.length > 0) {
                         atypeReqScoped = atypeReqScoped.clone();
 
@@ -206,7 +206,7 @@ public class SwitchExpression
         }
 
         // notify the case manager that we're finished collecting everything
-        fValid = fValid && mgr.validateEnd(ctxCase, errs);
+        fValid = fValid && mgr.validateEnd(errs);
 
         ctx = ctx.exit();
 
@@ -261,12 +261,10 @@ public class SwitchExpression
         List<AstNode> aNodes    = contents;
         Label         labelCur  = null;
         Label         labelExit = new Label("switch_end");
-        for (int i = 0, c = aNodes.size(); i < c; ++i) {
-            AstNode node = aNodes.get(i);
+        for (AstNode node : aNodes) {
             if (node instanceof CaseStatement stmtCase) {
                 labelCur = stmtCase.getLabel();
             } else {
-
                 Expression expr = (Expression) node;
                 expr.updateLineNumber(code);
                 code.add(labelCur);
