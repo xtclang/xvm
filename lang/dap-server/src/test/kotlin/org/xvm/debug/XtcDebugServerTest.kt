@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 import org.eclipse.lsp4j.debug.PauseArguments
+import org.eclipse.lsp4j.debug.RestartFrameArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
@@ -99,6 +100,7 @@ class XtcDebugServerTest {
                 "supportsModulesRequest",
                 "supportsLoadedSourcesRequest",
                 "supportsStepInTargetsRequest",
+                "supportsRestartFrame",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -734,6 +736,22 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a frame that can restart says so, and restartFrame restarts it, or fails for one that cannot`() {
+        runs.frames = listOf(FrameState(1, "App.twice", "/work/App.x", 11, restartable = true), FrameState(2, "App.run", "/work/App.x", 5))
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).get(10, SECONDS).stackFrames
+        assertThat(frames.map { it.canRestart }).containsExactly(true, false)
+
+        server.restartFrame(RestartFrameArguments().apply { frameId = 1 }).get(10, SECONDS)
+        assertThat(runs.restarts).containsExactly(1)
+        assertThatThrownBy { server.restartFrame(RestartFrameArguments().apply { frameId = 2 }).get(10, SECONDS) }
+            .isInstanceOf(ExecutionException::class.java)
+            .hasMessageContaining(XtcDebugServer.NOT_RESTARTABLE)
+        assertThat(runs.restarts).containsExactly(1)
+    }
+
+    @Test
     fun `a failed build reports its diagnostics and fails the launch, which runs nothing`() {
         runs.result = LaunchResult(null, "/work/App.x:2:5: error: no such type [COMPILER-42]")
         server.configurationDone(ConfigurationDoneArguments())
@@ -1257,6 +1275,13 @@ class XtcDebugServerTest {
             threadId: Int,
             targetId: Int,
         ) = CompletableFuture.completedFuture((threadId == 12 && targetId in 31..32).also { if (it) intos.add(threadId to targetId) })
+
+        val restarts = CopyOnWriteArrayList<Int>()
+
+        override fun restartFrame(
+            runId: String,
+            frameId: Int,
+        ) = CompletableFuture.completedFuture(frames.any { it.id == frameId && it.restartable }.also { if (it) restarts.add(frameId) })
 
         override fun pause(runId: String) = (runId == this.runId).also { if (it) paused++ }
 
