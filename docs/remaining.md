@@ -96,6 +96,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   console, though the alternative showed; it passes alone (`run-266543211336496817`). X324's library
   frame had no source position, though the read-only copy of `Collection.x` it named was written
   36 s before; it passes alone, after X323, and after X304-X322 (`run-6424025512923475166`).
+- [ ] X312 failed once, in the full run on the 0.30.0 branch (`run-11663425380226624296`,
+  2026-10-28): the program stopped at the exception its filter names, but no exception hint showed
+  in 30 s, and no hint label was showing at all. It passed in the 70-case run before
+  (`run-6838369535683503954`) and in the rerun after (`run-10037495088984883693`). LSP4IJ shows the
+  hint in the first editor of the stop's file 1 s after `exceptionInfo` answers, or after 1 s
+  without an answer, and hides it for another hint or Escape; which step failed is unknown.
 - [x] The server never deleted its `xtc-library-sources-*` temporary directories
   (`XdkLibrarySources`); 2,068 had piled up by 2026-10-28. A JVM shutdown hook now deletes the
   directory when the server exits (`4cf5450acd`; `LibraryCopiesCleanupTest` in compilerStdioTest).
@@ -543,24 +549,49 @@ passes with the workaround disabled. The gates are in
   full for the run, and so do X259, X74 and X150. The UP25 gate passes. Failed: X323, as its UP44
   gate does once #1773 is in; X257 (the UP26 gate) and X324, which fail only in the full run (see
   [test harness stability](#test-harness-stability)). No IDE exception.
+- [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0` (34 commits on errs
+  `4e3b1b65e7`, tip `d5d64a8caf`, 2026-10-28). It pins 0.30.0 and removes, each in its own commit,
+  the bridges 0.30.0 makes unnecessary; the items below name them. It is checked against a plugin
+  built from LSP4IJ `main` `44675cb3` with #1790 and #1791 before their CodeRabbit fixes. Full
+  IntelliJ run at `56c699eb5a` (`run-11663425380226624296`): 307 passed, 4 partial (X286-X288,
+  X303), 1 not implemented (X302), 3 failed, and X312's timeout stopped it before X313-X331. X5 and
+  X131 failed on two playbook races, fixed in `92eefb10c9` and `3e6a466b7e`; with them X5, X131 and
+  X312-X331 pass (`run-10037495088984883693`; X314 partial for UP41). X312 is under [test harness
+  stability](#test-harness-stability). The plugin's 113 unit tests pass. Native cases made full:
+  X308, X311-X313, X315-X318, X320, X323, X326 and X328-X331 (UP30-UP37, UP40, UP42, UP44-UP48,
+  UP50, UP55); X307 checks the exception hint's text; X131 opens a link with Ctrl+Click (UP52,
+  `e317d03c11`, which also retires the replacement gates); X132 formats two ranges, X131 opens a
+  symbol with Go to Symbol and X42 shows inlay tooltips (UP54, UP59, UP60, `a901032102`). The server
+  now omits a signature's `parameters` without their metadata, which X20 needs with LSP4IJ's handler
+  (`df11487151`). Kept on purpose: UP03, UP04's rename guard, UP12, UP13 and both halves of UP14.
+  `verifyPlugin` resolves LSP4IJ from the Marketplace, so it can check the branch only after the
+  release; against 0.21.0 it fails on #1786's `LSPFormattingParams` constructor. The internal API
+  list is reviewed against the candidate's source (`c81995303f`). To do after the release: build
+  against it, pass `verifyPlugin` and a full native run, and merge the branch.
 - [ ] UP01 (#1696): remove the `ConnectionLifetime` guard in `XtcLspServerSupportProvider`; gate:
   `ConnectionLifetimeTest`, the packaged process regressions, START/STARTUP and
-  START/START_PROJECTS.
+  START/START_PROJECTS. On the 0.30.0 branch: `9ca54e5fe4`; `ConnectionProcessTest` drives the
+  provider.
 - [ ] UP02 (#1746): enable `willSaveWaitUntil` and server save formatting; gate: real pre-save
-  requests apply version-checked edits before persistence, and X139 extended.
-- [ ] UP04 (#1698, #1718): remove the rename snapshot guard and client edit validation; gate:
-  stale, closed and reopened document tests and X144.
+  requests apply version-checked edits before persistence, and X139 extended. On the 0.30.0 branch:
+  `97cdb4e25d`, its settings texts `d5d64a8caf`.
+- [ ] UP04 (#1698, #1718): remove the rename snapshot guard and client edit validation; gate: stale,
+  closed and reopened document tests and X144. On the 0.30.0 branch: `2be956ad8c` removes the
+  client's edit validation (`applyEdit`); the rename guard stays (`XtcRenameEdit`,
+  `PreflightedRenames`).
 - [ ] UP05 (#1742): remove `CompilerRootWatches`; gate: changes under external roots observed while
-  focused, watchers released on disposal, X124.
+  focused, watchers released on disposal, X124. On the 0.30.0 branch: `26e2f7440e`.
 - [ ] UP07 (#1730, #1735): remove `DiagnosticResultMessages` and the quick-fix data revision; gate:
-  X181–X185, X202, X213 and diagnostic/action Undo/Redo.
+  X181–X185, X202, X213 and diagnostic/action Undo/Redo. On the 0.30.0 branch: `9afed877da`.
 - [ ] UP08 (#1710): remove `ConfigurationJson`'s null handling; gate: X266, X268, CFG1–CFG3.
+  On the 0.30.0 branch: `d8ad697b7f`.
 - [ ] UP09 (#1724, #1725, #1728, #1736): remove `DocumentStartupMessages`; gate: startup typing and
-  close/reopen regressions.
+  close/reopen regressions. On the 0.30.0 branch: `2be956ad8c`.
 - [ ] UP10 (#1712, #1734): remove `XtcParameterInfoHandler`; gate: X20 and the retrigger and
-  constructor signature cases.
+  constructor signature cases. On the 0.30.0 branch: `10b92e3803`, with the server's `df11487151`
+  for X20.
 - [ ] UP11 (#1733): remove the `CodeActionMessages` routing; gate: X105, X122, stale refusal and
-  native Undo/Redo.
+  native Undo/Redo. On the 0.30.0 branch: `58782992f6`.
 - [ ] UP12 (#1707): narrow the `XtcFormattingService` override; gate: absent-editor, snapshot,
   cancellation and server-lifetime guards, X138 and X139. The UP24 command ownership stays.
 - [ ] UP14 (#1716): remove the semantic-result retirement in `XtcLanguageClient`; gate: X146.
@@ -574,16 +605,19 @@ passes with the workaround disabled. The gates are in
   what #1771 leaves, answers that change after an analysis without any file changing, and the
   features still on the file stamp; X146 passes.
 - [ ] UP18 (#1711): advertise `AsIs` again; gate: X150 keeps exact source, placeholders and Undo.
+  On the 0.30.0 branch: `06acfabc96`.
 - [ ] UP19 (#1708): remove `DirectoryDocumentMoves`; gate: X118, X161, X162, X163 and the
-  connection lifecycle tests.
+  connection lifecycle tests. On the 0.30.0 branch: `4d7a8a361a`.
 - [ ] UP21 (#1726, #1731): remove `ClosedRefactoringDocuments`; gate: X169 (exact disk text and
-  current diagnostics).
+  current diagnostics). On the 0.30.0 branch: `1172c649d8`; `XtcRenameEdit` still refuses an unsaved
+  closed target.
 - [ ] UP22 (#1699): no workaround to remove; gate: native reconnect and typing acceptance.
 - [ ] UP25 (#1749): advertise `workspace/textDocumentContent` to IntelliJ; gate: X254 without the
-  read-only file fallback.
+  read-only file fallback. On the 0.30.0 branch: `e1ca98fdb0`; X254's checks `56c699eb5a`.
 - [ ] UP26 (#1715): gate: X257 with explicit invocation and selection forwarded.
+  On the 0.30.0 branch: `12ac9ec06b`; X257 waits for the Invoked request (`357045d859`).
 - [ ] UP27 (#1700): remove `EditorRefresh`; gate: the many-file X146 burst and the long
-  X137/X146/X259 run.
+  X137/X146/X259 run. On the 0.30.0 branch: `bba29c4b4d`.
 - [ ] UP03 (#1720, #1739): narrow the guarded Rename/Move entry points; gate: X103 and X130.
 - [ ] UP03: follow LSP4IJ #1740 (generic UI wait during the `will*` requests), still open.
 - [ ] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757), merged 2026-10-26): `DAPDebugProcess` did not implement `startPausing()`,
@@ -848,7 +882,7 @@ passes with the workaround disabled. The gates are in
   gate: full and unchanged reports round-trip in the bundled client. No LSP4J release is needed:
   #1723 registers its own adapter in `configureCompatibilityAdapters`, which the client's Gson applies
   (checked 2026-10-28 against LSP4IJ's `main`; done on the local branch `lagergren/lsp4ij-0.30.0`,
-  `cf21a1ed54`).
+  `fe12afc23e`).
 
 ### vscode-languageclient
 
