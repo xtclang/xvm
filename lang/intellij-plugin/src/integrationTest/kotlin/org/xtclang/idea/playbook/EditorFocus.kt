@@ -5,6 +5,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
 import com.intellij.driver.sdk.ui.remote.Window
@@ -160,6 +161,18 @@ internal interface NativeEditorUi {
     fun renameState(editor: Editor): String
 
     fun renameAvailable(editor: Editor): Boolean
+
+    fun inlayTooltips(editor: Editor): String
+
+    fun reformatRanges(
+        editor: Editor,
+        ranges: String,
+    )
+
+    fun goToSymbol(
+        project: Project,
+        name: String,
+    ): String
 
     fun interruptFocus(): Window
 
