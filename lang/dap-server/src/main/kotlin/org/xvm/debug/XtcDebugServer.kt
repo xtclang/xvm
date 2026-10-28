@@ -72,8 +72,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * stop the program where an exception that nothing catches, or any exception, is thrown, with the reason
  * `exception`; they are installed before the program's first line as breakpoints are. `pause` stops a running
  * program at the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at its first line,
- * with the reason `entry`. There is no evaluation yet (R7 in lang/doc/plans/plan-embedded-execution.md), so none is
- * advertised.
+ * with the reason `entry`. `evaluate` in a stopped frame evaluates paths to values, such as `point.x` or `ints[1]`,
+ * for watches, hovers and the console, without running the program's code; general expressions are R7's bounded
+ * evaluation, still to come (lang/doc/plans/plan-embedded-execution.md).
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -169,7 +170,7 @@ class XtcDebugServer(
 
         /** Why a debug console line is not evaluated. */
         const val NO_EVALUATION =
-            "Expressions cannot be evaluated yet; a line typed while the program runs is its console input."
+            "Nothing is evaluated while the program runs; a line typed in the console then is its input."
 
         /** How long a launch whose build has finished waits for the client to finish its configuration. */
         private const val CONFIGURATION_WAIT_SECONDS = 2L
@@ -205,6 +206,7 @@ class XtcDebugServer(
             Capabilities().apply {
                 supportsConfigurationDoneRequest = true
                 supportsTerminateRequest = true
+                supportsEvaluateForHovers = true
                 exceptionBreakpointFilters =
                     arrayOf(
                         ExceptionBreakpointsFilter().apply {
@@ -468,11 +470,26 @@ class XtcDebugServer(
     /**
      * DAP: evaluate
      *
-     * A line typed in the debug console while the program runs is sent to the program's console; nothing else can
-     * be evaluated.
+     * In a stopped frame, a watch, a hover or a line typed in the debug console evaluates a path to a value, such as
+     * `point.x` or `ints[1]`, without running the program's code; what cannot be evaluated fails with the reason.
+     * Without a frame, as while the program runs, a line typed in the debug console is the program's console input.
      */
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
-        if (args.context != EvaluateArgumentsContext.REPL || args.frameId != null) {
+        val frameId = args.frameId
+        if (frameId != null && debuggedRunning()) {
+            return runs.evaluate(runId, frameId, args.expression).handle { state, failure ->
+                if (failure != null) {
+                    val cause = (failure as? CompletionException)?.cause ?: failure
+                    throw error(cause.message ?: cause.toString())
+                }
+                EvaluateResponse().apply {
+                    result = state.value
+                    type = state.type.ifEmpty { null }
+                    variablesReference = state.variablesReference
+                }
+            }
+        }
+        if (args.context != EvaluateArgumentsContext.REPL) {
             return failed(NO_EVALUATION)
         }
         if (!launched.get() || ended.isDone || !runs.input(runId, "${args.expression}\n")) {

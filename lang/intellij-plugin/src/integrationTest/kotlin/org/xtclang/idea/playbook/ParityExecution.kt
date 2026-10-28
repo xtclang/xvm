@@ -571,10 +571,53 @@ internal fun ParityScenarios.runEntryCases() {
                 val argument = data.strings("argument")
                 check(locals.any { it.string("name") == argument[0] && it.string("value") == argument[1] }) { "No ${argument[0]}: $locals" }
 
+                // TODO LSP4IJ: UP31 — LSP4IJ shows the exception a second after the stop, in the editor it found at the
+                // stop, without checking that the editor is still open; until the hint shows, the editor must stay open
+                awaitUi("LSP4IJ shows the exception where it was thrown", 30.seconds) { debugger.hintShown() }
+
                 debugger.resume(project, module)
                 val ended = debugger.awaitState(project, module, "Resume lets the program fail", 60.seconds) { it.has("exitCode") }
                 check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
                 check(data.string("message") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X310") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(
+                    project,
+                    module,
+                    "the program stops at the breakpoint",
+                    60.seconds,
+                ) { it["suspended"]?.asBoolean == true }
+
+                fun evaluate(expression: String) = JsonParser.parseString(debugger.evaluate(project, module, expression)).asJsonObject
+                data.getAsJsonArray("watches").map { it.asJsonArray }.forEach { expected ->
+                    val shown = evaluate(expected[0].asString)
+                    // LSP4IJ shows strings and numbers without their type
+                    val type = shown["type"]?.asString.orEmpty()
+                    check(shown["value"]?.asString == expected[1].asString && type in listOf("", expected[2].asString)) {
+                        "${expected[0].asString} is not ${expected[1].asString}: $shown"
+                    }
+                }
+                check(evaluate(data.string("expands"))["expands"]?.asBoolean == true) { "${data.string("expands")} does not expand" }
+                val refused = data.strings("refused")
+                val error = evaluate(refused[0])["error"]?.asString.orEmpty()
+                check(refused[1] in error) { "${refused[0]} is not refused with the reason: $error" }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
             } finally {
                 debugger.clearBreakpoints(project)
             }
@@ -647,6 +690,14 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
     )
+
+    fun evaluate(
+        project: Project,
+        module: String,
+        expression: String,
+    ): String
+
+    fun hintShown(): Boolean
 
     fun clearBreakpoints(project: Project)
 }

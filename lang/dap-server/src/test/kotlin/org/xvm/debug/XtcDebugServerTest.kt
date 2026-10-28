@@ -55,7 +55,12 @@ class XtcDebugServerTest {
         val capabilities = server.initialize(InitializeRequestArguments().apply { adapterID = "xtc" }).get(10, SECONDS)
         // the wire form shows exactly what is advertised
         assertThat(Gson().toJsonTree(capabilities).asJsonObject.keySet())
-            .containsExactlyInAnyOrder("supportsConfigurationDoneRequest", "supportsTerminateRequest", "exceptionBreakpointFilters")
+            .containsExactlyInAnyOrder(
+                "supportsConfigurationDoneRequest",
+                "supportsTerminateRequest",
+                "supportsEvaluateForHovers",
+                "exceptionBreakpointFilters",
+            )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
         assertThat(capabilities.exceptionBreakpointFilters.map { it.filter to it.default_ })
             .containsExactly(XtcDebugServer.UNCAUGHT_EXCEPTIONS to true, XtcDebugServer.ALL_EXCEPTIONS to false)
@@ -381,7 +386,7 @@ class XtcDebugServerTest {
     }
 
     @Test
-    fun `a line typed in the debug console while the program runs is its input, and nothing is evaluated`() {
+    fun `a line typed in the debug console while the program runs is its input, and nothing is evaluated without a frame`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
 
@@ -389,10 +394,31 @@ class XtcDebugServerTest {
         assertThat(answer.result).isEmpty()
         assertThat(runs.inputs).containsExactly("Grace\n")
         assertFailsWith(XtcDebugServer.NO_EVALUATION) { server.evaluate(evaluate("count", EvaluateArgumentsContext.WATCH)) }
+        assertThat(runs.evaluated).isEmpty()
 
         runs.events.exited(0, null)
         assertFailsWith("The program is not running, so it cannot read that line.") {
             server.evaluate(evaluate("late", EvaluateArgumentsContext.REPL))
+        }
+    }
+
+    @Test
+    fun `a watch, a hover or a console line in a stopped frame evaluates a path, and what cannot be evaluated says why`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        for (context in listOf(EvaluateArgumentsContext.WATCH, EvaluateArgumentsContext.HOVER, EvaluateArgumentsContext.REPL)) {
+            val answer = server.evaluate(evaluate("point.x", context).apply { frameId = 1 }).get(10, SECONDS)
+            assertThat(listOf(answer.result, answer.type, answer.variablesReference.toString())).containsExactly("3", "Int", "0")
+        }
+        assertThat(runs.evaluated).containsOnly(1 to "point.x")
+        assertThat(runs.inputs).isEmpty()
+
+        val point = server.evaluate(evaluate("point", EvaluateArgumentsContext.WATCH).apply { frameId = 1 }).get(10, SECONDS)
+        assertThat(point.variablesReference).isEqualTo(8)
+        assertFailsWith("There is no variable \"nope\" in this frame.") {
+            server.evaluate(evaluate("nope", EvaluateArgumentsContext.WATCH).apply { frameId = 1 })
         }
     }
 
@@ -450,6 +476,7 @@ class XtcDebugServerTest {
         val installed = CopyOnWriteArrayList<SourceBreakpoints>()
         val steps = CopyOnWriteArrayList<Pair<Int, StepKind>>()
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
+        val evaluated = CopyOnWriteArrayList<Pair<Int, String>>()
         var resumed = 0
         var paused = 0
 
@@ -475,6 +502,19 @@ class XtcDebugServerTest {
         ) = (runId == this.runId).also { if (it) inputs.add(text) }
 
         override fun stop(runId: String) = (runId == this.runId).also { if (it) stopped.add(runId) }
+
+        override fun evaluate(
+            runId: String,
+            frameId: Int,
+            expression: String,
+        ): CompletableFuture<VariableState> {
+            evaluated.add(frameId to expression)
+            return when (expression) {
+                "point.x" -> CompletableFuture.completedFuture(VariableState("point.x", "3", "Int", 0))
+                "point" -> CompletableFuture.completedFuture(VariableState("point", "Vars:Point", "Vars:Point", 8))
+                else -> CompletableFuture.failedFuture(IllegalStateException("There is no variable \"$expression\" in this frame."))
+            }
+        }
 
         override fun setExceptionStops(
             runId: String,
