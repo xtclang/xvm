@@ -145,6 +145,31 @@ class PluginManifestTest {
     }
 
     @Test
+    @DisplayName("every default shortcut keeps Control on both macOS keymaps, as VS Code and the docs do")
+    fun macShortcutsKeepControl() {
+        val elements = pluginXml.getElementsByTagName("action")
+        val actions = (0 until elements.length).map { elements.item(it) as Element }
+        val checked =
+            actions.mapNotNull { action ->
+                val shortcuts = action.getElementsByTagName("keyboard-shortcut")
+                val byKeymap =
+                    (0 until shortcuts.length)
+                        .map { shortcuts.item(it) as Element }
+                        .associate {
+                            it.getAttribute("keymap") to
+                                (it.getAttribute("first-keystroke") to it.getAttribute("second-keystroke"))
+                        }
+                byKeymap["\$default"]?.let { default ->
+                    // "Mac OS X 10.5+", the default macOS keymap, otherwise turns $default's ctrl into Command
+                    assertThat(byKeymap["Mac OS X"]).describedAs(action.getAttribute("id")).isEqualTo(default)
+                    assertThat(byKeymap["Mac OS X 10.5+"]).describedAs(action.getAttribute("id")).isEqualTo(default)
+                    action.getAttribute("id")
+                }
+            }
+        assertThat(checked).contains("xtc.selectLanguageAdapter", "xtc.toggleServerLog")
+    }
+
+    @Test
     @DisplayName("LSP server registration points at xtcLanguageServer and maps *.x")
     fun lspServerWiring() {
         // The LSP server element lives inside <extensions
