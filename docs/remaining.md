@@ -859,7 +859,8 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   [IJPL-259475](https://youtrack.jetbrains.com/issue/IJPL-259475), a console freeze whose stacks end in the same `maxEnd` correction. To do: get it merged.
 - [ ] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
   of 80,000 highlighters installed, so it never measured the decorated case.
-- [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28). To do: get it
+- [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881), a duplicate of the older
+  [IJPL-29917](https://youtrack.jetbrains.com/issue/IJPL-29917) and [IJPL-223024](https://youtrack.jetbrains.com/issue/IJPL-223024); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28). To do: get it
   merged.
 - [ ] UP20 (IntelliJ test Driver): filed as [IJPL-259883](https://youtrack.jetbrains.com/issue/IJPL-259883); our [#3729](https://github.com/JetBrains/intellij-community/pull/3729) (open, 2026-10-28).
   To do: get it merged.
