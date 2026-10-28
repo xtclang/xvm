@@ -27,6 +27,9 @@ import static org.xvm.asm.ErrorListener.silent;
  * The compiler is silent for three different reasons, and says which it means.
  */
 public class ErrorListenerSilenceTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = "PARSER-03";
+
     /**
      * The reasons are separate names for the same behaviour. They have to stay indistinguishable
      * at runtime: the moment anything can branch on which one it holds, the listener has become
@@ -149,7 +152,4 @@ public class ErrorListenerSilenceTest {
         assertThrows(NullPointerException.class, () -> new ErrorList().silence(null));
         assertThrows(NullPointerException.class, () -> silent(PROBE).silence(null));
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = "PARSER-03";
 }

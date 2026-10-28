@@ -175,18 +175,28 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
      * a compiler context survives with the returned tree. The result is detached from the collector.
      */
     public static final class Collector {
+        /** Ordinary compiler clients need not collect tooling facts. This instance never writes. */
+        public static final Collector NONE = new Collector(false);
+
+        private final boolean enabled;
+
+        private final Map<InvocationExpression, InvocationBinding> bindings = new IdentityHashMap<>();
+        private final Map<InvocationExpression, FunctionCall> functions = new IdentityHashMap<>();
+        private final Map<NewExpression, InvocationBinding> constructors = new IdentityHashMap<>();
+        private final Map<PropertyDeclarationStatement, InitializerBinding> initializers = new IdentityHashMap<>();
+
         /** Create an enabled call-fact collector for one compilation attempt. */
         public Collector() {
             this(true);
         }
 
         private Collector(boolean enabled) {
-            f_enabled = enabled;
+            this.enabled = enabled;
         }
 
         /** @return whether this attempt requests call facts */
         public boolean isEnabled() {
-            return f_enabled;
+            return enabled;
         }
 
         /**
@@ -195,9 +205,9 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          * @param invocation  the source invocation being validated
          */
         public void begin(InvocationExpression invocation) {
-            if (f_enabled) {
-                f_bindings.remove(invocation);
-                f_functions.remove(invocation);
+            if (enabled) {
+                bindings.remove(invocation);
+                functions.remove(invocation);
             }
         }
 
@@ -208,8 +218,8 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          * @param binding     the successfully established facts for this source node
          */
         public void record(InvocationExpression invocation, InvocationBinding binding) {
-            if (f_enabled) {
-                f_bindings.put(invocation, binding);
+            if (enabled) {
+                bindings.put(invocation, binding);
             }
         }
 
@@ -220,8 +230,8 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          * @param binding     the successfully established facts for this source node
          */
         public void record(InvocationExpression invocation, FunctionCall binding) {
-            if (f_enabled) {
-                f_functions.put(invocation, binding);
+            if (enabled) {
+                functions.put(invocation, binding);
             }
         }
 
@@ -231,8 +241,8 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          * @param construction  the source construction being validated
          */
         public void begin(NewExpression construction) {
-            if (f_enabled) {
-                f_constructors.remove(construction);
+            if (enabled) {
+                constructors.remove(construction);
             }
         }
 
@@ -243,8 +253,8 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          * @param binding       the successfully established facts for this source node
          */
         public void record(NewExpression construction, InvocationBinding binding) {
-            if (f_enabled) {
-                f_constructors.put(construction, binding);
+            if (enabled) {
+                constructors.put(construction, binding);
             }
         }
 
@@ -255,8 +265,8 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          * @param binding   the successfully established facts for this source node
          */
         public void record(PropertyDeclarationStatement property, InitializerBinding binding) {
-            if (f_enabled) {
-                f_initializers.put(property, binding);
+            if (enabled) {
+                initializers.put(property, binding);
             }
         }
 
@@ -280,53 +290,43 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
          */
         public Facts finishFacts(List<? extends AstNode> roots) {
             Map<InvocationExpression, InvocationBinding> result = new IdentityHashMap<>();
-            Map<InvocationExpression, FunctionCall> functions = new IdentityHashMap<>();
-            Map<NewExpression, InvocationBinding> constructors = new IdentityHashMap<>();
-            Map<PropertyDeclarationStatement, InitializerBinding> initializers = new IdentityHashMap<>();
+            Map<InvocationExpression, FunctionCall> survivingFunctions = new IdentityHashMap<>();
+            Map<NewExpression, InvocationBinding> survivingConstructors = new IdentityHashMap<>();
+            Map<PropertyDeclarationStatement, InitializerBinding> survivingInitializers = new IdentityHashMap<>();
             List<AstNode> nodes = new ArrayList<>(roots);
             for (int i = 0; i < nodes.size(); ++i) {
                 AstNode node = nodes.get(i);
                 if (node instanceof InvocationExpression invocation &&
                         invocation.isValidated() && invocation.getTypeFit().isFit()) {
-                    InvocationBinding binding = f_bindings.get(invocation);
+                    InvocationBinding binding = bindings.get(invocation);
                     if (binding != null) {
                         result.put(invocation, binding);
                     }
-                    FunctionCall function = f_functions.get(invocation);
+                    FunctionCall function = functions.get(invocation);
                     if (function != null) {
-                        functions.put(invocation, function);
+                        survivingFunctions.put(invocation, function);
                     }
                 }
                 if (node instanceof NewExpression construction && construction.isValidated() &&
                         construction.getTypeFit().isFit()) {
-                    InvocationBinding binding = f_constructors.get(construction);
+                    InvocationBinding binding = constructors.get(construction);
                     if (binding != null) {
-                        constructors.put(construction, binding);
+                        survivingConstructors.put(construction, binding);
                     }
                 }
                 if (node instanceof PropertyDeclarationStatement property) {
-                    InitializerBinding binding = f_initializers.get(property);
+                    InitializerBinding binding = initializers.get(property);
                     if (binding != null) {
-                        initializers.put(property, binding);
+                        survivingInitializers.put(property, binding);
                     }
                 }
                 node.children().forEachRemaining(nodes::add);
             }
-            f_bindings.clear();
-            f_functions.clear();
-            f_constructors.clear();
-            f_initializers.clear();
-            return new Facts(result, functions, constructors, initializers);
+            bindings.clear();
+            functions.clear();
+            constructors.clear();
+            initializers.clear();
+            return new Facts(result, survivingFunctions, survivingConstructors, survivingInitializers);
         }
-
-        /** Ordinary compiler clients need not collect tooling facts. This instance never writes. */
-        public static final Collector NONE = new Collector(false);
-
-        private final boolean f_enabled;
-
-        private final Map<InvocationExpression, InvocationBinding> f_bindings = new IdentityHashMap<>();
-        private final Map<InvocationExpression, FunctionCall> f_functions = new IdentityHashMap<>();
-        private final Map<NewExpression, InvocationBinding> f_constructors = new IdentityHashMap<>();
-        private final Map<PropertyDeclarationStatement, InitializerBinding> f_initializers = new IdentityHashMap<>();
     }
 }

@@ -109,6 +109,12 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
+            private val documents =
+                DocumentStartupMessages(::snapshot).also {
+                    this@XtcClientFeatures.documents.set(it)
+                }
+            private val diagnostics = DiagnosticResultMessages(::snapshot)
+
             @Suppress("UNCHECKED_CAST") // LSP4J's multiple-interface proxy factory returns Object.
             override fun createProxy(remoteEndpoint: RemoteEndpoint): S {
                 val endpoint = preflightedRenames.endpoint(remoteEndpoint)
@@ -134,12 +140,6 @@ class XtcClientFeatures : LSPClientFeatures() {
                     document.immutableCharSequence.toString(),
                 )
             }
-
-            private val documents =
-                DocumentStartupMessages(::snapshot).also {
-                    this@XtcClientFeatures.documents.set(it)
-                }
-            private val diagnostics = DiagnosticResultMessages(::snapshot)
 
             override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
                 val wrapped = super.wrapMessageConsumer(consumer)

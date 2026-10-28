@@ -29,7 +29,6 @@ import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
@@ -49,6 +48,7 @@ import static org.xvm.util.Handy.removeExtension;
 import static org.xvm.util.Handy.resolveFile;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.in;
 
 import static org.xvm.asm.ErrorListener.Silence.DISCARD;
 import static org.xvm.asm.ErrorListener.silent;
@@ -1524,8 +1524,7 @@ public class ModuleInfo {
                 m_stmtAST = parse.apply(source, ErrorListener.cancellable(this, errs::isAbortDesired));
             } catch (CompilerException e) {
                 if (!hasSeriousErrors() && !errs.isAbortDesired()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
-                            source.getPosition(), source.getPosition());
+                    fatal(Parser.FATAL_ERROR, in(source, source.getPosition(), source.getPosition()));
                 }
             }
         }

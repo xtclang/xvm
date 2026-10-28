@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Bounded to the current graph. Only detached diagnostics, source inputs and artifacts survive. */
 internal class XdkDiagnosticIndex {
+    private val current = AtomicReference(Snapshot())
+
     /** Module source and dependency inputs that determine reusable diagnostics. */
     data class Key(
         val name: String,
@@ -25,8 +27,6 @@ internal class XdkDiagnosticIndex {
         val results: List<CompilationResult> = emptyList(),
         val builds: Map<String, Build> = emptyMap(),
     )
-
-    private val current = AtomicReference(Snapshot())
 
     fun snapshot(): Snapshot = current.get()
 

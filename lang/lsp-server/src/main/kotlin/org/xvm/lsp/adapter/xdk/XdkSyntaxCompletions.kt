@@ -49,6 +49,130 @@ import java.util.concurrent.CancellationException
  * semantic bindings. No synthetic declaration is compiled or installed in an editor snapshot.
  */
 internal object XdkSyntaxCompletions {
+    private val comments = setOf(Id.EOL_COMMENT, Id.ENC_COMMENT)
+    private val newlines = Regex("\\r\\n|\\r|\\n")
+    private val fileKeywords = listOf(Id.MODULE, Id.PACKAGE, Id.CLASS, Id.INTERFACE, Id.SERVICE, Id.CONST, Id.ENUM, Id.MIXIN)
+    private val typeKeywords =
+        listOf(
+            Id.CLASS,
+            Id.INTERFACE,
+            Id.SERVICE,
+            Id.CONST,
+            Id.ENUM,
+            Id.MIXIN,
+            Id.TYPEDEF,
+            Id.IMPORT,
+            Id.VOID,
+            Id.PUBLIC,
+            Id.PROTECTED,
+            Id.PRIVATE,
+            Id.STATIC,
+            Id.PACKAGE,
+            Id.ANNOTATION,
+            Id.CONSTRUCT,
+            Id.CONDITIONAL,
+            Id.FUNCTION,
+            Id.IMMUTABLE,
+        )
+    private val statementKeywords =
+        listOf(
+            Id.IF,
+            Id.WHILE,
+            Id.FOR,
+            Id.SWITCH,
+            Id.RETURN,
+            Id.THROW,
+            Id.TRY,
+            Id.ASSERT,
+            Id.VAL,
+            Id.VAR,
+            Id.DO,
+            Id.USING,
+            Id.FUNCTION,
+            Id.IMMUTABLE,
+        )
+    private val keywords = (fileKeywords + typeKeywords + statementKeywords + listOf(Id.BREAK, Id.CONTINUE)).toSet()
+    private val templates =
+        listOf(
+            Template(
+                Context.FILE,
+                "module",
+                "module declaration",
+                "module Example {\n    \n}",
+                $$"module ${1:Example} {\n    $0\n}",
+            ),
+            Template(
+                Context.TYPE,
+                "class",
+                "class declaration",
+                "class Example {\n    \n}",
+                $$"class ${1:Example} {\n    $0\n}",
+            ),
+            Template(
+                Context.TYPE,
+                "void",
+                "void method",
+                "void run() {\n    \n}",
+                $$"void ${1:run}() {\n    $0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "if",
+                "if block",
+                "if (True) {\n    \n}",
+                $$"if (${1:True}) {\n    $0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "while",
+                "while loop",
+                "while (False) {\n    \n}",
+                $$"while (${1:False}) {\n    $0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "return",
+                "return value",
+                "return value;",
+                $$"return ${1:value};$0",
+            ),
+            Template(
+                Context.TYPE,
+                "interface",
+                "interface declaration",
+                "interface Example {\n    \n}",
+                $$"interface ${1:Example} {\n    $0\n}",
+            ),
+            Template(
+                Context.TYPE,
+                "service",
+                "service declaration",
+                "service Example {\n    \n}",
+                $$"service ${1:Example} {\n    $0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "for",
+                "for range",
+                "for (Int i : 0..<1) {\n    \n}",
+                $$"for (Int i : ${1:0..<1}) {\n    $0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "do",
+                "do loop",
+                "do {\n    \n} while (False);",
+                $$"do {\n    $0\n} while (${1:False});",
+            ),
+            Template(
+                Context.STATEMENT,
+                "try",
+                "try catch",
+                "try {\n    \n} catch (Exception e) {\n}",
+                $$"try {\n    $0\n} catch (${1:Exception} e) {\n}",
+            ),
+        )
+
     fun complete(
         text: String,
         position: Position,
@@ -368,128 +492,4 @@ internal object XdkSyntaxCompletions {
         val plain: String,
         val snippet: String,
     )
-
-    private val comments = setOf(Id.EOL_COMMENT, Id.ENC_COMMENT)
-    private val newlines = Regex("\\r\\n|\\r|\\n")
-    private val fileKeywords = listOf(Id.MODULE, Id.PACKAGE, Id.CLASS, Id.INTERFACE, Id.SERVICE, Id.CONST, Id.ENUM, Id.MIXIN)
-    private val typeKeywords =
-        listOf(
-            Id.CLASS,
-            Id.INTERFACE,
-            Id.SERVICE,
-            Id.CONST,
-            Id.ENUM,
-            Id.MIXIN,
-            Id.TYPEDEF,
-            Id.IMPORT,
-            Id.VOID,
-            Id.PUBLIC,
-            Id.PROTECTED,
-            Id.PRIVATE,
-            Id.STATIC,
-            Id.PACKAGE,
-            Id.ANNOTATION,
-            Id.CONSTRUCT,
-            Id.CONDITIONAL,
-            Id.FUNCTION,
-            Id.IMMUTABLE,
-        )
-    private val statementKeywords =
-        listOf(
-            Id.IF,
-            Id.WHILE,
-            Id.FOR,
-            Id.SWITCH,
-            Id.RETURN,
-            Id.THROW,
-            Id.TRY,
-            Id.ASSERT,
-            Id.VAL,
-            Id.VAR,
-            Id.DO,
-            Id.USING,
-            Id.FUNCTION,
-            Id.IMMUTABLE,
-        )
-    private val keywords = (fileKeywords + typeKeywords + statementKeywords + listOf(Id.BREAK, Id.CONTINUE)).toSet()
-    private val templates =
-        listOf(
-            Template(
-                Context.FILE,
-                "module",
-                "module declaration",
-                "module Example {\n    \n}",
-                $$"module ${1:Example} {\n    $0\n}",
-            ),
-            Template(
-                Context.TYPE,
-                "class",
-                "class declaration",
-                "class Example {\n    \n}",
-                $$"class ${1:Example} {\n    $0\n}",
-            ),
-            Template(
-                Context.TYPE,
-                "void",
-                "void method",
-                "void run() {\n    \n}",
-                $$"void ${1:run}() {\n    $0\n}",
-            ),
-            Template(
-                Context.STATEMENT,
-                "if",
-                "if block",
-                "if (True) {\n    \n}",
-                $$"if (${1:True}) {\n    $0\n}",
-            ),
-            Template(
-                Context.STATEMENT,
-                "while",
-                "while loop",
-                "while (False) {\n    \n}",
-                $$"while (${1:False}) {\n    $0\n}",
-            ),
-            Template(
-                Context.STATEMENT,
-                "return",
-                "return value",
-                "return value;",
-                $$"return ${1:value};$0",
-            ),
-            Template(
-                Context.TYPE,
-                "interface",
-                "interface declaration",
-                "interface Example {\n    \n}",
-                $$"interface ${1:Example} {\n    $0\n}",
-            ),
-            Template(
-                Context.TYPE,
-                "service",
-                "service declaration",
-                "service Example {\n    \n}",
-                $$"service ${1:Example} {\n    $0\n}",
-            ),
-            Template(
-                Context.STATEMENT,
-                "for",
-                "for range",
-                "for (Int i : 0..<1) {\n    \n}",
-                $$"for (Int i : ${1:0..<1}) {\n    $0\n}",
-            ),
-            Template(
-                Context.STATEMENT,
-                "do",
-                "do loop",
-                "do {\n    \n} while (False);",
-                $$"do {\n    $0\n} while (${1:False});",
-            ),
-            Template(
-                Context.STATEMENT,
-                "try",
-                "try catch",
-                "try {\n    \n} catch (Exception e) {\n}",
-                $$"try {\n    $0\n} catch (${1:Exception} e) {\n}",
-            ),
-        )
 }

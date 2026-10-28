@@ -19,6 +19,8 @@ import kotlin.system.exitProcess
 object FakeRunWorker {
     internal val IDENTITY = RunWorkerIdentity(RunWorkerIdentity.PROTOCOL, "fake-xdk")
 
+    private val running = HashMap<Long?, String>()
+
     @JvmStatic
     fun main(args: Array<String>) {
         val mode = args.firstOrNull()
@@ -86,8 +88,6 @@ object FakeRunWorker {
         }
         exitProcess(0)
     }
-
-    private val running = HashMap<Long?, String>()
 
     private fun output(
         id: Long?,
