@@ -94,9 +94,7 @@ class ParsingTest {
     private String quoted(String text) = "\"" + text + "\"";
 
     /**
-     * @return the JSON escape of the UTF-16 unit that the hexits spell, made this way since the
-     *         compiler reads a backslash, a "u" and four hexits as that character, also in a
-     *         String literal
+     * @return the JSON escape of the UTF-16 unit that the hexits spell
      */
-    private String u(String hexits) = "\\" + "u" + hexits;
+    private String u(String hexits) = $"\\u{hexits}";
 }
