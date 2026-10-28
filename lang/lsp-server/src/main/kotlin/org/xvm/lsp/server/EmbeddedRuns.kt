@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugSetup
+import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
@@ -219,6 +220,8 @@ internal class EmbeddedRuns(
 
                     override fun stopped(stop: StopState) = events.stopped(stop)
 
+                    override fun logged(text: String) = events.logged(text)
+
                     override fun exited(
                         code: Long?,
                         error: String?,
@@ -323,6 +326,12 @@ internal class EmbeddedRuns(
         frame: Int,
         expression: String,
     ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression) }
+
+    /** The exception a fiber of a stopped program under the debugger stopped it at; null for another stop. */
+    internal fun exceptionInfo(
+        runId: String,
+        thread: Int,
+    ): CompletableFuture<ExceptionInfoState?> = debugged(runId) { worker.exceptionInfo(it, thread) }
 
     /** Steps a fiber of a stopped program under the debugger; false when that fiber does not wait. */
     internal fun step(
