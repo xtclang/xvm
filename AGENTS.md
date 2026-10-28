@@ -105,6 +105,9 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 - When fixing bugs in existing code, do not perform broad modernization rewrites unless they are needed for the fix or make
   the touched code materially safer or clearer.
 - Keep the style of the code you add to an existing class consistent with its current style.
+- Match inline comment capitalization and punctuation to the surrounding method/class. In Java code
+  that uses lowercase comment openings without trailing periods, follow that convention; keep normal
+  sentence formatting for Javadoc.
 
 
 ## General
