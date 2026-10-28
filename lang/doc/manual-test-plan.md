@@ -120,9 +120,8 @@ notifications are failures; do not replay a timed-out mutation to manufacture a 
 
 - VS Code's native batch-move and overlapping-move Undo paths have recorded host failures
   (X130 and X218). The cases remain assertions, not silently skipped successes.
-- IntelliJ uses the supported read-only file fallback for library content (X254).
-  X257 covers inline-completion constraints partly through the installed connection because
-  released LSP4IJ does not expose all required native invocation metadata. Both report partial coverage.
+- X257 covers inline-completion constraints partly through the installed connection because
+  released LSP4IJ does not expose all required native invocation metadata. It reports partial coverage.
 - Error notifications are intentional in the negative import/settings cases X261/X262,
   X268–X270 and failed JVM launch X272. Their retention and recovery assertions must still pass.
 
@@ -3590,7 +3589,7 @@ relocation are backend tests, not claims about native editor widgets.
 
 | Case | Action | Expected result |
 |------|--------|-----------------|
-| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source, compare its declaration moniker with the consumer, and request formatting. Attempt an edit in the VS Code virtual editor. | VS Code negotiates revision-owned virtual content and refuses edits; IntelliJ uses protected file views. Declaration/export and consumer/import share artifact identity. Formatting leaves the source unchanged. |
+| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source, compare its declaration moniker with the consumer, and request formatting. Attempt an edit in the VS Code virtual editor. | Both editors negotiate revision-owned virtual content and refuse edits. Declaration/export and consumer/import share artifact identity. Formatting leaves the source unchanged. |
 
 Select **X31,X101,X158,X252,X253,X254** to cover existing bundled navigation, portable identities and the
 new library-view path. X254 runs the same String/xml.Document source fixture in both editors.
@@ -3598,8 +3597,9 @@ new library-view path. X254 runs the same String/xml.Document source fixture in 
 1. Open `X254/LibraryViews.x` and navigate from `String` and `xml.Document` to their definitions.
 2. In VS Code, confirm the target uses `ecstasy-library:` and displays the matching declaration.
    Typing must leave the document unchanged and clean. Formatting must return no edits.
-3. In IntelliJ, confirm the matching source file opens read-only and formatting leaves it unchanged.
-   LSP4IJ 0.21.0 lacks virtual content/refresh; this explicitly tests the supported file fallback.
+3. In IntelliJ, confirm the target uses `ecstasy-library:`, opens read-only and displays the matching
+   declaration, and that formatting leaves it unchanged. Changing the compiler inputs refreshes it, and a
+   server restart retires it.
 4. The driver requests `textDocument/moniker` at the library declaration. Its scheme/identifier must
    match the consumer import; the declaration kind is `export`. Neither IDE has a moniker browser.
 5. For supporting clients, `workspace/textDocumentContent` returns exact matching bundled text.

@@ -14,8 +14,6 @@ import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
-import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 /** Exercise the installed Rename handler and its dialog, including ordered resource operations. */
@@ -278,24 +276,13 @@ fun Driver.rejectRename(
 }
 
 /**
- * Reformat must encounter the native read-only gate; cancel it without unlocking bundled sources.
+ * Reformat must leave a bundled source unchanged. LSP4IJ opens it from `workspace/textDocumentContent` as a read-only
+ * document without a file, whose status IntelliJ can't clear: Reformat Code then refuses without a dialog, so the
+ * unchanged text is what shows the refusal.
  */
 fun Driver.rejectFormatting(editor: JEditorUiComponent) {
     focusEditor(editor)
-    // TODO LSP4IJ: UP25 — a library source that LSP4IJ opens from workspace/textDocumentContent (#1749) is a
-    // read-only document without a file, whose status IntelliJ can't clear: Reformat Code then refuses without
-    // the dialog, so the unchanged text is what shows the refusal
-    if (!Files.isRegularFile(Path.of(editor.editor.getVirtualFile().getPath()))) {
-        val text = editor.text
-        invokeAction("ReformatCode", now = true, component = editor.component)
-        check(editor.text == text) { "Reformat Code changed a read-only library source" }
-        return
-    }
-    invokeAction("ReformatCode", now = false, component = editor.component)
-    val dialog = ui.dialog(title = "Clear Read-Only Status")
-    awaitUi("reformat is blocked by read-only source", HANG_LIMIT) { dialog.present() }
-    withContext(OnDispatcher.EDT) {
-        cast(dialog.button("Cancel").component, NativeButton::class).doClick()
-    }
-    awaitUi("read-only prompt closes", HANG_LIMIT) { dialog.notPresent() }
+    val text = editor.text
+    invokeAction("ReformatCode", now = true, component = editor.component)
+    check(editor.text == text) { "Reformat Code changed a read-only library source" }
 }
