@@ -14,6 +14,7 @@ import org.xtclang.idea.lsp.BuildResponse
 import org.xtclang.idea.lsp.BuiltModule
 import org.xtclang.idea.lsp.DocumentDiagnostics
 import org.xtclang.idea.lsp.RunExitedParams
+import org.xtclang.idea.lsp.RunInputParams
 import org.xtclang.idea.lsp.RunOutputParams
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.RunResponse
@@ -26,6 +27,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.text.Charsets.ISO_8859_1
+import kotlin.text.Charsets.UTF_8
 
 /** Embedded build and run without an IDE: mode resolution, saved configurations, reports and run lifecycle. */
 class EmbeddedExecutionTest {
@@ -145,6 +148,32 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `typed lines reach the server after the run request, and Send EOF ends the input`() {
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server)
+        // typed before the run request exists: it must still follow it
+        handler.processInput.write("Ada ✓\n".toByteArray(UTF_8))
+        handler.startNotify()
+        handler.processInput.write("rest".toByteArray(UTF_8))
+        handler.processInput.close()
+        val runId = server.requests.poll(30, SECONDS)!!.runId!!
+
+        assertThat(server.inputs.poll(30, SECONDS)).isEqualTo(RunInputParams(runId, "Ada ✓\n", false))
+        assertThat(server.inputs.poll(30, SECONDS)).isEqualTo(RunInputParams(runId, "rest", true))
+        assertThat(server.calls).containsExactly("run", "runInput", "runInput")
+    }
+
+    @Test
+    fun `console input forwards each complete line in the console's encoding`() {
+        val sent = mutableListOf<Pair<String?, Boolean>>()
+        RunConsoleInput(ISO_8859_1) { text, end -> sent += text to end }.use { input ->
+            input.write("é\nab\ncd".toByteArray(ISO_8859_1))
+        }
+        assertThat(sent).containsExactly("é\n" to false, "ab\n" to false, "cd" to true)
+    }
+
+    @Test
     fun `a server that stops ends the run`() {
         val sessions = EmbeddedRunSessions()
         val server = FakeServer(sessions)
@@ -164,7 +193,7 @@ class EmbeddedExecutionTest {
     ) = RecordingHandler(
         EmbeddedRunProcessHandler(sessions, {
             CompletableFuture.completedFuture(server.proxy)
-        }, RunParams("file:///work/App.x"), "App"),
+        }, RunParams("file:///work/App.x"), "App", { UTF_8 }),
     )
 
     private class Recorder : EmbeddedRunSessions.Session {
@@ -182,17 +211,20 @@ class EmbeddedExecutionTest {
         }
     }
 
-    /** The two requests a run makes, answered as a language server would; everything else is unsupported. */
+    /** The requests a run makes, answered as a language server would; everything else is unsupported. */
     private class FakeServer(
         sessions: EmbeddedRunSessions,
         private val response: RunResponse? = null,
     ) {
         val requests = LinkedBlockingQueue<RunParams>()
         val stops = LinkedBlockingQueue<StopRunParams>()
+        val inputs = LinkedBlockingQueue<RunInputParams>()
+        val calls = ConcurrentLinkedQueue<String>()
         val started = CompletableFuture<Unit>()
 
         val proxy: XtcLanguageServer =
             Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XtcLanguageServer::class.java)) { _, method, args ->
+                calls += method.name
                 when (method.name) {
                     "run" -> {
                         val request = args[0] as RunParams
@@ -203,6 +235,11 @@ class EmbeddedExecutionTest {
 
                     "stopRun" -> {
                         stops += args[0] as StopRunParams
+                        CompletableFuture.completedFuture(true)
+                    }
+
+                    "runInput" -> {
+                        inputs += args[0] as RunInputParams
                         CompletableFuture.completedFuture(true)
                     }
 
@@ -233,6 +270,7 @@ class EmbeddedExecutionTest {
 
         val exitCode get() = handler.exitCode
         val isProcessTerminated get() = handler.isProcessTerminated
+        val processInput get() = handler.processInput
 
         fun startNotify() = handler.startNotify()
 

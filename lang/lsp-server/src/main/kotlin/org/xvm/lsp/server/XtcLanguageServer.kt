@@ -1249,6 +1249,10 @@ class XtcLanguageServer(
     @JsonRequest("xtc/stopRun")
     fun stopRun(params: StopRunParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.stop(params))
 
+    /** Console input for a run, or its end. False when no such run is building or running. */
+    @JsonRequest("xtc/runInput")
+    fun runInput(params: RunInputParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.input(params))
+
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
     @JsonRequest("xtc/rename")
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
