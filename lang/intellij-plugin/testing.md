@@ -286,7 +286,7 @@ engine in `XTC_CONTAINER_COMMAND` (else `docker`, or `podman` without it):
 
 ```bash
 lang/intellij-plugin/container/playbook.sh playbook X257 -Plsp4ijChannel=nightly \
-    -Plsp4ijVersion=<version> -PintellijPlaybookReplacementGates=UP26          # with an LSP4IJ nightly
+    -Plsp4ijVersion=<version>                                                  # with an LSP4IJ nightly
 lang/intellij-plugin/container/playbook.sh gradle :lang:vscode-extension:testVscodeExtension \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true                     # the VS Code suite
 ```

@@ -67,8 +67,6 @@ class ParityWorkspace(
         }
     }
 
-    internal fun replacementGate(id: String): Boolean = id in System.getProperty("xtc.playbook.replacementGates", "").split(',')
-
     /** Couples a fixture's path and text with its playbook workspace identity. */
     inner class Document(
         val file: String,
