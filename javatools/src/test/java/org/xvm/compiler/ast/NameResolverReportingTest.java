@@ -88,8 +88,10 @@ class NameResolverReportingTest {
 
     /** Routes name resolution through a supplied component resolver to observe diagnostic ownership. */
     private static class ResolvingNode extends AstNode {
+        private final ComponentResolver resolver;
+
         ResolvingNode(ComponentResolver resolver) {
-            f_resolver = resolver;
+            this.resolver = resolver;
         }
 
         @Override
@@ -97,14 +99,12 @@ class NameResolverReportingTest {
         @Override
         protected boolean canResolveNames() { return true; }
         @Override
-        public ComponentResolver getComponentResolver() { return f_resolver; }
+        public ComponentResolver getComponentResolver() { return resolver; }
         @Override
         public long getStartPosition() { return 0; }
         @Override
         public long getEndPosition() { return 1; }
         @Override
         public String toString() { return "test component"; }
-
-        private final ComponentResolver f_resolver;
     }
 }

@@ -22,6 +22,15 @@ import java.util.concurrent.atomic.AtomicReference
  * re-enter the cache or authorize reuse against a newer document revision.
  */
 class DiagnosticResultMessagesTest {
+    private val uri = "file:///Diagnostics.x"
+    private val initial = DocumentStartupMessages.Snapshot(Any(), 1, "module Diagnostics {}")
+    private val buffers = mutableMapOf(uri to initial)
+    private val sent = mutableListOf<Message>()
+    private val received = mutableListOf<Message>()
+    private val guard = DiagnosticResultMessages(buffers::get)
+    private val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
+    private val incoming = guard.incoming(MessageConsumer { received.add(it) })
+
     @Test
     fun `close or cancellation during reply snapshot lookup cannot reinsert a retired result`() {
         listOf(false, true).forEach { cancel ->
@@ -73,15 +82,6 @@ class DiagnosticResultMessagesTest {
             ).isNull()
         }
     }
-
-    private val uri = "file:///Diagnostics.x"
-    private val initial = DocumentStartupMessages.Snapshot(Any(), 1, "module Diagnostics {}")
-    private val buffers = mutableMapOf(uri to initial)
-    private val sent = mutableListOf<Message>()
-    private val received = mutableListOf<Message>()
-    private val guard = DiagnosticResultMessages(buffers::get)
-    private val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
-    private val incoming = guard.incoming(MessageConsumer { received.add(it) })
 
     @Test
     fun `repeated automatic pulls reuse the current report without changing its response`() {

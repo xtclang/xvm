@@ -21,6 +21,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 internal class DiagnosticResultMessages(
     private val snapshot: (String) -> DocumentStartupMessages.Snapshot?,
 ) {
+    private val lock = Any()
+    private val requests = mutableMapOf<String, Pending>()
+    private val results = mutableMapOf<Key, Result>()
+
     /** Diagnostic result namespace for one document and optional provider identifier. */
     private data class Key(
         val uri: String,
@@ -38,10 +42,6 @@ internal class DiagnosticResultMessages(
         val snapshot: DocumentStartupMessages.Snapshot,
         val id: String,
     )
-
-    private val lock = Any()
-    private val requests = mutableMapOf<String, Pending>()
-    private val results = mutableMapOf<Key, Result>()
 
     fun outgoing(next: MessageConsumer): MessageConsumer =
         MessageConsumer { message ->

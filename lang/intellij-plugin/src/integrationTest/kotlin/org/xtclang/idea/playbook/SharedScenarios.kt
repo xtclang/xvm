@@ -14,6 +14,32 @@ class SharedScenarios(
     val common: Common,
     val scenarios: Map<String, Scenario>,
 ) {
+    val diagnostics: Diagnostics = core("X2")
+    val definitions: Definitions = core("X4")
+    val completion: Completion = core("X7")
+    val dependencyNavigation: Navigation = core("X45")
+    val dependencyEdit: DependencyEdit = core("X46")
+    val configuration: Configuration = core("CFG1")
+    val warning: Warning = core("7a.8")
+
+    val ids: List<String>
+        get() = scenarios.keys.toList()
+
+    val files: List<String>
+        get() = common.fixtures.map { it.file }
+
+    val implementedIds: Set<String>
+        get() = scenarios.filterValues { it.intellij.coverage != "not-implemented" }.keys
+
+    val graph: String
+        get() =
+            Gson()
+                .toJson(
+                    mapOf(
+                        "xtc" to mapOf("compiler" to mapOf("sourceModules" to common.sourceModules)),
+                    ),
+                )
+
     /** Holds fixture and configuration data shared by all editor scenarios. */
     data class Common(
         val sourceModules: List<SourceModule>,
@@ -65,14 +91,6 @@ class SharedScenarios(
         json.addProperty("id", id)
         return Gson().fromJson(json, T::class.java)
     }
-
-    val diagnostics: Diagnostics = core("X2")
-    val definitions: Definitions = core("X4")
-    val completion: Completion = core("X7")
-    val dependencyNavigation: Navigation = core("X45")
-    val dependencyEdit: DependencyEdit = core("X46")
-    val configuration: Configuration = core("CFG1")
-    val warning: Warning = core("7a.8")
 
     /** Describes a fixture module's sources, dependencies and optional resource roots. */
     data class SourceModule(
@@ -167,24 +185,6 @@ class SharedScenarios(
         val declaration: String,
         val edit: Edit,
     )
-
-    val ids: List<String>
-        get() = scenarios.keys.toList()
-
-    val files: List<String>
-        get() = common.fixtures.map { it.file }
-
-    val implementedIds: Set<String>
-        get() = scenarios.filterValues { it.intellij.coverage != "not-implemented" }.keys
-
-    val graph: String
-        get() =
-            Gson()
-                .toJson(
-                    mapOf(
-                        "xtc" to mapOf("compiler" to mapOf("sourceModules" to common.sourceModules)),
-                    ),
-                )
 
     fun validate(fixtures: Map<String, String>) {
         diagnostics.errors.forEach { expected ->

@@ -12,6 +12,8 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Worker-only edit planning and binding comparison. Compiler constants never escape this proof. */
 internal object XdkRename {
+    private val newlines = Regex("\\r\\n|\\r|\\n")
+
     /** Replacement text and offsets in the original source, before any edits are applied. */
     data class Edit(
         val start: Int,
@@ -1196,8 +1198,6 @@ internal object XdkRename {
                 !lexer.hasNext() &&
                 !errors.hasSeriousErrors()
         }
-
-    private val newlines = Regex("\\r\\n|\\r|\\n")
 
     internal fun offset(
         text: String,
