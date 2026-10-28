@@ -734,10 +734,10 @@ public interface ErrorListener {
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
 
     /**
-     * A console sink that remembers an abort request after an ERROR or FATAL report.
+     * A forwarding sink that remembers an abort request after an ERROR or FATAL report.
      *
-     * <p>It prints reports to standard output. Unlike the older implementation, reporting does not
-     * deliberately throw to stop the operation; callers must query {@link #isAbortDesired()} and
+     * <p>Reports go to the supplied listener, or to {@link #STDERR} for standalone callers.
+     * Reporting does not deliberately throw to stop the operation; callers must query {@link #isAbortDesired()} and
      * choose their own failure handling. The abort flag remains set for the life of this instance.
      *
      * <p>This sink does not collect diagnostic codes or override the serious-error query. Use
@@ -745,12 +745,24 @@ public interface ErrorListener {
      */
     class RuntimeErrorListener
             implements ErrorListener {
+        /** Construct a standalone listener that reports to standard error. */
+        public RuntimeErrorListener() {
+            this(STDERR);
+        }
+
+        /**
+         * @param errs  the destination for runtime diagnostics
+         */
+        public RuntimeErrorListener(ErrorListener errs) {
+            f_errs = requireNonNull(errs, "errs");
+        }
+
         @Override
         public void log(ErrorInfo err) {
-            System.out.println(err.getSeverity() + ": " + err);
             if (err.getSeverity().isAtLeast(Severity.ERROR)) {
                 m_fAbort = true;
             }
+            f_errs.log(err);
         }
 
         /**
@@ -764,7 +776,8 @@ public interface ErrorListener {
             return m_fAbort;
         }
 
-        private volatile boolean m_fAbort;
+        private final ErrorListener f_errs;
+        private volatile boolean    m_fAbort;
 
         @Override
         public String toString() {
@@ -1047,8 +1060,14 @@ public interface ErrorListener {
     ErrorListener SILENT_DISCARD = new SilentErrorListener(Silence.DISCARD);
 
     /**
-     * Shared console fallback. Its abort flag is sticky across uses; it is not a fresh per-operation
-     * collector. Embedding hosts should supply their own listener.
+     * Stateless standard-error destination for standalone callers. Hosts should supply their own
+     * listener to receive diagnostics without writing to a process stream.
+     */
+    ErrorListener STDERR = err -> System.err.println(err.getSeverity() + ": " + err);
+
+    /**
+     * Shared standard-error fallback. Its abort flag is sticky across uses; it is not a fresh
+     * per-operation collector. Embedding hosts should supply their own listener.
      */
     ErrorListener RUNTIME = new RuntimeErrorListener();
 
