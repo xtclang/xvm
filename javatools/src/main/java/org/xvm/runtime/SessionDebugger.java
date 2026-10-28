@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,7 +211,10 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * fiber that reaches it evaluates them on its own thread, as it would variables; a condition that
  * cannot be evaluated stops the program and says why. A breakpoint may also be installed by a
  * method's name ({@link #setMethodBreakpoints}): it stops at the first line of each of the
- * program's methods of that name, with the reason "function breakpoint", as DAP calls it. Thrown
+ * program's methods of that name, with the reason "function breakpoint", as DAP calls it. A data
+ * breakpoint watches a field of an object ({@link #watchable}, {@link #setDataBreakpoints}): once
+ * the field's value changes, the program stops at the next line that a fiber of the object's
+ * service reaches, with the reason "data breakpoint". Thrown
  * exceptions may stop the program only for some exception classes, those named and the classes
  * that extend them, and the host can read the exception that stopped the program
  * ({@link #exceptionInfo}).
@@ -264,6 +268,16 @@ public final class SessionDebugger implements Debugger {
     public static final String NO_METHOD = "No method of the program has this name.";
 
     /**
+     * Why a variable cannot be watched by a data breakpoint: it is not a field of an object.
+     */
+    public static final String ONLY_FIELDS = "Only a field of an object can be watched.";
+
+    /**
+     * The message of a data breakpoint whose data ID {@link #watchable} did not give.
+     */
+    public static final String NO_DATA = "No field of the program has this data ID.";
+
+    /**
      * The value of an expression that {@link #run} runs as a statement, since it has no value, such
      * as a call to a method that returns nothing.
      */
@@ -301,6 +315,12 @@ public final class SessionDebugger implements Debugger {
      */
     private static final String NOT_CHANGED =
             "The variable is not one of the stopped program's, so it cannot be changed.";
+
+    /**
+     * Why a variable of another stop, or of none, cannot be watched by a data breakpoint.
+     */
+    private static final String NOT_WATCHED =
+            "The variable is not one of the stopped program's, so it cannot be watched.";
 
     /**
      * Why an evaluation or a run that the program's resume abandoned has no answer.
@@ -355,6 +375,12 @@ public final class SessionDebugger implements Debugger {
     private final Map<String, List<MethodLines>> methodsByFile = new HashMap<>();
 
     /**
+     * The fields that data breakpoints may watch, by the data ID that {@link #watchable} gave
+     * them; guarded by this debugger's monitor. Each holds its object for the rest of the session.
+     */
+    private final Map<String, Watched> watchables = new HashMap<>();
+
+    /**
      * The real paths of the files looked up, by path.
      */
     private final Map<String, String> realPaths = new ConcurrentHashMap<>();
@@ -368,7 +394,7 @@ public final class SessionDebugger implements Debugger {
     /**
      * The installed breakpoints, replaced as a whole when they change.
      */
-    private volatile Installed installed = new Installed(Map.of(), Map.of(), Map.of());
+    private volatile Installed installed = new Installed(Map.of(), Map.of(), List.of(), Map.of());
 
     /**
      * The thrown exceptions that stop the program.
@@ -531,6 +557,39 @@ public final class SessionDebugger implements Debugger {
          */
         public Method(int id, String name) {
             this(id, name, null, null);
+        }
+    }
+
+    /**
+     * A variable as the target of a data breakpoint, as {@link #watchable} answers for it.
+     *
+     * @param dataId       the ID that a {@link Data} takes, the same each time a field of an object
+     *                     is asked about; null if the variable cannot be watched
+     * @param description  the field after its object's type, such as {@code "Counter.count"}, or
+     *                     why the variable cannot be watched
+     */
+    public record Watchable(String dataId, String description) {
+    }
+
+    /**
+     * A data breakpoint the host requests: its ID, the data ID of the field it watches, and a
+     * condition and a hit count, as a {@link Line} has.
+     *
+     * @param id         the breakpoint's ID, which the host chooses, and which a stop at it
+     *                   reports ({@link Stop#breakpointIds})
+     * @param dataId     the field's data ID, which {@link #watchable} gave
+     * @param condition  the condition, or null for none
+     * @param hitCount   the hit count, or null for none
+     */
+    public record Data(int id, String dataId, String condition, String hitCount) {
+        /**
+         * A data breakpoint that stops every time the field changes.
+         *
+         * @param id      the breakpoint's ID, which the host chooses
+         * @param dataId  the field's data ID, which {@link #watchable} gave
+         */
+        public Data(int id, String dataId) {
+            this(id, dataId, null, null);
         }
     }
 
@@ -736,17 +795,20 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * Why and where the program stopped: the reason ("breakpoint", "function breakpoint", "step",
-     * "exception", "pause" or "entry"), what stopped it in words (an exception's type and text),
-     * the fiber that stopped, and the IDs of the breakpoints it stopped at.
+     * Why and where the program stopped: the reason ("breakpoint", "function breakpoint", "data
+     * breakpoint", "step", "restart", "exception", "pause" or "entry"), what stopped it in words
+     * (an exception's type and text), the fiber that stopped, and the IDs of the breakpoints it
+     * stopped at.
      *
      * @param reason         {@code "breakpoint"}, also for {@code assert:debug},
      *                       {@code "function breakpoint"} for a breakpoint on entering a method,
-     *                       {@code "step"}, {@code "exception"}, {@code "pause"} or
+     *                       {@code "data breakpoint"} for a field that changed, {@code "step"},
+     *                       {@code "restart"}, {@code "exception"}, {@code "pause"} or
      *                       {@code "entry"}
      * @param description    what stopped it in words, or null: an exception's type and text,
-     *                       {@code "assert:debug"}, or why a breakpoint's condition cannot be
-     *                       evaluated
+     *                       {@code "assert:debug"}, how a watched field changed, such as
+     *                       {@code "Counter.count changed from 0 to 2"}, or why a breakpoint's
+     *                       condition cannot be evaluated
      * @param threadId       the ID of the fiber that stopped
      * @param breakpointIds  the IDs of the breakpoints it stopped at, which the host chose;
      *                       none for {@code assert:debug} and for a stop of any other reason
@@ -838,7 +900,7 @@ public final class SessionDebugger implements Debugger {
             idsByFile.put(file, Map.copyOf(idsByLine));
             optionsById.putAll(options);
         }
-        installed = new Installed(Map.copyOf(idsByFile), current.idsByName(), Map.copyOf(optionsById));
+        installed = current.withFiles(Map.copyOf(idsByFile), Map.copyOf(optionsById));
         updateActive();
         return result;
     }
@@ -882,7 +944,99 @@ public final class SessionDebugger implements Debugger {
         var       optionsById = new HashMap<>(current.optionsById());
         current.idsByName().values().forEach(optionsById::remove);
         optionsById.putAll(options);
-        installed = new Installed(current.idsByFile(), Map.copyOf(idsByName), Map.copyOf(optionsById));
+        installed = current.withNames(Map.copyOf(idsByName), Map.copyOf(optionsById));
+        updateActive();
+        return result;
+    }
+
+    /**
+     * Name a variable of the stopped program as the target of a data breakpoint: a field of a
+     * mutable object, by the reference to the object's fields and the field's name. A local
+     * variable, an array's element, a computed property, and a field of an immutable object, which
+     * does not change, cannot be watched.
+     *
+     * @param reference  a reference that {@link #variables} gave to an object's fields
+     * @param name       the field's name, as its variable has it
+     *
+     * @return the field's data ID, which the field keeps for the rest of the session, and what it
+     *         is; or why the variable cannot be watched
+     */
+    public synchronized Watchable watchable(int reference, String name) {
+        Halt   current = halt;
+        Target target  = current == null ? null : current.targets.get(reference);
+        if (!(target instanceof Children(int thread, GenericHandle object))) {
+            return new Watchable(null, target == null ? NOT_WATCHED : ONLY_FIELDS);
+        }
+
+        // the object's class as frames name it, such as Counter
+        String    type  = object.getTemplate().getStructure().getName();
+        FieldInfo field = DebugConsole.getFieldLayout(object.getComposition()).get(name);
+        if (field == null) {
+            return new Watchable(null, type + " has no field " + name + ". " + ONLY_FIELDS);
+        }
+        if (!object.isMutable()) {
+            return new Watchable(null, type + " is immutable, so its fields do not change.");
+        }
+
+        // the same field of the same object keeps its data ID; the object belongs to the waiting
+        // fiber's service, whose fibers are the ones to change it
+        String label = type + '.' + name;
+        for (var entry : watchables.entrySet()) {
+            if (entry.getValue().object() == object && entry.getValue().index() == field.getIndex()) {
+                return new Watchable(entry.getKey(), label);
+            }
+        }
+        var dataId = String.valueOf(handles.incrementAndGet());
+        var waits  = current.stacks.get(thread).frame();
+        watchables.put(dataId, new Watched(object, field.getIndex(), label, waits.getContext()));
+        return new Watchable(dataId, label);
+    }
+
+    /**
+     * Replace the data breakpoints. Each watches the field that its data ID names: once the field's
+     * value is no longer what it was, the program stops, with the reason "data breakpoint", at the
+     * next line that a fiber of the object's service reaches, which is that line's only stop, and
+     * says how the value changed, if the breakpoint's condition and hit count hold there. A value
+     * is compared by what its variable shows, so a new value that shows the same is no change. One
+     * whose data ID {@link #watchable} did not give, or whose condition or hit count cannot be
+     * understood, is not installed. The host may call it at any time, as {@link #setBreakpoints}.
+     *
+     * @param data  the data breakpoints; none removes them all
+     *
+     * @return each breakpoint as installed, on line 0, in the order requested
+     */
+    public synchronized List<Breakpoint> setDataBreakpoints(List<Data> data) {
+        // a field that stays watched keeps the value it was last seen with
+        Installed current = installed;
+        var       earlier = new IdentityHashMap<Watched, Watch>();
+        current.watches().forEach(watch -> earlier.putIfAbsent(watch.field(), watch));
+
+        var watches = new ArrayList<Watch>();
+        var options = new HashMap<Integer, Options>();
+        var result  = new ArrayList<Breakpoint>(data.size());
+        for (Data request : data) {
+            Watched field = watchables.get(request.dataId());
+            if (field == null) {
+                result.add(new Breakpoint(request.id(), 0, false, NO_DATA));
+                continue;
+            }
+            try {
+                Options.of(request.condition(), request.hitCount(), null)
+                        .ifPresent(given -> options.put(request.id(), given));
+            } catch (IllegalArgumentException e) {
+                result.add(new Breakpoint(request.id(), 0, false, e.getMessage()));
+                continue;
+            }
+            Watch        before = earlier.get(field);
+            ObjectHandle last   = before == null ? field.value() : before.last().get();
+            watches.add(new Watch(request.id(), field, new AtomicReference<>(last)));
+            result.add(new Breakpoint(request.id(), 0, true, null));
+        }
+
+        var optionsById = new HashMap<>(current.optionsById());
+        current.watches().forEach(watch -> optionsById.remove(watch.id()));
+        optionsById.putAll(options);
+        installed = current.withWatches(List.copyOf(watches), Map.copyOf(optionsById));
         updateActive();
         return result;
     }
@@ -1687,7 +1841,7 @@ public final class SessionDebugger implements Debugger {
     @Override
     public synchronized void detach() {
         detached     = true;
-        installed    = new Installed(Map.of(), Map.of(), Map.of());
+        installed    = new Installed(Map.of(), Map.of(), List.of(), Map.of());
         stepping     = null;
         pendingPause = null;
         release();
@@ -1835,6 +1989,14 @@ public final class SessionDebugger implements Debugger {
             return pc + 1;
         }
 
+        // a watched field that changed stops the program before the next line of its service runs
+        List<Change> changes = startsLine(frame, pc) ? changes(frame) : List.of();
+        if (!changes.isEmpty()) {
+            String description = changes.stream().map(Change::description).collect(Collectors.joining("; "));
+            return stop(frame, "data breakpoint", description, changes.stream().map(Change::id).toList(), null, null,
+                    f -> resumes(f, pc));
+        }
+
         // a breakpoint on the line where a step ends, or a pause, is reported as the breakpoint; a
         // logpoint, or a breakpoint whose condition or hit count does not hold, lets them stop
         Integer[]            breaks = breaksOf(frame);
@@ -1897,6 +2059,49 @@ public final class SessionDebugger implements Debugger {
         if (step != null && step.frame() == frame && (step.step() != Step.IN || step.call() != Stepping.NO_CALL)) {
             stepping = new Stepping(Step.IN, frame, frame.getFiber());
         }
+    }
+
+    /**
+     * @return the data breakpoints of the frame's service whose fields changed since its fibers
+     *         last reached a line, and whose condition and hit count hold at the frame, with how
+     *         each changed; a change is seen once
+     */
+    private List<Change> changes(Frame frame) {
+        List<Watch> watches = installed.watches();
+        if (watches.isEmpty()) {
+            return List.of();
+        }
+
+        var changes = new ArrayList<Change>();
+        for (Watch watch : watches) {
+            Watched field = watch.field();
+            if (field.context() != frame.getContext()) {
+                continue;
+            }
+            ObjectHandle value  = field.value();
+            ObjectHandle before = watch.last().getAndSet(value);
+            if (value == before) {
+                continue;
+            }
+            String from = shownText(before);
+            String to   = shownText(value);
+            if (from.equals(to)) {
+                continue;
+            }
+            Hit hit = hit(frame, watch.id());
+            if (hit.stops()) {
+                String changed = field.label() + " changed from " + from + " to " + to;
+                changes.add(new Change(watch.id(), hit.description() == null ? changed : hit.description()));
+            }
+        }
+        return changes;
+    }
+
+    /**
+     * @return the text of a field's value as its variable shows it, or {@link #UNASSIGNED}
+     */
+    private static String shownText(ObjectHandle value) {
+        return value == null ? UNASSIGNED : valueText(value);
     }
 
     /**
@@ -2315,7 +2520,9 @@ public final class SessionDebugger implements Debugger {
         Runtime attached = runtime;
         if (attached != null) {
             boolean stopping = halt != null || running != null || stepping != null || pendingPause != null;
-            boolean watching = !installed.idsByFile().isEmpty() || !installed.idsByName().isEmpty() || exceptionStops.any();
+            Installed current  = installed;
+            boolean   watching = !current.idsByFile().isEmpty() || !current.idsByName().isEmpty()
+                    || !current.watches().isEmpty() || exceptionStops.any();
             attached.setDebuggerActive(stopping || watching);
         }
     }
@@ -3596,16 +3803,66 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * The installed breakpoints: by real path, the ID of the breakpoint on each line; by name, the
-     * ID of the breakpoint on entering the methods of that name; the options of the breakpoints
-     * that have any, by ID; and the breakpoint IDs of each method seen, by op index, computed for
-     * these breakpoints.
+     * ID of the breakpoint on entering the methods of that name; the data breakpoints; the options
+     * of the breakpoints that have any, by ID; and the breakpoint IDs of each method seen, by op
+     * index, computed for these breakpoints.
      */
     private record Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<String, Integer> idsByName,
-                             Map<Integer, Options> optionsById, Map<Op[], Integer[]> idsByOps) {
-        Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<String, Integer> idsByName,
+                             List<Watch> watches, Map<Integer, Options> optionsById, Map<Op[], Integer[]> idsByOps) {
+        Installed(Map<String, Map<Integer, Integer>> idsByFile, Map<String, Integer> idsByName, List<Watch> watches,
                   Map<Integer, Options> optionsById) {
-            this(idsByFile, idsByName, optionsById, new ConcurrentHashMap<>());
+            this(idsByFile, idsByName, watches, optionsById, new ConcurrentHashMap<>());
         }
+
+        /**
+         * @return these breakpoints with the specified breakpoints of files and options in place
+         *         of theirs
+         */
+        Installed withFiles(Map<String, Map<Integer, Integer>> files, Map<Integer, Options> options) {
+            return new Installed(files, idsByName, watches, options);
+        }
+
+        /**
+         * @return these breakpoints with the specified breakpoints on entering methods and options
+         *         in place of theirs
+         */
+        Installed withNames(Map<String, Integer> names, Map<Integer, Options> options) {
+            return new Installed(idsByFile, names, watches, options);
+        }
+
+        /**
+         * @return these breakpoints with the specified data breakpoints and options in place of
+         *         theirs
+         */
+        Installed withWatches(List<Watch> watched, Map<Integer, Options> options) {
+            return new Installed(idsByFile, idsByName, watched, options);
+        }
+    }
+
+    /**
+     * A field that data breakpoints may watch: its object, its index among the object's fields,
+     * what it is called, such as {@code "Counter.count"}, and the service whose fibers change it.
+     */
+    private record Watched(GenericHandle object, int index, String label, ServiceContext context) {
+        /**
+         * @return the field's value now, as its variable shows it, or null if it is unassigned
+         */
+        ObjectHandle value() {
+            return shown(object.getField(index));
+        }
+    }
+
+    /**
+     * An installed data breakpoint: its ID, the field it watches, and the field's value when last
+     * seen, which the fibers of the field's service compare, one at a time, at each line.
+     */
+    private record Watch(int id, Watched field, AtomicReference<ObjectHandle> last) {
+    }
+
+    /**
+     * A data breakpoint whose field changed, by its ID, and how, in words.
+     */
+    private record Change(int id, String description) {
     }
 
     /**

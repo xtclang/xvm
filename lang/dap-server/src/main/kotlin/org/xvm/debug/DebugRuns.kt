@@ -43,6 +43,27 @@ data class FunctionBreakpointRequest(
     val hitCondition: String? = null,
 )
 
+/**
+ * A data breakpoint a session asks for, which stops once the field that its [dataId] names has changed: its DAP ID,
+ * which the session chooses, the data ID that [DebugRuns.dataBreakpointInfo] gave, and a [condition] and a
+ * [hitCondition], as a [BreakpointRequest] has.
+ */
+data class DataBreakpointRequest(
+    val id: Int,
+    val dataId: String,
+    val condition: String? = null,
+    val hitCondition: String? = null,
+)
+
+/**
+ * A variable as the target of a data breakpoint: the [dataId] that names the field, or null if it cannot be watched,
+ * and what it is, such as `Counter.count`, or why it cannot be watched.
+ */
+data class DataInfoState(
+    val dataId: String?,
+    val description: String,
+)
+
 /** The breakpoints of one source file, by its path; none removes the file's breakpoints. */
 data class SourceBreakpoints(
     val path: String,
@@ -263,6 +284,25 @@ interface DebugRuns {
     fun setBreakpoints(
         runId: String,
         breakpoints: SourceBreakpoints,
+    ): CompletableFuture<List<BreakpointState>>
+
+    /**
+     * Names a variable of the stopped program as a data breakpoint's target: a field of a mutable object, by the
+     * reference to the object's fields and the field's name; a local, an element or a computed property cannot be.
+     */
+    fun dataBreakpointInfo(
+        runId: String,
+        reference: Int,
+        name: String,
+    ): CompletableFuture<DataInfoState>
+
+    /**
+     * Replaces the data breakpoints of a debugged program that runs; none removes them. Each stops the program, with
+     * the reason `data breakpoint`, at the next line of the field's service once the field's value has changed.
+     */
+    fun setDataBreakpoints(
+        runId: String,
+        breakpoints: List<DataBreakpointRequest>,
     ): CompletableFuture<List<BreakpointState>>
 
     /** Replaces the function breakpoints of a debugged program that runs; none removes them. */

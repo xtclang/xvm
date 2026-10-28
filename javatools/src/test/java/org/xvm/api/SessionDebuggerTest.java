@@ -51,6 +51,7 @@ import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
 import org.xvm.runtime.SessionDebugger.Completion;
 import org.xvm.runtime.SessionDebugger.Completions;
+import org.xvm.runtime.SessionDebugger.Data;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
 import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
@@ -63,6 +64,7 @@ import org.xvm.runtime.SessionDebugger.Step;
 import org.xvm.runtime.SessionDebugger.Stop;
 import org.xvm.runtime.SessionDebugger.ThreadInfo;
 import org.xvm.runtime.SessionDebugger.Variable;
+import org.xvm.runtime.SessionDebugger.Watchable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -235,6 +237,33 @@ public class SessionDebuggerTest {
 
                 Int twice(Int n) {
                     return n * 2;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() makes a Counter on line 4 and adds 2 and then 3 to its count, on line 16
+     * of Counter.add(), whose next line is 17; it prints "count=5" and returns 5.
+     */
+    private static final String WATCHED = """
+            module Watched {
+                Int run() {
+                    @Inject Console console;
+                    Counter counter = new Counter();
+                    counter.add(2);
+                    counter.add(3);
+                    console.print($"count={counter.count}");
+                    return counter.count;
+                }
+
+                class Counter {
+                    Int count = 0;
+                    Int adds  = 0;
+
+                    void add(Int n) {
+                        count += n;
+                        ++adds;
+                    }
                 }
             }
             """;
@@ -731,6 +760,51 @@ public class SessionDebuggerTest {
             session.resume();
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
             assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
+    public void aDataBreakpointStopsAtTheNextLineOfTheFieldsServiceOnceTheFieldHasChanged() throws Exception {
+        Path  source  = compile("Watched", WATCHED);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Watched"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Watched", output, session);
+        try (control) {
+            Stop     stop    = stops.next();
+            int      frame   = session.stackTrace(stop.threadId()).getFirst().id();
+            int      locals  = session.scopes(frame).getFirst().variablesReference();
+            Variable counter = read(session, locals).stream().filter(v -> v.name().equals("counter")).findFirst().get();
+
+            // a field of an object, the same each time; not a local, nor what is not a field
+            Watchable count = session.watchable(counter.variablesReference(), "count");
+            assertNotNull(count.dataId());
+            assertEquals("Counter.count", count.description());
+            assertEquals(count, session.watchable(counter.variablesReference(), "count"));
+            assertEquals(new Watchable(null, SessionDebugger.ONLY_FIELDS), session.watchable(locals, "counter"));
+            assertNull(session.watchable(counter.variablesReference(), "total").dataId());
+            assertEquals(List.of(new Breakpoint(2, 0, true, null),
+                                 new Breakpoint(3, 0, false, SessionDebugger.NO_DATA)),
+                    session.setDataBreakpoints(List.of(new Data(2, count.dataId()), new Data(3, "nothing"))));
+
+            // each add() stops at the line after the one that changes the count
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            for (String change : List.of("0 to 2", "2 to 5")) {
+                Stop changed = stops.next();
+                assertEquals("data breakpoint", changed.reason());
+                assertEquals(List.of(2), changed.breakpointIds());
+                assertEquals("Counter.count changed from " + change, changed.description());
+                assertEquals("Counter.add:17", where(session, changed));
+                session.resume();
+            }
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(5L, control.result());
+            assertTrue(output.toString().contains("count=5"), output.toString());
+            assertEquals(null, stops.poll());
         }
     }
 
