@@ -209,7 +209,7 @@ class TypeInfoDiagnosticsTest {
      * This one is worth its own test because master loses it. Compiling this source there reports
      * nothing at all - the compiler parks the file on a silence for the duration of a compilation,
      * and the warning goes into it - so the annotation is silently ignored and the author is never
-     * told.
+     * told. See the appendix of docs/errs.md.
      */
     @Test
     fun `a duplicated property annotation is reported, which master swallows`() {

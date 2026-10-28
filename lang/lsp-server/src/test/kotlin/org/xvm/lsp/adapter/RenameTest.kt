@@ -9,8 +9,7 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Rename tests for [TreeSitterAdapter].
  *
- * Exercises prepare-rename and rename-all-occurrences via AST-based
- * identifier matching.
+ * Exercises prepare-rename and rename-all-occurrences via AST-based identifier matching.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -25,8 +24,8 @@ class RenameTest : TreeSitterTestBase() {
     @DisplayName("rename()")
     inner class RenameTests {
         /**
-         * `prepareRename` finds the identifier AST node at the cursor and returns
-         * its text as the placeholder. Cursor on "Person" should yield exactly that.
+         * `prepareRename` finds the identifier AST node at the cursor and returns its text as the
+         * placeholder. Cursor on "Person" should yield exactly that.
          */
         @Test
         @DisplayName("should prepare rename for identifier")
@@ -48,8 +47,8 @@ class RenameTest : TreeSitterTestBase() {
         }
 
         /**
-         * Renaming "Person" to "Human" should produce edits for every identifier node
-         * with text "Person" in the file -- at least the declaration and usage sites.
+         * Renaming "Person" to "Human" should produce edits for every identifier node with text
+         * "Person" in the file -- at least the declaration and usage sites.
          */
         @Test
         @DisplayName("should rename all occurrences")
@@ -87,12 +86,11 @@ class RenameTest : TreeSitterTestBase() {
         }
 
         /**
-         * Issue #459: renaming a local variable renamed ALL same-named variables and
-         * properties in the file. Rename must be scope-aware: only occurrences that
-         * resolve to the same declaration as the cursor's identifier get edited.
-         * Here `count` exists as a module property, as a local in run(), and as a
-         * local in other() -- renaming the local in run() must leave the property
-         * and other()'s local untouched.
+         * Issue #459: renaming a local variable renamed ALL same-named variables and properties in
+         * the file. Rename must be scope-aware: only occurrences that resolve to the same
+         * declaration as the cursor's identifier get edited. Here `count` exists as a module
+         * property, as a local in run(), and as a local in other() -- renaming the local in run()
+         * must leave the property and other()'s local untouched.
          */
         @Test
         @DisplayName("should rename only the scoped local variable")
@@ -127,8 +125,8 @@ class RenameTest : TreeSitterTestBase() {
         }
 
         /**
-         * Renaming an outer variable must not touch an inner declaration that
-         * shadows it (nor the shadowed uses, which resolve to the inner one).
+         * Renaming an outer variable must not touch an inner declaration that shadows it (nor the
+         * shadowed uses, which resolve to the inner one).
          */
         @Test
         @DisplayName("should not rename a shadowing inner declaration")
@@ -161,8 +159,8 @@ class RenameTest : TreeSitterTestBase() {
         }
 
         /**
-         * Issue #459: with the whole identifier selected, the caret sits at the
-         * exclusive end of the word. prepareRename must still find the identifier.
+         * Issue #459: with the whole identifier selected, the caret sits at the exclusive end of
+         * the word. prepareRename must still find the identifier.
          */
         @Test
         @DisplayName("should prepare rename when caret is at the end of the word")

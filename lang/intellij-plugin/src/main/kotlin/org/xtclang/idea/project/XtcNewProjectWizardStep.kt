@@ -20,15 +20,16 @@ import org.xvm.tool.XtcProjectCreator
 import kotlin.io.path.Path
 
 /**
- * XTC-specific wizard step for the New Project wizard.
- * Uses XtcProjectCreator (synced from javatools, compiled for Java 21).
+ * XTC-specific wizard step for the New Project wizard. Uses XtcProjectCreator (synced from
+ * javatools, compiled for Java 21).
  */
 class XtcNewProjectWizardStep(
     parent: NewProjectWizardStep,
 ) : AbstractNewProjectWizardStep(parent) {
     private val logger = logger<XtcNewProjectWizardStep>()
 
-    private val projectTypeProperty = propertyGraph.property(XtcProjectCreator.ProjectType.APPLICATION)
+    private val projectTypeProperty =
+        propertyGraph.property(XtcProjectCreator.ProjectType.APPLICATION)
     private val multiModuleProperty = propertyGraph.property(false)
 
     var projectType: XtcProjectCreator.ProjectType by projectTypeProperty
@@ -37,7 +38,8 @@ class XtcNewProjectWizardStep(
     override fun setupUI(builder: Panel) {
         builder.apply {
             row("Project type:") {
-                comboBox(XtcProjectCreator.ProjectType.entries.toList()).bindItem(projectTypeProperty)
+                comboBox(XtcProjectCreator.ProjectType.entries.toList())
+                    .bindItem(projectTypeProperty)
             }
             row {
                 checkBox("Multi-module project").bindSelected(multiModuleProperty)
@@ -49,10 +51,11 @@ class XtcNewProjectWizardStep(
         val base = baseData ?: return logger.error("No base data available")
         val projectPath = Path(base.path).resolve(base.name)
         val xtcVersion =
-            PluginPaths.selfDescriptor()?.version
-                ?: XtcProjectCreator.DEFAULT_XTC_VERSION
+            PluginPaths.selfDescriptor()?.version ?: XtcProjectCreator.DEFAULT_XTC_VERSION
 
-        logger.info("Creating Ecstasy project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion")
+        logger.info(
+            "Creating Ecstasy project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion",
+        )
 
         val creator = XtcProjectCreator(projectPath, projectType, multiModule, xtcVersion, null)
         val result = creator.create()
@@ -66,7 +69,10 @@ class XtcNewProjectWizardStep(
 
             else -> {
                 logger.error("Failed to create Ecstasy project: ${result.message}")
-                Messages.showErrorDialog("Failed to create Ecstasy project: ${result.message}", "Ecstasy Project Creation Failed")
+                Messages.showErrorDialog(
+                    "Failed to create Ecstasy project: ${result.message}",
+                    "Ecstasy Project Creation Failed",
+                )
             }
         }
     }

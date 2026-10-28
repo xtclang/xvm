@@ -398,7 +398,10 @@ class DslPowerShowcaseTest {
         assertTrue(textMate.contains(testKeyword), "TextMate has '$testKeyword'")
         assertTrue(vim.contains(testKeyword), "Vim has '$testKeyword'")
         assertTrue(emacs.contains("\"$testKeyword\""), "Emacs has '$testKeyword'")
-        assertTrue(treeSitterHighlights.contains("\"$testKeyword\""), "Tree-sitter has '$testKeyword'")
+        assertTrue(
+            treeSitterHighlights.contains("\"$testKeyword\""),
+            "Tree-sitter has '$testKeyword'",
+        )
 
         // All contain built-in types
         val testType = "String"

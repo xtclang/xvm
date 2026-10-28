@@ -1,0 +1,641 @@
+package org.xvm.lsp.adapter
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.compiler.Source
+import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.toDependency
+import java.nio.file.Path
+
+class XdkMemberActionsTest {
+    @TempDir lateinit var directory: Path
+
+    @Test
+    fun `recursive inherited signatures do not suppress unrelated member actions`() {
+        val text =
+            """
+            module App {
+                typedef (Int | Array<Doc>) as Doc;
+                class Base<T> {
+                    T read(T value) = value;
+                    Int count() = 1;
+                }
+                class Box extends Base<Doc> {}
+            }
+            """.trimIndent()
+        workspace(text) { adapter, uri ->
+            val offered = actions(adapter, uri, text)
+            assertThat(offered.map { it.title }).contains("Override Int64 count()")
+            assertThat(offered).noneMatch { it.title.startsWith("Override ") && " read(" in it.title }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Int read(Int value);", "void read();", "String read(String value);"])
+    fun `implement ordinary abstract source contracts with compiler proven stubs`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.versioned).isTrue()
+            val changed = apply(text, edit.changes.getValue(uri))
+            assertThat(changed).contains("@Override", "TODO();")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") })
+                .isEmpty()
+        }
+    }
+
+    @Test
+    fun `override inherited concrete source method without changing unrelated bindings`() {
+        val text =
+            "module App { class Base { Int read(Int value) = value; } class Box extends Base { String keep = \"ok\"; } }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title.startsWith("Override ") && it.title.contains(" read(")
+                }
+            assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `overloads remain separate compiler selected actions`() {
+        val text =
+            "module App { interface Api { Int read(Int value); String read(String value); } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val actions =
+                actions(adapter, uri, text).filter {
+                    it.title.startsWith("Implement ") && !it.title.startsWith("Implement all")
+                }
+            assertThat(actions).hasSize(2)
+            actions.forEach { action ->
+                assertThat(
+                    adapter
+                        .compile(
+                            uri,
+                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                        ).diagnostics,
+                ).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `all required overloads repair an instantiated class atomically`() {
+        val text =
+            """
+            module App {
+                interface Api { Int read(Int value); String read(String value); }
+                class Box implements Api {}
+                class Child extends Box {}
+                Box make() = new Box();
+                String use(Child child) = child.read(value = "text");
+            }
+            """.trimIndent()
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement all required members (2)"
+                }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(edit.changes.getValue(uri)).hasSize(1)
+            val changed = apply(text, edit.changes.getValue(uri))
+            assertThat(changed.split("@Override")).hasSize(3)
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") })
+                .isEmpty()
+        }
+    }
+
+    @Test
+    fun `bulk generation preserves existing implementations and property bindings`() {
+        val text =
+            """
+            module App {
+                interface Api { Int first(); String second(); void third(); }
+                class Box implements Api { @Override Int first() = 7; String label = "keep"; }
+                Box make() = new Box();
+                String use(Box box) = box.second() + box.label;
+            }
+            """.trimIndent()
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement all required members (2)"
+                }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains("@Override Int first() = 7; String label = \"keep\";")
+            assertThat(changed.split("first()")).hasSize(3)
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `all required action refuses an unsupported remainder on an implicitly abstract class`() {
+        val text =
+            "module App { interface Api { void first(); void second(); List<Int> read(List<Int> value = []); } " +
+                "class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val offered = actions(adapter, uri, text)
+            assertThat(offered.map { it.title })
+                .contains("Implement void first()", "Implement void second()")
+            assertThat(offered).noneMatch { it.title.startsWith("Implement all") }
+        }
+    }
+
+    @Test
+    fun `specialized generic contract uses the compiler substituted signature`() {
+        val text =
+            "module App { interface Api<T> { T read(T value); } class Box implements Api<String> {} }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title.startsWith("Implement String read(String value)")
+                }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `CRLF indentation and Unicode text survive generation`() {
+        val text =
+            "module App {\r\n    interface Api { void read(); }\r\n    // café\r\n    class Box implements Api {\r\n    }\r\n}\r\n"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed)
+                .contains("    // café\r\n", "        @Override\r\n", "            TODO();\r\n")
+            assertThat(changed.replace("\r\n", "")).doesNotContain("\n")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "conditional Int read();",
+                "(Int, Int) read();",
+                "Int read(Int value = 1);",
+                "List<Int> read();",
+                "<T> T read(T value);",
+                "<T extends String> T read(T value);",
+                "conditional (Int, String) read();",
+                "Map<String, List<Int>> read();",
+                "(Int | String) read();",
+                "String? read(String? value);",
+                "immutable List<Int> read();",
+                "List<(Int | String)> read();",
+                "String read(String value = \"line\\n\\\"quoted\\\"\");",
+            ],
+    )
+    fun `broader signatures preserve the compiler contract`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") })
+                .isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["List<Int> read(List<Int> value = []);"])
+    fun `unrenderable types and nonliteral defaults remain refusals`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            assertThat(actions(adapter, uri, text).filter { it.title.contains(" read(") }).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "Int read(Int value = -2);",
+                "String read(String value = \"text\");",
+                "Char read(Char value = 'x');",
+            ],
+    )
+    fun `fresh declaration repair retains literal defaults`(signature: String) {
+        val text =
+            "module App { interface Api { $signature } class Box implements Api {} " +
+                "Box make() = new Box(); void use(Box box) { box.read(); } }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains(signature.substringAfter("value = ").substringBefore(')'))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `validated computed primitive default is rendered as its constant value`() {
+        val text =
+            "module App { interface Api { Int read(Int value = 1 + 2); } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement Int64 read(Int64 value = 3)"
+                }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `unvalidated computed defaults remain a refusal during fresh declaration repair`() {
+        val text =
+            "module App { interface Api { Int read(Int value = 1 + 2); } class Box implements Api {} Box make() = new Box(); }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            assertThat(actions(adapter, uri, text).filter { it.title.contains(" read(") }).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = ["Boolean read(Boolean value = True);", "String? read(String? value = Null);"],
+    )
+    fun `validated singleton defaults use explicit XDK identities`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains(" = ecstasy.")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `existing call intentionally selects the generated override`() {
+        val text =
+            "module App { class Base { Int read() = 1; } class Box extends Base {} Int use(Box box) = box.read(); }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title.startsWith("Override ") && it.title.contains(" read(")
+                }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `source contract in another module generates an edit only in the implementing class`() {
+        val library = "module Library { interface Api { String read(String value); } }"
+        val file = directory.resolve("Library.x").toFile().apply { writeText(library) }
+        val text = "module App { package lib import Library; class Box implements lib.Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+                .isEmpty()
+            assertThat(file.readText()).isEqualTo(library)
+        }
+    }
+
+    @Test
+    fun `foreign signature types add qualified imports without shadowing existing names`() {
+        val library = "module Library { class Value {} interface Api { Value read(Value value); } }"
+        val file = directory.resolve("Library.x").toFile().apply { writeText(library) }
+        val text =
+            "module App { package lib import Library; class Box implements lib.Api { Int library = 1; } " +
+                "Int keep(Box box) = box.library; }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement library1.Value read(library1.Value value)"
+                }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(edit.changes.getValue(uri)).hasSize(2)
+            val changed = apply(text, edit.changes.getValue(uri))
+            assertThat(changed).contains("package library1 import Library;", "Int library = 1;")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(file.readText()).isEqualTo(library)
+        }
+    }
+
+    @Test
+    fun `bulk foreign signatures share one import while repairing construction`() {
+        directory
+            .resolve("Library.x")
+            .toFile()
+            .writeText(
+                "module Library { class Value {} interface Api { Value read(); void write(Value value); } }",
+            )
+        val text =
+            "module App { package lib import Library; class Box implements lib.Api {} Box make() = new Box(); }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement all required members (2)"
+                }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed.split("package library import Library;")).hasSize(2)
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `binary contracts generate only user source edits with or without indexed sources`(indexed: Boolean) {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val library =
+            EmbeddingSupport
+                .instance()
+                .compileModule(
+                    Source(
+                        "module Library { interface Api { String read(String value); } }",
+                        "file:///Library.x",
+                    ),
+                    null,
+                    errors,
+                )
+        assertThat(library.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        val indexedDependency = library.toDependency()
+        val dependency =
+            if (indexed) indexedDependency else XdkDependency.fromBinary(indexedDependency.bytes())
+        val original = dependency.bytes()
+        val text =
+            "module App { package lib import Library; class Box implements lib.Api {} " +
+                "Box make() = new Box(); String use(Box box) = box.read(value = \"text\"); }"
+        workspace(text, initiallyValid = false, dependencies = listOf(dependency)) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement String read(String value)"
+                }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+                .isEmpty()
+            assertThat(dependency.bytes()).isEqualTo(original)
+        }
+    }
+
+    @Test
+    fun `bundled Iterator contract repairs construction without editing the XDK`() {
+        val text = "module App { class Box implements Iterator<String> {} Box make() = new Box(); }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title == "Implement conditional String next()"
+                }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+                .isEmpty()
+        }
+    }
+
+    @Test
+    fun `bundled concrete method override preserves descendant and selected call bindings`() {
+        val text =
+            "module App { class Box implements Iterator<String> { @Override conditional String next() = False; } " +
+                "class Child extends Box {} String use(Child child) = child.take(); }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Override String take()" }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `descendants inherit the generated override in compiler dispatch order`() {
+        val text =
+            "module App { class Base { Int read() = 1; } class Box extends Base {} class Child extends Box {} }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title.startsWith("Override ") && it.title.contains(" read(")
+                }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `named arguments and descendant overrides preserve overload and property bindings`() {
+        val text =
+            """
+            module App {
+                class Base {
+                    Int read(Int value) = value;
+                    String read(String value) = value;
+                    String label = "keep";
+                }
+                class Box extends Base {}
+                class Child extends Box { @Override Int read(Int value) = super(value); }
+                Int use(Box box) = box.read(value = 1);
+                Int child(Child child) = child.read(value = 2);
+                String other(Box box) = box.read(value = "text") + box.label;
+            }
+            """.trimIndent()
+        workspace(text) { adapter, uri ->
+            val actions =
+                actions(adapter, uri, text).filter {
+                    it.title.startsWith("Override ") && it.title.contains(" read(")
+                }
+            assertThat(actions).hasSize(2)
+            actions.forEach { action ->
+                val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+                assertThat(changed)
+                    .contains("child.read(value = 2)", "box.read(value = \"text\") + box.label")
+                assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `generic override supports inferred calls and descendant dispatch`() {
+        val text =
+            """
+            module App {
+                class Base { <T> T read(T value) = value; }
+                class Box extends Base {}
+                class Child extends Box {}
+                String use(Child child) = child.read(value = "text");
+            }
+            """.trimIndent()
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override <T>") }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+        }
+    }
+
+    @Test
+    fun `closed dependent module follows the new override without receiving edits`() {
+        val consumer =
+            "module Consumer { package app import App; class Child extends app.Box {} Int use(Child child) = child.read(); }"
+        val file = directory.resolve("Consumer.x").toFile().apply { writeText(consumer) }
+        val text = "module App { class Base { Int read() = 1; } class Box extends Base {} }"
+        workspace(text) { adapter, uri ->
+            val action =
+                actions(adapter, uri, text).single {
+                    it.title.startsWith("Override ") && it.title.contains(" read(")
+                }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+                .isEmpty()
+            assertThat(file.readText()).isEqualTo(consumer)
+        }
+    }
+
+    @Test
+    fun `a broken neighbor prevents publishing a generation edit`() {
+        directory.resolve("Broken.x").toFile().writeText("module Broken { Missing value; }")
+        val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
+        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
+    }
+
+    @Test
+    fun `missing implementation at construction can be repaired from fresh declarations`() {
+        val text =
+            "module App { interface Api { String read(String value); } class Box implements Api {} Box make() = new Box(); }"
+        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val uri = source.toURI().toString()
+            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            assertThat(
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
+            assertThat(source.readText()).isEqualTo(text)
+        }
+    }
+
+    @Test
+    fun `declaration errors do not produce a member fix from failed type information`() {
+        val text =
+            "module App { interface Api { Missing read(); } class Box implements Api {} Box make() = new Box(); }"
+        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val uri = source.toURI().toString()
+            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
+            assertThat(actions(adapter, uri, text)).isEmpty()
+        }
+    }
+
+    @Test
+    fun `code generation only appears at the selected class declaration`() {
+        val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            assertThat(
+                adapter
+                    .getCodeActions(
+                        uri,
+                        Range(Position(0, 0), Position(0, 0)),
+                        emptyList(),
+                    ).filter { it.title.startsWith("Implement ") },
+            ).isEmpty()
+        }
+    }
+
+    private fun actions(
+        adapter: XdkAdapter,
+        uri: String,
+        text: String,
+    ): List<CodeAction> {
+        val offset = text.indexOf("Box")
+        val at = position(text, offset)
+        return adapter.getCodeActions(uri, Range(at, at), emptyList())
+    }
+
+    private fun position(
+        text: String,
+        offset: Int,
+    ): Position =
+        Position(
+            text.take(offset).count { it == '\n' },
+            offset - text.lastIndexOf('\n', offset - 1) - 1,
+        )
+
+    private fun apply(
+        text: String,
+        edits: List<TextEdit>,
+    ): String {
+        fun offset(at: Position): Int = text.split('\n').take(at.line).sumOf { it.length + 1 } + at.column
+        return edits
+            .sortedByDescending { offset(it.range.start) }
+            .fold(text) { result, edit ->
+                result.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
+            }
+    }
+
+    private fun workspace(
+        text: String,
+        initiallyValid: Boolean = true,
+        dependencies: List<XdkDependency> = emptyList(),
+        check: (XdkAdapter, String) -> Unit,
+    ) {
+        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
+        XdkAdapter().use { adapter ->
+            adapter.replaceDependencies(dependencies)
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val uri = source.toURI().toString()
+            assertThat(adapter.compile(uri, text).diagnostics.isEmpty())
+                .describedAs(text)
+                .isEqualTo(initiallyValid)
+            check(adapter, uri)
+            assertThat(source.readText()).isEqualTo(text)
+        }
+    }
+}
