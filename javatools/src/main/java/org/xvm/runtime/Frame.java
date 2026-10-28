@@ -801,6 +801,13 @@ public class Frame
     }
 
     /**
+     * @return true if code runs after this frame returns, before its caller goes on
+     */
+    public boolean hasContinuation() {
+        return m_continuation != null;
+    }
+
+    /**
      * @return "private:this"
      */
     public ObjectHandle getThis() {
