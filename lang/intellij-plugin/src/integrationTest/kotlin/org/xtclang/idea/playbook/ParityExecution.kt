@@ -1574,8 +1574,8 @@ internal fun ParityScenarios.runEntryCases() {
     }
 
     // TODO LSP4IJ: UP50 — IntelliJ draws inline values for Ecstasy only with an LSP4IJ that asks the language server
-    // for them and expands the frame's locals; 0.21.0 draws none, so the catalog keeps X331 not-implemented and this
-    // runs only with a plugin built from our local branch (-Plsp4ijPlugin) and X331 made full
+    // for them and expands the frame's locals (#1781); 0.21.0 draws none, so the catalog keeps X331 not-implemented
+    // until a release has it, and this runs only with an LSP4IJ that has it and X331 made full
     case("X331") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
