@@ -562,8 +562,8 @@ passes with the workaround disabled. The gates are in
 - [ ] UP12 (#1707): narrow the `XtcFormattingService` override; gate: absent-editor, snapshot,
   cancellation and server-lifetime guards, X138 and X139. The UP24 command ownership stays.
 - [ ] UP14 (#1716): remove the semantic-result retirement in `XtcLanguageClient`; gate: X146.
-- [ ] UP14's other half ([#1771](https://github.com/redhat-developer/lsp4ij/pull/1771), filed 2026-10-26,
-  `fix/feature-cache-other-file-changes` at `9675614f`): hover, definition, declaration, type
+- [ ] UP14's other half ([#1771](https://github.com/redhat-developer/lsp4ij/pull/1771), merged 2026-10-27,
+  unreleased, `7fa1794f`): hover, definition, declaration, type
   definition, implementation, references, completion, rename and the hierarchy prepares reuse a
   completed answer for the same offset while the file's own stamp is unchanged, so another file's
   edit leaves them stale until the file is edited or another offset is asked for. The pull request
