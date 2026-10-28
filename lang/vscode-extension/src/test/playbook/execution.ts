@@ -182,3 +182,27 @@ export function executionCases(): void {
         });
     });
 }
+
+/** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */
+export function executionInputCases(): void {
+    playbook('X287', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
+            const prompted = (update: ExecutionUpdate) => update.text.includes(data.prompt) && !finished(update);
+            await executions.start('run', data.module, () => vscode.tasks.executeTask(task), prompted, 'Program prompts for input');
+            // the newest terminal for this module is the run's task terminal
+            const terminal = vscode.window.terminals.filter(item => item.name.includes(data.module)).pop();
+            assert.ok(terminal, `A run terminal for ${data.module}`);
+            // typed into the run's own terminal: the line and Enter, then Ctrl+D on the empty line
+            terminal.sendText(data.input, true);
+            await executions.await('run', data.module, update => update.text.includes(data.greeting), 'Program reads the typed line');
+            terminal.sendText('\x04', false);
+            const run = await executions.await('run', data.module, finished, 'Program ends after the end of input');
+            assert.strictEqual(run.exitCode, data.exitCode, run.text);
+            assert.ok(run.text.includes(data.ended), run.text);
+        });
+    });
+}
