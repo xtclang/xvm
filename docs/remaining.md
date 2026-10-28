@@ -850,8 +850,13 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
-- [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-28, then the two library document fixes `622d0a506f` and `4cf5450acd` as `9e90dd1e13` and
+- [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
+  when the user decided that #693 takes everything that completes the LSP and DAP implementation,
+  distilled per feature, without tracking documents or plans. Last synchronized 2026-10-28: the
+  debugger track through `a521e2ebbf`, as 22 feature commits and two of #693's own,
+  `9b3b802eb2..6f5f5fde1b` (see "The debugger track in #693" in
+  [the integration plan](errs-integration-plan.md#the-debugger-track-in-693-2026-10-28)). Before
+  that, the same day, the two library document fixes `622d0a506f` and `4cf5450acd` as `9e90dd1e13` and
   `b80a36e050`, the second without errs' `file()` and `copy()`, which came with the debugger's library
   frames, and with an import #693 lacked; XdkLibrarySourcesTest, LibraryContentProtocolTest and
   LibraryCopiesCleanupTest pass there. Before them, `f1d2060f29..3137736743`, 15 commits, each a clean cherry-pick: the discovery race fix
