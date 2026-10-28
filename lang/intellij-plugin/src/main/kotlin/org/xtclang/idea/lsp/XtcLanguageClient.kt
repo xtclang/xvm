@@ -138,9 +138,9 @@ class XtcLanguageClient(
     private val semanticUpdates =
         SequentialTaskExecutor.createSequentialApplicationPoolExecutor("Ecstasy semantic updates")
 
-    // TODO LSP4IJ: UP13 — merge project/global configuration in createSettings upstream.
-    // LSP4IJ already subscribes/disposes listeners for both stores, but its default
-    // createSettings reads only the global store. Project settings take precedence here.
+    // UP13, by design upstream: LSP4IJ keeps server configuration in its global store and
+    // leaves other sources to clients through createSettings. The Ecstasy project settings
+    // page writes project configuration, so the store that owns the compiler graph wins here.
     override fun createSettings(): Any? =
         CompilerBuildModel.settings(
             project,
