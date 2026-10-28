@@ -41,6 +41,10 @@ import org.xvm.compiler.ast.StatementBlock.RootContext;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
@@ -362,8 +366,8 @@ public class MethodDeclarationStatement
                 if (fValidator) {
                     if (modifiers != null && !modifiers.isEmpty()) {
                         Token tok = modifiers.getFirst();
-                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
-                            getSource(), tok.getStartPosition(), tok.getEndPosition());
+                        errs.error(Compiler.ILLEGAL_MODIFIER, in(
+                            getSource(), tok.getStartPosition(), tok.getEndPosition()));
                         return;
                     }
                     if (params != null && !params.isEmpty()) {
@@ -726,7 +730,7 @@ public class MethodDeclarationStatement
                     shuffle(atypeInto,  iFound, iNext);
                     shuffle(atypeAnno, iFound, iNext);
 
-                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, ErrorListener.BLACKHOLE)) {
+                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, silent(PROBE))) {
                         fReordered = true;
                         break Validate;
                     }
