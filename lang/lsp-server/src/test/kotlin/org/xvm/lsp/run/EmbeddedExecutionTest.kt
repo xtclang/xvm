@@ -761,6 +761,124 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a console line in a stopped frame runs code there, whose effect stays, and cancel or the time limit ends a run that loops`() {
+        CompilerTestSupport.configure()
+        val module = source("Runs.x", RUNS.trimIndent())
+        val path = directory.resolve("Runs.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
+            sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+            val frame =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject
+            assertThat(frame["name"].asString).isEqualTo("Runs.show")
+            val frameId = frame["id"].asInt
+
+            // a call runs on the stopped fiber, and the editors are told to read the variables again
+            sessions.request(id, 6, "evaluate", """{"expression": "box.bump(n)", "frameId": $frameId, "context": "repl"}""")
+            val bumped = client.until(id) { it.response == "evaluate" }
+            assertThat(bumped.last()["body"].asJsonObject["result"].asString).isEqualTo("5")
+            val invalidated = bumped.firstOrNull { it.event == "invalidated" } ?: client.until(id) { it.event == "invalidated" }.last()
+            assertThat(invalidated["body"].asJsonObject["areas"].asJsonArray.map { it.asString }).containsExactly("variables")
+            // what it changed stays changed, also for a watch, which runs nothing
+            sessions.request(id, 7, "evaluate", """{"expression": "box.count", "frameId": $frameId, "context": "watch"}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "evaluate" }
+                    .last()["body"]
+                    .asJsonObject["result"]
+                    .asString,
+            ).isEqualTo("5")
+
+            // a run that loops ends when it is cancelled, and at the console's time limit when it is not
+            sessions.request(id, 8, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
+            sessions.request(id, 9, "cancel", """{"requestId": 8}""")
+            val cancelled = client.until(id) { it.response == "evaluate" }.last()
+            assertThat(cancelled["success"].asBoolean).isFalse()
+            assertThat(cancelled["message"].asString).isEqualTo("cancelled")
+            sessions.request(id, 10, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
+            val ended = client.until(id) { it.response == "evaluate" && it["request_seq"].asInt == 10 }.last()
+            assertThat(ended["success"].asBoolean).isFalse()
+            assertThat(ended["message"].asString).isEqualTo("spin() did not finish within 2 seconds, so it was ended.")
+
+            // the program goes on from its stop, with the console's change
+            sessions.request(id, 11, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(11)
+            assertThat(rest.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("after 5")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `a launch with evaluationRunsProgram lets a console line's code wait on work that another fiber does`() {
+        CompilerTestSupport.configure()
+        val module = source("Program.x", PROGRAM.trimIndent())
+        val path = directory.resolve("Program.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Program", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
+            sessions.request(id, 2, "launch", """{"module": "Program", "moduleUri": "$module", "evaluationRunsProgram": true}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 18}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+            val frameId =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject["id"]
+                    .asInt
+
+            // the worker's service answers once its own fiber, which the stop held, has done its work
+            sessions.request(id, 6, "evaluate", """{"expression": "worker.finished()", "frameId": $frameId, "context": "repl"}""")
+            val finished = client.until(id) { it.response == "evaluate" }
+            assertThat(finished.last()["body"].asJsonObject["result"].asString).isEqualTo("200000")
+            val invalidated = finished.firstOrNull { it.event == "invalidated" } ?: client.until(id) { it.event == "invalidated" }.last()
+            assertThat(invalidated["body"].asJsonObject["areas"].asJsonArray.map { it.asString }).containsExactly("all")
+
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(200_000 % 256)
+            assertThat(rest.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("done 200000")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a stopped program steps into a call and out of it, and continue runs it to its exit`() {
         CompilerTestSupport.configure()
         val stops = source("Stops.x", STOPS.trimIndent())
@@ -1514,6 +1632,69 @@ class EmbeddedExecutionTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """
+
+        /** Stops at line 18, in run(), while its Worker counts to 200,000; worker.finished() waits for the count. */
+        const val PROGRAM =
+            """
+            module Program {
+                service Worker {
+                    Int done;
+
+                    void work() {
+                        for (Int i : 0 ..< 200_000) {
+                            ++done;
+                        }
+                    }
+
+                    Int finished() = done;
+                }
+
+                Int run() {
+                    Worker worker = new Worker();
+                    worker.work^();
+                    @Inject Console console;
+                    console.print("working");
+                    Int done = worker.finished();
+                    console.print($"done {done}");
+                    return done % 256;
+                }
+            }
+            """
+
+        /** Stops at line 21, in show(), where the console runs code: a call with an effect, and one that loops. */
+        const val RUNS =
+            """
+            module Runs {
+                class Box {
+                    Int count;
+
+                    Int bump(Int by) {
+                        count += by;
+                        return count;
+                    }
+                }
+
+                Int run() {
+                    @Inject Console console;
+                    Box box = new Box();
+                    Int n = show(box, 5);
+                    console.print($"after {box.count}");
+                    return n;
+                }
+
+                Int show(Box box, Int n) {
+                    Int shown = n + 1;
+                    return shown + box.count;
+                }
+
+                void spin() {
+                    Int count = 0;
+                    while (True) {
+                        ++count;
+                    }
                 }
             }
             """
