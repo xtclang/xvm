@@ -11,8 +11,6 @@ import com.intellij.driver.sdk.PsiManager
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
-import com.intellij.driver.sdk.ui.components.elements.accessibleTable
-import com.intellij.driver.sdk.ui.components.elements.popup
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
 import java.net.URI
@@ -87,14 +85,13 @@ internal fun Driver.nativeLocations(
             val inspection = PopupInspection(this, document.editor, ::invoke)
             invoke()
             if (expected.size > 1) {
-                val popup = ui.popup()
-                val table = popup.accessibleTable()
+                // The row count check and the choice are one IDE step, so a chooser that closes in between chooses nothing.
+                val choices = utility(NativePopupChoices::class)
                 awaitUi("native $kind chooser has ${expected.size} targets", 45.seconds) {
                     inspection.recover()
-                    table.present() && table.content().size == expected.size
+                    withContext(OnDispatcher.EDT) { choices.chooseTableRow(index, expected.size) }
                 }
-                chooseNavigationRow(table, index)
-                awaitUi("native $kind chooser closes", 15.seconds) { popup.notPresent() }
+                awaitUi("native $kind chooser closes", 15.seconds) { withContext(OnDispatcher.EDT) { choices.tableRows() } == null }
             }
             awaitUi(
                 message = "$kind opens an exact source target",
