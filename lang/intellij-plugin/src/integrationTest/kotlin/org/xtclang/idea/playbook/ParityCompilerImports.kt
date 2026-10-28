@@ -35,6 +35,8 @@ internal fun ParityScenarios.compilerImportCases() {
                 )
             // Fail before touching a pre-existing build; every test owns an isolated workspace.
             files.forEach { check(!Files.exists(root.resolve(it))) { "Fixture would replace $it" } }
+            // Gradle's project cache, which holds the reports, and the wrapper's directory, when this case makes them.
+            val made = listOf(".gradle", "gradle").map { root.resolve(it) }.filterNot(Files::exists)
             val control = Files.createDirectories(root.resolve(".compiler-import-playbook"))
             val report = root.resolve(".gradle/xtc/lsp-model.json")
             val previousReport = report.takeIf(Files::exists)?.let(Files::readAllBytes)
@@ -217,6 +219,8 @@ internal fun ParityScenarios.compilerImportCases() {
                 if (previousReport == null) Files.deleteIfExists(report) else Files.write(report, previousReport)
                 if (previousAggregate == null) Files.deleteIfExists(aggregate) else Files.write(aggregate, previousAggregate)
                 if (data.has("included")) root.resolve("included").toFile().deleteRecursively()
+                // X303 makes its project in a project root without them.
+                made.forEach { it.toFile().deleteRecursively() }
                 with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).clearProjectGraph(singleProject()) } }
                 refresh()
             }
