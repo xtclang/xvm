@@ -1,7 +1,5 @@
 package org.xvm.javajit.builders;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
@@ -24,14 +22,6 @@ public class PackageBuilder
     @Override
     public ClassDesc getSuperCD() {
         return CD_nPackage;
-    }
-
-    @Override
-    public boolean assembleClass(ClassBuilder classBuilder) {
-        classBuilder
-            .withFlags(ClassFile.ACC_PUBLIC)
-            .withSuperclass(CD_nPackage);
-        return true;
     }
 
     @Override

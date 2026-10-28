@@ -279,7 +279,7 @@ public abstract class Builder {
     }
 
     /**
-     * Obtain a unique ClassDesc for the specified type.
+     * Obtain the ClassDesc that represents the "JIT Call Class Name" for this type.
      */
     public ClassDesc getCCDesc(TypeConstant type) {
         return type.getJitCCDesc(typeSystem);
@@ -300,7 +300,7 @@ public abstract class Builder {
     }
 
     /**
-     * Obtain the Java descriptor of the Pure interface corresponding to the specified type's
+     * Obtain the ClassDesc that represents the Pure interface corresponding to the specified type's
      * Impl shape.
      */
     public ClassDesc getPureImplDesc(TypeConstant type) {
