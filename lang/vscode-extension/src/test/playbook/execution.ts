@@ -229,7 +229,7 @@ export function executionCases(): void {
     });
 }
 
-/** X304-X309, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause and stop on entry. */
+/** X304-X310, registered after X303 in catalog order: a breakpoint, variables, steps, an exception stop, pause, stop on entry and watches. */
 export function debugSessionCases(): void {
     playbook('X304', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
@@ -524,6 +524,55 @@ export function debugSessionCases(): void {
                 assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
                 assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
             } finally {
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                start.dispose();
+                termination.dispose();
+                tracker.dispose();
+            }
+        });
+    });
+    playbook('X310', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        await embedded(async () => {
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            const start = vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            });
+            const termination = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            });
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                const session = started;
+                assert.ok(session, 'The Ecstasy debug session started');
+                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
+                const frameId = stack.stackFrames[0].id;
+
+                // the requests VS Code's Watch view and hover send for the focused frame
+                const evaluate = (expression: string, context: string) =>
+                    session.customRequest('evaluate', { expression, frameId, context }) as Thenable<{ result: string; type?: string; variablesReference: number }>;
+                for (const [expression, value, type] of data.watches as string[][]) {
+                    const answer = await evaluate(expression, 'watch');
+                    assert.deepStrictEqual([answer.result, answer.type], [value, type], expression);
+                }
+                assert.ok((await evaluate(data.expands, 'hover')).variablesReference > 0, `${data.expands} expands`);
+                const [refused, reason] = data.refused as string[];
+                await assert.rejects(Promise.resolve(evaluate(refused, 'watch')), (error: Error) => error.message.includes(reason));
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
                 if (started && !ended) await vscode.debug.stopDebugging(started);
                 start.dispose();
                 termination.dispose();
