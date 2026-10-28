@@ -172,6 +172,13 @@ class XtcTextDocumentService(
     // Completion callbacks and notifications must agree on which document may publish.
     private val lifecycle = Any()
     private val openDocuments = ConcurrentHashMap<String, Document>()
+
+    /**
+     * Open documents whose last edits could not be applied. Their server text no longer matches the editor,
+     * so they report only [Diagnostic.Codes.DOCUMENT_OUT_OF_SYNC] and refuse queries until a full-text
+     * change, or close and reopen, resynchronizes them.
+     */
+    private val outOfSync = mutableSetOf<String>()
     private var closed = false
     private val diagnosticReports = DiagnosticReports()
     private val semanticTokenReports = SemanticTokenReports()
@@ -227,11 +234,16 @@ class XtcTextDocumentService(
             uri.orEmpty(),
             request = {
                 server.supplyAsync(method, logParams, logResult) {
-                    synchronized(lifecycle) {
-                        if (closed || (uri != null && openDocuments[uri] !== document)) {
-                            throw contentModified()
-                        }
+                    fun current() = !closed && (uri == null || openDocuments[uri] === document)
+                    if (adapter.concurrentQueries) {
+                        // queryAsync rechecks currency before publishing, so the lock guards only this check
+                        synchronized(lifecycle) { if (!current()) throw contentModified() }
                         block()
+                    } else {
+                        synchronized(lifecycle) {
+                            if (!current()) throw contentModified()
+                            block()
+                        }
                     }
                 }
             },
@@ -244,12 +256,16 @@ class XtcTextDocumentService(
         }
     }
 
-    /** A semantic query owns its backend future, while the module analysis remains shared. */
+    /**
+     * A semantic query owns its backend future, while the module analysis remains shared. Only a request that
+     * [reportsOutOfSync], such as a diagnostic pull, runs for a document that is out of sync.
+     */
     private fun <T, R> queryAsync(
         method: String,
         uri: String,
         request: () -> CompletableFuture<T>,
         workspace: Boolean = false,
+        reportsOutOfSync: Boolean = false,
         sourceOnly: Boolean = false,
         progress: WorkDoneProgressParams? = null,
         partial: ((R) -> PartialResults.Plan<R>)? = null,
@@ -261,6 +277,7 @@ class XtcTextDocumentService(
         val (document, documents, revision) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(contentModified())
+                if (uri in outOfSync && !reportsOutOfSync) return CompletableFuture.failedFuture(outOfSyncFailure(uri))
                 pendingQueries[result] = uri
                 Triple(
                     openDocuments[uri],
@@ -379,6 +396,15 @@ class XtcTextDocumentService(
         return server.observeQuery(method, progress, publication, uri)
     }
 
+    private fun outOfSyncFailure(uri: String) =
+        ResponseErrorException(
+            ResponseError(
+                ResponseErrorCode.RequestFailed,
+                "$uri is out of sync with the editor; close and reopen it",
+                null,
+            ),
+        )
+
     private fun contentModified() =
         ResponseErrorException(
             ResponseError(
@@ -405,6 +431,7 @@ class XtcTextDocumentService(
                 params.textDocument.uri,
                 params.textDocument.version,
             )
+            outOfSync.remove(params.textDocument.uri)
             analyse(
                 params.textDocument.uri,
                 params.textDocument.text,
@@ -422,21 +449,71 @@ class XtcTextDocumentService(
             if (version <= previous.version) return
             val changes = params.contentChanges
             if (changes.isNullOrEmpty()) return
+            // Out of sync, only a full-text change (and the edits after it) gives the editor's text again.
+            val resync = changes.indexOfLast { it.range == null }
+            if (uri in outOfSync && resync < 0) {
+                openDocuments[uri] = Document(previous.content, version, previous.scope, previous.analysis)
+                return
+            }
             val content =
                 try {
-                    DocumentText(previous.content)
-                        .change(changes, server.synchronization.incremental)
+                    if (uri in outOfSync) {
+                        DocumentText(changes[resync].text).change(changes.drop(resync + 1), server.synchronization.incremental)
+                    } else {
+                        DocumentText(previous.content).change(changes, server.synchronization.incremental)
+                    }
                 } catch (e: IllegalArgumentException) {
-                    logger.warn(
-                        "textDocument/didChange: ignoring invalid changes for {}: {}",
-                        uri,
-                        e.message,
-                    )
+                    desynchronize(uri, previous, version, e.message)
                     return
                 }
+            if (outOfSync.remove(uri)) logger.info("textDocument/didChange: {} is in sync again", uri)
             analyse(uri, content, version)
         }
     }
+
+    /**
+     * Called under lifecycle. The editor applied changes the server could not, so neither text the server
+     * has is the editor's: report that, and refuse queries, rather than answer for the wrong text.
+     */
+    private fun desynchronize(
+        uri: String,
+        previous: Document,
+        version: Int,
+        reason: String?,
+    ) {
+        logger.warn("textDocument/didChange: cannot apply changes to {}, now out of sync: {}", uri, reason)
+        val result = CompilationResult.failure(uri, listOf(outOfSyncDiagnostic(uri)))
+        openDocuments[uri] = Document(previous.content, version, previous.scope, CompletableFuture.completedFuture(result))
+        invalidateQueries(setOf(uri))
+        clearResolveReports()
+        diagnosticRevision++
+        diagnosticReports.record(uri, result.diagnostics)
+        server.publishDiagnostics(uri, result.diagnostics, version)
+        server.refreshDiagnostics()
+        server.refreshSemanticFeatures()
+        if (outOfSync.add(uri)) {
+            server.showWarning(
+                "Ecstasy: edits to ${uri.substringAfterLast('/')} could not be applied, so the language server " +
+                    "no longer has its current text. Close and reopen the file to resynchronize.",
+            )
+        }
+    }
+
+    /** A result whose documents are out of sync reports only that, never diagnostics for stale text. */
+    private fun reportOutOfSync(result: CompilationResult): CompilationResult {
+        val stale = result.documentUris.filter { it in outOfSync }
+        if (stale.isEmpty()) return result
+        return result.copy(diagnostics = result.diagnostics.filter { it.location.uri !in stale } + stale.map(::outOfSyncDiagnostic))
+    }
+
+    private fun outOfSyncDiagnostic(uri: String) =
+        Diagnostic(
+            location = DiagnosticLocation(uri, 0, 0, 0, 0),
+            severity = Diagnostic.Severity.ERROR,
+            message = "This file is out of sync with the language server; close and reopen it to resynchronize",
+            code = Diagnostic.Codes.DOCUMENT_OUT_OF_SYNC,
+            source = Diagnostic.SOURCE,
+        )
 
     /** Refresh the changed module, then open source consumers in dependency order. */
     private fun analyse(
@@ -463,8 +540,9 @@ class XtcTextDocumentService(
         val ownership = analysisScopes()
         scopes
             .mapNotNull { scope ->
+                // a document that is out of sync keeps its report; its text cannot start an analysis
                 openDocuments.entries.firstOrNull {
-                    it.value.scope == scope || ownership[it.key] == scope
+                    it.key !in outOfSync && (it.value.scope == scope || ownership[it.key] == scope)
                 }
             }.distinctBy { ownership[it.key] }
             .forEach { (uri, document) ->
@@ -491,7 +569,7 @@ class XtcTextDocumentService(
         val currentScopes = ownership ?: analysisScopes()
         val affected =
             openDocuments.filter { (otherUri, document) ->
-                otherUri == uri || document.scope == scope || currentScopes[otherUri] == scope
+                otherUri !in outOfSync && (otherUri == uri || document.scope == scope || currentScopes[otherUri] == scope)
             }
         val current =
             affected
@@ -529,8 +607,8 @@ class XtcTextDocumentService(
                                         severity = Diagnostic.Severity.ERROR,
                                         message =
                                             "Ecstasy analysis failed; see the language server log for details",
-                                        code = "ANALYSIS-FAILED",
-                                        source = "xtc",
+                                        code = Diagnostic.Codes.ANALYSIS_FAILED,
+                                        source = Diagnostic.SOURCE,
                                     ),
                                 ),
                             ),
@@ -550,9 +628,14 @@ class XtcTextDocumentService(
         clearUnowned(previous - result.documentUris)
         result.documentUris.forEach { uri ->
             val diagnostics =
-                result.diagnostics.filter {
-                    it.location.uri == uri ||
-                        (uri == result.uri && it.location.uri !in result.documentUris)
+                if (uri in outOfSync) {
+                    // a module analysis used this file's last applied text, not the editor's
+                    listOf(outOfSyncDiagnostic(uri))
+                } else {
+                    result.diagnostics.filter {
+                        it.location.uri == uri ||
+                            (uri == result.uri && it.location.uri !in result.documentUris)
+                    }
                 }
             diagnosticReports.record(uri, diagnostics)
             server.publishDiagnostics(uri, diagnostics, openDocuments[uri]?.version)
@@ -586,6 +669,7 @@ class XtcTextDocumentService(
             val affected = adapter.affectedAnalysisScopes(uri)
             semanticTokenReports.retire(uri)
             val document = openDocuments.remove(uri)
+            outOfSync.remove(uri)
             invalidateQueries(setOf(uri))
             document?.analysis?.cancel(false)
             val retired =
@@ -712,6 +796,7 @@ class XtcTextDocumentService(
                 params.previousResultId,
                 if (server.supportsRelatedDiagnostics) current else emptySet(),
                 relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
+                tags = server.presentation.pullDiagnosticTags,
             )
         }
 
@@ -737,6 +822,7 @@ class XtcTextDocumentService(
                 params.previousResultIds.orEmpty().associate { it.uri to it.value },
                 openDocuments.mapValues { it.value.version },
                 relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
+                tags = server.presentation.pullDiagnosticTags,
             )
         }
 
@@ -749,7 +835,7 @@ class XtcTextDocumentService(
         partial: ((T) -> PartialResults.Plan<T>)? = null,
         convert: (List<CompilationResult>) -> T,
     ): CompletableFuture<T> {
-        if (!server.usesPullDiagnostics || (identifier != null && identifier != "xtc")) {
+        if (!server.usesPullDiagnostics || (identifier != null && identifier != XtcLanguageServer.PULL_DIAGNOSTICS_IDENTIFIER)) {
             return CompletableFuture.failedFuture(
                 ResponseErrorException(
                     ResponseError(
@@ -764,6 +850,7 @@ class XtcTextDocumentService(
         return queryAsync(
             method,
             uri,
+            reportsOutOfSync = true,
             request = {
                 val open = openDocuments[uri]
                 if (!workspace && open != null) {
@@ -789,7 +876,7 @@ class XtcTextDocumentService(
                             .filter {
                                 workspace || diagnosticReports.includes(it.documentUris, uri)
                             }
-                convert(all)
+                convert(all.map(::reportOutOfSync))
             },
             workspace = true,
         )
@@ -1389,17 +1476,18 @@ class XtcTextDocumentService(
         }
     }
 
-    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> =
-        queryAsync(
+    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> {
+        // a quick fix names the diagnostics it resolves; answer with the client's own diagnostic objects
+        val context = params.context.diagnostics.orEmpty()
+        val originals = context.associateBy { Diagnostic.fromLsp(params.textDocument.uri, it) }
+        return queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
             {
                 adapter.getCodeActionsAsync(
                     params.textDocument.uri,
                     toAdapterRange(params.range),
-                    params.context.diagnostics.orEmpty().map {
-                        Diagnostic.fromLsp(params.textDocument.uri, it)
-                    },
+                    originals.keys.toList(),
                 )
             },
             workspace = true,
@@ -1444,6 +1532,11 @@ class XtcTextDocumentService(
                     CodeAction().apply {
                         title = action.title
                         this.kind = action.kind.toLsp()
+                        diagnostics =
+                            action.diagnostics
+                                .mapNotNull(originals::get)
+                                .distinct()
+                                .ifEmpty { null }
                         isPreferred =
                             action.isPreferred.takeIf { server.presentation.preferredActions }
                         this.edit = proposed
@@ -1452,6 +1545,7 @@ class XtcTextDocumentService(
                 )
             }
         }
+    }
 
     internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
         queryAsync(

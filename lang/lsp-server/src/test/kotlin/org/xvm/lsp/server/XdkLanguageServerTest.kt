@@ -330,7 +330,7 @@ class XdkLanguageServerTest {
                 assertThat(diagnostic.severity).isEqualTo(DiagnosticSeverity.Error)
                 assertThat(diagnostic.code.left).startsWith("PARSER-")
                 assertThat(diagnostic.range.start.line).isEqualTo(2)
-                assertThat(diagnostic.source).isEqualTo("xtc")
+                assertThat(diagnostic.source).isEqualTo("Ecstasy")
             }
             session.change("module Semantic { void run() { NoSuchTypeAnywhere x = 1; } }", 2)
             val semantic = session.next()

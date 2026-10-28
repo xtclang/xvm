@@ -247,6 +247,15 @@ sessions. Immutable Kotlin snapshots supply semantic queries; structural queries
 ASTs. Member edits invalidate all sibling views, and filesystem notifications refresh disk inputs.
 Closing an overlay restores the disk version while another document keeps the module session open.
 
+Quick fixes name the diagnostics they resolve (`CodeAction.diagnostics`): those of the request that
+overlap the code a fix repairs, returned as the client's own objects, so editors offer the fix on the
+problem itself (the Problems view, the error hover, IntelliJ's error tooltip). Code the compiler proves
+can never run carries the `Unnecessary` tag, which editors may render faded: an operand a constant
+short-circuits away (`COMPILER-208`) and a `catch` an earlier clause already catches (`COMPILER-118`).
+Similar messages reported on wider or unplaced code are not tagged. Tags are sent only on response
+paths whose client declares tag support. Nothing is tagged `Deprecated`: the compiler has no
+deprecation contract.
+
 Type hierarchy follows direct declared `extends` and `implements` edges and retains generic parent
 arguments. It requires successful compilation and source locations in the current module. Type-definition
 uses copied type identities, including flow narrowing, generic parameters and union targets.
@@ -374,6 +383,12 @@ attempt, and `semanticSnapshots(errors)` to copy per-source views sharing one id
 inspect implementation chains through the cancellable host listener. The no-argument
 `semanticSnapshots()` remains passive. Both implementation and explicit cursor inspection can build
 TypeInfo on the serialized compiler worker; request threads query copied facts.
+Because those facts are immutable, compiler-mode requests hold the server's document lock only to
+check that the document is current, not while they wait for the worker (`Adapter.concurrentQueries`).
+A hover or cross-module navigation that waits for a compilation therefore never delays `didChange`,
+`$/cancelRequest` or other requests on the JSON-RPC reader; a result for a document that changed
+meanwhile is still rejected with `ContentModified`. The Tree-sitter and mock adapters keep queries
+and document updates serialized.
 `Compilation.sourceTrees()` supplies structural
 views even when parsing errors prevent an assembled `parsed()` tree. See the
 [acceptance reports](../doc/manual-test-plan.md#acceptance-reports) for verification and
@@ -449,14 +464,35 @@ are reused, and obsolete compiler/cursor results cannot publish.
 Failed dependencies publish their original source diagnostics and block consumers with
 `DEPENDENCY-FAILED`; an old successful artifact is not reused. Deleted/unreadable roots report
 `SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
-Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
-overlapping source graphs are rejected. Closing sessions prunes unused cached artifacts.
+Blocked consumers keep their syntax-only views, the outline, folding and selection ranges, parsed
+from their own sources; semantic views (hover, navigation, semantic tokens, completion) and their
+own compiler diagnostics return when the dependencies recover. Cyclic or
+overlapping source graphs are rejected (`SOURCE-GRAPH`). Closing sessions prunes unused cached artifacts.
+These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure,
+`DOCUMENT-OUT-OF-SYNC` (see [document synchronization](#document-synchronization)) and the `Ecstasy`
+diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
+(`org.xvm.lsp.model`); compiler codes such as `COMPILER-43` come from the compiler.
 
 This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
 declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
-settings. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
+settings. After startup, rescans for file events and workspace-folder changes run on a background
+`xtc-discovery` thread: the notification returns at once, a burst of events costs one or two walks,
+and no lock is held while the walk reads the disk. A walk is adopted only if no edit or newer graph
+changed what it read; otherwise it walks again. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
 It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
+
+### Document synchronization
+
+The server uses full-text synchronization unless a client sets
+`initializationOptions.xtcDocumentSync.incremental`; then it applies UTF-16 range edits in order,
+preserving CRLF and bare CR. A batch is applied whole or not at all, and stale versions are ignored.
+If a batch cannot be applied (a range outside the document, or a range edit without negotiated
+incremental sync), the editor has the edit and the server does not, so the server no longer knows the
+text. It then reports only `DOCUMENT-OUT-OF-SYNC` for that file, shows one warning, and refuses other
+requests on it with `RequestFailed` instead of answering for the wrong text. Later range edits are
+ignored. A change that carries the whole text (with any edits after it) resynchronizes, as does
+closing and reopening the file; in full-sync mode the next keystroke does this.
 
 ### Embedded build and run
 

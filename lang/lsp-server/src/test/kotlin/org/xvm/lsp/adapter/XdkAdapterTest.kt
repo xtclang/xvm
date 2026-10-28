@@ -40,7 +40,7 @@ class XdkAdapterTest {
             val first = result.diagnostics.first()
             assertThat(first.severity).isEqualTo(Diagnostic.Severity.ERROR)
             assertThat(first.code).isNotNull()
-            assertThat(first.source).isEqualTo("xtc")
+            assertThat(first.source).isEqualTo("Ecstasy")
             assertThat(first.location.uri).isEqualTo("file:///Broken.x")
             // the fault is on the third line of the document, not at its start
             assertThat(first.location.startLine).isEqualTo(2)

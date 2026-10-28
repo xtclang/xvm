@@ -6,6 +6,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.ModuleStructure
 import org.xvm.asm.MultiMethodStructure
+import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
@@ -146,6 +147,9 @@ class XdkAdapter
 
         override val displayName: String = "XDK"
 
+        /** Queries read completed module analyses, which are immutable and replaced whole on each edit. */
+        override val concurrentQueries: Boolean get() = true
+
         override val capabilities: Set<AdapterCapability> =
             setOf(
                 AdapterCapability.COMPLETION,
@@ -200,15 +204,37 @@ class XdkAdapter
         }
 
         /** Returns retired scopes so the server can rebuild current document versions. */
-        fun refreshDiscoveredSources(): Set<String> {
+        fun refreshDiscoveredSources(): Set<String> = scanDiscoveredSources()?.install?.invoke().orEmpty()
+
+        /**
+         * A workspace rescan, taken without holding any lock so that a slow filesystem walk never delays
+         * editing. [install] adopts it and returns the affected scopes, or null when an edit, a closed
+         * adapter or a newer graph changed what the scan read, in which case the caller scans again.
+         */
+        class DiscoveryScan internal constructor(
+            val install: () -> Set<String>?,
+        )
+
+        /** Rescans the discovered workspace; null when an explicit graph leaves nothing to discover. */
+        fun scanDiscoveredSources(): DiscoveryScan? {
             val settings = discovery.get()
-            if (settings.explicit) return emptySet()
+            if (settings.explicit) return null
             val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
+            val superseded = { closed || discovery.get() !== settings }
             val catalog =
-                settings.catalog.rescan(settings.folders, buffers) {
-                    closed || discovery.get() !== settings
+                try {
+                    settings.catalog.rescan(settings.folders, buffers, superseded)
+                } catch (failure: RuntimeException) {
+                    // a superseded walk stops by aborting tokenization; the caller scans again
+                    if (superseded()) return DiscoveryScan { null } else throw failure
                 }
-            return installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers }
+            return DiscoveryScan {
+                val current =
+                    synchronized(lifecycle) {
+                        !closed && project === previous && overlays == buffers && discovery.get() === settings
+                    }
+                if (current) installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers } else null
+            }
         }
 
         /**
@@ -276,6 +302,15 @@ class XdkAdapter
             added: List<String>,
             removed: List<String>,
         ): Set<String> {
+            updateWorkspaceFolders(added, removed)
+            return refreshDiscoveredSources()
+        }
+
+        /** Records the folders to discover; the next [scanDiscoveredSources] reads them. */
+        fun updateWorkspaceFolders(
+            added: List<String>,
+            removed: List<String>,
+        ) {
             val deleted = removed.mapNotNull(XdkSources::file).toSet()
             discovery.updateAndGet { settings ->
                 settings.copy(
@@ -286,7 +321,6 @@ class XdkAdapter
                         ).distinct(),
                 )
             }
-            return refreshDiscoveredSources()
         }
 
         override val readOnlyDocumentSchemes = setOf(XdkLibrarySources.SCHEME)
@@ -1263,7 +1297,7 @@ class XdkAdapter
          */
         private fun compileNow(request: Request): ModuleAnalysis {
             request.problem?.let {
-                return unavailableProjectModule(request.uri, request.dependencies, "SOURCE-GRAPH", it)
+                return unavailableProjectModule(request.uri, request.dependencies, Diagnostic.Codes.SOURCE_GRAPH, it)
             }
             val order = request.project.buildOrder(request.scope)
             if (order.isEmpty()) {
@@ -1322,7 +1356,7 @@ class XdkAdapter
                                     unavailableProjectModule(
                                         uri,
                                         inputs,
-                                        "SOURCE-UNAVAILABLE",
+                                        Diagnostic.Codes.SOURCE_UNAVAILABLE,
                                         "Cannot read source for ${module.name}: $reason",
                                     )
                                 }
@@ -1331,9 +1365,10 @@ class XdkAdapter
                                     unavailableProjectModule(
                                         uri,
                                         inputs,
-                                        "DEPENDENCY-FAILED",
+                                        Diagnostic.Codes.DEPENDENCY_FAILED,
                                         "Dependencies unavailable: ${missing.joinToString()}",
                                         sources.documentUris,
+                                        structure = sources,
                                     )
                                 }
 
@@ -1383,30 +1418,44 @@ class XdkAdapter
             )
         }
 
+        /**
+         * A module that cannot be compiled reports only why. With readable [structure] it keeps syntax-only
+         * views, outline, folding and selection, from parsing each source alone, which needs no dependency;
+         * semantic views stay absent rather than guess at a module that did not compile.
+         */
         private fun unavailableProjectModule(
             uri: String,
             inputs: XdkDependencies,
             code: String,
             message: String,
             documents: Set<String> = setOf(uri),
-        ) = ModuleAnalysis(
-            documents = emptyMap(),
-            diagnostics =
-                listOf(
-                    Diagnostic(
-                        Location(uri, 0, 0, 0, 0),
-                        Diagnostic.Severity.ERROR,
-                        message,
-                        code,
-                        SOURCE,
-                    ),
-                ),
-            dependencies = emptySet(),
-            succeeded = false,
-            dependencySources = emptyMap(),
-            inputs = inputs,
-            documentUris = documents,
-        )
+            structure: XdkSources? = null,
+        ): ModuleAnalysis {
+            val diagnostics = listOf(Diagnostic(Location(uri, 0, 0, 0, 0), Diagnostic.Severity.ERROR, message, code, Diagnostic.SOURCE))
+            return ModuleAnalysis(
+                documents = structure?.let { structuralViews(it, diagnostics) }.orEmpty(),
+                diagnostics = diagnostics,
+                dependencies = emptySet(),
+                succeeded = false,
+                dependencySources = emptyMap(),
+                inputs = inputs,
+                documentUris = documents,
+            )
+        }
+
+        /** Parse errors are not reported: the module's own diagnostic already says why it was not compiled. */
+        private fun structuralViews(
+            sources: XdkSources,
+            diagnostics: List<Diagnostic>,
+        ): Map<String, Analysis> =
+            sources.inputs.text.entries.associate { (file, text) ->
+                val uri = sources.uri(file)
+                val ast =
+                    ExecutionTrace.api("Parser.parseSource(structure)", uri) {
+                        runCatching { Parser(Source(text, file.path), ErrorList(MAX_STRUCTURE_ERRORS)).parseSource() }.getOrNull()
+                    }
+                uri to Analysis(diagnostics.filter { it.location.uri == uri }, XdkSymbols.of(uri, ast), ast)
+            }
 
         /** Compile and copy all source views on the single worker. */
         private fun compileOne(
@@ -1472,7 +1521,7 @@ class XdkAdapter
                 return unavailableProjectModule(
                     uri,
                     inputs,
-                    "PROJECT-MODULE",
+                    Diagnostic.Codes.PROJECT_MODULE,
                     "Expected module $moduleName, found ${artifact.module}",
                     documentUris,
                 )
@@ -2089,7 +2138,7 @@ class XdkAdapter
         ): CompletableFuture<List<CodeAction>> =
             if (hasProject(uri)) {
                 projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range), emptyList()) {
-                    it.codeActions(uri, range)
+                    it.codeActions(uri, range, diagnostics)
                 }
             } else {
                 CompletableFuture.completedFuture(
@@ -2498,8 +2547,10 @@ class XdkAdapter
             )
 
         private companion object {
-            const val SOURCE = "xtc"
             const val SHUTDOWN_SECONDS = 5L
+
+            /** Enough to keep parsing past ordinary mistakes; structural views do not report them. */
+            const val MAX_STRUCTURE_ERRORS = 100
             const val DEBOUNCE_MILLIS = 100L
 
             /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
