@@ -126,8 +126,9 @@ An Ecstasy Application configuration has:
 Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run gets a fresh
 application container in one worker JVM, which is reused across runs and restarted if it dies;
 programs never run inside the language server. A failed build prints its diagnostics in the console,
-linked to the sources, and runs nothing. Embedded runs cannot read console input yet, there is no
-Ecstasy debugger, and `.x` files have no gutter Run icon because the plugin has no PSI parser.
+linked to the sources, and runs nothing. A program that reads console input reads the lines typed
+into its Run console, including lines typed while it still builds; **Send EOF** ends the input. There
+is no Ecstasy debugger, and `.x` files have no gutter Run icon because the plugin has no PSI parser.
 Embedded mode needs the compiler language service.
 
 ## Development
@@ -174,7 +175,7 @@ adopted. Publishing requires both checks.
 ```
 
 This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
-Ultimate features and automatic trials are disabled. The 291-case catalog is shared with VS Code;
+Ultimate features and automatic trials are disabled. The 292-case catalog is shared with VS Code;
 see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](testing.md).
 
 The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
