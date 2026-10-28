@@ -22,21 +22,20 @@ import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Forces diagnostic reply, edit and close races around snapshot lookup. Ensures a retired result ID cannot
- * re-enter the cache or authorize reuse against a newer document revision.
+ * Forces diagnostic reply, edit and close races around snapshot lookup. Ensures a retired or late report cannot become
+ * the record of a document as it is now.
  */
 class DiagnosticResultMessagesTest {
     private val uri = "file:///Diagnostics.x"
     private val initial = DocumentStartupMessages.Snapshot(Any(), 1, "module Diagnostics {}")
     private val buffers = mutableMapOf(uri to initial)
-    private val sent = mutableListOf<Message>()
     private val received = mutableListOf<Message>()
     private val guard = DiagnosticResultMessages(buffers::get)
-    private val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
+    private val outgoing = guard.outgoing(MessageConsumer {})
     private val incoming = guard.incoming(MessageConsumer { received.add(it) })
 
     @Test
-    fun `close or cancellation during reply snapshot lookup cannot reinsert a retired result`() {
+    fun `close or cancellation during reply snapshot lookup cannot record a retired report`() {
         listOf(false, true).forEach { cancel ->
             val duringSnapshot = AtomicReference<(() -> Unit)?>(null)
             val guard =
@@ -44,17 +43,15 @@ class DiagnosticResultMessagesTest {
                     duringSnapshot.getAndSet(null)?.invoke()
                     initial
                 }
-            val sent = mutableListOf<Message>()
-            val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
+            val outgoing = guard.outgoing(MessageConsumer {})
             val incoming = guard.incoming(MessageConsumer {})
-
-            fun request(id: String) =
+            outgoing.consume(
                 RequestMessage().apply {
-                    this.id = id
+                    id = "pending"
                     method = "textDocument/diagnostic"
                     params = DocumentDiagnosticParams(TextDocumentIdentifier(uri))
-                }
-            outgoing.consume(request("pending"))
+                },
+            )
             duringSnapshot.set {
                 outgoing.consume(
                     NotificationMessage().apply {
@@ -71,70 +68,22 @@ class DiagnosticResultMessagesTest {
             incoming.consume(
                 ResponseMessage().apply {
                     id = "pending"
-                    result =
-                        DocumentDiagnosticReport(
-                            RelatedFullDocumentDiagnosticReport(emptyList()).apply {
-                                resultId = "retired"
-                            },
-                        )
+                    result = DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(emptyList()).apply { resultId = "retired" })
                 },
             )
-            outgoing.consume(request("next"))
-            assertThat(
-                ((sent.last() as RequestMessage).params as DocumentDiagnosticParams)
-                    .previousResultId,
-            ).isNull()
+            assertThat(guard.reported()).isEmpty()
         }
     }
 
     @Test
-    fun `repeated automatic pulls reuse the current report without changing its response`() {
-        assertThat(request("1").previousResultId).isNull()
+    fun `a report reaches the client as it came`() {
+        request("1")
         val response = reply("1", "first")
         assertThat(received.single()).isSameAs(response)
-        assertThat(request("2").previousResultId).isEqualTo("first")
-        reply("2", "second")
-        assertThat(request("3").previousResultId).isEqualTo("second")
     }
 
     @Test
-    fun `an edit requires a fresh full report even if diagnostic contents would be identical`() {
-        request("1")
-        reply("1", "old")
-        buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
-        assertThat(request("2").previousResultId).isNull()
-        reply("2", "new")
-        assertThat(request("3").previousResultId).isEqualTo("new")
-    }
-
-    @Test
-    fun `late results from an earlier edit cannot replace the current result ID`() {
-        request("old")
-        buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
-        request("new")
-        reply("new", "current")
-        reply("old", "obsolete")
-        assertThat(request("next").previousResultId).isEqualTo("current")
-    }
-
-    @Test
-    fun `close and reopen clear pending and cached reports even with the same document stamp`() {
-        request("1")
-        reply("1", "old")
-        request("late")
-        outgoing.consume(
-            NotificationMessage().apply {
-                method = "textDocument/didClose"
-                params = DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
-            },
-        )
-        buffers[uri] = initial.copy(owner = Any())
-        reply("late", "obsolete")
-        assertThat(request("next").previousResultId).isNull()
-    }
-
-    @Test
-    fun `cancellation and errors do not seed a report the client never consumed`() {
+    fun `cancellation and errors record no report the client never consumed`() {
         request("cancelled")
         outgoing.consume(
             NotificationMessage().apply {
@@ -142,44 +91,16 @@ class DiagnosticResultMessagesTest {
                 params = CancelParams().apply { id = "cancelled" }
             },
         )
-        reply("cancelled", "ignored")
-        assertThat(request("failed").previousResultId).isNull()
+        reply("cancelled", "ignored", items = 1)
+        request("failed")
         incoming.consume(
             ResponseMessage().apply {
                 id = "failed"
                 error = ResponseError(ResponseErrorCode.ContentModified, "changed", null)
             },
         )
-        assertThat(request("next").previousResultId).isNull()
-    }
-
-    @Test
-    fun `explicit previous IDs and different providers keep their own request policy`() {
-        request("1")
-        reply("1", "cached")
-        assertThat(request("2", previous = "caller-owned").previousResultId)
-            .isEqualTo("caller-owned")
-        reply("2", "caller-result")
-        assertThat(request("3").previousResultId).isEqualTo("cached")
-        assertThat(request("4", identifier = "other").previousResultId).isNull()
-    }
-
-    @Test
-    fun `a new connection and requests without an open document start without cached results`() {
-        request("1")
-        reply("1", "cached")
-        buffers.clear()
-        assertThat(request("closed").previousResultId).isNull()
-        buffers[uri] = initial
-        val reconnect = DiagnosticResultMessages(buffers::get)
-        val request =
-            RequestMessage().apply {
-                id = "new-connection"
-                method = "textDocument/diagnostic"
-                params = DocumentDiagnosticParams(TextDocumentIdentifier(uri))
-            }
-        reconnect.outgoing(MessageConsumer { sent.add(it) }).consume(request)
-        assertThat(sent.last()).isSameAs(request)
+        assertThat(guard.currentItems(uri)).isNull()
+        assertThat(guard.reported()).isEmpty()
     }
 
     @Test
@@ -192,7 +113,7 @@ class DiagnosticResultMessagesTest {
 
         buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
         assertThat(guard.currentItems(uri)).isNull()
-        request("2")
+        request("2", previous = "first")
         reply("2", "second", items = 0)
         assertThat(guard.currentItems(uri)).isEqualTo(0)
     }
@@ -201,7 +122,8 @@ class DiagnosticResultMessagesTest {
     fun `an unchanged report keeps the item count of the report before it`() {
         request("1")
         reply("1", "first", items = 1)
-        request("2")
+        // LSP4IJ asks with the result ID of the report it applied
+        request("2", previous = "first")
         incoming.consume(
             ResponseMessage().apply {
                 id = "2"
@@ -233,8 +155,7 @@ class DiagnosticResultMessagesTest {
     private fun request(
         id: String,
         previous: String? = null,
-        identifier: String = "xtc",
-    ): DocumentDiagnosticParams {
+    ) {
         outgoing.consume(
             RequestMessage().apply {
                 this.id = id
@@ -242,11 +163,10 @@ class DiagnosticResultMessagesTest {
                 params =
                     DocumentDiagnosticParams(TextDocumentIdentifier(uri)).apply {
                         previousResultId = previous
-                        this.identifier = identifier
+                        identifier = "xtc"
                     }
             },
         )
-        return (sent.last() as RequestMessage).params as DocumentDiagnosticParams
     }
 
     private fun reply(
