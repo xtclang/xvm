@@ -11,6 +11,7 @@ import org.xvm.debug.DebugSetup
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
+import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
@@ -298,6 +299,10 @@ internal class RunWorkerProcess(
     /** The fibers of a stopped run; none while it runs. */
     fun threads(id: Long): CompletableFuture<List<ThreadState>> =
         request("threads", id).thenApply { RunWorkerDebug.threadsOf(it.getAsJsonArray("threads")) }
+
+    /** The modules of a debugged run, its own and the libraries it uses; none before it starts. */
+    fun modules(id: Long): CompletableFuture<List<ModuleState>> =
+        request("modules", id).thenApply { RunWorkerDebug.modulesOf(it.getAsJsonArray("modules")) }
 
     /** A stopped fiber's stack, innermost frame first. */
     fun stackTrace(

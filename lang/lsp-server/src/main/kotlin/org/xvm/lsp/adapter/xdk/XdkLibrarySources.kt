@@ -58,6 +58,9 @@ internal object XdkLibrarySources {
     }
     private val sources = ConcurrentHashMap<String, SourceFile>()
 
+    /** The read-only files of the bundled sources written so far, by source path. */
+    private val copies = ConcurrentHashMap<String, Path>()
+
     /** Attached source text and the revision used to detect a changed source file. */
     private data class Entry(
         val text: String,
@@ -131,6 +134,33 @@ internal object XdkLibrarySources {
     fun sourceUri(name: String?): String? = name?.takeIf(::owns)
 
     /**
+     * The read-only file with the bundled source of [path] in the library [module], which navigation opens too, or null
+     * when [module] is not a bundled library or has no such source.
+     */
+    fun file(
+        module: String,
+        path: String,
+    ): String? {
+        if (module !in XdkLibraries.moduleNames) return null
+        val entry = entries[path] ?: return null
+        return copy(path, entry).toString()
+    }
+
+    /** The read-only file with the bundled source of [path], written the first time it is asked for. */
+    private fun copy(
+        path: String,
+        entry: Entry,
+    ): Path =
+        copies.computeIfAbsent(path) {
+            val file = directory.resolve(path).normalize()
+            require(file.startsWith(directory)) { "Invalid bundled source path" }
+            Files.createDirectories(file.parent)
+            Files.writeString(file, entry.text)
+            check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
+            file.toFile().canonicalFile.toPath()
+        }
+
+    /**
      * Deletes [directory] and the read-only copies in it, each made writable first, which Windows needs to delete
      * it. Returns whether it is gone.
      */
@@ -181,21 +211,14 @@ internal object XdkLibrarySources {
         entry: Entry,
     ): SourceFile {
         val text = entry.text
-        val file = directory.resolve(path).normalize()
-        require(file.startsWith(directory)) { "Invalid bundled source path" }
-        Files.createDirectories(file.parent)
-        Files.writeString(file, text)
-        check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
+        val file = copy(path, entry)
         val declarations = libraryDeclarations(text, path)
         val virtualUri = URI(SCHEME, module, "/${XdkLibraries.revision(module)}/${entry.revision}/$path", null, null).toASCIIString()
         return SourceFile(
             module,
             path,
-            file
-                .toFile()
-                .canonicalFile
-                .toURI()
-                .toString(),
+            // as File gives it, which owns() compares with
+            file.toFile().toURI().toString(),
             ReadOnlyDocument(virtualUri, text),
             declarations,
         )
