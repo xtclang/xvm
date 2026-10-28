@@ -21,24 +21,6 @@ import java.util.zip.ZipInputStream
  * not.
  */
 internal object XdkLibrarySources {
-    /** Attached source text and the revision used to detect a changed source file. */
-    private data class Entry(
-        val text: String,
-        val revision: String,
-    )
-
-    /** Read-only library source document and its declarations, identified by module and relative path. */
-    private data class SourceFile(
-        val module: String,
-        val path: String,
-        val uri: String,
-        val document: ReadOnlyDocument,
-        val declarations: List<LibraryDeclaration>,
-    ) {
-        // Evaluated only on the compiler worker. The cached value contains copied ranges/IDs only.
-        val monikers by lazy { declarationMonikers(this) }
-    }
-
     const val SCHEME = "ecstasy-library"
 
     private val entries by lazy {
@@ -68,6 +50,24 @@ internal object XdkLibrarySources {
     }
     private val directory by lazy { Files.createTempDirectory("xtc-library-sources-") }
     private val sources = ConcurrentHashMap<String, SourceFile>()
+
+    /** Attached source text and the revision used to detect a changed source file. */
+    private data class Entry(
+        val text: String,
+        val revision: String,
+    )
+
+    /** Read-only library source document and its declarations, identified by module and relative path. */
+    private data class SourceFile(
+        val module: String,
+        val path: String,
+        val uri: String,
+        val document: ReadOnlyDocument,
+        val declarations: List<LibraryDeclaration>,
+    ) {
+        // Evaluated only on the compiler worker. The cached value contains copied ranges/IDs only.
+        val monikers by lazy { declarationMonikers(this) }
+    }
 
     private fun source(uri: String): SourceFile? {
         if (sources.isEmpty()) return null

@@ -21,6 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * analysis.
  */
 class XdkModuleSessionTest {
+    @TempDir lateinit var directory: Path
+
     @Test
     fun `structure warnings belong to a closed member declaration and follow its overlay`() {
         CompilerTestSupport.configure()
@@ -51,8 +53,6 @@ class XdkModuleSessionTest {
             ).isEmpty()
         }
     }
-
-    @TempDir lateinit var directory: Path
 
     @Test
     fun `source snapshots preserve implicit packages containing only resources`() {

@@ -9,6 +9,14 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** Timing metadata only: never logs source buffers, protocol payloads or compiler objects. */
 internal object ExecutionTrace {
+    private val logger = LoggerFactory.getLogger("org.xvm.lsp.trace")
+    private val gson = Gson()
+    private val ids = AtomicLong()
+    private val events = AtomicLong()
+    private val context = ThreadLocal<Context>()
+    private val apiThreads = AtomicInteger()
+    private val pid = ProcessHandle.current().pid()
+
     /** Operation identity, parent and monotonic start time propagated across asynchronous work. */
     data class Span(
         val id: Long,
@@ -24,14 +32,6 @@ internal object ExecutionTrace {
         val span: Span,
         val apiDepth: Int,
     )
-
-    private val logger = LoggerFactory.getLogger("org.xvm.lsp.trace")
-    private val gson = Gson()
-    private val ids = AtomicLong()
-    private val events = AtomicLong()
-    private val context = ThreadLocal<Context>()
-    private val apiThreads = AtomicInteger()
-    private val pid = ProcessHandle.current().pid()
 
     fun span(
         kind: String,

@@ -45,6 +45,9 @@ import java.util.concurrent.TimeUnit
  * and records what the Build tool window and Run console receive.
  */
 object EmbeddedExecutionUi {
+    private val runs = ConcurrentHashMap<String, Capture>()
+    private val watched = ConcurrentHashMap.newKeySet<Project>()
+
     /** One run's console text and exit code, captured from the moment its process starts. */
     private class Capture : ProcessListener {
         val text = StringBuffer()
@@ -64,9 +67,6 @@ object EmbeddedExecutionUi {
             exitCode = event.exitCode
         }
     }
-
-    private val runs = ConcurrentHashMap<String, Capture>()
-    private val watched = ConcurrentHashMap.newKeySet<Project>()
 
     /** Sets the project's build mode and returns the previous one. */
     @JvmStatic

@@ -24,6 +24,9 @@ internal class CompilerRootWatches(
     private val watch: (Set<Path>) -> AutoCloseable,
     private val refresh: (Set<Path>) -> CompletableFuture<Void>,
 ) : AutoCloseable {
+    private var state = State()
+    private val refreshing = AtomicBoolean()
+
     /**
      * Watch registrations and their shared lease, replaced together when roots change or the connection
      * closes.
@@ -35,9 +38,6 @@ internal class CompilerRootWatches(
     ) {
         val roots = registrations.values.flatten().toSet()
     }
-
-    private var state = State()
-    private val refreshing = AtomicBoolean()
 
     @Synchronized
     fun replace(

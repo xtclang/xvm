@@ -179,8 +179,8 @@ public class WhileStatement
 
             // the current context and error list are required by getLabelVar() if, in the process
             // of validation, one of the nested AST nodes requires a loop variable
-            m_labelVars = new ValidationScope(ctx, errs);
-            m_listContinues = null;
+            labelVars = new ValidationScope(ctx, errs);
+            continues = null;
 
             // either enter normal or loop, depending on the assumption
             if (fLoops) {
@@ -272,8 +272,8 @@ public class WhileStatement
 
                     // apply the assignment contributions from the various continue statements, if any
                     boolean fContinues = false;
-                    if (m_listContinues != null) {
-                        for (Iterator<Break> iter = m_listContinues.iterator(); iter.hasNext();) {
+                    if (continues != null) {
+                        for (Iterator<Break> iter = continues.iterator(); iter.hasNext();) {
                             Break continueInfo = iter.next();
                             if (continueInfo.node().isDiscarded()) {
                                 iter.remove();
@@ -325,7 +325,7 @@ public class WhileStatement
             discardNodes(condsOrig, blockOrig);
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_labelVars = null;
+            labelVars = null;
 
             if (ctxFork != null && !hasBreaks()) {
                 // there are no breaks out of the loop, therefore the only way to get out is for the
@@ -368,8 +368,8 @@ public class WhileStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean  fCompletes = fReachable;
         boolean  fDoWhile   = isDoWhile();
-        Register regFirst   = m_regFirst;
-        Register regCount   = m_regCount;
+        Register regFirst   = firstRegister;
+        Register regCount   = countRegister;
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)

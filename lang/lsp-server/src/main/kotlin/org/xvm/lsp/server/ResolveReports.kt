@@ -18,6 +18,8 @@ internal class ResolveReports<T>(
     private val limit: Int = 512,
     private val characterLimit: Int = 2_000_000,
 ) {
+    private val entries = linkedMapOf<String, Entry<T>>()
+
     /** Deferred response data tied to a document revision, with its size tracked against the cache budget. */
     private data class Entry<T>(
         val revision: Long,
@@ -25,8 +27,6 @@ internal class ResolveReports<T>(
         val value: T,
         val characters: Int,
     )
-
-    private val entries = linkedMapOf<String, Entry<T>>()
 
     fun remember(
         revision: Long,
