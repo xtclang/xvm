@@ -794,14 +794,15 @@ passes with the workaround disabled. The gates are in
   unreleased, `0ecbcdeb`): a DAP line breakpoint has a `Hit condition`, sent as `hitCondition`. To do:
   after a release with it, a native IntelliJ hit-count case.
 
-### LSP4IJ: the `exited` event (UP56): bridged, our #1791, open
+### LSP4IJ: the `exited` event (UP56): bridged, our #1791, merged
 
 - [ ] UP56 (2026-10-28): LSP4IJ ignores DAP's `exited` event, so the program's exit code never reaches
   IntelliJ through it. XVM's `LanguageServerDebugProcessHandler` reads `exited` itself and ends its
-  process with that exit code. Our [#1791](https://github.com/redhat-developer/lsp4ij/pull/1791) (open,
-  2026-10-28) puts the exit code on the session's process handler (`DAPDebugProcess.PROGRAM_EXIT_CODE`)
-  and shows it when the adapter's process ends. To do: after a release with it, have our handler take
-  the exit code from that key instead of reading `exited`.
+  process with that exit code. Our [#1791](https://github.com/redhat-developer/lsp4ij/pull/1791) (merged
+  2026-10-28, unreleased, `116a18d1`) puts the exit code on the session's process handler
+  (`DAPDebugProcess.PROGRAM_EXIT_CODE`) and shows it when the adapter's process ends; CodeRabbit's
+  finding, a child session's exit code replacing its parent's, was fixed in it first. To do: after a
+  release with it, have our handler take the exit code from that key instead of reading `exited`.
 
 ### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, merged
 
