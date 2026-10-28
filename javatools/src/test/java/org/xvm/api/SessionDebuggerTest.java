@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +54,12 @@ import org.xvm.runtime.SessionDebugger.Completions;
 import org.xvm.runtime.SessionDebugger.ExceptionInfo;
 import org.xvm.runtime.SessionDebugger.Filter;
 import org.xvm.runtime.SessionDebugger.Line;
+import org.xvm.runtime.SessionDebugger.ModuleInfo;
 import org.xvm.runtime.SessionDebugger.Scope;
 import org.xvm.runtime.SessionDebugger.StackFrameInfo;
 import org.xvm.runtime.SessionDebugger.Step;
 import org.xvm.runtime.SessionDebugger.Stop;
+import org.xvm.runtime.SessionDebugger.ThreadInfo;
 import org.xvm.runtime.SessionDebugger.Variable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -206,6 +209,22 @@ public class SessionDebuggerTest {
                 Int twice(Int n) {
                     Int result = n * 2;
                     return result;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() calls Collection.forEach, from the ecstasy library, which calls its
+     * lambda: line 6 is the lambda's.
+     */
+    private static final String LIBRARY = """
+            module Library {
+                void run() {
+                    @Inject Console console;
+                    Int[] numbers = [1, 2, 3];
+                    numbers.forEach(n -> {
+                        console.print($"n={n}");
+                    });
                 }
             }
             """;
@@ -608,9 +627,7 @@ public class SessionDebuggerTest {
 
     @BeforeAll
     static void configure() throws URISyntaxException {
-        URL modules = SessionDebuggerTest.class.getResource("/xdk-modules");
-        assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
-        support = new EmbeddingSupport().configure(new DirRepository(new File(modules.toURI()), true), null);
+        support = new EmbeddingSupport().configure(xdk(), null);
     }
 
     /**
@@ -620,6 +637,106 @@ public class SessionDebuggerTest {
     @AfterAll
     static void shutdown() {
         support.shutdownInterpreter();
+    }
+
+    @Test
+    public void aStopListsTheFibersThatDoNotWaitAtALineWithWhatTheyDoAndTheStacksOfThoseThatStandStill()
+            throws Exception {
+        Path  source  = compile("Waits", PROGRAM.replace("Program", "Waits"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Waits"));
+        // by then, run() has asked the busy worker for its count, and waits for the answer
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "done == 100000", null, null)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Waits", output, session);
+        try (control) {
+            Stop             stop    = stops.next();
+            List<ThreadInfo> threads = session.threads();
+            assertEquals(List.of("Worker", "Waits (waiting)"), threads.stream().map(ThreadInfo::name).toList());
+            assertEquals(stop.threadId(), threads.getFirst().id());
+
+            // the waiting fiber's own stack, the same when asked again, whose frames have no variables
+            List<StackFrameInfo> waiting = session.stackTrace(threads.get(1).id());
+            assertEquals(List.of("Waits.run:19"), waiting.stream().map(frame -> frame.name() + ':' + frame.line()).toList());
+            assertEquals(waiting, session.stackTrace(threads.get(1).id()));
+            assertTrue(session.scopes(waiting.getFirst().id()).isEmpty());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(3_000_000L, control.result());
+            assertTrue(session.threads().isEmpty());
+        }
+    }
+
+    @Test
+    public void theProgramsModulesAreItsOwnAndTheLibrariesItUsesWithTheSourceFilesOfTheirClasses()
+            throws Exception {
+        Path  source  = compile("Modules", LIBRARY.replace("Library", "Modules"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Modules"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 6)));
+        // before the program starts, the runtime has linked nothing
+        assertTrue(session.modules().isEmpty());
+
+        Control control = run("Modules", new StringWriter(), session);
+        try (control) {
+            stops.next();
+            Map<String, ModuleInfo> modules = new HashMap<>();
+            session.modules().forEach(module -> modules.put(module.name(), module));
+
+            ModuleInfo program = modules.get("Modules");
+            assertTrue(program.own());
+            assertEquals(List.of("Modules.x"), program.sources());
+            assertEquals(source.getParent().toRealPath(), Path.of(program.sourceDir()).toRealPath());
+
+            ModuleInfo ecstasy = modules.get("ecstasy.xtclang.org");
+            assertFalse(ecstasy.own());
+            assertTrue(ecstasy.sources().contains("ecstasy/collections/Collection.x"), ecstasy.sources().toString());
+            assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue(), ecstasy.sourceDir());
+            assertEquals(session.modules(), session.modules());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+    }
+
+    @Test
+    public void aFrameOfALibrarysCodeIsInTheLibrarysOwnSourceDirectoryAndNamesItsModuleAndSource()
+            throws Exception {
+        Path  source  = compile("Library", LIBRARY);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Library"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 6)));
+
+        Control control = run("Library", new StringWriter(), session);
+        try (control) {
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            assertEquals(List.of("Library.->", "Collection.forEach", "Library.run"),
+                    frames.stream().map(StackFrameInfo::name).toList());
+
+            StackFrameInfo lambda = frames.get(0);
+            assertEquals("Library", lambda.module());
+            assertEquals("Library.x", lambda.source());
+            assertEquals(source.toRealPath(), Path.of(lambda.path()).toRealPath());
+
+            // the library's own source directory, where it was compiled, not the program's
+            StackFrameInfo forEach = frames.get(1);
+            assertEquals("ecstasy.xtclang.org", forEach.module());
+            assertEquals("ecstasy/collections/Collection.x", forEach.source());
+            assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue() + forEach.source(),
+                    forEach.path());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
     }
 
     @Test
@@ -1338,23 +1455,17 @@ public class SessionDebuggerTest {
         assertTrue(session.setBreakpoints(source.toString(), List.of(new Line(1, 16))).getFirst().verified());
 
         Control control = run("Holds", new StringWriter(), session);
-        try (control) {
-            Stop stop = stops.next();
-            // the spinning fiber, on a thread of its own, reaches a line of its loop and waits there
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (session.threads().size() < 2) {
-                    Thread.sleep(10);
-                }
-            });
-            int spinner = session.threads().get(1).id();
-            assertEquals("Spinner.spin", session.stackTrace(spinner).getFirst().name());
-            assertEquals(stop.threadId(), session.threads().getFirst().id());
+        Stop    stop    = stops.next();
+        // the spinning fiber, on a thread of its own, reaches a line of its loop and waits there
+        int spinner = waitingAtLines(session, 2).get(1);
+        assertEquals("Spinner.spin", session.stackTrace(spinner).getFirst().name());
+        assertEquals(stop.threadId(), session.threads().getFirst().id());
 
-            session.resume();
-            // the spinner never ends on its own; closing the run ends it
-            assertTimeoutPreemptively(RUN_LIMIT, control::close);
-            assertFalse(control.running());
-        }
+        session.resume();
+        // the spinner never ends on its own; closing the run ends it. Not in a try-with-resources:
+        // closing again after a close that timed out would wait without a limit
+        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        assertFalse(control.running());
     }
 
     @Test
@@ -1369,15 +1480,11 @@ public class SessionDebuggerTest {
         StringWriter output  = new StringWriter();
         Control      control = run("Shares", output, session);
         Stop         stop    = stops.next();
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
-            while (session.threads().size() < 2) {
-                Thread.sleep(10);
-            }
-        });
+        waitingAtLines(session, 2);
 
         // the spinner's frame has its variables, which its own thread reads, and its service's
         // state stands still while the program is stopped
-        int                   spinner = session.threads().get(1).id();
+        int                   spinner = waitingAtLines(session, 2).get(1);
         int                   frame   = session.stackTrace(spinner).getFirst().id();
         Map<String, Variable> spin    = byName(read(session, session.scopes(frame).getFirst().variablesReference()));
         assertTrue(spin.containsKey("count"), spin.keySet().toString());
@@ -2059,11 +2166,7 @@ public class SessionDebuggerTest {
 
         Control control = run("Blocked", new StringWriter(), session);
         Stop    stop    = stops.next();
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
-            while (session.threads().size() < 2) {
-                Thread.sleep(10);
-            }
-        });
+        waitingAtLines(session, 2);
 
         // the spinner's fiber waits at a line in its service, which therefore cannot answer
         int frame = session.stackTrace(stop.threadId()).getFirst().id();
@@ -2092,11 +2195,7 @@ public class SessionDebuggerTest {
         try (control) {
             Stop stop = stops.next();
             // the worker's fiber waits at a line of its loop, part of the way through it
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (session.threads().size() < 2) {
-                    Thread.sleep(10);
-                }
-            });
+            waitingAtLines(session, 2);
             int main   = session.stackTrace(stop.threadId()).getFirst().id();
             int worker = session.threads().stream().filter(t -> t.id() != stop.threadId()).findFirst().orElseThrow().id();
             int frame  = session.stackTrace(worker).getFirst().id();
@@ -2108,11 +2207,7 @@ public class SessionDebuggerTest {
             session.setBreakpoints(source.toString(), List.of(new Line(1, 18), new Line(2, 7)));
             assertEquals("199990000", session.run(main, "busy()", RUN_LIMIT, true)
                     .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (session.threads().size() < 2) {
-                    Thread.sleep(10);
-                }
-            });
+            waitingAtLines(session, 2);
             int again = session.stackTrace(worker).getFirst().id();
             assertNotEquals(frame, again);
             assertTrue(Long.parseLong(evaluate(session, again, "done").value()) > count);
@@ -2294,7 +2389,37 @@ public class SessionDebuggerTest {
         return file;
     }
 
+    /**
+     * Wait until the specified number of the stopped program's fibers wait at a line, which
+     * {@link SessionDebugger#threads} lists first, named by their services alone.
+     *
+     * @return the IDs of the fibers that wait at a line, the stopped one first
+     */
+    private static List<Integer> waitingAtLines(SessionDebugger session, int count) {
+        return assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            while (true) {
+                List<Integer> ids = session.threads().stream()
+                        .filter(thread -> !thread.name().endsWith(")"))
+                        .map(ThreadInfo::id)
+                        .toList();
+                if (ids.size() >= count) {
+                    return ids;
+                }
+                Thread.sleep(10);
+            }
+        });
+    }
+
     private static ModuleRepository input() {
         return new DirRepository(outputDir.toFile(), true);
+    }
+
+    /**
+     * @return the compiled XDK modules, which the build puts in the test resources
+     */
+    private static ModuleRepository xdk() throws URISyntaxException {
+        URL modules = SessionDebuggerTest.class.getResource("/xdk-modules");
+        assertNotNull(modules, "the build puts the compiled XDK modules in the test resources");
+        return new DirRepository(new File(modules.toURI()), true);
     }
 }
