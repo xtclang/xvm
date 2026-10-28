@@ -716,7 +716,7 @@ The XTC plugin depends on three bundled/third-party plugins:
 | `com.intellij.java` | Bundled | Available in platform test framework automatically |
 | `com.intellij.gradle` | Bundled | Available in platform test framework automatically |
 | `org.jetbrains.plugins.textmate` | Bundled | Available, but TextMate bundle loading requires sandbox setup |
-| `com.redhat.devtools.lsp4ij` (0.19.1) | Third-party | Must be explicitly added to test dependencies |
+| `com.redhat.devtools.lsp4ij` (0.21.0) | Third-party | Must be explicitly added to test dependencies |
 
 ### LSP4IJ in Tests
 
