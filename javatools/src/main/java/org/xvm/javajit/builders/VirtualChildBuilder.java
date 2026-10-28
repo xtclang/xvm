@@ -361,8 +361,7 @@ public class VirtualChildBuilder extends CommonBuilder {
                     code -> generateFieldBody(code, prop, isGetter, jmd));
         } else if (body.getMethodStructure().hasCode()) {
             BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter, jmd);
-            classBuilder.withMethodBody(name, bodyMD, flags, code -> generateCode(bodyMD, bctx, code));
-            assembleDeferredMethods(classBuilder, bctx, ClassFile.ACC_PUBLIC);
+            doAssembleMethod(classBuilder, bctx, body.getMethodInfo(), name, bodyMD, flags);
         }
     }
 
@@ -690,10 +689,8 @@ public class VirtualChildBuilder extends CommonBuilder {
 
         MethodTypeDesc bodyMD = jmd.isOptimized ? bodyJmd.optimizedMD : bodyJmd.standardMD;
 
-        // unlike the CommonBuilder, while detached body is static, the deferred methods may not be
         doAssembleMethod(classBuilder, bctx, method, bodyName, bodyMD,
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC);
-        assembleDeferredMethods(classBuilder, bctx, ClassFile.ACC_PUBLIC);
     }
 
     /**

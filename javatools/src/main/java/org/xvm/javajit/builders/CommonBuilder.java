@@ -4373,7 +4373,21 @@ public class CommonBuilder
             }
         }
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
-        assembleDeferredMethods(classBuilder, bctx, flags);
+    }
+
+    /**
+     * Assemble the method body and any deferred methods; used for subclassing.
+     */
+    protected void doAssembleMethod(ClassBuilder classBuilder, BuildContext bctx, MethodInfo method,
+                                    String jitName, MethodTypeDesc md, int flags) {
+        classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
+            if (!method.isAbstract()) {
+                methodBuilder.withCode(code -> generateCode(md, bctx, code));
+            }
+        });
+
+        // the enclosing body can be static while its deferred methods are instance methods
+        assembleDeferredMethods(classBuilder, bctx, flags & ~ClassFile.ACC_STATIC);
     }
 
     /**
@@ -4399,7 +4413,7 @@ public class CommonBuilder
                     nameNext += OPT;
                 }
 
-                int flagsNext = fStatic || jmdNext.isOptimizedStatic
+                int flagsNext = fStatic || jmdNext.isStandardStatic || jmdNext.isOptimizedStatic
                                         || jmdNext instanceof JitDetachedBodyDesc
                         ? flags | ClassFile.ACC_STATIC
                         : flags;
@@ -4409,18 +4423,6 @@ public class CommonBuilder
             }
             bctxDeferred = bctxNext.getDeferred();
         }
-    }
-
-    /**
-     * The final stage of assembling the method; used for subclassing.
-     */
-    protected void doAssembleMethod(ClassBuilder classBuilder, BuildContext bctx, MethodInfo method,
-                                    String jitName, MethodTypeDesc md, int flags) {
-        classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
-            if (!method.isAbstract()) {
-                methodBuilder.withCode(code -> generateCode(md, bctx, code));
-            }
-        });
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
