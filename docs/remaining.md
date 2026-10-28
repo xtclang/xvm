@@ -829,12 +829,12 @@ the JetBrains tickets, forks `lagergren/intellij-community` and `lagergren/vscod
 contributor agreement, and the branches rebased. UP17's commit message quotes 14.6 s with 80,000
 highlighters in an editor, which its probe never measured: check or drop it before filing.
 
-- [ ] UP17 (IntelliJ Platform): file a YouTrack ticket (IJPL), then a PR from intellij-community
-  `interval-tree-bulk-removal` (`9e4fa930d`).
+- [ ] UP17 (IntelliJ Platform): our [#3728](https://github.com/JetBrains/intellij-community/pull/3728) (open, 2026-10-28) for the existing
+  [IJPL-259475](https://youtrack.jetbrains.com/issue/IJPL-259475), a console freeze whose stacks end in the same `maxEnd` correction. To do: get it merged.
 - [ ] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
   of 80,000 highlighters installed, so it never measured the decorated case.
-- [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881) (2026-10-28); then a PR from `async-format-redo`
-  (`e7f0801a0`).
+- [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28). To do: get it
+  merged.
 - [ ] UP20 (IntelliJ test Driver): ticket (project `AT`, or `IJPL` if `AT` isn't public), then a PR
   from `driver-edt-modality` (`2c07e3ae4`).
 - [ ] UP29 (IntelliJ test Driver): ticket, then a PR from `driver-waitfor-once` (`5fe70a336`).
