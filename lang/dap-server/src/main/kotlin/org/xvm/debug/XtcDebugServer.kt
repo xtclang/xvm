@@ -10,34 +10,35 @@ import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsResponse
 import org.eclipse.lsp4j.debug.TerminateArguments
-import org.eclipse.lsp4j.debug.Thread
 import org.eclipse.lsp4j.debug.ThreadsResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 
 /**
- * Stub XTC Debug Adapter Protocol (DAP) server.
+ * Placeholder Ecstasy Debug Adapter Protocol (DAP) server. There is no runtime debugger yet, so it says so
+ * instead of pretending: breakpoints are reported unverified with that reason, launch and attach fail with
+ * it, and there are no threads. A real implementation needs session-scoped runtime debugging (R6/R7 in
+ * lang/doc/plans/plan-embedded-execution.md).
  *
- * Implements [IDebugProtocolServer] to receive breakpoint notifications and other
- * debug requests from IDEs. Currently logs all requests as a foundation for future
- * debugger integration.
- *
- * DAP is a separate protocol from LSP, specifically for debugging. LSP4J provides
- * the `org.eclipse.lsp4j.debug` module with the server-side DAP API.
+ * DAP is a separate protocol from LSP, specifically for debugging. LSP4J provides the
+ * `org.eclipse.lsp4j.debug` module with the server-side DAP API.
  */
 class XtcDebugServer : IDebugProtocolServer {
     private var client: IDebugProtocolClient? = null
 
     companion object {
         private val logger = LoggerFactory.getLogger(XtcDebugServer::class.java)
-        private const val MAIN_THREAD_ID = 1
+
+        /** Shown to the user for every request that would need a debugger. */
+        const val NOT_AVAILABLE = "Ecstasy debugging is not available yet; run the module without debugging instead."
     }
 
-    /**
-     * Connect to the DAP client (IDE).
-     */
+    /** Connect to the DAP client (IDE). */
     fun connect(client: IDebugProtocolClient) {
         this.client = client
         logger.info("connect: Connected to debug client")
@@ -46,7 +47,7 @@ class XtcDebugServer : IDebugProtocolServer {
     /**
      * DAP: initialize
      *
-     * Called first by the client. Returns server capabilities.
+     * Called first by the client. Advertises nothing beyond the configuration handshake.
      */
     override fun initialize(args: InitializeRequestArguments): CompletableFuture<Capabilities> {
         logger.info("initialize: clientID={}, adapterID={}", args.clientID, args.adapterID)
@@ -60,38 +61,29 @@ class XtcDebugServer : IDebugProtocolServer {
     /**
      * DAP: setBreakpoints
      *
-     * Called when the user sets or changes breakpoints in a source file.
-     * Logs the source file and line numbers, and returns them as verified.
+     * No breakpoint can be installed, so each is reported unverified with the reason, never as set.
      */
     override fun setBreakpoints(args: SetBreakpointsArguments): CompletableFuture<SetBreakpointsResponse> {
         val sourcePath = args.source?.path ?: args.source?.name ?: "<unknown>"
-        val lines = args.breakpoints?.map { it.line } ?: emptyList()
-        logger.info("setBreakpoints: source={}, lines={}", sourcePath, lines)
-
+        logger.info("setBreakpoints: source={}, lines={}", sourcePath, args.breakpoints?.map { it.line }.orEmpty())
         val breakpoints =
             args.breakpoints
-                ?.mapIndexed { index, sourceBreakpoint ->
+                ?.map { sourceBreakpoint ->
                     Breakpoint().apply {
-                        id = index + 1
-                        isVerified = true
+                        isVerified = false
+                        message = NOT_AVAILABLE
                         line = sourceBreakpoint.line
                         source = args.source
                     }
                 }?.toTypedArray() ?: emptyArray()
-
-        val response =
-            SetBreakpointsResponse().apply {
-                this.breakpoints = breakpoints
-            }
-        return CompletableFuture.completedFuture(response)
+        return CompletableFuture.completedFuture(SetBreakpointsResponse().apply { this.breakpoints = breakpoints })
     }
 
     /**
      * DAP: setExceptionBreakpoints
      *
-     * Called when the user configures exception breakpoint filters.
+     * Accepted and ignored: the adapter advertises no exception filters.
      */
-    @Suppress("ktlint:standard:function-signature")
     override fun setExceptionBreakpoints(args: SetExceptionBreakpointsArguments): CompletableFuture<SetExceptionBreakpointsResponse> {
         logger.info("setExceptionBreakpoints: filters={}", args.filters?.toList())
         return CompletableFuture.completedFuture(SetExceptionBreakpointsResponse())
@@ -100,57 +92,28 @@ class XtcDebugServer : IDebugProtocolServer {
     /**
      * DAP: configurationDone
      *
-     * Signals that the client has finished sending initial configuration requests
-     * (breakpoints, exception breakpoints, etc.).
+     * Signals that the client has finished sending initial configuration requests.
      */
     override fun configurationDone(args: ConfigurationDoneArguments): CompletableFuture<Void> {
         logger.info("configurationDone")
         return CompletableFuture.completedFuture(null)
     }
 
-    /**
-     * DAP: launch
-     *
-     * Called when the client wants to launch the debuggee.
-     * Sends an `initialized` event back to the client.
-     */
+    /** DAP: launch. Fails with the reason, so the client ends the session instead of waiting on nothing. */
     override fun launch(args: MutableMap<String, Any>): CompletableFuture<Void> {
-        logger.info("launch: args={}", args)
-        client?.initialized()
-        return CompletableFuture.completedFuture(null)
+        logger.info("launch: refused, no debugger: args={}", args)
+        return unavailable()
     }
 
-    /**
-     * DAP: attach
-     *
-     * Called when the client wants to attach to an already running debuggee.
-     * Sends an `initialized` event back to the client.
-     */
+    /** DAP: attach. Fails with the reason, like [launch]. */
     override fun attach(args: MutableMap<String, Any>): CompletableFuture<Void> {
-        logger.info("attach: args={}", args)
-        client?.initialized()
-        return CompletableFuture.completedFuture(null)
+        logger.info("attach: refused, no debugger: args={}", args)
+        return unavailable()
     }
 
-    /**
-     * DAP: threads
-     *
-     * Returns the list of threads. Currently returns a single dummy thread.
-     */
-    override fun threads(): CompletableFuture<ThreadsResponse> {
-        logger.info("threads")
-        val response =
-            ThreadsResponse().apply {
-                threads =
-                    arrayOf(
-                        Thread().apply {
-                            id = MAIN_THREAD_ID
-                            name = "main"
-                        },
-                    )
-            }
-        return CompletableFuture.completedFuture(response)
-    }
+    /** DAP: threads. Nothing runs under this adapter, so there are none. */
+    override fun threads(): CompletableFuture<ThreadsResponse> =
+        CompletableFuture.completedFuture(ThreadsResponse().apply { threads = emptyArray() })
 
     /**
      * DAP: disconnect
@@ -171,4 +134,7 @@ class XtcDebugServer : IDebugProtocolServer {
         logger.info("terminate: restart={}", args.restart)
         return CompletableFuture.completedFuture(null)
     }
+
+    private fun unavailable(): CompletableFuture<Void> =
+        CompletableFuture.failedFuture(ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, NOT_AVAILABLE, null)))
 }
