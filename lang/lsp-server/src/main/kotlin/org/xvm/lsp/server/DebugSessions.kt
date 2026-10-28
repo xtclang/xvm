@@ -12,6 +12,7 @@ import org.xvm.debug.LaunchResult
 import org.xvm.debug.LaunchTarget
 import org.xvm.debug.ProgramEvents
 import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.run.RunWorkerProcess
@@ -149,6 +150,22 @@ internal class DebugSessions(
             runId: String,
             threadId: Int,
         ) = runs.stackTrace(runId, threadId)
+
+        override fun scopes(
+            runId: String,
+            frameId: Int,
+        ) = runs.scopes(runId, frameId)
+
+        override fun variables(
+            runId: String,
+            reference: Int,
+        ) = runs.variables(runId, reference)
+
+        override fun step(
+            runId: String,
+            threadId: Int,
+            kind: StepKind,
+        ) = runs.step(runId, threadId, kind)
 
         override fun resume(runId: String) = runs.resume(runId)
     }

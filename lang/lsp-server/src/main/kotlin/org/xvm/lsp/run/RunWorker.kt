@@ -9,9 +9,11 @@ import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.FrameState
+import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
+import org.xvm.debug.VariableState
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.runtime.SessionDebugger
 import org.xvm.util.Severity
@@ -49,7 +51,9 @@ import kotlin.time.toJavaDuration
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints` to run under the
  * debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`; for a run under the debugger,
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
- * `request`, `thread`) and `continue` (`id`). The debug data's JSON forms are in [RunWorkerDebug].
+ * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
+ * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
+ * in [RunWorkerDebug].
  * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
  * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, `poolThreads`,
  * `consoles`, `runs`, sent after the run's exit), `log` (`text`); for a run under the debugger, `breakpoints` (`id`,
@@ -57,6 +61,9 @@ import kotlin.time.toJavaDuration
  * `reason`, `description`, `thread`, `breakpoints`) and `reply` (`id`, `request`, and the answer or `error`).
  */
 object RunWorker {
+    /** The error of a request for the debugger of a run without one, or of one that ended. */
+    private const val NOT_DEBUGGED = "The program is not running under the debugger"
+
     /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
     private val STOP_LIMIT = 5.seconds
 
@@ -84,6 +91,9 @@ object RunWorker {
                     "setBreakpoints" -> runs.setBreakpoints(command)
                     "threads" -> runs.threads(command)
                     "stackTrace" -> runs.stackTrace(command)
+                    "scopes" -> runs.scopes(command)
+                    "variables" -> runs.variables(command)
+                    "step" -> runs.step(command)
                     "continue" -> runs.resume(command["id"].asLong)
                     "shutdown" -> break
                     else -> channel.log("Unknown worker command: $line")
@@ -133,7 +143,8 @@ object RunWorker {
             val control =
                 try {
                     val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
-                    val debugger = command.getAsJsonArray("breakpoints")?.let { debugger(id, repositories, RunWorkerDebug.sourcesOf(it)) }
+                    val debugger =
+                        command.getAsJsonArray("breakpoints")?.let { debugger(id, repositories, RunWorkerDebug.sourcesOf(it), output) }
                     EmbeddingSupport.instance().runMethod(
                         LinkedRepository(*repositories.toTypedArray()),
                         command["module"].asString,
@@ -206,15 +217,17 @@ object RunWorker {
         /**
          * The runtime debugger of a run started with breakpoints: it knows the program's own modules, so the
          * breakpoints in their files are verified, and installs the breakpoints, reporting each file's, before
-         * the program starts. Its stops are reported as `stopped` events.
+         * the program starts. Its stops are reported as `stopped` events, after the program's output so far.
          */
         private fun debugger(
             id: Long,
             repositories: List<ModuleRepository>,
             sources: List<SourceBreakpoints>,
+            output: OutputBatches,
         ): SessionDebugger {
             val debugger =
                 SessionDebugger { stop ->
+                    output.sendNow()
                     channel.send("stopped") {
                         addProperty("id", id)
                         RunWorkerDebug.stop(this, StopState(stop.reason(), stop.description(), stop.threadId(), stop.breakpointIds()))
@@ -248,6 +261,39 @@ object RunWorker {
                 add("frames", RunWorkerDebug.frames(frames))
             }
 
+        fun scopes(command: JsonObject) =
+            reply(command) { debugger ->
+                val scopes = debugger.scopes(command["frame"].asInt).map { ScopeState(it.name(), it.variablesReference()) }
+                add("scopes", RunWorkerDebug.scopes(scopes))
+            }
+
+        /**
+         * Answers once the waiting fiber that holds the variables has read them on its own thread, so the commands
+         * that follow, such as `continue`, do not wait for the read.
+         */
+        fun variables(command: JsonObject) {
+            val read =
+                debuggers[command["id"].asLong]?.variables(command["reference"].asInt)
+                    ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
+            read.whenComplete { variables, failure ->
+                answer(command) {
+                    if (failure != null) {
+                        addProperty("error", failure.message ?: failure.toString())
+                    } else {
+                        val states = variables.map { VariableState(it.name(), it.value(), it.type(), it.variablesReference()) }
+                        add("variables", RunWorkerDebug.variables(states))
+                    }
+                }
+            }
+        }
+
+        /** Answers whether the fiber was stepped; one that does not wait is not, and the program stays stopped. */
+        fun step(command: JsonObject) =
+            reply(command) { debugger ->
+                val step = SessionDebugger.Step.valueOf(command["step"].asString.uppercase())
+                addProperty("stepped", debugger.step(command["thread"].asInt, step))
+            }
+
         fun resume(id: Long) {
             debuggers[id]?.resume()
         }
@@ -265,12 +311,20 @@ object RunWorker {
             command: JsonObject,
             fill: JsonObject.(SessionDebugger) -> Unit,
         ) {
-            val id = command["id"].asLong
-            val debugger = debuggers[id]
+            val debugger = debuggers[command["id"].asLong]
+            answer(command) { if (debugger == null) addProperty("error", NOT_DEBUGGED) else fill(debugger) }
+        }
+
+        /** Sends a reply; its content is made first, since asking the debugger must not wait while holding the channel. */
+        private fun answer(
+            command: JsonObject,
+            fill: JsonObject.() -> Unit,
+        ) {
+            val content = JsonObject().apply(fill)
             channel.send("reply") {
-                addProperty("id", id)
+                addProperty("id", command["id"].asLong)
                 addProperty("request", command["request"].asLong)
-                if (debugger == null) addProperty("error", "The program is not running under the debugger") else fill(debugger)
+                content.entrySet().forEach { (name, value) -> add(name, value) }
             }
         }
 
@@ -411,6 +465,10 @@ internal class OutputBatches(
 
     override fun flush() {}
 
+    /** Sends what waits at once: when the program stops at a breakpoint, its output so far comes before the stop. */
+    @Synchronized
+    fun sendNow() = sendPending(all = false)
+
     /** Sends everything still waiting; the run's exit follows its output. */
     @Synchronized
     override fun close() = sendPending(all = true)
@@ -465,7 +523,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 3
+        const val PROTOCOL = 5
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

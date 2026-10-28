@@ -37,6 +37,17 @@ class OutputBatchesTest {
     }
 
     @Test
+    fun `sending now sends what waits without waiting for the delay`() {
+        val sent = CopyOnWriteArrayList<String>()
+        val output = OutputBatches(sent::add, delay = 1.hours)
+        output.write("before")
+        output.sendNow()
+        assertThat(sent).containsExactly("before")
+        output.sendNow()
+        assertThat(sent).containsExactly("before")
+    }
+
+    @Test
     fun `text goes out after the delay when nothing follows`() {
         val sent = LinkedBlockingQueue<String>()
         val output = OutputBatches(sent::add, delay = 50.milliseconds)
