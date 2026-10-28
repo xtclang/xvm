@@ -214,7 +214,7 @@ class CompilerPlaybookTest {
         // the Marketplace channel of lsp4ijVersion, such as nightly; empty for the default channel
         val lsp4ijChannel = System.getProperty("xtc.playbook.lsp4ijChannel", "")
         val replacementGates = System.getProperty("xtc.playbook.replacementGates", "").split(',').filter(String::isNotEmpty)
-        require(replacementGates.all { it in setOf("UP25", "UP26") }) { "Unknown replacement gate: $replacementGates" }
+        require(replacementGates.all { it in GATE_CASES }) { "Unknown replacement gate: $replacementGates" }
         require(replacementGates.isEmpty() || localLsp4ij != null || lsp4ijChannel.isNotEmpty()) {
             "Replacement gates require an LSP4IJ that isn't the release: a local build or a channel's"
         }
@@ -355,8 +355,7 @@ class CompilerPlaybookTest {
                     // additional opt-in assertions separately from those default statuses.
                     "replacementGateResults" to
                         replacementGates.associateWith { gate ->
-                            val id = if (gate == "UP25") "X254" else "X257"
-                            when (val status = cases.results.single { it.id == id }.status) {
+                            when (val status = cases.results.single { it.id == GATE_CASES.getValue(gate) }.status) {
                                 "passed", "partial" -> if (ideFailures.isEmpty()) "passed" else "ide-failure"
                                 else -> status
                             }
@@ -393,3 +392,6 @@ class CompilerPlaybookTest {
         }
     }
 }
+
+/** The case that runs each replacement gate's opt-in assertions in place of its shipping ones. */
+private val GATE_CASES = mapOf("UP25" to "X254", "UP26" to "X257", "UP52" to "X131")
