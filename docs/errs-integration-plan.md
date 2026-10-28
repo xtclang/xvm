@@ -163,6 +163,9 @@ resolve to #716's final form. #693 replayed without a conflict; its commit 39 no
   100: a value's `toString()` went past its one-second limit. Its class then passed, 54 of 54, and
   the case three times on its own. On `d3aceb5785`, commits 1 to 38 compile again, and commits 39 to
   71 have the trees of `f7f8620d0c`'s.
+- Native playbooks on `d3aceb5785` for X31, X131, X280–X289 and X304–X331: VS Code `run-kLv2zk`, 40
+  of 40; IntelliJ `run-5224751324208668446` (LSP4IJ 0.21.0), 21 passed and 12 partial as the catalog
+  declares, the 7 not implemented there not run, and no IDE errors.
 - #693 was force-pushed with leases from `c77de154c9` to `f7f8620d0c`, then from `f7f8620d0c` to
   `d3aceb5785`. [errs-693-rebase-2026-10-28.tsv](errs-693-rebase-2026-10-28.tsv) maps the regroup's
   commits to both.
