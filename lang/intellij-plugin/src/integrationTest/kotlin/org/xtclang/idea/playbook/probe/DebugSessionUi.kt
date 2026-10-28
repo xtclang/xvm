@@ -22,9 +22,11 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -37,6 +39,7 @@ import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
+import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
 import com.intellij.xdebugger.frame.XCompositeNode
@@ -51,6 +54,7 @@ import com.intellij.xdebugger.frame.XValueModifier
 import com.intellij.xdebugger.frame.XValueNode
 import com.intellij.xdebugger.frame.XValuePlace
 import com.intellij.xdebugger.frame.presentation.XValuePresentation
+import com.intellij.xdebugger.impl.XDebugSessionImpl
 import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl
 import com.intellij.xdebugger.impl.evaluate.XDebuggerEvaluationDialog
 import com.intellij.xdebugger.impl.evaluate.XEvaluationOrigin
@@ -649,6 +653,76 @@ object DebugSessionUi {
             }
         }
         debug(project, module, uri, 0)
+    }
+
+    /** Adds a line breakpoint on the 1-based [line] of the file [uri], as a click in its gutter does. */
+    @JvmStatic
+    fun addBreakpoint(
+        project: Project,
+        uri: String,
+        line: Int,
+    ) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, line - 1)
+        }
+    }
+
+    /**
+     * The line breakpoints of the file [uri], in line order, as the module's debug session shows them in the gutter:
+     * each one's 1-based `line` and its `state`, `verified` once the debug adapter installed it, `invalid` with the
+     * `message` it gave if it did not, or `pending` before it says either.
+     */
+    @JvmStatic
+    fun breakpoints(
+        project: Project,
+        module: String,
+        uri: String,
+    ): String {
+        val session = checkNotNull(session(project, module) as? XDebugSessionImpl) { "No debug session of $module" }
+        val states = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            XDebuggerManager
+                .getInstance(project)
+                .breakpointManager.allBreakpoints
+                .filterIsInstance<XLineBreakpoint<*>>()
+                .filter { it.fileUrl == file.url }
+                .sortedBy { it.line }
+                .forEach { breakpoint ->
+                    val shown = session.getBreakpointPresentation(breakpoint)
+                    states.add(
+                        JsonObject().apply {
+                            addProperty("line", breakpoint.line + 1)
+                            addProperty(
+                                "state",
+                                when {
+                                    shown == null -> "pending"
+                                    shown.errorMessage != null -> "invalid"
+                                    else -> "verified"
+                                },
+                            )
+                            shown?.errorMessage?.let { addProperty("message", it) }
+                        },
+                    )
+                }
+        }
+        return states.toString()
+    }
+
+    /** Types [text] at the start of the 1-based [line] of the file [uri], without saving it. */
+    @JvmStatic
+    fun insert(
+        project: Project,
+        uri: String,
+        line: Int,
+        text: String,
+    ) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            val document = checkNotNull(FileDocumentManager.getInstance().getDocument(file)) { "No document of $uri" }
+            WriteCommandAction.runWriteCommandAction(project) { document.insertString(document.getLineStartOffset(line - 1), text) }
+        }
     }
 
     /** Removes every line breakpoint of the project. */
