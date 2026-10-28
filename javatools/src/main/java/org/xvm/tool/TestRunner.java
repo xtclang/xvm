@@ -78,12 +78,12 @@ public class TestRunner extends Runner {
     /**
      * TestRunner constructor for programmatic invocation.
      *
-     * @param options     the runner options (RunnerOptions or TestRunnerOptions)
-     * @param console     representation of the terminal within which this command is run
-     * @param errListener optional error listener for programmatic error access
+     * @param options  the runner options (RunnerOptions or TestRunnerOptions)
+     * @param console  representation of the terminal within which this command is run
+     * @param errs     optional error listener for programmatic error access
      */
-    public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errListener) {
-        super(options, console, errListener);
+    public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errs) {
+        super(options, console, errs);
     }
 
     @Override
