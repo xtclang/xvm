@@ -35,6 +35,10 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 import org.xvm.lsp.adapter.TextEdit as AdapterTextEdit
 
+/**
+ * Exercises sequential UTF-16 patches and save edits against exact document snapshots. Invalid ranges, stale
+ * versions and conflicting edits must fail without mutating the server buffer or waiting for compilation.
+ */
 class DocumentSynchronizationTest {
     private val uri = "file:///Sync.x"
     private val id = TextDocumentIdentifier(uri)

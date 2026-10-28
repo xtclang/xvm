@@ -41,14 +41,28 @@ public class StageMgr {
         this(node, stageTarget, errs, InvocationBinding.Collector.NONE);
     }
 
-    /** Progress a node while preserving the compilation attempt's call-fact collector. */
-    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs,
-                    InvocationBinding.Collector bindings) {
+    /**
+     * Progress a node while preserving the compilation attempt's call-fact collector.
+     *
+     * @param node         the node whose subtree is processed
+     * @param stageTarget  the target compiler stage
+     * @param errs         the diagnostic listener and abort policy for this operation
+     * @param bindings     the attempt-owned call-fact collector, or its NONE instance to disable collection
+     */
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs, InvocationBinding.Collector bindings) {
         this(node, stageTarget, errs, bindings, CursorBinding.Collector.NONE);
     }
 
-    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs,
-                    InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
+    /**
+     * Progress source nodes using the enclosing attempt's call and cursor collectors.
+     *
+     * @param node         the node whose subtree is processed
+     * @param stageTarget  the target compiler stage
+     * @param errs         the diagnostic listener and abort policy for this operation
+     * @param bindings     the attempt-owned call-fact collector, or its NONE instance to disable collection
+     * @param cursors      the attempt-owned cursor-fact collector, or its NONE instance to disable collection
+     */
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs, InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
@@ -71,14 +85,28 @@ public class StageMgr {
         this(list, stageTarget, errs, InvocationBinding.Collector.NONE);
     }
 
-    /** Progress child nodes using the same collector as their enclosing compilation. */
-    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs,
-                    InvocationBinding.Collector bindings) {
+    /**
+     * Progress child nodes using the same collector as their enclosing compilation.
+     *
+     * @param list         the nonempty list of nodes whose subtrees are processed
+     * @param stageTarget  the target compiler stage
+     * @param errs         the diagnostic listener and abort policy for this operation
+     * @param bindings     the attempt-owned call-fact collector, or its NONE instance to disable collection
+     */
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs, InvocationBinding.Collector bindings) {
         this(list, stageTarget, errs, bindings, CursorBinding.Collector.NONE);
     }
 
-    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs,
-                    InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
+    /**
+     * Progress source nodes using the enclosing attempt's call and cursor collectors.
+     *
+     * @param list         the nonempty list of nodes whose subtrees are processed
+     * @param stageTarget  the target compiler stage
+     * @param errs         the diagnostic listener and abort policy for this operation
+     * @param bindings     the attempt-owned call-fact collector, or its NONE instance to disable collection
+     * @param cursors      the attempt-owned cursor-fact collector, or its NONE instance to disable collection
+     */
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs, InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
@@ -200,6 +228,11 @@ public class StageMgr {
         return f_cursors;
     }
 
+    /**
+     * Obtain the collector shared by this stage manager and its child stages.
+     *
+     * @return the attempt-owned collector, possibly the disabled NONE instance
+     */
     public InvocationBinding.Collector getInvocationBindings() {
         return f_bindings;
     }

@@ -10,6 +10,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 
+/**
+ * Exercises initialize, initialized and shutdown ordering at the message boundary. Failed initialization may
+ * retry, but duplicate or premature requests must not bypass lifecycle rules.
+ */
 class ProtocolLifecycleTest {
     @Test
     fun `failed initialization can retry and late client replies survive shutdown`() {

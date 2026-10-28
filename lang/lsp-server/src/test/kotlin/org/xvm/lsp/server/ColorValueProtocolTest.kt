@@ -27,6 +27,10 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises opt-in color requests at the protocol boundary. Checks current document ranges and channel
+ * validation, and verifies disabled providers reject requests without disturbing analysis.
+ */
 class ColorValueProtocolTest {
     @Test
     fun `color provider requires opt in and disabled requests report method not found`() {

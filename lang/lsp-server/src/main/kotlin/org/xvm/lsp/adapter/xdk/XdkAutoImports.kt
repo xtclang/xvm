@@ -18,6 +18,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Detached import candidates; only a successful whole-graph repair proof can publish an edit. */
 internal object XdkAutoImports {
+    /** Importable declaration name, module and qualified path established by the compiler. */
     data class Target(
         val name: String,
         val module: String,

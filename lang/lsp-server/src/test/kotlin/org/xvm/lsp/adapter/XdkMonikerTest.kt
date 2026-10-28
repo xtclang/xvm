@@ -16,6 +16,11 @@ import org.xvm.lsp.adapter.xdk.compiledSemantics
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks portable symbol identities across recompilation, checkout relocation and dependency replacement.
+ * Overloads and versions stay distinct; private or unresolved declarations cannot acquire invented exported
+ * artifact identities.
+ */
 class XdkMonikerTest {
     @TempDir lateinit var directory: Path
 

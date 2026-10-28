@@ -110,6 +110,7 @@ class XtcRenameEdit
                 }
         }
 
+        /** Open buffer and synchronizer identity captured before requesting a rename. */
         private data class Buffer(
             val opened: OpenedDocument,
             val synchronizer: DocumentContentSynchronizer,
@@ -123,6 +124,7 @@ class XtcRenameEdit
                     synchronizer.document.modificationStamp == stamp
         }
 
+        /** Source file, original modification stamp and proposed destination for a rename. */
         private data class FileMove(
             val file: VirtualFile,
             val url: String,
@@ -136,6 +138,7 @@ class XtcRenameEdit
                     FileMoveTargets.valid(mapOf(Path.of(file.path) to target))
         }
 
+        /** Connection, buffers and file moves that must remain current while the server proves the rename. */
         private data class Snapshot(
             val wrapper: LanguageServerWrapper,
             val server: LanguageServer,

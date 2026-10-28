@@ -23,6 +23,10 @@ import static java.util.Objects.requireNonNull;
 /**
  * Immutable source provenance for a selected, instantiated method call. Created during real
  * validation, not overload probing. No Context or mutable argument expressions are retained.
+ *
+ * @param method     the compiler-selected method identity
+ * @param signature  the instantiated signature fitted at this source site
+ * @param arguments  written argument spans associated with visible parameter indices
  */
 public record InvocationBinding(MethodConstant method, SignatureConstant signature,
                                 List<Argument> arguments) {
@@ -30,7 +34,12 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         arguments = List.copyOf(arguments);
     }
 
-    /** A validated function-valued invocation has a signature, but no statically selected method. */
+    /**
+     * A validated function-valued invocation has a signature, but no statically selected method.
+     *
+     * @param type       the compiler-resolved value or function type
+     * @param arguments  written argument spans associated with visible parameter indices
+     */
     public record FunctionCall(TypeConstant type, List<Argument> arguments) {
         public FunctionCall {
             arguments = List.copyOf(arguments);
@@ -40,6 +49,11 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
     /**
      * The two kinds of call facts remain separate so a function never claims a method target.
      * Maps are immutable identity snapshots: keys and values compare by reference.
+     *
+     * @param methods       validated method calls keyed by invocation identity
+     * @param functions     validated function calls keyed by invocation identity
+     * @param constructors  validated constructor calls keyed by construction identity
+     * @param initializers  folded initializer facts keyed by source property identity
      */
     public record Facts(Map<InvocationExpression, InvocationBinding> methods,
                         Map<InvocationExpression, FunctionCall> functions,
@@ -52,12 +66,25 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             initializers = identitySnapshot(initializers);
         }
 
+        /**
+         * Capture call facts, leaving omitted constructor or initializer facts empty.
+         *
+         * @param methods       validated method calls keyed by invocation identity
+         * @param functions     validated function calls keyed by invocation identity
+         * @param constructors  validated constructor calls keyed by construction identity
+         */
         public Facts(Map<InvocationExpression, InvocationBinding> methods,
                      Map<InvocationExpression, FunctionCall> functions,
                      Map<NewExpression, InvocationBinding> constructors) {
             this(methods, functions, constructors, Map.of());
         }
 
+        /**
+         * Capture call facts, leaving omitted constructor or initializer facts empty.
+         *
+         * @param methods    validated method calls keyed by invocation identity
+         * @param functions  validated function calls keyed by invocation identity
+         */
         public Facts(Map<InvocationExpression, InvocationBinding> methods,
                      Map<InvocationExpression, FunctionCall> functions) {
             this(methods, functions, Map.of());
@@ -77,12 +104,25 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
     /** A written argument's source range and visible parameter index; positional/legacy facts have no label. */
     public record Argument(long startPosition, long endPosition, int parameterIndex, boolean named,
                            Label label) {
-        /** Retain callers that recorded named status without the label's source span. */
+        /**
+         * Retain callers that recorded named status without the label's source span.
+         *
+         * @param startPosition   the written source range's inclusive start
+         * @param endPosition     the written source range's exclusive end
+         * @param parameterIndex  the zero-based visible parameter index
+         * @param named           whether the argument was written with a parameter label
+         */
         public Argument(long startPosition, long endPosition, int parameterIndex, boolean named) {
             this(startPosition, endPosition, parameterIndex, named, null);
         }
 
-        /** Retain the original positional-argument construction API. */
+        /**
+         * Retain the original positional-argument construction API.
+         *
+         * @param startPosition   the written source range's inclusive start
+         * @param endPosition     the written source range's exclusive end
+         * @param parameterIndex  the zero-based visible parameter index
+         */
         public Argument(long startPosition, long endPosition, int parameterIndex) {
             this(startPosition, endPosition, parameterIndex, false);
         }
@@ -91,6 +131,11 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
     /**
      * Match the compiler's parameter-ordered expressions to their written argument spans before
      * validation inserts conversions. Synthetic defaults have no matching written expression.
+     *
+     * @param written  the arguments in source order, before validation rewrites
+     * @param ordered  the same arguments arranged in parameter order, including synthetic defaults
+     *
+     * @return source-to-parameter associations, or empty if any written argument cannot be matched
      */
     public static Optional<List<Argument>> arguments(List<Expression> written, List<Expression> ordered) {
         List<Argument> bindings = new ArrayList<>();
@@ -130,6 +175,7 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
      * a compiler context survives with the returned tree. The result is detached from the collector.
      */
     public static final class Collector {
+        /** Create an enabled call-fact collector for one compilation attempt. */
         public Collector() {
             this(true);
         }
@@ -143,7 +189,11 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             return f_enabled;
         }
 
-        /** Invalidate any earlier result before retrying validation of this invocation. */
+        /**
+         * Invalidate any earlier result before retrying validation of this invocation.
+         *
+         * @param invocation  the source invocation being validated
+         */
         public void begin(InvocationExpression invocation) {
             if (f_enabled) {
                 f_bindings.remove(invocation);
@@ -151,45 +201,83 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             }
         }
 
-        /** Record a completed validation; node identity keeps speculative clones separate. */
+        /**
+         * Record a completed validation; node identity keeps speculative clones separate.
+         *
+         * @param invocation  the source invocation being validated
+         * @param binding     the successfully established facts for this source node
+         */
         public void record(InvocationExpression invocation, InvocationBinding binding) {
             if (f_enabled) {
                 f_bindings.put(invocation, binding);
             }
         }
 
+        /**
+         * Retain a successfully validated call's source associations.
+         *
+         * @param invocation  the source invocation being validated
+         * @param binding     the successfully established facts for this source node
+         */
         public void record(InvocationExpression invocation, FunctionCall binding) {
             if (f_enabled) {
                 f_functions.put(invocation, binding);
             }
         }
 
-        /** Constructor arguments undergo the same named/default argument rewriting as methods. */
+        /**
+         * Constructor arguments undergo the same named/default argument rewriting as methods.
+         *
+         * @param construction  the source construction being validated
+         */
         public void begin(NewExpression construction) {
             if (f_enabled) {
                 f_constructors.remove(construction);
             }
         }
 
+        /**
+         * Retain a successfully validated call's source associations.
+         *
+         * @param construction  the source construction being validated
+         * @param binding       the successfully established facts for this source node
+         */
         public void record(NewExpression construction, InvocationBinding binding) {
             if (f_enabled) {
                 f_constructors.put(construction, binding);
             }
         }
 
-        /** A discarded synthetic initializer keeps detached facts anchored to its source property. */
+        /**
+         * A discarded synthetic initializer keeps detached facts anchored to its source property.
+         *
+         * @param property  the surviving property declaration that owns the initializer
+         * @param binding   the successfully established facts for this source node
+         */
         public void record(PropertyDeclarationStatement property, InitializerBinding binding) {
             if (f_enabled) {
                 f_initializers.put(property, binding);
             }
         }
 
-        /** Finish the attempt, returning immutable facts for the surviving source trees. */
+        /**
+         * Finish the attempt, returning immutable facts for the surviving source trees.
+         *
+         * @param roots  the surviving source roots to publish facts for
+         *
+         * @return immutable method-call facts keyed by surviving invocation identity; scratch entries are cleared
+         */
         public Map<InvocationExpression, InvocationBinding> finish(List<? extends AstNode> roots) {
             return finishFacts(roots).methods();
         }
 
-        /** Finish both kinds together, releasing discarded or speculative nodes in either map. */
+        /**
+         * Finish both kinds together, releasing discarded or speculative nodes in either map.
+         *
+         * @param roots  the surviving source roots to publish facts for
+         *
+         * @return immutable call and initializer facts for surviving syntax; scratch entries are cleared
+         */
         public Facts finishFacts(List<? extends AstNode> roots) {
             Map<InvocationExpression, InvocationBinding> result = new IdentityHashMap<>();
             Map<InvocationExpression, FunctionCall> functions = new IdentityHashMap<>();

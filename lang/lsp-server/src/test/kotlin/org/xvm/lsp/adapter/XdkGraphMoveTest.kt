@@ -12,6 +12,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks source-graph and resource ownership during container relocation. A proposal must preserve
+ * dependencies and resource values, including disabled or missing roots, rather than succeeding against the
+ * old filesystem layout.
+ */
 class XdkGraphMoveTest {
     @TempDir lateinit var directory: Path
 

@@ -17,6 +17,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Forces diagnostic reply, edit and close races around snapshot lookup. Ensures a retired result ID cannot
+ * re-enter the cache or authorize reuse against a newer document revision.
+ */
 class DiagnosticResultMessagesTest {
     @Test
     fun `close or cancellation during reply snapshot lookup cannot reinsert a retired result`() {

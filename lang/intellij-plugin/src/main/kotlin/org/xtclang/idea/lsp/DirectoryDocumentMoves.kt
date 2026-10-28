@@ -20,6 +20,11 @@ import java.util.concurrent.CompletableFuture
 // TODO LSP4IJ: UP19 — reconnect open descendants when their directory moves or is renamed.
 // Upstream onFileRenameAfter handles only the event's exact file. Remove this bridge once X162
 // passes Move/Undo/Redo and subsequent unsaved edits without stale document connections.
+
+/**
+ * Keeps open LSP documents attached to the correct URIs during directory moves. Closes them under their old
+ * URIs before the VFS change, then lets synchronization reopen them at their new paths.
+ */
 internal class DirectoryDocumentMoves(
     private val wrapper: LanguageServerWrapper,
     private val disposed: () -> Boolean,

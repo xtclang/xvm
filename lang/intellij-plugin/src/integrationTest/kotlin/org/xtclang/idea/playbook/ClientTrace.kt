@@ -175,6 +175,7 @@ class ClientTrace(
     ): Boolean = URI(left) == URI(right)
 }
 
+/** Selects a native LSP4IJ trace level without duplicating its enum in the test classloader. */
 @Remote("com.redhat.devtools.lsp4ij.settings.ServerTrace", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientTraceLevel {
     fun valueOf(name: String): ClientTraceLevel
@@ -182,6 +183,7 @@ interface ClientTraceLevel {
     fun name(): String
 }
 
+/** Locates IDE editors so tests can inspect the native protocol trace output. */
 @Remote("com.intellij.openapi.editor.EditorFactory")
 interface TraceEditors {
     fun getInstance(): TraceEditors
@@ -189,6 +191,7 @@ interface TraceEditors {
     fun getAllEditors(): List<TraceEditor>
 }
 
+/** Exposes an editor's document for trace-content assertions. */
 @Remote("com.intellij.openapi.editor.Editor")
 interface TraceEditor {
     fun getDocument(): ParityDocument

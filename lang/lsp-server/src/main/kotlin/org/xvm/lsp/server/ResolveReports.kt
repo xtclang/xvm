@@ -6,11 +6,19 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import java.util.UUID
 
-/** Bounded detached results, owned by one connection and guarded by the document lifecycle lock. */
+/**
+ * Retains deferred response data behind opaque handles for completion, code-action and other resolve
+ * requests. Entry and character budgets bound retention; oversized values must be returned eagerly.
+ *
+ * One connection owns the cache, and callers hold the document lifecycle lock. Resolution checks the
+ * document revision and item label so an expired or stale handle cannot apply data from another request.
+ * Stored values must be detached from compiler attempts to avoid retaining ASTs and constant pools.
+ */
 internal class ResolveReports<T>(
     private val limit: Int = 512,
     private val characterLimit: Int = 2_000_000,
 ) {
+    /** Deferred response data tied to a document revision, with its size tracked against the cache budget. */
     private data class Entry<T>(
         val revision: Long,
         val label: String,

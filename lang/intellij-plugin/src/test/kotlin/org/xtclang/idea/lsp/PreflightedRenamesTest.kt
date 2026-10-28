@@ -14,6 +14,10 @@ import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 
+/**
+ * Exercises the real LSP proxy boundary used during an already-proven native rename. Verifies scoped
+ * ownership survives synchronous dispatch and no-op follow-up requests do not block on the compiler again.
+ */
 class PreflightedRenamesTest {
     private val guard = PreflightedRenames()
     private val pending = CompletableFuture<Any?>()

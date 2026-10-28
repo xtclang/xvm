@@ -77,6 +77,7 @@ internal fun Driver.settingsPersistence(
     }
 }
 
+/** Drives persisted settings and reloads through the native test probe. */
 @Remote("org.xtclang.idea.playbook.probe.SettingsPersistencePage", plugin = "org.xtclang.playbook.probe")
 internal interface SettingsPersistencePage {
     fun sources(

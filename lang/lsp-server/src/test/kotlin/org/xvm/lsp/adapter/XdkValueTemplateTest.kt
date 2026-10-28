@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks lambda templates against expected callable arity in ordinary, named and constructor arguments.
+ * Generated scaffolds must preserve contextual typing and exact insertion syntax.
+ */
 class XdkValueTemplateTest {
     @Test
     fun `lambda templates fit expected arity and compile in named ordinary and constructor arguments`() {

@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
+/**
+ * Forces out-of-order configuration replies around reset and disconnect. Late or malformed settings must not
+ * replace the latest valid editor formatting snapshot.
+ */
 class EditorFormattingStateTest {
     @Test
     fun `disconnect rejects delayed configuration and requests created after close`() {

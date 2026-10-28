@@ -24,6 +24,7 @@ internal class ReadOnlyDocuments(
     private val adapter: Adapter,
     private val client: () -> LanguageClient?,
 ) : AutoCloseable {
+    /** Connection readiness and published library documents, including which documents the client has fetched. */
     private data class State(
         val enabled: Boolean = false,
         val ready: Boolean = false,

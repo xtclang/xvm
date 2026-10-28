@@ -14,6 +14,10 @@ import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks reuse and retirement of module analyses when source graphs, build inputs or binaries change.
+ * Independent successful buffers remain usable while changed dependencies invalidate their consumers.
+ */
 class XdkConfigurationReplacementTest {
     @TempDir lateinit var directory: Path
 

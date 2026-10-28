@@ -291,6 +291,7 @@ internal fun ParityScenarios.compilerImportCases() {
     }
 }
 
+/** Drives Gradle compiler-model import through the plugin's native settings page. */
 @Remote("org.xtclang.idea.playbook.probe.CompilerImportPage", plugin = "org.xtclang.playbook.probe")
 internal interface CompilerImportPage {
     fun open(project: Project): CompilerImportPage
