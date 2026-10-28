@@ -1,20 +1,36 @@
 package org.xtclang.idea.playbook.probe
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.intellij.codeInsight.completion.CompletionPhase
 import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
+import com.intellij.codeInsight.hints.declarative.impl.inlayRenderer.DeclarativeInlayRenderer
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.DataManager
+import com.intellij.navigation.ChooseByNameContributor
+import com.intellij.navigation.NavigationItem
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.progress.EmptyProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.IdeFrame
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.ui.AppIcon
+import com.intellij.util.indexing.FindSymbolParameters
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.features.workspaceSymbol.LSPWorkspaceGotoSymbolContributor
+import com.redhat.devtools.lsp4ij.features.workspaceSymbol.WorkspaceSymbolData
 import org.xtclang.idea.lsp.XtcRenameHandler
 import java.awt.KeyboardFocusManager
 import java.awt.Window
@@ -156,6 +172,76 @@ object EditorUi {
             task.get(HANG_SECONDS, SECONDS)
         } finally {
             task.cancel(false)
+        }
+    }
+
+    /**
+     * The tooltips of the editor's declarative inlays, as IntelliJ shows them when the mouse is over one: each inlay's
+     * `offset` and its `tooltip`, an HTML text, or none.
+     */
+    @JvmStatic
+    fun inlayTooltips(editor: Editor): String {
+        val tooltips = JsonArray()
+        ApplicationManager.getApplication().invokeAndWait {
+            editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength).forEach { inlay ->
+                val renderer = inlay.renderer as? DeclarativeInlayRenderer ?: return@forEach
+                tooltips.add(
+                    JsonObject().apply {
+                        addProperty("offset", inlay.offset)
+                        addProperty("tooltip", renderer.presentationList.model.tooltip)
+                    },
+                )
+            }
+        }
+        return tooltips.toString()
+    }
+
+    /**
+     * Opens the workspace symbol [name] as Go to Symbol does once it is chosen: the item that LSP4IJ's contributor gives
+     * for it navigates, and resolves the symbol's range first when its location has none (#1788). Answers whether the
+     * item had a `range` before, and the selected editor's `path` and caret `offset` after it.
+     */
+    @JvmStatic
+    fun goToSymbol(
+        project: Project,
+        name: String,
+    ): String {
+        val contributor =
+            ChooseByNameContributor.SYMBOL_EP_NAME.extensionList
+                .filterIsInstance<LSPWorkspaceGotoSymbolContributor>()
+                .single()
+        val items = mutableListOf<NavigationItem>()
+        ProgressManager.getInstance().runProcess(
+            { contributor.processElementsWithName(name, { items.add(it) }, FindSymbolParameters.wrap(name, project, false)) },
+            EmptyProgressIndicator(),
+        )
+        val item = checkNotNull(items.filterIsInstance<WorkspaceSymbolData>().firstOrNull { it.name == name }) { "No symbol $name: $items" }
+        val state = JsonObject().apply { addProperty("range", item.textRange != null) }
+        ApplicationManager.getApplication().invokeAndWait {
+            item.navigate(true)
+            val editor = FileEditorManager.getInstance(project).selectedTextEditor
+            state.addProperty("path", editor?.virtualFile?.path)
+            state.addProperty("offset", editor?.caretModel?.offset)
+        }
+        return state.toString()
+    }
+
+    /**
+     * Reformats the given ranges of the editor's file, `[start, end]` offsets, as Reformat Code does for the changed lines
+     * of several places: one formatting request for all of them.
+     */
+    @JvmStatic
+    fun reformatRanges(
+        editor: Editor,
+        ranges: String,
+    ) {
+        val project = requireNotNull(editor.project)
+        val textRanges = JsonParser.parseString(ranges).asJsonArray.map { TextRange(it.asJsonArray[0].asInt, it.asJsonArray[1].asInt) }
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = requireNotNull(PsiDocumentManager.getInstance(project).getPsiFile(editor.document))
+            WriteCommandAction.runWriteCommandAction(project, "Reformat Ranges", null, {
+                CodeStyleManager.getInstance(project).reformatText(file, textRanges)
+            })
         }
     }
 
