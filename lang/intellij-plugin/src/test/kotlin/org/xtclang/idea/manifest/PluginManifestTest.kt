@@ -1,5 +1,6 @@
 package org.xtclang.idea.manifest
 
+import com.intellij.refactoring.move.MoveHandlerDelegate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -10,13 +11,11 @@ import javax.xml.parsers.DocumentBuilderFactory
 /**
  * Self-consistency tests for META-INF/plugin.xml.
  *
- * Counterpart to VS Code's `activation.test.ts` — both guard the same failure
- * mode: an extension point / command / configuration declared in the
- * manifest but referenced from the wrong place in code (or vice versa)
- * silently fails to register at runtime. We can't fully verify
- * runtime registration without `BasePlatformTestCase`, but we can at
- * least guarantee that the manifest carries every extension point our
- * Kotlin code expects, and that the plugin ID matches the single
+ * Counterpart to VS Code's `activation.test.ts` — both guard the same failure mode: an extension
+ * point / command / configuration declared in the manifest but referenced from the wrong place in
+ * code (or vice versa) silently fails to register at runtime. We can't fully verify runtime
+ * registration without `BasePlatformTestCase`, but we can at least guarantee that the manifest
+ * carries every extension point our Kotlin code expects, and that the plugin ID matches the single
  * source of truth in `PluginPaths.PLUGIN_ID`.
  */
 @DisplayName("Plugin manifest (META-INF/plugin.xml)")
@@ -57,7 +56,9 @@ class PluginManifestTest {
     }
 
     @Test
-    @DisplayName("declares all required extension points (newProjectWizard, configurationType, lang.commenter, LSP server, ...)")
+    @DisplayName(
+        "declares all required extension points (newProjectWizard, configurationType, lang.commenter, LSP server, ...)",
+    )
     fun declaresAllRequiredExtensions() {
         // Collect every <extensions defaultExtensionNs="..."> child element name
         // across the entire manifest. We don't care which <extensions> block they
@@ -77,14 +78,20 @@ class PluginManifestTest {
 
         val required =
             setOf(
-                "notificationGroup", // notification group "XTC Language Server" used by XtcLspServerSupportProvider
-                "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated plugins
+                "notificationGroup", // notification group "Ecstasy Language Server" used by
+                // XtcLspServerSupportProvider
+                "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated
+                // plugins
+                "lang.syntaxHighlighterFactory", // use the TextMate grammar for our native file type
+                "editorHighlighterProvider", // use TextMate's scope-aware token storage
                 "newProjectWizard.generator", // wizard entry created by XtcNewProjectWizard
                 "configurationType", // run-config type created by XtcRunConfigurationType
                 "runConfigurationProducer", // auto-create run configs from .x context
                 "iconProvider", // file icons via XtcIconProvider
                 "defaultLiveTemplates", // /liveTemplates/XTC snippets
                 "lang.commenter", // Ctrl+/ via XtcCommenter
+                "renameHandler", // guarded compiler rename via XtcRenameHandler
+                "refactoring.moveHandler", // compiler preflight before native filesystem mutation
                 "langCodeStyleSettingsProvider", // Settings -> Code Style -> Ecstasy
                 "enterHandlerDelegate", // auto-indent on Enter
                 "postStartupActivity", // XtcEditorStartupActivity
@@ -105,9 +112,42 @@ class PluginManifestTest {
     }
 
     @Test
+    fun fileMoveUsesThePlatformExtensionPoint() {
+        val elements = pluginXml.getElementsByTagName("*")
+        val registration =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .single {
+                    it.getAttribute("implementation") == "org.xtclang.idea.lsp.XtcFileMoveHandler"
+                }
+        val namespace = (registration.parentNode as Element).getAttribute("defaultExtensionNs")
+        assertThat("$namespace.${registration.tagName}").isEqualTo(MoveHandlerDelegate.EP_NAME.name)
+    }
+
+    @Test
+    @DisplayName("requires only Community platform plugins and LSP4IJ")
+    fun communityDependencies() {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val required =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .filter { it.getAttribute("optional") != "true" }
+                .map { it.textContent.trim() }
+        assertThat(required)
+            .containsExactlyInAnyOrder(
+                "com.intellij.modules.platform",
+                "com.intellij.modules.java",
+                "com.intellij.gradle",
+                "org.jetbrains.plugins.textmate",
+                "com.redhat.devtools.lsp4ij",
+            )
+    }
+
+    @Test
     @DisplayName("LSP server registration points at xtcLanguageServer and maps *.x")
     fun lspServerWiring() {
-        // The LSP server element lives inside <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">.
+        // The LSP server element lives inside <extensions
+        // defaultExtensionNs="com.redhat.devtools.lsp4ij">.
         // We look for the <server> child with id="xtcLanguageServer" and the
         // <fileNamePatternMapping> with patterns="*.x".
         val servers = pluginXml.getElementsByTagName("server")
@@ -116,8 +156,9 @@ class PluginManifestTest {
                 .map { servers.item(it) as Element }
                 .firstOrNull { it.getAttribute("id") == "xtcLanguageServer" }
         assertThat(server)
-            .withFailMessage("plugin.xml is missing the LSP4IJ <server id='xtcLanguageServer'> element")
-            .isNotNull
+            .withFailMessage(
+                "plugin.xml is missing the LSP4IJ <server id='xtcLanguageServer'> element",
+            ).isNotNull
 
         val mappings = pluginXml.getElementsByTagName("fileNamePatternMapping")
         val mapping =
@@ -141,7 +182,9 @@ class PluginManifestTest {
         val fileType =
             (0 until fileTypes.length)
                 .map { fileTypes.item(it) as Element }
-                .firstOrNull { it.getAttribute("implementationClass") == "org.xtclang.idea.XtcFileType" }
+                .firstOrNull {
+                    it.getAttribute("implementationClass") == "org.xtclang.idea.XtcFileType"
+                }
         assertThat(fileType)
             .withFailMessage(
                 "plugin.xml must register org.xtclang.idea.XtcFileType. Without this, IntelliJ treats .x as " +

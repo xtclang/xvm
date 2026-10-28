@@ -6,22 +6,57 @@ import {
     Executable,
     LanguageClient,
     LanguageClientOptions,
+    MessageTransports,
     ServerOptions,
     State,
     Trace,
     TransportKind
 } from 'vscode-languageclient/node';
 
+import { formattingSettings, nativeFormatOnSave, readServiceSettings } from './editor-settings';
+import { synchronizationOptions } from './service-settings';
+import { compilerBuildModels } from './compiler-paths';
+import { BuildModel } from './build-model';
+import { LibraryOptions } from './library-configuration';
+import { libraryOptions } from './library-settings';
 import { buildJvmArgs, findJavaExecutable } from './java';
+import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
+import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
+import { supportLogs } from './support-logs';
+import { serviceFailure } from './service-notifications';
 
 let client: LanguageClient | undefined;
-let crashCount = 0;
-let hasEverReachedRunning = false;
+let activeConnectionKey: string | undefined;
+
+function connectionKey(): string {
+    const settings = readServiceSettings();
+    const config = vscode.workspace.getConfiguration('xtc');
+    return JSON.stringify([settings.adapter, settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions(), runtimeLogArguments()]);
+}
+
+export function connectionSettingsChanged(): boolean { return connectionKey() !== activeConnectionKey; }
+
 const MAX_CRASH_RESTARTS = 3;
 
 export function getClient(): LanguageClient | undefined {
     return client;
+}
+
+function compilerConfiguration(): { sourceModules: unknown[] | null; buildModels: BuildModel[]; libraries: LibraryOptions } {
+    return { sourceModules: compilerSourceModules(), buildModels: compilerBuildModels(), libraries: libraryOptions() };
+}
+
+export async function updateEditorConfiguration(): Promise<void> {
+    if (client?.state === State.Running) {
+        await client.sendNotification('workspace/didChangeConfiguration', { settings: { xtc: { presentation: {} } } });
+    }
+}
+
+export async function updateCompilerConfiguration(): Promise<void> {
+    if (client?.state === State.Running) {
+        await client.sendNotification('workspace/didChangeConfiguration', { settings: { xtc: { compiler: compilerConfiguration() } } });
+    }
 }
 
 /** Stop the client safely, swallowing any state-related throws. */
@@ -38,12 +73,31 @@ async function safeStop(): Promise<void> {
     }
 }
 
-export async function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
-    const javaExecutable = await findJavaExecutable(context);
-    const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
-    const jvmArgs = buildJvmArgs(serverJar, logLevel);
+let starting: Promise<void> | undefined;
+export function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    starting ??= startConnection(context, serverJar, outputChannel).finally(() => { starting = undefined; });
+    return starting;
+}
 
-    outputChannel.appendLine('Starting XTC Language Server...');
+async function startConnection(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    // These counters belong to this connection, including its automatic crash restarts.
+    let crashCount = 0;
+    let hasEverReachedRunning = false;
+    const preferences = readServiceSettings();
+    const requestedKey = connectionKey();
+    let lastFormatting = formattingSettings();
+    const logs = supportLogs(context);
+    let launch = logs.begin('Resolving the Java runtime.\n');
+    const javaExecutable = await findJavaExecutable(context).catch(error => {
+        logs.finish(launch, `Startup failed: ${error}\n`);
+        serviceFailure(`Cannot start Ecstasy: ${error}`);
+        throw error;
+    });
+    const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
+    const adapterArgs = preferences.adapter === 'default' ? [] : [`-Dxtc.lsp.adapter=${preferences.adapter}`];
+    const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...adapterArgs, ...buildJvmArgs(serverJar, logLevel)];
+
+    outputChannel.appendLine('Starting Ecstasy Language Server...');
     outputChannel.appendLine(`Java: ${javaExecutable}`);
     outputChannel.appendLine(`Args: ${jvmArgs.join(' ')}`);
     outputChannel.appendLine(`JAR: ${serverJar}`);
@@ -63,29 +117,54 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
     };
 
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: 'file', language: 'xtc' }],
+        documentSelector: [{ scheme: 'file', language: 'xtc' }, { scheme: 'ecstasy-library', language: 'xtc' }],
         outputChannel,
         traceOutputChannel: outputChannel,
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
         },
         initializationOptions: {
-            inlayHintsEnabled: vscode.workspace.getConfiguration('xtc').get<boolean>('inlayHints.enabled', true),
-            xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', [])
+            xtcDocumentSync: synchronizationOptions(preferences, false),
+            xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', []),
+            xtcCompiler: compilerConfiguration()
         },
+        // Our startup handler reports one actionable failure; the default handler also opens
+        // raw JSON-RPC and initialization popups for the same failed process.
+        initializationFailedHandler: () => false,
         middleware: {
+            provideInlayHints: (document, range, token, next) => {
+                const value = vscode.workspace.getConfiguration('xtc', document.uri).get<unknown>('inlayHints.enabled', true);
+                const enabled = typeof value === 'boolean' ? value : preferences.inlayHints;
+                return enabled ? next(document, range, token) : [];
+            },
+            // Save ownership is checked per document at the instant of saving, including
+            // language/folder overrides changed after initialization.
+            willSaveWaitUntil: (event, next) => nativeFormatOnSave(event.document) ? Promise.resolve([]) : next(event),
+            provideRenameEdits: (document, position, name, token, next) => {
+                if (client !== connection) return null;
+                return connection.initializeResult?.capabilities.experimental?.xtcRenameProposal === 1
+                    ? renameWithConfiguration(connection, document, position, name, token)
+                    : next(document, position, name, token);
+            },
             workspace: {
+                willRenameFiles: (event, next) => {
+                    if (client !== connection) return Promise.resolve(null);
+                    return connection.initializeResult?.capabilities.experimental?.xtcFileMoveProposal === 1
+                        ? moveWithConfiguration(connection, event) : next(event);
+                },
                 configuration: (params: ConfigurationParams) => {
                     return params.items.map(item => {
+                        if (item.section === 'xtc.compiler') {
+                            return compilerConfiguration();
+                        }
+                        if (item.section === 'xtc.codeLens') {
+                            const resource = item.scopeUri ? vscode.Uri.parse(item.scopeUri) : undefined;
+                            return { references: vscode.workspace.getConfiguration('xtc.codeLens', resource).get('references', true) };
+                        }
                         if (item.section === 'xtc.formatting') {
-                            const config = vscode.workspace.getConfiguration('xtc.formatting');
-                            return {
-                                indentSize: config.get<number>('indentSize', 4),
-                                continuationIndentSize: config.get<number>('continuationIndentSize', 8),
-                                tabSize: config.get<number>('tabSize', 4),
-                                insertSpaces: config.get<boolean>('insertSpaces', true),
-                                maxLineWidth: config.get<number>('maxLineWidth', 120)
-                            };
+                            try { lastFormatting = formattingSettings(); }
+                            catch (error) { outputChannel.warn(`Retaining previous Ecstasy formatting settings: ${error}`); }
+                            return lastFormatting;
                         }
                         return {};
                     });
@@ -100,11 +179,12 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
                 return { action: ErrorAction.Shutdown };
             },
             closed: () => {
+                if (client !== connection) return { action: CloseAction.DoNotRestart, handled: true };
                 if (!hasEverReachedRunning) {
                     // Server died before reaching Running state (startup crash).
                     // Do not restart to avoid unhandled rejection issues in vscode-languageclient.
                     updateStatusBar('error');
-                    return { action: CloseAction.DoNotRestart };
+                    return { action: CloseAction.DoNotRestart, handled: true };
                 }
                 crashCount++;
                 if (crashCount <= MAX_CRASH_RESTARTS) {
@@ -112,29 +192,64 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
                     return { action: CloseAction.Restart };
                 }
                 updateStatusBar('stopped');
-                void vscode.window.showErrorMessage(
-                    `XTC Language Server crashed ${crashCount} times and will not be restarted. Use "Ecstasy: Restart Language Server" to restart manually.`
-                );
-                return { action: CloseAction.DoNotRestart };
+                serviceFailure(`Ecstasy Language Server crashed ${crashCount} times and will not restart automatically.`);
+                return { action: CloseAction.DoNotRestart, handled: true };
             }
         }
     };
 
-    client = new LanguageClient(
+    const connection = new class extends LanguageClient {
+        override async start(): Promise<void> {
+            try {
+                // TODO VSCODE: UP28 — start() can lose its internal startup promise when the
+                // transport closes during initialize. Observe the idempotent in-flight start
+                // immediately too, before upstream clears it, so its rejection is handled.
+                // Remove when upstream always returns/observes that captured promise (X272).
+                const starting = super.start();
+                await Promise.all([starting, super.start()]);
+                if (!this.isRunning()) throw new Error('Server stopped before initialization completed');
+            } catch (error) {
+                if (client === this) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    logs.finish(launch, `Startup failed: ${message}\n`);
+                    serviceFailure('Ecstasy Language Server could not start. Check the Java runtime and JVM options; details are in the server log.');
+                    updateStatusBar('error');
+                }
+                throw error;
+            }
+        }
+
+        override error(message: string, data?: unknown, showNotification?: boolean | 'force'): void {
+            // Keep full transport detail in Output. Startup/disconnect notifications have an owner.
+            super.error(message, data, this.isRunning() ? showNotification : false);
+        }
+
+        override stop(timeout?: number): Promise<void> {
+            // Upstream invokes void stop() during initialization failure, when stopping is invalid.
+            return super.stop(timeout).catch(() => {});
+        }
+
+        protected override async createMessageTransports(encoding: string): Promise<MessageTransports> {
+            const id = logs.begin(`Java: ${javaExecutable}\nArguments: ${jvmArgs.join(' ')}\n`);
+            launch = id;
+            const transports = await super.createMessageTransports(encoding);
+            this.serverProcess?.stderr?.on('data', (chunk: Buffer) => logs.append(id, chunk.toString()));
+            this.serverProcess?.once('exit', (code, signal) => logs.finish(id, `\nProcess exited: code=${code}, signal=${signal ?? 'none'}\n`));
+            return transports;
+        }
+    }(
         'xtcLanguageServer',
-        'XTC Language Server',
+        'Ecstasy Language Server',
         serverOptions,
         clientOptions
     );
 
-    // Patch stop() to suppress internal rejections from vscode-languageclient.
-    // The library calls `void this.stop()` during initialization failures, creating
-    // unhandled rejections. This patch ensures stop() always resolves.
-    const originalStop = client.stop.bind(client);
-    (client as unknown as { stop: (timeout?: number) => Promise<void> }).stop =
-        (timeout?: number) => originalStop(timeout).catch(() => {});
+    client = connection;
 
+    activeConnectionKey = requestedKey;
+    const startingClient = client;
     client.onDidChangeState(({ newState }) => {
+        if (client !== connection) return;
         const stateMap = {
             [State.Starting]: 'starting' as const,
             [State.Running]: 'ready' as const,
@@ -144,6 +259,15 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
         if (newState === State.Running) {
             crashCount = 0;
             hasEverReachedRunning = true;
+            const id = launch;
+            void connection.sendRequest<{ adapter: string; logs: { directory: string; traceDirectory: string } }>('xtc/languageServiceStatus')
+                .then(status => {
+                    if (client === connection && connection.isRunning()) {
+                        logs.remember(id, status);
+                        updateStatusBar('ready', status.adapter);
+                    }
+                })
+                .catch(error => outputChannel.warn(`Could not record Ecstasy log session: ${error}`));
         }
         
         const status = stateMap[newState as keyof typeof stateMap];
@@ -154,34 +278,42 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
 
     updateStatusBar('starting');
 
-    void client.start().catch(err => {
+    await startingClient.start().catch(err => {
+        if (client !== connection) throw err;
         const message = err?.message ?? String(err);
-        console.warn('XTC Language Server failed to start:', message);
-
-        if (message.includes('UnsupportedClassVersionError') || message.includes('class file version')) {
-            void vscode.window.showErrorMessage(
-                'XTC Language Server requires Java 25+. Set the "xtc.java.home" setting to your Java 25 installation path.',
-                'Open Settings'
-            ).then(choice => {
-                if (choice === 'Open Settings') {
-                    void vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.home');
-                }
-            });
-        }
+        console.warn('Ecstasy Language Server failed to start:', message);
 
         updateStatusBar('error');
-        client = undefined;
+        if (client === startingClient) client = undefined;
+        throw err;
     });
+    await applyTraceConfig();
 }
 
-export async function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
-    crashCount = 0;
-    hasEverReachedRunning = false;
-    await safeStop();
-    await startLanguageClient(context, serverJar, outputChannel);
+// Restart requests share one operation; settings changes during startup are applied in order.
+let restarting: Promise<void> | undefined;
+let restartRevision = 0;
+export function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    readServiceSettings();
+    runtimeJvmOptions(); // Validate before stopping a working connection.
+    runtimeLogArguments();
+    formattingSettings(); // Reject malformed settings before stopping a valid connection.
+    restartRevision++;
+    restarting ??= (async () => {
+        let applied: number;
+        do {
+            applied = restartRevision;
+            await starting?.catch(() => {});
+            await safeStop();
+            await startLanguageClient(context, serverJar, outputChannel);
+        } while (applied !== restartRevision);
+    })().finally(() => { restarting = undefined; });
+    return restarting;
 }
 
 export async function stopLanguageClient(): Promise<void> {
+    await restarting?.catch(() => {});
+    await starting?.catch(() => {});
     await safeStop();
 }
 

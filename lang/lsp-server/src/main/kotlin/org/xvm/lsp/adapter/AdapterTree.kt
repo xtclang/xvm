@@ -3,9 +3,9 @@ package org.xvm.lsp.adapter
 /**
  * Backend-agnostic interface for a parsed syntax tree.
  *
- * Implementations provide access to the root node, source text, and positional
- * node lookup. Both tree-sitter and compiler-based parsers can implement this
- * interface, allowing formatting and code action logic to work with either backend.
+ * Implementations provide access to the root node, source text, and positional node lookup. Both
+ * tree-sitter and compiler-based parsers can implement this interface, allowing formatting and code
+ * action logic to work with either backend.
  *
  * @see AdapterNode for the node interface
  */
@@ -22,7 +22,7 @@ interface AdapterTree {
     /**
      * Find the smallest node at the given position.
      *
-     * @param line   0-based line number
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return the node at that position, or null if none
      */
@@ -35,9 +35,8 @@ interface AdapterTree {
 /**
  * Backend-agnostic interface for a syntax tree node.
  *
- * Provides the subset of node operations needed by shared formatting and
- * code action logic. Implementations wrap backend-specific node types
- * (tree-sitter nodes, compiler AST nodes, etc.).
+ * Provides the subset of node operations needed by shared formatting and code action logic.
+ * Implementations wrap backend-specific node types (tree-sitter nodes, compiler AST nodes, etc.).
  *
  * @see AdapterTree for the tree interface
  */
@@ -75,8 +74,8 @@ interface AdapterNode {
     /**
      * Get a child node by field name.
      *
-     * Field-based lookup is preferred when available — it is O(1) and
-     * position-independent, unlike [childByType] which scans linearly.
+     * Field-based lookup is preferred when available — it is O(1) and position-independent, unlike
+     * [childByType] which scans linearly.
      */
     fun childByFieldName(fieldName: String): AdapterNode?
 

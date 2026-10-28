@@ -14,12 +14,15 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.XtcParser
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Integration tests for [WorkspaceIndexer].
  *
- * Requires the tree-sitter native library. Tests are skipped (not failed)
- * when the native library is unavailable.
+ * Requires the tree-sitter native library. Tests are skipped (not failed) when the native library
+ * is unavailable.
  */
 @DisplayName("WorkspaceIndexer")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -39,6 +42,135 @@ class WorkspaceIndexerTest {
     @AfterAll
     fun tearDown() {
         parser?.close()
+    }
+
+    @Test
+    fun `an open buffer wins over an in flight disk read and survives disk deletion`(
+        @TempDir directory: Path,
+    ) {
+        val path = directory.resolve("Owner.x")
+        // Java File URIs use file:/ while LSP/Path URIs use file:///; ownership is identical.
+        val uri = path.toFile().toURI().toString()
+        Files.writeString(path, "module Owner { class Disk {} }")
+        val read = CompletableFuture<Void>()
+        val release = CompletableFuture<Void>()
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
+            (if (Files.isRegularFile(file)) Files.readString(file) else null).also {
+                read.complete(null)
+                release.get(5, SECONDS)
+            }
+        }.use { indexer ->
+            val scan = indexer.scanWorkspace(listOf(directory.toString()))
+            try {
+                read.get(5, SECONDS)
+                indexer.reindexFile(uri, "module Owner { class Buffer {} }")
+            } finally {
+                release.complete(null)
+            }
+            scan.get(5, SECONDS)
+            assertThat(index.findByName("Disk")).isEmpty()
+            assertThat(index.findByName("Buffer")).hasSize(1)
+            Files.delete(path)
+            indexer.refreshFile(uri)
+            assertThat(index.findByName("Buffer")).hasSize(1)
+            indexer.closeDocument(uri)
+            assertThat(index.findByName("Buffer")).isEmpty()
+        }
+    }
+
+    @Test
+    fun `closing restores disk and reopening invalidates an older close read`(
+        @TempDir directory: Path,
+    ) {
+        val path = directory.resolve("Owner.x")
+        val uri = path.toUri().toString()
+        Files.writeString(path, "module Owner { class Disk {} }")
+        val block = AtomicBoolean(false)
+        val read = CompletableFuture<Void>()
+        val release = CompletableFuture<Void>()
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
+            Files.readString(file).also {
+                if (block.get()) {
+                    read.complete(null)
+                    release.get(5, SECONDS)
+                }
+            }
+        }.use { indexer ->
+            indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
+            indexer.closeDocument(uri)
+            assertThat(index.findByName("Disk")).hasSize(1)
+            assertThat(index.findByName("FirstBuffer")).isEmpty()
+            indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
+            block.set(true)
+            val closing = CompletableFuture.runAsync { indexer.closeDocument(uri) }
+            try {
+                read.get(5, SECONDS)
+                indexer.reindexFile(uri, "module Owner { class Reopened {} }")
+            } finally {
+                release.complete(null)
+            }
+            closing.get(5, SECONDS)
+            assertThat(index.findByName("Disk")).isEmpty()
+            assertThat(index.findByName("Reopened")).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `buffers opened before the initial scan are indexed and closing observes disk deletion`(
+        @TempDir directory: Path,
+    ) {
+        val path = directory.resolve("Owner.x")
+        val uri = path.toUri().toString()
+        Files.writeString(path, "module Owner { class Disk {} }")
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()).use { indexer ->
+            indexer.reindexFile(uri, "module Owner { class Buffer {} }")
+            indexer.scanWorkspace(listOf(directory.toString())).get(5, SECONDS)
+            assertThat(index.findByName("Buffer")).hasSize(1)
+            assertThat(index.findByName("Disk")).isEmpty()
+            indexer.closeDocument(uri)
+            Files.delete(path)
+            indexer.refreshFile(uri)
+            assertThat(index.symbolCount).isZero()
+        }
+    }
+
+    @Test
+    fun `concurrent workspace scans do not starve their own bounded executor`(
+        @TempDir directory: Path,
+    ) {
+        Files.writeString(directory.resolve("Concurrent.x"), "module Concurrent { class Value {} }")
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()).use { indexer ->
+            val scans = List(12) { indexer.scanWorkspace(listOf(directory.toString())) }
+            CompletableFuture.allOf(*scans.toTypedArray()).get(15, SECONDS)
+            assertThat(index.findByName("Value")).hasSize(1)
+            indexer.close()
+            indexer.reindexFile(
+                directory.resolve("Concurrent.x").toUri().toString(),
+                "module Replaced {}",
+            )
+            assertThat(index.findByName("Value")).hasSize(1)
+            assertThat(index.findByName("Replaced")).isEmpty()
+        }
+    }
+
+    @Test
+    fun `concurrent native parser requests retain independent source trees`() {
+        XtcParser(requireNotNull(parser).getLanguage()).use { shared ->
+            val requests =
+                List(40) { number ->
+                    CompletableFuture.runAsync {
+                        val source = "module Parallel$number { Int value = $number; }"
+                        shared.parse(source).use { tree ->
+                            assertThat(tree.root.text).isEqualTo(source)
+                        }
+                    }
+                }
+            CompletableFuture.allOf(*requests.toTypedArray()).get(15, SECONDS)
+        }
     }
 
     // ========================================================================
@@ -93,11 +225,10 @@ class WorkspaceIndexerTest {
         }
 
         /**
-         * Issue #459: cmd-click on `JsonArray` (a typedef in json.x, used from
-         * JsonArrayBuilder.x) found nothing because typedef declarations never
-         * reached the workspace index. Shorthand constructor parameters
-         * (`const Point(Int x, Int y)`) declare properties and must be indexed
-         * too -- `structure.y` navigated to an unrelated file without this.
+         * Issue #459: cmd-click on `JsonArray` (a typedef in json.x, used from JsonArrayBuilder.x)
+         * found nothing because typedef declarations never reached the workspace index. Shorthand
+         * constructor parameters (`const Point(Int x, Int y)`) declare properties and must be
+         * indexed too -- `structure.y` navigated to an unrelated file without this.
          */
         @Test
         @DisplayName("should index typedefs and shorthand constructor properties")
@@ -119,13 +250,11 @@ class WorkspaceIndexerTest {
 
             indexer.scanWorkspace(listOf(tempDir.toString())).join()
 
-            assertThat(index.findByName("JsonArray"))
-                .isNotEmpty
-                .allMatch { it.kind == SymbolKind.CLASS }
+            assertThat(index.findByName("JsonArray")).isNotEmpty.allMatch {
+                it.kind == SymbolKind.CLASS
+            }
             assertThat(index.findByName("x")).isNotEmpty
-            assertThat(index.findByName("y"))
-                .isNotEmpty
-                .allMatch { it.kind == SymbolKind.PROPERTY }
+            assertThat(index.findByName("y")).isNotEmpty.allMatch { it.kind == SymbolKind.PROPERTY }
 
             indexer.close()
         }
