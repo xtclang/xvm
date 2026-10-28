@@ -11,6 +11,9 @@ See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundari
 - **Build and Run** - Build/Rebuild Project and Ecstasy run configurations use the language
   server's embedded compiler or Gradle, chosen under Settings | Build, Execution, Deployment |
   Ecstasy ([details](#running-your-application)); `xtc run` remains available per configuration
+- **Debug** - With the embedded compiler, Debug of an Ecstasy run configuration goes through
+  LSP4IJ's DAP client to a debug session in the language server: breakpoints, stepping, variables,
+  watches and Evaluate Expression ([details](#running-your-application))
 - **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
   native file type through TextMate’s syntax factory and editor highlighter.
 - **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
@@ -129,14 +132,62 @@ An Ecstasy Application configuration has:
   Configurations saved with the older *Use Gradle* checkbox become *Project default* (or *xtc
   command line* when it was cleared).
 - **Quiet mode** — adds `-q` to Gradle runs.
+- **Stop at the program's first line** — under Debug, stops the program before its module's own
+  code runs.
+- **Let the program run while Evaluate Expression runs code** — under Debug, the rest of the
+  program runs too while Evaluate Expression runs code.
 
 Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run gets a fresh
-application container in one worker JVM, which is reused across runs and restarted if it dies;
-programs never run inside the language server. A failed build prints its diagnostics in the console,
-linked to the sources, and runs nothing. A program that reads console input reads the lines typed
-into its Run console, including lines typed while it still builds; **Send EOF** ends the input. A
-module with a Run lens also has a Run icon in the gutter of that line, which runs it the same way.
-There is no Ecstasy debugger. Embedded mode needs the compiler language service.
+application container. Each running program has an execution worker JVM of its own, so up to four
+programs run at once; one idle worker is kept for the next run, and after a worker dies the next run
+gets a new one. Programs never run inside the language server. A failed build prints its
+diagnostics in the console, linked to the sources, and runs nothing. A program that reads console
+input reads the lines typed into its Run console, including lines typed while it still builds;
+**Send EOF** ends the input. A module with a Run lens also has a Run icon in the gutter of that
+line, which runs it the same way.
+Embedded mode needs the compiler language service.
+
+With the embedded compiler, a configuration can also be debugged: **Debug** starts a debug session
+in the language server, which builds and runs the module as Run does, in the same execution workers,
+with LSP4IJ's DAP client as the debugger. Line breakpoints can be set in `.x` files; they are
+verified when the program starts, and a breakpoint or `assert:debug` stops the program, with its
+line, call stack and the other fibers that wait shown in the Debug tool window. The running program
+keeps the code it was built from, so once the file is edited a breakpoint is placed on the line it
+was built with, and one on a line changed since is marked invalid, saying why. Its Variables view
+shows the frame's locals and expands objects and arrays, a large array to its first 100 elements and
+how many more there are, since LSP4IJ does not read a variable's children a page at a time (LSP4IJ pull request [#1770](https://github.com/redhat-developer/lsp4ij/pull/1770)); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy
+variables, `(...)`, whose values run the program's code, for at most a second; expand one to show
+its value, since LSP4IJ does not show a Show value link for them yet (LSP4IJ pull request
+[#1768](https://github.com/redhat-developer/lsp4ij/pull/1768)). A mutable object's value ends with its
+identity code, such as `#1023456`, which tells two objects with the same fields apart. Integers in
+hexadecimal wait on LSP4IJ, whose Variables view has no Show Values as Hexadecimal yet (LSP4IJ
+pull request [#1769](https://github.com/redhat-developer/lsp4ij/pull/1769)). **Set Value** on a local, a
+field or an array element gives it the value of an expression such as `5`, `n * 2` or `"text"`,
+computed without running the program's code; one of another type, or a field of an immutable object,
+is refused with the reason. In **Evaluate Expression**, **Basic Completion** completes the name
+typed: after a dot, with the fields, properties and methods of the value before it, otherwise with
+the frame's variables and the members of `this`; nothing of the program runs to find them. LSP4IJ
+0.21.0 reports an IDE error, `Document/PSI mismatch`, as the expression there is edited (fixed
+by LSP4IJ pull request [#1763](https://github.com/redhat-developer/lsp4ij/pull/1763)). **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
+**Resume Program** runs it on and **Stop** ends it where it is. A breakpoint's condition, an
+expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. Its pass count and
+**Evaluate and log**, and a breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (LSP4IJ pull request [#1759](https://github.com/redhat-developer/lsp4ij/pull/1759)).
+An uncaught exception stops the program where it is thrown, by default, and the exception is the
+frame's first variable; exception filter conditions and the exception's stack in the hint wait on
+LSP4IJ too (LSP4IJ pull requests [#1760](https://github.com/redhat-developer/lsp4ij/pull/1760) and [#1761](https://github.com/redhat-developer/lsp4ij/pull/1761)). The
+Watches view shows expressions such as `point.x + 1` or `ints[i] > 0` in the selected frame, without
+running the program's code, and what is not evaluated shows why; LSP4IJ's debugger hover evaluates
+the name under the mouse. **Evaluate Expression** evaluates them so too, and runs what that refuses,
+such as a call, as code on the stopped fiber, for at most two seconds, and what the code changed
+stays changed; the Variables view shows it the next time it reads the variables, since LSP4IJ does
+not handle the `invalidated` event yet (LSP4IJ pull request [#1766](https://github.com/redhat-developer/lsp4ij/pull/1766)). Only that code, and the services it calls, run
+meanwhile; the configuration's **Let the program run while Evaluate Expression runs code** lets the
+rest of the program run too, without stopping at breakpoints, for code that waits on work the
+program's other fibers do. **Pause
+Program** does nothing yet: LSP4IJ's DAP client does not pause (fixed in LSP4IJ pull
+request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration's **Stop at the
+program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code. Debug is
+not offered for Gradle or command-line runs.
 
 ## Development
 
@@ -182,7 +233,7 @@ adopted. Publishing requires both checks.
 ```
 
 This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
-Ultimate features and automatic trials are disabled. The 305-case catalog is shared with VS Code;
+Ultimate features and automatic trials are disabled. The 333-case catalog is shared with VS Code;
 see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](testing.md).
 
 The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
@@ -665,7 +716,8 @@ intellij-plugin/
 │   │   ├── XtcIntelliJLanguage.kt        # IntelliJ Language singleton (for Code Style, etc.)
 │   │   ├── XtcTextMateBundleProvider.kt  # TextMate grammar integration
 │   │   ├── dap/
-│   │   │   └── XtcDebugAdapterFactory.kt # DAP server integration
+│   │   │   ├── XtcDebugAdapterFactory.kt # Debug of Ecstasy Application configurations through LSP4IJ's DAP client
+│   │   │   └── LanguageServerDebugProcessHandler.kt # Carries a debug session over the language server connection
 │   │   ├── lsp/
 │   │   │   ├── XtcLanguageClient.kt            # Custom LSP client (forwards Code Style → server)
 │   │   │   └── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
@@ -753,7 +805,7 @@ Ensure you have the Gradle plugin enabled in IntelliJ (bundled by default).
 
 ## License
 
-Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
+Apache License 2.0 - See [LICENSE](../../LICENSE.md) for details.
 
 The native file-tree Move action now requests compiler proof before moving selected source files
 or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
