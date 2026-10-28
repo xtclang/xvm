@@ -151,10 +151,11 @@ Only if a real need comes up; each is a documented refusal today.
   Done 2026-10-21: adopted interface properties (SansCode) now rename; union-typed property reads
   stay refused (they need per-receiver alternatives); Implicit, Field and Native stay refused.
 - [ ] Rename: VS Code edited-file resource history with refactoring auto-save off, instead of the
-  current pre-edit refusal. Investigated 2026-10-21, no clean implementation: an extension cannot put
-  a move and its text edits into one undo group, `isRefactoring` saves only when the setting is on,
-  and VS Code moves a dirty file by recreating its model, which drops the old model's text Undo.
-  Writing the moved file as create plus delete would itself save it. The refusal stays.
+  current pre-edit refusal. Investigated 2026-10-21, no clean implementation: `isRefactoring` saves
+  only when the setting is on, and VS Code moves a dirty file by recreating its model, which drops
+  the old model's text Undo (UP62, the existing [microsoft/vscode#17977](https://github.com/microsoft/vscode/issues/17977), commented 2026-10-28). Writing the moved
+  file as create plus delete would itself save it. The refusal stays. Corrected 2026-10-28: one
+  workspace edit's move and text edits do share one undo group (`BulkEditService`).
   - [ ] The refusal only works for Rename. In an Explorer move (`willRenameFiles`) the thrown
     refusal is only logged, so the move goes ahead without the Ecstasy edits; and Explorer moves
     never auto-save, so the setting does not protect them.
@@ -384,8 +385,9 @@ recorded partial coverage.
   the runtime's `R_RESET`; the program stops at the call's first line with the reason `restart`.
   A frame says whether it can (`canRestart`): not when its caller is native, the host's or a run's,
   nor when it or a frame above it is native or has a continuation, nor at an exception's stop
-  (worker protocol 21). VS Code offers it in the Call Stack view; IntelliJ has no Reset Frame for
-  the session (UP47), so X329 is not implemented there.
+  (worker protocol 21). VS Code offers it in the Call Stack view. IntelliJ offers Reset Frame through
+  our LSP4IJ #1778 (UP47, merged 2026-10-27, unreleased): X329 passes there with a plugin built from
+  it, and stays not implemented in the catalog until a release has it.
 - [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped. Not built
   (decided 2026-10-27): it needs DAP's `singleThread`, which neither editor sends (UP49: VS Code
   [#166450](https://github.com/microsoft/vscode/issues/166450), open since 2022; LSP4IJ none),
