@@ -120,10 +120,10 @@ import kotlin.time.Duration.Companion.seconds
  * `ints[i] > 0`, for watches and hovers without running the program's code: variables, their fields and elements,
  * literals, and operators that the runtime computes natively. A line typed in the console is evaluated so too, and
  * what that refuses, such as a call, runs as code on the stopped fiber, for at most [CONSOLE_LIMIT]; `cancel` ends it
- * sooner, and once code has run, `invalidated` tells a client that takes it to read the variables again
- * (lang/doc/plans/plan-bounded-evaluation.md, tier 2). A launch with `evaluationRunsProgram` lets the whole program run
- * while such code does, for a program whose code waits on work that its other fibers do; they then wait at their next
- * line once it ends, and `invalidated` asks for everything again, since the stop's threads and stacks may have moved.
+ * sooner, and once code has run, `invalidated` tells a client that takes it to read the variables again. A launch
+ * with `evaluationRunsProgram` lets the whole program run while such code does, for a program whose code waits on
+ * work that its other fibers do; they then wait at their next line once it ends, and `invalidated` asks for everything
+ * again, since the stop's threads and stacks may have moved.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the

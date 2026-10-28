@@ -9503,7 +9503,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ's DAP debug process does not implement pausing in 0.21.0, so IntelliJ's Pause Program does nothing for a DAP session; UP30 in docs/remaining.md, fixed by LSP4IJ #1757 (merged 2026-10-26, unreleased). IntelliJ's case, through Pause Program, passed with LSP4IJ nightly 0.21.1-20261027-160212 (run-7834140860152509548) and runs once a release has it."
+          "LSP4IJ's DAP debug process does not implement pausing in 0.21.0, so IntelliJ's Pause Program does nothing for a DAP session; UP30, fixed by LSP4IJ #1757 (merged 2026-10-26, unreleased). IntelliJ's case, through Pause Program, passed with LSP4IJ nightly 0.21.1-20261027-160212 (run-7834140860152509548) and runs once a release has it."
         ]
       }
     },
@@ -9597,7 +9597,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ sends only a breakpoint's condition (0.21.0), not its hit count, and a breakpoint whose Suspend is unchecked leaves the program stopped (UP32 in docs/remaining.md), so IntelliJ checks the condition alone: the breakpoint stops where i is 0 and 2. The hit condition and the logpoint are checked in VS Code."
+          "LSP4IJ sends only a breakpoint's condition (0.21.0), not its hit count, and a breakpoint whose Suspend is unchecked leaves the program stopped (UP32), so IntelliJ checks the condition alone: the breakpoint stops where i is 0 and 2. The hit condition and the logpoint are checked in VS Code."
         ]
       }
     },
@@ -9674,7 +9674,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ sends only a breakpoint's condition (0.21.0), not a log message (UP32 in docs/remaining.md), so IntelliJ checks the condition and the watches: the breakpoint stops where i is 2 and 4. The logpoint is checked in VS Code."
+          "LSP4IJ sends only a breakpoint's condition (0.21.0), not a log message (UP32), so IntelliJ checks the condition and the watches: the breakpoint stops where i is 2 and 4. The logpoint is checked in VS Code."
         ]
       }
     },
@@ -9706,7 +9706,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ never sends DAP cancel (UP41 in docs/remaining.md) and does not handle invalidated (UP40, LSP4IJ #1766), so IntelliJ checks the call's value through the Evaluate Expression dialog, the watch after it, the time limit and the exit; cancel and invalidated are checked in VS Code."
+          "LSP4IJ never sends DAP cancel (UP41) and does not handle invalidated (UP40, LSP4IJ #1766), so IntelliJ checks the call's value through the Evaluate Expression dialog, the watch after it, the time limit and the exit; cancel and invalidated are checked in VS Code."
         ]
       }
     },
