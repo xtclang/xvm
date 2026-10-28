@@ -222,6 +222,48 @@ class XdkPresentationTest {
         }
     }
 
+    @Test
+    fun `inline values are the stopped method's parameters and locals up to the stopped line, not its fields`() {
+        val source =
+            """
+            module Presentation {
+                class Counter {
+                    Int count = 0;
+                    Int add(Int n) {
+                        Int before = count;
+                        count = before + n;
+                        Int after = count;
+                        return after;
+                    }
+                    void each(Int[] values) {
+                        @Inject Console console;
+                        Int offset = 1;
+                        values.forEach(v -> {
+                            console.print(v + offset);
+                        });
+                    }
+                }
+            }
+            """.trimIndent()
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(URI, source).success).isTrue()
+
+            fun values(
+                stopped: Int,
+                range: Range = ALL,
+            ) = adapter.getInlineValues(URI, range, Position(stopped, 0)).map { it.name to it.range.start.line }
+
+            // stopped on line 5: the parameter and the local so far; not the field, nor the local of line 6
+            assertThat(values(5)).containsExactly("n" to 3, "before" to 4, "before" to 5, "n" to 5)
+            // only those in the range shown
+            assertThat(values(5, Range(Position(5, 0), Position(6, 0)))).containsExactly("before" to 5, "n" to 5)
+            // within a lambda, its own code's: its parameter, and what it uses of the method's locals
+            assertThat(values(13)).containsExactly("v" to 12, "console" to 13, "v" to 13, "offset" to 13)
+            // outside any method, none
+            assertThat(values(2)).isEmpty()
+        }
+    }
+
     private fun at(
         source: String,
         marker: String,
