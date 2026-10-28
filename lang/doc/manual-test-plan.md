@@ -1401,11 +1401,11 @@ See the [extension testing notes](../vscode-extension/README.md#testing) for dis
 The host suite also includes `CompilerAtomicEmissionTest` and `CompilerEmissionAuditTest`: they
 execute serialized atomic operations through qualified, implicit, enclosing-instance and generic
 receivers, check source/dependency diagnostic delivery, and inspect dense-switch bytecode conversions.
-These are compiler-output checks that the editor UI cannot establish. To run them without launching VS Code:
+These are compiler-output checks that the editor UI cannot establish. To run them without launching
+VS Code, `emissionTest` runs the two:
 
 ```bash
-./gradlew :lang:lsp-server:test --tests org.xvm.lsp.adapter.CompilerEmissionAuditTest \
-    --tests org.xvm.lsp.adapter.CompilerAtomicEmissionTest --rerun-tasks --no-build-cache \
+./gradlew :lang:lsp-server:emissionTest --rerun-tasks --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
@@ -1855,14 +1855,11 @@ export a successful `Compilation.toDependency()` and call
 `replaceDependencies(...)` and reschedule the returned scope keys themselves. Binary-only artifacts
 load with `XdkDependency.fromBinary(bytes)` and intentionally supply no source targets.
 
-Run the host regression checks to verify the integration boundary without pretending an ordinary
-editor launch configures it:
+Run the host regression checks, `dependencyHostTest`, to verify the integration boundary without
+pretending an ordinary editor launch configures it:
 
 ```bash
-./gradlew :lang:lsp-server:test \
-    --tests 'org.xvm.lsp.adapter.XdkDependencyTest' \
-    --tests 'org.xvm.lsp.server.XdkLanguageServerTest' \
-    --rerun --no-build-cache \
+./gradlew :lang:lsp-server:dependencyHostTest --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
@@ -1937,13 +1934,10 @@ dependencies recover. Hosts must supply accurate edges;
 the server does not infer a project graph from unresolved imports or build-tool files.
 
 Automated adapter/server coverage of this setup, including uncooperative late compiler results,
-cursor cancellation, snapshot timing and binary replacement:
+cursor cancellation, snapshot timing and binary replacement, is `sourceGraphHostTest`:
 
 ```bash
-./gradlew :lang:lsp-server:test \
-    --tests 'org.xvm.lsp.adapter.XdkProjectTest' \
-    --tests 'org.xvm.lsp.server.XdkProjectServerTest' \
-    --rerun --no-build-cache \
+./gradlew :lang:lsp-server:sourceGraphHostTest --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
@@ -2137,17 +2131,11 @@ Controlled regressions in `XdkProjectQueryLifecycleTest` and `XdkCursorServerTes
 another module, close/reopen, configuration/dependency replacement, canceled/superseded queries and
 late disk changes before returning results. These races are hard to trigger reliably by hand.
 
-For closed-member input checks, version conversion, cancellation and the repeated retention workload:
+For closed-member input checks, version conversion, cancellation and the repeated retention
+workload, `graphQueryTest` runs those test classes of the server:
 
 ```bash
-./gradlew :lang:lsp-server:test \
-    --tests 'org.xvm.lsp.adapter.XdkRenameTest' \
-    --tests 'org.xvm.lsp.adapter.XdkProjectQueryTest' \
-    --tests 'org.xvm.lsp.adapter.XdkProjectQueryLifecycleTest' \
-    --tests 'org.xvm.lsp.server.XdkRenameServerTest' \
-    --tests 'org.xvm.lsp.server.XdkCursorServerTest' \
-    --tests 'org.xvm.lsp.adapter.XdkRetentionTest' \
-    --rerun --no-build-cache \
+./gradlew :lang:lsp-server:graphQueryTest --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 

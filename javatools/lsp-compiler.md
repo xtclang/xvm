@@ -987,14 +987,10 @@ integration checkout combining the reporting changes with the embedding foundati
 the real compiler-consumer test with no skips. These checks cover different scopes; the 60 focused
 tests are not presented as a substitute for compilation and integration validation.
 
-Run the focused tests from the repository root:
+Run the focused tests, `errorListenerTest`, from the repository root:
 
 ```bash
-./gradlew :javatools:test \
-  --tests 'org.xvm.asm.ErrorListener*Test' \
-  --tests org.xvm.api.ErrorListenerBoundaryTest \
-  --tests org.xvm.tool.LauncherErrorHandlingTest \
-  --rerun-tasks --no-build-cache
+./gradlew :javatools:errorListenerTest --rerun-tasks --no-build-cache
 ```
 
 These focused cases do not require installed XDK modules. The numerical receipts above
@@ -1012,17 +1008,12 @@ require installed modules:
 ./gradlew :javatools:test --rerun-tasks --no-build-cache
 ```
 
-A focused embedding-consumer run exercises the new API boundaries without launching an IDE:
+A focused embedding-consumer run, `embeddingConsumerTest`, exercises the new API boundaries without
+launching an IDE:
 
 ```bash
-./gradlew :lang:lsp-server:test \
+./gradlew :lang:lsp-server:embeddingConsumerTest \
   -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
-  --tests 'org.xvm.lsp.adapter.Embedding*Test' \
-  --tests org.xvm.lsp.adapter.TypeInfoDiagnosticsTest \
-  --tests org.xvm.lsp.adapter.TypeInfoFinalCompositionTest \
-  --tests org.xvm.lsp.adapter.CompilerBindingFactsTest \
-  --tests org.xvm.lsp.adapter.CompilerDeclarationAnalysisTest \
-  --tests org.xvm.lsp.adapter.CompilerPartialFactsTest \
   --rerun-tasks --no-build-cache
 ```
 
