@@ -319,7 +319,7 @@ class XdkRenameServerTest {
                     .uri,
             ).isEqualTo(root.toURI().toString())
             assertThat(
-                proposal.graph!!
+                proposal.graph
                     .after
                     .single()
                     .uri,
@@ -331,7 +331,7 @@ class XdkRenameServerTest {
                     .toString(),
             )
             assertThat(
-                proposal.graph!!
+                proposal.graph
                     .after
                     .single()
                     .resourceRoots,
@@ -393,7 +393,7 @@ class XdkRenameServerTest {
                     .dependencies,
             ).isEmpty()
             assertThat(
-                proposal.graph!!
+                proposal.graph
                     .after
                     .single { it.name == "App" }
                     .dependencies,
