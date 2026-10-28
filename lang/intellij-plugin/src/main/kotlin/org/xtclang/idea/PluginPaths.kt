@@ -9,7 +9,7 @@ import java.nio.file.Path
 /**
  * Shared utility for resolving files bundled with the XTC plugin.
  *
- * Server JARs (LSP, DAP) are placed in the plugin's `bin/` directory -- NOT `lib/`. If placed in
+ * Server JARs, such as the LSP server, are placed in the plugin's `bin/` directory -- NOT `lib/`. If placed in
  * `lib/`, IntelliJ loads their bundled lsp4j classes which conflict with LSP4IJ's lsp4j. The `bin/`
  * directory is not on IntelliJ's classloader path.
  */
@@ -41,7 +41,7 @@ object PluginPaths {
      * 1. Own [PluginDescriptor] plugin path (via [selfDescriptor], public API)
      * 2. Classloader code-source fallback (for development/test scenarios)
      *
-     * @param jarName the JAR filename, e.g. `"xtc-lsp-server.jar"` or `"xtc-dap-server.jar"`
+     * @param jarName the JAR filename, e.g. `"xtc-lsp-server.jar"`
      * @throws IllegalStateException if the JAR cannot be found
      */
     fun findServerJar(jarName: String): Path {

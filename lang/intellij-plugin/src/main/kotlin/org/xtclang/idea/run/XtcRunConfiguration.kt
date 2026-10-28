@@ -7,9 +7,9 @@ import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.RunConfiguration
-import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.configurations.RuntimeConfigurationError
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
@@ -22,7 +22,11 @@ import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import com.redhat.devtools.lsp4ij.dap.DebugAdapterManager
+import com.redhat.devtools.lsp4ij.dap.configurations.DAPRunConfigurationBase
+import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import org.jdom.Element
+import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.lsp.RunParams
 import kotlin.io.path.Path
 
@@ -41,13 +45,14 @@ enum class XtcRunMode(
 
 /**
  * Run configuration for XTC applications. Runs with the embedded compiler and execution worker, the Gradle
- * `runXtc` task, or `xtc run`.
+ * `runXtc` task, or `xtc run`. With the embedded compiler it can also be debugged: Debug is LSP4IJ's DAP client, which
+ * [XtcDebugAdapterFactory] connects to a debug session in the language server.
  */
 class XtcRunConfiguration(
     project: Project,
     factory: ConfigurationFactory,
     name: String,
-) : RunConfigurationBase<Any>(project, factory, name) {
+) : DAPRunConfigurationBase<Any>(project, factory, name) {
     private val logger = logger<XtcRunConfiguration>()
 
     var moduleName = ""
@@ -80,8 +85,10 @@ class XtcRunConfiguration(
     override fun getState(
         executor: Executor,
         environment: ExecutionEnvironment,
-    ): RunProfileState =
-        when (val mode = effectiveRunMode()) {
+    ): RunProfileState? {
+        // Debug is LSP4IJ's DAP client, whose session in the language server builds and runs as embedded runs do
+        if (executor.id == DefaultDebugExecutor.EXECUTOR_ID) return super.getState(executor, environment)
+        return when (val mode = effectiveRunMode()) {
             XtcRunMode.EMBEDDED -> {
                 EmbeddedRunState(environment, embeddedRequest(), moduleName.ifBlank { moduleUri })
             }
@@ -95,6 +102,14 @@ class XtcRunConfiguration(
                 }
             }
         }
+    }
+
+    /** Debug is offered with the embedded compiler only, whose runs a debug session in the language server launches. */
+    override fun canRun(executorId: String): Boolean =
+        executorId == DefaultDebugExecutor.EXECUTOR_ID && effectiveRunMode() == XtcRunMode.EMBEDDED
+
+    override fun getDebugAdapterServer(): DebugAdapterServerDefinition? =
+        DebugAdapterManager.getInstance().getDebugAdapterServerById(XtcDebugAdapterFactory.SERVER_ID)
 
     internal fun embeddedRequest() = embeddedRequest(moduleName, moduleUri, methodName, moduleArguments)
 
