@@ -47,6 +47,19 @@ class OutputBatchesTest {
     }
 
     @Test
+    fun `the delayed send runs in a thread group of its own, not that of the runtime thread that prints`() {
+        // the server counts the threads in the runtime pool's group after each run, and retires a worker whose
+        // count grew; the timer thread starts on the first print, from one of those threads
+        val groups = LinkedBlockingQueue<String>()
+        val output = OutputBatches({ groups.add(Thread.currentThread().threadGroup.name) }, delay = 10.milliseconds)
+        Thread(ThreadGroup("XVM"), { output.write("printed") }).apply {
+            start()
+            join()
+        }
+        assertThat(groups.poll(10, SECONDS)).isEqualTo("xtc-run-output")
+    }
+
+    @Test
     fun `a surrogate pair is never split between events`() {
         val sent = CopyOnWriteArrayList<String>()
         OutputBatches(sent::add, limit = 4, delay = 1.hours).use { it.write("abc😀def") }
