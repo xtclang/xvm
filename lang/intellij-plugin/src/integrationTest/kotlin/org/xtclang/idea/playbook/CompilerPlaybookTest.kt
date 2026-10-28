@@ -285,4 +285,4 @@ class CompilerPlaybookTest {
 }
 
 /** The case that runs each replacement gate's opt-in assertions in place of its shipping ones. */
-private val GATE_CASES = mapOf("UP26" to "X257", "UP52" to "X131")
+private val GATE_CASES = mapOf("UP52" to "X131")

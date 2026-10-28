@@ -120,8 +120,6 @@ notifications are failures; do not replay a timed-out mutation to manufacture a 
 
 - VS Code's native batch-move and overlapping-move Undo paths have recorded host failures
   (X130 and X218). The cases remain assertions, not silently skipped successes.
-- X257 covers inline-completion constraints partly through the installed connection because
-  released LSP4IJ does not expose all required native invocation metadata. It reports partial coverage.
 - Error notifications are intentional in the negative import/settings cases X261/X262,
   X268–X270 and failed JVM launch X272. Their retention and recovery assertions must still pass.
 
@@ -3617,14 +3615,14 @@ claim complete semantic editing/navigation inside library bodies.
 |---|---|---|
 | X255 | Accept and undo a compiler-backed inline name. Use the shared `X255/InlineValues.x` source. | Native ghost text accepts answer; one Undo restores ans. |
 | X256 | Dismiss ghost text and keep suggestions current while typing. Use the shared `X256/InlineValues.x` source. | Dismissal leaves source unchanged; further typing produces a current suggestion. |
-| X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source. IntelliJ cannot distinguish an explicit inline-completion trigger or transmit the selected popup item. |
+| X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source, in both editors' native UI: an explicit invocation cycles the alternatives, and the selected popup item constrains the suggestion. |
 | X258 | Complete a type-compatible value in an unfinished call. Use the shared `X258/InlineValues.x` source. | Only the Int-compatible answer is suggested; missing delimiters remain untouched. |
 | X259 | Keep RefreshConsumer open, including its bundled recursive json.Doc method signature. Disable inlay hints, change RefreshLibrary.make from Int to String, re-enable hints and restart. Restore the dependency while toggling hints again. | Visible consumer hints disappear when disabled, then show String and Int in order. Recursive signatures do not crash workspace analysis. The consumer text/version stays unchanged and the old server exits. X146 separately verifies all five refresh families; X147 covers late report publication. |
 
 Ghost suggestions are plain compiler names/values. No imports or placeholder bodies are inserted.
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
-Insert Inline Completion and Escape. Explicit ambiguous suggestions are a VS Code native check;
-LSP4IJ currently sends Automatic even for a direct invocation.
+Insert Inline Completion and Escape. Both send an explicit invocation as Invoked, and the popup's
+selected item as `selectedCompletionInfo`.
 
 ### Compiler build import lifecycle (UI5–UI7)
 
