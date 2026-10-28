@@ -5,11 +5,8 @@ import java.io.IOException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-
-import java.util.function.BiConsumer;
 
 import org.xvm.asm.FileStructure.FileInfo;
 
@@ -36,29 +33,10 @@ public class FileRepository
      * @param readOnly  true to make the repository "read-only"
      */
     public FileRepository(File file, boolean readOnly) {
-        this(file, readOnly, (candidate, cause) ->
-                System.out.println("Error reading module file " + candidate + ": " + cause));
-    }
-
-    /**
-     * Construct a repository with an observer for unsuccessful file reads.
-     *
-     * <p>The observer receives the candidate file and original I/O exception synchronously for
-     * each failed read attempt, including an unsupported binary version. It replaces the default
-     * console report; it does not change lookup or fallback. Cached absence produces no report.
-     * A report establishes neither the file's module identity nor why its contents became unreadable.
-     * Write failures continue to be thrown by {@link #storeModule(ModuleStructure)}.
-     *
-     * @param file           the file that contains the module(s)
-     * @param readOnly       true to make the repository read-only
-     * @param onReadFailure  the non-null observer; it must not reenter this repository
-     */
-    public FileRepository(File file, boolean readOnly, BiConsumer<File, IOException> onReadFailure) {
         assert file != null && !file.isDirectory();
 
-        this.file          = moduleFile(file);
-        this.readOnly      = readOnly;
-        this.onReadFailure = Objects.requireNonNull(onReadFailure);
+        this.file     = moduleFile(file);
+        this.readOnly = readOnly;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -251,12 +229,11 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // Successful reads keep the usual burst cache. Failed reads are
-        // retried after the burst, or immediately if the file metadata changes.
+        // Both successful and failed reads use the usual metadata-based burst cache.
         long now = System.currentTimeMillis();
         boolean unchanged = timestamp == file.lastModified() && size == file.length();
         boolean recent = now < lastScan + 60/*ms*/;
-        if (!readFailed ? recent || unchanged : recent && unchanged) {
+        if (recent || unchanged) {
             return cacheOk;
         }
 
@@ -326,9 +303,9 @@ public class FileRepository
             FileInfo info = FileStructure.readFileInfo(file);
             readFailed = false;
             return info;
-        } catch (IOException e) {
+        } catch (Exception e) {
             readFailed = true;
-            onReadFailure.accept(file, e);
+            System.out.println("Error loading FileInfo from file: " + file + "; " + e.getMessage());
             return null;
         }
     }
@@ -341,9 +318,9 @@ public class FileRepository
             FileStructure structure = new FileStructure(file);
             readFailed = false;
             return structure;
-        } catch (IOException e) {
+        } catch (Exception e) {
             readFailed = true;
-            onReadFailure.accept(file, e);
+            System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
             return null;
         }
     }
@@ -391,10 +368,8 @@ public class FileRepository
     private long    lastScan;
     private boolean cacheOk;
 
-    /** Whether the last read failed and must be retried after the cache interval. */
+    /** A replacement must pass a complete read after a prior failure, not just a header read. */
     private boolean readFailed;
-
-    private final BiConsumer<File, IOException> onReadFailure;
 
     /**
      * Cached file contents: module names and versions thereof.
