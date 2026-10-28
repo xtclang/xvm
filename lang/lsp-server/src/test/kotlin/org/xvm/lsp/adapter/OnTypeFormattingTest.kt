@@ -16,9 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * Unit tests for on-type formatting (`textDocument/onTypeFormatting`) in [TreeSitterAdapter].
  *
  * Tests parse XTC snippets via the tree-sitter native parser, then call
- * [TreeSitterAdapter.onTypeFormatting] with a trigger character and cursor position,
- * asserting that the returned [TextEdit] list produces the correct
- * indentation.
+ * [TreeSitterAdapter.onTypeFormatting] with a trigger character and cursor position, asserting that
+ * the returned [TextEdit] list produces the correct indentation.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -28,7 +27,8 @@ class OnTypeFormattingTest {
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
-    private val ts: TreeSitterAdapter get() = adapter!!
+    private val ts: TreeSitterAdapter
+        get() = adapter!!
 
     private fun freshUri(): String = "file:///fmt${uriCounter.incrementAndGet()}.x"
 
@@ -54,8 +54,8 @@ class OnTypeFormattingTest {
     }
 
     /**
-     * Helper: compile source, then call onTypeFormatting.
-     * Returns the desired indent (new text length) or -1 if no edit was returned.
+     * Helper: compile source, then call onTypeFormatting. Returns the desired indent (new text
+     * length) or -1 if no edit was returned.
      */
     private fun formatAfterTrigger(
         source: String,
@@ -77,9 +77,7 @@ class OnTypeFormattingTest {
         }
     }
 
-    /**
-     * Helper: compile source, call onTypeFormatting, return the raw edit list.
-     */
+    /** Helper: compile source, call onTypeFormatting, return the raw edit list. */
     private fun formatEdits(
         source: String,
         line: Int,
@@ -139,7 +137,9 @@ class OnTypeFormattingTest {
         }
 
         @Test
-        @DisplayName("auto-closed method brace skeleton keeps blank body line and aligned closing brace")
+        @DisplayName(
+            "auto-closed method brace skeleton keeps blank body line and aligned closing brace",
+        )
         fun autoClosedMethodBraceSkeleton() {
             val source =
                 """
@@ -498,7 +498,8 @@ class OnTypeFormattingTest {
                     tabSize = 2,
                     insertSpaces = true,
                 )
-            val edits = ts.onTypeFormatting(uri, line = 1, column = 0, ch = "\n", options = customOptions)
+            val edits =
+                ts.onTypeFormatting(uri, line = 1, column = 0, ch = "\n", options = customOptions)
             assertThat(edits).isNotEmpty
             assertThat(
                 edits

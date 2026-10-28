@@ -2,9 +2,6 @@ package org.xvm.lsp.adapter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.Position
-import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.adapter.TextEdit
 
 /**
  * Backend-agnostic formatter that works with any [AdapterTree]/[AdapterNode] implementation.
@@ -102,23 +99,29 @@ class AdapterFormatter {
         options: FormattingOptions,
     ): List<TextEdit> = buildFormattingEdits(tree, content, config, options, startLine = 0, endLine = null)
 
-    /**
-     * Format a range of lines within the document.
-     */
+    /** Format a range of lines within the document. */
     fun formatRange(
         tree: AdapterTree,
         content: String,
         range: Range,
         config: FormattingConfig,
         options: FormattingOptions,
-    ): List<TextEdit> = buildFormattingEdits(tree, content, config, options, startLine = range.start.line, endLine = range.end.line)
+    ): List<TextEdit> =
+        buildFormattingEdits(
+            tree,
+            content,
+            config,
+            options,
+            startLine = range.start.line,
+            endLine = range.end.line,
+        )
 
     /**
      * Build formatting edits for a line range (or the whole document when [endLine] is null).
      *
-     * For each line, computes the correct indentation from the AST and emits an edit if
-     * the actual indentation differs. Also strips trailing whitespace and inserts a final
-     * newline for whole-document formatting.
+     * For each line, computes the correct indentation from the AST and emits an edit if the actual
+     * indentation differs. Also strips trailing whitespace and inserts a final newline for
+     * whole-document formatting.
      */
     private fun buildFormattingEdits(
         tree: AdapterTree,
@@ -147,7 +150,9 @@ class AdapterFormatter {
 
                 // Trailing whitespace removal
                 val trimmed = line.trimEnd()
-                if (trimmed.length < line.length && (options.trimTrailingWhitespace || isFullDocument)) {
+                if (
+                    trimmed.length < line.length && (options.trimTrailingWhitespace || isFullDocument)
+                ) {
                     add(
                         TextEdit(
                             range =
@@ -163,7 +168,12 @@ class AdapterFormatter {
 
             // Insert final newline if missing. XTC default is true; user can override
             // via editor settings (insertFinalNewline = false).
-            if (isFullDocument && options.insertFinalNewline && content.isNotEmpty() && !content.endsWith("\n")) {
+            if (
+                isFullDocument &&
+                options.insertFinalNewline &&
+                content.isNotEmpty() &&
+                !content.endsWith("\n")
+            ) {
                 val lastIdx = lines.size - 1
                 val lastCol = lines[lastIdx].length
                 add(
@@ -184,12 +194,12 @@ class AdapterFormatter {
     /**
      * Compute the correct indentation for a single line based on its AST context.
      *
-     * Uses structural depth (counting indent-parent ancestors in the AST) rather than
-     * reading indentation from the source. This is critical for correctly formatting
-     * files that are already misindented.
+     * Uses structural depth (counting indent-parent ancestors in the AST) rather than reading
+     * indentation from the source. This is critical for correctly formatting files that are already
+     * misindented.
      *
-     * Returns [SKIP_INDENT] for lines inside string literals (must not be modified).
-     * Returns 0 for blank lines.
+     * Returns [SKIP_INDENT] for lines inside string literals (must not be modified). Returns 0 for
+     * blank lines.
      */
     private fun computeLineIndent(
         tree: AdapterTree,
@@ -211,8 +221,7 @@ class AdapterFormatter {
 
         // 3. Doc/block comment interior lines
         val commentAncestor =
-            generateSequence(node) { it.parent }
-                .firstOrNull { it.type in commentTypes }
+            generateSequence(node) { it.parent }.firstOrNull { it.type in commentTypes }
         if (commentAncestor != null && commentAncestor.startLine != lineIndex) {
             // Interior or closing line of a comment, not the opening line.
             // Align " *" one space to the right of the comment's structural indent.
@@ -223,8 +232,7 @@ class AdapterFormatter {
         if (trimmed.startsWith("}")) {
             val enclosingBlock =
                 generateSequence(node) { it.parent }
-                    .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
-                    ?: return 0
+                    .firstOrNull { it.type in blockTypes || it.type in classBodyTypes } ?: return 0
             val ownerNode = enclosingBlock.parent ?: return 0
             return countIndentDepth(ownerNode) * config.indentSize
         }
@@ -232,10 +240,13 @@ class AdapterFormatter {
         // 5. Closing paren -> match the opening paren's construct
         if (trimmed.startsWith(")")) {
             val enclosing =
-                generateSequence(node) { it.parent }.firstOrNull { ancestor ->
-                    val firstChild = ancestor.children.firstOrNull()
-                    firstChild != null && firstChild.type == "(" && ancestor.startLine < lineIndex
-                }
+                generateSequence(node) { it.parent }
+                    .firstOrNull { ancestor ->
+                        val firstChild = ancestor.children.firstOrNull()
+                        firstChild != null &&
+                            firstChild.type == "(" &&
+                            ancestor.startLine < lineIndex
+                    }
             if (enclosing != null) {
                 return countIndentDepth(enclosing) * config.indentSize
             }
@@ -243,19 +254,23 @@ class AdapterFormatter {
 
         // 5b. Interior of multi-line paren construct -> continuation indent from owner
         val parenAncestor =
-            generateSequence(node) { it.parent }.firstOrNull { ancestor ->
-                val firstChild = ancestor.children.firstOrNull()
-                firstChild != null && firstChild.type == "(" && ancestor.startLine < lineIndex
-            }
+            generateSequence(node) { it.parent }
+                .firstOrNull { ancestor ->
+                    val firstChild = ancestor.children.firstOrNull()
+                    firstChild != null && firstChild.type == "(" && ancestor.startLine < lineIndex
+                }
         if (parenAncestor != null) {
             return countIndentDepth(parenAncestor) * config.indentSize + config.indentSize
         }
 
         // 6. Case labels -> same indent as switch
-        if (trimmed.startsWith("case ") || trimmed.startsWith("default:") || trimmed.startsWith("default ")) {
+        if (
+            trimmed.startsWith("case ") ||
+            trimmed.startsWith("default:") ||
+            trimmed.startsWith("default ")
+        ) {
             val switchNode =
-                generateSequence(node) { it.parent }
-                    .firstOrNull { it.type in switchTypes }
+                generateSequence(node) { it.parent }.firstOrNull { it.type in switchTypes }
             if (switchNode != null) {
                 return countIndentDepth(switchNode) * config.indentSize
             }
@@ -264,10 +279,10 @@ class AdapterFormatter {
         // 7. Continuation lines (extends, implements, incorporates, delegates)
         if (isContinuationLine(trimmed)) {
             val declNode =
-                generateSequence(node) { it.parent }
-                    .firstOrNull { it.type in declarationTypes }
+                generateSequence(node) { it.parent }.firstOrNull { it.type in declarationTypes }
             if (declNode != null) {
-                return countIndentDepth(declNode) * config.indentSize + config.continuationIndentSize
+                return countIndentDepth(declNode) * config.indentSize +
+                    config.continuationIndentSize
             }
         }
 
@@ -276,14 +291,15 @@ class AdapterFormatter {
     }
 
     /**
-     * Count the number of indent-parent ancestors to determine structural nesting depth.
-     * Includes the node itself if it is an indent parent type.
+     * Count the number of indent-parent ancestors to determine structural nesting depth. Includes
+     * the node itself if it is an indent parent type.
      */
-    internal fun countIndentDepth(node: AdapterNode): Int {
+    private fun countIndentDepth(node: AdapterNode): Int {
         var depth = 0
-        generateSequence(node) { it.parent }.forEach { n ->
-            if (n.type in indentParentTypes) depth++
-        }
+        generateSequence(node) { it.parent }
+            .forEach { n ->
+                if (n.type in indentParentTypes) depth++
+            }
         return depth
     }
 
@@ -291,9 +307,7 @@ class AdapterFormatter {
     // On-type formatting (auto-indent)
     // ========================================================================
 
-    /**
-     * Handle a character typed by the user and return indentation edits.
-     */
+    /** Handle a character typed by the user and return indentation edits. */
     fun onTypeFormatting(
         tree: AdapterTree,
         line: Int,
@@ -303,15 +317,14 @@ class AdapterFormatter {
     ): List<TextEdit> =
         when (ch) {
             "\n" -> handleEnter(tree, line, config)
-            "}" -> handleCloseBrace(tree, line, column, config)
-            ")" -> handleCloseParen(tree, line, column, config)
+            "}", ")" -> handleCloseDelimiter(tree, line, column, ch.single())
             ";" -> emptyList()
             else -> emptyList()
         }
 
     /**
-     * Handle Enter key: determine the correct indentation for the new line based on
-     * what the previous line ends with and the AST context.
+     * Handle Enter key: determine the correct indentation for the new line based on what the
+     * previous line ends with and the AST context.
      */
     private fun handleEnter(
         tree: AdapterTree,
@@ -337,7 +350,8 @@ class AdapterFormatter {
         // Doc/block comment continuation: insert " * " prefix on Enter inside comments.
         // Try multiple column positions since tree.nodeAt(line, 0) may return a node
         // outside the comment when there's leading whitespace.
-        val commentEdit = handleCommentContinuation(tree, prevLineIndex, line, lines, prevTrimmed, prevIndent)
+        val commentEdit =
+            handleCommentContinuation(tree, prevLineIndex, line, lines, prevTrimmed, prevIndent)
         if (commentEdit != null) return commentEdit
 
         // IntelliJ may compact an auto-inserted empty block onto the previous line as "{}"
@@ -346,8 +360,13 @@ class AdapterFormatter {
         if (prevTrimmed.endsWith("{}")) {
             val bodyIndent =
                 when {
-                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    else -> prevIndent + config.indentSize
+                    isContinuationLine(prevTrimmed) -> {
+                        findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    }
+
+                    else -> {
+                        prevIndent + config.indentSize
+                    }
                 }
             val closingIndent =
                 when {
@@ -384,8 +403,13 @@ class AdapterFormatter {
             val currentIndent = currentLine.takeWhile { it == ' ' }.length
             val bodyIndent =
                 when {
-                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    else -> prevIndent + config.indentSize
+                    isContinuationLine(prevTrimmed) -> {
+                        findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    }
+
+                    else -> {
+                        prevIndent + config.indentSize
+                    }
                 }
             val closingIndent =
                 when {
@@ -416,14 +440,17 @@ class AdapterFormatter {
         val (reason, desiredIndent) =
             when {
                 // Continuation keyword ending with '{' -> body indent from declaration start.
-                // Must be checked BEFORE the generic endsWith("{") to avoid matching as plain brace.
+                // Must be checked BEFORE the generic endsWith("{") to avoid matching as plain
+                // brace.
                 isContinuationLine(prevTrimmed) && prevTrimmed.endsWith("{") -> {
-                    "continuation-with-brace" to (findDeclarationIndent(tree, prevLineIndex) + config.indentSize)
+                    "continuation-with-brace" to
+                        (findDeclarationIndent(tree, prevLineIndex) + config.indentSize)
                 }
 
                 // Continuation keyword (extends, implements, etc.) NOT ending with '{'
                 isContinuationLine(prevTrimmed) && !prevTrimmed.endsWith("{") -> {
-                    "continuation" to (findDeclarationIndent(tree, prevLineIndex) + config.continuationIndentSize)
+                    "continuation" to
+                        (findDeclarationIndent(tree, prevLineIndex) + config.continuationIndentSize)
                 }
 
                 // Previous line ends with '{' -> indent one level deeper
@@ -448,7 +475,8 @@ class AdapterFormatter {
 
                 // Default: use AST context
                 else -> {
-                    "ast-context" to computeDesiredIndent(tree, prevLineIndex, prevIndent, config.indentSize)
+                    "ast-context" to
+                        computeDesiredIndent(tree, prevLineIndex, prevIndent, config.indentSize)
                 }
             }
 
@@ -475,55 +503,63 @@ class AdapterFormatter {
     }
 
     /**
-     * Handle closing brace: outdent the current line to match the line where the
-     * corresponding opening '{' lives.
+     * Outdent a closing brace or parenthesis to match its opening construct's line.
+     * Braces align with the block owner; parentheses align with the opening parenthesis.
      */
-    private fun handleCloseBrace(
+    private fun handleCloseDelimiter(
         tree: AdapterTree,
         line: Int,
         column: Int,
-        config: FormattingConfig,
+        closing: Char,
     ): List<TextEdit> {
         val source = tree.source
         val lines = source.split("\n")
-        if (line < 0 || line >= lines.size) return emptyList()
+        val currentLine = lines.getOrNull(line) ?: return emptyList()
 
-        val currentIndent = lines[line].takeWhile { it == ' ' }.length
+        val currentIndent = currentLine.takeWhile { it == ' ' }.length
 
-        // Find the '}' character position on the line and look up the AST node there.
-        // LSP sends the cursor position *after* the typed character, so try both the
-        // reported column and the actual '}' position on the line.
-        val braceCol = lines[line].indexOf('}')
+        // LSP reports the cursor after the typed character. Prefer the delimiter's actual
+        // position, falling back to the reported column if that lookup finds no node.
+        val delimiterCol = currentLine.indexOf(closing)
         val node =
-            tree.nodeAt(line, if (braceCol >= 0) braceCol else column)
+            tree.nodeAt(line, if (delimiterCol >= 0) delimiterCol else column)
                 ?: tree.nodeAt(line, column)
                 ?: return emptyList()
 
-        // Walk up to find the block or class_body that this '}' closes
-        val enclosingBlock =
-            generateSequence(node) { it.parent }
-                .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
-                ?: return emptyList()
-
-        // Find the reference line: the construct that owns the block
-        val ownerNode = enclosingBlock.parent
         val refLine =
-            when (ownerNode?.type) {
-                in declarationTypes,
-                "method_declaration",
-                "function_declaration",
-                "constructor_declaration",
-                -> ownerNode!!.startLine
+            if (closing == '}') {
+                val enclosingBlock =
+                    generateSequence(node) { it.parent }
+                        .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
+                        ?: return emptyList()
+                val ownerNode = enclosingBlock.parent
+                when (ownerNode?.type) {
+                    in declarationTypes,
+                    "method_declaration",
+                    "function_declaration",
+                    "constructor_declaration",
+                    -> ownerNode!!.startLine
 
-                in controlFlowTypes -> ownerNode!!.startLine
+                    in controlFlowTypes -> ownerNode!!.startLine
 
-                else -> enclosingBlock.startLine
+                    else -> enclosingBlock.startLine
+                }
+            } else {
+                // Parameter lists, argument lists and conditions start with an opening
+                // parenthesis. Only align to an ancestor that starts on an earlier line.
+                val enclosing =
+                    generateSequence(node) { it.parent }
+                        .firstOrNull { ancestor ->
+                            val firstChild = ancestor.children.firstOrNull()
+                            firstChild != null && firstChild.type == "(" && ancestor.startLine < line
+                        } ?: return emptyList()
+                enclosing.startLine
             }
 
         val desiredIndent = getLineIndent(source, refLine)
-
         logger.info(
-            "onTypeFormatting[close-brace]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
+            "onTypeFormatting[{}]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
+            if (closing == '}') "close-brace" else "close-paren",
             line,
             column,
             refLine,
@@ -537,57 +573,10 @@ class AdapterFormatter {
     }
 
     /**
-     * Handle closing parenthesis: outdent to match the line where the opening '(' lives.
-     * This handles multi-line parameter lists, argument lists, and condition expressions.
-     */
-    private fun handleCloseParen(
-        tree: AdapterTree,
-        line: Int,
-        column: Int,
-        @Suppress("UNUSED_PARAMETER") config: FormattingConfig,
-    ): List<TextEdit> {
-        val source = tree.source
-        val lines = source.split("\n")
-        if (line < 0 || line >= lines.size) return emptyList()
-
-        val currentIndent = lines[line].takeWhile { it == ' ' }.length
-
-        // Find the ')' on this line and look up the AST node.
-        val parenCol = lines[line].indexOf(')')
-        val node =
-            tree.nodeAt(line, if (parenCol >= 0) parenCol else column)
-                ?: tree.nodeAt(line, column)
-                ?: return emptyList()
-
-        // Walk up to find a node whose opening '(' is on a different line.
-        // Parenthesized constructs in tree-sitter: argument_list, parameter_list,
-        // parenthesized_expression, condition, etc. We look for any ancestor that
-        // starts with '(' (its first child is '(') and spans multiple lines.
-        val enclosing =
-            generateSequence(node) { it.parent }.firstOrNull { ancestor ->
-                val firstChild = ancestor.children.firstOrNull()
-                firstChild != null && firstChild.type == "(" && ancestor.startLine < line
-            } ?: return emptyList()
-
-        val desiredIndent = getLineIndent(source, enclosing.startLine)
-        logger.info(
-            "onTypeFormatting[close-paren]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
-            line,
-            column,
-            enclosing.startLine,
-            desiredIndent,
-            currentIndent,
-        )
-        if (desiredIndent == currentIndent) return emptyList()
-
-        return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
-    }
-
-    /**
      * Handle Enter inside a doc comment or block comment.
      *
-     * Returns a list of edits that insert " * " continuation prefix on the new line,
-     * aligned with the "*" on the opening line. Returns null if not inside a comment.
+     * Returns a list of edits that insert " * " continuation prefix on the new line, aligned with
+     * the "*" on the opening line. Returns null if not inside a comment.
      */
     private fun handleCommentContinuation(
         tree: AdapterTree,
@@ -678,13 +667,11 @@ class AdapterFormatter {
         lineIndex: Int,
     ): Boolean {
         val node = tree.nodeAt(lineIndex, 0) ?: return false
-        return generateSequence(node) { it.parent }
-            .any { it.type == "case_clause" }
+        return generateSequence(node) { it.parent }.any { it.type == "case_clause" }
     }
 
-    internal fun isInsideStringLiteral(node: AdapterNode): Boolean =
-        generateSequence(node) { it.parent }
-            .any { it.type in stringLiteralTypes }
+    private fun isInsideStringLiteral(node: AdapterNode): Boolean =
+        generateSequence(node) { it.parent }.any { it.type in stringLiteralTypes }
 
     private fun findDeclarationIndent(
         tree: AdapterTree,
@@ -692,8 +679,7 @@ class AdapterFormatter {
     ): Int {
         val node = tree.nodeAt(lineIndex, 0) ?: return 0
         val decl =
-            generateSequence(node) { it.parent }
-                .firstOrNull { it.type in declarationTypes }
+            generateSequence(node) { it.parent }.firstOrNull { it.type in declarationTypes }
                 ?: return 0
         return getLineIndent(tree.source, decl.startLine)
     }
@@ -711,8 +697,7 @@ class AdapterFormatter {
         val node = tree.nodeAt(prevLineIndex, lastNonSpace) ?: return prevIndent
 
         val ancestor =
-            generateSequence(node) { it.parent }
-                .firstOrNull { it.type in indentParentTypes }
+            generateSequence(node) { it.parent }.firstOrNull { it.type in indentParentTypes }
 
         return if (ancestor != null) {
             val ownerLine = ancestor.parent?.startLine ?: ancestor.startLine
@@ -745,8 +730,5 @@ class AdapterFormatter {
             newText = " ".repeat(desiredIndent),
         )
 
-    private fun summarizeLine(text: String): String =
-        text
-            .replace("\t", "\\t")
-            .take(80)
+    private fun summarizeLine(text: String): String = text.replace("\t", "\\t").take(80)
 }

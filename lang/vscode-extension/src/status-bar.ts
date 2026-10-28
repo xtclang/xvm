@@ -7,33 +7,34 @@ export function createStatusBar(): vscode.StatusBarItem {
     return statusBarItem;
 }
 
-export function updateStatusBar(state: 'starting' | 'ready' | 'stopped' | 'error'): void {
+export function updateStatusBar(state: 'starting' | 'ready' | 'stopped' | 'error', adapter?: string): void {
     if (!statusBarItem) {
         return;
     }
 
     switch (state) {
         case 'starting':
-            statusBarItem.text = '$(sync~spin) XTC';
-            statusBarItem.tooltip = 'XTC Language Server: Starting...';
+            statusBarItem.text = '$(sync~spin) Ecstasy';
+            statusBarItem.tooltip = 'Ecstasy Language Server: Starting...';
             statusBarItem.backgroundColor = undefined;
             statusBarItem.command = 'xtc.showServerOutput';
             break;
         case 'ready':
-            statusBarItem.text = '$(check) XTC';
-            statusBarItem.tooltip = 'XTC Language Server: Ready';
+            const label = adapter === 'XDK' ? 'Compiler' : adapter === 'TreeSitter' ? 'Tree-sitter' : adapter;
+            statusBarItem.text = `$(check) Ecstasy${label ? ` · ${label}` : ''}`;
+            statusBarItem.tooltip = `Ecstasy Language Server: Ready${label ? ` (${label})` : ''} — click to switch adapter`;
             statusBarItem.backgroundColor = undefined;
-            statusBarItem.command = 'xtc.showServerOutput';
+            statusBarItem.command = 'xtc.selectLanguageAdapter';
             break;
         case 'stopped':
-            statusBarItem.text = '$(error) XTC';
-            statusBarItem.tooltip = 'XTC Language Server: Stopped - click to restart';
+            statusBarItem.text = '$(error) Ecstasy';
+            statusBarItem.tooltip = 'Ecstasy Language Server: Stopped - click to restart';
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
             statusBarItem.command = 'xtc.restartServer';
             break;
         case 'error':
-            statusBarItem.text = '$(warning) XTC';
-            statusBarItem.tooltip = 'XTC Language Server: Error - click to restart';
+            statusBarItem.text = '$(warning) Ecstasy';
+            statusBarItem.tooltip = 'Ecstasy Language Server: Error - click to restart';
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             statusBarItem.command = 'xtc.restartServer';
             break;

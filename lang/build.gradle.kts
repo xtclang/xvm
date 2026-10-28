@@ -2,7 +2,7 @@ import com.diffplug.gradle.spotless.SpotlessCheck
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/**
+/*
  * Root project for XTC language tooling.
  *
  * Subprojects:
@@ -22,12 +22,20 @@ plugins {
 // =============================================================================
 // Kotlin formatting
 // =============================================================================
-// Spotless runs ktlint with its default rules, as the ktlint Gradle plugin did. Each Kotlin
-// subproject checks its own sources, tests and build script; generated and synced build outputs
-// stay excluded. The lang root, tree-sitter and vscode-extension scripts were never under ktlint
-// and would need a one-off reformat to join.
-val ktlintVersion = libs.versions.lang.ktlint.get()
+// Build scripts are owned by the lang root; each Kotlin subproject owns its sources,
+// including tests and integration tests. Generated and synced build outputs stay excluded.
+// Match master's Spotless integration; do not restore the separate ktlint Gradle plugin.
+val ktlintVersion =
+    libs.versions.lang.ktlint
+        .get()
 val ci = providers.environmentVariable("CI").isPresent
+
+spotless {
+    kotlinGradle {
+        target("*.gradle.kts", "*/build.gradle.kts")
+        ktlint(ktlintVersion)
+    }
+}
 
 allprojects {
     pluginManager.withPlugin("com.diffplug.spotless") {
@@ -44,9 +52,6 @@ subprojects {
         configure<SpotlessExtension> {
             kotlin {
                 target("src/**/*.kt", "src/**/*.kts")
-                ktlint(ktlintVersion)
-            }
-            kotlinGradle {
                 ktlint(ktlintVersion)
             }
         }
@@ -78,24 +83,25 @@ subprojects {
 // after modifying the language model or generators.
 // =============================================================================
 
-val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
-    group = "generation"
-    description = "Update the generated-examples directory with freshly generated files"
+val updateGeneratedExamples =
+    tasks.register<Copy>("updateGeneratedExamples") {
+        group = "generation"
+        description = "Update the generated-examples directory with freshly generated files"
 
-    dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
+        dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
 
-    from(project(":dsl").layout.buildDirectory.dir("generated")) {
-        include("xtc.tmLanguage.json")
-        include("language-configuration.json")
-        include("xtc.vim")
-        include("xtc-mode.el")
-        include("grammar.js")
-        include("highlights.scm")
-        include("xtc.sublime-syntax")
+        from(project(":dsl").layout.buildDirectory.dir("generated")) {
+            include("xtc.tmLanguage.json")
+            include("language-configuration.json")
+            include("xtc.vim")
+            include("xtc-mode.el")
+            include("grammar.js")
+            include("highlights.scm")
+            include("xtc.sublime-syntax")
+        }
+
+        into(layout.projectDirectory.dir("generated-examples"))
     }
-
-    into(layout.projectDirectory.dir("generated-examples"))
-}
 
 // =============================================================================
 // Aggregate subproject tasks
@@ -111,9 +117,17 @@ val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
 // Turn one on with -PincludeBuildAttachIntellijPlugin=true or -PincludeBuildAttachVsCodeExtension=true,
 // or build it directly: ./gradlew :lang:intellij-plugin:buildPlugin
 val attachIntellijPlugin =
-    providers.gradleProperty("includeBuildAttachIntellijPlugin").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachIntellijPlugin")
+        .orElse("false")
+        .get()
+        .toBoolean()
 val attachVsCodeExtension =
-    providers.gradleProperty("includeBuildAttachVsCodeExtension").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachVsCodeExtension")
+        .orElse("false")
+        .get()
+        .toBoolean()
 
 // Projects to aggregate standard lifecycle tasks from
 val coreProjects =
@@ -131,12 +145,13 @@ val allProjects =
     listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
 
 // Map of aggregate task -> subproject task (null means same name)
-val taskMappings = mapOf(
-    "build" to mapOf(":intellij-plugin" to "buildPlugin"),  // intellij uses buildPlugin
-    "assemble" to emptyMap(),
-    "check" to emptyMap(),
-    "clean" to emptyMap()
-)
+val taskMappings =
+    mapOf(
+        "build" to mapOf(":intellij-plugin" to "buildPlugin"), // intellij uses buildPlugin
+        "assemble" to emptyMap(),
+        "check" to emptyMap(),
+        "clean" to emptyMap(),
+    )
 
 taskMappings.forEach { (aggregateTask, overrides) ->
     val projects = if (aggregateTask == "clean") allProjects else coreProjects
@@ -152,14 +167,16 @@ taskMappings.forEach { (aggregateTask, overrides) ->
 // IDE run tasks - convenience aliases for subproject tasks
 // =============================================================================
 
-val runIntellijPlugin = tasks.register("runIntellijPlugin") {
-    group = "run"
-    description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
-    dependsOn(project(":intellij-plugin").tasks.named("runIde"))
-}
+val runIntellijPlugin =
+    tasks.register("runIntellijPlugin") {
+        group = "run"
+        description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
+        dependsOn(project(":intellij-plugin").tasks.named("runIde"))
+    }
 
-val runVsCodeExtension = tasks.register("runVsCodeExtension") {
-    group = "run"
-    description = "Launch VS Code with the XTC extension loaded for testing"
-    dependsOn(project(":vscode-extension").tasks.named("runCode"))
-}
+val runVsCodeExtension =
+    tasks.register("runVsCodeExtension") {
+        group = "run"
+        description = "Launch VS Code with the XTC extension loaded for testing"
+        dependsOn(project(":vscode-extension").tasks.named("runCode"))
+    }
