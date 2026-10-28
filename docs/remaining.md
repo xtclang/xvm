@@ -834,7 +834,17 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-27: the semantic token history's synchronization `efdcff889c` as `f1d2060f29`, its
+  2026-10-28, `f1d2060f29..3137736743`, 15 commits, each a clean cherry-pick: the discovery race fix
+  `f71c9cc0a5` as `3137736743`; the focused test tasks `bdab767b8c` and `021948fcdb`; the LSP4IJ
+  channel option and the nightly's playbook fixes `4ca6f5993d`, `4918127129`, `8d845d167e`,
+  `ddcc6fda9d`, `0952a3f0c9`, `3b7c450765`, `ff06c86d0b` and `b499c339fb`; and the full runs' fixes
+  `a82a762d19`, `95b4cfa2f1`, `5e6a0f2391` and `c2a9b296d5`. The lsp-server tests and the IntelliJ
+  and VS Code playbooks compile; XdkResourcesTest (3) and the new errorListenerTest (68) pass. A
+  survey of every errs commit since 2026-10-16 that #693 lacks found nothing else to take: the
+  others are debugger work and its records, already in #693 in another form (the close races as
+  `75af7a168c`, the build-logic fields), for code #693 doesn't have (the `f_errs` alignment, X31's
+  `inlineValueProvider`), or the 2026-10-16 file-event fixes and their revert, which cancel out.
+  Before that, 2026-10-27: the semantic token history's synchronization `efdcff889c` as `f1d2060f29`, its
   SemanticTokenReportsTest passing; before that, after both were rebased onto master `bcd8e30d58`: R8's fixes that are not debugger
   work are the pool count, the graph-walk tests and the worker's heap without `System.gc()` as
   `9eae4bfa50`, `1feca90e99` and `34b3ef3878`, then the read-only test skips `c730053240` as
