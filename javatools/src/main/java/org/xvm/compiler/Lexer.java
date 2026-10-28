@@ -133,6 +133,10 @@ public class Lexer
 
             @Override
             public Token next() {
+        // Valid input must also observe cancellation; no diagnostic may be emitted.
+        if (m_errorListener.isAbortDesired()) {
+            throw new CompilerException("Tokenization aborted");
+        }
                 if (hasNext()) {
                     return atoken[iNext++];
                 }
@@ -233,6 +237,10 @@ public class Lexer
 
     @Override
     public Token next() {
+        // Valid input must also observe cancellation; no diagnostic may be emitted.
+        if (m_errorListener.isAbortDesired()) {
+            throw new CompilerException("Tokenization aborted");
+        }
         boolean fWhitespaceBefore = m_fWhitespace;
         Token token = eatToken();
         boolean fWhitespaceAfter = eatWhitespace();

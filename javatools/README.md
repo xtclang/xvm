@@ -109,7 +109,7 @@ results, and stop obsolete work at compiler checkpoints. It cannot reconstruct d
 the compiler discarded or obtain errors from work that an unintended one-error budget prevented.
 Leaving those failures in place blocks a reliable compiler-backed adapter, regardless of how much
 code is added around the public entry point. These changes establish the reporting foundation;
-the companion ownership and delivery changes described below complete the paths built on it.
+the result, source-snapshot and cached-diagnostic APIs below complete the host-facing path.
 The exact helper names and the decision to remove a legacy alias are API design choices. The
 delivery, state and stopping guarantees they implement are the essential requirements.
 
@@ -366,21 +366,22 @@ Check failures and skips in `javatools/build/test-results/test/TEST-*.xml`; a gr
 not establish that optional tests executed. The real compiler-consumer integration test additionally
 exercises the standard build path with compiled modules supplied by its Gradle dependencies.
 
-### Review scope and related work
+### Combined embedding review scope
 
-[PR #680: separating diagnostic reporting from abort policy](https://github.com/xtclang/xvm/pull/680)
-introduces the listener contract, factories and branch fixes.
-[PR #681: explicit compiler listeners and named suppression](https://github.com/xtclang/xvm/pull/681)
-migrates callers and active compilation boundaries. This scoped-reporting change builds on both:
-it controls temporary parser/resolver destinations and restores validation callback state on normal,
-early and exceptional exits.
+This combined change includes the listener contract and explicit-listener migration, scoped
+parser/validation reporting, compilation outcomes, cached TypeInfo diagnostic replay, cancellation
+and host-supplied module source snapshots. The shared behavior can be reviewed with its actual
+host consumer tests rather than inferred across separate API migrations.
 
-Further **explicit structure reporting and TypeInfo diagnostic replay** work removes ambient
-file/pool lookup and preserves diagnostics associated with cached semantic results. That work
-remains a separate review boundary. The file/pool ambient-listener API is still present here:
-`XvmStructure.log` retains its existing fallback when passed null; the active compilation
-boundaries listed above do not. Scoped restoration is another prerequisite for complete host
-reporting, not a claim that every compiler-failure or TypeInfo-cache path is already repaired.
+The independent [repository read-failure fix](https://github.com/xtclang/xvm/pull/683) supplies
+retained I/O causes; this API forwards them only after a required dependency search fails.
+[The parser/branch correction](https://github.com/xtclang/xvm/pull/684) supplies the parent-abort,
+default-budget and lexical-rollback behavior preserved here. Empty transient-local retention is
+an independent utility fix. None of these APIs depends on an LSP implementation or editor.
+
+Selected-call facts, declaration-only analysis, incomplete-source recovery, cursor completion,
+AST copying and the production language server remain later review boundaries. The result here
+exposes ordinary compilation progress, not recovered syntax or executable output from invalid code.
 
 ### Scoped parser and validation reporting
 
@@ -393,9 +394,9 @@ the same breaking release boundary described above.
 Parser and resolver destinations use `Reporting` scopes, closed in reverse order with
 try-with-resources. `NameResolver.getErrorListener()` is null outside `resolve`; callbacks borrow
 the caller's non-null listener only during that call. These scopes restore destinations on every
-exit. They do not make a parser, resolver, AST or listener safe for concurrent use. The lexer still
-reports to its original listener; module-name-only scans should construct the parser with an
-explicit discard listener if lexical diagnostics are unwanted.
+exit. They do not make a parser, resolver, AST or listener safe for concurrent use. Lexical
+reports also follow the active attempt, preserving lexical rollback from the parser correction.
+Module-name-only scans can supply an explicit discard listener when reports are unwanted.
 
 Loop and try/finally label variables retain their context/listener as one immutable
 `ValidationScope` value. Each statement restores its previous value on normal, early and
@@ -409,6 +410,89 @@ abort propagation and exceptional statement exits without requiring installed mo
 and run the existing `manualTests/src/main/x/loop.x` and `exceptions.x` exercises with the built
 XDK to check lazy label variables and try/finally behavior through code generation and execution.
 The separate Gradle compiler-consumer test supplies its compiled modules through dependencies.
+
+### Compile a host snapshot and inspect its outcome
+
+```java
+ErrorList reports = new ErrorList();
+ErrorListener operation = ErrorListener.cancellable(reports, cancelled::get);
+EmbeddingSupport.Compilation result = embedding.compileModule(
+        new Source(text, documentName), dependencies, operation);
+
+if (result.succeeded()) {
+    ModuleStructure executable = result.module();
+}
+if (result.parsed() != null) {
+    // Inspect ordinary parsed syntax, even if semantic validation subsequently failed.
+}
+if (result.pool() != null) {
+    // Inspect structures built before a semantic failure, on the compiling worker.
+}
+```
+
+`Compilation` separates a successful executable module from the file structure and assembled AST
+that an attempt reached. Loading/parsing failures can leave no AST; semantic failures can leave a
+file and pool without an executable module. Returning these objects does not make them immutable
+or safe to share between workers. The host owns their lifetime and must detach any facts it shares.
+The existing String/File convenience methods delegate to this path and retain their module/null
+or boolean result shapes. A compilation creates a fresh compiler and build repository; hosts must
+serialize attempts sharing mutable repositories.
+
+`compileModule(ModuleInfo, ...)` runs the same source discovery, package assembly and resource
+association used by the CLI. A host can override `readSource` for unsaved text, `sourceEntries`
+for added/deleted members, and the protected source-identity constructor for a wholly virtual
+module. Membership, text and resource identity must describe one consistent snapshot. Construct a
+fresh `ModuleInfo` per attempt: it caches its assembled tree. Ordinary file constructors retain
+disk discovery and reading.
+
+Errors stay structured. A non-module/empty source gets a source diagnostic. Failed dependency
+resolution can include the original repository path and I/O cause. Successful fallback past an
+unreadable file does not fail a valid compilation. Unexpected exceptions and assertions are reported
+as internal failures even when an earlier source error was already collected. FATAL reports reach
+the host before the CLI console's deliberate exception can stop execution.
+
+`footprint(result)` reads the supplied compilation pool and repository counts without starting an
+interpreter. `ensureRuntimePool()` explicitly initializes the runtime if needed; the deprecated
+`getConstantPool()` retains that behavior. A runtime pool is not the pool of a failed compilation.
+
+### Report diagnostics from cached type information
+
+Structures no longer store, inherit or discover a listener through an ambient pool. Pass the
+operation's listener to `XvmStructure.log` and `TypeConstant.ensureTypeInfo(errors)`. The no-argument
+TypeInfo lookup is an explicit silent metadata query. A successful TypeInfo build retains an
+immutable diagnostic list; a later explicit lookup replays it to the new listener, including when
+it returns the same cached TypeInfo instance. Receiving `ErrorList` instances deduplicate repeated
+reports; a raw callback deliberately receives each replay. Cache invalidation causes a fresh build
+and replaces the retained reports.
+
+This matters when speculative work builds a generic type before the selected source use: the
+later caller must still hear an ignored-annotation warning. Tests cover source and serialized
+library types, silent-first/cache-hit ordering, distinct reporting owners, final selected uses
+and partial structures after semantic failure.
+
+### Cancel obsolete work without manufacturing errors
+
+`ErrorListener.cancellable` decorates the operation listener, preserving its reporting, state,
+branching and merging while polling the host predicate at abort checkpoints. A valid token stream
+also polls; cancellation cannot depend on finding a source error. Module-member loading and phase
+boundaries retain the same policy. This is cooperative cancellation, not interruption: a host must
+keep its predicate true once an attempt becomes obsolete. Other attempts have separate policies.
+
+The direct consumer suites `EmbeddingDiagnosticsTest`, `EmbeddingSourceSnapshotTest` and
+`TypeInfoDiagnosticsTest` use compiled modules supplied by Gradle, with no production adapter.
+Run them from the repository root:
+
+```bash
+./gradlew :lang:lsp-server:test \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true \
+  --tests 'org.xvm.lsp.adapter.Embedding*Test' \
+  --tests org.xvm.lsp.adapter.TypeInfoDiagnosticsTest \
+  --rerun-tasks --no-build-cache
+```
+
+The earlier numerical receipts above describe the original listener migration. Validation of the
+combined branch must additionally include these consumer suites and a fresh XDK build; those
+historical receipts alone do not validate the enlarged scope.
 
 ## Assembler
 
