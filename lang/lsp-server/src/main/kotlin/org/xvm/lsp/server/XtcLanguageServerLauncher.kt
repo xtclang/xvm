@@ -5,7 +5,6 @@ package org.xvm.lsp.server
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
-import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
@@ -202,8 +201,8 @@ fun launchStdio(
     val trace = ProtocolTrace(server.clientTrace)
     val lifecycle = ProtocolLifecycle()
     try {
-        val launcher: Launcher<LanguageClient> =
-            object : Launcher.Builder<LanguageClient>() {
+        val launcher: Launcher<XtcLanguageClient> =
+            object : Launcher.Builder<XtcLanguageClient>() {
                 override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
                     lifecycle.wrap(
                         trace.wrap(
@@ -213,7 +212,7 @@ fun launchStdio(
                         received = consumer is RemoteEndpoint,
                     )
             }.setLocalService(server)
-                .setRemoteInterface(LanguageClient::class.java)
+                .setRemoteInterface(XtcLanguageClient::class.java)
                 .setInput(input)
                 .setOutput(output)
                 .setExecutorService(executor)

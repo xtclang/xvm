@@ -87,7 +87,7 @@ class XdkEditingTest {
     @Test
     fun `linked locals follow resolved identity and module lenses use the existing client command`() {
         val text =
-            "module Editing { Int one() { Int value = 1; return value; } Int two() { Int value = 2; return value; } }"
+            "module Editing { Int one() { Int value = 1; return value; } Int two() { Int value = 2; return value; } void run() {} }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             val linked =
