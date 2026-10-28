@@ -30,7 +30,6 @@ import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -40,8 +39,7 @@ import static org.xvm.util.Handy.indentLines;
  * The traditional "for" statement.
  */
 public class ForStatement
-        extends ConditionalStatement
-        implements LabelAble {
+        extends LoopStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForStatement(
@@ -63,28 +61,6 @@ public class ForStatement
         return true;
     }
 
-    @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
-        Context ctxDest = ensureValidationContext();
-        Label   label   = getContinueLabel();
-
-        if (ctxOrigin.isReachable()) {
-            // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            // record the jump that landed on this statement by recording its assignment impact
-            if (m_listContinues == null) {
-                m_listContinues = new ArrayList<>();
-            }
-            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
-        }
-
-        return label;
-    }
-
     /**
      * @return true iff there is a continue label for this statement, which indicates that it has
      *         already been requested at least one time
@@ -96,6 +72,7 @@ public class ForStatement
     /**
      * @return the continue label for this statement
      */
+    @Override
     public Label getContinueLabel() {
         Label label = m_labelContinue;
         if (label == null) {
@@ -143,12 +120,7 @@ public class ForStatement
                 m_listShorts = new ArrayList<>();
             }
 
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            m_listShorts.add(new Break(nodeOrigin, mapAsn, mapArg, null));
+            m_listShorts.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, null));
         }
 
         // create, store, and return a label for this specific init/update node
@@ -213,56 +185,10 @@ public class ForStatement
         return CHILD_FIELDS;
     }
 
-    // ----- LabelAble methods ---------------------------------------------------------------------
-
-    @Override
-    public boolean hasLabelVar(String sName) {
-        return "first".equals(sName) || "count".equals(sName);
-    }
-
-    @Override
-    public Register getLabelVar(Context ctx, String sName) {
-        assert hasLabelVar(sName);
-
-        boolean fFirst = "first".equals(sName);
-
-        Register reg = fFirst ? m_regFirst : m_regCount;
-        if (reg == null) {
-            // this occurs only during validate()
-            assert m_labelVars != null;
-
-            String sLabel = ((LabeledStatement) getParent()).getName();
-            Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
-
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
-            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
-
-            if (fFirst) {
-                m_regFirst = reg;
-            } else {
-                m_regCount = reg;
-            }
-        }
-
-        return reg;
-    }
-
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        ValidationScope previous = m_labelVars;
-        try {
-            return validateScoped(ctx, errs);
-        } finally {
-            m_labelVars = previous;
-        }
-    }
-
-    /**
-     * Validate with callback state restored by {@link #validateImpl} on every exit.
-     */
-    private Statement validateScoped(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         boolean fValidInit = true;
 
         // the for() statement will represent its own scope
@@ -280,17 +206,7 @@ public class ForStatement
             }
 
             if (m_listShorts != null) {
-                boolean fContinues = false;
-                for (Break shortInfo : m_listShorts) {
-                    if (!shortInfo.node().isDiscarded()) {
-                        ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
-                        fContinues = true;
-                    }
-                }
-
-                if (fContinues) {
-                    ctx.setReachable(true);
-                }
+                mergeJumps(ctx, m_listShorts);
                 m_listShorts = null;
             }
         }
@@ -354,36 +270,15 @@ public class ForStatement
             for (int i = 0; i < cConds; ++i) {
                 AstNode cond = getCondition(i);
 
-                // the condition is either a boolean expression or an assignment statement whose R-value
-                // is a multi-value with the first value being a boolean
-                if (cond instanceof AssignmentStatement stmtOld) {
-                    if (stmtOld.isNegated()) {
-                        ctx = ctx.enterNot();
-                    }
-
-                    AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-
-                    if (stmtOld.isNegated()) {
-                        ctx = ctx.exit();
-                    }
-
-                    if (stmtNew == null) {
-                        fValid = false;
-                    } else if (stmtNew != stmtOld) {
-                        cond = stmtNew;
-                        conds.set(i, cond);
-                    }
-                } else {
-                    Expression exprOld = (Expression) cond;
-                    Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-                    if (exprNew == null) {
-                        fValid = false;
-                    } else if (exprNew != exprOld) {
-                        cond = exprNew;
-                        conds.set(i, cond);
-                    }
-
-                    fAlwaysTrue = cond instanceof Expression expr && expr.isConstantTrue();
+                AstNode validated = validateCondition(ctx, cond, errs);
+                if (validated == null) {
+                    fValid = false;
+                } else if (validated != cond) {
+                    cond = validated;
+                    conds.set(i, cond);
+                }
+                if (cond instanceof Expression expression) {
+                    fAlwaysTrue = expression.isConstantTrue();
                 }
             }
 
@@ -413,17 +308,7 @@ public class ForStatement
 
             if (m_listContinues != null) {
                 // the last "continue" is translated as a "break"
-                boolean fContinues = false;
-                for (Break continueInfo : m_listContinues) {
-                    if (!continueInfo.node().isDiscarded()) {
-                        ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
-                        fContinues = true;
-                    }
-                }
-
-                if (fContinues) {
-                    ctx.setReachable(true);
-                }
+                mergeJumps(ctx, m_listContinues);
                 m_listContinues = null;
             }
 
@@ -438,17 +323,7 @@ public class ForStatement
                 }
 
                 if (m_listShorts != null) {
-                    boolean fContinues = false;
-                    for (Break shortInfo : m_listShorts) {
-                        if (!shortInfo.node().isDiscarded()) {
-                            ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
-                            fContinues = true;
-                        }
-                    }
-
-                    if (fContinues) {
-                        ctx.setReachable(true);
-                    }
+                    mergeJumps(ctx, m_listShorts);
                     m_listShorts = null;
                 }
             }
@@ -576,25 +451,7 @@ public class ForStatement
         } else if (!fAlwaysTrue) {
             for (int i = 0, c = getConditionCount(); i < c; ++i) {
                 AstNode cond = getCondition(i);
-                if (cond instanceof AssignmentStatement stmtCond) {
-                    boolean fNegated = stmtCond.isNegated();
-                    Label   labelNeg = fNegated ? new Label("negated") : null;
-
-                    stmtCond.setConditionFalseLabel(fNegated ? labelNeg : getEndLabel());
-
-                    fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
-
-                    assert stmtCond.isConditionFalseLabelTaken();
-
-                    if (fNegated) {
-                        code.add(new Jump(getEndLabel()));
-                        code.add(labelNeg);
-                    }
-                } else {
-                    Expression exprCond = (Expression) cond;
-                    exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-                    fBlockReachable &= exprCond.isCompletable();
-                }
+                fBlockReachable &= emitCondition(ctx, cond, fCompletes, code, getEndLabel(), errs);
             }
         }
 
@@ -679,15 +536,6 @@ public class ForStatement
     protected StatementBlock  block;
 
     private transient Label m_labelContinue;
-
-    private transient ValidationScope m_labelVars;
-    private transient Register        m_regFirst;
-    private transient Register        m_regCount;
-
-    /**
-     * Generally null, unless there is a "continue" that jumps to this statement.
-     */
-    private transient List<Break> m_listContinues;
 
     /**
      * The short-circuits from inside of the most recent "init" or "update".

@@ -118,7 +118,7 @@ public class StatementExpression
 
         // the resulting returned types come back in the type collector
         StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, silent(PROBE));
-        ctx = ctx.exit();
+        ctx.exit();
 
         // extract the type information (if everything validated ok)
         TypeConstant[] aTypes = null;
@@ -136,7 +136,7 @@ public class StatementExpression
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
                                 ErrorListener errs) {
-        if (atypeRequired != null && atypeRequired.length == 0) {
+        if (atypeRequired == null || atypeRequired.length == 0) {
             return TypeFit.Fit;
         }
 
@@ -204,7 +204,7 @@ public class StatementExpression
             body = bodyNew;
 
             if (m_collector == null) {
-                if (atypeRequired != null && atypeRequired.length == 0) {
+                if (atypeRequired == null || atypeRequired.length == 0) {
                     // void is a fit
                     atypeActual = atypeRequired;
                 } else {

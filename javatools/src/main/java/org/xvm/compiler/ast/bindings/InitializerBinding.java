@@ -1,4 +1,4 @@
-package org.xvm.compiler;
+package org.xvm.compiler.ast.bindings;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -8,6 +8,7 @@ import java.util.Map;
 import org.xvm.asm.Constant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.Expression;
 import org.xvm.compiler.ast.NameExpression;
