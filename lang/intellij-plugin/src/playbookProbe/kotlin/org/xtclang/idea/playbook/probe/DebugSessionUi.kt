@@ -44,6 +44,7 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.util.ui.UIUtil
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
+import com.intellij.xdebugger.XDebugSessionListener
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
@@ -107,6 +108,9 @@ import javax.swing.SwingUtilities
 object DebugSessionUi {
     /** Sessions by name as they start: the debugger manager lists a session only while it runs. */
     private val sessions = ConcurrentHashMap<String, XDebugSession>()
+
+    /** How often each session, by name, rebuilt its views since it started. */
+    private val rebuilds = ConcurrentHashMap<String, Int>()
     private val watched = ConcurrentHashMap.newKeySet<Project>()
 
     private fun watch(project: Project) {
@@ -115,7 +119,17 @@ object DebugSessionUi {
                 XDebuggerManager.TOPIC,
                 object : XDebuggerManagerListener {
                     override fun processStarted(debugProcess: XDebugProcess) {
-                        sessions[debugProcess.session.sessionName] = debugProcess.session
+                        val session = debugProcess.session
+                        sessions[session.sessionName] = session
+                        rebuilds[session.sessionName] = 0
+                        // XDebugSession.rebuildViews() tells the session's listeners that its settings changed
+                        session.addSessionListener(
+                            object : XDebugSessionListener {
+                                override fun settingsChanged() {
+                                    rebuilds.merge(session.sessionName, 1, Int::plus)
+                                }
+                            },
+                        )
                     }
                 },
             )
@@ -826,6 +840,19 @@ object DebugSessionUi {
     private const val LOADED_SOURCES = "dap-loaded-sources-panel"
 
     private const val MODULES = "dap-modules-panel"
+
+    /**
+     * How often the module's session rebuilt its views since it started, as LSP4IJ does on the DAP `invalidated` event
+     * (#1766).
+     */
+    @JvmStatic
+    fun viewRebuilds(
+        project: Project,
+        module: String,
+    ): Int {
+        checkNotNull(session(project, module)) { "No debug session of $module" }
+        return rebuilds[name(module)] ?: 0
+    }
 
     /** Resumes the module's paused session, as the Resume Program action does. */
     @JvmStatic
