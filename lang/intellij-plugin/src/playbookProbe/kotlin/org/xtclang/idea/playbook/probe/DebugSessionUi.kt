@@ -79,11 +79,11 @@ import com.intellij.xdebugger.impl.ui.tree.nodes.XValueGroupNodeImpl
 import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl
 import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
 import com.intellij.xdebugger.stepping.XSmartStepIntoVariant
+import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import com.redhat.devtools.lsp4ij.dap.breakpoints.DAPBreakpointProperties
+import com.redhat.devtools.lsp4ij.dap.breakpoints.DAPFunctionBreakpointProperties
 import com.redhat.devtools.lsp4ij.dap.settings.UserDefinedDebugAdapterServerSettings
 import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
-import org.eclipse.lsp4j.debug.Module
-import org.eclipse.lsp4j.debug.Source
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcAttachConfigurationType
@@ -760,15 +760,12 @@ object DebugSessionUi {
                         default_ = !wanted[id].isJsonNull
                     }
                 }
-            // TODO LSP4IJ: UP34 — conditions came with #1760, after 0.21.0, which the probe compiles against
             val conditions =
                 wanted.entrySet().filter { !it.value.isJsonNull && it.value.asString.isNotEmpty() }.associate {
                     it.key to
                         it.value.asString
                 }
-            if (conditions.isNotEmpty()) {
-                updated.javaClass.getMethod("setExceptionBreakpointsFilterConditions", Map::class.java).invoke(updated, TreeMap(conditions))
-            }
+            if (conditions.isNotEmpty()) updated.exceptionBreakpointsFilterConditions = TreeMap(conditions)
         }
         settings.setFilterSettings(XtcDebugAdapterFactory.SERVER_ID, updated)
         return was?.toString() ?: "null"
@@ -790,11 +787,11 @@ object DebugSessionUi {
             state.addProperty("sourcesShown", session.ui?.findContent(LOADED_SOURCES) != null)
             state.addProperty("modulesShown", session.ui?.findContent(MODULES) != null)
         }
-        val sources = call(checkNotNull(call(process, "getLoadedSourcesPanel")), "getSources") as List<*>
+        val sources = (process as DAPDebugProcess).loadedSourcesPanel.sources
         state.add(
             "sources",
             JsonArray().apply {
-                sources.filterIsInstance<Source>().forEach { source ->
+                sources.forEach { source ->
                     add(
                         JsonObject().apply {
                             addProperty("name", source.name)
@@ -804,11 +801,11 @@ object DebugSessionUi {
                 }
             },
         )
-        val modules = call(checkNotNull(call(process, "getModulesPanel")), "getModules") as List<*>
+        val modules = process.modulesPanel.modules
         state.add(
             "modules",
             JsonArray().apply {
-                modules.filterIsInstance<Module>().forEach { shown ->
+                modules.forEach { shown ->
                     add(
                         JsonObject().apply {
                             addProperty("name", shown.name)
@@ -821,13 +818,9 @@ object DebugSessionUi {
         return state.toString()
     }
 
-    /** The conditions of the exception breakpoint filters in LSP4IJ's settings, which LSP4IJ 0.21.0 doesn't have. */
+    /** The conditions of the exception breakpoint filters in LSP4IJ's settings. */
     private fun filterConditions(settings: UserDefinedDebugAdapterServerSettings.FilterItemSettings): Map<String, String> =
-        runCatching { settings.javaClass.getMethod("getExceptionBreakpointsFilterConditions").invoke(settings) as? Map<*, *> }
-            .getOrNull()
-            .orEmpty()
-            .entries
-            .associate { it.key.toString() to it.value.toString() }
+        settings.exceptionBreakpointsFilterConditions.orEmpty()
 
     /** The IDs of LSP4IJ's Loaded Sources and Modules views in the debug session's layout (UP45). */
     private const val LOADED_SOURCES = "dap-loaded-sources-panel"
@@ -1139,28 +1132,27 @@ object DebugSessionUi {
 
     /**
      * Adds a DAP function breakpoint on the function [name], with the [condition], as the Breakpoints dialog's "+" and
-     * its DAP Function Breakpoint item do once the name is typed, through the type that LSP4IJ registers (#1780); the
-     * probe finds it by its ID, since LSP4IJ 0.21.0, which it compiles against, has none. False without that type.
+     * its DAP Function Breakpoint item do once the name is typed, through the type that LSP4IJ registers (#1780).
      */
     @JvmStatic
     fun addFunctionBreakpoint(
         project: Project,
         name: String,
         condition: String,
-    ): Boolean {
+    ) {
         @Suppress("UNCHECKED_CAST")
         val type =
-            XBreakpointType.EXTENSION_POINT_NAME.extensionList.firstOrNull { it.id == FUNCTION_BREAKPOINT }
-                as? XBreakpointType<XBreakpoint<XBreakpointProperties<*>>, XBreakpointProperties<*>> ?: return false
+            XBreakpointType.EXTENSION_POINT_NAME.extensionList.first { it.id == FUNCTION_BREAKPOINT }
+                as XBreakpointType<XBreakpoint<XBreakpointProperties<*>>, XBreakpointProperties<*>>
         boundedEdt(ModalityState.defaultModalityState()) {
-            val properties = checkNotNull(type.createProperties()) { "No properties for a function breakpoint" }
-            properties.javaClass.getMethod("setName", String::class.java).invoke(properties, name)
+            val properties =
+                checkNotNull(type.createProperties() as? DAPFunctionBreakpointProperties) { "No function breakpoint properties" }
+            properties.name = name
             ApplicationManager.getApplication().runWriteAction {
                 val breakpoint = XDebuggerManager.getInstance(project).breakpointManager.addBreakpoint(type, properties)
                 breakpoint.conditionExpression = XExpressionImpl.fromText(condition)
             }
         }
-        return true
     }
 
     /**
