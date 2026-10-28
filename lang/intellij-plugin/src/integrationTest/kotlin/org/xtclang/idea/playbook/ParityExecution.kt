@@ -555,9 +555,12 @@ internal fun ParityScenarios.runEntryCases() {
                 val argument = data.strings("argument")
                 check(locals.any { it.string("name") == argument[0] && it.string("value") == argument[1] }) { "No ${argument[0]}: $locals" }
 
-                // TODO LSP4IJ: UP31 — LSP4IJ shows the exception a second after the stop, in the editor it found at the
-                // stop, without checking that the editor is still open; until the hint shows, the editor must stay open
-                awaitUi("LSP4IJ shows the exception where it was thrown", HANG_LIMIT) { debugger.hintShown() }
+                // the hint is the exceptionInfo answer: the exception, its message and its stack, from check()
+                var hints = listOf<String>()
+                awaitUi("LSP4IJ shows the exception's information where it was thrown", HANG_LIMIT, { "Hints: $hints" }) {
+                    hints = JsonParser.parseString(debugger.hintTexts()).asJsonArray.map { it.asString }
+                    hints.any { hint -> listOf(data.string("exception"), data.string("message"), "check").all { it in hint } }
+                }
 
                 debugger.resume(project, module)
                 val ended = debugger.awaitState(project, module, "Resume lets the program fail", HANG_LIMIT) { it.has("exitCode") }
@@ -674,18 +677,21 @@ internal fun ParityScenarios.runEntryCases() {
             val debugger = with(driver) { utility(DebugSessionProbe::class) }
             val module = data.string("module")
             try {
-                // LSP4IJ sends the breakpoint's condition, but not a hit condition or a log message (UP32)
-                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"))
-                for (expected in data.strings("conditionStops")) {
-                    // a stop is the next one once i has the value it stops at
-                    awaitUi("the program stops where i is $expected", HANG_LIMIT) {
-                        runCatching { JsonParser.parseString(debugger.evaluate(project, module, "i")).asJsonObject["value"]?.asString }
-                            .getOrNull() == expected
-                    }
-                    debugger.resume(project, module)
+                val file = uri(data.string("file"))
+                // the logpoint doesn't suspend, and logs its expression's value
+                debugger.addLogpoint(project, file, data.int("logLine"), data.string("logExpression"))
+                // the breakpoint stops at the hit its hit condition names, among those where its condition holds
+                debugger.debugWhen(project, module, file, data.int("breakpointLine"), data.string("condition"), data.string("hitCondition"))
+                val stopsAt = data.string("stopsAt")
+                awaitUi("the program stops where i is $stopsAt", HANG_LIMIT) {
+                    runCatching { JsonParser.parseString(debugger.evaluate(project, module, "i")).asJsonObject["value"]?.asString }
+                        .getOrNull() == stopsAt
                 }
+                debugger.resume(project, module)
                 val ended = debugger.awaitState(project, module, "the program runs to its exit", HANG_LIMIT) { it.has("exitCode") }
                 check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                val console = ended.string("console")
+                check(console.lines().any { it.trim() == data.string("logValue") }) { "The logpoint logged nothing: $console" }
             } finally {
                 debugger.clearBreakpoints(project)
             }
@@ -745,9 +751,10 @@ internal fun ParityScenarios.runEntryCases() {
             val debugger = with(driver) { utility(DebugSessionProbe::class) }
             val module = data.string("module")
             try {
-                // TODO LSP4IJ: UP32 — LSP4IJ sends a breakpoint's condition but not its log message, so the logpoint is
-                // checked in VS Code only; set it here too once a release sends log messages (#1759)
-                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"))
+                val file = uri(data.string("file"))
+                // the logpoint doesn't suspend, and logs its expression's value
+                debugger.addLogpoint(project, file, data.int("logLine"), data.string("logExpression"))
+                debugger.debugWhen(project, module, file, data.int("breakpointLine"), data.string("condition"), "")
 
                 fun evaluate(expression: String) = JsonParser.parseString(debugger.evaluate(project, module, expression)).asJsonObject
                 data.strings("conditionStops").forEachIndexed { stop, expected ->
@@ -772,6 +779,8 @@ internal fun ParityScenarios.runEntryCases() {
                 }
                 val ended = debugger.awaitState(project, module, "the program runs to its exit", HANG_LIMIT) { it.has("exitCode") }
                 check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                val console = ended.string("console")
+                check(console.lines().any { it.trim() == data.string("logValue") }) { "The logpoint logged nothing: $console" }
             } finally {
                 debugger.clearBreakpoints(project)
             }
@@ -1289,7 +1298,7 @@ internal fun ParityScenarios.runEntryCases() {
             val module = data.string("module")
             try {
                 // by then, run() has asked the busy worker for its count, and waits for the answer
-                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"))
+                debugger.debugWhen(project, module, uri(data.string("file")), data.int("breakpointLine"), data.string("condition"), "")
                 debugger.awaitState(project, module, "the worker stops at its count", HANG_LIMIT) { it["suspended"]?.asBoolean == true }
 
                 // the stopped fiber first, then run()'s, which waits for the worker, with its own stack
@@ -2030,8 +2039,6 @@ internal interface DebugSessionProbe {
         origin: String,
     ): String
 
-    fun hintShown(): Boolean
-
     fun hintTexts(): String
 
     fun pause(
@@ -2057,6 +2064,14 @@ internal interface DebugSessionProbe {
         uri: String,
         breakpointLine: Int,
         condition: String,
+        hitCondition: String,
+    )
+
+    fun addLogpoint(
+        project: Project,
+        uri: String,
+        line: Int,
+        expression: String,
     )
 
     fun clearBreakpoints(project: Project)
