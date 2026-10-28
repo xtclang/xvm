@@ -26,17 +26,20 @@ import static org.xvm.asm.ErrorListener.in;
  * depending on who is listening.
  */
 public class ErrorListenerBranchTest {
+    private static final String SOURCE = "module TestSimple { void run() {} }";
+    private static final String CODE   = "PARSER-03";
+
     /**
      * A listener of the shape a host would write: it collects, and overrides nothing else.
      */
     private static class HostListener
             implements ErrorListener {
+        final List<String> received = new ArrayList<>();
+
         @Override
         public void log(ErrorInfo err) {
             received.add(err.getCode());
         }
-
-        final List<String> received = new ArrayList<>();
     }
 
     /**
@@ -138,7 +141,4 @@ public class ErrorListenerBranchTest {
         host.fatal(CODE, in(source, 2, 3), "b");
         assertTrue(host.isAbortDesired(), "a fatal is");
     }
-
-    private static final String SOURCE = "module TestSimple { void run() {} }";
-    private static final String CODE   = "PARSER-03";
 }

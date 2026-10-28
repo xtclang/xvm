@@ -23,6 +23,9 @@ import org.xvm.compiler.ast.LambdaExpression.LambdaContext;
  * Only the compiler-owned collector records facts; readers receive immutable collection snapshots.
  */
 public final class LambdaBindings {
+    private final Map<Register, Register>        captureOrigins = new IdentityHashMap<>();
+    private final Map<Integer, ParameterBinding> parameters = new LinkedHashMap<>();
+
     private LambdaBindings() {}
 
     /** A source parameter and its validated binding, excluding synthetic capture parameters. */
@@ -48,6 +51,9 @@ public final class LambdaBindings {
      * belong to the same compiler worker; the collector is not a host-side editing API.
      */
     public static final class Collector {
+        private       MethodStructure method;
+        private final LambdaBindings  bindings = new LambdaBindings();
+
         /** Create the source-binding collector for a fresh lambda validation context. */
         public Collector() {}
 
@@ -89,11 +95,5 @@ public final class LambdaBindings {
                 }
             }
         }
-
-        private       MethodStructure method;
-        private final LambdaBindings  bindings = new LambdaBindings();
     }
-
-    private final Map<Register, Register>        captureOrigins = new IdentityHashMap<>();
-    private final Map<Integer, ParameterBinding> parameters = new LinkedHashMap<>();
 }
