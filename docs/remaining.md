@@ -790,12 +790,12 @@ passes with the workaround disabled. The gates are in
   part's command, not for tooltips. XVM's server sends each of these only to a client that declares
   it, and otherwise sends the full results, so nothing is lost in IntelliJ.
 
-### LSP4IJ: its support lists disagreed with its code (UP61): our #1784, open
+### LSP4IJ: its support lists disagreed with its code (UP61): our #1784, merged
 
-- [ ] UP61 (2026-10-28): LSP4IJ's `LSPSupport.md` and `DAPSupport.md` marked some supported
-  features as unsupported, listed one method twice and left out others. Fixed by our
-  [#1784](https://github.com/redhat-developer/lsp4ij/pull/1784) (open, `07f7882d`). To do: get it
-  merged.
+- [x] UP61 (2026-10-28): LSP4IJ's `LSPSupport.md` and `DAPSupport.md` marked some supported
+  features as unsupported, listed two methods twice and left out others. Fixed by our
+  [#1784](https://github.com/redhat-developer/lsp4ij/pull/1784) (merged 2026-10-28, `e301a971`).
+  The lists are read on `main`, so no release is needed.
 
 ### LSP4J
 
