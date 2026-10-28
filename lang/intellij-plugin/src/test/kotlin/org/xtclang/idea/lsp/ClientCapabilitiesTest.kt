@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
  */
 class ClientCapabilitiesTest {
     @Test
-    fun `advertise the indentation mode implemented by native snippet expansion`() {
+    fun `advertise the indentation modes LSP4IJ declares, since its snippets honor AsIs`() {
         val completion =
             CompletionCapabilities().apply {
                 completionItem =
@@ -37,8 +37,8 @@ class ClientCapabilitiesTest {
                     }
             }
         XtcLanguageServerFactory().createClientFeatures().initializeParams(params)
-        assertThat(completion.insertTextMode).isEqualTo(InsertTextMode.AdjustIndentation)
-        assertThat(completion.completionItem.insertTextModeSupport.valueSet).containsExactly(InsertTextMode.AdjustIndentation)
+        assertThat(completion.insertTextMode).isNull()
+        assertThat(completion.completionItem.insertTextModeSupport.valueSet).containsExactlyElementsOf(InsertTextMode.entries)
         assertThat(completion.completionItem.snippetSupport).isTrue()
     }
 
