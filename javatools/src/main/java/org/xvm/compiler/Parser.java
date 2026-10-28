@@ -66,10 +66,10 @@ public class Parser {
         // we need to route lexical reports through the active lookahead attempt, if any
         ErrorListener listenerWrapper = err -> {
             if (m_lookAhead == null) {
-                return m_errorListener.log(err);
+                m_errorListener.log(err);
+            } else {
+                m_lookAhead.log(err);
             }
-            m_lookAhead.log(err);
-            return false;
         };
         m_lexer = lexer == null ? new Lexer(source, listenerWrapper) : lexer;
 
@@ -5624,9 +5624,12 @@ public class Parser {
     protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam) {
         if (m_lookAhead != null) {
             m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
-        } else if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
-            m_fAvoidRecovery = true;
-            throw new CompilerException("error list is full: " + m_errorListener);
+        } else {
+            m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+            if (m_errorListener.isAbortDesired()) {
+                m_fAvoidRecovery = true;
+                throw new CompilerException("error list is full: " + m_errorListener);
+            }
         }
     }
 
