@@ -57,6 +57,7 @@ class CompilerPlaybook(
         val error: String? = null,
         val limitations: List<String> = emptyList(),
         val manual: List<String> = emptyList(),
+        val tags: List<String> = emptyList(),
     )
 
     private val completed = mutableListOf<Result>()
@@ -81,6 +82,7 @@ class CompilerPlaybook(
                         executed?.error,
                         scenario.intellij.limitations,
                         scenario.manual,
+                        scenario.tags.orEmpty(),
                     )
                 }
 

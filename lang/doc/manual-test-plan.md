@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **284 scenarios**: X1–X279, CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **291 scenarios**: X1–X286, CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1263,11 +1263,11 @@ module Hello {
 | 18a.3 | Unsaved edits | Edit without saving, then build | All files are saved first; the build reflects the edit |
 | 18a.4 | Run | Run lens, VS Code editor Run button or IntelliJ Run Context Configuration (`Ctrl+Shift+R` macOS / `Ctrl+Shift+F10`) | `Hello …` printed, then the exit code (VS Code: "Process finished with exit code 0") |
 | 18a.5 | Arguments | Configure arguments `a b,ü` (IntelliJ *Module arguments*; VS Code task `"args": ["a b", "ü"]`) | The program receives them unchanged, without shell parsing |
-| 18a.6 | Stop | Run `module Loop { void run() { while (True) {} } }`, then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
-| 18a.7 | Rerun | IntelliJ **Rerun** while a run is active | The old run stops and a new one starts in the same console |
+| 18a.6 | Stop | Run `module Loop { void run() { for (Int count = 0; count >= 0; ++count) {} } }` (an empty `while (True)` is rejected as non-terminating), then Stop (IntelliJ) or close the terminal (VS Code) | The run ends and reports its exit; the next run works in the same worker |
+| 18a.7 | Rerun | IntelliJ **Rerun**, or VS Code **Tasks: Restart Running Task**, while a run is active | The old run stops and a new one starts in the same console (automated in X283) |
 | 18a.8 | Failed build skips the run | Run a module that does not compile | The diagnostics print and nothing runs |
 | 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before |
-| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs |
+| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A message says debugging is not available, and the module runs (the run is automated in X285) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 
 Known limits: no console input; one program at a time per server (a second concurrent run reports
@@ -1413,7 +1413,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X279 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X286 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1561,11 +1561,18 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 284 scenarios: X1–X279, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 291 scenarios: X1–X286, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
+
+Cases may carry `tags` defined by the catalog's `tagDefinitions`, and both run reports copy them.
+`slow` marks the cases whose median took at least 10 seconds in either editor across the recorded
+passing runs up to 2026-10-08; most cases take one to four seconds. The 16 slow cases are X27,
+X50, X65, X67, X97, X108, X122, X142, X143, X144, X145, X146, X148, X265, X277 and CFG1. Full and
+focused runs still include them. A future fast profile could exclude them for quick checks, with
+full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
 all 291 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
@@ -2390,7 +2397,7 @@ module Advanced {
 | X134 | Configure an unopened Library.x outside the workspace and a local consumer. Change its return type externally, restore it, delete it and recreate it. | Consumer Problems appears/clears from OS file events without opening Library or manually refreshing VFS in either host. |
 | X135 | Use the server-log actions to open/hide the docked log twice, then return to the source. | The log view opens and hides without modifying source. Physical shortcut dispatch, remapped shortcuts and alternate docking are manual checks. |
 | X136 | Open the language-service settings, change inlays, Reset/Cancel, then Apply; inspect effective configuration. | Live presentation changes preserve source and compiler graph ownership; report includes PID, adapter and queue names/count. IntelliJ drives the actual settings components; VS Code uses native configuration and the contributed report command. |
-| X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. | Each applied transport change restarts the existing connection and restores current unsaved text. This is text transport, not incremental compilation. |
+| X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. Then add an unsaved declaration and switch the language adapter to Tree-sitter, then back to the compiler. | Each applied transport or adapter change restarts the connection once (a new server process) and restores the current unsaved text without saving it; the unsaved declaration appears in the outline under each adapter. Transport is text synchronization, not incremental compilation. The compiler adapter is restored afterwards. |
 | X138 | Change indentation to 2, format, then supply an invalid indentation value. | Valid change applies without restarting; invalid settings retain the previous formatter. Effective status identifies native save-hook availability. |
 | X139 | Enable native format-on-save and save an unindented source. In IntelliJ also leave a second dirty document closed, then Save All. In VS Code also select server save formatting with native formatting disabled. | Open and closed IntelliJ documents are indented without formatting-error notifications or a file-cache conflict. VS Code suppresses the server hook when native formatting is enabled; IntelliJ uses native Actions on Save because LSP4IJ has no server save-edit hook. |
 | X140 | Open the shared source with an emoji before an `Int` reference on the same line. Hover and prepare rename on the final `value`. | UTF-16 is explicit; hover resolves `Int` and rename selects exactly `value`, without shifting after the surrogate pair. |
@@ -2668,7 +2675,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Inlay hints | X42/X131 | Enable/disable through native controls, inspect tooltip rendering for locals/parameters/lambdas, verify no misleading names for unnamed function calls, named arguments or omitted defaults. A protocol tooltip does not prove the UI renders it. |
 | Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. X138 verifies live indent settings; X249/X250 verify continuation/comment margins and bounded width wrapping with native history. Backend regressions cover custom indentation and tabs. Not every variant is a shared-driver scenario. |
 | Document links | X131 plus lexical unit tests; section 15 | Click HTTP(S) URLs in comments/strings; verify exact ranges and absence of invented import/file/unsupported-scheme links. Malformed/partial literals must not create arbitrary targets. External browser launching is a manual action, separate from resolving a URI. |
-| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Lenses appear only on modules with a callable `run`. Embedded build/run/stop/rerun is manual in [section 18a](#18a-embedded-build-and-run) and backed by worker regressions; shared native playbook cases and the R6–R8 debugging and soak gates remain **open**. A Run lens alone does not establish execution. |
+| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Lenses appear only on modules with a callable `run`. Shared X280–X285 drive embedded Run lenses, builds, arguments/exit codes, Stop, Rerun, failed builds and debug launches natively; [section 18a](#18a-embedded-build-and-run) adds Gradle mode and configuration migration as manual checks. The R6–R8 debugging and soak gates remain **open**. A Run lens alone does not establish execution. |
 | Semantic tokens | X41/X126, existing token tests; section 19 | Inspect theme fallback, enable/disable behavior, UTF-16/range clipping, edits/close/restart with old result IDs and refresh. Audit per-token claims (e.g. deprecated tags) against actual modifiers rather than claiming every row for every adapter. |
 | Rename, actions and resource edits | X53–X63/X102–X105/X109–X122/X127–X130 | Collision/capture refusals, cancellation, stale documents, graph persistence, closed consumers, one Undo/Redo and source text plus filesystem bytes; see the batch matrix. Explorer drag/drop and arbitrary third-party edit application are separate host paths. |
 | Discovery, paths and build settings | CFG1–CFG3/X99/X100/X124/X129/X134 | Multiple roots, Unicode/space-containing paths, symlinks, project close/reopen and external shared watch leases. Gradle-import failure, missing generated resources and no-Gradle projects must retain usable last-valid inputs and show actionable status. |
@@ -3828,6 +3835,27 @@ visual comparisons; normal native runs leave it alone.
 
 All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
 startup comparisons are recorded in the [acceptance reports](#acceptance-reports).
+
+### Embedded build and run (X280–X285)
+
+These cases switch the workspace or project to the embedded build mode for their duration
+(VS Code `xtc.build.mode`, IntelliJ Build, Execution, Deployment › Ecstasy) and configure only their
+own modules. Manual steps for the same behavior are in [section 18a](#18a-embedded-build-and-run).
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X280 | Open LensRunnable and LensOnlyLibrary. Give LensOnlyLibrary a `run(String, String)`, then a `run()`. | Only LensRunnable has a **▶ Run** lens at first. Two required parameters still give no lens; adding `run()` adds the LensOnlyLibrary lens. |
+| X281 | Configure BuildLibrary and BuildApp (which imports it); Build. Break BuildLibrary without saving and Build again. | The first build reports both modules built and the `build/xtc/embedded/lib` artifact. The second saves the edit first, fails BuildLibrary with a `BuildLibrary.x:2:` error, and skips BuildApp because its dependency failed. |
+| X282 | Run RunEcho with the arguments `a b` and `ü`. | Output `args=2:a b\|ü`, unchanged arguments without shell parsing, and exit code 3. |
+| X283 | Run RunForever; after it prints `started`, Rerun it (IntelliJ **Rerun**, VS Code **Tasks: Restart Running Task**); after the new run prints `started`, Stop it. Then run RunNext from its Run lens. | Rerun stops the first run and starts a new one that prints `started` again. The stopped run reports its exit, and the next program runs in the reused worker with exit code 5. |
+| X284 | Run RunBroken, whose `run` returns a String as an Int. | The run prints the `RunBroken.x:2:` diagnostic and "Build failed; nothing was run.", runs nothing and ends with exit code 1. |
+| X285 | VS Code: start debugging DebugRun (`F5` or a `launch.json` entry). IntelliJ: open DebugRun's Ecstasy Application configuration. | VS Code starts no debug session, says debugging is not available, and runs the module to exit code 4. IntelliJ offers Run but no Debug runner for the configuration, so it never pretends to debug. |
+
+### Adapter chooser (X286)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X286 | In an Ecstasy editor press `Ctrl+Alt+X`, then `A`, and choose **Tree-sitter**. Then open **Ecstasy: Switch Language Adapter** (VS Code Command Palette; IntelliJ **Tools** menu) and choose **Ecstasy Compiler**. | Each shortcut opens the same chooser; each choice restarts the server once (a new process) into the chosen adapter. VS Code presses the chord as renderer key events. IntelliJ checks the keymap binding and the Tools menu entry, then invokes the action from the editor and answers its popup. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
