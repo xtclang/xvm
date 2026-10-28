@@ -8,6 +8,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.ScopeState
@@ -52,8 +53,8 @@ import kotlin.time.toJavaDuration
  *
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions` and
  * `stopOnEntry` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`;
- * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`), `pause` (`id`), `evaluate` (`id`,
- * `request`, `frame`, `expression`),
+ * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
+ * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`), `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `threads` (`id`, `request`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -62,7 +63,8 @@ import kotlin.time.toJavaDuration
  * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, `poolThreads`,
  * `consoles`, `runs`, sent after the run's exit), `log` (`text`); for a run under the debugger, `breakpoints` (`id`,
  * `path`, `breakpoints`: how a file's breakpoints were installed before the program started), `stopped` (`id`,
- * `reason`, `description`, `thread`, `breakpoints`) and `reply` (`id`, `request`, and the answer or `error`).
+ * `reason`, `description`, `thread`, `breakpoints`), `logged` (`id`, `text`: a logpoint's message) and `reply`
+ * (`id`, `request`, and the answer or `error`).
  */
 object RunWorker {
     /** The error of a request for the debugger of a run without one, or of one that ended. */
@@ -98,6 +100,7 @@ object RunWorker {
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
                     "evaluate" -> runs.evaluate(command)
+                    "exceptionInfo" -> runs.exceptionInfo(command)
                     "step" -> runs.step(command)
                     "exceptionStops" -> runs.exceptionStops(command)
                     "pause" -> runs.pause(command["id"].asLong)
@@ -240,13 +243,29 @@ object RunWorker {
             output: OutputBatches,
         ): SessionDebugger {
             val debugger =
-                SessionDebugger { stop ->
-                    output.sendNow()
-                    channel.send("stopped") {
-                        addProperty("id", id)
-                        RunWorkerDebug.stop(this, StopState(stop.reason(), stop.description(), stop.threadId(), stop.breakpointIds()))
-                    }
-                }
+                SessionDebugger(
+                    object : SessionDebugger.Listener {
+                        override fun stopped(stop: SessionDebugger.Stop) {
+                            output.sendNow()
+                            channel.send("stopped") {
+                                addProperty("id", id)
+                                RunWorkerDebug.stop(
+                                    this,
+                                    StopState(stop.reason(), stop.description(), stop.threadId(), stop.breakpointIds()),
+                                )
+                            }
+                        }
+
+                        override fun logged(message: String) {
+                            // after what the program printed before it reached the logpoint
+                            output.sendNow()
+                            channel.send("logged") {
+                                addProperty("id", id)
+                                addProperty("text", message)
+                            }
+                        }
+                    },
+                )
             repositories.forEach { repository ->
                 repository.moduleNames.forEach { name -> repository.loadModule(name)?.let(debugger::addModule) }
             }
@@ -257,7 +276,7 @@ object RunWorker {
                     add("breakpoints", RunWorkerDebug.states(install(debugger, source)))
                 }
             }
-            debugger.setExceptionStops(exceptions.all, exceptions.uncaught)
+            debugger.setExceptionStops(exceptions.all, exceptions.allTypes, exceptions.uncaught, exceptions.uncaughtTypes)
             // after the modules are known, so it stops in the program's code, not in the libraries before it
             if (stopOnEntry) debugger.stopOnEntry()
             debuggers[id] = debugger
@@ -337,8 +356,19 @@ object RunWorker {
 
         fun exceptionStops(command: JsonObject) {
             val stops = RunWorkerDebug.exceptionsOf(command)
-            debuggers[command["id"].asLong]?.setExceptionStops(stops.all, stops.uncaught)
+            debuggers[command["id"].asLong]?.setExceptionStops(stops.all, stops.allTypes, stops.uncaught, stops.uncaughtTypes)
         }
+
+        /** Answers with the exception the fiber stopped the program at; none when it stopped it for another reason. */
+        fun exceptionInfo(command: JsonObject) =
+            reply(command) { debugger ->
+                debugger.exceptionInfo(command["thread"].asInt)?.let { info ->
+                    add(
+                        "exception",
+                        RunWorkerDebug.exceptionInfo(ExceptionInfoState(info.type(), info.text(), info.stackTrace(), info.uncaught())),
+                    )
+                }
+            }
 
         fun pause(id: Long) {
             debuggers[id]?.pause()
@@ -353,8 +383,10 @@ object RunWorker {
             source: SourceBreakpoints,
         ): List<BreakpointState> =
             debugger
-                .setBreakpoints(source.path, source.breakpoints.map { SessionDebugger.Line(it.id, it.line) })
-                .map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
+                .setBreakpoints(
+                    source.path,
+                    source.breakpoints.map { SessionDebugger.Line(it.id, it.line, it.condition, it.hitCondition, it.logMessage) },
+                ).map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
 
         /** Answers a request for a run's debugger; a run without one, or one that ended, answers with an error. */
         private fun reply(
@@ -573,7 +605,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 8
+        const val PROTOCOL = 9
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
