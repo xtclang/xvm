@@ -569,8 +569,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP30 — Pause Program needs LSP4IJ's startPausing (#1757); the catalog keeps X308 not-implemented
-    // until a release has it, so this runs only with an LSP4IJ that has it (-Plsp4ijChannel=nightly) and X308 made full
     case("X308") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -694,9 +692,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP34, UP33 — an exception filter's condition needs LSP4IJ's filterOptions (#1760), and its hint
-    // the exceptionInfo answer (#1761); the catalog keeps X312 not-implemented until a release has them, so this runs
-    // only with an LSP4IJ that has them (-Plsp4ijChannel=nightly) and X312 made full
     case("X312") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -1329,9 +1324,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP45 — loaded sources and modules need LSP4IJ's Loaded Sources and Modules views (#1774); the catalog
-    // keeps X326 not-implemented until a release has them, so this runs only with an LSP4IJ that has them
-    // (-Plsp4ijChannel=nightly) and X326 made full
     case("X326") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -1427,8 +1419,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP46 — function breakpoints need LSP4IJ's breakpoint type for them (#1780); the catalog keeps X328
-    // not-implemented until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X328 made full
     case("X328") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -1467,8 +1457,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP47 — Reset Frame needs LSP4IJ's drop-frame handler (#1778); the catalog keeps X329 not-implemented
-    // until a release has it, so this runs only with a plugin built from it (-Plsp4ijPlugin) and X329 made full
     case("X329") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -1511,8 +1499,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP48 — data breakpoints need LSP4IJ's Break on Value Change (#1782); 0.21.0 has none, so the catalog
-    // keeps X330 not-implemented and this runs only with a plugin built from it (-Plsp4ijPlugin), X330 made full
     case("X330") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
@@ -1568,9 +1554,6 @@ internal fun ParityScenarios.runEntryCases() {
         }
     }
 
-    // TODO LSP4IJ: UP50 — IntelliJ draws inline values for Ecstasy only with an LSP4IJ that asks the language server
-    // for them and expands the frame's locals (#1781); 0.21.0 draws none, so the catalog keeps X331 not-implemented
-    // until a release has it, and this runs only with an LSP4IJ that has it and X331 made full
     case("X331") { data ->
         val document = open(data.string("file"), data.string("source"))
         configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
