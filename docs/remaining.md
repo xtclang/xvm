@@ -744,17 +744,17 @@ passes with the workaround disabled. The gates are in
   the request through LSP4IJ's LSP4J endpoint, a protocol check rather than native coverage; VS Code
   has no moniker view either. Nothing is filed until IntelliJ has a use for them.
 
-### LSP4IJ: document links without a target (UP52): our #1785, open
+### LSP4IJ: document links without a target (UP52): our #1785, merged
 
 - [ ] UP52 (2026-10-28): LSP4IJ declares document links but never resolves one, and its Ctrl+Click
   ignores a link without a target (0.21.0 and `main`, `7469aab9`). XVM's server defers every link's
   target to `documentLink/resolve` for any client that declares document links, so an HTTP(S) link
   in a comment very likely opens nothing in IntelliJ. X131 resolves links itself, so it can't show
-  this. Fixed by our [#1785](https://github.com/redhat-developer/lsp4ij/pull/1785) (open, `e5e5608a`):
+  this. Fixed by our [#1785](https://github.com/redhat-developer/lsp4ij/pull/1785) (merged 2026-10-28, unreleased, `02faa149`):
   a clicked link without a target is resolved when the server has `resolveProvider`. Checked natively
   in IntelliJ's X131 (2026-10-28, `a521e2ebbf`): 0.21.0 opens nothing
   (`run-2626450875688172472`), and a plugin built from #1785 resolves the link and opens it
-  (`run-8879176847449743226`, gate UP52 passed). To do: get #1785 merged; after a release with it,
+  (`run-8879176847449743226`, gate UP52 passed). To do: after a release with it,
   make X131's UP52 step pass without the gate.
 
 ### LSP4IJ: no linked editing (UP53): not filed
