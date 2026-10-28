@@ -132,6 +132,9 @@ export function platformCases(): void {
 
     playbook('X129', async (workspace, data) => {
         const report = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, modelPath);
+        // Gradle's project cache, which holds the report; X303 makes its project in a folder root without it.
+        const cache = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, '.gradle');
+        const made = !await fs.stat(cache).then(() => true, () => false);
         const model = JSON.parse(JSON.stringify(data.model).split('${workspace}').join(vscode.Uri.file(workspace.directory).toString()));
         const settings = vscode.workspace.getConfiguration('xtc.compiler');
         const previous = settings.get('sourceModules');
@@ -167,6 +170,7 @@ export function platformCases(): void {
             await vscode.commands.executeCommand('xtc.showCompilerPaths');
         } finally {
             await fs.rm(report.fsPath, { force: true });
+            if (made) await fs.rm(cache, { recursive: true, force: true });
             await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
             await updateCompilerConfiguration();
         }
