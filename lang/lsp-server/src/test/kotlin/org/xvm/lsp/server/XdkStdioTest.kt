@@ -589,6 +589,8 @@ class XdkStdioTest {
                         DocumentSymbolParams(TextDocumentIdentifier(URI)),
                     ),
                 )
+                // Let the server write its final trace records before reading the log files.
+                session.shutdownAndExit()
                 session.traceDirectory
             }
         val entries =
@@ -611,10 +613,12 @@ class XdkStdioTest {
             assertThat(it["event"].asString).isEqualTo("end")
             assertThat(it["elapsedMs"].asDouble).isPositive()
         }
-        assertThat(entries).anySatisfy {
+        // Query completion and protocol replies share an operation name, but only replies have a boundary.
+        val requests = entries.filter { it["kind"].asString == "lsp-request" }
+        assertThat(requests).anySatisfy {
             assertThat(it["operation"]?.asString).isEqualTo("textDocument/documentSymbol")
             assertThat(it["event"].asString).isEqualTo("end")
-            assertThat(it["boundary"].asString).isEqualTo("server-reply-written")
+            assertThat(it["boundary"]?.asString).isEqualTo("server-reply-written")
         }
         assertThat(entries.toString()).doesNotContain("Int answer() = 42")
     }
