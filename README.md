@@ -72,7 +72,7 @@ This repository contains comprehensive documentation organized hierarchically:
 ### Language Documentation
 - **[Ecstasy Language Wiki](https://github.com/xtclang/xvm/wiki)** - Language specification, tutorials, and examples
 - **[Ecstasy Language Website](http://xtclang.org/)** - Official language website and resources
-- **[Core Documentation](doc/DOCUMENTATION.md)** - Language specification files, BNF grammar, and VM instruction set
+- **[Core Documentation](doc/documentation.md)** - Language specification files, BNF grammar, and VM instruction set
 
 ---
 
