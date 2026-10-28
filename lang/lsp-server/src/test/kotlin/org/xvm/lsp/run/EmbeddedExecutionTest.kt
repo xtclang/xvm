@@ -589,19 +589,81 @@ class EmbeddedExecutionTest {
         CompilerTestSupport.configure()
         val libraryText = "module Library { static Int value() = 7; }"
         val appText = "module App { void run() {} }"
+        // the runtime calls only methods, so a run function is no entry point
+        val utilityText = "module Utility { static void run() {} }"
         val library = source("Library.x", libraryText)
         val app = source("App.x", appText)
+        val utility = source("Utility.x", utilityText)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app)))
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app), XdkSourceModule("Utility", utility)),
+            )
             assertThat(adapter.compile(library, libraryText).success).isTrue()
             assertThat(adapter.compile(app, appText).success).isTrue()
+            assertThat(adapter.compile(utility, utilityText).success).isTrue()
 
             assertThat(adapter.runnableTargets().map { it.module }).containsExactly("App")
             assertThat(adapter.getCodeLensesAsync(app, false).get(30, SECONDS).mapNotNull { it.command?.command })
                 .contains("xtc.runModule")
             assertThat(adapter.getCodeLensesAsync(library, false).get(30, SECONDS).mapNotNull { it.command?.command })
                 .doesNotContain("xtc.runModule")
+        }
+    }
+
+    @Test
+    fun `a run method an annotation contributes gives its module a Run lens, and the module runs`() {
+        CompilerTestSupport.configure()
+        val contributionsText =
+            """
+            module Contributions {
+                annotation Runnable into module {
+                    void run() {
+                        @Inject Console console;
+                        console.print("run from an annotation");
+                    }
+                }
+            }
+            """.trimIndent()
+        val annotatedText =
+            """
+            @Runnable
+            module Annotated {
+                package contributions import Contributions;
+                import contributions.Runnable;
+            }
+            """.trimIndent()
+        val contributions = source("Contributions.x", contributionsText)
+        val annotated = source("Annotated.x", annotatedText)
+        val output = StringBuffer()
+        val exited = CompletableFuture<RunExitedParams>()
+        val client =
+            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {
+                    output.append(params.text)
+                }
+
+                override fun runExited(params: RunExitedParams) {
+                    exited.complete(params)
+                }
+            }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("Contributions", contributions), XdkSourceModule("Annotated", annotated, setOf("Contributions"))),
+            )
+            assertThat(adapter.compile(contributions, contributionsText).success).isTrue()
+            assertThat(adapter.compile(annotated, annotatedText).success).isTrue()
+
+            // the module declares no run method; its annotation does, and the module declaring the annotation is no program
+            assertThat(adapter.runnableTargets().map { it.module }).containsExactly("Annotated")
+            assertThat(adapter.getCodeLensesAsync(annotated, false).get(30, SECONDS).mapNotNull { it.command?.command })
+                .contains("xtc.runModule")
+            EmbeddedRuns(adapter, { client }).use { runs ->
+                assertThat(runs.run(RunParams(module = "Annotated", runId = "contributed")).get(60, SECONDS).runId).isEqualTo("contributed")
+                assertThat(exited.get(60, SECONDS).error).isNull()
+                assertThat(output.toString()).contains("run from an annotation")
+            }
         }
     }
 

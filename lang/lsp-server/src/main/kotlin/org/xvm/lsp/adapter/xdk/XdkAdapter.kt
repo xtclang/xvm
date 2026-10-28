@@ -1,11 +1,13 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ConstantPool
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.ModuleStructure
 import org.xvm.asm.MultiMethodStructure
+import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
@@ -527,16 +529,8 @@ class XdkAdapter
                 entryMethods(module.uri).map { XdkRunnableTarget(module.name, module.uri, it) }
             }
 
-        /**
-         * Entry methods the runner can call in the module [uri] declares: `run` with at most one required
-         * parameter. Read from the module structure the compiler registered for the document, so a module
-         * that registers but does not yet build still offers to run (and the run reports why it cannot).
-         */
-        private fun entryMethods(uri: String): List<String> {
-            val module = analysis(uri)?.ast?.let(::moduleDeclaration)?.component as? ModuleStructure ?: return emptyList()
-            val run = module.getChild("run") as? MultiMethodStructure
-            return if (run?.methods().orEmpty().any { it.requiredParamCount <= 1 }) listOf("run") else emptyList()
-        }
+        /** Entry methods the runner can call in the module [uri] belongs to, from its latest compilation. */
+        private fun entryMethods(uri: String): List<String> = module(uri)?.entryMethods.orEmpty()
 
         private fun moduleDeclaration(node: AstNode): TypeCompositionStatement? =
             if (node is TypeCompositionStatement && node.category.id == Token.Id.MODULE) {
@@ -1145,6 +1139,8 @@ class XdkAdapter
             val documentUris: Set<String> = documents.keys,
             val sourceInputs: XdkSources.Inputs? = null,
             val sourceTexts: Map<String, String> = emptyMap(),
+            /** The module's callable entry methods, found on the compiler worker ([entryMethodsOf]). */
+            val entryMethods: List<String> = emptyList(),
         ) {
             private val semanticViews =
                 documents
@@ -1481,6 +1477,7 @@ class XdkAdapter
                 documentUris = documents,
                 sourceInputs = target.sourceInputs,
                 sourceTexts = target.sourceTexts,
+                entryMethods = target.entryMethods,
             )
         }
 
@@ -1682,6 +1679,10 @@ class XdkAdapter
             val declarations = XdkAst.declarationLocations(compilation.sourceTrees(), sourceUris)
             val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris, declarations) }
             val documentUris = sources?.documentUris ?: setOf(uri)
+            val entryMethods =
+                (roots.values.firstNotNullOfOrNull(::moduleDeclaration)?.component as? ModuleStructure)
+                    ?.let { entryMethodsOf(it, compilation.succeeded()) }
+                    .orEmpty()
             val documents =
                 documentUris.associateWith { uri ->
                     val sourceName = sourceUris.entries.firstOrNull { it.value == uri }?.key ?: uri
@@ -1751,7 +1752,34 @@ class XdkAdapter
                         ?.entries
                         ?.associate { (file, text) -> file.path to text }
                         ?: mapOf(uri to request.overlays.getValue(uri)),
+                entryMethods = entryMethods,
             )
+        }
+
+        /**
+         * Entry methods the runner can call in [module]: a `run` method, not a function, with at most one
+         * required parameter. A module that [compiled] is asked through its type, which includes the methods
+         * its annotations contribute, as the runner finds them; one that did not offers the `run` it declares,
+         * so its run reports why it cannot start. Runs on the compiler worker, which owns the module's
+         * structures.
+         */
+        private fun entryMethodsOf(
+            module: ModuleStructure,
+            compiled: Boolean,
+        ): List<String> {
+            val runs =
+                if (compiled) {
+                    ConstantPool.withPool(module.constantPool).use {
+                        val info =
+                            ExecutionTrace.api("TypeConstant.ensureTypeInfo(entry-methods)") {
+                                module.identityConstant.type.ensureTypeInfo(ErrorList())
+                            }
+                        info.findMethods("run", -1, TypeInfo.MethodKind.Method).mapNotNull { info.getMethodById(it)?.head?.methodStructure }
+                    }
+                } else {
+                    (module.getChild("run") as? MultiMethodStructure)?.methods().orEmpty()
+                }
+            return if (runs.any { !it.isFunction && it.requiredParamCount <= 1 }) listOf("run") else emptyList()
         }
 
         // ----- what the tree can answer --------------------------------------------------------------
