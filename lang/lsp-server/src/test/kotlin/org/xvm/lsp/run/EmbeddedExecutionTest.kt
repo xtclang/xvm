@@ -905,6 +905,64 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a function breakpoint set before the start stops where the method of its name is entered`() {
+        CompilerTestSupport.configure()
+        val module = source("Entered.x", TARGETS.trimIndent().replace("Targets", "Entered"))
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Entered", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Entered", "moduleUri": "$module"}""")
+            sessions.request(id, 3, "setFunctionBreakpoints", """{"breakpoints": [{"name": "twice"}, {"name": "nothing"}]}""")
+            val pending =
+                client
+                    .until(id) { it.response == "setFunctionBreakpoints" }
+                    .last()["body"]
+                    .asJsonObject["breakpoints"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            assertThat(pending.map { it["verified"].asBoolean }).containsOnly(false)
+            sessions.request(id, 4, "configurationDone")
+            val stopped = client.until(id) { it.event == "stopped" }
+
+            // installed with the program: twice() at its first line, and no method has the other name
+            val installed = stopped.filter { it.event == "breakpoint" }.map { it["body"].asJsonObject["breakpoint"].asJsonObject }
+            val twice = installed.single { it["id"].asInt == pending[0]["id"].asInt }
+            assertThat(twice["verified"].asBoolean).isTrue()
+            assertThat(twice["line"].asInt).isEqualTo(15)
+            assertThat(Path.of(twice["source"].asJsonObject["path"].asString).toRealPath())
+                .isEqualTo(directory.resolve("Entered.x").toRealPath())
+            assertThat(installed.single { it["id"].asInt == pending[1]["id"].asInt }["verified"].asBoolean).isFalse()
+
+            val stop = stopped.last()["body"].asJsonObject
+            assertThat(stop["reason"].asString).isEqualTo("function breakpoint")
+            assertThat(stop["hitBreakpointIds"].asJsonArray.map { it.asInt }).containsExactly(pending[0]["id"].asInt)
+            sessions.request(id, 5, "stackTrace", """{"threadId": ${stop["threadId"].asInt}}""")
+            val top =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject
+            assertThat(top["name"].asString to top["line"].asInt).isEqualTo("Entered.twice" to 15)
+
+            // replaced while it runs, at once
+            sessions.request(id, 6, "setFunctionBreakpoints", """{"breakpoints": []}""")
+            client.until(id) { it.response == "setFunctionBreakpoints" }
+            sessions.request(id, 7, "continue", """{"threadId": ${stop["threadId"].asInt}}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.none { it.event == "stopped" }).isTrue()
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(6)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a stop lists the fibers that do not wait at a line, with what they do, and the stack of one that waits`() {
         CompilerTestSupport.configure()
         val module = source("Waits.x", PROGRAM.trimIndent().replace("Program", "Waits"))

@@ -42,6 +42,8 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsResponse
+import org.eclipse.lsp4j.debug.SetFunctionBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetFunctionBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetVariableArguments
 import org.eclipse.lsp4j.debug.SetVariableResponse
 import org.eclipse.lsp4j.debug.Source
@@ -98,7 +100,9 @@ import kotlin.time.Duration.Companion.seconds
  * fiber, and the program stops again with the reason `step`, and `continue` resumes it. A breakpoint may have a
  * condition, an expression whose Boolean value must be True, a hit condition (`N` for the Nth hit, `>= N`, `> N` or
  * `% N`), and a log message, which makes it a logpoint: its message, with each `{expression}` replaced by its value,
- * goes to the console, and the program runs on. The exception filters stop the program where an exception that nothing catches,
+ * goes to the console, and the program runs on. A function breakpoint names a method, alone or after its class's, as
+ * `twice` or `Point.move`, and stops at the first line of the program's methods of that name, with the reason
+ * `function breakpoint`. The exception filters stop the program where an exception that nothing catches,
  * or any exception, is thrown, with the reason `exception`, and each may name exception classes, separated by
  * commas, to stop only for them and the classes that extend them; `exceptionInfo` tells of the exception. They are
  * installed before the program's first line as breakpoints are. `pause` stops a running
@@ -162,6 +166,13 @@ class XtcDebugServer(
 
     @Volatile
     private var installedExceptions = ExceptionStops()
+
+    /** The client's function breakpoints, and those installed at start. */
+    @Volatile
+    private var functionBreakpoints: List<FunctionBreakpointRequest> = emptyList()
+
+    @Volatile
+    private var installedFunctions: List<FunctionBreakpointRequest> = emptyList()
     private val lastBreakpoint = AtomicInteger()
 
     /** 0 for a client that counts lines and columns from 1, as DAP does by default, -1 for one that counts from 0. */
@@ -287,6 +298,7 @@ class XtcDebugServer(
                 supportsEvaluateForHovers = true
                 supportsConditionalBreakpoints = true
                 supportsHitConditionalBreakpoints = true
+                supportsFunctionBreakpoints = true
                 supportsLogPoints = true
                 supportsExceptionInfoRequest = true
                 supportsExceptionFilterOptions = true
@@ -350,6 +362,31 @@ class XtcDebugServer(
                 runs.setBreakpoints(runId, breakpoints.getValue(path)).thenApply { states ->
                     SetBreakpointsResponse().apply { this.breakpoints = states.map { breakpoint(it, path) }.toTypedArray() }
                 }
+        }
+    }
+
+    /**
+     * DAP: setFunctionBreakpoints
+     *
+     * Replaces the function breakpoints, by a method's name, which stop at the first line of the program's methods of that
+     * name. Each is answered at the line of the first such method, or unverified when none has the name. They are
+     * installed as breakpoints are: at once while a debugged program runs, and before it starts, pending.
+     */
+    override fun setFunctionBreakpoints(args: SetFunctionBreakpointsArguments): CompletableFuture<SetFunctionBreakpointsResponse> {
+        val requests =
+            args.breakpoints.orEmpty().map {
+                FunctionBreakpointRequest(lastBreakpoint.incrementAndGet(), it.name.orEmpty(), it.condition, it.hitCondition)
+            }
+        logger.info("setFunctionBreakpoints: names={}", requests.map { it.name })
+        functionBreakpoints = requests
+        val states =
+            when {
+                !debugging -> CompletableFuture.completedFuture(requests.map { BreakpointState(it.id, 0, false, NOT_DEBUGGING) })
+                !debuggedRunning() -> CompletableFuture.completedFuture(requests.map { BreakpointState(it.id, 0, false, PENDING) })
+                else -> runs.setFunctionBreakpoints(runId, requests)
+            }
+        return states.thenApply { installed ->
+            SetFunctionBreakpointsResponse().apply { breakpoints = installed.map(::functionBreakpoint).toTypedArray() }
         }
     }
 
@@ -451,7 +488,8 @@ class XtcDebugServer(
                 if (debugging) {
                     installed = breakpoints.toMap()
                     installedExceptions = exceptionStops
-                    DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry)
+                    installedFunctions = functionBreakpoints
+                    DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions)
                 } else {
                     null
                 }
@@ -916,6 +954,8 @@ class XtcDebugServer(
                 states: List<BreakpointState>,
             ) = changed(path, states)
 
+            override fun functionBreakpoints(states: List<BreakpointState>) = functionsChanged(states)
+
             override fun logged(text: String) = output(OutputEventArgumentsCategory.CONSOLE, "$text\n")
 
             override fun stopped(stop: StopState) {
@@ -956,7 +996,7 @@ class XtcDebugServer(
     /** True while a debugged program runs, stopped or not. */
     private fun debuggedRunning() = debugging && started && !ended.isDone
 
-    /** Installs the breakpoints and exception filters the client changed after the program's were taken, before it started. */
+    /** Installs the breakpoints, function breakpoints and exception filters the client changed after the program's were taken, before it started. */
     private fun installChanged() {
         breakpoints.forEach { (path, current) ->
             if (installed[path] !== current) {
@@ -964,6 +1004,9 @@ class XtcDebugServer(
             }
         }
         if (exceptionStops != installedExceptions) runs.setExceptionStops(runId, exceptionStops)
+        if (functionBreakpoints !== installedFunctions) {
+            runs.setFunctionBreakpoints(runId, functionBreakpoints).thenAccept(::functionsChanged)
+        }
     }
 
     /** Tells the client how a file's breakpoints were installed. */
@@ -980,6 +1023,30 @@ class XtcDebugServer(
             )
         }
     }
+
+    /** Tells the client how the function breakpoints were installed. */
+    private fun functionsChanged(states: List<BreakpointState>) {
+        states.forEach { state ->
+            client?.breakpoint(
+                BreakpointEventArguments().apply {
+                    reason = BreakpointEventArgumentsReason.CHANGED
+                    breakpoint = functionBreakpoint(state)
+                },
+            )
+        }
+    }
+
+    /** A function breakpoint, at the first line of the first method of its name if one has it. */
+    private fun functionBreakpoint(state: BreakpointState) =
+        Breakpoint().apply {
+            id = state.id
+            isVerified = state.verified
+            message = state.message
+            state.path?.let { path ->
+                line = state.line + lineBase
+                source = sources[path] ?: Source().apply { this.path = path }
+            }
+        }
 
     private fun breakpoint(
         state: BreakpointState,

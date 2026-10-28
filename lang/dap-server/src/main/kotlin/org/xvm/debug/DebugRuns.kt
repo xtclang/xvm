@@ -31,6 +31,18 @@ data class BreakpointRequest(
     val logMessage: String? = null,
 )
 
+/**
+ * A function breakpoint a session asks for, which stops where a method of the program of that [name] is entered: its
+ * DAP ID, which the session chooses, the method's name, alone, such as `twice`, or after its class's or module's, as
+ * the call stack names it, such as `Point.move`, and a [condition] and a [hitCondition], as a [BreakpointRequest] has.
+ */
+data class FunctionBreakpointRequest(
+    val id: Int,
+    val name: String,
+    val condition: String? = null,
+    val hitCondition: String? = null,
+)
+
 /** The breakpoints of one source file, by its path; none removes the file's breakpoints. */
 data class SourceBreakpoints(
     val path: String,
@@ -39,13 +51,15 @@ data class SourceBreakpoints(
 
 /**
  * A breakpoint as the program installed it: the line it is on, which may follow the requested line when that line
- * has no code of its own, whether it is installed, and if not, why.
+ * has no code of its own, whether it is installed, and if not, why. A function breakpoint's line is where the first
+ * method of its name starts, in the source file at [path], or 0 and no path when no method has the name.
  */
 data class BreakpointState(
     val id: Int,
     val line: Int,
     val verified: Boolean,
     val message: String? = null,
+    val path: String? = null,
 )
 
 /** A fiber of the stopped program, by its ID and its service's name. */
@@ -154,13 +168,14 @@ data class ExceptionInfoState(
 )
 
 /**
- * What a debugged program starts with: the breakpoints installed before its first line, its exception stops, and
- * whether it stops at its first line.
+ * What a debugged program starts with: the breakpoints installed before its first line, its exception stops, whether
+ * it stops at its first line, and its function breakpoints.
  */
 data class DebugSetup(
     val breakpoints: List<SourceBreakpoints>,
     val exceptions: ExceptionStops = ExceptionStops(),
     val stopOnEntry: Boolean = false,
+    val functions: List<FunctionBreakpointRequest> = emptyList(),
 )
 
 /** How a stopped fiber is stepped: over a call, into one, or out of the current method. */
@@ -193,6 +208,9 @@ interface ProgramEvents {
         path: String,
         states: List<BreakpointState>,
     ) {}
+
+    /** The function breakpoints as installed when a debugged program starts. */
+    fun functionBreakpoints(states: List<BreakpointState>) {}
 
     /** A debugged program stopped; it waits until it is resumed. */
     fun stopped(stop: StopState) {}
@@ -243,6 +261,12 @@ interface DebugRuns {
     fun setBreakpoints(
         runId: String,
         breakpoints: SourceBreakpoints,
+    ): CompletableFuture<List<BreakpointState>>
+
+    /** Replaces the function breakpoints of a debugged program that runs; none removes them. */
+    fun setFunctionBreakpoints(
+        runId: String,
+        breakpoints: List<FunctionBreakpointRequest>,
     ): CompletableFuture<List<BreakpointState>>
 
     /** The fibers of the stopped program; none while it runs. */
