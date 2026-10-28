@@ -92,7 +92,7 @@ public abstract class nObject
 
     /**
      * Resolve a virtual child's type against this runtime parent, preserving its own parameters.
-     * Used by {@link org.xvm.javajit.Builder#buildNew} before dispatching construction through
+     * Used by {@link org.xvm.javajit.Builder#callNew} before dispatching construction through
      * the child's class-of-class.
      * Also used by generated "$xvmType" methods on non-generic virtual children.
      */

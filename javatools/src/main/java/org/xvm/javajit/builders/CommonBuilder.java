@@ -941,7 +941,7 @@ public class CommonBuilder
                         ClassDesc      cd     = getCCDesc(type);
                         MethodConstant ctorId = type.ensureTypeInfo().findConstructor(pool.typeString());
 
-                        buildNew(null, code, type, ctorId,
+                        callNew(null, code, type, ctorId,
                                 (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
                         code.putstatic(CD_this, name, cd);
                     } else {
