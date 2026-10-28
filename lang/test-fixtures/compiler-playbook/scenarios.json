@@ -9976,6 +9976,26 @@
         "limitations": []
       }
     },
+    "X323": {
+      "title": "Run to Cursor stops a debugged program at the cursor's line, and leaves no breakpoint there: the program then runs on to its exit",
+      "manual": [],
+      "values": {
+        "file": "RunToCursor.x",
+        "module": "RunToCursor",
+        "source": "module RunToCursor {\n    Int run() {\n        @Inject Console console;\n        Int total = 0;\n        for (Int count = 0; count < 3_000_000; ++count) {}\n        for (Int i = 0; i < 3; ++i) {\n            total += i;\n            console.print($\"i={i}\");\n        }\n        console.print($\"total={total}\");\n        return total;\n    }\n}\n",
+        "breakpointLine": 4,
+        "cursorLine": 8,
+        "printed": "i=",
+        "output": "total=3",
+        "exitCode": 3
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0, and its main branch, removes Run to Cursor's temporary breakpoint once the continue request is answered, not when the program stops there, so a program that takes longer to reach the cursor than that removal runs past it (UP44). X323's program counts to 3,000,000 before the cursor's line; IntelliJ checks that Run to Cursor resumes it, and that it runs past the cursor to its exit."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
