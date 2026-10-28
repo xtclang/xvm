@@ -257,6 +257,21 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.test {
+    // Separate JVMs isolate compiler globals while each worker reuses its bundled XDK repository.
+    // Do not enable JUnit method concurrency: several regressions deliberately alter compiler state.
+    // Default to half the cores, capped because each worker holds its own XDK; -PlspTestForks overrides.
+    maxParallelForks =
+        providers
+            .gradleProperty("lspTestForks")
+            .map(String::toInt)
+            .orElse(providers.provider { (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 8) })
+            .get()
+    val includeHeavy =
+        providers
+            .gradleProperty("lspTestHeavy")
+            .orElse("true")
+            .get()
+            .toBooleanStrict()
     systemProperty(
         "xtc.lsp.retentionCycles",
         providers.gradleProperty("lsp.retentionCycles").orElse("120").get(),
@@ -264,7 +279,10 @@ tasks.test {
     // Prefer the real logger over javatools' shaded no-op provider, without setting a provider
     // property on Gradle's separate bootstrap classloader (which cannot see test dependencies).
     classpath = configurations.testRuntimeClasspath.get().filter { it.name.startsWith("logback-classic-") } + classpath
-    useJUnitPlatform { excludeTags("compiler-stdio") }
+    useJUnitPlatform {
+        excludeTags("compiler-stdio")
+        if (!includeHeavy) excludeTags("heavy")
+    }
     testLogging {
         events("failed")
     }
