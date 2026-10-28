@@ -21,6 +21,7 @@ import java.io.PrintWriter
 import java.io.Reader
 import java.io.Writer
 import java.lang.management.ManagementFactory
+import java.lang.management.MemoryType
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -29,6 +30,9 @@ import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 /**
  * Entry point of the execution worker JVM. The language server starts it on demand and exchanges one
@@ -43,6 +47,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * `consoles`, `runs`, sent after the run's exit), `log` (`text`).
  */
 object RunWorker {
+    /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
+    private val STOP_LIMIT = 5.seconds
+
     @JvmStatic
     fun main(args: Array<String>) {
         val channel = RunWorkerChannel(PrintStream(FileOutputStream(FileDescriptor.out), false, Charsets.UTF_8))
@@ -69,7 +76,8 @@ object RunWorker {
                 }
             }
         }
-        runs.stopAll()
+        // nothing waits for the programs any more: they get a while to end, and the worker exits after it in any case
+        runs.stopAll(STOP_LIMIT)
         // runtime service threads are not daemons, so a finished worker exits explicitly
         exitProcess(0)
     }
@@ -172,12 +180,16 @@ object RunWorker {
             active[id]?.let { control -> Thread.ofVirtual().start { control.close() } }
         }
 
-        /** Threads of the runtime's own worker pool, which is fixed in size. */
-        private fun poolThreads(): Int = Thread.getAllStackTraces().keys.count { it.threadGroup?.name == "XVM" }
+        /**
+         * Threads of the runtime's own worker pool, which is fixed in size. Not those in its thread group: a thread that a
+         * pool thread starts joins it, such as the JDK's for a CompletableFuture's timeout, which it starts when needed.
+         */
+        private fun poolThreads(): Int = EmbeddingSupport.instance().poolThreads()
 
-        fun stopAll() {
+        /** Ends each run's input and closes the runs, waiting at most [limit] for them to end. */
+        fun stopAll(limit: Duration) {
             inputs.values.forEach(ConsoleInput::end)
-            active.values.forEach { runCatching { it.close() } }
+            closeAll(active.values.toList(), limit)
         }
 
         private fun ErrorList.failure(): String? =
@@ -387,6 +399,22 @@ private class RunErrors(
 }
 
 /**
+ * Closes each of [closeables] on a thread of its own and waits at most [limit] for all of them, for a worker that
+ * exits after it: a run whose close waits for a program that does not end must not keep the worker alive.
+ *
+ * @return whether every one of them was closed in time
+ */
+internal fun closeAll(
+    closeables: Collection<AutoCloseable>,
+    limit: Duration,
+): Boolean {
+    val closing = closeables.map { closeable -> Thread.ofVirtual().start { runCatching { closeable.close() } } }
+    val deadline = System.nanoTime() + limit.inWholeNanoseconds
+    closing.forEach { it.join((deadline - System.nanoTime()).coerceAtLeast(0).nanoseconds.toJavaDuration()) }
+    return closing.none(Thread::isAlive)
+}
+
+/**
  * What a run left behind: the runtime's pool threads, and the consoles and runs still registered for
  * programs that have ended, which should be none.
  */
@@ -430,19 +458,21 @@ internal class RunWorkerChannel(
     fun log(text: String) = send("log") { addProperty("text", text) }
 
     /**
-     * Reports what the worker holds once a run has ended: the heap in use after a collection, the live
-     * threads, and what the run [kept]. The server retires a worker whose runs leave too much behind.
+     * Reports what the worker holds once a run has ended: the heap the JVM left in use after its latest
+     * collection of each heap pool, the live threads, and what the run [kept]. No collection is forced here:
+     * the JVM collects when it needs to, so a pool it has not collected yet counts nothing, and the figure
+     * can be from before the run. The server retires a worker whose runs leave too much behind.
      */
     fun usage(
         id: Long,
         kept: Kept,
     ) {
-        System.gc()
-        val heap = ManagementFactory.getMemoryMXBean().heapMemoryUsage
+        val collected =
+            ManagementFactory.getMemoryPoolMXBeans().filter { it.type == MemoryType.HEAP }.sumOf { it.collectionUsage?.used ?: 0L }
         send("usage") {
             addProperty("id", id)
-            addProperty("heapUsed", heap.used)
-            addProperty("heapMax", heap.max)
+            addProperty("heapUsed", collected)
+            addProperty("heapMax", ManagementFactory.getMemoryMXBean().heapMemoryUsage.max)
             addProperty("threads", ManagementFactory.getThreadMXBean().threadCount)
             addProperty("poolThreads", kept.poolThreads)
             addProperty("consoles", kept.consoles)
