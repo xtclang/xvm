@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities
 import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
@@ -49,6 +50,48 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class XdkRenameServerTest {
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `every position inside a project method name prepares the same complete rename`() {
+        val text =
+            "module App { (String, String) getPassword(String? realm = Null, Boolean force = False) { " +
+                "return \"name\", \"password\"; } void run() { getPassword(); } }"
+        val root = directory.resolve("App.x").toFile().apply { writeText(text) }
+        val uri = root.toURI().toString()
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(mock(LanguageClient::class.java))
+            server.initialize(parameters()).get(20, SECONDS)
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
+            val documents = server.textDocumentService
+            val document = TextDocumentIdentifier(uri)
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            val name = "getPassword"
+            val starts = listOf(text.indexOf(name), text.lastIndexOf(name))
+            starts.forEach { start ->
+                name.indices.forEach { offset ->
+                    val prepared =
+                        documents
+                            .prepareRename(
+                                PrepareRenameParams(document, Position(0, start + offset)),
+                            ).get(30, SECONDS)
+                            .second
+                    assertThat(prepared.placeholder).isEqualTo(name)
+                    assertThat(prepared.range).isEqualTo(Range(Position(0, start), Position(0, start + name.length)))
+                }
+            }
+            val edit =
+                requireNotNull(
+                    documents.rename(RenameParams(document, Position(0, starts.first() + 5), "readPassword")).get(30, SECONDS),
+                )
+            val changes = edit.documentChanges.single().left
+            assertThat(changes.textDocument.uri).isEqualTo(uri)
+            assertThat(changes.edits.map { it.left.newText }).containsExactly("readPassword", "readPassword")
+            assertThat(changes.edits.map { it.left.range }).containsExactlyInAnyOrderElementsOf(
+                starts.map { Range(Position(0, it), Position(0, it + name.length)) },
+            )
+            assertThat(root.readText()).isEqualTo(text)
+        }
+    }
 
     @ParameterizedTest
     @CsvSource("false,false", "false,true", "true,false", "true,true")
