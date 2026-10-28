@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **331 scenarios**: X1–X329 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **332 scenarios**: X1–X330 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 331 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 332 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1367,7 +1367,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X329 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X330 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 331 scenarios: X1–X329 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 332 scenarios: X1–X330 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1530,7 +1530,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 331 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 332 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3869,7 +3869,7 @@ last published to mavenLocal.
 |---|---|---|
 | X303 | Make the application project `GradleBuilt` with `xtc init` (what VS Code's **Ecstasy: Create Project** runs) or the IntelliJ New Project wizard's creator, put it at the root and choose the Gradle build mode. Build and Run it (IntelliJ: Run with the argument `World`). Then save a type error in `GradleBuilt.x` and Build (IntelliJ: Run) again. | The build ends with exit code 0 and writes `build/xtc/main/lib/GradleBuilt.xtc` and the test module `GradleBuiltTest.xtc`; the run ends with exit code 0, and IntelliJ's Run console shows `Hello, World!`. The broken module fails the build: VS Code shows `COMPILER-43` on line 3 of `GradleBuilt.x` in Problems, and IntelliJ's run fails with `GradleBuilt.x:3` and `COMPILER-43` in its console. IntelliJ's Build Project in Gradle mode is the IDE's own builder and is not driven. |
 
-### Debugging and repeated runs (X304–X329)
+### Debugging and repeated runs (X304–X330)
 
 | ID | Actions | Expected result |
 |---|---|---|
@@ -3899,6 +3899,7 @@ last published to mavenLocal.
 | X327 | In StepTargets.x, set a breakpoint on line 4, `Int n = twice(add(1, 2));`, and start debugging StepTargets (IntelliJ: Debug its Ecstasy Application configuration). When it stops, choose Step Into Target (VS Code: the editor's context menu; IntelliJ: Smart Step Into, Shift+F7), and choose `twice(Int)`. Then remove the breakpoint and continue (IntelliJ: Resume Program). | The calls offered are `add(Int, Int)` and `twice(Int)`, in that order. Choosing `twice(Int)` runs `add` without stopping, and the program stops on line 15, in `twice`. Continue prints `n=6 m=6`, and the program ends with exit code 6. |
 | X328 | In Entered.x, add a function breakpoint `Entered.twice` with the condition `n > 5` (VS Code: the Breakpoints view's +, Function Breakpoint, then Edit Condition), and start debugging Entered. When it stops, look at the call stack. Then continue. IntelliJ has no function breakpoints (UP46). | The breakpoint shows as installed once the program starts. The program stops on line 15, in `twice`, called from line 5, `Int m = twice(n);`: the call on line 4, where `n` is 3, does not stop. Continue prints `n=6 m=12`, and the program ends with exit code 12. |
 | X329 | In Restarts.x, set a breakpoint on line 16, in `inner`, and start debugging Restarts. When it stops, look at the call stack, remove the breakpoint, and restart `Restarts.outer`'s frame (VS Code: Restart Frame in the Call Stack view's context menu). Then continue. IntelliJ has no Reset Frame for the session (UP47). | The call stack is `Restarts.inner`, `Restarts.outer` and `Restarts.run`; Restart Frame is offered on the first two, not on `Restarts.run`, which the runtime called. Restarting `Restarts.outer` stops on line 10, its first line, with `Restarts.run` below it on line 4. Continue prints `outer 20` again and `n=42`, so `outer 20` shows twice, and the program ends with exit code 42. |
+| X330 | In Watched.x, set a breakpoint on line 5 and start debugging Watched. When it stops, expand `counter` in the Variables view and choose Break on Value Change on its `count`. Remove the line breakpoint and continue three times. IntelliJ has no data breakpoints (UP48). | The data breakpoint is `Counter.count`, for writes. The first continue stops on line 17, in `Counter.add`, saying `Counter.count changed from 0 to 2`; the second stops there again with `Counter.count changed from 2 to 5`. The third prints `count=5`, and the program ends with exit code 5. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
