@@ -22,8 +22,6 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.RegistrationParams
-import org.eclipse.lsp4j.UnregistrationParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -52,7 +50,6 @@ import java.util.concurrent.atomic.AtomicReference
 class XtcLanguageClient(
     project: Project,
 ) : LanguageClientImpl(project) {
-    private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
     private val settingsStores =
@@ -99,7 +96,6 @@ class XtcLanguageClient(
 
     override fun dispose() {
         settingsStores.forEach { it.removeSettingsListener(settingsListener) }
-        compilerWatches.dispose()
         if (!project.isDisposed) {
             EmbeddedRunSessions.getInstance(project).endAll("The Ecstasy language server stopped")
             // a project that never debugged has no sessions, and its service is not created while it closes
@@ -187,16 +183,6 @@ class XtcLanguageClient(
             CompletableFuture.completedFuture(ServerWorkspaceEdit.refused("Connection is closed"))
         } else {
             (clientFeatures as XtcClientFeatures).applyEdit(params)
-        }
-
-    override fun registerCapability(params: RegistrationParams): CompletableFuture<Void> =
-        super.registerCapability(params).thenRunAsync {
-            if (!isDisposed && !project.isDisposed) compilerWatches.register(params.registrations)
-        }
-
-    override fun unregisterCapability(params: UnregistrationParams): CompletableFuture<Void> =
-        super.unregisterCapability(params).thenRun {
-            compilerWatches.unregister(params.unregisterations.map { it.id }.toSet())
         }
 
     // Rename/file-operation listeners can hold the IDE write lock while awaiting an LSP reply.
