@@ -216,7 +216,12 @@ object RunWorker {
                         debuggers.remove(id)
                         active.remove(id)
                         // counted before the exit, so the next run, which may start right after it, is not
-                        val kept = Kept(poolThreads(), EmbeddingSupport.instance().registeredConsoles(), active.size + inputs.size)
+                        val kept =
+                            Kept(
+                                poolThreads(),
+                                EmbeddingSupport.instance().registeredConsoles(),
+                                active.size + inputs.size + debuggers.size + running.size,
+                            )
                         channel.exit(id, control.result(), errors.failure())
                         channel.usage(id, kept)
                     }
@@ -524,7 +529,7 @@ object RunWorker {
 
         /**
          * Threads of the runtime's own worker pool, which is fixed in size. Not those in its thread group: a thread that a
-         * pool thread starts joins it, such as the JDK's for a CompletableFuture's timeout, which it starts when needed.
+         * pool thread starts joins it, such as the JDK's for the debugger's time limits, which it starts when needed.
          */
         private fun poolThreads(): Int = EmbeddingSupport.instance().poolThreads()
 
@@ -762,7 +767,8 @@ internal fun closeAll(
 
 /**
  * What a run left behind: the runtime's pool threads, and the consoles and runs still registered for
- * programs that have ended, which should be none.
+ * programs that have ended, which should be none. A run's control, its input, its debugger and each
+ * piece of console code running in one of its frames count as one each.
  */
 internal data class Kept(
     val poolThreads: Int,
