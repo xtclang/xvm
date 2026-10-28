@@ -1059,8 +1059,9 @@ class EmbeddedExecutionTest {
             }
             val stopped = frames(5)
             assertThat(stopped.map { it["name"].asString }).containsExactly("Restarts.inner", "Restarts.outer", "Restarts.run")
-            // run() is called by the runtime, which cannot make the call again
-            assertThat(stopped.map { it["canRestart"]?.asBoolean == true }).containsExactly(true, true, false)
+            // run() is called by the runtime, which cannot make the call again; false is said, since a frame that does not
+            // say it cannot restart can
+            assertThat(stopped.map { it["canRestart"]?.asBoolean }).containsExactly(true, true, false)
 
             // outer() again, from run(): it stops at its first line and prints again
             sessions.request(id, 6, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
