@@ -120,8 +120,8 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 Compiler mode has implementations for all 27 capabilities in this project's adapter interface,
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Debug inline values, notebooks and broader
-refactorings remain incomplete. The fixture-only color constructor prototype was removed on
+bounded; the interface does not cover every LSP feature. Notebooks and broader refactorings remain
+incomplete. The fixture-only color constructor prototype was removed on
 2026-10-21; a public Ecstasy color-library contract remains deferred. See the
 [feature boundaries below](#supported-lsp-features) and
 [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
