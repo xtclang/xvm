@@ -67,7 +67,8 @@ import kotlin.time.toJavaDuration
  * `exceptionInfo` (`id`, `request`, `thread`),
  * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `setFunctionBreakpoints` (`id`, `request`,
  * `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
- * `stepInTargets` (`id`, `request`, `frame`), `stepInto` (`id`, `request`, `thread`, `target`), `stackTrace` (`id`,
+ * `stepInTargets` (`id`, `request`, `frame`), `stepInto` (`id`, `request`, `thread`, `target`), `restartFrame` (`id`,
+ * `request`, `frame`), `stackTrace` (`id`,
  * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`,
  * `filter`: `ALL`, `NAMED` or `INDEXED`, `start`, `count`), `step`
  * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
@@ -114,6 +115,7 @@ object RunWorker {
                     "modules" -> runs.modules(command)
                     "stepInTargets" -> runs.stepInTargets(command)
                     "stepInto" -> runs.stepInto(command)
+                    "restartFrame" -> runs.restartFrame(command)
                     "stackTrace" -> runs.stackTrace(command)
                     "scopes" -> runs.scopes(command)
                     "variables" -> runs.variables(command)
@@ -351,7 +353,7 @@ object RunWorker {
             reply(command) { debugger ->
                 val frames =
                     debugger.stackTrace(command["thread"].asInt).map {
-                        FrameState(it.id(), it.name(), it.path(), it.line(), it.module(), it.source())
+                        FrameState(it.id(), it.name(), it.path(), it.line(), it.module(), it.source(), it.restartable())
                     }
                 add("frames", RunWorkerDebug.frames(frames))
             }
@@ -519,6 +521,9 @@ object RunWorker {
 
         fun stepInto(command: JsonObject) =
             reply(command) { debugger -> addProperty("stepped", debugger.stepInto(command["thread"].asInt, command["target"].asInt)) }
+
+        fun restartFrame(command: JsonObject) =
+            reply(command) { debugger -> addProperty("restarted", debugger.restartFrame(command["frame"].asInt)) }
 
         fun exceptionStops(command: JsonObject) {
             val stops = RunWorkerDebug.exceptionsOf(command)
@@ -779,7 +784,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 20
+        const val PROTOCOL = 21
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)

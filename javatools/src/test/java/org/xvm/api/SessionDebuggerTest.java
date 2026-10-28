@@ -240,6 +240,31 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module whose run() calls outer(20) on line 4, which prints "outer 20" on line 11 and calls
+     * inner() on line 12, whose code is on line 16; run() returns 42.
+     */
+    private static final String RESTARTS = """
+            module Restarts {
+                Int run() {
+                    @Inject Console console;
+                    Int n = outer(20);
+                    console.print($"n={n}");
+                    return n;
+                }
+
+                Int outer(Int n) {
+                    @Inject Console console;
+                    console.print($"outer {n}");
+                    return inner(n + 1);
+                }
+
+                Int inner(Int n) {
+                    return n * 2;
+                }
+            }
+            """;
+
+    /**
      * A module whose run() calls Collection.forEach, from the ecstasy library, which calls its
      * lambda: line 6 is the lambda's.
      */
@@ -706,6 +731,52 @@ public class SessionDebuggerTest {
             session.resume();
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
             assertEquals(6L, control.result());
+        }
+    }
+
+    @Test
+    public void aRestartedFrameIsCalledAgainByItsCallerAndStopsAtItsFirstLine() throws Exception {
+        Path  source  = compile("Restarts", RESTARTS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Restarts"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 16)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Restarts", output, session);
+        try (control) {
+            // run() is called by the runtime, which cannot make the call again
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            assertEquals(List.of("Restarts.inner", "Restarts.outer", "Restarts.run"),
+                    frames.stream().map(StackFrameInfo::name).toList());
+            assertEquals(List.of(true, true, false), frames.stream().map(StackFrameInfo::restartable).toList());
+            assertFalse(session.restartFrame(frames.get(2).id()));
+
+            // outer() again: its frame and inner()'s are left, and run() calls it again
+            assertTrue(session.restartFrame(frames.get(1).id()));
+            Stop restart = stops.next();
+            assertEquals("restart", restart.reason());
+            assertEquals("Restarts.outer:10", where(session, restart));
+            assertEquals(List.of("Restarts.outer", "Restarts.run"),
+                    session.stackTrace(restart.threadId()).stream().map(StackFrameInfo::name).toList());
+            assertFalse(session.restartFrame(frames.get(1).id()));
+
+            // it prints again, and reaches the breakpoint again; the frame that waits restarts too
+            session.resume();
+            Stop again = stops.next();
+            assertEquals("Restarts.inner:16", where(session, again));
+            session.setBreakpoints(source.toString(), List.of());
+            assertTrue(session.restartFrame(session.stackTrace(again.threadId()).getFirst().id()));
+            Stop top = stops.next();
+            assertEquals("restart", top.reason());
+            assertEquals("Restarts.inner:16", where(session, top));
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(42L, control.result());
+            assertEquals(2, output.toString().split("outer 20", -1).length - 1, output.toString());
+            assertEquals(null, stops.poll());
         }
     }
 
