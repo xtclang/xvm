@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
@@ -264,6 +265,47 @@ internal fun ParityScenarios.semanticCases() {
                             .filter { it.isValid() && it.getWidthInPixels() > 0 }
                             .map { it.getOffset() }
                             .containsAll(offsets)
+                    }
+                }
+            }
+            // each hint's tooltip reaches its inlay, rendered from the server's Markdown: the hint's label, no code fence
+            val tooltips = hints.filter { it.has("tooltip") }
+            check(tooltips.isNotEmpty()) { "No hint has a tooltip: $hints" }
+            with(driver) {
+                var shown = listOf<JsonObject>()
+                awaitUi("the inlays show the hints' tooltips", HANG_LIMIT, { "Inlay tooltips: $shown; hints: $tooltips" }) {
+                    shown =
+                        JsonParser
+                            .parseString(utility(NativeEditorUi::class).inlayTooltips(doc.editor.editor))
+                            .asJsonArray
+                            .map { it.asJsonObject }
+                    tooltips.all { hint ->
+                        val offset = ParityWorkspace.offset(doc.text, hint.getAsJsonObject("position"))
+                        val label =
+                            hint["label"].let {
+                                if (it.isJsonPrimitive) {
+                                    it.asString
+                                } else {
+                                    it.rows().joinToString(
+                                        "",
+                                    ) { part -> part.string("value") }
+                                }
+                            }
+                        val name =
+                            label
+                                .trim()
+                                .removePrefix(":")
+                                .removeSuffix(":")
+                                .trim()
+                        shown.any { inlay ->
+                            val text =
+                                inlay["tooltip"]
+                                    ?.takeUnless { it.isJsonNull }
+                                    ?.asString
+                                    ?.replace(Regex("<[^>]+>"), "")
+                                    .orEmpty()
+                            inlay.int("offset") == offset && name in text && "```" !in text
+                        }
                     }
                 }
             }
