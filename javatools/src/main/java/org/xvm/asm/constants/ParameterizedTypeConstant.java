@@ -30,6 +30,9 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.cow;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -835,7 +838,7 @@ public class ParameterizedTypeConstant
                 && !type.isTuple() && !type.isTypeOfType()
                 && !type.isFunction() && !type.isMethod()
                 && !type.getSingleUnderlyingClass(true).equals(getConstantPool().clzClass())
-                && type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+                && type.ensureTypeInfo().isNewable(false, silent(PROBE));
         return new JitInfo(this, loader, type, fNewable);
     }
 

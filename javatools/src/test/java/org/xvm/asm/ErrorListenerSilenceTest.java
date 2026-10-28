@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.asm.ErrorListener.Silence.CASCADE;
@@ -64,9 +65,8 @@ public class ErrorListenerSilenceTest {
     }
 
     /**
-     * The reason is part of the listener rather than part of its name, so a host republishing
-     * diagnostics can tell a probe from a cascade - which is what lets it offer the one and not
-     * the other.
+     * The reason makes a suppression decision inspectable. It does not retain discarded messages
+     * or select a different compiler algorithm.
      */
     @Test
     public void testASilentListenerSaysWhyItIsSilent() {
@@ -80,8 +80,8 @@ public class ErrorListenerSilenceTest {
     }
 
     /**
-     * A silence derived from a listener keeps it, so a host that wants the consequences after all
-     * has somewhere to get them. A silence a caller reached for without having one cannot.
+     * A derived silence retains the original destination and its abort policy, not discarded
+     * messages. A standalone silence has no parent to preserve.
      */
     @Test
     public void testADerivedSilenceKeepsTheListenerItSilenced() {
@@ -104,6 +104,50 @@ public class ErrorListenerSilenceTest {
 
         assertSame(quiet, quiet.silence(CASCADE));
         assertSame(quiet, quiet.silence(PROBE), "already silent; a second reason adds nothing");
+    }
+
+    /**
+     * The one-argument constructor expresses a standalone sink without a null parent argument.
+     */
+    @Test
+    public void testStandaloneConstructorDiscardsWithoutAnAbortPolicy() {
+        var quiet = new ErrorListener.SilentErrorListener(PROBE);
+        quiet.fatal(CODE, ErrorListener.NOWHERE, "a", "b");
+
+        assertNull(quiet.suppressed());
+        assertEquals(PROBE, quiet.silenceReason());
+        assertTrue(quiet.isSilent());
+        assertFalse(quiet.hasSeriousErrors());
+        assertFalse(quiet.hasError(CODE));
+        assertFalse(quiet.isAbortDesired());
+    }
+
+    /**
+     * An explicitly supplied parent keeps its live abort policy, even after wrapper construction.
+     */
+    @Test
+    public void testParentConstructorPreservesLaterAbortRequests() {
+        ErrorList parent = new ErrorList(ErrorList.FIRST_ERROR);
+        var quiet = new ErrorListener.SilentErrorListener(parent, CASCADE);
+        quiet.error(CODE, ErrorListener.NOWHERE, "discarded", "report");
+        assertTrue(parent.getErrors().isEmpty());
+        assertFalse(quiet.isAbortDesired());
+
+        parent.error(CODE, ErrorListener.NOWHERE, "retained", "report");
+        assertSame(parent, quiet.suppressed());
+        assertTrue(quiet.isAbortDesired());
+        assertFalse(quiet.hasSeriousErrors());
+    }
+
+    /**
+     * A missing reason is a caller error for both new and already-silent listeners.
+     */
+    @Test
+    @SuppressWarnings("DataFlowIssue") // Deliberately exercise Java callers violating @NotNull.
+    public void testSilenceAlwaysRequiresAReason() {
+        assertThrows(NullPointerException.class, () -> new ErrorListener.SilentErrorListener(null));
+        assertThrows(NullPointerException.class, () -> new ErrorList().silence(null));
+        assertThrows(NullPointerException.class, () -> silent(PROBE).silence(null));
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";
