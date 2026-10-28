@@ -40,12 +40,13 @@ import org.xvm.compiler.ast.StatementBlock.RootContext;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.in;
-import static org.xvm.asm.ErrorListener.silent;
-
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A method declaration.
@@ -134,6 +135,11 @@ public class MethodDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /** @return the written documentation text, or null when no documentation comment is present */
+    public String getDocumentation() {
+        return TypeCompositionStatement.extractDocumentation(doc);
+    }
+
     /**
      * @return true iff this statement represents a constructor
      */
@@ -211,7 +217,7 @@ public class MethodDeclarationStatement
     /**
      * @return the simple name for this statement
      */
-    private String getName() {
+    public String getName() {
         if (name != null) {
             return name.getValueText();
         }
@@ -220,6 +226,13 @@ public class MethodDeclarationStatement
         return struct == null
                 ? "???"
                 : struct.getName();
+    }
+
+    /**
+     * @return the declared name token, or null for an implicit method without a source name
+     */
+    public Token getNameToken() {
+        return name;
     }
 
     @Override
@@ -543,6 +556,13 @@ public class MethodDeclarationStatement
 
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null) {
+            if (typeParams != null) {
+                for (int i = 0; i < typeParams.size(); ++i) {
+                    typeParams.get(i).setResolvedTarget(
+                            method.getParam(i).asTypeParameterConstant(method.getIdentityConstant()));
+                }
+            }
+
             // methods are opaque, so everything inside the curlies can be deferred until we get to the
             // validateContent() stage
             mgr.processChildrenExcept((child) -> child == body);
@@ -590,7 +610,7 @@ public class MethodDeclarationStatement
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
         MethodStructure method = (MethodStructure) getComponent();
-        if (method == null || !catchUpChildren(errs)) {
+        if (method == null || !catchUpChildren(errs, mgr.getInvocationBindings())) {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
             return;
@@ -895,7 +915,7 @@ public class MethodDeclarationStatement
         if (cDefaults > 0) {
             StatementBlock block = adopt(new StatementBlock(Collections.emptyList()));
 
-            RootContext ctxMethod = new RootContext(block, method);
+            RootContext ctxMethod = new RootContext(block, method, mgr.getInvocationBindings());
             Context     ctx       = ctxMethod.validatingContext();
 
             int cParamExprs = params.size();
@@ -932,7 +952,7 @@ public class MethodDeclarationStatement
     }
 
     protected void compileBody(StageMgr mgr, MethodStructure method, ErrorListener errs) {
-        if (body != null && !body.compileMethod(method.createCode(), errs)) {
+        if (body != null && !body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings())) {
             // the compilation has failed; no further progress is possible
             mgr.deferChildren();
         }
