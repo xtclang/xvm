@@ -70,7 +70,7 @@ open class LanguageServiceConfigurable(
                     add(adapter)
                     add(JBLabel("Text synchronization (restarts automatically)"))
                     add(synchronization)
-                    add(JBLabel("Save formatting owner (restart required)"))
+                    add(JBLabel("Save formatting owner (restarts automatically)"))
                     add(saving)
                     add(hints)
                     add(JBLabel("Native IDE inlay controls still apply."))
@@ -82,7 +82,7 @@ open class LanguageServiceConfigurable(
             add(
                 JBLabel(
                     "<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
-                        "Server save edits are unavailable in LSP4IJ. Use Tools → Actions on Save → Reformat code.<br>" +
+                        "The server formats on save while Tools → Actions on Save doesn't reformat Ecstasy files.<br>" +
                         "Indentation and the compiler wrapping margin are configured under Editor → Code Style → Ecstasy.<br>" +
                         "Compiler paths remain under Ecstasy Compiler. Trace controls remain in Language Servers; JVM and log limits are under Ecstasy Server Runtime and Logs.</html>",
                 ),

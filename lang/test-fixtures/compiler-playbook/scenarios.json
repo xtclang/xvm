@@ -4637,7 +4637,6 @@
     "X138": {
       "title": "live formatting settings retain valid values and expose save ownership",
       "manual": [
-        "IntelliJ server save edits are unavailable in LSP4IJ; use native Actions on Save.",
         "Per-folder VS Code native format-on-save overrides and physical Code Style editing."
       ],
       "values": {
