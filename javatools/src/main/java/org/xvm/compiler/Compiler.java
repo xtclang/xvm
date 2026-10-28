@@ -35,6 +35,11 @@ public class Compiler {
     /** Construct a compiler that records call facts in the supplied attempt-owned collector. */
     public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs,
                     InvocationBinding.Collector bindings) {
+        this(stmtModule, errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs,
+                    InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         if (stmtModule == null) {
             throw new IllegalArgumentException("AST node for module required");
         }
@@ -44,6 +49,7 @@ public class Compiler {
         m_stmtModule = stmtModule;
         f_errs       = requireNonNull(errs, "errs");
         f_bindings   = requireNonNull(bindings, "bindings");
+        f_cursors    = requireNonNull(cursors, "cursors");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -119,7 +125,7 @@ public class Compiler {
         if (getStage() == Stage.Initial) {
             setStage(Stage.Registering);
 
-            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, f_errs, f_bindings);
+            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, f_errs, f_bindings, f_cursors);
             if (!mgr.processComplete()) {
                 if (f_errs.hasSeriousErrors() || f_errs.isAbortDesired()) {
                     return null;
@@ -192,7 +198,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Resolving)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Resolving);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, f_errs, f_bindings);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, f_errs, f_bindings, f_cursors);
             }
 
             if (fLastAttempt) {
@@ -236,7 +242,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Validating)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Validating);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, f_errs, f_bindings);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, f_errs, f_bindings, f_cursors);
             }
 
             if (fLastAttempt) {
@@ -280,7 +286,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Emitting)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Emitting);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, f_errs, f_bindings);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, f_errs, f_bindings, f_cursors);
             }
 
             if (fLastAttempt) {
@@ -386,6 +392,7 @@ public class Compiler {
 
     /** Optional tooling output, confined to this compiler attempt. */
     private final InvocationBinding.Collector f_bindings;
+    private final CursorBinding.Collector     f_cursors;
 
     /**
      * The FileStructure that this compiler is putting together in a series of passes.
