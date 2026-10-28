@@ -65,7 +65,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [x] `workspace/inlineValue/refresh`, after a compile, to a client that takes it.
 - [x] A shared acceptance case: X331 passes in VS Code, which shows no values for Ecstasy without it
   (`debug.inlineValues` on `auto`). IntelliJ's is not implemented: released LSP4IJ draws no inline
-  values for Ecstasy (UP50); with our local LSP4IJ branch it passes.
+  values for Ecstasy (UP50); with our LSP4IJ #1781, merged 2026-10-28, it passes.
 
 ### L82: completion evidence and release gates
 
@@ -677,7 +677,7 @@ passes with the workaround disabled. The gates are in
   [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
   last item waits on it. To do: build it once an editor sends `singleThread`.
 
-### LSP4IJ: no inline values for Ecstasy (UP50): our #1781, open
+### LSP4IJ: no inline values for Ecstasy (UP50): our #1781, merged
 
 - [ ] UP50 (2026-10-27): IntelliJ shows no inline values for Ecstasy. LSP4IJ never sends
   `textDocument/inlineValue` (0.21.0 and `main`, `f22304a4`); its scan of the editor's TextMate tokens
@@ -685,18 +685,18 @@ passes with the workaround disabled. The gates are in
   IntelliJ computes inline data only for the variables it shows. LSP4IJ issue
   [#1432](https://github.com/redhat-developer/lsp4ij/issues/1432) reports the same; its maintainer
   answered that inline values are an LSP feature. Fixed by our
-  [#1781](https://github.com/redhat-developer/lsp4ij/pull/1781) (2026-10-27, open, `f76a4fd5`): it asks
+  [#1781](https://github.com/redhat-developer/lsp4ij/pull/1781) (merged 2026-10-28, unreleased, `7469aab9`): it asks
   the language server, falls back to the token scan, and expands the locals' group; with a plugin
   built from it, IntelliJ draws the values and X331 passes (`run-4604772112093360200`). To do: after a
   release with it, make IntelliJ's X331 full.
 
-### LSP4IJ: no data breakpoints (UP48): our #1782, open
+### LSP4IJ: no data breakpoints (UP48): our #1782, merged
 
 - [ ] UP48 (2026-10-27): LSP4IJ never sends `dataBreakpointInfo` or `setDataBreakpoints` (0.21.0 and
   `main`, `42f1f16e`), so IntelliJ has no breakpoint on a variable's value in a DAP session. XVM's
   adapter installs them since R9 (X330), which VS Code's Break on Value Change adds. Fixed by our
-  [#1782](https://github.com/redhat-developer/lsp4ij/pull/1782) (2026-10-27, open, `bf392a08` on
-  `main` `0d3c64de`): Break on Value Change in the Variables view asks `dataBreakpointInfo` and adds
+  [#1782](https://github.com/redhat-developer/lsp4ij/pull/1782) (merged 2026-10-28, unreleased,
+  `c7955a13`): Break on Value Change in the Variables view asks `dataBreakpointInfo` and adds
   a DAP data breakpoint, which it sends with `setDataBreakpoints`; one that cannot persist goes with
   its session. In IntelliJ 2026.2 the action finds the DAP value behind the split debugger's
   frontend proxy through `XDebuggerTreeBackendOnlyActionBase`. Its `DAPBreakOnValueChangeSessionTest`
