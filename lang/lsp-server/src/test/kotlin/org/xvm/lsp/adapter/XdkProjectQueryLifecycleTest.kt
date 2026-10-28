@@ -171,8 +171,8 @@ class XdkProjectQueryLifecycleTest {
                 }
 
                 Feature.CODE_LENSES -> {
-                    assertThat((result as List<*>).filterIsInstance<CodeLens>().map { it.command?.command })
-                        .containsExactly("xtc.runModule")
+                    // The rejected graph yields no reference lenses, and Library has no entry point to run.
+                    assertThat((result as List<*>).filterIsInstance<CodeLens>()).isEmpty()
                 }
 
                 Feature.RENAME -> {

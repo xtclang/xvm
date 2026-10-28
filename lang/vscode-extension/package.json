@@ -93,7 +93,17 @@
             },
             {
                 "command": "xtc.runModule",
-                "title": "Ecstasy: Run Module"
+                "title": "Ecstasy: Run Module",
+                "icon": "$(play)"
+            },
+            {
+                "command": "xtc.build",
+                "title": "Ecstasy: Build",
+                "icon": "$(tools)"
+            },
+            {
+                "command": "xtc.rebuild",
+                "title": "Ecstasy: Rebuild"
             },
             {
                 "command": "xtc.restartServer",
@@ -144,6 +154,58 @@
                 "command": "xtc.hideServerOutput",
                 "key": "ctrl+alt+x l",
                 "when": "view.workbench.panel.output.visible && activeOutputChannel =~ /xtclang\\.xtc-language\\.Ecstasy Language Server(?:\\.\\d+)?\\.log$/"
+            },
+            {
+                "command": "xtc.build",
+                "key": "ctrl+f9",
+                "mac": "cmd+f9",
+                "when": "editorLangId == xtc"
+            },
+            {
+                "command": "xtc.runModule",
+                "key": "ctrl+shift+f10",
+                "mac": "ctrl+shift+r",
+                "when": "editorLangId == xtc"
+            }
+        ],
+        "menus": {
+            "editor/title/run": [
+                {
+                    "command": "xtc.runModule",
+                    "when": "resourceLangId == xtc",
+                    "group": "navigation@1"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "xtc.runModule",
+                    "when": "resourceLangId == xtc",
+                    "group": "xtc@1"
+                },
+                {
+                    "command": "xtc.build",
+                    "when": "resourceLangId == xtc",
+                    "group": "xtc@2"
+                }
+            ]
+        },
+        "problemMatchers": [
+            {
+                "name": "xtc",
+                "owner": "xtc",
+                "source": "xtc",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^.*?(Error|Warning|Info): (.+\\.x):\\d+ \\[(\\d+):(\\d+)\\.\\.(\\d+):(\\d+)\\] (\\S+): (.*)$",
+                    "severity": 1,
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "endLine": 5,
+                    "endColumn": 6,
+                    "code": 7,
+                    "message": 8
+                }
             }
         ],
         "taskDefinitions": [
@@ -163,12 +225,27 @@
                     },
                     "moduleArguments": {
                         "type": "string",
-                        "description": "Comma-separated arguments passed to the module"
+                        "description": "Comma-separated arguments passed to the module; prefer 'args'"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Arguments passed to the entry method exactly as given"
+                    },
+                    "moduleUri": {
+                        "type": "string",
+                        "description": "A source file of the module, identifying it for embedded runs"
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["embedded", "gradle"],
+                        "description": "Build and run with the embedded compiler or with Gradle; defaults to the folder's xtc.build.mode"
                     },
                     "useGradle": {
                         "type": "boolean",
-                        "default": true,
-                        "description": "Use Gradle to run (recommended for projects with build.gradle.kts)"
+                        "description": "Legacy switch: true runs with Gradle, false with the xtc command line; absent follows 'mode'"
                     },
                     "quietMode": {
                         "type": "boolean",
@@ -310,6 +387,19 @@
                         "default": "default",
                         "scope": "window",
                         "description": "Language server adapter. Changes restart the server and restore open buffers. Also available through Ecstasy: Switch Language Adapter."
+                    },
+                    "xtc.build.mode": {
+                        "type": "string",
+                        "enum": ["auto", "embedded", "gradle"],
+                        "enumItemLabels": ["Automatic", "Ecstasy compiler (embedded)", "Gradle"],
+                        "enumDescriptions": [
+                            "Use Gradle for folders with a Gradle build, and the embedded compiler otherwise.",
+                            "Build, run and rebuild with the language server's compiler; builds go to build/xtc/embedded.",
+                            "Build and run through the project's Gradle build."
+                        ],
+                        "default": "auto",
+                        "scope": "resource",
+                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode needs the compiler language service."
                     },
                     "xtc.trace.server": {
                         "type": "string",
