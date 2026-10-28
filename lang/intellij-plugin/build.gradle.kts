@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskAction
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 
@@ -480,13 +481,10 @@ intellijPlatform {
     // cost ~1 GB and a verification per IDE. failureLevel is explicit so the build fails
     // on real breaks but not on every deprecated/experimental API touch.
     //
-    // INTERNAL_API_USAGES is included so the build fails if the plugin calls an
-    // IntelliJ API marked @ApiStatus.Internal. Such APIs are not meant for client
-    // plugins and can change without notice; gating on them here is what catches a
-    // regression like a switch to PluginManager.findEnabledPlugin (internal) over
-    // PluginManagerCore.getPlugin (public). Previously these were only logged as
-    // "Compatible. N usages of internal API" and silently passed CI while still
-    // generating a JetBrains verifier email on every Marketplace upload.
+    // Internal API reports are checked by verifyPluginInternalApis below. LSP4IJ marks
+    // several required integration points internal; a version-bound list names those
+    // exact signatures. Other internal APIs (including IntelliJ Platform internals)
+    // still fail, and the complete usage report remains available for review.
     pluginVerification {
         ides {
             latest {
@@ -500,7 +498,6 @@ intellijPlatform {
                 VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
                 VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
                 VerifyPluginTask.FailureLevel.MISSING_DEPENDENCIES,
-                VerifyPluginTask.FailureLevel.INTERNAL_API_USAGES,
             )
     }
 }
@@ -522,7 +519,18 @@ val summarizeSearchableOptions =
         manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
     }
 
-val verifyPlugin = tasks.named("verifyPlugin")
+val verifyPlugin = tasks.named<VerifyPluginTask>("verifyPlugin")
+val verifyPluginInternalApis =
+    tasks.register<VerifyPluginInternalApis>("verifyPluginInternalApis") {
+        group = "verification"
+        description = "Reject unreviewed internal APIs in the IntelliJ Plugin Verifier reports."
+        reportsDirectory.set(verifyPlugin.flatMap { it.verificationReportsDirectory })
+        acceptedApis.set(layout.projectDirectory.file("verifier-lsp4ij-apis.txt"))
+        lsp4ijVersion.set(libs.versions.lang.intellij.lsp4ij)
+    }
+
+// A direct verifyPlugin invocation must enforce the same policy as publishing.
+verifyPlugin.configure { finalizedBy(verifyPluginInternalApis) }
 
 val publishPlugin =
     tasks.named("publishPlugin") {
@@ -531,7 +539,7 @@ val publishPlugin =
         // Enforce binary-compat verification before publishing, regardless of who
         // invokes publishPlugin (CI, local, snapshot pipeline). Catches removed/
         // changed APIs and missing dependencies that would otherwise reach users.
-        dependsOn(verifyPlugin)
+        dependsOn(verifyPluginInternalApis)
     }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
@@ -664,9 +672,20 @@ val prepareJarSearchableOptions =
 // Some bundled plugins have split frontend/backend architectures that fail to
 // load cleanly in the sandbox. Disable them to avoid spurious errors.
 
-// Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
-// prepareSandbox.destinationDirectory is the plugins/ directory, config/ is a sibling
-val sandboxConfigDir: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("../config") }
+// The platform plugin gives runIde its own sandbox. Add off-classpath assets to that producer
+// so its Sync task owns the complete plugin installation, including the server and grammar.
+val prepareRunIdeSandbox =
+    tasks.named<PrepareSandboxTask>("prepareSandbox_runIde") {
+        from(textMateGrammar) {
+            into("intellij-plugin/lib/textmate")
+        }
+        from(lspServerJar) {
+            into("intellij-plugin/bin")
+            rename { "xtc-lsp-server.jar" }
+        }
+    }
+
+val sandboxConfigDir: Provider<Directory> = prepareRunIdeSandbox.flatMap { it.sandboxConfigDirectory }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
 val disabledSandboxPlugins =
@@ -681,9 +700,7 @@ val configureDisabledPlugins =
         group = "intellij platform"
         description = "Disable Ultimate-only plugins in the sandbox IDE"
 
-        // Must run after prepareSandbox creates the directory structure
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir // Capture for configuration cache
         val pluginsList = disabledSandboxPlugins
@@ -705,8 +722,7 @@ val configureSandboxLogging =
         group = "intellij platform"
         description = "Configure INFO-level logging for XTC plugin in the sandbox IDE"
 
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir
         outputs.file(configDir.map { it.file("options/log-categories.xml") })
@@ -731,8 +747,7 @@ val configureSandboxAppearance =
         group = "intellij platform"
         description = "Remove broken user-derived color-scheme overrides from the sandbox IDE config"
 
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir
         doNotTrackState("Removes invalid overrides from user-managed sandbox settings on each IDE launch")
@@ -783,8 +798,7 @@ val runIdeLspLogDirectory =
 val runIdeInfo =
     tasks.register<RunIdeEnvironmentReportTask>("runIdeInfo") {
         dependsOn(
-            copyTextMateToSandbox,
-            copyLspServerToSandbox,
+            prepareRunIdeSandbox,
             configureDisabledPlugins,
             configureSandboxLogging,
             configureSandboxAppearance,
@@ -794,16 +808,17 @@ val runIdeInfo =
         lsp4ijVersion.set(runIdeCapturedLsp4ijVersion)
         pluginVersion.set(runIdeCapturedPluginVersion)
         semanticTokensEnabled.set(runIdeCapturedSemanticTokens)
-        sandboxDir.set(sandboxConfigDir.map { it.dir("..") })
+        sandboxDir.set(prepareRunIdeSandbox.flatMap { it.sandboxDirectory })
+        sandboxLogDir.set(prepareRunIdeSandbox.flatMap { it.sandboxLogDirectory })
+        sandboxSystemDir.set(prepareRunIdeSandbox.flatMap { it.sandboxSystemDirectory })
         val mavenLocalRoot =
             providers
                 .systemProperty("maven.repo.local")
                 .orElse(providers.systemProperty("user.home").map { "$it/.m2/repository" })
         this.mavenLocalRoot.set(layout.dir(mavenLocalRoot.map(::File)))
         pluginNames.set(
-            sandboxConfigDir.map { configDir ->
-                configDir
-                    .dir("../plugins")
+            prepareRunIdeSandbox.flatMap { it.sandboxPluginsDirectory }.map { pluginsDir ->
+                pluginsDir
                     .asFile
                     .listFiles()
                     ?.map { it.name }
@@ -826,14 +841,12 @@ val stopLspLogTail =
         threadName.set("lsp-log-tailer")
     }
 
-// Ensure TextMate files, LSP server JAR, and mavenLocal artifacts are ready before IDE starts
-// NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
+// Prepare the interactive sandbox and publish its Gradle dependencies before starting the IDE.
 val runIde =
     tasks.named<JavaExec>("runIde") {
         parentPublishLocal.forEach { dependsOn(it) }
         dependsOn(
-            copyTextMateToSandbox,
-            copyLspServerToSandbox,
+            prepareRunIdeSandbox,
             configureDisabledPlugins,
             configureSandboxLogging,
             configureSandboxAppearance,
