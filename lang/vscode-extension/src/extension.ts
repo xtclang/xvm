@@ -16,7 +16,7 @@ import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTr
 import { selectLanguageAdapter } from './adapter-selection';
 import { createBuildModeStatus, selectBuildMode } from './build-mode-selection';
 import { XtcTaskProvider } from './task-provider';
-import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
+import { registerValueFormat, XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
 import { registerCompilerPaths } from './compiler-paths';
 import { readServiceSettings } from './editor-settings';
@@ -119,6 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     registerCommands(context, outputChannel, getClient);
     registerCompilerPaths(context);
+    registerValueFormat(context);
 
     // Setup LSP server
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));

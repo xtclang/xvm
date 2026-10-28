@@ -809,6 +809,86 @@ class EmbeddedExecutionTest {
                     .asString,
             ).isEqualTo("5")
 
+            // an object's toString() is a lazy variable, and reading its reference runs it on the stopped fiber
+            fun variables(
+                seq: Int,
+                reference: Int,
+            ): List<JsonObject> {
+                sessions.request(id, seq, "variables", """{"variablesReference": $reference}""")
+                return client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+            }
+            sessions.request(id, 30, "scopes", """{"frameId": $frameId}""")
+            val locals =
+                client
+                    .until(id) { it.response == "scopes" }
+                    .last()["body"]
+                    .asJsonObject["scopes"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject["variablesReference"]
+                    .asInt
+            val box = variables(31, locals).single { it["name"].asString == "box" }
+            val fields = variables(32, box["variablesReference"].asInt)
+            assertThat(fields.map { it["name"].asString to (it["presentationHint"]?.asJsonObject?.get("lazy")?.asBoolean == true) })
+                .containsExactly("count" to false, "toString()" to true)
+            assertThat(fields.last()["value"].asString).isEqualTo("(...)")
+            assertThat(variables(33, fields.last()["variablesReference"].asInt).map { it["name"].asString to it["value"].asString })
+                .containsExactly("toString()" to "\"Box\"")
+
+            // a request's hex format shows the integers in hexadecimal
+            sessions.request(id, 34, "variables", """{"variablesReference": $locals, "format": {"hex": true}}""")
+            val hex =
+                client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .associate { it["name"].asString to it["value"].asString }
+            assertThat(hex["n"]).isEqualTo("0x5")
+            assertThat(hex["shown"]).isEqualTo("0x6")
+
+            // a request's filter, start and count reach the program: a frame's locals are named, a part at a time
+            val names = variables(37, locals).map { it["name"].asString }
+            sessions.request(id, 35, "variables", """{"variablesReference": $locals, "filter": "named", "start": 1, "count": 1}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject["name"].asString },
+            ).containsExactly(names[1])
+            // a local takes an expression's value, which the program goes on with; show() has used n already
+            sessions.request(id, 38, "setVariable", """{"variablesReference": $locals, "name": "n", "value": "n * 3"}""")
+            val changed = client.until(id) { it.response == "setVariable" }.last()
+            assertThat(changed["success"].asBoolean).isTrue()
+            assertThat(changed["body"].asJsonObject["value"].asString).isEqualTo("15")
+            // the console completes the name typed after a dot with the members of the value before it
+            sessions.request(id, 39, "completions", """{"frameId": $frameId, "text": "box.co", "column": 7}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "completions" }
+                    .last()["body"]
+                    .asJsonObject["targets"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .map { Triple(it["label"].asString, it["type"].asString, it["length"].asInt) },
+            ).containsExactly(Triple("count", "field", 2))
+            sessions.request(id, 36, "variables", """{"variablesReference": $locals, "filter": "indexed"}""")
+            assertThat(
+                client
+                    .until(id) { it.response == "variables" }
+                    .last()["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray,
+            ).isEmpty()
+
             // a run that loops ends when it is cancelled, and at the console's time limit when it is not
             sessions.request(id, 8, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             sessions.request(id, 9, "cancel", """{"requestId": 8}""")

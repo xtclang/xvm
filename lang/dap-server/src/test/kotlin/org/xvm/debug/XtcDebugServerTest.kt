@@ -6,6 +6,8 @@ import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.debug.BreakpointEventArguments
+import org.eclipse.lsp4j.debug.CompletionItemType
+import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
@@ -23,6 +25,7 @@ import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetVariableArguments
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceArguments
@@ -32,7 +35,9 @@ import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.debug.ThreadEventArguments
+import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.junit.jupiter.api.Test
@@ -77,6 +82,10 @@ class XtcDebugServerTest {
                 "supportsExceptionInfoRequest",
                 "supportsExceptionFilterOptions",
                 "supportsCancelRequest",
+                "supportsValueFormattingOptions",
+                "supportsSetVariable",
+                "supportsCompletionsRequest",
+                "completionTriggerCharacters",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -227,6 +236,155 @@ class XtcDebugServerTest {
                     },
                 ).get(10, SECONDS)
         assertThat(fields.variables.map { it.name to it.value }).containsExactly("y" to "4")
+    }
+
+    @Test
+    fun `a request's hex format, or else the session's, which xtc valueFormat sets, shows integers in hexadecimal`() {
+        server.initialize(
+            InitializeRequestArguments().apply {
+                adapterID = "xtc"
+                supportsInvalidatedEvent = true
+            },
+        )
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        fun variables(format: Boolean?) =
+            server
+                .variables(
+                    VariablesArguments().apply {
+                        variablesReference = 7
+                        this.format = format?.let { hex -> ValueFormat().apply { this.hex = hex } }
+                    },
+                ).get(10, SECONDS)
+
+        // in decimal, unless a request asks for hexadecimal
+        variables(null)
+        variables(true)
+        assertThat(runs.hexes).containsExactly(false, true)
+
+        // the session's own choice applies to the requests that name no format, and the client reads them again
+        server.valueFormat(ValueFormat().apply { hex = true }).get(10, SECONDS)
+        assertThat(client.events).contains(INVALIDATED)
+        variables(null)
+        variables(false)
+        server.evaluate(evaluate("point.x", EvaluateArgumentsContext.WATCH).apply { frameId = 1 }).get(10, SECONDS)
+        assertThat(runs.hexes).containsExactly(false, true, true, false, true)
+        server.valueFormat(ValueFormat()).get(10, SECONDS)
+        variables(null)
+        assertThat(runs.hexes.last()).isFalse()
+    }
+
+    @Test
+    fun `setVariable changes a variable to an expression's value, and one that it cannot take says why`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        fun set(expression: String) =
+            server.setVariable(
+                SetVariableArguments().apply {
+                    variablesReference = 7
+                    name = "n"
+                    value = expression
+                },
+            )
+        val changed = set("n * 2 + 1").get(10, SECONDS)
+        assertThat(listOf(changed.value, changed.type)).containsExactly("41", "Int")
+        assertThat(runs.sets).containsExactly(listOf(7, "n", "n * 2 + 1", false))
+        assertFailsWith("\"text\" is String, not Int, so n cannot take it.") { set("\"text\"") }
+    }
+
+    @Test
+    fun `completions are asked for at the offset of the console's line and column, and replace what is typed of the name`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        fun complete(
+            text: String,
+            column: Int,
+            line: Int? = null,
+            frame: Int? = 3,
+        ) = server
+            .completions(
+                CompletionsArguments().apply {
+                    frameId = frame
+                    this.text = text
+                    this.column = column
+                    this.line = line
+                },
+            ).get(10, SECONDS)
+            .targets
+            .map { listOf(it.label, it.type, it.start, it.length) }
+
+        // the typed part of the name is replaced, the length before the cursor, with no start (UP43)
+        assertThat(complete("box.cou", 8)).containsExactly(listOf("count", CompletionItemType.FIELD, null, 3))
+        assertThat(runs.completed.last()).isEqualTo(Triple(3, "box.cou", 7))
+        assertThat(complete("box.", 5))
+            .containsExactly(listOf("count", CompletionItemType.FIELD, null, null), listOf("bump", CompletionItemType.METHOD, null, null))
+        // a later line's offset counts the lines before it and their newlines
+        complete("n\nbox.cou", 8, 2)
+        assertThat(runs.completed.last()).isEqualTo(Triple(3, "n\nbox.cou", 9))
+        // a frame that is not one of the stop's, or none, has nothing to complete
+        assertThat(complete("gone.", 6)).isEmpty()
+        assertThat(complete("box.", 5, frame = null)).isEmpty()
+        assertThat(runs.completed).hasSize(4)
+    }
+
+    @Test
+    fun `an array's variable says how many elements it has, and a client reads them a part at a time`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val squares =
+            server
+                .variables(VariablesArguments().apply { variablesReference = 20 })
+                .get(10, SECONDS)
+                .variables
+                .single()
+        assertThat(squares.indexedVariables).isEqualTo(250)
+        assertThat(runs.reads.last()).isEqualTo(Triple(ChildFilter.ALL, 0, 0))
+
+        // the part a client asks for is the part the program reads
+        server
+            .variables(
+                VariablesArguments().apply {
+                    variablesReference = 21
+                    filter = VariablesArgumentsFilter.INDEXED
+                    start = 200
+                    count = 50
+                },
+            ).get(10, SECONDS)
+        assertThat(runs.reads.last()).isEqualTo(Triple(ChildFilter.INDEXED, 200, 50))
+        server
+            .variables(
+                VariablesArguments().apply {
+                    variablesReference = 21
+                    filter = VariablesArgumentsFilter.NAMED
+                },
+            ).get(10, SECONDS)
+        assertThat(runs.reads.last()).isEqualTo(Triple(ChildFilter.NAMED, 0, 0))
+    }
+
+    @Test
+    fun `an object's computed properties and its toString() are lazy variables, whose reference runs their code`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val fields = server.variables(VariablesArguments().apply { variablesReference = 8 }).get(10, SECONDS).variables
+        assertThat(fields.map { it.name to (it.presentationHint?.lazy == true) })
+            .containsExactly("x" to false, "y" to false, "sum" to true, "toString()" to true)
+        val sum = fields.single { it.name == "sum" }
+        assertThat(sum.value).isEqualTo("(...)")
+        assertThat(sum.type).isNull()
+
+        val value = server.variables(VariablesArguments().apply { variablesReference = sum.variablesReference }).get(10, SECONDS)
+        assertThat(value.variables.map { listOf(it.name, it.value, it.type) }).containsExactly(listOf("sum", "7", "Int"))
+        assertThat(value.variables.single().presentationHint).isNull()
     }
 
     @Test
@@ -709,6 +867,16 @@ class XtcDebugServerTest {
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
         val evaluated = CopyOnWriteArrayList<Pair<Int, String>>()
 
+        /** Whether each read, evaluation and run asked for hexadecimal integers. */
+        val hexes = CopyOnWriteArrayList<Boolean>()
+
+        /** Each read's filter, start and count. */
+        val reads = CopyOnWriteArrayList<Triple<ChildFilter, Int, Int>>()
+
+        /** Each change's reference, name, expression and hex. */
+        val sets = CopyOnWriteArrayList<List<Any>>()
+        val completed = CopyOnWriteArrayList<Triple<Int, String, Int>>()
+
         /** Each run asked for, and its answer, which the test completes. */
         val ran = CopyOnWriteArrayList<Ran>()
         val runAnswers = CopyOnWriteArrayList<CompletableFuture<VariableState>>()
@@ -745,8 +913,10 @@ class XtcDebugServerTest {
             runId: String,
             frameId: Int,
             expression: String,
+            hex: Boolean,
         ): CompletableFuture<VariableState> {
             evaluated.add(frameId to expression)
+            hexes.add(hex)
             return when (expression) {
                 "point.x" -> CompletableFuture.completedFuture(VariableState("point.x", "3", "Int", 0))
                 "point" -> CompletableFuture.completedFuture(VariableState("point", "Vars:Point", "Vars:Point", 8))
@@ -755,14 +925,50 @@ class XtcDebugServerTest {
             }
         }
 
+        override fun setVariable(
+            runId: String,
+            reference: Int,
+            name: String,
+            expression: String,
+            hex: Boolean,
+        ): CompletableFuture<VariableState> {
+            sets.add(listOf(reference, name, expression, hex))
+            return if (expression == "\"text\"") {
+                CompletableFuture.failedFuture(IllegalArgumentException("\"text\" is String, not Int, so $name cannot take it."))
+            } else {
+                CompletableFuture.completedFuture(VariableState(name, "41", "Int", 0))
+            }
+        }
+
+        override fun completions(
+            runId: String,
+            frameId: Int,
+            text: String,
+            offset: Int,
+        ): CompletableFuture<CompletionsState> {
+            completed.add(Triple(frameId, text, offset))
+            if (text.startsWith("gone")) {
+                return CompletableFuture.failedFuture(
+                    IllegalArgumentException("The frame is not one of the stopped program's, so nothing can be evaluated in it."),
+                )
+            }
+            val typed = text.substring(0, offset).takeLastWhile(Char::isLetterOrDigit)
+            val names = listOf(CompletionState("count", "field"), CompletionState("bump", "method"))
+            return CompletableFuture.completedFuture(
+                CompletionsState(offset - typed.length, typed.length, names.filter { it.label.startsWith(typed) }),
+            )
+        }
+
         override fun run(
             runId: String,
             frameId: Int,
             expression: String,
             limit: Duration,
             program: Boolean,
+            hex: Boolean,
         ): CompletableFuture<VariableState> {
             ran.add(Ran(frameId, expression, limit, program))
+            hexes.add(hex)
             return CompletableFuture<VariableState>().also(runAnswers::add)
         }
 
@@ -806,20 +1012,38 @@ class XtcDebugServerTest {
         override fun variables(
             runId: String,
             reference: Int,
-        ) = CompletableFuture.completedFuture(
-            when (reference) {
-                7 ->
-                    listOf(
-                        VariableState("n", "21", "Int", 0),
-                        VariableState("point", "Vars:Point", "Vars:Point", 8),
-                        VariableState("unset", "<unassigned>", "", 0),
-                    )
+            hex: Boolean,
+            filter: ChildFilter,
+            start: Int,
+            count: Int,
+        ) = CompletableFuture
+            .completedFuture(
+                when (reference) {
+                    7 ->
+                        listOf(
+                            VariableState("n", "21", "Int", 0),
+                            VariableState("point", "Vars:Point", "Vars:Point", 8),
+                            VariableState("unset", "<unassigned>", "", 0),
+                        )
 
-                8 -> listOf(VariableState("x", "3", "Int", 0), VariableState("y", "4", "Int", 0))
+                    8 ->
+                        listOf(
+                            VariableState("x", "3", "Int", 0),
+                            VariableState("y", "4", "Int", 0),
+                            VariableState("sum", "(...)", "", 9, lazy = true),
+                            VariableState("toString()", "(...)", "", 10, lazy = true),
+                        )
 
-                else -> emptyList()
-            },
-        )
+                    9 -> listOf(VariableState("sum", "7", "Int", 0))
+
+                    20 -> listOf(VariableState("squares", "Int[250]", "Array<Int>", 21, elements = 250))
+
+                    else -> emptyList()
+                }.drop(start).let { if (count > 0) it.take(count) else it },
+            ).also {
+                hexes.add(hex)
+                reads.add(Triple(filter, start, count))
+            }
 
         override fun step(
             runId: String,

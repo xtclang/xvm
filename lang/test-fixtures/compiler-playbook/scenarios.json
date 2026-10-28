@@ -8875,8 +8875,8 @@
         "module": "RunAsk",
         "source": "module RunAsk {\n    void run() {\n        @Inject Console console;\n        String name = console.readLine(\"Name? \");\n        console.print($\"Hello, {name}!\");\n        String next = console.readLine();\n        console.print($\"next=[{next}]\");\n    }\n}\n",
         "prompt": "Name? ",
-        "input": "Grace Hopper \u2713",
-        "greeting": "Hello, Grace Hopper \u2713!",
+        "input": "Grace Hopper ✓",
+        "greeting": "Hello, Grace Hopper ✓!",
         "ended": "next=[]",
         "exitCode": 0
       },
@@ -9019,7 +9019,7 @@
         "destinationFile": "RenamedRoot.x",
         "module": "MovedRoot",
         "source": "module MovedRoot {\n    void run() {\n        @Inject Console console;\n        console.print(\"moved root runs\");\n    }\n}\n",
-        "runTitle": "\u25b6 Run MovedRoot",
+        "runTitle": "▶ Run MovedRoot",
         "output": "moved root runs",
         "exitCode": 0
       },
@@ -9382,6 +9382,10 @@
           [
             "y",
             "4"
+          ],
+          [
+            "toString()",
+            "(...)"
           ]
         ],
         "elements": [
@@ -9728,6 +9732,192 @@
         "coverage": "partial",
         "limitations": [
           "LSP4IJ does not handle invalidated (UP40, LSP4IJ #1766), so IntelliJ checks the answer of the Evaluate Expression dialog and the exit; the invalidated event is checked in VS Code."
+        ]
+      }
+    },
+    "X316": {
+      "title": "an object's computed property and its toString() are lazy variables, which run the program's code to show their values when asked",
+      "manual": [
+        "How each editor shows a lazy variable, VS Code's button and IntelliJ's link, is checked manually; VS Code checks the lazy hint of each variable and the value its reference answers with, IntelliJ the value each lazy variable shows."
+      ],
+      "values": {
+        "file": "DebugLazy.x",
+        "module": "DebugLazy",
+        "source": "module DebugLazy {\n    const Point(Int x, Int y) {\n        Int sum.get() = x + y;\n\n        @Override\n        String toString() = $\"({x}, {y})\";\n    }\n\n    Int run() {\n        Point point = new Point(3, 4);\n        @Inject Console console;\n        console.print($\"sum {point.sum}\");\n        return point.sum;\n    }\n}\n",
+        "breakpointLine": 12,
+        "expands": "point",
+        "fields": [
+          [
+            "x",
+            "3"
+          ],
+          [
+            "y",
+            "4"
+          ],
+          [
+            "sum",
+            "(...)"
+          ],
+          [
+            "toString()",
+            "(...)"
+          ]
+        ],
+        "lazy": [
+          [
+            "sum",
+            "7"
+          ],
+          [
+            "toString()",
+            "\"(3, 4)\""
+          ]
+        ],
+        "output": "sum 7",
+        "exitCode": 7
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0 ignores presentationHint.lazy (UP35, fixed by LSP4IJ #1768): a lazy variable shows (...) and expands to one child that has its value, which the case reads; with #1768 it shows a Show value link, which the case clicks."
+        ]
+      }
+    },
+    "X317": {
+      "title": "integers show in hexadecimal when the Variables view asks, and two objects with the same fields have different identity codes",
+      "manual": [
+        "How each editor's menu item shows its check mark is checked manually; VS Code runs its Show Values as Hexadecimal and checks the request it sends, the invalidated event and the values, IntelliJ turns LSP4IJ's on (with #1769) and checks the values."
+      ],
+      "values": {
+        "file": "DebugFormats.x",
+        "module": "DebugFormats",
+        "source": "module DebugFormats {\n    class Box {\n        Int count;\n    }\n\n    Int run() {\n        Int  big   = 255;\n        Int8 small = -1;\n        Box  one   = new Box();\n        Box  two   = new Box();\n        @Inject Console console;\n        console.print($\"{big} {small} {one.count} {two.count}\");\n        return big;\n    }\n}\n",
+        "breakpointLine": 12,
+        "decimal": [
+          [
+            "big",
+            "255"
+          ],
+          [
+            "small",
+            "-1"
+          ]
+        ],
+        "hex": [
+          [
+            "big",
+            "0xFF"
+          ],
+          [
+            "small",
+            "0xFF"
+          ]
+        ],
+        "identities": [
+          "one",
+          "two"
+        ],
+        "output": "255 -1 0 0",
+        "exitCode": 255
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0 has no Show Values as Hexadecimal (UP36, fixed by LSP4IJ #1769): IntelliJ checks the decimal values and the identity codes, and the hexadecimal values only with #1769, whose item the case turns on."
+        ]
+      }
+    },
+    "X318": {
+      "title": "a large array says how many elements it has, and the Variables view reads them a page at a time",
+      "manual": [
+        "How VS Code groups a large array's elements in ranges of 100 is checked manually; VS Code checks the element count and the page it reads, IntelliJ the first 100 elements and how many more there are."
+      ],
+      "values": {
+        "file": "DebugPages.x",
+        "module": "DebugPages",
+        "source": "module DebugPages {\n    Int run() {\n        Int[] squares = new Int[250](i -> i * i);\n        @Inject Console console;\n        console.print(squares.size);\n        return squares[249] % 256;\n    }\n}\n",
+        "breakpointLine": 5,
+        "expands": "squares",
+        "elements": 250,
+        "page": [
+          200,
+          50
+        ],
+        "first": [
+          "[200]",
+          "40000"
+        ],
+        "last": [
+          "[249]",
+          "62001"
+        ],
+        "shown": 100,
+        "more": "150 more",
+        "output": "250",
+        "exitCode": 49
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0 asks for all of a variable's children at once and never pages by indexedVariables (UP42, fixed by LSP4IJ #1770), so IntelliJ checks the first 100 elements and how many more there are; with #1770 it checks the first page and IntelliJ's own ... node, which it opens until the last element shows."
+        ]
+      }
+    },
+    "X319": {
+      "title": "Set Value gives a stopped frame's variable an expression's value, which the program goes on with, and refuses a value of another type with the reason",
+      "manual": [
+        "How each editor's Set Value edits a value is checked manually; VS Code checks the setVariable answers, IntelliJ what its Set Value reports and the variable's new value."
+      ],
+      "values": {
+        "file": "DebugSet.x",
+        "module": "DebugSet",
+        "source": "module DebugSet {\n    Int run() {\n        Int n = 20;\n        @Inject Console console;\n        console.print($\"n {n}\");\n        return n;\n    }\n}\n",
+        "breakpointLine": 5,
+        "set": [
+          "n",
+          "n * 2 + 1",
+          "41"
+        ],
+        "refused": [
+          "\"text\"",
+          "\"text\" is String, not Int, so n cannot take it."
+        ],
+        "output": "n 41",
+        "exitCode": 41
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X320": {
+      "title": "The debug console completes a name typed in a stopped frame, after a dot with the members of the value before it",
+      "manual": [
+        "How each editor's console offers and inserts a completion is checked manually; VS Code checks the completions answers, IntelliJ what its expression editor's Basic Completion offers and inserts."
+      ],
+      "values": {
+        "file": "DebugComplete.x",
+        "module": "DebugComplete",
+        "source": "module DebugComplete {\n    class Box {\n        Int count;\n        void bump() {\n            ++count;\n        }\n    }\n\n    Int run() {\n        Box box = new Box();\n        box.count = 6;\n        @Inject Console console;\n        console.print($\"count {box.count}\");\n        return box.count;\n    }\n}\n",
+        "breakpointLine": 13,
+        "members": [
+          "box.",
+          "count",
+          "bump"
+        ],
+        "typed": [
+          "box.co",
+          "count",
+          "box.count"
+        ],
+        "output": "count 6",
+        "exitCode": 6
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has the event system on, so an edit of it, as typing or a chosen completion is, fails IntelliJ's Document/PSI check (UP37, fixed by LSP4IJ #1763): IntelliJ checks the names Evaluate Expression's Basic Completion offers, and with #1763 also the text a chosen one makes."
         ]
       }
     },

@@ -72,6 +72,37 @@ class LanguageServerDebugAdapter implements vscode.DebugAdapter {
     }
 }
 
+/** The context key that says whether Ecstasy debug sessions show integers in hexadecimal, for the menu's check mark. */
+const HEX_VALUES = 'xtc.debug.hexValues';
+
+/**
+ * The Variables and Watch views' "Show Values as Hexadecimal" item. VS Code never asks a debug adapter for a value
+ * format, so the item sets the Ecstasy sessions' own with `xtc/valueFormat`, now and for each session that starts
+ * while it is on; the language server's session then tells VS Code to read the variables again.
+ */
+export function registerValueFormat(context: vscode.ExtensionContext): void {
+    let hex = false;
+    const sessions = new Set<vscode.DebugSession>();
+    const send = (session: vscode.DebugSession) =>
+        Promise.resolve(session.customRequest('xtc/valueFormat', { hex })).catch(() => undefined);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('xtc.debug.toggleHexValues', async () => {
+            hex = !hex;
+            await vscode.commands.executeCommand('setContext', HEX_VALUES, hex);
+            await Promise.all([...sessions].map(send));
+        }),
+        vscode.debug.onDidStartDebugSession(session => {
+            if (session.type === 'xtc') {
+                sessions.add(session);
+                if (hex) {
+                    void send(session);
+                }
+            }
+        }),
+        vscode.debug.onDidTerminateDebugSession(session => { sessions.delete(session); }),
+    );
+}
+
 export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
     constructor(private readonly client: ClientAccess) {}
 

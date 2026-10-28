@@ -71,13 +71,44 @@ data class ScopeState(
 /**
  * A variable of a stopped program, or a field or element of one: its name, its value and type in words (the type
  * is empty when it is not known), and the reference its own fields or elements are read by, or 0 when it has none.
+ * A [lazy] one, an object's computed property or its `toString()`, has a placeholder for its value and no type, and
+ * reading its reference runs the code that computes the value, for at most a second, which answers with one variable
+ * that has the value and its type. An array's has the number of its [elements], which can be read a part at a time.
  */
 data class VariableState(
     val name: String,
     val value: String,
     val type: String,
     val variablesReference: Int,
+    val lazy: Boolean = false,
+    val elements: Int = 0,
 )
+
+/** A name that what is typed in a stopped frame can be completed with, and what it names: a variable, field, property or method. */
+data class CompletionState(
+    val label: String,
+    val kind: String,
+)
+
+/**
+ * The names that complete the name typed in a stopped frame: those that start with the [length] characters of it that
+ * are typed, from the 0-based index [start] in the text, which they replace.
+ */
+data class CompletionsState(
+    val start: Int,
+    val length: Int,
+    val items: List<CompletionState>,
+)
+
+/**
+ * Which of a value's children a read gives, as DAP's `filter` names them: all, the named ones (a frame's locals, an
+ * object's fields and lazy variables), or the indexed ones (an array's elements).
+ */
+enum class ChildFilter {
+    ALL,
+    NAMED,
+    INDEXED,
+}
 
 /**
  * Which thrown exceptions stop a debugged program: every one, or those that no frame will catch, and for each, the
@@ -208,23 +239,60 @@ interface DebugRuns {
 
     /**
      * The variables of a scope, or the fields or elements of a variable, by its reference; none for a reference
-     * from before the program last resumed.
+     * from before the program last resumed. A lazy variable's reference runs its code, and fails, with the reason as
+     * its message, if the code throws or does not end within a second. With [hex], integers are in hexadecimal, such as
+     * `0x1F`, and a negative one of a type of fixed size in its two's complement. Only the children [filter] takes are
+     * read, from the one at [start], [count] of them, or all from there for 0; an array's are read only for that part,
+     * and all of a large one from [start] are its first 100 and how many more there are.
      */
     fun variables(
         runId: String,
         reference: Int,
+        hex: Boolean,
+        filter: ChildFilter,
+        start: Int,
+        count: Int,
     ): CompletableFuture<List<VariableState>>
 
     /**
      * Evaluates an expression, such as `point.x + 1` or `ints[i] > 0`, in a stopped frame, without running the
-     * program's code: the value as a variable named by the expression. Fails, with the reason as its message, if it
-     * cannot.
+     * program's code: the value as a variable named by the expression, an integer in hexadecimal with [hex]. Fails,
+     * with the reason as its message, if it cannot.
      */
     fun evaluate(
         runId: String,
         frameId: Int,
         expression: String,
+        hex: Boolean,
     ): CompletableFuture<VariableState>
+
+    /**
+     * Changes a variable of the stopped program, a frame's local, an object's field or an array's element, by the
+     * [reference] that read it and its [name], to the value of [expression], which is evaluated without running the
+     * program's code; a literal takes the variable's type. Answers with the variable and its new value, an integer
+     * in hexadecimal with [hex]; fails, with the reason as its message, if the variable cannot take the value, as one
+     * of another type, or a field of an immutable object.
+     */
+    fun setVariable(
+        runId: String,
+        reference: Int,
+        name: String,
+        expression: String,
+        hex: Boolean,
+    ): CompletableFuture<VariableState>
+
+    /**
+     * The names that complete the name typed in a stopped frame, which ends at the 0-based [offset] in [text]: after a
+     * dot, the members of the value before it, which is evaluated without running the program's code, otherwise the
+     * frame's variables, `this`, and the members of `this`; none if what is before the dot cannot be evaluated. Fails,
+     * with the reason as its message, if the frame is not one of the stopped program's.
+     */
+    fun completions(
+        runId: String,
+        frameId: Int,
+        text: String,
+        offset: Int,
+    ): CompletableFuture<CompletionsState>
 
     /**
      * Runs code, such as a call, in a stopped frame, on the fiber that waits there, for at most [limit]: the value as
@@ -232,7 +300,7 @@ interface DebugRuns {
      * changed, and the program stays stopped. Fails, with the reason as its message, if the code does not compile,
      * throws, or does not end within [limit]. Cancelling the answer ends the run. With [program], the program's other
      * fibers run meanwhile too, without stopping, and wait again at their next line once the run ends, so the stop's
-     * threads, stacks and variables may have changed.
+     * threads, stacks and variables may have changed. With [hex], an integer value is in hexadecimal instead.
      */
     fun run(
         runId: String,
@@ -240,6 +308,7 @@ interface DebugRuns {
         expression: String,
         limit: Duration,
         program: Boolean,
+        hex: Boolean,
     ): CompletableFuture<VariableState>
 
     /** The exception that the stopped fiber stopped the program at; null when it stopped it for another reason. */

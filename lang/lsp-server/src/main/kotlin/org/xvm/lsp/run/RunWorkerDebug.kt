@@ -5,6 +5,8 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.CompletionState
+import org.xvm.debug.CompletionsState
 import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
@@ -135,12 +137,47 @@ internal object RunWorkerDebug {
             addProperty("value", variable.value)
             addProperty("type", variable.type)
             addProperty("reference", variable.variablesReference)
+            addProperty("lazy", variable.lazy)
+            addProperty("elements", variable.elements)
         }
 
     fun variablesOf(json: JsonArray): List<VariableState> = json.map { variableOf(it.asJsonObject) }
 
     fun variableOf(json: JsonObject) =
-        VariableState(json["name"].asString, json["value"].asString, json["type"].asString, json["reference"].asInt)
+        VariableState(
+            json["name"].asString,
+            json["value"].asString,
+            json["type"].asString,
+            json["reference"].asInt,
+            json["lazy"].asBoolean,
+            json["elements"].asInt,
+        )
+
+    fun completions(completions: CompletionsState) =
+        JsonObject().apply {
+            addProperty("start", completions.start)
+            addProperty("length", completions.length)
+            add(
+                "items",
+                JsonArray().apply {
+                    completions.items.forEach { item ->
+                        add(
+                            JsonObject().apply {
+                                addProperty("label", item.label)
+                                addProperty("kind", item.kind)
+                            },
+                        )
+                    }
+                },
+            )
+        }
+
+    fun completionsOf(json: JsonObject) =
+        CompletionsState(
+            json["start"].asInt,
+            json["length"].asInt,
+            json.getAsJsonArray("items").map { it.asJsonObject }.map { CompletionState(it["label"].asString, it["kind"].asString) },
+        )
 
     fun exceptions(stops: ExceptionStops) =
         JsonObject().apply {
