@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StepInArguments
+import org.eclipse.lsp4j.debug.StepInTargetsArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminateArguments
@@ -94,6 +95,7 @@ class XtcDebugServerTest {
                 "completionTriggerCharacters",
                 "supportsModulesRequest",
                 "supportsLoadedSourcesRequest",
+                "supportsStepInTargetsRequest",
                 "exceptionBreakpointFilters",
             )
         // uncaught exceptions stop a program unless the user turns that off; every thrown one only when asked
@@ -644,6 +646,39 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `the calls of a stopped frame's line are step targets, and stepIn with a target steps into that call`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+
+        val targets = server.stepInTargets(StepInTargetsArguments().apply { frameId = 1 }).get(10, SECONDS).targets
+        assertThat(targets.map { it.id to it.label }).containsExactly(31 to "add(Int, Int)", 32 to "twice(Int)")
+        assertThat(server.stepInTargets(StepInTargetsArguments().apply { frameId = 2 }).get(10, SECONDS).targets).isEmpty()
+
+        server
+            .stepIn(
+                StepInArguments().apply {
+                    threadId = 12
+                    targetId = 32
+                },
+            ).get(10, SECONDS)
+        assertThat(runs.intos).containsExactly(12 to 32)
+        assertThat(runs.steps).isEmpty()
+
+        // a target that is not one of the line's is refused, and without a target it is a plain step into
+        assertThatThrownBy {
+            server
+                .stepIn(
+                    StepInArguments().apply {
+                        threadId = 12
+                        targetId = 99
+                    },
+                ).get(10, SECONDS)
+        }.isInstanceOf(ExecutionException::class.java)
+        server.stepIn(StepInArguments().apply { threadId = 12 }).get(10, SECONDS)
+        assertThat(runs.steps).containsExactly(12 to StepKind.IN)
+    }
+
+    @Test
     fun `a failed build reports its diagnostics and fails the launch, which runs nothing`() {
         runs.result = LaunchResult(null, "/work/App.x:2:5: error: no such type [COMPILER-42]")
         server.configurationDone(ConfigurationDoneArguments())
@@ -1131,6 +1166,28 @@ class XtcDebugServerTest {
             threadId: Int,
             kind: StepKind,
         ): CompletableFuture<Boolean> = CompletableFuture.completedFuture((threadId == 12).also { if (it) steps.add(threadId to kind) })
+
+        /** The calls of frame 1's line, and each step into one of them, by thread and call. */
+        val intos = CopyOnWriteArrayList<Pair<Int, Int>>()
+
+        override fun stepInTargets(
+            runId: String,
+            frameId: Int,
+        ) = CompletableFuture.completedFuture(
+            if (frameId ==
+                1
+            ) {
+                listOf(StepTargetState(31, "add(Int, Int)"), StepTargetState(32, "twice(Int)"))
+            } else {
+                emptyList()
+            },
+        )
+
+        override fun stepInto(
+            runId: String,
+            threadId: Int,
+            targetId: Int,
+        ) = CompletableFuture.completedFuture((threadId == 12 && targetId in 31..32).also { if (it) intos.add(threadId to targetId) })
 
         override fun pause(runId: String) = (runId == this.runId).also { if (it) paused++ }
 
