@@ -54,7 +54,8 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
 /**
  * One debug launch of an Ecstasy Application configuration: its "server" is a process that carries the session over
  * the language server's connection, ready at once, and its launch arguments are the configuration's module, method
- * and arguments, in the form the language server's `launch` takes them.
+ * and arguments, and whether evaluations run the whole program, in the form the language server's `launch` takes
+ * them.
  */
 class XtcDebugAdapterDescriptor(
     options: RunConfigurationOptions,
@@ -76,6 +77,7 @@ class XtcDebugAdapterDescriptor(
             configuration.moduleUri.takeIf { it.isNotBlank() }?.let { parameters["moduleUri"] = it }
             configuration.methodName.takeIf { it.isNotBlank() }?.let { parameters["method"] = it }
             parameters["args"] = configuration.embeddedRequest().args
+            if (configuration.evaluationRunsProgram) parameters["evaluationRunsProgram"] = true
         }
         return parameters
     }

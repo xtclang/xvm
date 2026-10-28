@@ -3,6 +3,7 @@ package org.xvm.debug
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.BreakpointEventArgumentsReason
+import org.eclipse.lsp4j.debug.CancelArguments
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
@@ -18,6 +19,8 @@ import org.eclipse.lsp4j.debug.ExceptionInfoArguments
 import org.eclipse.lsp4j.debug.ExceptionInfoResponse
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
+import org.eclipse.lsp4j.debug.InvalidatedAreas
+import org.eclipse.lsp4j.debug.InvalidatedEventArguments
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
@@ -55,6 +58,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
@@ -62,6 +66,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * One Ecstasy Debug Adapter Protocol (DAP) session. A launch builds and runs its module through [runs], the
@@ -81,9 +86,13 @@ import java.util.concurrent.atomic.AtomicInteger
  * installed before the program's first line as breakpoints are. `pause` stops a running
  * program at the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at its first line,
  * with the reason `entry`. `evaluate` in a stopped frame evaluates expressions, such as `point.x + 1` or
- * `ints[i] > 0`, for watches, hovers and the console, without running the program's code: variables, their fields and
- * elements, literals, and operators that the runtime computes natively. Expressions that run code, such as calls, are
- * the rest of R7's bounded evaluation, still to come (lang/doc/plans/plan-bounded-evaluation.md).
+ * `ints[i] > 0`, for watches and hovers without running the program's code: variables, their fields and elements,
+ * literals, and operators that the runtime computes natively. A line typed in the console is evaluated so too, and
+ * what that refuses, such as a call, runs as code on the stopped fiber, for at most [CONSOLE_LIMIT]; `cancel` ends it
+ * sooner, and once code has run, `invalidated` tells a client that takes it to read the variables again
+ * (lang/doc/plans/plan-bounded-evaluation.md, tier 2). A launch with `evaluationRunsProgram` lets the whole program run
+ * while such code does, for a program whose code waits on work that its other fibers do; they then wait at their next
+ * line once it ends, and `invalidated` asks for everything again, since the stop's threads and stacks may have moved.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -144,6 +153,20 @@ class XtcDebugServer(
     @Volatile
     private var columnBase = 0
 
+    /** True for a client that takes the `invalidated` event. */
+    @Volatile
+    private var invalidates = false
+
+    /** True for a launch that lets the whole program run while code from the console does. */
+    @Volatile
+    private var evaluationRunsProgram = false
+
+    /** The console evaluations in progress, by their request's `seq`, which `cancel` names. */
+    private val evaluations = ConcurrentHashMap<Int, Evaluation>()
+
+    /** The `seq` of the request being handled on this thread, as [receiving] gives it; null when not known. */
+    private val handling = ThreadLocal<Int?>()
+
     companion object {
         private val logger = LoggerFactory.getLogger(XtcDebugServer::class.java)
 
@@ -188,6 +211,15 @@ class XtcDebugServer(
         /** A launch whose build fails runs nothing. */
         const val BUILD_FAILED = "Build failed; nothing was run."
 
+        /**
+         * How long code typed in the console may run on the stopped fiber (decided 2026-10-23): longer than any
+         * expression needs, short enough that a loop does not leave the console waiting.
+         */
+        val CONSOLE_LIMIT = 2.seconds
+
+        /** The answer to an evaluation that `cancel` ended, as DAP names it. */
+        const val CANCELLED = "cancelled"
+
         /** Why a debug console line is not evaluated. */
         const val NO_EVALUATION =
             "Nothing is evaluated while the program runs; a line typed in the console then is its input."
@@ -221,6 +253,7 @@ class XtcDebugServer(
         logger.info("initialize: clientID={}, adapterID={}", args.clientID, args.adapterID)
         lineBase = if (args.linesStartAt1 == false) -1 else 0
         columnBase = if (args.columnsStartAt1 == false) -1 else 0
+        invalidates = args.supportsInvalidatedEvent == true
         afterResponse.execute { client?.initialized() }
         val capabilities =
             Capabilities().apply {
@@ -232,6 +265,7 @@ class XtcDebugServer(
                 supportsLogPoints = true
                 supportsExceptionInfoRequest = true
                 supportsExceptionFilterOptions = true
+                supportsCancelRequest = true
                 exceptionBreakpointFilters =
                     arrayOf(
                         ExceptionBreakpointsFilter().apply {
@@ -360,8 +394,9 @@ class XtcDebugServer(
      * Builds the module and starts it, with the breakpoints set by then, answering once it has started; a failed
      * build answers with an error after reporting the build's diagnostics as output. Arguments: `module` (a module
      * name), `moduleUri` (a source URI of the module, used in place of the name when given), `method`, `args` (an
-     * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, and `stopOnEntry`, which stops the
-     * program at its first line.
+     * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, `stopOnEntry`, which stops the
+     * program at its first line, and `evaluationRunsProgram`, which lets the whole program run while code from the
+     * console does.
      */
     override fun launch(args: Map<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
@@ -375,6 +410,7 @@ class XtcDebugServer(
             return failed("This debug session has already launched a program.")
         }
         debugging = args?.get("noDebug") != true
+        evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
         val stopOnEntry = args?.get("stopOnEntry") == true
         console("Building and running ${target.moduleName ?: target.module} with the embedded compiler...")
@@ -551,16 +587,37 @@ class XtcDebugServer(
      *
      * In a stopped frame, a watch, a hover or a line typed in the debug console evaluates an expression, such as
      * `point.x + 1` or `ints[i] > 0`, without running the program's code; what cannot be evaluated fails with the
-     * reason.
+     * reason. What that refuses in a console line, such as a call, runs as code on the stopped fiber, for at most
+     * [CONSOLE_LIMIT], and answers with its value's `toString()`; `cancel` ends it sooner, with [CANCELLED]. Once
+     * code has run, `invalidated` tells a client that takes it that the variables may have changed.
      * Without a frame, as while the program runs, a line typed in the debug console is the program's console input.
      */
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
         val frameId = args.frameId
         if (frameId != null && debuggedRunning()) {
-            return runs.evaluate(runId, frameId, args.expression).handle { state, failure ->
+            val read = runs.evaluate(runId, frameId, args.expression)
+            val value =
+                if (args.context == EvaluateArgumentsContext.REPL) {
+                    // a line typed in the console is code, which runs, unless reading it as a path does without
+                    // running any: that changes nothing, and shows a value as the Variables view does
+                    val evaluation = Evaluation()
+                    val seq = handling.get()?.also { evaluations[it] = evaluation }
+                    read
+                        .exceptionallyCompose {
+                            evaluation.start {
+                                val program = evaluationRunsProgram
+                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program).also { run ->
+                                    run.whenComplete { _, _ -> ran(program) }
+                                }
+                            }
+                        }.whenComplete { _, _ -> seq?.let(evaluations::remove) }
+                } else {
+                    read
+                }
+            return value.handle { state, failure ->
                 if (failure != null) {
                     val cause = (failure as? CompletionException)?.cause ?: failure
-                    throw error(cause.message ?: cause.toString())
+                    throw error(if (cause is CancellationException) CANCELLED else cause.message ?: cause.toString())
                 }
                 EvaluateResponse().apply {
                     result = state.value
@@ -581,6 +638,33 @@ class XtcDebugServer(
                 variablesReference = 0
             },
         )
+    }
+
+    /**
+     * DAP: cancel
+     *
+     * Ends a console evaluation that runs code, which `requestId` names, before its time limit; it then answers with
+     * [CANCELLED]. Any other request is answered too soon to be cancelled, so its cancel does nothing.
+     */
+    override fun cancel(args: CancelArguments?): CompletableFuture<Void> {
+        args?.requestId?.let(evaluations::get)?.cancel()
+        return CompletableFuture.completedFuture(null)
+    }
+
+    /**
+     * Handles one request, whose `seq` is [seq], with [handle]: the endpoint calls each request's method through this,
+     * so that the method knows which request it answers, and a later `cancel` can name it.
+     */
+    internal fun <T> receiving(
+        seq: Int?,
+        handle: () -> T,
+    ): T {
+        handling.set(seq)
+        try {
+            return handle()
+        } finally {
+            handling.remove()
+        }
     }
 
     /** DAP: terminate. Stops the program, whose exit then ends the session; with no program, it ends at once. */
@@ -648,6 +732,17 @@ class XtcDebugServer(
     ): CompletableFuture<Void> {
         if (!debuggedRunning()) return failed(NOT_STOPPED)
         return runs.step(runId, threadId, kind).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+    }
+
+    /**
+     * Code has run on a stopped fiber: what it changed may show in the variables, which the client reads again, and
+     * after a run of the whole [program], also the threads and stacks, since its other fibers moved.
+     */
+    private fun ran(program: Boolean) {
+        if (invalidates) {
+            val area = if (program) InvalidatedAreas.ALL else InvalidatedAreas.VARIABLES
+            client?.invalidated(InvalidatedEventArguments().apply { areas = arrayOf(area) })
+        }
     }
 
     /** True while a debugged program runs, stopped or not. */
@@ -771,6 +866,33 @@ class XtcDebugServer(
     }
 
     private fun error(message: String) = ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, message, null))
+
+    /**
+     * A console evaluation in progress, which `cancel` ends: before its code starts to run, it then never does, and
+     * while it runs, the run ends.
+     */
+    private class Evaluation {
+        @Volatile
+        private var cancelled = false
+
+        @Volatile
+        private var run: CompletableFuture<*>? = null
+
+        /** Starts the evaluation's run, unless it was cancelled first. */
+        fun <T> start(run: () -> CompletableFuture<T>): CompletableFuture<T> {
+            if (cancelled) return CompletableFuture.failedFuture(CancellationException())
+            return run().also {
+                this.run = it
+                // a cancel between the check and now has no run to end yet
+                if (cancelled) it.cancel(false)
+            }
+        }
+
+        fun cancel() {
+            cancelled = true
+            run?.cancel(false)
+        }
+    }
 
     private fun <T> failed(message: String): CompletableFuture<T> = CompletableFuture.failedFuture(error(message))
 }

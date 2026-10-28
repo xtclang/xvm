@@ -694,6 +694,75 @@ internal fun ParityScenarios.runEntryCases() {
             }
         }
     }
+
+    case("X314") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debug(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(
+                    project,
+                    module,
+                    "the program stops at the breakpoint",
+                    60.seconds,
+                ) { it["suspended"]?.asBoolean == true }
+
+                // the Evaluate Expression dialog's evaluations run code: LSP4IJ sends them as the console's (repl)
+                fun run(code: String) = JsonParser.parseString(debugger.evaluateFrom(project, module, code, "DIALOG")).asJsonObject
+                val (call, value) = data.strings("call")
+                val ran = run(call)
+                check(ran["value"]?.asString == value) { "$call is not $value: $ran" }
+                val (watch, watched) = data.strings("watch")
+                val shown = JsonParser.parseString(debugger.evaluate(project, module, watch)).asJsonObject
+                check(shown["value"]?.asString == watched) { "$watch is not $watched after $call: $shown" }
+                // TODO LSP4IJ: UP40, UP41 — LSP4IJ never sends DAP `cancel` (UP41) and does not handle `invalidated` (UP40,
+                // #1766), so both are checked in VS Code only; check them here too once a release has them
+                val ended = run(data.string("loop"))["error"]?.asString.orEmpty()
+                check(data.string("limited") in ended) { "${data.string("loop")} does not end at its time limit: $ended" }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+
+    case("X315") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        embedded { _, project ->
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val module = data.string("module")
+            try {
+                debugger.debugRunningProgram(project, module, uri(data.string("file")), data.int("breakpointLine"))
+                debugger.awaitState(
+                    project,
+                    module,
+                    "the program stops at the breakpoint",
+                    60.seconds,
+                ) { it["suspended"]?.asBoolean == true }
+
+                // the worker's service answers once its fiber, which the stop holds otherwise, has done its work;
+                // TODO LSP4IJ: UP40 — LSP4IJ does not handle `invalidated` (#1766), so its event is checked in VS Code only
+                val (call, value) = data.strings("call")
+                val ran = JsonParser.parseString(debugger.evaluateFrom(project, module, call, "DIALOG")).asJsonObject
+                check(ran["value"]?.asString == value) { "$call is not $value: $ran" }
+
+                debugger.resume(project, module)
+                val exited = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+                check(exited.int("exitCode") == data.int("exitCode")) { "Debug session: $exited" }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
 }
 
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
@@ -740,6 +809,13 @@ internal interface DebugSessionProbe {
         breakpointLine: Int,
     )
 
+    fun debugRunningProgram(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+    )
+
     fun state(
         project: Project,
         module: String,
@@ -766,6 +842,13 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
         expression: String,
+    ): String
+
+    fun evaluateFrom(
+        project: Project,
+        module: String,
+        expression: String,
+        origin: String,
     ): String
 
     fun hintShown(): Boolean
