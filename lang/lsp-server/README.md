@@ -514,8 +514,7 @@ closing and reopening the file; in full-sync mode the next keystroke does this.
 
 IDE clients can build and run source modules without Gradle. The editor integrations use this as
 their *embedded* mode ([VS Code](../vscode-extension/README.md#building-and-running),
-[IntelliJ](../intellij-plugin/README.md#running-your-application)); the design and remaining work are in
-the [execution plan](../doc/plans/plan-embedded-execution.md). Only the compiler adapter supports it;
+[IntelliJ](../intellij-plugin/README.md#running-your-application)). Only the compiler adapter supports it;
 other adapters fail these requests. `xtc/languageServiceStatus` reports `embeddedExecution: true`.
 
 | Message | Direction | Purpose |
