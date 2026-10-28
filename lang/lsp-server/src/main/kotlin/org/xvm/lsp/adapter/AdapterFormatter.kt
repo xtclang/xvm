@@ -228,11 +228,11 @@ class AdapterFormatter {
             return countIndentDepth(commentAncestor) * config.indentSize + 1
         }
 
-        // 4. Closing brace -> match the opening construct
+        // 4. Closing brace -> match the opening construct; a switch's body is no block, so its brace
+        //    aligns with the switch itself
         if (trimmed.startsWith("}")) {
-            val enclosingBlock =
-                generateSequence(node) { it.parent }
-                    .firstOrNull { it.type in blockTypes || it.type in classBodyTypes } ?: return 0
+            val enclosingBlock = closedBy(node) ?: return 0
+            if (enclosingBlock.type in switchTypes) return countIndentDepth(enclosingBlock) * config.indentSize
             val ownerNode = enclosingBlock.parent ?: return 0
             return countIndentDepth(ownerNode) * config.indentSize
         }
@@ -263,7 +263,8 @@ class AdapterFormatter {
             return countIndentDepth(parenAncestor) * config.indentSize + config.indentSize
         }
 
-        // 6. Case labels -> same indent as switch
+        // 6. Case labels -> in XDK style, a switch statement's align with the switch and a switch
+        //    expression's are one level inside it
         if (
             trimmed.startsWith("case ") ||
             trimmed.startsWith("default:") ||
@@ -272,7 +273,8 @@ class AdapterFormatter {
             val switchNode =
                 generateSequence(node) { it.parent }.firstOrNull { it.type in switchTypes }
             if (switchNode != null) {
-                return countIndentDepth(switchNode) * config.indentSize
+                val inside = if (switchNode.type == "switch_expression") 1 else 0
+                return (countIndentDepth(switchNode) + inside) * config.indentSize
             }
         }
 
@@ -289,6 +291,11 @@ class AdapterFormatter {
         // 8. General case: count indent-parent ancestors for structural depth
         return countIndentDepth(node) * config.indentSize
     }
+
+    /** The nearest block, class body or switch around [node]: what a closing brace on its line closes. */
+    private fun closedBy(node: AdapterNode): AdapterNode? =
+        generateSequence(node) { it.parent }
+            .firstOrNull { it.type in blockTypes || it.type in classBodyTypes || it.type in switchTypes }
 
     /**
      * Count the number of indent-parent ancestors to determine structural nesting depth. Includes
@@ -518,12 +525,9 @@ class AdapterFormatter {
 
         val refLine =
             if (closing == '}') {
-                val enclosingBlock =
-                    generateSequence(node) { it.parent }
-                        .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
-                        ?: return emptyList()
+                val enclosingBlock = closedBy(node) ?: return emptyList()
                 val ownerNode = enclosingBlock.parent
-                when (ownerNode?.type) {
+                when (ownerNode?.type.takeUnless { enclosingBlock.type in switchTypes }) {
                     in declarationTypes,
                     "method_declaration",
                     "function_declaration",
@@ -532,6 +536,7 @@ class AdapterFormatter {
 
                     in controlFlowTypes -> ownerNode!!.startLine
 
+                    // a switch's own braces close it, so the brace aligns with the switch's line
                     else -> enclosingBlock.startLine
                 }
             } else {
