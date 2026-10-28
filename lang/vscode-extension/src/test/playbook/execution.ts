@@ -1,13 +1,16 @@
 import * as assert from 'node:assert';
+import { execFile } from 'node:child_process';
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
+import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { buildModeStatus } from '../../build-mode-selection';
 import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
 import { discovered } from './liveWorkspace';
-import { client, eventually, noErrors, playbook, type Workspace } from './support';
+import { client, diagnosticCode, eventually, noErrors, playbook, type Workspace } from './support';
 
 /** Records what each embedded build or run terminal shows, keyed by kind and label. */
 class Executions implements vscode.Disposable {
@@ -227,7 +230,7 @@ export function executionInputCases(): void {
 }
 
 /** Runs [action], which starts the shell task called [name], and returns that task process's exit code. */
-async function shellTaskExit(name: string, action: () => Thenable<unknown>): Promise<number | undefined> {
+async function shellTaskExit(name: string, action: () => Thenable<unknown>, timeoutMs?: number): Promise<number | undefined> {
     let ended = false;
     let exitCode: number | undefined;
     const listener = vscode.tasks.onDidEndTaskProcess(event => {
@@ -238,7 +241,7 @@ async function shellTaskExit(name: string, action: () => Thenable<unknown>): Pro
     });
     try {
         await action();
-        await eventually(async () => ended, value => value, `${name} task ends`);
+        await eventually(async () => ended, value => value, `${name} task ends`, timeoutMs);
         return exitCode;
     } finally {
         listener.dispose();
@@ -329,6 +332,64 @@ export function buildModeCases(): void {
             });
         });
     });
+}
+
+/** A real Gradle build starts its own daemon, so its tasks get longer than the usual wait. */
+const GRADLE_WAIT_MS = 120_000;
+
+const exists = (file: string) => fs.access(file).then(() => true, () => false);
+
+/** X303, registered after X302 in catalog order: a project made by xtc init, which Ecstasy: Create Project runs. */
+export function gradleProjectCases(): void {
+    playbook('X303', async (_workspace, data) => {
+        const folder = vscode.workspace.workspaceFolders?.[0];
+        assert.ok(folder, 'The playbook opens a folder');
+        // Gradle mode runs ./gradlew at the folder root, so the project goes there; nothing of it may be there yet,
+        // apart from the build directory, which embedded builds share
+        const root = (file: string) => path.join(folder.uri.fsPath, file);
+        for (const entry of data.rootEntries) assert.ok(!await exists(root(entry)), `X303 needs a folder root without ${entry}`);
+        const xtc = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xtc.bat' : 'xtc');
+        assert.ok(await exists(xtc), `X303 makes its project with ${xtc} init; run ./gradlew xdk:installDist first`);
+        const settings = vscode.workspace.getConfiguration('xtc');
+        const original = settings.inspect<string>('build.mode')?.workspaceValue;
+        const generated = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-init-'));
+        try {
+            await promisify(execFile)(xtc, ['init', data.project, '--type', 'application', '--dir', generated],
+                { shell: process.platform === 'win32' });
+            await fs.cp(path.join(generated, data.project), folder.uri.fsPath, { recursive: true });
+            await fs.chmod(root('gradlew'), 0o755);
+            const version = new RegExp(data.versionPattern, 'm').exec(await fs.readFile(root(data.catalog), 'utf8'))?.[1];
+            assert.ok(version, `An XTC version in ${data.catalog}`);
+            for (const artifact of data.mavenLocal) {
+                const published = path.join(os.homedir(), '.m2', 'repository', artifact, version);
+                assert.ok(await exists(published), `X303 builds with ${artifact} ${version} from mavenLocal; run ./gradlew publishLocal first`);
+            }
+
+            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
+            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+            const build = () => shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build'), GRADLE_WAIT_MS);
+            assert.strictEqual(await build(), 0, 'Gradle build exit code');
+            for (const artifact of data.artifacts) assert.ok(await exists(root(artifact)), `The Gradle build writes ${artifact}`);
+            const module = vscode.Uri.file(root(data.moduleFile));
+            assert.strictEqual(await shellTaskExit(`Run ${data.module}`,
+                () => vscode.commands.executeCommand('xtc.runModule', module.toString(), data.module), GRADLE_WAIT_MS), 0, 'Gradle run exit code');
+
+            // the build compiles the saved module: a type error fails it, and the Build task's problem matcher shows
+            // it in Problems (the file is never opened, so the language server reports nothing for it)
+            assert.deepStrictEqual(vscode.languages.getDiagnostics(module), [], 'No problems before the broken build');
+            await fs.writeFile(module.fsPath, data.broken);
+            assert.notStrictEqual(await build(), 0, 'Broken Gradle build exit code');
+            await eventually(async () => vscode.languages.getDiagnostics(module),
+                values => values.some(item => diagnosticCode(item) === data.brokenCode && item.range.start.line === data.brokenLine),
+                'The build error in Problems');
+        } finally {
+            await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
+            await Promise.all(data.rootEntries.map(entry => fs.rm(root(entry), { recursive: true, force: true })));
+            // only when nothing else, such as embedded build output, is left in them
+            for (const directory of data.sharedDirectories) await fs.rmdir(root(directory)).catch(() => undefined);
+            await fs.rm(generated, { recursive: true, force: true });
+        }
+    }, 360_000);
 }
 
 /** X291 is registered after the on-type cases and X301 after X300, in catalog order. */

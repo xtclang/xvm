@@ -2,6 +2,7 @@ package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Driver
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import kotlin.time.Duration.Companion.seconds
 
@@ -94,6 +95,26 @@ fun Driver.focusRecovery(
             }
         }
         check(editor.text == renamed)
+        workspace.clean(document)
+
+        // An intention menu that closes as soon as it shows has nothing chosen from it: the next round reopens
+        // it while the source is unchanged, and the chosen action applies once.
+        val title = "Generate documentation comment"
+        val choices = utility(NativePopupChoices::class)
+        var opened = 0
+        focusEditor(editor)
+        withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(editor.text.indexOf("pair(Int")) }
+        choosePopup(editor, listOf(title), title) {
+            invokeAction("ShowIntentionActions", now = false, component = editor.component)
+            if (opened++ == 0) {
+                awaitUi("first intention menu opens", 45.seconds) { withContext(OnDispatcher.EDT) { choices.listRows() } != null }
+                dismissPopups()
+            }
+        }
+        awaitUi("the documentation comment is generated", 30.seconds) { "@param number TODO" in editor.text }
+        check(opened >= 2 && editor.text.split("TODO: add description.").size == 2) {
+            "Expected one comment after reopening the closed menu ($opened openings): ${editor.text}"
+        }
         workspace.clean(document)
     }
 }

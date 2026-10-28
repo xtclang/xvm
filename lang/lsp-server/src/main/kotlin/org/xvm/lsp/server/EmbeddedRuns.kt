@@ -51,6 +51,12 @@ data class RunResponse(
     val build: BuildResponse,
 )
 
+/** A Run lens of a document: the module it runs and the zero-based line it is on. */
+data class RunLens(
+    val module: String,
+    val line: Int,
+)
+
 data class StopRunParams(
     val runId: String? = null,
 )

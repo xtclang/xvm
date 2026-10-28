@@ -133,13 +133,7 @@ internal object XdkMissingDeclarations {
                         val method =
                             generateSequence(parents[node]) { parents[it] }.filterIsInstance<MethodDeclarationStatement>().firstOrNull()
                                 ?: return@mapNotNull null
-                        val owner =
-                            parents[parents[method]] as? TypeCompositionStatement
-                                ?: return@mapNotNull null.also {
-                                    System.err.println(
-                                        "DECL owner ${parents[method]} / ${parents[parents[method]]}",
-                                    )
-                                }
+                        val owner = parents[parents[method]] as? TypeCompositionStatement ?: return@mapNotNull null
                         val methodToken = method.nameToken ?: return@mapNotNull null
                         val methodAt = position(methodToken.startPosition)
                         val declared = model.symbolAt(methodAt.line, methodAt.column) ?: return@mapNotNull null

@@ -3,9 +3,11 @@ package org.xtclang.idea.playbook
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 /** Embedded build and run through Build Project, Ecstasy run configurations, Stop, console input and the Run lens. */
@@ -21,14 +23,38 @@ internal fun ParityScenarios.executionCases() {
         fun runTitles(document: ParityWorkspace.Document) =
             with(driver) { withContext(OnDispatcher.EDT) { probe.titles(document.editor.editor) } }.filter { it.startsWith("▶ Run") }
 
+        // IntelliJ also shows a Run icon in the gutter, on the line of the Run lens (the module declaration)
+        val gutter = with(driver) { utility(RunGutterProbe::class) }
+
+        fun runIcons(document: ParityWorkspace.Document) =
+            with(driver) { withContext(OnDispatcher.EDT) { gutter.icons(document.editor.editor) } }
+
         awaitUi("Run lens on a module with run()", 45.seconds) { data.string("runTitle") in runTitles(runnable) }
+        awaitUi("Run icon in the gutter of a module with run()", 45.seconds) {
+            runIcons(runnable) ==
+                listOf("Run ${data.string("module")}@0")
+        }
         check(runTitles(library).isEmpty()) { "No Run lens on a module without run(): ${runTitles(library)}" }
+        check(runIcons(library).isEmpty()) { "No Run icon on a module without run(): ${runIcons(library)}" }
         replace(library, data.string("uncallable"))
         clean(library)
         check(runTitles(library).isEmpty()) { "No Run lens when run() needs two arguments: ${runTitles(library)}" }
+        check(runIcons(library).isEmpty()) { "No Run icon when run() needs two arguments: ${runIcons(library)}" }
         replace(library, data.string("runnableLibrary"))
         clean(library)
         awaitUi("Run lens after adding run()", 45.seconds) { data.string("libraryRunTitle") in runTitles(library) }
+        awaitUi("Run icon after adding run()", 45.seconds) { runIcons(library) == listOf("Run ${data.string("libraryModule")}@0") }
+        // clicking the icon runs the module, as the lens does; a run builds a configured source module
+        val module = data.string("module")
+        configure(listOf(SharedScenarios.SourceModule(module, uri(data.string("file")), emptyList())))
+        clean(runnable)
+        awaitUi("Run icon on the configured module", 45.seconds) { runIcons(runnable) == listOf("Run $module@0") }
+        embedded { execution, project ->
+            execution.expect(project, module)
+            with(driver) { withContext(OnDispatcher.EDT) { gutter.click(runnable.editor.editor, "Run $module") } }
+            awaitUi("run from the gutter icon finishes", 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+            check(execution.exitCode(module) == 0) { "Exit code ${execution.exitCode(module)}: ${execution.output(module)}" }
+        }
     }
 
     case("X281") { data ->
@@ -334,6 +360,58 @@ internal fun ParityScenarios.runEntryCases() {
             ) { "The warning comes before the program's output: $output" }
         }
     }
+
+    case("X303") { data ->
+        // Gradle mode runs ./gradlew in the project root, so the project goes there; nothing of it may be there yet,
+        // apart from the build directory, which embedded builds share
+        val rootEntries = data.strings("rootEntries").map(projectRoot::resolve)
+        rootEntries.forEach { check(!Files.exists(it)) { "X303 needs a project root without ${projectRoot.relativize(it)}" } }
+        val project = with(driver) { singleProject() }
+        val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
+        val generated = Files.createTempDirectory("xtc-new-project")
+        val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, "GRADLE") } }
+        try {
+            val created = JsonParser.parseString(execution.newProject(generated.toString(), data.string("project"))).asJsonObject
+            check(created["success"].asBoolean) { created.string("message") }
+            generated.resolve(data.string("project")).toFile().copyRecursively(projectRoot.toFile())
+            projectRoot.resolve("gradlew").toFile().setExecutable(true)
+            val catalog = Files.readString(projectRoot.resolve(data.string("catalog")))
+            val version = Regex(data.string("versionPattern"), RegexOption.MULTILINE).find(catalog)?.groupValues?.get(1)
+            checkNotNull(version) { "An XTC version in ${data.string("catalog")}" }
+            data.strings("mavenLocal").forEach { artifact ->
+                check(Files.isDirectory(Path.of(System.getProperty("user.home"), ".m2", "repository", artifact, version))) {
+                    "X303 builds with $artifact $version from mavenLocal; run ./gradlew publishLocal first"
+                }
+            }
+            val module = data.string("module")
+            val file = projectRoot.resolve(data.string("moduleFile"))
+
+            fun gradleRun(message: String): String {
+                execution.run(project, module, file.toUri().toString(), data.string("args"))
+                awaitUi(message, 120.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                return execution.output(module)
+            }
+
+            // the Ecstasy Application configuration calls ./gradlew runXtc, which compiles the module (not its tests) first
+            val output = gradleRun("Gradle run finishes")
+            check(execution.exitCode(module) == 0) { "Exit code ${execution.exitCode(module)}: $output" }
+            check(data.string("output") in output) { output }
+            val artifact = data.strings("artifacts").first()
+            check(Files.exists(projectRoot.resolve(artifact))) { "The Gradle run builds $artifact: $output" }
+
+            // a type error in the saved module fails the compile, and the run reports it instead of running
+            Files.writeString(file, data.string("broken"))
+            val failed = gradleRun("Gradle run of the broken module finishes")
+            check(execution.exitCode(module) != 0) { "The broken module must not run: $failed" }
+            check(data.string("brokenCode") in failed && data.string("brokenLocation") in failed) { failed }
+        } finally {
+            with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, previous) } }
+            rootEntries.forEach { it.toFile().deleteRecursively() }
+            // only when nothing else, such as embedded build output, is left in them
+            data.strings("sharedDirectories").forEach { projectRoot.resolve(it).toFile().delete() }
+            generated.toFile().deleteRecursively()
+        }
+    }
 }
 
 /** What the Build tool window shows when the embedded compiler takes Build Project. */
@@ -354,12 +432,28 @@ private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> 
     }
 }
 
+/** The Run icons in an editor's gutter, as "Run Module@line", and a click on one. */
+@Remote("org.xtclang.idea.playbook.probe.RunGutterUi", plugin = "org.xtclang.playbook.probe")
+internal interface RunGutterProbe {
+    fun icons(editor: Editor): List<String>
+
+    fun click(
+        editor: Editor,
+        tooltip: String,
+    )
+}
+
 /** Embedded Build Project and runs, recorded by the IDE-side probe. */
 @Remote("org.xtclang.idea.playbook.probe.EmbeddedExecutionUi", plugin = "org.xtclang.playbook.probe")
 interface EmbeddedExecutionProbe {
     fun mode(
         project: Project,
         value: String,
+    ): String
+
+    fun newProject(
+        parent: String,
+        name: String,
     ): String
 
     fun build(
