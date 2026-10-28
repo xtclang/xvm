@@ -5,6 +5,10 @@ import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.BreakpointEventArgumentsReason
 import org.eclipse.lsp4j.debug.CancelArguments
 import org.eclipse.lsp4j.debug.Capabilities
+import org.eclipse.lsp4j.debug.CompletionItem
+import org.eclipse.lsp4j.debug.CompletionItemType
+import org.eclipse.lsp4j.debug.CompletionsArguments
+import org.eclipse.lsp4j.debug.CompletionsResponse
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.ContinueResponse
@@ -33,6 +37,8 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetExceptionBreakpointsResponse
+import org.eclipse.lsp4j.debug.SetVariableArguments
+import org.eclipse.lsp4j.debug.SetVariableResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.debug.StackTraceArguments
@@ -47,14 +53,18 @@ import org.eclipse.lsp4j.debug.Thread
 import org.eclipse.lsp4j.debug.ThreadEventArguments
 import org.eclipse.lsp4j.debug.ThreadEventArgumentsReason
 import org.eclipse.lsp4j.debug.ThreadsResponse
+import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.Variable
+import org.eclipse.lsp4j.debug.VariablePresentationHint
 import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.debug.VariablesResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.UUID
@@ -161,6 +171,13 @@ class XtcDebugServer(
     @Volatile
     private var evaluationRunsProgram = false
 
+    /**
+     * True to show integers in hexadecimal for a `variables` or `evaluate` request that names no `format`: the session's
+     * own choice, which `xtc/valueFormat` sets, since VS Code never sends a format (UP38).
+     */
+    @Volatile
+    private var hexValues = false
+
     /** The console evaluations in progress, by their request's `seq`, which `cancel` names. */
     private val evaluations = ConcurrentHashMap<Int, Evaluation>()
 
@@ -266,6 +283,10 @@ class XtcDebugServer(
                 supportsExceptionInfoRequest = true
                 supportsExceptionFilterOptions = true
                 supportsCancelRequest = true
+                supportsValueFormattingOptions = true
+                supportsSetVariable = true
+                supportsCompletionsRequest = true
+                completionTriggerCharacters = arrayOf(".")
                 exceptionBreakpointFilters =
                     arrayOf(
                         ExceptionBreakpointsFilter().apply {
@@ -536,20 +557,28 @@ class XtcDebugServer(
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(VariablesResponse().apply { variables = emptyArray() })
         }
-        return runs.variables(runId, args.variablesReference).thenApply { states ->
-            val first = args.start ?: 0
-            val count = args.count?.takeIf { it > 0 } ?: states.size
+        val filter =
+            when (args.filter) {
+                VariablesArgumentsFilter.NAMED -> ChildFilter.NAMED
+                VariablesArgumentsFilter.INDEXED -> ChildFilter.INDEXED
+                else -> ChildFilter.ALL
+            }
+        val hex = args.format?.hex ?: hexValues
+        return runs.variables(runId, args.variablesReference, hex, filter, args.start ?: 0, args.count ?: 0).thenApply { states ->
             VariablesResponse().apply {
                 variables =
                     states
-                        .drop(first)
-                        .take(count)
                         .map { state ->
                             Variable().apply {
                                 name = state.name
                                 value = state.value
                                 type = state.type.ifEmpty { null }
                                 variablesReference = state.variablesReference
+                                // a client that pages, such as VS Code, reads a large array's elements a part at a time
+                                indexedVariables = state.elements.takeIf { it > 0 }
+                                if (state.lazy) {
+                                    presentationHint = VariablePresentationHint().apply { lazy = true }
+                                }
                             }
                         }.toTypedArray()
             }
@@ -595,7 +624,8 @@ class XtcDebugServer(
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
         val frameId = args.frameId
         if (frameId != null && debuggedRunning()) {
-            val read = runs.evaluate(runId, frameId, args.expression)
+            val hex = args.format?.hex ?: hexValues
+            val read = runs.evaluate(runId, frameId, args.expression, hex)
             val value =
                 if (args.context == EvaluateArgumentsContext.REPL) {
                     // a line typed in the console is code, which runs, unless reading it as a path does without
@@ -606,7 +636,7 @@ class XtcDebugServer(
                         .exceptionallyCompose {
                             evaluation.start {
                                 val program = evaluationRunsProgram
-                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program).also { run ->
+                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program, hex).also { run ->
                                     run.whenComplete { _, _ -> ran(program) }
                                 }
                             }
@@ -623,6 +653,7 @@ class XtcDebugServer(
                     result = state.value
                     type = state.type.ifEmpty { null }
                     variablesReference = state.variablesReference
+                    indexedVariables = state.elements.takeIf { it > 0 }
                 }
             }
         }
@@ -638,6 +669,88 @@ class XtcDebugServer(
                 variablesReference = 0
             },
         )
+    }
+
+    /**
+     * DAP: setVariable
+     *
+     * Changes a stopped frame's local, an object's field or an array's element, which `variablesReference` read, to
+     * the value of an expression, such as `5`, `n * 2` or `"text"`, evaluated without running the program's code; what
+     * cannot take the value, as a variable of another type or a field of an immutable object, fails with the reason.
+     * The answer is the variable's new value, which the client shows; the program goes on with it once it resumes.
+     */
+    override fun setVariable(args: SetVariableArguments): CompletableFuture<SetVariableResponse> {
+        if (!debuggedRunning()) return failed("The program is not stopped, so its variables cannot be changed.")
+        val hex = args.format?.hex ?: hexValues
+        return runs.setVariable(runId, args.variablesReference, args.name, args.value, hex).handle { state, failure ->
+            if (failure != null) {
+                val cause = (failure as? CompletionException)?.cause ?: failure
+                throw error(cause.message ?: cause.toString())
+            }
+            SetVariableResponse().apply {
+                value = state.value
+                type = state.type.ifEmpty { null }
+                variablesReference = state.variablesReference
+                indexedVariables = state.elements.takeIf { it > 0 }
+            }
+        }
+    }
+
+    /**
+     * DAP: completions
+     *
+     * Completes the name typed in the debug console where its cursor is, at `column` of `line` of `text`, in the
+     * stopped frame: after a dot, with the members of the value before it, which is evaluated without running the
+     * program's code, otherwise with the frame's variables, `this`, and the members of `this`. The items are the names
+     * that start with what is typed of the name, which they replace: `length` characters before the cursor. Without a
+     * frame, or one of the stopped program's, there are none.
+     */
+    override fun completions(args: CompletionsArguments): CompletableFuture<CompletionsResponse> {
+        val frameId = args.frameId
+        if (frameId == null ||
+            !debuggedRunning()
+        ) {
+            return CompletableFuture.completedFuture(CompletionsResponse().apply { targets = emptyArray() })
+        }
+        val text = args.text
+        val lines = text.split('\n')
+        val line = ((args.line ?: (1 + lineBase)) - lineBase - 1).coerceIn(0, lines.lastIndex)
+        val offset = lines.take(line).sumOf { it.length + 1 } + (args.column - columnBase - 1).coerceIn(0, lines[line].length)
+        return runs.completions(runId, frameId, text, offset).handle { state, failure ->
+            if (failure != null) logger.debug("completions: none, {}", failure.message)
+            // no start: DAP measures it in the client's column base, but adapters send it 0-based and LSP4IJ and VS
+            // Code read it so, although both say columns start at 1 (UP43); with the length alone, both replace the
+            // typed part before the cursor
+            val typed = state?.length?.takeIf { it > 0 }
+            CompletionsResponse().apply {
+                targets =
+                    state
+                        ?.items
+                        .orEmpty()
+                        .map { item ->
+                            CompletionItem().apply {
+                                label = item.label
+                                type = CompletionItemType.valueOf(item.kind.uppercase())
+                                length = typed
+                            }
+                        }.toTypedArray()
+            }
+        }
+    }
+
+    /**
+     * `xtc/valueFormat`, a request of this adapter's own: shows integers in hexadecimal ([ValueFormat.hex]), or in
+     * decimal, for the `variables` and `evaluate` requests that name no `format`, until it is set again. VS Code's
+     * Variables view sets it from the Ecstasy extension's "Show Values as Hexadecimal" item, since VS Code never sends a
+     * format itself (UP38); a client that takes `invalidated` is then told to read the variables again.
+     */
+    @JsonRequest("xtc/valueFormat")
+    fun valueFormat(args: ValueFormat?): CompletableFuture<Void> {
+        hexValues = args?.hex == true
+        if (invalidates && debuggedRunning()) {
+            client?.invalidated(InvalidatedEventArguments().apply { areas = arrayOf(InvalidatedAreas.VARIABLES) })
+        }
+        return CompletableFuture.completedFuture(null)
     }
 
     /**
