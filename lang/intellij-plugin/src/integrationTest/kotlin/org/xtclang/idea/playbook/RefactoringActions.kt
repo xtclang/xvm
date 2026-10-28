@@ -13,6 +13,8 @@ import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 /** Exercise the installed Rename handler and its dialog, including ordered resource operations. */
@@ -267,6 +269,15 @@ fun Driver.rejectRename(
  */
 fun Driver.rejectFormatting(editor: JEditorUiComponent) {
     focusEditor(editor)
+    // TODO LSP4IJ: UP25 — a library source that LSP4IJ opens from workspace/textDocumentContent (#1749) is a
+    // read-only document without a file, whose status IntelliJ can't clear: Reformat Code then refuses without
+    // the dialog, so the unchanged text is what shows the refusal
+    if (!Files.isRegularFile(Path.of(editor.editor.getVirtualFile().getPath()))) {
+        val text = editor.text
+        invokeAction("ReformatCode", now = true, component = editor.component)
+        check(editor.text == text) { "Reformat Code changed a read-only library source" }
+        return
+    }
     invokeAction("ReformatCode", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Clear Read-Only Status")
     awaitUi("reformat is blocked by read-only source", 45.seconds) { dialog.present() }

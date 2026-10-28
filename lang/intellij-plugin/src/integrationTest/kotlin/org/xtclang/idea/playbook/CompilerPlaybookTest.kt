@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.starter.ci.CIServer
 import com.intellij.ide.starter.ci.NoCIServer
+import com.intellij.ide.starter.config.ConfigurationStorage
+import com.intellij.ide.starter.config.monitoringDumpsIntervalSeconds
 import com.intellij.ide.starter.di.di
 import com.intellij.ide.starter.driver.engine.runIdeWithDriver
 import com.intellij.ide.starter.models.IdeInfo
@@ -209,9 +211,13 @@ class CompilerPlaybookTest {
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
         val localLsp4ij = System.getProperty("xtc.playbook.lsp4ijPlugin")?.let { LocalLsp4ijPlugin.read(Path.of(it)) }
+        // the Marketplace channel of lsp4ijVersion, such as nightly; empty for the default channel
+        val lsp4ijChannel = System.getProperty("xtc.playbook.lsp4ijChannel", "")
         val replacementGates = System.getProperty("xtc.playbook.replacementGates", "").split(',').filter(String::isNotEmpty)
         require(replacementGates.all { it in setOf("UP25", "UP26") }) { "Unknown replacement gate: $replacementGates" }
-        require(replacementGates.isEmpty() || localLsp4ij != null) { "Replacement gates require an explicit local LSP4IJ build" }
+        require(replacementGates.isEmpty() || localLsp4ij != null || lsp4ijChannel.isNotEmpty()) {
+            "Replacement gates require an LSP4IJ that isn't the release: a local build or a channel's"
+        }
         val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
         val selection =
@@ -239,6 +245,10 @@ class CompilerPlaybookTest {
                     APPEND,
                 )
             }
+        // macOS 27 kills a JVM whose thread dump reads the mach port of a thread that has just exited (EXC_GUARD,
+        // GUARD_TYPE_MACH_PORT, in VM_PrintThreads): the test IDE crashed in Starter's thread dump of every minute, so
+        // it takes none there
+        if (System.getProperty("os.name").startsWith("Mac")) ConfigurationStorage.monitoringDumpsIntervalSeconds(Int.MAX_VALUE)
         val previousDi = di
         di =
             DI {
@@ -274,7 +284,7 @@ class CompilerPlaybookTest {
             Files.writeString(run.resolve("ide-paths.txt"), context.paths.toString())
             PluginConfigurator(context).apply {
                 if (localLsp4ij == null) {
-                    installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion)
+                    installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion, lsp4ijChannel.ifEmpty { null })
                 } else {
                     installPluginFromDir(Path.of(localLsp4ij.path))
                 }
@@ -338,6 +348,7 @@ class CompilerPlaybookTest {
                 mapOf(
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
+                    "lsp4ijChannel" to lsp4ijChannel,
                     "localLsp4ij" to localLsp4ij,
                     "replacementGates" to replacementGates,
                     // The shared catalog retains shipping-version limitations. Report the
