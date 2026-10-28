@@ -322,7 +322,7 @@ object RunWorker {
             }
         }
 
-        /** Answers, as `variables` does, with the value a path names, or the reason it cannot be evaluated. */
+        /** Answers, as `variables` does, with an expression's value, or the reason it cannot be evaluated. */
         fun evaluate(command: JsonObject) {
             val read =
                 debuggers[command["id"].asLong]?.evaluate(command["frame"].asInt, command["expression"].asString)

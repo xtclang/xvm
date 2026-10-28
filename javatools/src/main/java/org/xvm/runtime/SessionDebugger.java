@@ -40,7 +40,6 @@ import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
-import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService.ServiceHandle;
@@ -93,16 +92,16 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * runs while this debugger holds its lock. Only the waiting fiber's own frames have variables,
  * not those of the fiber that called it, and another service's state is not expanded: a read
  * touches only the waiting service's state and immutable values. A variable's reference to its
- * fields or elements, like a frame's ID, lasts until the program resumes. A path to a value, such
- * as {@code point.x} or {@code ints[1]}, is evaluated the same way, without running any of the
- * program's code.
+ * fields or elements, like a frame's ID, lasts until the program resumes. An expression, such as
+ * {@code point.x + 1} or {@code ints[i] > 0}, is evaluated the same way, without running any of the
+ * program's code: its operators run the runtime's own native operations ({@link PureExpression}).
  *
  * <p>A breakpoint is installed by file and line: it stops every fiber that reaches the first op of
  * that line in any method compiled from that file. A file is the module's source directory and
  * the class's source path, as the compiler records them, compared as real paths. A breakpoint may
- * have a condition, a path to a Boolean that must be True; a hit count, which counts the hits whose
- * condition holds; and a log message, which makes it a logpoint that logs the message, with the
- * values of the paths in braces in it, and does not stop. The fiber that reaches it evaluates
+ * have a condition, an expression whose Boolean value must be True; a hit count, which counts the
+ * hits whose condition holds; and a log message, which makes it a logpoint that logs the message,
+ * with the values of the expressions in braces in it, and does not stop. The fiber that reaches it evaluates
  * them on its own thread, as it would variables; a condition that cannot be evaluated stops the
  * program and says why. Thrown exceptions may stop the program only for some exception classes,
  * those named and the classes that extend them, and the host can read the exception that stopped
@@ -154,12 +153,6 @@ public final class SessionDebugger implements Debugger {
     private static final int MAX_TEXT = 1000;
 
     private static final Integer[] NO_BREAKS = new Integer[0];
-
-    /**
-     * One part of a path: its first name, then a field or an array element.
-     */
-    private static final Pattern PATH_PART = Pattern.compile(
-            "\\G(?:(?<root><exception>|[A-Za-z_][A-Za-z0-9_]*)|\\.(?<field>[A-Za-z_][A-Za-z0-9_]*)|\\[(?<index>\\d{1,9})])");
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -270,7 +263,7 @@ public final class SessionDebugger implements Debugger {
          * A logpoint logged a message. Called on the interpreter thread that reached the logpoint,
          * which runs on once this returns.
          *
-         * @param message  the message, with the values of the paths in it
+         * @param message  the message, with the values of the expressions in it
          */
         default void logged(String message) {
         }
@@ -278,11 +271,11 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * A breakpoint the host requests: its ID, which the host chooses, its 1-based line, and how it
-     * stops, each null when not given: a condition, a path to a Boolean that must be True, such as
-     * {@code done} or {@code point.valid}; a hit count, "N" to stop at the Nth hit, or ">= N", "> N"
-     * or "% N", counting the hits whose condition holds; and a log message, which makes it a
-     * logpoint: it logs the message, with each {@code {path}} in it replaced by that path's value,
-     * and does not stop.
+     * stops, each null when not given: a condition, an expression whose Boolean value must be True,
+     * such as {@code done} or {@code i % 2 == 0}; a hit count, "N" to stop at the Nth hit, or
+     * ">= N", "> N" or "% N", counting the hits whose condition holds; and a log message, which
+     * makes it a logpoint: it logs the message, with each {@code {expression}} in it replaced by
+     * that expression's value, and does not stop.
      */
     public record Line(int id, int line, String condition, String hitCount, String logMessage) {
         public Line(int id, int line) {
@@ -528,23 +521,25 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * Evaluate a path in a stopped frame without running any of the program's code: a variable of
-     * the frame, {@code this}, {@link #EXCEPTION} or a field of {@code this}, then any fields
-     * ({@code .name}) and array elements ({@code [index]}), such as {@code point.x} or
-     * {@code ints[1]}. The innermost variable of a name is the one meant. The waiting fiber that
-     * holds the frame reads the value on its own thread, as {@link #variables} reads variables.
+     * Evaluate an expression in a stopped frame without running any of the program's code: a
+     * variable of the frame, {@code this}, {@link #EXCEPTION} or a field of {@code this}, their
+     * fields ({@code .name}) and array elements ({@code [index]}), literals, and operators on
+     * numbers, strings, characters, Booleans, enum values and {@code Null}, such as
+     * {@code point.x + 1} or {@code ints[i] > 0} ({@link PureExpression}). The innermost variable
+     * of a name is the one meant. The waiting fiber that holds the frame evaluates it on its own
+     * thread, as {@link #variables} reads variables.
      *
-     * @param frameId  the ID of a frame that {@link #stackTrace} returned
-     * @param path     the path to evaluate
+     * @param frameId     the ID of a frame that {@link #stackTrace} returned
+     * @param expression  the expression to evaluate
      *
-     * @return the value, as a variable named by the path, with a reference to its fields or
-     *         elements; fails, with the reason in words, if the text is not a path, the path names
-     *         no value, or the frame is not one of this stop's
+     * @return the value, as a variable named by the expression, with a reference to its fields or
+     *         elements; fails, with the reason in words, if the text is not such an expression, it
+     *         cannot be evaluated, or the frame is not one of this stop's
      */
-    public CompletableFuture<Variable> evaluate(int frameId, String path) {
-        ValuePath parsed;
+    public CompletableFuture<Variable> evaluate(int frameId, String expression) {
+        PureExpression parsed;
         try {
-            parsed = ValuePath.parse(path);
+            parsed = PureExpression.parse(expression);
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -787,7 +782,7 @@ public final class SessionDebugger implements Debugger {
         }
         if (options.condition() != null) {
             try {
-                if (!isTrue(frame, options.condition())) {
+                if (!options.condition().isTrue(frame, frame)) {
                     return Hit.RUN;
                 }
             } catch (IllegalArgumentException e) {
@@ -805,30 +800,17 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return true if the path names a Boolean that is True in the frame
-     *
-     * @throws IllegalArgumentException if the path names no value, or a value that is not a Boolean
-     */
-    private static boolean isTrue(Frame frame, ValuePath path) {
-        ObjectHandle value = shown(valueOf(frame, frame, path));
-        if (value instanceof BooleanHandle bool) {
-            return bool.get();
-        }
-        String what = value == null ? "unassigned" : typeText(value);
-        throw new IllegalArgumentException(path.text() + " is " + what + ", not a Boolean.");
-    }
-
-    /**
-     * @return the log message with the value of each path in it, or why it cannot be evaluated
+     * @return the log message with the value of each expression in it, or why it cannot be
+     *         evaluated
      */
     private static String message(Frame frame, List<LogPart> parts) {
         var message = new StringBuilder();
         for (LogPart part : parts) {
             switch (part) {
                 case Text(String text) -> message.append(text);
-                case Value(ValuePath path) -> {
+                case Value(PureExpression expression) -> {
                     try {
-                        ObjectHandle value = shown(valueOf(frame, frame, path));
+                        ObjectHandle value = shown(expression.evaluate(frame, frame));
                         message.append(value == null ? UNASSIGNED : valueText(value));
                     } catch (IllegalArgumentException e) {
                         message.append('<').append(e.getMessage()).append('>');
@@ -856,7 +838,7 @@ public final class SessionDebugger implements Debugger {
     /**
      * @return the exception's type and its text, if it has one
      */
-    private static String describe(ExceptionHandle exception) {
+    static String describe(ExceptionHandle exception) {
         String       type = exception.getType().getValueString();
         ObjectHandle text = exception.getField(null, "text");
         return text instanceof StringHandle string ? type + ": " + string.getStringValue() : type;
@@ -1057,7 +1039,7 @@ public final class SessionDebugger implements Debugger {
         return (int) fiber.getId();
     }
 
-    private static String functionName(MethodStructure function) {
+    static String functionName(MethodStructure function) {
         String className = switch (function.getContainingClass()) {
             case null                   -> null;
             case ModuleStructure module -> module.getSimpleName();
@@ -1080,7 +1062,7 @@ public final class SessionDebugger implements Debugger {
             vars = switch (target) {
                 case Locals(int _, Frame scope)                  -> locals(current, frame, scope);
                 case Children(int _, ObjectHandle value)         -> children(current, frame, value);
-                case Evaluation(int _, Frame scope, ValuePath p) -> List.of(resolve(current, frame, scope, p));
+                case Evaluation(int _, Frame scope, PureExpression e) -> List.of(resolve(current, frame, scope, e));
             };
         } catch (RuntimeException e) {
             // a value the debugger cannot read fails the read, not the program
@@ -1153,7 +1135,7 @@ public final class SessionDebugger implements Debugger {
      * @return the array's element at the specified index, read through the waiting frame's stack,
      *         or null if it cannot be read
      */
-    private static ObjectHandle element(Frame waitingFrame, ArrayHandle array, long index) {
+    static ObjectHandle element(Frame waitingFrame, ArrayHandle array, long index) {
         // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds), which must not stay
         // on the waiting frame
         var             template = (xArray) array.getTemplate();
@@ -1166,103 +1148,17 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return the value the path names, as a variable named by the path
+     * @return the expression's value, as a variable named by the expression
      */
-    private Variable resolve(Halt current, Frame waitingFrame, Frame frame, ValuePath path) {
-        return variable(current, waitingFrame, path.text(), valueOf(waitingFrame, frame, path));
-    }
-
-    /**
-     * @return the value the path names in the frame, read through the waiting frame's stack, which
-     *         may be a reference
-     */
-    private static ObjectHandle valueOf(Frame waitingFrame, Frame frame, ValuePath path) {
-        ObjectHandle value = root(frame, path.root());
-        for (PathPart part : path.parts()) {
-            ObjectHandle shown = shown(value);
-            if (shown == null) {
-                throw new IllegalArgumentException(path.text() + ": a value on the way is unassigned.");
-            }
-            value = switch (part) {
-                case Field(String name) -> field(waitingFrame, shown, name, path);
-                case Element(int index) -> element(waitingFrame, shown, index, path);
-            };
-        }
-        return value;
+    private Variable resolve(Halt current, Frame waitingFrame, Frame frame, PureExpression expression) {
+        return variable(current, waitingFrame, expression.text(), expression.evaluate(waitingFrame, frame));
     }
 
     /**
      * @return the value a reference refers to, null if it is unassigned, or the value itself
      */
-    private static ObjectHandle shown(ObjectHandle value) {
+    static ObjectHandle shown(ObjectHandle value) {
         return value instanceof RefHandle ref ? ref.getReferent() : value;
-    }
-
-    /**
-     * @return the frame's value of the specified name: {@code this}, the exception it throws, its
-     *         innermost variable of that name, or a field of {@code this}
-     */
-    private static ObjectHandle root(Frame frame, String name) {
-        switch (name) {
-        case "this":
-            if (frame.f_hThis == null) {
-                throw new IllegalArgumentException("This frame has no \"this\".");
-            }
-            return frame.f_hThis;
-
-        case EXCEPTION:
-            if (frame.m_hException == null) {
-                throw new IllegalArgumentException("This frame throws no exception.");
-            }
-            return frame.m_hException;
-        }
-
-        for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
-            VarInfo info = frame.getVarInfo(i);
-            if (info != null && name.equals(info.getName())) {
-                return frame.f_ahVar[i];
-            }
-        }
-        if (frame.f_hThis instanceof GenericHandle self) {
-            FieldInfo field = DebugConsole.getFieldLayout(self.getComposition()).get(name);
-            if (field != null) {
-                return self.getField(field.getIndex());
-            }
-        }
-        throw new IllegalArgumentException("There is no variable \"" + name + "\" in this frame.");
-    }
-
-    /**
-     * @return the object's field of the specified name
-     */
-    private static ObjectHandle field(Frame waitingFrame, ObjectHandle value, String name, ValuePath path) {
-        if (!(value instanceof GenericHandle object) || value instanceof EnumHandle || value.getComposition() == null) {
-            throw new IllegalArgumentException(path.text() + ": " + typeText(value) + " has no fields to read.");
-        }
-        if (value instanceof ServiceHandle service && service.f_context != waitingFrame.f_context) {
-            throw new IllegalArgumentException(path.text() + ": another service's state is read only while it is stopped.");
-        }
-        FieldInfo field = DebugConsole.getFieldLayout(object.getComposition()).get(name);
-        if (field == null) {
-            throw new IllegalArgumentException(path.text() + ": " + typeText(value) + " has no field \"" + name + "\".");
-        }
-        return object.getField(field.getIndex());
-    }
-
-    /**
-     * @return the array's element at the specified index
-     */
-    private static ObjectHandle element(Frame waitingFrame, ObjectHandle value, int index, ValuePath path) {
-        if (!(value instanceof ArrayHandle array)) {
-            throw new IllegalArgumentException(path.text() + ": " + typeText(value) + " is not an array.");
-        }
-        long size = array.m_hDelegate.m_cSize;
-        ObjectHandle element = index < size ? element(waitingFrame, array, index) : null;
-        if (element == null) {
-            String reason = "index " + index + " is out of bounds for size " + size + ".";
-            throw new IllegalArgumentException(path.text() + ": " + reason);
-        }
-        return element;
     }
 
     /**
@@ -1346,9 +1242,15 @@ public final class SessionDebugger implements Debugger {
         return text;
     }
 
-    private static String typeText(ObjectHandle value) {
-        // a deferred value has no composition yet
-        return value.getComposition() == null ? "" : value.getType().getValueString();
+    static String typeText(ObjectHandle value) {
+        // a deferred value has no composition yet; an enum value's own class, such as True, is not
+        // the type the program declares, its enumeration, such as Boolean
+        if (value.getComposition() == null) {
+            return "";
+        }
+        return value instanceof EnumHandle
+                ? value.getTemplate().getClassConstant().getValueString()
+                : value.getType().getValueString();
     }
 
     /**
@@ -1537,7 +1439,7 @@ public final class SessionDebugger implements Debugger {
      * How a breakpoint stops, from what the host gave: its condition, its hit count, and the parts
      * of its log message, each null when not given.
      */
-    private record Options(ValuePath condition, HitCount hitCount, List<LogPart> log) {
+    private record Options(PureExpression condition, HitCount hitCount, List<LogPart> log) {
         /**
          * @return the options of the requested breakpoint, if it has any
          *
@@ -1551,15 +1453,15 @@ public final class SessionDebugger implements Debugger {
             if (condition == null && hitCount == null && log == null) {
                 return Optional.empty();
             }
-            ValuePath path = null;
+            PureExpression parsed = null;
             if (condition != null) {
                 try {
-                    path = ValuePath.parse(condition);
+                    parsed = PureExpression.parse(condition);
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("The condition " + e.getMessage(), e);
                 }
             }
-            return Optional.of(new Options(path, hitCount == null ? null : HitCount.parse(hitCount),
+            return Optional.of(new Options(parsed, hitCount == null ? null : HitCount.parse(hitCount),
                     log == null ? null : LogPart.parse(log)));
         }
 
@@ -1600,14 +1502,14 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A part of a log message: text, or a path whose value replaces it.
+     * A part of a log message: text, or an expression whose value replaces it.
      */
     private sealed interface LogPart {
         /**
-         * @return the parts of the log message: each {@code {path}} is a path, and the rest is
-         *         text, as is a brace without its pair
+         * @return the parts of the log message: each {@code {expression}} is an expression, and
+         *         the rest is text, as is a brace without its pair
          *
-         * @throws IllegalArgumentException if a part in braces is not a path
+         * @throws IllegalArgumentException if a part in braces is not an expression
          */
         static List<LogPart> parse(String message) {
             var parts = new ArrayList<LogPart>();
@@ -1623,7 +1525,7 @@ public final class SessionDebugger implements Debugger {
                     parts.add(new Text(message.substring(at, open)));
                 }
                 try {
-                    parts.add(new Value(ValuePath.parse(message.substring(open + 1, close))));
+                    parts.add(new Value(PureExpression.parse(message.substring(open + 1, close))));
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("In the log message, " + e.getMessage(), e);
                 }
@@ -1636,7 +1538,7 @@ public final class SessionDebugger implements Debugger {
     private record Text(String text) implements LogPart {
     }
 
-    private record Value(ValuePath path) implements LogPart {
+    private record Value(PureExpression expression) implements LogPart {
     }
 
     /**
@@ -1714,57 +1616,9 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * A path to evaluate in a frame.
+     * An expression to evaluate in a frame.
      */
-    private record Evaluation(int thread, Frame frame, ValuePath path) implements Target {
-    }
-
-    /**
-     * A path to a value, as the host wrote it: its first name, then its fields and elements.
-     */
-    private record ValuePath(String text, String root, List<PathPart> parts) {
-        /**
-         * @return the path the text writes, which may be surrounded by spaces
-         *
-         * @throws IllegalArgumentException if the text is not a path
-         */
-        static ValuePath parse(String text) {
-            String  trimmed = text.strip();
-            Matcher matcher = PATH_PART.matcher(trimmed);
-            if (!matcher.lookingAt() || matcher.group("root") == null) {
-                throw notAPath(trimmed);
-            }
-
-            String root  = matcher.group("root");
-            var    parts = new ArrayList<PathPart>();
-            while (matcher.end() < trimmed.length()) {
-                // each part after the first is a field or an element; a name there is not a path
-                if (!matcher.find(matcher.end()) || matcher.group("root") != null) {
-                    throw notAPath(trimmed);
-                }
-                parts.add(matcher.group("field") != null
-                        ? new Field(matcher.group("field"))
-                        : new Element(Integer.parseInt(matcher.group("index"))));
-            }
-            return new ValuePath(trimmed, root, List.copyOf(parts));
-        }
-
-        private static IllegalArgumentException notAPath(String text) {
-            return new IllegalArgumentException("\"" + text + "\" is not evaluated: only variables, their fields"
-                    + " and array elements are, such as point.x or ints[1].");
-        }
-    }
-
-    /**
-     * A field or an array element of a path.
-     */
-    private sealed interface PathPart {
-    }
-
-    private record Field(String name) implements PathPart {
-    }
-
-    private record Element(int index) implements PathPart {
+    private record Evaluation(int thread, Frame frame, PureExpression expression) implements Target {
     }
 
     /**
