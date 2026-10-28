@@ -4654,7 +4654,7 @@
     "X139": {
       "title": "native save formatting and server save edits have a single owner",
       "manual": [
-        "LSP4IJ has no server save hook; its case verifies native Actions on Save instead."
+        "With native format-on-save off and server save formatting selected, save an unindented source: the server's save edits indent it before it is written."
       ],
       "values": {
         "file": "ServiceSave.x",

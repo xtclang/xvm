@@ -22,6 +22,7 @@ class LanguageServiceConfigurationTest {
         assertThat(after.requiresRestart(before)).isTrue()
         assertThat(after.requiresRestart(after)).isFalse()
         assertThat(after.copy(inlayHints = true).requiresRestart(after)).isFalse()
+        assertThat(after.copy(saveFormatting = "server").requiresRestart(after)).isTrue()
         assertThat(LanguageAdapter.TREE_SITTER.launchArguments()).containsExactly("-Dxtc.lsp.adapter=treesitter")
         assertThat(LanguageAdapter.COMPILER.launchArguments()).containsExactly("-Dxtc.lsp.adapter=compiler")
         assertThat(LanguageAdapter.DEFAULT.launchArguments()).isEmpty()
