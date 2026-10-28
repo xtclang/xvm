@@ -14,6 +14,10 @@ import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises rename proofs spanning explicit external roots and unsaved consumers. Missing or changed captured
+ * inputs must invalidate proof instead of silently narrowing the claimed rename scope.
+ */
 class XdkExternalRenameTest {
     @TempDir lateinit var directory: Path
 

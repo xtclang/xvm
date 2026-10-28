@@ -19,6 +19,11 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import java.util.concurrent.Executors
 
+/**
+ * Checks facts recorded at actual compiler call selection, including generic inference and named arguments.
+ * Dynamic function values retain signatures without invented method targets, and invalid argument fitting
+ * cannot publish a selected call.
+ */
 class CompilerCallSiteTest {
     @Test
     fun `function valued calls expose typed signatures without inventing method targets`() {

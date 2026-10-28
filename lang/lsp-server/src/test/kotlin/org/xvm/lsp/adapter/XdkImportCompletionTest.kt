@@ -7,6 +7,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 
+/**
+ * Checks atomic completion/import edits against actual dependency visibility. Whole-token replacement must
+ * compile without inventing dependencies, conflating same-named types or hiding unrelated errors.
+ */
 class XdkImportCompletionTest {
     @TempDir lateinit var directory: Path
 

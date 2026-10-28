@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Runs rename against real manual-test mixin compositions. Protects covariant and conditional contract
+ * families from touching unrelated compositions or accepting colliding defaults.
+ */
 class XdkManualCompositionRenameTest {
     @TempDir lateinit var directory: Path
 

@@ -9,6 +9,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises signature and argument queries for function-valued parameters, properties and narrowed locals.
+ * Uses the current callable type without inventing a method declaration target.
+ */
 class XdkIncompleteFunctionTest {
     @ParameterizedTest
     @ValueSource(strings = ["fn(", "fn(1", "fn(1, "])

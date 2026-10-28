@@ -12,6 +12,7 @@ import com.intellij.util.xmlb.annotations.OptionTag
 @Service(Service.Level.APP)
 @State(name = "EcstasyServerRuntime", storages = [Storage(value = "ecstasy-server-runtime.xml", roamingType = RoamingType.DISABLED)])
 internal class ServerRuntimeSettings : SerializablePersistentStateComponent<ServerRuntimeSettings.Options>(Options()) {
+    /** Persisted JVM and log-retention settings used when launching the language server. */
     data class Options(
         // Explicit bindings preserve immutable fields in IntelliJ's XML serializer.
         @field:OptionTag @JvmField val vmOptions: String = "",

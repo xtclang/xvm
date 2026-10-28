@@ -15,6 +15,10 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 
+/**
+ * Checks generated helper methods, signatures and captured inputs through trial compilation. Preserves
+ * contextual types, overload selection, receiver ownership and exact source trivia.
+ */
 class XdkMethodExtractionTest {
     @TempDir lateinit var directory: Path
 

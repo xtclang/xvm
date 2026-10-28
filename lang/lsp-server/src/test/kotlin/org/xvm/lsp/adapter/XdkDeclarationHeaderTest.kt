@@ -14,6 +14,10 @@ import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Exercises malformed declaration headers while retaining their written names, ranges and following
+ * declarations. Recovery must not register incomplete method or property components as valid declarations.
+ */
 class XdkDeclarationHeaderTest {
     @TempDir lateinit var directory: Path
 

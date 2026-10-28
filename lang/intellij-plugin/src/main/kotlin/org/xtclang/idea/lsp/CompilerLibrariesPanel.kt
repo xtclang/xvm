@@ -14,6 +14,10 @@ import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.table.DefaultTableModel
 
+/**
+ * Edits ordered binary module paths and their attached source roots. Keeps the inherit-from-Gradle choice
+ * distinct from an explicitly configured library list.
+ */
 internal class CompilerLibrariesPanel(
     private val project: Project,
 ) : JPanel(BorderLayout(0, 8)) {

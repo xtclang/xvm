@@ -20,12 +20,14 @@ internal class ServerWorkspaceEdit
         private val label: String,
         private val targets: List<Target>,
     ) {
+        /** Text replacement expressed in offsets of the validated document snapshot. */
         private data class Replacement(
             val start: Int,
             val end: Int,
             val text: String,
         )
 
+        /** Document, file and synchronization snapshot checked again before applying the server edit. */
         private data class Target(
             val uri: String,
             val version: Int?,

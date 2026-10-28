@@ -9,6 +9,10 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Exercises the import state machine independently of Gradle timing. Cancellation, failed builds and
+ * superseded completions must preserve the last accepted compiler model.
+ */
 class CompilerImportTest {
     private val disk = AtomicReference<String?>("original")
     private val imports = CompilerImport(disk::get) { require(it != "invalid") { "Invalid model" } }

@@ -126,6 +126,7 @@ fun Driver.startupEditing(
     println("IntelliJ startup editing receipt: $report")
 }
 
+/** Drives edits while the IDE language service is still starting. */
 @Remote("org.xtclang.idea.playbook.probe.StartupEdits", plugin = "org.xtclang.playbook.probe")
 interface StartupEdits {
     fun openAndEdit(

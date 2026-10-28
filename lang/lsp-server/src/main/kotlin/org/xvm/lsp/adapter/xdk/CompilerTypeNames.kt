@@ -20,6 +20,7 @@ internal data class CompilerTypeName(
     val imported: Boolean,
 )
 
+/** Written type reference and its proven identity, import route and qualified source path. */
 internal data class TypeName(
     val location: SemanticModel.SourceLocation,
     val terminal: SemanticModel.Range,
@@ -29,6 +30,7 @@ internal data class TypeName(
     val imported: Boolean,
 )
 
+/** Proven declaration identity and its module-relative path for type moves. */
 internal data class TypePath(
     val target: ProofIdentity,
     val module: String,
@@ -59,9 +61,7 @@ internal fun compilerTypeNames(nodes: List<AstNode>): List<CompilerTypeName> {
             if (target !is ClassConstant && target !is TypedefConstant) return@mapNotNull null
             val tokens =
                 when (node) {
-                    is NamedTypeExpression -> {
-                        node.nameBindings.map { it.name() }
-                    }
+                    is NamedTypeExpression -> node.nameBindings.map { it.name() }
 
                     is NameExpression -> {
                         val chain = generateSequence(node) { it.leftExpression as? NameExpression }.toList().asReversed()
@@ -85,9 +85,7 @@ internal fun compilerTypeNames(nodes: List<AstNode>): List<CompilerTypeName> {
                         written
                     }
 
-                    else -> {
-                        return@mapNotNull null
-                    }
+                    else -> return@mapNotNull null
                 }
             if (tokens.isEmpty()) return@mapNotNull null
 

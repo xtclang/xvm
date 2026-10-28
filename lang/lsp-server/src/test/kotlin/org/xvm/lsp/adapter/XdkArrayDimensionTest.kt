@@ -12,6 +12,11 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.NewExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks array-size completion against the fixed-size constructor's actual size slot. Copy, capacity and
+ * mutability overloads must not appear as dimension candidates, and unsupported dimensions must retain honest
+ * lexical behavior.
+ */
 class XdkArrayDimensionTest {
     @ParameterizedTest
     @ValueSource(
