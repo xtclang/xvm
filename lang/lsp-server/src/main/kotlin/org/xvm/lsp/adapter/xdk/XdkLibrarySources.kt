@@ -10,6 +10,7 @@ import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SymbolMoniker
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Properties
@@ -48,7 +49,13 @@ internal object XdkLibrarySources {
             }
         }
     }
-    private val directory by lazy { Files.createTempDirectory("xtc-library-sources-") }
+
+    /** The folder of the read-only copies, which the JVM deletes when it exits. */
+    private val directory by lazy {
+        Files.createTempDirectory("xtc-library-sources-").also {
+            Runtime.getRuntime().addShutdownHook(Thread({ deleteCopies(it) }, "xtc-library-sources-cleanup"))
+        }
+    }
     private val sources = ConcurrentHashMap<String, SourceFile>()
 
     /** Attached source text and the revision used to detect a changed source file. */
@@ -122,6 +129,16 @@ internal object XdkLibrarySources {
     }
 
     fun sourceUri(name: String?): String? = name?.takeIf(::owns)
+
+    /**
+     * Deletes [directory] and the read-only copies in it, each made writable first, which Windows needs to delete
+     * it. Returns whether it is gone.
+     */
+    internal fun deleteCopies(directory: Path): Boolean =
+        directory
+            .toFile()
+            .walkBottomUp()
+            .fold(true) { deleted, file -> file.setWritable(true) && file.delete() && deleted }
 
     /** Use the actual artifact identity, never a name search across library modules. */
     fun declaration(identity: IdentityConstant): DependencyDeclaration? {
