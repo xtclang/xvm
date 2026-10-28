@@ -58,6 +58,7 @@ class RefreshRequests private constructor(
             "inlayHint" to "inlayHint",
             "codeLens" to "codeLens",
             "foldingRange" to "foldingRange",
+            "inlineValue" to "inlineValue",
         ).mapNotNull { (capability, method) ->
             "workspace/$method/refresh".takeIf {
                 workspace.getAsJsonObject(capability)?.get("refreshSupport")?.asBoolean == true
