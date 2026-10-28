@@ -183,7 +183,7 @@ class XtcClientFeatures : LSPClientFeatures() {
                 val wrapped = super.wrapMessageConsumer(consumer)
                 return if (consumer is RemoteEndpoint) {
                     documents.incoming(
-                        diagnostics.incoming(CodeActionMessages.incoming(wrapped)),
+                        diagnostics.incoming(wrapped),
                     )
                 } else {
                     documents.outgoing(diagnostics.outgoing(wrapped))

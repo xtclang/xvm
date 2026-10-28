@@ -10,6 +10,9 @@ import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
 import org.eclipse.lsp4j.CodeAction
+import org.eclipse.lsp4j.CodeActionOptions
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -67,7 +70,8 @@ import java.util.concurrent.Future
  * and records the methods it is asked for. With [completionDocumentation] it resolves completion items, and gives an
  * item its documentation only then, as the real server does. With [diagnostics] it has a diagnostic provider with a
  * workspace report, as the real server does: a document's pull reports its [pulled] diagnostics, and the workspace
- * report has the [reported] ones. The client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's
+ * report has the [reported] ones. With [codeActions] it has a code action provider that resolves actions, as the real
+ * server does, and offers none of its own: a test gives LSP4IJ the action that it resolves. The client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's
  * own. Each connection runs [connecting] as it starts, on LSP4IJ's thread, where a test can hold it. [LightEditor]
  * connects it as the Ecstasy server, with the plugin's own client features, so LSP4IJ's code runs as it does against
  * the real server.
@@ -78,6 +82,7 @@ class StubLanguageServer(
     val completionDocumentation: Map<String, String> = emptyMap(),
     val signature: SignatureHelp? = null,
     val diagnostics: Boolean = false,
+    val codeActions: Boolean = false,
     val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
     val connecting: () -> Unit = {},
 ) : LanguageServer,
@@ -132,6 +137,9 @@ class StubLanguageServer(
                     signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
                     if (diagnostics) {
                         diagnosticProvider = DiagnosticRegistrationOptions(true, true).apply { identifier = "stub" }
+                    }
+                    if (codeActions) {
+                        setCodeActionProvider(CodeActionOptions().apply { resolveProvider = true })
                     }
                 },
             ),
@@ -218,6 +226,11 @@ class StubLanguageServer(
     override fun didChangeConfiguration(params: DidChangeConfigurationParams) = Unit
 
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) = Unit
+
+    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> {
+        requests += "textDocument/codeAction"
+        return CompletableFuture.completedFuture(emptyList())
+    }
 
     override fun resolveCodeAction(unresolved: CodeAction): CompletableFuture<CodeAction> {
         requests += "codeAction/resolve"
