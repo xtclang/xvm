@@ -115,6 +115,8 @@ class XtcLanguageServer(
     private val onExit: (Int) -> Unit = {},
     /** Shown to the user once the handshake completes, e.g. that the requested adapter could not start. */
     private val startupWarning: String? = null,
+    /** Runs each background workspace walk; tests use it to hold one open. */
+    private val rescans: (rescan: () -> Unit) -> Unit = { it() },
 ) : LanguageServer,
     LanguageClientAware,
     AutoCloseable {
@@ -129,7 +131,11 @@ class XtcLanguageServer(
     private val embeddedRuns = EmbeddedRuns(adapter, { client })
 
     /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
-    private val discoveryRefresh = CoalescingTask("xtc-discovery", ::rediscover)
+    private val discoveryRefresh = CoalescingTask("xtc-discovery") { rescans(::rediscover) }
+
+    /** The walk that discovers the workspace folders added last; workspace-wide requests start after it. */
+    @Volatile
+    private var folderDiscovery: CompletableFuture<Void> = CompletableFuture.completedFuture(null)
 
     override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
 
@@ -1394,12 +1400,37 @@ class XtcLanguageServer(
             }
         }
         compiler.updateWorkspaceFolders(added, removed)
-        discoveryRefresh.request()
+        folderDiscovery = discoveryRefresh.request()
     }
 
-    /** Rediscovers source modules after membership changes; returns at once, the rescan runs off-thread. */
-    fun refreshCompilerDiscovery() {
-        if (adapter is XdkAdapter) discoveryRefresh.request()
+    /**
+     * Completes once the walk for the workspace folders added last has finished. Workspace-wide requests wait for it,
+     * so they see those folders; a folder can be large, so it is walked off the reader thread.
+     */
+    internal fun folderDiscovery(): CompletableFuture<Void> = folderDiscovery
+
+    /**
+     * Applies file events that can change module membership before the next message is read, reading only the
+     * files and folders they name, so a request sent after them sees them. A walk of the whole workspace then
+     * follows in the background, for anything the watcher missed; it changes the graph only if it finds a
+     * difference, and nothing waits for it.
+     */
+    fun refreshCompilerDiscovery(uris: Collection<String>) {
+        val compiler = adapter as? XdkAdapter ?: return
+        try {
+            var applied: Set<String>? = emptySet()
+            textDocumentService.refreshDependencies { compiler.applyFileEvents(uris).also { applied = it }.orEmpty() }
+            if (applied != null) {
+                updateResourceWatchers()
+            } else {
+                logger.info("Source discovery changed while applying {} file events; the workspace walk applies them", uris.size)
+            }
+        } catch (failure: IllegalArgumentException) {
+            reportCompilerConfigError(failure)
+        } catch (failure: IOException) {
+            logger.warn("Source discovery failed; keeping previous graph: {}", failure.message)
+        }
+        discoveryRefresh.request()
     }
 
     /** Completes once every requested rediscovery has finished, for tests that need the new graph. */

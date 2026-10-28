@@ -97,8 +97,9 @@ class XtcWorkspaceService(
         if (changes.isEmpty()) return
         // Resource content changes cannot add/remove source modules. Membership events still
         // rediscover, including directory events that can contain several source files.
-        if (changes.any { it.type != FileChangeType.Changed || it.uri.endsWith(".x") }) {
-            server.refreshCompilerDiscovery()
+        val membership = changes.filter { it.type != FileChangeType.Changed || it.uri.endsWith(".x") }
+        if (membership.isNotEmpty()) {
+            server.refreshCompilerDiscovery(membership.map { it.uri })
         }
         changes
             .distinctBy { it.uri to it.type }

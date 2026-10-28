@@ -228,13 +228,7 @@ class XdkAdapter
                     // a superseded walk stops by aborting tokenization; the caller scans again
                     if (superseded()) return DiscoveryScan { null } else throw failure
                 }
-            return DiscoveryScan {
-                val current =
-                    synchronized(lifecycle) {
-                        !closed && project === previous && overlays == buffers && discovery.get() === settings
-                    }
-                if (current) installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers } else null
-            }
+            return DiscoveryScan { installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers } }
         }
 
         /**
@@ -270,32 +264,65 @@ class XdkAdapter
                 settings.catalog.withSource(file, content) { closed || discovery.get() !== settings }
             return installDiscoveredCatalog(catalog, settings, previous) {
                 if (closing) uri !in overlays else overlays[uri] == content
-            }
+            }.orEmpty()
         }
 
+        /**
+         * Applies file events to the discovered sources, reading only the files and folders they name, and returns
+         * the retired scopes. The server calls this before reading its next message, so a request sent after the
+         * events sees them and no later walk retires it; [scanDiscoveredSources] then only catches events the watcher
+         * missed. Null when concurrent discovery changes, such as a background walk installing, kept the update from
+         * being installed each time it was tried.
+         */
+        fun applyFileEvents(uris: Collection<String>): Set<String>? {
+            val paths = uris.mapNotNull(XdkSources::file).distinct()
+            repeat(MAX_EVENT_ATTEMPTS) {
+                val settings = discovery.get()
+                if (settings.explicit || paths.isEmpty()) return emptySet()
+                val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
+                val superseded = { closed || discovery.get() !== settings }
+                val catalog =
+                    try {
+                        settings.catalog.withEvents(settings.folders, paths, buffers, superseded)
+                    } catch (failure: RuntimeException) {
+                        // a superseded read stops by aborting tokenization; read again from the newer catalog
+                        if (superseded()) null else throw failure
+                    }
+                catalog?.let { installDiscoveredCatalog(it, settings, previous) { overlays == buffers } }?.let { return it }
+            }
+            return null
+        }
+
+        /** Null when an edit, a closed adapter or a newer graph or catalog kept [catalog] from being installed. */
         private fun installDiscoveredCatalog(
             catalog: XdkWorkspaceDiscovery.Catalog,
             settings: Discovery,
             previous: XdkProject,
             current: () -> Boolean,
-        ): Set<String> {
+        ): Set<String>? {
+            if (synchronized(lifecycle) { closed }) return null
             val candidate = runCatching { XdkProject(catalog.modules(previous.modules.values)) }
             val failure = candidate.exceptionOrNull()
             if (failure != null && failure !is IllegalArgumentException) throw failure
             val problem = failure?.message
-            return installSourceModules(
-                (candidate.getOrNull() ?: previous).modules.values.toList(),
-                explicit = false,
-                force = settings.problem != problem,
-            ) {
-                !closed &&
-                    project === previous &&
-                    current() &&
-                    discovery.compareAndSet(
-                        settings,
-                        settings.copy(catalog = catalog, problem = problem),
-                    )
-            }
+            var installed = false
+            val retired =
+                installSourceModules(
+                    (candidate.getOrNull() ?: previous).modules.values.toList(),
+                    explicit = false,
+                    force = settings.problem != problem,
+                ) {
+                    (
+                        !closed &&
+                            project === previous &&
+                            current() &&
+                            discovery.compareAndSet(
+                                settings,
+                                settings.copy(catalog = catalog, problem = problem),
+                            )
+                    ).also { installed = it }
+                }
+            return retired.takeIf { installed }
         }
 
         fun changeWorkspaceFolders(
@@ -583,23 +610,57 @@ class XdkAdapter
                 val changed =
                     inputScopes(uri).filter { scope ->
                         val module = project.modules.values.firstOrNull { it.uri == scope }
-                        val inputs = sourceInputs(scope)
                         val root = module?.root ?: XdkSources.file(scope)
-                        file == null ||
-                            root == null ||
-                            inputs == null ||
-                            requests[scope]?.result?.isDone == false ||
-                            // A failed current analysis still owns its captured source inputs.
-                            // Only fallback builds can predate a failure (e.g. a missing dependency);
-                            // matching that old build must not suppress recovery after recreation.
-                            (
-                                completed[scope]?.sourceInputs == null &&
-                                    project.affected(scope).any { completed[it]?.succeeded == false }
-                            ) ||
-                            !XdkFileChanges.unchanged(file, root, inputs, openSources)
+                        val running = requests[scope]?.takeUnless { it.result.isDone }
+                        when {
+                            file == null || root == null -> true
+
+                            // judged against what the running analysis reads, which no finished one has yet
+                            running != null -> !readsUnchanged(running, file, root, openSources)
+
+                            else -> {
+                                val inputs = sourceInputs(scope)
+                                inputs == null ||
+                                    // A failed current analysis still owns its captured source inputs.
+                                    // Only fallback builds can predate a failure (e.g. a missing dependency);
+                                    // matching that old build must not suppress recovery after recreation.
+                                    (
+                                        completed[scope]?.sourceInputs == null &&
+                                            project.affected(scope).any { completed[it]?.succeeded == false }
+                                    ) ||
+                                    !XdkFileChanges.unchanged(file, root, inputs, openSources)
+                            }
+                        }
                     }
                 project.orderedScopes(changed.flatMapTo(linkedSetOf(), project::affected))
             }
+
+        /**
+         * Whether a file event at [file] leaves the sources of [request], a running analysis, as it reads them.
+         * The watcher reports a change after making it, so an analysis that has not read its sources yet will
+         * read the changed files; the watcher's report of a folder the editor just created then cancels nothing.
+         */
+        private fun readsUnchanged(
+            request: Request,
+            file: File,
+            root: File,
+            overlays: Map<File, String>,
+        ): Boolean =
+            when (val read = request.sources) {
+                SourceRead.Pending -> true
+                SourceRead.Reading -> false
+                is SourceRead.Read -> read.inputs != null && XdkFileChanges.unchanged(file, root, read.inputs, overlays)
+            }
+
+        /** Records on [request] what [capture] read, so a file event during the analysis is judged against it. */
+        private fun <T> reading(
+            request: Request,
+            inputs: (T) -> XdkSources.Inputs?,
+            capture: () -> T,
+        ): T {
+            request.sources = SourceRead.Reading
+            return capture().also { request.sources = SourceRead.Read(inputs(it)) }
+        }
 
         private fun sourceInputs(scope: String): XdkSources.Inputs? =
             completed[scope]?.sourceInputs
@@ -1045,6 +1106,24 @@ class XdkAdapter
 
             /** The queued work of an editor compile. */
             val task: CompilerQueueTrace.Work get() = checkNotNull(queued) { "A build compile is never queued on its own" }
+
+            /** How far this analysis has got in reading its sources; see [readsUnchanged]. */
+            @Volatile
+            var sources: SourceRead = SourceRead.Pending
+        }
+
+        /** How far an analysis has got in reading its sources from disk and the editor's buffers. */
+        private sealed interface SourceRead {
+            /** Not read yet: it reads the files as they are after every file event received so far. */
+            data object Pending : SourceRead
+
+            /** Being read: a file may have been read before or after a change to it. */
+            data object Reading : SourceRead
+
+            /** Read; null when the analysis compiles only an open buffer. */
+            data class Read(
+                val inputs: XdkSources.Inputs?,
+            ) : SourceRead
         }
 
         /** New compilation request together with the superseded work that must be retired. */
@@ -1380,7 +1459,7 @@ class XdkAdapter
                 return compileOne(
                     request,
                     request.uri,
-                    captureSources(request) { isStale(request) },
+                    reading(request, { it?.inputs }) { captureSources(request) { isStale(request) } },
                     request.dependencies,
                 )
             }
@@ -1420,15 +1499,26 @@ class XdkAdapter
             each: (module: XdkSourceModule, analysis: ModuleAnalysis, reused: Boolean, sources: XdkSources?) -> Unit,
         ): ModuleAnalysis {
             val captured =
-                order.associateWith { module ->
-                    try {
-                        Result.success(
-                            XdkSources.capture(module.root, request.overlays, module.resourceFiles) {
-                                isStale(request)
-                            },
-                        )
-                    } catch (failure: IOException) {
-                        Result.failure(failure)
+                reading(
+                    request,
+                    { reads ->
+                        reads.entries
+                            .firstOrNull { it.key.uri == request.scope }
+                            ?.value
+                            ?.getOrNull()
+                            ?.inputs
+                    },
+                ) {
+                    order.associateWith { module ->
+                        try {
+                            Result.success(
+                                XdkSources.capture(module.root, request.overlays, module.resourceFiles) {
+                                    isStale(request)
+                                },
+                            )
+                        } catch (failure: IOException) {
+                            Result.failure(failure)
+                        }
                     }
                 }
             // A source-owned module must never fall back to an older host-supplied binary.
@@ -2647,6 +2737,9 @@ class XdkAdapter
             /** Enough to keep parsing past ordinary mistakes; structural views do not report them. */
             const val MAX_STRUCTURE_ERRORS = 100
             const val DEBOUNCE_MILLIS = 100L
+
+            /** A file event's update is read again when a background walk installs first; it rarely needs a second try. */
+            const val MAX_EVENT_ATTEMPTS = 3
 
             /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
             fun cursorPosition(
