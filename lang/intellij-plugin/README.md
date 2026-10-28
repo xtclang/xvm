@@ -182,7 +182,7 @@ adopted. Publishing requires both checks.
 ```
 
 This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
-Ultimate features and automatic trials are disabled. The 299-case catalog is shared with VS Code;
+Ultimate features and automatic trials are disabled. The 304-case catalog is shared with VS Code;
 see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](testing.md).
 
 The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
@@ -228,6 +228,9 @@ LSP4IJ stores these server settings at IDE scope. Relative paths resolve against
 single workspace folder; use absolute file URIs when needed. Applying settings notifies the
 running server. Setting `sourceModules` to `[]` clears the graph; omitting it preserves the
 current graph. This uses LSP4IJ's existing JSON editor, not a dedicated XTC project-settings UI.
+In **Languages & Frameworks > Ecstasy Compiler**, **Add consumers from folders** adds the modules under
+the chosen folders that import the running graph as table rows (an empty table first takes the effective
+modules); they apply with **Apply**. Rename covers only modules in the graph.
 `XtcLanguageClient` delegates section lookup and configuration notifications to LSP4IJ; only
 `xtc.formatting` reads Ecstasy Code Style settings.
 
