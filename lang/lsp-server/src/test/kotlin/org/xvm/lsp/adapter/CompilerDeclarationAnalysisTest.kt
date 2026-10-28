@@ -10,6 +10,11 @@ import org.xvm.compiler.Source
 import org.xvm.tool.ModuleInfo
 import java.nio.file.Path
 
+/**
+ * Exercises declaration-only embedding independently of full compilation. Verifies cancellation and source
+ * identity, and prevents syntax/declaration failures from exposing a supposedly queryable graph or executable
+ * result.
+ */
 class CompilerDeclarationAnalysisTest {
     @TempDir lateinit var directory: Path
 

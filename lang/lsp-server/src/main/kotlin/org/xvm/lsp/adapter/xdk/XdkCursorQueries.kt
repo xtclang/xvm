@@ -25,9 +25,7 @@ internal object XdkCursorQueries {
                         )
                     }
 
-                    else -> {
-                        return model.syntaxCompletions
-                    }
+                    else -> return model.syntaxCompletions
                 }
         val range =
             Range(
@@ -283,6 +281,7 @@ internal object XdkCursorQueries {
         )
     }
 
+    /** Call-site signature, argument mapping and documentation detached for signature-help responses. */
     private data class SignatureSite(
         val range: SemanticModel.Range,
         val callee: SemanticModel.Range,

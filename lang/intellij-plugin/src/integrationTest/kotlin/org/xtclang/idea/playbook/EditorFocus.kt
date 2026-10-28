@@ -18,6 +18,7 @@ fun Driver.dismissPopups() {
     }
 }
 
+/** Locates IntelliJ's popup manager so cleanup can dismiss native popups deterministically. */
 @Remote("com.intellij.ide.IdeEventQueue")
 interface NativeEventQueue {
     fun getInstance(): NativeEventQueue
@@ -25,6 +26,7 @@ interface NativeEventQueue {
     fun getPopupManager(): NativePopupManager
 }
 
+/** Dismisses native popups before the next scenario changes editor focus. */
 @Remote("com.intellij.ide.IdePopupManager")
 interface NativePopupManager {
     fun closeAllPopups(): Boolean
@@ -137,6 +139,7 @@ internal fun JEditorUiComponent.scrollToCaretNow() {
     }
 }
 
+/** Uses the IDE-side focus probe to activate the intended editor. */
 @Remote("org.xtclang.idea.playbook.probe.EditorUi", plugin = "org.xtclang.playbook.probe")
 internal interface NativeEditorUi {
     fun focusEditor(editor: Editor)
@@ -163,6 +166,7 @@ internal interface NativeEditorUi {
     fun scrollToCaret(editor: Editor)
 }
 
+/** Requests native application focus before keyboard-driven editor actions. */
 @Remote("com.intellij.ui.AppIcon")
 interface NativeAppFocus {
     fun getInstance(): NativeAppFocus

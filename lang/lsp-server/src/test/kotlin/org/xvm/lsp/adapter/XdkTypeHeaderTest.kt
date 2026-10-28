@@ -14,6 +14,10 @@ import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks visible type suggestions in unfinished composition headers without registering a partial class.
+ * Accepting a suggestion must edit only the prefix and restore ordinary compilation diagnostics.
+ */
 class XdkTypeHeaderTest {
     @TempDir lateinit var directory: Path
 

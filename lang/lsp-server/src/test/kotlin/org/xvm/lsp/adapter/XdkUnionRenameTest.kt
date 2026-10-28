@@ -10,6 +10,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 
+/**
+ * Checks rename across all possible union-call targets and closed consumers. Reordered union legs or shared
+ * spellings must not hide a changed binding.
+ */
 class XdkUnionRenameTest {
     @TempDir lateinit var directory: Path
 

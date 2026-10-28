@@ -26,6 +26,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks portable symbol IDs and optional partial-result streaming on the wire. Edited or canceled requests
+ * must retire their work without publishing stale or partial identities.
+ */
 class MonikerProtocolTest {
     @Test
     fun `monikers use protocol kinds scheme uniqueness and optional partial results`() {

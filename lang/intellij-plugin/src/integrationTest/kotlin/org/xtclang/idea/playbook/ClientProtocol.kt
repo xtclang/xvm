@@ -135,6 +135,7 @@ class ClientProtocol(
     }
 }
 
+/** Sends protocol requests through the existing IDE client connection. */
 @Remote("org.eclipse.lsp4j.jsonrpc.Endpoint", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientEndpoint {
     fun request(
@@ -148,6 +149,7 @@ interface ClientEndpoint {
     )
 }
 
+/** Polls or cancels an IDE-side asynchronous operation from the test driver. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface ClientFuture {
     fun isDone(): Boolean
@@ -161,12 +163,14 @@ interface ClientFuture {
     fun exceptionNow(): ClientFailure
 }
 
+/** Preserves the failed request's method, protocol code and message in the test process. */
 class ClientRequestFailure(
     method: String,
     val code: Int?,
     message: String?,
 ) : RuntimeException("$method failed ($code): $message")
 
+/** Reads a remote failure message without importing its implementation class. */
 @Remote("java.lang.Throwable")
 interface ClientFailure {
     fun getMessage(): String?
@@ -174,42 +178,51 @@ interface ClientFailure {
     fun getCause(): ClientFailure?
 }
 
+/** Unwraps a native JSON-RPC response exception into its protocol error. */
 @Remote("org.eclipse.lsp4j.jsonrpc.ResponseErrorException", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientResponseFailure {
     fun getResponseError(): ClientResponseError
 }
 
+/** Reads the server's error code through the driver boundary. */
 @Remote("org.eclipse.lsp4j.jsonrpc.messages.ResponseError", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientResponseError {
     fun getCode(): Int
 }
 
+/** Reads a completed protocol result that remains in the IDE process. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface ClientObjectFuture : ClientFuture {
     fun get(): ClientValue?
 }
 
+/** Reads a completed collection of native protocol values through the driver. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface ClientListFuture : ClientFuture {
     fun get(): List<ClientValue>?
 }
 
+/** Holds an opaque IDE-side value for subsequent native conversion or protocol operations. */
 @Remote("java.lang.Object")
 interface ClientValue
 
+/** Carries request JSON in the IDE process for the native protocol endpoint. */
 @Remote("com.google.gson.JsonElement", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientJson
 
+/** Parses request JSON in the IDE process so the native endpoint receives compatible value types. */
 @Remote("com.google.gson.JsonParser", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientJsonParser {
     fun parseString(json: String): ClientJson
 }
 
+/** Obtains LSP4IJ's configured Gson instance for protocol-compatible serialization. */
 @Remote("com.redhat.devtools.lsp4ij.JSONUtils", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientJsonTools {
     fun getLsp4jGson(): ClientGson
 }
 
+/** Serializes native protocol objects before transferring their contents to the test process. */
 @Remote("com.google.gson.Gson", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientGson {
     fun toJson(value: ClientValue): String

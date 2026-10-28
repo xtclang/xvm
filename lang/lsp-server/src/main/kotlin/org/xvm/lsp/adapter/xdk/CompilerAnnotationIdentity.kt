@@ -35,49 +35,27 @@ internal fun annotationIdentity(
 
     fun bytes(value: ByteArray) = scalar(HexFormat.of().formatHex(value))
     return when (value) {
-        is TypeConstant -> {
-            receiverIdentity(value, identity, depth + 1)
-        }
+        is TypeConstant -> receiverIdentity(value, identity, depth + 1)
 
-        is SingletonConstant -> {
-            identity(value.classConstant)
-        }
+        is SingletonConstant -> identity(value.classConstant)
 
-        is ByteConstant, is CharConstant, is IntConstant, is StringConstant, is LiteralConstant -> {
-            scalar(value.valueString)
-        }
+        is ByteConstant, is CharConstant, is IntConstant, is StringConstant, is LiteralConstant -> scalar(value.valueString)
 
-        is FloatConstant -> {
-            scalar(value.value.toRawBits().toString())
-        }
+        is FloatConstant -> scalar(value.value.toRawBits().toString())
 
-        is Float64Constant -> {
-            scalar(value.value.toRawBits().toString())
-        }
+        is Float64Constant -> scalar(value.value.toRawBits().toString())
 
-        is Float128Constant -> {
-            bytes(value.value)
-        }
+        is Float128Constant -> bytes(value.value)
 
-        is FPNConstant -> {
-            bytes(value.value)
-        }
+        is FPNConstant -> bytes(value.value)
 
-        is DecimalConstant -> {
-            bytes(value.value.toByteArray())
-        }
+        is DecimalConstant -> bytes(value.value.toByteArray())
 
-        is DecimalAutoConstant -> {
-            bytes(value.value.toByteArray())
-        }
+        is DecimalAutoConstant -> bytes(value.value.toByteArray())
 
-        is UInt8ArrayConstant -> {
-            bytes(value.value)
-        }
+        is UInt8ArrayConstant -> bytes(value.value)
 
-        is RegExConstant -> {
-            scalar("${value.flags}:${value.value}")
-        }
+        is RegExConstant -> scalar("${value.flags}:${value.value}")
 
         is ArrayConstant -> {
             ProofIdentity.TypeShape(
@@ -108,8 +86,6 @@ internal fun annotationIdentity(
         }
 
         // Runtime handles, deferred computations and filesystem objects need their own contracts.
-        else -> {
-            null
-        }
+        else -> null
     }
 }

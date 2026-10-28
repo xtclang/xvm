@@ -49,6 +49,10 @@ import org.xvm.lsp.adapter.SignatureHelp as AdapterSignatureHelp
 import org.xvm.lsp.adapter.TextEdit as AdapterEdit
 import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
 
+/**
+ * Exercises optional protocol fields against minimal and fully capable clients. Tooltip and signature
+ * metadata must honor negotiation in both eager responses and later resolution.
+ */
 class CapabilityNegotiationTest {
     @Test
     fun `link tooltips honor missing false and true support on eager and resolved results`() {

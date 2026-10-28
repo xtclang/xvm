@@ -8,6 +8,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks deduplication of file-operation and watcher events using content snapshots. Equal timestamps cannot
+ * hide changed bytes, and folder notifications must not trigger tree scans on the notification thread.
+ */
 class FileChangeSnapshotsTest {
     @TempDir lateinit var directory: Path
 

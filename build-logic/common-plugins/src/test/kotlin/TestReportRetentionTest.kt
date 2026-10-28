@@ -6,6 +6,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 
+/**
+ * Verifies that playbook cleanup reclaims disposable IDE caches without deleting reports, pinned artifacts,
+ * unfinished runs or Git checkouts. Real directory and symlink fixtures protect the destructive cleanup
+ * boundary.
+ */
 class TestReportRetentionTest {
     @TempDir lateinit var root: Path
 

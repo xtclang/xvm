@@ -17,6 +17,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises negotiated refresh and runtime trace behavior under refusal and disconnect. Coalescing must
+ * retain a later change, and tracing must not expose request payloads or continue after closure.
+ */
 internal class ClientNotificationsTest {
     @ParameterizedTest
     @EnumSource(ClientRefresh.Feature::class)

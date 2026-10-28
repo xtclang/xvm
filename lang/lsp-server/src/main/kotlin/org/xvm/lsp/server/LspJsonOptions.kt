@@ -26,13 +26,9 @@ internal object LspJsonOptions {
     ): List<String> {
         val value = lookup(raw, key) ?: return emptyList()
         return when (value) {
-            is List<*> -> {
-                value.mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
-            }
+            is List<*> -> value.mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
 
-            is JsonArray -> {
-                value.mapNotNull { stringOrNull(it) }
-            }
+            is JsonArray -> value.mapNotNull { stringOrNull(it) }
 
             is JsonElement -> {
                 if (value.isJsonArray) {
@@ -42,9 +38,7 @@ internal object LspJsonOptions {
                 }
             }
 
-            else -> {
-                emptyList()
-            }
+            else -> emptyList()
         }
     }
 
@@ -70,17 +64,9 @@ internal object LspJsonOptions {
                     .takeUnless { it.isJsonNull }
                     ?.let {
                         when {
-                            it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> {
-                                it.asInt
-                            }
-
-                            it.isJsonPrimitive && it.asJsonPrimitive.isString -> {
-                                it.asString.toIntOrNull()
-                            }
-
-                            else -> {
-                                null
-                            }
+                            it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> it.asInt
+                            it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toIntOrNull()
+                            else -> null
                         }
                     }
             }
@@ -109,17 +95,9 @@ internal object LspJsonOptions {
                     .takeUnless { it.isJsonNull }
                     ?.let {
                         when {
-                            it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> {
-                                it.asBoolean
-                            }
-
-                            it.isJsonPrimitive && it.asJsonPrimitive.isString -> {
-                                it.asString.toBooleanStrictOrNull()
-                            }
-
-                            else -> {
-                                null
-                            }
+                            it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> it.asBoolean
+                            it.isJsonPrimitive && it.asJsonPrimitive.isString -> it.asString.toBooleanStrictOrNull()
+                            else -> null
                         }
                     }
             }

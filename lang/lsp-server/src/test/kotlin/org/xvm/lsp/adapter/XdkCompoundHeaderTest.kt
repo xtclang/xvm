@@ -13,6 +13,10 @@ import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises type completion inside damaged compound declaration headers. Ensures bounded recovery preserves
+ * written syntax and restores compilation after the exact suggested edit.
+ */
 class XdkCompoundHeaderTest {
     @ParameterizedTest
     @ValueSource(

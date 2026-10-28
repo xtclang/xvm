@@ -6,6 +6,10 @@ import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 
+/**
+ * Exercises formatting, links, linked editing and run lenses through the compiler adapter. Checks live
+ * settings and exact source preservation, including CRLF, literal contents and UTF-16 link ranges.
+ */
 class XdkEditingTest {
     @Test
     fun `live editor settings reach every formatter and reset to request options`() {

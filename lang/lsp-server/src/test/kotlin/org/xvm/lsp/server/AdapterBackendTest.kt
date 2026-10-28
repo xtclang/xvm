@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks bundled defaults, startup overrides and supported adapter aliases. Unknown values must fail
+ * explicitly rather than silently selecting a mock or different backend.
+ */
 class AdapterBackendTest {
     @Test
     fun `startup selection overrides the bundled default and rejects invalid overrides`() {

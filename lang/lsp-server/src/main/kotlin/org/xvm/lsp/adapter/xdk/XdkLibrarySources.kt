@@ -21,11 +21,13 @@ import java.util.zip.ZipInputStream
  * not.
  */
 internal object XdkLibrarySources {
+    /** Attached source text and the revision used to detect a changed source file. */
     private data class Entry(
         val text: String,
         val revision: String,
     )
 
+    /** Read-only library source document and its declarations, identified by module and relative path. */
     private data class SourceFile(
         val module: String,
         val path: String,

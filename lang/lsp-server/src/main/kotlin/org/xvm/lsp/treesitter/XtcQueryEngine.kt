@@ -165,9 +165,7 @@ class XtcQueryEngine(
                     "method_declaration",
                     "function_declaration",
                     "constructor_declaration",
-                    -> {
-                        findParameterInMethod(current, name)
-                    }
+                    -> findParameterInMethod(current, name)
 
                     "class_body",
                     "module_body",
@@ -243,9 +241,7 @@ class XtcQueryEngine(
                     "method_declaration",
                     "function_declaration",
                     "constructor_declaration",
-                    -> {
-                        enumerateParameters(current, uri)
-                    }
+                    -> enumerateParameters(current, uri)
 
                     "class_body",
                     "module_body",

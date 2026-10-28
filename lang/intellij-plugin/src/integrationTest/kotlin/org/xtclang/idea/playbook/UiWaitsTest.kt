@@ -10,6 +10,10 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 
+/**
+ * Protects readiness polling from checking a successful observation twice during connection replacement. Uses
+ * controlled observations to cover expiry, pending reads and cancellation without launching an IDE.
+ */
 class UiWaitsTest {
     @Test
     fun `a successful readiness observation is not checked again`() {

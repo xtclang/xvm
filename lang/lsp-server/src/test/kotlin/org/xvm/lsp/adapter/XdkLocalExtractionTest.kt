@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks extraction of expressions into locals with exact edits and compiler binding comparison. Preserves
+ * contextual types, evaluation and captured references rather than accepting compilation success alone.
+ */
 class XdkLocalExtractionTest {
     @TempDir lateinit var directory: Path
 
