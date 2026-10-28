@@ -61,6 +61,7 @@ class XtcRunConfiguration(
     var moduleArguments = "" // Comma-separated arguments passed to the module
     var runWith = XtcRunMode.PROJECT
     var quietMode = true // Use -q flag for less verbose Gradle output
+    var evaluationRunsProgram = false // While Evaluate Expression runs code under Debug, the rest of the program runs too
 
     /** The mode this configuration runs with now: never [XtcRunMode.PROJECT]. */
     fun effectiveRunMode(): XtcRunMode =
@@ -148,6 +149,7 @@ class XtcRunConfiguration(
         moduleArguments = element.getAttributeValue("moduleArguments").orEmpty()
         runWith = runMode(element.getAttributeValue("runWith"), element.getAttributeValue("useGradle"))
         quietMode = element.getAttributeValue("quietMode")?.toBoolean() ?: true
+        evaluationRunsProgram = element.getAttributeValue("evaluationRunsProgram")?.toBoolean() ?: false
     }
 
     override fun writeExternal(element: Element) {
@@ -158,6 +160,7 @@ class XtcRunConfiguration(
         element.setAttribute("moduleArguments", moduleArguments)
         element.setAttribute("runWith", runWith.name)
         element.setAttribute("quietMode", quietMode.toString())
+        element.setAttribute("evaluationRunsProgram", evaluationRunsProgram.toString())
     }
 
     internal companion object {
@@ -234,6 +237,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
     private var moduleArguments = ""
     private var runWith = XtcRunMode.PROJECT
     private var quietMode = true
+    private var evaluationRunsProgram = false
 
     private val editorPanel by lazy {
         panel {
@@ -265,6 +269,14 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
                     .comment("The project default is set in Settings | Build, Execution, Deployment | Ecstasy")
             }
             row { checkBox("Quiet mode (-q, Gradle only)").bindSelected(::quietMode) }
+            row {
+                checkBox("Let the program run while Evaluate Expression runs code (Debug)")
+                    .bindSelected(::evaluationRunsProgram)
+                    .comment(
+                        "For code that waits on work the program's other fibers do; they run without stopping at " +
+                            "breakpoints, and their frames may then have moved",
+                    )
+            }
         }
     }
 
@@ -278,6 +290,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         config.moduleArguments = moduleArguments
         config.runWith = runWith
         config.quietMode = quietMode
+        config.evaluationRunsProgram = evaluationRunsProgram
     }
 
     override fun resetEditorFrom(config: XtcRunConfiguration) {
@@ -287,6 +300,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         moduleArguments = config.moduleArguments
         runWith = config.runWith
         quietMode = config.quietMode
+        evaluationRunsProgram = config.evaluationRunsProgram
         editorPanel.reset() // Reset UI from backing properties
     }
 }
