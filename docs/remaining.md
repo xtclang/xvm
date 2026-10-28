@@ -630,7 +630,7 @@ passes with the workaround disabled. The gates are in
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 
-### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41)
+### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): LSP4J part our draft #1009
 
 - [ ] UP41 (2026-10-24, cause found 2026-10-26): an IntelliJ evaluation that runs code cannot be ended
   before its time limit; X314 checks cancel in VS Code only. LSP4IJ never sends DAP `cancel`, but the
@@ -639,11 +639,13 @@ passes with the workaround disabled. The gates are in
   dialog neither cancels an evaluation when it closes or evaluates again nor offers to stop one, so an
   evaluator never learns that its result is no longer wanted. LSP4IJ could only cancel at a resume,
   step or stop, where our server ends the run itself. To do: an IntelliJ Platform ticket (IJPL) for an
-  evaluation's obsolescence or cancel; then the LSP4IJ half: a `DebugRemoteEndpoint` whose
-  `sendCancelNotification()` sends DAP `cancel` with the request's `seq` to an adapter with
-  `supportsCancelRequest` (LSP4J's sends LSP's `$/cancelRequest` notification, which a DAP endpoint
-  writes as an `event`), and an evaluator that cancels its request once IntelliJ abandons it. LSP4IJ
-  cancels no DAP request today, so no adapter gets that event.
+  evaluation's obsolescence or cancel; then the LSP4J part, our draft [LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009)
+  (2026-10-28): `DebugRemoteEndpoint.sendCancelNotification()` sends DAP `cancel` with the request's
+  `seq` as `requestId` (LSP4J sent LSP's `$/cancelRequest` notification, which a DAP endpoint writes
+  as an `event`), and an incoming `cancel` cancels the request it names; it waits on the maintainer's
+  view of older LSP4J peers and of an adapter's own requests. Then the LSP4IJ part: an evaluator that
+  cancels its request, to an adapter with `supportsCancelRequest`, once IntelliJ abandons it. LSP4IJ
+  cancels no DAP request today.
 
 ### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): our #1773, merged
 
@@ -784,18 +786,40 @@ passes with the workaround disabled. The gates are in
   unreleased, `0ecbcdeb`): a DAP line breakpoint has a `Hit condition`, sent as `hitCondition`. To do:
   after a release with it, a native IntelliJ hit-count case.
 
-### LSP4IJ: the `exited` event (UP56): bridged, not filed
+### LSP4IJ: the `exited` event (UP56): bridged, our #1791, open
 
-- UP56 (2026-10-28): LSP4IJ ignores DAP's `exited` event, so the program's exit code never reaches
+- [ ] UP56 (2026-10-28): LSP4IJ ignores DAP's `exited` event, so the program's exit code never reaches
   IntelliJ through it. XVM's `LanguageServerDebugProcessHandler` reads `exited` itself and ends its
-  process with that exit code.
+  process with that exit code. Our [#1791](https://github.com/redhat-developer/lsp4ij/pull/1791) (open,
+  2026-10-28) puts the exit code on the session's process handler (`DAPDebugProcess.PROGRAM_EXIT_CODE`)
+  and shows it when the adapter's process ends. To do: after a release with it, have our handler take
+  the exit code from that key instead of reading `exited`.
 
-### LSP4IJ: refreshes and resolves XVM's server does without (UP57–UP60): not filed
+### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, open
 
-- UP57–UP60 (2026-10-28): LSP4IJ declares neither inline-value nor (LSP 3.18) folding-range refresh,
-  resolves no workspace symbol, and resolves inlay hints only without a label or for a clicked
-  part's command, not for tooltips. XVM's server sends each of these only to a client that declares
-  it, and otherwise sends the full results, so nothing is lost in IntelliJ.
+- UP57, UP58 (2026-10-28): LSP4IJ declares neither inline-value nor (LSP 3.18) folding-range
+  refresh. XVM's server sends each only to a client that declares it, so nothing is lost in
+  IntelliJ. Our [#1790](https://github.com/redhat-developer/lsp4ij/pull/1790) (open, 2026-10-28)
+  declares both and handles them.
+
+### LSP4IJ: no workspace symbol resolve (UP59): our #1788, open
+
+- [ ] UP59 (2026-10-28): LSP4IJ resolves no workspace symbol, so XVM's server sends it each
+  symbol's full location. Our [#1788](https://github.com/redhat-developer/lsp4ij/pull/1788) (open,
+  2026-10-28) declares `resolveSupport` for `location.range` and resolves a URI-only symbol when it
+  is opened. To do: after a release with it, a native Go to Symbol case that opens a URI-only symbol
+  at its range.
+
+### LSP4IJ: inlay hint tooltips never showed (UP60): our #1789, merged
+
+- [ ] UP60 (2026-10-28): LSP4IJ showed only the plain-string tooltips of a hint's label parts, so
+  XVM's Markdown tooltips, which its server puts on the hint, never showed in IntelliJ. This was
+  first recorded as having no effect on XVM, which was wrong. Fixed by our
+  [#1789](https://github.com/redhat-developer/lsp4ij/pull/1789) (merged 2026-10-28, unreleased,
+  `f4e57c05`): the hint's tooltip, or else its parts', with Markdown rendered. LSP4IJ still resolves
+  no tooltip lazily, which IntelliJ's declarative inlays don't allow, so XVM's server keeps sending
+  tooltips with the hints. To do: after a release with it, a native case that shows an inlay hint's
+  tooltip.
 
 ### LSP4IJ: its support lists disagreed with its code (UP61): our #1784, merged
 
