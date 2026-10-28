@@ -21,8 +21,10 @@ internal class CoalescingTask(
     @Volatile
     private var latest: CompletableFuture<Void> = CompletableFuture.completedFuture(null)
 
-    fun request() {
-        if (!queued.compareAndSet(false, true)) return
+    /** Returns the run that starts after this request, completed when it has finished. */
+    @Synchronized
+    fun request(): CompletableFuture<Void> {
+        if (!queued.compareAndSet(false, true)) return latest
         latest =
             try {
                 CompletableFuture.runAsync(
@@ -40,6 +42,7 @@ internal class CoalescingTask(
                 queued.set(false)
                 CompletableFuture.completedFuture(null)
             }
+        return latest
     }
 
     /** Completes when every run requested so far has finished; the thread runs them in order. */

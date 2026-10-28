@@ -5,12 +5,15 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks whether late filesystem notifications still describe the inputs already compiled. Identical events
@@ -129,6 +132,94 @@ class XdkFileChangesTest {
                 .containsExactlyInAnyOrderElementsOf(modules.map { it.uri })
         } finally {
             adapter.close()
+        }
+    }
+
+    @Test
+    fun `a file event during a running analysis is judged against the sources it read`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val root = directory.resolve("App.x").toFile().apply { writeText("module App { Box make() = new Box(); }") }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        withHeldCompile("App.x") { adapter, hold ->
+            val uri = root.toURI().toString()
+            val analysis = adapter.compileAsync(uri, root.readText())
+            assertThat(hold.entered.await(20, SECONDS)).isTrue()
+
+            // the watcher reports files the running analysis already read: nothing to recompile
+            listOf(root.parentFile, member.parentFile, member).forEach {
+                assertThat(adapter.changedFileScopes(it.toURI().toString())).describedAs(it.path).isEmpty()
+            }
+            // a change it did not read is found at once
+            member.writeText("class Box { Int changed = 1; }")
+            assertThat(adapter.changedFileScopes(member.toURI().toString())).contains(uri)
+            hold.release.countDown()
+            assertThat(analysis.get(30, SECONDS).success).isTrue()
+        }
+    }
+
+    @Test
+    fun `a file event before a queued analysis reads its sources needs no new analysis`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val busy = directory.resolve("Busy.x").toFile().apply { writeText("module Busy {}") }
+        val root = directory.resolve("App.x").toFile().apply { writeText("module App { Box make() = new Box(); }") }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        withHeldCompile("Busy.x") { adapter, hold ->
+            val first = adapter.compileAsync(busy.toURI().toString(), busy.readText())
+            assertThat(hold.entered.await(20, SECONDS)).isTrue()
+            val uri = root.toURI().toString()
+            val analysis = adapter.compileAsync(uri, root.readText())
+
+            // App waits behind Busy for the only compiler thread, so it reads its sources after this change
+            member.writeText("class Box { Int changed = 1; }")
+            listOf(member, member.parentFile).forEach {
+                assertThat(adapter.changedFileScopes(it.toURI().toString())).describedAs(it.path).isEmpty()
+            }
+            hold.release.countDown()
+            first.get(30, SECONDS)
+            assertThat(analysis.get(30, SECONDS).success).isTrue()
+            // it did read the change
+            assertThat(adapter.changedFileScopes(member.toURI().toString())).isEmpty()
+        }
+    }
+
+    private class Hold {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+    }
+
+    /** The first compile of the module whose root file is [rootName] waits in the compiler until released. */
+    private fun withHeldCompile(
+        rootName: String,
+        test: (XdkAdapter, Hold) -> Unit,
+    ) {
+        val hold = Hold()
+        val support = EmbeddingSupport.instance()
+        XdkAdapter(
+            { source, repository, errors -> support.compileModule(source, repository, errors) },
+            { sources, repository, errors ->
+                if (sources.sourceFile.name == rootName && hold.entered.count > 0) {
+                    hold.entered.countDown()
+                    check(hold.release.await(20, SECONDS))
+                }
+                support.compileModule(sources, repository, errors)
+            },
+            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+        ).use { adapter ->
+            try {
+                test(adapter, hold)
+            } finally {
+                hold.release.countDown()
+            }
         }
     }
 }
