@@ -96,16 +96,7 @@ class XtcRunConfiguration(
             }
         }
 
-    /**
-     * The module's source URI, or else its name; the server accepts either, and runs in the folder that owns
-     * the module, as Gradle runs do. A source identifies the module exactly, whatever its qualified name.
-     */
-    internal fun embeddedRequest() =
-        RunParams(
-            module = moduleUri.ifBlank { moduleName },
-            method = methodName.ifBlank { null },
-            args = moduleArguments.split(",").map(String::trim).filter(String::isNotEmpty),
-        )
+    internal fun embeddedRequest() = embeddedRequest(moduleName, moduleUri, methodName, moduleArguments)
 
     private fun createGradleCommandLine() =
         GeneralCommandLine().apply {
@@ -165,6 +156,24 @@ class XtcRunConfiguration(
         ): XtcRunMode =
             runWith?.let { name -> XtcRunMode.entries.firstOrNull { it.name == name } }
                 ?: if (useGradle?.toBoolean() == false) XtcRunMode.COMMAND_LINE else XtcRunMode.PROJECT
+
+        /**
+         * The module's source URI, or else its name; the server accepts either, and runs in the folder that owns
+         * the module, as Gradle runs do. A source identifies the module exactly, whatever its qualified name. The
+         * name goes along with a URI: a saved configuration keeps its URI after the file is renamed or moved,
+         * and the server then finds the module by its name.
+         */
+        fun embeddedRequest(
+            moduleName: String,
+            moduleUri: String,
+            methodName: String,
+            moduleArguments: String,
+        ) = RunParams(
+            module = moduleUri.ifBlank { moduleName },
+            method = methodName.ifBlank { null },
+            args = moduleArguments.split(",").map(String::trim).filter(String::isNotEmpty),
+            moduleName = moduleName.ifBlank { null }.takeIf { moduleUri.isNotBlank() },
+        )
     }
 }
 
@@ -179,7 +188,7 @@ internal class EmbeddedRunState(
         runner: ProgramRunner<*>,
     ): ExecutionResult {
         val project = environment.project
-        EmbeddedExecution.saveAll()
+        val editsSent = EmbeddedExecution.editsSent(project)
         val console =
             TextConsoleBuilderFactory
                 .getInstance()
@@ -191,7 +200,7 @@ internal class EmbeddedRunState(
         val handler =
             EmbeddedRunProcessHandler(
                 EmbeddedRunSessions.getInstance(project),
-                { EmbeddedExecution.server(project) },
+                { EmbeddedExecution.server(project).thenCombine(editsSent) { server, _ -> server } },
                 request,
                 label,
                 XtcBuildSettings.gradleNotUsed(project.basePath?.let { Path(it) }),
