@@ -100,14 +100,13 @@ public abstract class Builder {
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {
-        // in theory, we could provide this info from art, or cache it as in CommonBuilder
-        throw new UnsupportedOperationException();
+        return art.type();
     }
 
     /**
      * Obtain the JVM receiver descriptor for a generated Ecstasy body.
      */
-    public ClassDesc getThisClassDesc(BuildContext bctx) {
+    public ClassDesc getThisCD(BuildContext bctx) {
         return art.CD();
     }
 
@@ -181,7 +180,7 @@ public abstract class Builder {
         if (shouldInvokeFieldAccessor(owner)) {
             code.invokeinterface(getCCDesc(owner), FieldGet + name, md(cd));
         } else {
-            code.getfield(getCCDesc(owner), name, cd);
+            code.getfield(getImplDesc(owner), name, cd);
         }
     }
 
@@ -192,7 +191,7 @@ public abstract class Builder {
         if (shouldInvokeFieldAccessor(owner)) {
             code.invokeinterface(getCCDesc(owner), FieldSet + name, md(CD_void, cd));
         } else {
-            code.putfield(getCCDesc(owner), name, cd);
+            code.putfield(getImplDesc(owner), name, cd);
         }
     }
 
@@ -218,7 +217,7 @@ public abstract class Builder {
     }
 
     /**
-     * Add the Java interfaces contributed by Ecstasy implements and incorporates clauses.
+     * Add the Java interfaces contributed by Ecstasy annotations and type composition clauses.
      *
      * @param isInterface  true iff the generated Java artifact is an interface
      */

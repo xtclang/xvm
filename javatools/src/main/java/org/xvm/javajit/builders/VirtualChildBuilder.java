@@ -140,14 +140,14 @@ public class VirtualChildBuilder extends CommonBuilder {
     }
 
     @Override
-    public ClassDesc getThisClassDesc(BuildContext bctx) {
+    public ClassDesc getThisCD(BuildContext bctx) {
         if (bctx.methodDesc instanceof JitDetachedBodyDesc body) {
             return body.receiverCD;
         }
         // everywhere, except constructors, we need to refer to "this" as an interface
         return bctx.isConstructor
                 ? thisType.getJitCCDesc(typeSystem)
-                : super.getThisClassDesc(bctx);
+                : super.getThisCD(bctx);
     }
 
     @Override
