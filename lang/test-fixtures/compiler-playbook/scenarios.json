@@ -9503,7 +9503,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ's DAP debug process does not implement pausing in 0.21.0, so IntelliJ's Pause Program does nothing for a DAP session; UP30 in docs/remaining.md, fixed by LSP4IJ #1757 (merged 2026-10-26, unreleased)."
+          "LSP4IJ's DAP debug process does not implement pausing in 0.21.0, so IntelliJ's Pause Program does nothing for a DAP session; UP30 in docs/remaining.md, fixed by LSP4IJ #1757 (merged 2026-10-26, unreleased). IntelliJ's case, through Pause Program, passed with LSP4IJ nightly 0.21.1-20261027-160212 (run-7834140860152509548) and runs once a release has it."
         ]
       }
     },
@@ -9626,7 +9626,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0 sends an exception filter without its condition (UP34) and never asks for exceptionInfo (UP33); both are fixed by LSP4IJ #1760 and #1761 (merged 2026-10-26, unreleased)."
+          "LSP4IJ 0.21.0 sends an exception filter without its condition (UP34) and never asks for exceptionInfo (UP33); both are fixed by LSP4IJ #1760 and #1761 (merged 2026-10-26, unreleased). IntelliJ's case, through LSP4IJ's exception filter settings and the exception hint, passed with LSP4IJ nightly 0.21.1-20261027-160212 (run-15063466997126294370) and runs once a release has them."
         ]
       }
     },
@@ -10071,7 +10071,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, sends neither loadedSources nor modules and has no view for them (UP45, implemented by our LSP4IJ #1774, merged 2026-10-27, unreleased), so IntelliJ has no loaded sources or modules to check."
+          "LSP4IJ 0.21.0 sends neither loadedSources nor modules and has no view for them (UP45, implemented by our LSP4IJ #1774, merged 2026-10-27, unreleased). IntelliJ's case, through its Loaded Sources and Modules views, passed with LSP4IJ nightly 0.21.1-20261027-160212 (run-15063466997126294370) and runs once a release has it."
         ]
       }
     },
@@ -10127,7 +10127,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no function breakpoints: it never sends setFunctionBreakpoints (UP46, implemented by our LSP4IJ #1780, open). IntelliJ's case, through a DAP function breakpoint, passed with a plugin built from #1780 (run-11586456472789120644) and runs once a release has it."
+          "LSP4IJ 0.21.0 has no function breakpoints: it never sends setFunctionBreakpoints (UP46, implemented by our LSP4IJ #1780, merged 2026-10-27, unreleased). IntelliJ's case, through a DAP function breakpoint, passed with a plugin built from #1780 (run-11586456472789120644) and with LSP4IJ nightly 0.21.1-20261027-160212 (run-5706548341147062858), and runs once a release has it."
         ]
       }
     },
@@ -10163,7 +10163,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no Reset Frame for a DAP session: it never sends restartFrame (UP47, fixed by our LSP4IJ #1778, merged 2026-10-27, unreleased). IntelliJ's case, through the Reset Frame action, passed with a plugin built from #1778 (run-17331679936087029005) and runs once a release has it."
+          "LSP4IJ 0.21.0 has no Reset Frame for a DAP session: it never sends restartFrame (UP47, fixed by our LSP4IJ #1778, merged 2026-10-27, unreleased). IntelliJ's case, through the Reset Frame action, passed with a plugin built from #1778 (run-17331679936087029005) and with LSP4IJ nightly 0.21.1-20261027-160212 (run-5706548341147062858), and runs once a release has it."
         ]
       }
     },
@@ -10194,7 +10194,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48), so IntelliJ has none to check."
+          "LSP4IJ 0.21.0, and its main branch, has no data breakpoints: it never sends dataBreakpointInfo or setDataBreakpoints (UP48, implemented by our LSP4IJ #1782, merged 2026-10-28, unreleased). IntelliJ's case, through Break on Value Change in the Variables view, passed with a plugin built from it (run-15563293796254899407) and runs once a release has it."
         ]
       }
     },
@@ -10235,7 +10235,7 @@
       "intellij": {
         "coverage": "not-implemented",
         "limitations": [
-          "LSP4IJ 0.21.0, and its main branch, never sends textDocument/inlineValue, and shows no inline values for Ecstasy at all: its scan of the editor's TextMate tokens finds none of the frame's variables, and it leaves the frame's Locals group collapsed, so IntelliJ computes no inline data until it is expanded (UP50, LSP4IJ issue #1432). IntelliJ's case passes with a plugin built from our local LSP4IJ branch, which asks the language server and expands the locals (run-1069392384661177323)."
+          "LSP4IJ 0.21.0 never sends textDocument/inlineValue, and shows no inline values for Ecstasy at all: its scan of the editor's TextMate tokens finds none of the frame's variables, and it leaves the frame's Locals group collapsed, so IntelliJ computes no inline data until it is expanded (UP50, LSP4IJ issue #1432). Our LSP4IJ #1781 (merged 2026-10-28, unreleased) asks the language server and expands the locals; IntelliJ's case passed with a plugin built from it (run-4604772112093360200) and runs once a release has it."
         ]
       }
     },
