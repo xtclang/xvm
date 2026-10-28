@@ -96,14 +96,17 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   console, though the alternative showed; it passes alone (`run-266543211336496817`). X324's library
   frame had no source position, though the read-only copy of `Collection.x` it named was written
   36 s before; it passes alone, after X323, and after X304-X322 (`run-6424025512923475166`).
-- [ ] The server never deletes its `xtc-library-sources-*` temporary directories
-  (`XdkLibrarySources`); 2,037 had piled up in the system temporary directory by 2026-10-28.
+- [x] The server never deleted its `xtc-library-sources-*` temporary directories
+  (`XdkLibrarySources`); 2,068 had piled up by 2026-10-28. A JVM shutdown hook now deletes the
+  directory when the server exits (`4cf5450acd`; `LibraryCopiesCleanupTest` in compilerStdioTest).
+  A killed server still leaves its directory, as the playbook's does when IDE Starter closes the IDE.
 - [x] X283 failed once in a full run (`run-17527198196716738382`) when keystrokes typed in another
   window reached its editor: the test IDE takes the focus to click a Run lens. It passes alone
   (`run-891840089927042241`). Don't type elsewhere during an IntelliJ run.
-- [ ] The server re-announces every library document a client fetched after each dependency change
-  (`ReadOnlyDocuments.refresh()`), though a URI's text can't change, and LSP4IJ fetches them all
-  again; in X146 that filled the LSP console. Decide whether a refresh is needed at all.
+- [x] The server re-announced every library document a client fetched after each dependency change
+  (`ReadOnlyDocuments.refresh()`), though a URI's text can't change, and LSP4IJ fetched them all
+  again; in X146 that filled the LSP console. Decided 2026-10-28: no refresh is needed, since a
+  library URI carries its revisions; removed (`622d0a506f`).
 
 - [x] Popup inspection race: a popup that disappears between its presence check and its row read,
   keeping the document-change guard and never replaying an accepted edit. The rows are read and a
@@ -835,7 +838,10 @@ pushed. The drafts of the tickets, PR descriptions and the #219122 comment were 
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits that are not debugger work (last synchronized
-  2026-10-28, `f1d2060f29..3137736743`, 15 commits, each a clean cherry-pick: the discovery race fix
+  2026-10-28, then the two library document fixes `622d0a506f` and `4cf5450acd` as `9e90dd1e13` and
+  `b80a36e050`, the second without errs' `file()` and `copy()`, which came with the debugger's library
+  frames, and with an import #693 lacked; XdkLibrarySourcesTest, LibraryContentProtocolTest and
+  LibraryCopiesCleanupTest pass there. Before them, `f1d2060f29..3137736743`, 15 commits, each a clean cherry-pick: the discovery race fix
   `f71c9cc0a5` as `3137736743`; the focused test tasks `bdab767b8c` and `021948fcdb`; the LSP4IJ
   channel option and the nightly's playbook fixes `4ca6f5993d`, `4918127129`, `8d845d167e`,
   `ddcc6fda9d`, `0952a3f0c9`, `3b7c450765`, `ff06c86d0b` and `b499c339fb`; and the full runs' fixes
