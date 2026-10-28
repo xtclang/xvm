@@ -52,7 +52,6 @@ import java.util.concurrent.atomic.AtomicReference
 class XtcLanguageClient(
     project: Project,
 ) : LanguageClientImpl(project) {
-    private val editorRefresh = EditorRefresh(project, this) { isDisposed }
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
@@ -318,7 +317,7 @@ class XtcLanguageClient(
 
     override fun refreshCodeLenses(): CompletableFuture<Void> {
         refreshRunIcons()
-        return refreshEditors(EditorRefresh.Feature.LENSES)
+        return super.refreshCodeLenses()
     }
 
     /** The gutter Run icons follow the Run lenses, from the same analysis, and the test icons its tests. */
@@ -326,17 +325,6 @@ class XtcLanguageClient(
         FileEditorManager.getInstance(project).openFiles.forEach {
             RunGutterIcons.refresh(project, it)
             TestGutterIcons.refresh(project, it)
-        }
-
-    override fun refreshInlayHints(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.HINTS)
-
-    override fun refreshSemanticTokens(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.TOKENS)
-
-    private fun refreshEditors(feature: EditorRefresh.Feature): CompletableFuture<Void> =
-        if (isDisposed || project.isDisposed) {
-            CompletableFuture.completedFuture(null)
-        } else {
-            editorRefresh.request(clientFeatures.serverWrapper, feature)
         }
 
     private fun semanticUpdate(update: () -> Unit): CompletableFuture<Void> =
