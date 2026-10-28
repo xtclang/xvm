@@ -1031,6 +1031,7 @@ internal fun ParityScenarios.platformCases() {
                 link
             }
         check(resolvedLink.string("target") == data.string("link"))
+        nativeLinkClick(document, link, data.string("link"))
         val hints =
             query(
                 "textDocument/inlayHint",
