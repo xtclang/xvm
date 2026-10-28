@@ -23,7 +23,7 @@ and editor support.
 >
 > We are actively working to improve stability and move toward a supported beta release.
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite build semantics](../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
 ## Enabling the Lang Build
 
@@ -370,4 +370,5 @@ All versions are defined in `/gradle/libs.versions.toml`.
 
 ## TODOs
 
-- [ ] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).
+- [x] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).
+  Done (2026-10-16): VS Code's display name, command titles/categories, settings groups and debugger label say Ecstasy, as do IntelliJ's language, wizard and run-configuration names; `xtc` remains in identifiers.
