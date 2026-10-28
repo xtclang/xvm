@@ -16,16 +16,28 @@ export type BuildMode = 'embedded' | 'gradle';
 
 const GRADLE_BUILD_FILES = ['build.gradle.kts', 'build.gradle', 'settings.gradle.kts', 'settings.gradle'];
 
-/** The effective mode for a folder: the setting, or with `auto`, Gradle exactly when the folder has a Gradle build. */
+/** Whether the folder has its own Gradle build. */
+export function hasGradleBuild(folder: vscode.WorkspaceFolder | undefined): boolean {
+    return !!folder && GRADLE_BUILD_FILES.some(name => fs.existsSync(path.join(folder.uri.fsPath, name)));
+}
+
+/**
+ * The effective mode for a folder: the setting, embedded by default even with a Gradle build, or with `auto`,
+ * Gradle exactly when the folder has a Gradle build.
+ */
 export function buildMode(folder: vscode.WorkspaceFolder | undefined): BuildMode {
-    const setting = vscode.workspace.getConfiguration('xtc', folder).get<string>('build.mode', 'auto');
+    const setting = vscode.workspace.getConfiguration('xtc', folder).get<string>('build.mode', 'embedded');
     if (setting === 'embedded' || setting === 'gradle') {
         return setting;
     }
-    return folder && GRADLE_BUILD_FILES.some(name => fs.existsSync(path.join(folder.uri.fsPath, name)))
-        ? 'gradle'
-        : 'embedded';
+    return hasGradleBuild(folder) ? 'gradle' : 'embedded';
 }
+
+/** Shown by embedded builds and runs in a folder with a Gradle build, whose own settings do not apply. */
+export const GRADLE_NOT_USED =
+    'This folder has a Gradle build, but embedded mode builds and runs with the language server\'s compiler and XDK; ' +
+    'Gradle settings such as runXtc arguments, JVM options and the build\'s XDK version do not apply. ' +
+    'Choose Gradle with "Ecstasy: Select Build Mode" or the build mode in the status bar to use Gradle.';
 
 interface LspDiagnostic {
     range: { start: { line: number; character: number } };
@@ -186,7 +198,7 @@ class BuildTerminal extends ExecutionTerminal {
     private readonly cancellation = new vscode.CancellationTokenSource();
 
     constructor(client: () => LanguageClient | undefined, private readonly module: string | undefined,
-                private readonly rebuild: boolean) {
+                private readonly rebuild: boolean, private readonly folder: vscode.WorkspaceFolder | undefined) {
         super(client, 'build', module ?? 'all Ecstasy modules');
     }
 
@@ -205,6 +217,9 @@ class BuildTerminal extends ExecutionTerminal {
             return;
         }
         this.line(`${this.rebuild ? 'Rebuilding' : 'Building'} ${this.module ?? 'all Ecstasy modules'} with the embedded compiler...`);
+        if (hasGradleBuild(this.folder)) {
+            this.line(GRADLE_NOT_USED);
+        }
         try {
             const build = await client.sendRequest<BuildResponse>(
                 'xtc/build', { module: this.module, rebuild: this.rebuild }, this.cancellation.token);
@@ -225,6 +240,8 @@ export interface RunTarget {
     method?: string;
     args?: string[];
     workingDirectory?: string;
+    /** The folder that owns the module, if known. */
+    folder?: vscode.WorkspaceFolder;
 }
 
 /** How long a stopped run may take to report its exit before the task ends anyway. */
@@ -307,6 +324,9 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
             return;
         }
         this.line(`Building and running ${this.target.label} with the embedded compiler...`);
+        if (hasGradleBuild(this.target.folder)) {
+            this.line(GRADLE_NOT_USED);
+        }
         // register before sending, because output can arrive before the response
         sessions.set(this.runId, this);
         this.running = true;
@@ -343,7 +363,7 @@ export function createEmbeddedBuildTask(client: () => LanguageClient | undefined
         scope,
         name,
         'xtc',
-        new vscode.CustomExecution(async () => new BuildTerminal(client, module, rebuild)),
+        new vscode.CustomExecution(async () => new BuildTerminal(client, module, rebuild, typeof scope === 'object' ? scope : undefined)),
         []
     );
     task.group = vscode.TaskGroup.Build;
