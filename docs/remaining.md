@@ -723,23 +723,25 @@ passes with the workaround disabled. The gates are in
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 
-### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799
+### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
 - [ ] UP65 (2026-10-29): LSP4IJ's `DAPStackFrame` finds a frame's file with
   `LocalFileSystem.findFileByPath`, which never refreshes, and keeps the null, so a file in a
   folder made after the VFS listed its parent has no source. The debug process handler refreshes
   the nearest known folder before a `stackTrace` response goes on (X324). Filed as our
-  [#1799](https://github.com/redhat-developer/lsp4ij/pull/1799) (2026-10-29): a lookup that refreshes
-  off the EDT and outside a read action. To do: drop the handler's refresh once a release has it.
+  [#1799](https://github.com/redhat-developer/lsp4ij/pull/1799) (merged 2026-10-29, unreleased,
+  `0ff8b7aa`, for 0.30.0): a lookup that refreshes off the EDT and outside a read action. To do: drop
+  the handler's refresh once a release has it.
 
-### LSP4IJ: an attach cannot use the adapter's own process (UP64): our #1798
+### LSP4IJ: an attach cannot use the adapter's own process (UP64): our #1798, merged
 
 - [ ] UP64 (2026-10-29): LSP4IJ's `DebugMode.ATTACH` replaces the adapter's process with a
   `NopProcessHandler` and reaches the adapter by its socket, so an adapter whose transport is its
   process handler, as ours is, can only be launched. The Ecstasy Attach configuration keeps the
   descriptor's mode at `LAUNCH` and makes only its client in `ATTACH` mode. Filed as our
-  [#1798](https://github.com/redhat-developer/lsp4ij/pull/1798) (2026-10-29), which adds
-  `DebugAdapterDescriptor.startServer(DebugMode)`. To do: use it once a release has it.
+  [#1798](https://github.com/redhat-developer/lsp4ij/pull/1798) (merged 2026-10-29, unreleased,
+  `8c4a5ba3`, for 0.30.0), which adds `DebugAdapterDescriptor.startServer(DebugMode)`. To do: use it
+  once a release has it.
 
 ### LSP4IJ: LSP4J's debug modules at 0.21.0 (UP63): our #1793, merged
 
