@@ -212,6 +212,15 @@ class XtcDebugServer(
     /** The `seq` of the request being handled on this thread, as [receiving] gives it; null when not known. */
     private val handling = ThreadLocal<Int?>()
 
+    /** What runs once [receiving] has handled the request on this thread, which lsp4j has then answered or will answer. */
+    private val handled = ThreadLocal<MutableList<() -> Unit>?>()
+
+    /** The stops held back while a request that set the program going is unanswered, as [beforeStops] holds them. */
+    private val heldStops = ArrayList<StopState>()
+
+    /** How many requests that set the program going are unanswered; guarded by [heldStops]. */
+    private var unanswered = 0
+
     companion object {
         private val logger = LoggerFactory.getLogger(XtcDebugServer::class.java)
 
@@ -781,12 +790,13 @@ class XtcDebugServer(
     }
 
     /** DAP: continue. Resumes every fiber of the stopped program. */
-    override fun continue_(args: ContinueArguments?): CompletableFuture<ContinueResponse> {
-        if (debuggedRunning()) {
-            runs.resume(runId)
+    override fun continue_(args: ContinueArguments?): CompletableFuture<ContinueResponse> =
+        beforeStops {
+            if (debuggedRunning()) {
+                runs.resume(runId)
+            }
+            CompletableFuture.completedFuture(ContinueResponse().apply { allThreadsContinued = true })
         }
-        return CompletableFuture.completedFuture(ContinueResponse().apply { allThreadsContinued = true })
-    }
 
     /** DAP: next. Steps the fiber over a call, to its next line; a return continues to the caller's next line. */
     override fun next(args: NextArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OVER)
@@ -798,7 +808,9 @@ class XtcDebugServer(
     override fun stepIn(args: StepInArguments): CompletableFuture<Void> {
         val target = args.targetId ?: return step(args.threadId, StepKind.IN)
         if (!debuggedRunning()) return failed(NOT_STOPPED)
-        return runs.stepInto(runId, args.threadId, target).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+        return beforeStops {
+            runs.stepInto(runId, args.threadId, target).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+        }
     }
 
     /** DAP: stepInTargets. The calls that a stopped frame's line makes, in the order of its code, which stepIn goes into. */
@@ -827,9 +839,11 @@ class XtcDebugServer(
      */
     override fun restartFrame(args: RestartFrameArguments): CompletableFuture<Void> {
         if (!debuggedRunning()) return failed(NOT_RESTARTABLE)
-        return runs
-            .restartFrame(runId, args.frameId)
-            .thenApply<Void> { restarted -> if (restarted) null else throw error(NOT_RESTARTABLE) }
+        return beforeStops {
+            runs
+                .restartFrame(runId, args.frameId)
+                .thenApply<Void> { restarted -> if (restarted) null else throw error(NOT_RESTARTABLE) }
+        }
     }
 
     /** DAP: stepOut. Steps the fiber until its method returns, to the caller's next line. */
@@ -840,8 +854,8 @@ class XtcDebugServer(
      * fibers all wait, for input say, stops when one of them next runs. A stopped program stays as it is.
      */
     override fun pause(args: PauseArguments?): CompletableFuture<Void> {
-        if (!debuggedRunning() || !runs.pause(runId)) return failed(NOT_PAUSABLE)
-        return CompletableFuture.completedFuture(null)
+        if (!debuggedRunning()) return failed(NOT_PAUSABLE)
+        return beforeStops { if (runs.pause(runId)) CompletableFuture.completedFuture<Void>(null) else failed(NOT_PAUSABLE) }
     }
 
     /**
@@ -999,19 +1013,59 @@ class XtcDebugServer(
 
     /**
      * Handles one request, whose `seq` is [seq], with [handle]: the endpoint calls each request's method through this,
-     * so that the method knows which request it answers, and a later `cancel` can name it.
+     * so that the method knows which request it answers, and a later `cancel` can name it. Once [handle] returns, lsp4j
+     * has sent an answer that was ready, or will send it when it is.
      */
     internal fun <T> receiving(
         seq: Int?,
         handle: () -> T,
     ): T {
+        val after = mutableListOf<() -> Unit>()
         handling.set(seq)
+        handled.set(after)
         try {
             return handle()
         } finally {
             handling.remove()
+            handled.remove()
+            after.forEach { it() }
         }
     }
+
+    /**
+     * Sets the program going with [start], and holds the stops it reports until the request's response is out: DAP
+     * sends a step's response before the `stopped` event where the step ends, and a short step can stop before the
+     * program answers it. lsp4j sends the response when the returned future completes, while [receiving] still handles
+     * the request or later on the thread that completes it, so the stops go out once both are done.
+     */
+    private fun <T> beforeStops(start: () -> CompletableFuture<T>): CompletableFuture<T> {
+        synchronized(heldStops) { unanswered++ }
+        val after = handled.get()
+        val waiting = AtomicInteger(if (after == null) 1 else 2)
+        val done = { if (waiting.decrementAndGet() == 0) releaseStops() }
+        after?.add(done)
+        val answer = CompletableFuture<T>()
+        val started =
+            try {
+                start()
+            } catch (e: RuntimeException) {
+                CompletableFuture.failedFuture(e)
+            }
+        started.whenComplete { value, error ->
+            if (error == null) answer.complete(value) else answer.completeExceptionally(error)
+            done()
+        }
+        return answer
+    }
+
+    /** One request that set the program going is answered; once none is left, the stops held back go out in order. */
+    private fun releaseStops() =
+        synchronized(heldStops) {
+            if (--unanswered == 0) {
+                heldStops.forEach(::sendStopped)
+                heldStops.clear()
+            }
+        }
 
     /** DAP: terminate. Stops the program, whose exit then ends the session; with no program, it ends at once. */
     override fun terminate(args: TerminateArguments?): CompletableFuture<Void> {
@@ -1058,20 +1112,25 @@ class XtcDebugServer(
 
             override fun logged(text: String) = output(OutputEventArgumentsCategory.CONSOLE, "$text\n")
 
-            override fun stopped(stop: StopState) {
-                client?.stopped(
-                    StoppedEventArguments().apply {
-                        reason = stop.reason
-                        description = stop.description
-                        // the exception's type and text, which editors show beside the stop
-                        text = stop.description.takeIf { stop.reason == StoppedEventArgumentsReason.EXCEPTION }
-                        threadId = stop.threadId
-                        allThreadsStopped = true
-                        hitBreakpointIds = stop.breakpointIds.takeIf { it.isNotEmpty() }?.toTypedArray()
-                    },
-                )
-            }
+            override fun stopped(stop: StopState) =
+                synchronized(heldStops) {
+                    if (unanswered > 0) heldStops += stop else sendStopped(stop)
+                }
         }
+
+    private fun sendStopped(stop: StopState) {
+        client?.stopped(
+            StoppedEventArguments().apply {
+                reason = stop.reason
+                description = stop.description
+                // the exception's type and text, which editors show beside the stop
+                text = stop.description.takeIf { stop.reason == StoppedEventArgumentsReason.EXCEPTION }
+                threadId = stop.threadId
+                allThreadsStopped = true
+                hitBreakpointIds = stop.breakpointIds.takeIf { it.isNotEmpty() }?.toTypedArray()
+            },
+        )
+    }
 
     /** Steps a stopped fiber; the stop where the step ends is reported as a `stopped` event. */
     private fun step(
@@ -1079,7 +1138,11 @@ class XtcDebugServer(
         kind: StepKind,
     ): CompletableFuture<Void> {
         if (!debuggedRunning()) return failed(NOT_STOPPED)
-        return runs.step(runId, threadId, kind).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+        return beforeStops {
+            runs.step(runId, threadId, kind).thenApply<Void> { stepped ->
+                if (stepped) null else throw error(NOT_STOPPED)
+            }
+        }
     }
 
     /**
