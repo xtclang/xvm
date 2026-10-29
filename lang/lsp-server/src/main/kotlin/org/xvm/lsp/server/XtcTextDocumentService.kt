@@ -225,6 +225,8 @@ class XtcTextDocumentService(
         partial: ((R) -> PartialResults.Plan<R>)? = null,
         block: () -> R,
     ): CompletableFuture<R> {
+        // before the document is taken, so that its new analysis is not taken for a change
+        synchronized(lifecycle) { if (!closed) reanalyzeRetired() }
         val document = uri?.let { openDocuments[it] }
         return queryAsync(
             method,
@@ -287,6 +289,23 @@ class XtcTextDocumentService(
         return startQuery(method, uri, request, workspace, reportsOutOfSync, sourceOnly, progress, partial, convert)
     }
 
+    /**
+     * Called under lifecycle. Analyzes again each open document whose analysis was retired, as the compiler
+     * retires the analyses of the modules a change elsewhere affects, and that nothing replaced: a query waiting
+     * on it would end as canceled, and so would every later one, while a client that pulls diagnostics asks
+     * again at once, without end. A replacement installs its analysis before it retires the old one, under this
+     * lock, so a query never finds a retired analysis that is about to be replaced.
+     */
+    private fun reanalyzeRetired() {
+        for (uri in openDocuments.keys.toList()) {
+            val document = openDocuments[uri] ?: continue
+            if (uri !in outOfSync && document.analysis.isCancelled) {
+                logger.info("analysis of {} was retired without a replacement; analyzing it again", uri)
+                analyseOne(uri, document.content, document.version)
+            }
+        }
+    }
+
     private fun <T, R> startQuery(
         method: String,
         uri: String,
@@ -305,6 +324,7 @@ class XtcTextDocumentService(
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(contentModified())
                 if (uri in outOfSync && !reportsOutOfSync) return CompletableFuture.failedFuture(outOfSyncFailure(uri))
+                reanalyzeRetired()
                 pendingQueries[result] = uri
                 Triple(
                     openDocuments[uri],
