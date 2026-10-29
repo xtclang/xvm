@@ -6,12 +6,19 @@ import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.newvfs.NewVirtualFile
+import com.intellij.openapi.vfs.newvfs.RefreshQueue
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.OutputStream
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -24,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 internal class LanguageServerDebugProcessHandler(
     private val sessions: DebugSessions,
+    private val frameSources: (List<Path>) -> Unit = ::findFrameSources,
     private val server: () -> CompletableFuture<XtcLanguageServer>,
 ) : ProcessHandler(),
     DebugSessions.Session {
@@ -105,6 +113,12 @@ internal class LanguageServerDebugProcessHandler(
                 ?.asInt
                 ?.let { exitCode = it }
         }
+        // TODO LSP4IJ: UP65 — DAPStackFrame looks a frame's source up with LocalFileSystem.findFileByPath, which
+        //  never refreshes, and keeps the null it gets. A library's sources are in a folder the server makes when it
+        //  starts, which the VFS doesn't know if it had listed the parent before; let it find them first
+        if (message["type"]?.asString == "response" && message["command"]?.asString == "stackTrace") {
+            frameSources(framePaths(message))
+        }
         notifyTextAvailable(DapFrames.frame(message.toString()), ProcessOutputTypes.STDOUT)
     }
 
@@ -136,4 +150,42 @@ internal class LanguageServerDebugProcessHandler(
         synchronized(lock) {
             connection?.also { sessions.remove(it.sessionId) }
         }
+}
+
+/** The files of a `stackTrace` response's frames whose source has a path, each once. */
+internal fun framePaths(response: JsonObject): List<Path> =
+    response["body"]
+        ?.asJsonObject
+        ?.getAsJsonArray("stackFrames")
+        ?.mapNotNull { frame ->
+            frame.asJsonObject["source"]
+                ?.asJsonObject
+                ?.get("path")
+                ?.asString
+                ?.let(Path::of)
+        }.orEmpty()
+        .distinct()
+
+/**
+ * Lets the VFS find each of [files] that is on disk but unknown to it, by refreshing the closest folder above it that
+ * the VFS knows. Applying a refresh needs the EDT, and a debug message comes on the language server's listener thread,
+ * so this waits a few seconds at most; then the frames go on as they would have.
+ */
+private fun findFrameSources(files: List<Path>) {
+    val local = LocalFileSystem.getInstance()
+    val folders =
+        files
+            .filter { local.findFileByNioFile(it) == null && Files.isRegularFile(it) }
+            .mapNotNull { file -> generateSequence(file.parent) { it.parent }.firstNotNullOfOrNull(local::findFileByNioFile) }
+            .distinct()
+    if (folders.isEmpty()) return
+    folders.forEach { (it as? NewVirtualFile)?.markDirty() }
+    val refreshed = CompletableFuture<Unit>()
+    RefreshQueue.getInstance().refresh(true, false, { refreshed.complete(Unit) }, folders)
+    try {
+        refreshed.get(5, TimeUnit.SECONDS)
+    } catch (_: TimeoutException) {
+    } catch (_: InterruptedException) {
+        Thread.currentThread().interrupt()
+    }
 }
