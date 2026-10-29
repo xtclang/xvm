@@ -1087,8 +1087,17 @@ internal class XdkProjectQueries(
                         val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
                         val after = compile(plan.proposed) ?: return@let null
                         if (!XdkRename.preservesSafeDelete(before, after, plan, candidate)) return@let null
+                        // A public member's consumers are the configured modules', which the title names.
+                        val modules = project.modules.keys.sorted()
                         CodeAction(
-                            "Safely delete private member '${candidate.name}'",
+                            if (candidate.private) {
+                                "Safely delete private member '${candidate.name}'"
+                            } else {
+                                "Safely delete member '${candidate.name}', unused in " +
+                                    modules.dropLast(1).joinToString(", ").ifEmpty { null }.let { first ->
+                                        if (first == null) modules.last() else "$first and ${modules.last()}"
+                                    }
+                            },
                             CodeAction.CodeActionKind.REFACTOR_REWRITE,
                             edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                         )
