@@ -114,7 +114,8 @@ export function liveWorkspaceCases(): void {
                     async () => provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token),
                     edit => !!edit, 'Companion rename proof after fixture watcher notifications');
                 assert.ok(edit);
-                assert.ok(await vscode.workspace.applyEdit(edit));
+                // Apply it as native Rename does: as a refactoring, which files.refactoring.autoSave saves.
+                assert.ok(await vscode.workspace.applyEdit(edit, { isRefactoring: true }));
             } finally { cancellation.dispose(); }
             await noErrors(document.uri);
             const moved = await vscode.workspace.openTextDocument(workspace.uri(data.destination));
@@ -126,6 +127,9 @@ export function liveWorkspaceCases(): void {
             await vscode.window.showTextDocument(document);
             await vscode.commands.executeCommand('undo');
             await eventually(async () => document.getText(), text => text === data.source, 'Undo restores the renamed type uses');
+            // The member's own edit is undone with its move, at its old path.
+            const restored = await vscode.workspace.openTextDocument(workspace.uri(data.member));
+            await eventually(async () => restored.getText(), text => text === data.memberSource, 'Undo restores the moved member declaration');
             assert.strictEqual(await fs.readFile(workspace.uri(data.companion).fsPath, 'utf8'), data.companionSource);
             assert.strictEqual(await fs.stat(workspace.uri(data.destination).fsPath).catch(() => null), null);
             await noErrors(document.uri);
