@@ -206,7 +206,7 @@ public class ArrayᐸObjectᐳ
     }
 
     /**
-     * Native implementation of "{@code immutable Array<Element> freeze(Boolean inPlace = False)}".
+     * Native implementation of {@code immutable Array<Element> freeze(Boolean inPlace = False)}.
      */
     @Override
     public ArrayᐸObjectᐳ freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {

@@ -747,18 +747,18 @@ public abstract class TypeConstant
      * conditional incorporation being incorporated vs not-incorporated. (For context, this
      * specialization is referred to as "layer one specialization".) By way of example, the Range
      * class implies two specializations: (0) when Element is NOT Sequential
-     * ("{@code Range<Orderable>}"), and (1) when Element IS Sequential
-     * ("{@code Range<Sequential>}"). Another example is ListMap, which has four specializations:
+     * ({@code Range<Orderable>}), and (1) when Element IS Sequential
+     * ({@code Range<Sequential>}). Another example is ListMap, which has four specializations:
      * (00) when Key is NOT immutable Hashable and Value is NOT Shareable
-     * ("{@code ListMap<Object, Object>}"), (01) when Key is NOT immutable Hashable but Key IS
-     * immutable Object and Value IS Shareable ("{@code ListMap<immutable Object, Shareable>}"),
+     * ({@code ListMap<Object, Object>}), (01) when Key is NOT immutable Hashable but Key IS
+     * immutable Object and Value IS Shareable ({@code ListMap<immutable Object, Shareable>}),
      * (10) when Key IS immutable Hashable and Value is NOT Shareable
-     * ("{@code ListMap<immutable Hashable, Object>}"), and (11) when Key IS immutable Hashable and
-     * Value IS Shareable ("{@code ListMap<immutable Hashable, Shareable>}").
+     * ({@code ListMap<immutable Hashable, Object>}), and (11) when Key IS immutable Hashable and
+     * Value IS Shareable ({@code ListMap<immutable Hashable, Shareable>}).
      * <p>
      * A class with no reachable conditional incorporations has only one canonical type, with no
      * type parameters specified; for example, "KeyBasedMap" is used as the canonical form, rather
-     * than the normalized "{@code KeyBasedMap<Object, Object>}".
+     * than the normalized {@code KeyBasedMap<Object, Object>}.
      * <p>
      * With virtual child relationships, this is additionally complicated by the ability of a child
      * class to (i) specify "incorporates conditional" clauses that reference a formal type

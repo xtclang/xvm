@@ -113,7 +113,7 @@ public class nType
     }
 
     /**
-     * Native implementation of "{@code conditional Hasher<DataType> hashed()}".
+     * Native implementation of {@code conditional Hasher<DataType> hashed()}.
      *
      * TODO: this is temporary - it needs to be removed here and naturally generated
      */
@@ -173,8 +173,8 @@ public class nType
     }
 
     /**
-     * Native implementation of: "{@code static <CompileType extends Type> Boolean
-     * equals(CompileType value1, CompileType value2)}".
+     * Native implementation of: {@code static <CompileType extends Type> Boolean
+     * equals(CompileType value1, CompileType value2)}.
      */
     public static boolean equals$p(Ctx ctx, nType CompileType, nType value1, nType value2) {
         return value1.$dataType.equals(value2.$dataType);

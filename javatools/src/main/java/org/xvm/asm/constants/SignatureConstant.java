@@ -47,8 +47,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * narrowing types:
  *
  * <pre>
- *     interface I
- *         {
+ *     interface I {
  *         I foo();
  *         void bar(I i);
  *     }
@@ -57,8 +56,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p>Now consider a class:
  *
  * <pre>
- *     class C
- *         {
+ *     class C {
  *         C! foo() {...}
  *         void bar(C! c) {...}
  *     }

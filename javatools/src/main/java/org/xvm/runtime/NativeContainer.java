@@ -787,7 +787,7 @@ public class NativeContainer
      * Obtain an object type for the specified constant.
      *
      * <p>The switch is deliberately exhaustive rather than closed with a {@code default}, so that
-     * adding a {@link Constant.Format Format} does not compile until someone has decided which of
+     * adding a {@link Constant.Format} does not compile until someone has decided which of
      * the three groups below it belongs to. The alternative - a {@code default} that throws - turns
      * a new format into a run-time {@code "No implementation for constant"} that only shows up once
      * a module containing one is actually executed.</p>
