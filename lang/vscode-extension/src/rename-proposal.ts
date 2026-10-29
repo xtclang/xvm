@@ -134,7 +134,10 @@ async function proposalWithConfiguration(
         };
         proposal.edit = { ...proposal.edit, documentChanges: [...(proposal.edit.documentChanges ?? []), configurationEdit] };
     }
-    if (editsMovedSource(proposal.edit) && !vscode.workspace.getConfiguration('files.refactoring').get('autoSave', true)) {
+    // Only Rename's own edit needs files.refactoring.autoSave. VS Code applies a file move's participant edits with the
+    // move as one undo group, and its Undo restores the moved file's text, saved or not; refusing a move, which VS Code
+    // makes anyway, would only drop the Ecstasy edits.
+    if (!hostMoves.length && editsMovedSource(proposal.edit) && !vscode.workspace.getConfiguration('files.refactoring').get('autoSave', true)) {
         throw new Error('Moving an edited source file requires files.refactoring.autoSave in VS Code so Undo and Redo preserve its contents.');
     }
     const originals = new Set(hostMoves.map(uri => new URL(uri).href.replace(/\/$/, '')));
