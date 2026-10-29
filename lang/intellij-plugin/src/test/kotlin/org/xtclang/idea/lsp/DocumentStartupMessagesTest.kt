@@ -29,12 +29,14 @@ class DocumentStartupMessagesTest {
     private val uri = "file:///Startup.x"
     private val buffers =
         mutableMapOf(uri to DocumentStartupMessages.Snapshot(Any(), 1, "module Startup {}"))
+    private val reached = mutableMapOf<String, Int>()
     private val sent = mutableListOf<Message>()
     private val received = mutableListOf<Message>()
     private val guard =
-        DocumentStartupMessages { requested ->
-            buffers.entries.singleOrNull { URI(it.key) == URI(requested) }?.value
-        }
+        DocumentStartupMessages(
+            { requested -> buffers.entries.singleOrNull { URI(it.key) == URI(requested) }?.value },
+            { requested -> reached[requested] },
+        )
     private val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
     private val incoming = guard.incoming(MessageConsumer { received.add(it) })
 
@@ -102,6 +104,43 @@ class DocumentStartupMessagesTest {
         )
         assertThat(guard.editSnapshot("file:/Startup.x", 7)).isEqualTo(buffers[uri])
         assertThat(guard.editSnapshot(uri, 7)).isEqualTo(buffers[uri])
+    }
+
+    @Test
+    fun `a synchronizer retired by a restart cannot hide the reopened one's change of its version`() {
+        buffers[uri] = buffers.getValue(uri).copy(text = "module Startup { String value; }")
+        reached[uri] = 1
+        open(buffers.getValue(uri).text)
+        // LSP4IJ 0.21.0 numbers each synchronizer from 1, so the retired one's pending change is 2.
+        change(2, buffers.getValue(uri).text)
+        buffers[uri] = buffers.getValue(uri).copy(stamp = 2, text = "module Startup { Int value; }")
+        reached[uri] = 2
+        change(2, buffers.getValue(uri).text)
+        assertThat(sent).hasSize(2)
+        assertThat(
+            ((sent.last() as NotificationMessage).params as DidChangeTextDocumentParams)
+                .contentChanges
+                .single()
+                .text,
+        ).isEqualTo("module Startup { Int value; }")
+        assertThat(guard.editSnapshot(uri, 2)).isEqualTo(buffers[uri])
+    }
+
+    @Test
+    fun `a retired synchronizer's change queued before the reopen leaves the open's own version`() {
+        buffers[uri] = buffers.getValue(uri).copy(text = "module Startup { String value; }")
+        reached[uri] = 1
+        change(7, buffers.getValue(uri).text)
+        open(buffers.getValue(uri).text)
+        assertThat(
+            ((sent.single() as NotificationMessage).params as DidOpenTextDocumentParams)
+                .textDocument
+                .version,
+        ).isEqualTo(1)
+        buffers[uri] = buffers.getValue(uri).copy(stamp = 2, text = "module Startup { Int value; }")
+        reached[uri] = 2
+        change(2, buffers.getValue(uri).text)
+        assertThat(guard.editSnapshot(uri, 2)).isEqualTo(buffers[uri])
     }
 
     @Test
