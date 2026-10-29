@@ -73,8 +73,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   receipts define provisional local budgets only.
 - [ ] Prolonged-session acceptance (editing, restart, process leaks) on each supported platform.
 - [ ] Cross-platform and remote acceptance: Windows, Linux, and restricted or remote workspaces.
-- [ ] An uninterrupted full-catalog VS Code run. The latest 284-case run: 281 pass; X130 (UP16),
-  X218 (UP23) and X273 fail. X273 tested the color prototype and is retired with it.
+- [x] An uninterrupted full-catalog VS Code run: `run-Pc161s` (2026-10-28, `5e6a0f2391`) ran all
+  333 cases in one window, 332 passed, and X218 failed on UP23, the exception already accepted. On
+  `vscode-languageclient` 11.0.0 (2026-10-29) the full catalog passed 332 again, X218 failing, in
+  three windows: keys typed by hand reached the test window in X167 and X222, which then timed out
+  and passed when run again (`run-l2txtQ`, `run-gvT2Bt`, `run-CirjOs`).
 - [ ] For each host limitation, either a released fix with its acceptance passing, or a recorded
   release exception: UP16, UP23 (already accepted as an exception), UP25, UP26, UP17.
 - [ ] IntelliJ bulk replacement in a heavily decorated large file (UP17): after a platform fix,
@@ -935,7 +938,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   [the regroup map](errs-693-regroup-2026-10-28.tsv) from each new commit to the old ones (see "#693
   regrouped and rebased onto master" in
   [the integration plan](errs-integration-plan.md#693-regrouped-and-rebased-onto-master-2026-10-28));
-  its last commit, the rename proof fix, is errs `a8264753db`. Last synchronized 2026-10-28: the
+  its last commit, the rename proof fix, is errs `a8264753db`. On 2026-10-29 #693 was rebased onto
+  master `636b29d80b` (#742), dropping its copy of #742, as 70 commits (`51c0b48aed`), and took
+  `vscode-languageclient` 11.0.0 without UP28's workarounds as its commit 71 (`4a5f624b67`, errs
+  `40013e5306`). Last synchronized 2026-10-28: the
   debugger track through `a521e2ebbf`, as 22 feature commits and two of #693's own,
   `9b3b802eb2..6f5f5fde1b` before the regroup (see "The debugger track in #693" in
   [the integration plan](errs-integration-plan.md#the-debugger-track-in-693-2026-10-28)). Before
@@ -1008,16 +1014,18 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   on this branch. Closed on 2026-10-26 after review: the interpreter keeps natural Ecstasy code wherever
   it can, and speed is the JIT's job. The closing comment notes `markNativeMethod()`'s gap through
   `Const`, which nothing reaches today.
-- [ ] Candidate for master on its own, apart from the debugger and the `toString()` one above:
+- [x] Candidate for master on its own, apart from the debugger and the `toString()` one above:
   `ab9fbddeb`'s `ServiceContext` change and its `EmbeddingSupportTest` case, which master has unchanged
   (its `terminate()` and `shutdown()` assert the same, and the test uses only `EmbeddingSupport`).
   `Container.kill()` hangs, with assertions on, once a service has a fiber that ended with a call still
   out. It is on #693 since 2026-10-23 (`e618f7a22`), and in master pull request
   [#716](https://github.com/xtclang/xvm/pull/716) (2026-10-23, `lagergren/fix-embedded-run-end`), with
   `1473c7e89` below, written for master: without the `SessionDebuggerTest` change and the server
-  README's line, which master's README has no place for.
+  README's line, which master's README has no place for. Merged as #716 on 2026-10-28 (`22ec660f1f`).
 - [ ] Candidates for master on their own, found by a scan of this branch's fixes outside `lang/` against
-  master (2026-10-23), each reproduced on master:
+  master (2026-10-23), each reproduced on master. State on 2026-10-29: #716, #717, #718, #720, #723,
+  #731 and #735 are merged; #719, #721 and #722 are closed, and #730 is closed with its fix in #724,
+  which is the one still open; `814153a42` stays on this branch.
   - `1473c7e89`: an embedded run ended when `run()` returned, and the services it left at work ran on
     with nothing able to stop them; now it lasts until they have nothing left to do, as `xtc run` does,
     and is then killed. Master has the runner and `EmbeddingSupport` (#703); the `xtc/runExited`
