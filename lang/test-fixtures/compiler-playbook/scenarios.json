@@ -10291,6 +10291,83 @@
         "limitations": []
       }
     },
+    "X335": {
+      "title": "an Explorer move with refactoring auto-save off rewrites the moved type, its aliases and closed consumers, and one Undo restores them",
+      "manual": [
+        "With files.refactoring.autoSave off and Box.x open, drag App/tools/Box.x to App/util in the Explorer; Undo, then Redo, from the Explorer."
+      ],
+      "values": {
+        "root": "App.x",
+        "from": "App/tools/Box.x",
+        "to": "App/util/Box.x",
+        "destination": "App/util",
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App { import tools.Box as Crate; Crate make() = new Crate(); }",
+            "destination": "App.x",
+            "expected": "module App { import util.Box as Crate; Crate make() = new Crate(); }"
+          },
+          {
+            "file": "App/tools/Box.x",
+            "source": "class Box { Helper make() = new Helper(); static Int number() = 1; }",
+            "destination": "App/util/Box.x",
+            "expected": "class Box { tools.Helper make() = new tools.Helper(); static Int number() = 1; }"
+          },
+          {
+            "file": "App/tools/Helper.x",
+            "source": "class Helper {}",
+            "destination": "App/tools/Helper.x",
+            "expected": "class Helper {}"
+          },
+          {
+            "file": "App/tools/Box/Part.x",
+            "source": "class Part {}",
+            "destination": "App/util/Box/Part.x",
+            "expected": "class Part {}"
+          },
+          {
+            "file": "App/tools/Box/data.txt",
+            "source": "keep this resource",
+            "destination": "App/util/Box/data.txt",
+            "expected": "keep this resource"
+          },
+          {
+            "file": "App/util/Marker.x",
+            "source": "class Marker {}",
+            "destination": "App/util/Marker.x",
+            "expected": "class Marker {}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package app import App; app.tools.Box make() = new app.tools.Box(); Int read() = app.tools.Box.number(); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package app import App; app.util.Box make() = new app.util.Box(); Int read() = app.util.Box.number(); }"
+          }
+        ],
+        "explorerMove": true
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "VS Code only: files.refactoring.autoSave and VS Code's file-operation participants have no IntelliJ counterpart. IntelliJ's move of a type, edited and moved, is X161."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
