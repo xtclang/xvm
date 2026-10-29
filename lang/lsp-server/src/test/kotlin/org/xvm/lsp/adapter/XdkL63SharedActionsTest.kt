@@ -19,7 +19,7 @@ class XdkL63SharedActionsTest {
     @ValueSource(
         ints = [
             181, 182, 183, 184, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240,
-            241, 242, 295, 296, 297, 298, 299,
+            241, 242, 295, 296, 297, 298, 299, 332, 333,
         ],
     )
     fun `shared action produces exact source or a documented refusal`(number: Int) {
