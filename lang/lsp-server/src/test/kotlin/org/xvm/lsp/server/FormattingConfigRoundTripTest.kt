@@ -67,7 +67,9 @@ class FormattingConfigRoundTripTest {
 
     /**
      * Create a mock [LanguageClient] that responds to `workspace/configuration` requests with the
-     * given formatting settings map.
+     * given formatting settings map. Every mock client here replies with a completed future, so the
+     * server stores the reply before `initialized` or `didChangeConfiguration` returns, and the tests
+     * read it without waiting.
      */
     private fun mockClientWithConfig(config: Map<String, Any>): LanguageClient {
         val client = mock(LanguageClient::class.java)
@@ -191,9 +193,6 @@ class FormattingConfigRoundTripTest {
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
-            // Allow async config request to complete
-            Thread.sleep(100)
-
             assertThat(server.editorFormattingConfig).isNotNull()
             assertThat(server.editorFormattingConfig!!.indentSize).isEqualTo(2)
             assertThat(server.editorFormattingConfig!!.continuationIndentSize).isEqualTo(4)
@@ -217,8 +216,6 @@ class FormattingConfigRoundTripTest {
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
-            Thread.sleep(100)
-
             assertThat(server.editorFormattingConfig).isNotNull()
             assertThat(server.editorFormattingConfig!!.indentSize).isEqualTo(2)
             assertThat(server.editorFormattingConfig!!.continuationIndentSize).isEqualTo(6)
@@ -233,8 +230,6 @@ class FormattingConfigRoundTripTest {
             server.connect(client)
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
-
-            Thread.sleep(100)
 
             // No editor config stored — formatting will use LSP options or defaults
             assertThat(server.editorFormattingConfig).isNull()
@@ -260,9 +255,6 @@ class FormattingConfigRoundTripTest {
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
-            // Wait for async config to be stored
-            Thread.sleep(100)
-
             // After "module myapp {", Enter → new line should indent by 2 (custom config)
             val source = "module myapp {\n}"
             val indent = formatWithServer(server, source, line = 1, column = 0, ch = "\n")
@@ -279,8 +271,6 @@ class FormattingConfigRoundTripTest {
             server.connect(client)
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
-
-            Thread.sleep(100)
 
             // Without editor config, falls back to LSP FormattingOptions (tabSize=4)
             val source = "module myapp {\n}"
@@ -305,8 +295,6 @@ class FormattingConfigRoundTripTest {
             server.connect(client)
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
-
-            Thread.sleep(100)
 
             // Nested class inside module with correct 3-space indentation.
             // The tree-sitter adapter reads the parent line's indentation from source,
@@ -333,8 +321,6 @@ class FormattingConfigRoundTripTest {
             server.connect(client)
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
-
-            Thread.sleep(100)
 
             val uri = "file:///roundtrip-${System.nanoTime()}.x"
             val source =
@@ -375,8 +361,6 @@ class FormattingConfigRoundTripTest {
             server.connect(client)
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
-
-            Thread.sleep(100)
 
             val uri = "file:///roundtrip-${System.nanoTime()}.x"
             val source =
@@ -437,7 +421,6 @@ class FormattingConfigRoundTripTest {
             server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
-            Thread.sleep(100)
             assertThat(server.editorFormattingConfig).isNotNull()
             assertThat(server.editorFormattingConfig!!.indentSize).isEqualTo(2)
 
@@ -445,8 +428,6 @@ class FormattingConfigRoundTripTest {
             server.workspaceService.didChangeConfiguration(
                 org.eclipse.lsp4j.DidChangeConfigurationParams(com.google.gson.JsonObject()),
             )
-
-            Thread.sleep(100)
 
             // Verify the server re-requested and stored the updated config
             assertThat(callCount)
