@@ -25,6 +25,9 @@ internal class DiagnosticResultMessages(
     private val requests = mutableMapOf<String, Pending>()
     private val results = mutableMapOf<Key, Result>()
 
+    /** The latest report of each document, by URI, and the snapshot it was asked for. */
+    private val reports = mutableMapOf<String, Report>()
+
     /** Diagnostic result namespace for one document and optional provider identifier. */
     private data class Key(
         val uri: String,
@@ -43,6 +46,25 @@ internal class DiagnosticResultMessages(
         val id: String,
     )
 
+    /** The number of items of a document's latest report, and the snapshot that report was asked for. */
+    private data class Report(
+        val snapshot: DocumentStartupMessages.Snapshot,
+        val items: Int,
+    )
+
+    /** The URIs of the documents with a report. */
+    fun reported(): Set<String> = synchronized(lock) { reports.keys.toSet() }
+
+    /**
+     * The number of items of the latest report of the document at [uri], if that report was asked for the document as
+     * it is now; null if there is none, or the document has changed since, as a test waiting for the diagnostics of an
+     * edit needs to know.
+     */
+    fun currentItems(uri: String): Int? {
+        val now = snapshot(uri) ?: return null
+        return synchronized(lock) { reports[uri]?.takeIf { it.snapshot == now }?.items }
+    }
+
     fun outgoing(next: MessageConsumer): MessageConsumer =
         MessageConsumer { message ->
             val request = message as? RequestMessage
@@ -57,6 +79,7 @@ internal class DiagnosticResultMessages(
                         val uri = close.textDocument.uri
                         results.keys.removeIf { it.uri == uri }
                         requests.values.removeIf { it.key.uri == uri }
+                        reports.remove(uri)
                     }
                     // Explicit callers own their previous-result policy. Only the installed
                     // synchronizer's typed, automatic request is enriched here.
@@ -97,13 +120,15 @@ internal class DiagnosticResultMessages(
                 synchronized(lock) {
                     // Snapshot lookup runs outside this lock. Close/cancel may retire the request
                     // while it runs; only the still-owned request can seed the result cache.
-                    if (
-                        requests.remove(response.id, pending) &&
-                        current == pending.snapshot &&
-                        response.error == null &&
-                        id != null
-                    ) {
+                    val owned = requests.remove(response.id, pending)
+                    if (owned && current == pending.snapshot && response.error == null && id != null) {
                         results[pending.key] = Result(pending.snapshot, id)
+                    }
+                    // a late reply for an earlier state never replaces the record of the current one
+                    if (owned && current == pending.snapshot && response.error == null && report != null) {
+                        val uri = pending.key.uri
+                        val items = report.left?.items?.size ?: reports[uri]?.items ?: 0
+                        reports[uri] = Report(pending.snapshot, items)
                     }
                 }
             }
