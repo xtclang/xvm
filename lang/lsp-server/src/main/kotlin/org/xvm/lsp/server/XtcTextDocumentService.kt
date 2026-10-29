@@ -301,7 +301,7 @@ class XtcTextDocumentService(
             val document = openDocuments[uri] ?: continue
             if (uri !in outOfSync && document.analysis.isCancelled) {
                 logger.info("analysis of {} was retired without a replacement; analyzing it again", uri)
-                analyseOne(uri, document.content, document.version)
+                analyzeOne(uri, document.content, document.version)
             }
         }
     }
@@ -479,7 +479,7 @@ class XtcTextDocumentService(
                 params.textDocument.version,
             )
             outOfSync.remove(params.textDocument.uri)
-            analyse(
+            analyze(
                 params.textDocument.uri,
                 params.textDocument.text,
                 params.textDocument.version,
@@ -514,7 +514,7 @@ class XtcTextDocumentService(
                     return
                 }
             if (outOfSync.remove(uri)) logger.info("textDocument/didChange: {} is in sync again", uri)
-            analyse(uri, content, version)
+            analyze(uri, content, version)
         }
     }
 
@@ -563,7 +563,7 @@ class XtcTextDocumentService(
         )
 
     /** Refresh the changed module, then open source consumers in dependency order. */
-    private fun analyse(
+    private fun analyze(
         uri: String,
         content: String,
         version: Int,
@@ -572,7 +572,7 @@ class XtcTextDocumentService(
         clearResolveReports()
         val compiler = adapter as? XdkAdapter
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
-        analyseOne(uri, content, version)
+        analyzeOne(uri, content, version)
         refreshScopes(
             (
                 changedGraph +
@@ -593,7 +593,7 @@ class XtcTextDocumentService(
                 }
             }.distinctBy { ownership[it.key] }
             .forEach { (uri, document) ->
-                analyseOne(uri, document.content, document.version, ownership)
+                analyzeOne(uri, document.content, document.version, ownership)
             }
     }
 
@@ -605,7 +605,7 @@ class XtcTextDocumentService(
         }
 
     /** A member edit replaces the analysis future for every open document in that module. */
-    private fun analyseOne(
+    private fun analyzeOne(
         uri: String,
         content: String,
         version: Int,
