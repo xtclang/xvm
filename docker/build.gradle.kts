@@ -6,6 +6,14 @@
  * are automatically created by the org.xtclang.build.docker convention plugin
  */
 
+// Build-classpath security constraint: the git-version plugin drags Guava 33.7.1-jre onto this
+// project's build classpath. The Guava BOM raises it to at least the patched version.
+buildscript {
+    dependencies {
+        classpath(platform(libs.guava.bom))
+    }
+}
+
 plugins {
     base
     alias(libs.plugins.palantir.git.version)  // Provides git info for Docker builds

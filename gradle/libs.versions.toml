@@ -40,6 +40,15 @@ spotless = "8.10.4"
 vanniktech-maven-publish = "0.37.0"
 
 # =============================================================================
+# Build tooling - Gradle plugin classpath floors
+# =============================================================================
+# Not a project dependency. The git-version Gradle plugin brings a vulnerable Guava onto
+# every classpath that resolves it (javatools' and docker's build scripts, build-logic's
+# accessor generation), and it is already at its latest release. The Guava BOM raises
+# that floor without pinning.
+guava = "33.7.2-jre"
+
+# =============================================================================
 # Testing (shared across XDK and lang)
 # =============================================================================
 assertj = "3.27.7"
@@ -183,6 +192,11 @@ jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
+
+# =============================================================================
+# Build tooling - Gradle plugin classpath floors (see version comment above)
+# =============================================================================
+guava-bom = { module = "com.google.guava:guava-bom", version.ref = "guava" }
 
 # =============================================================================
 # Testing (shared across XDK and lang)

@@ -7,6 +7,14 @@ import java.util.Properties
  * Build file for the Java tools portion of the XDK.
  */
 
+// Build-classpath security constraint: the git-version plugin drags Guava 33.7.1-jre onto this
+// project's build classpath. The Guava BOM raises it to at least the patched version.
+buildscript {
+    dependencies {
+        classpath(platform(libs.guava.bom))
+    }
+}
+
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.palantir.git.version)
