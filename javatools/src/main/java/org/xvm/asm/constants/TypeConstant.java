@@ -1558,7 +1558,7 @@ public abstract class TypeConstant
      *
      * @return the resolved actual type or null if there is no matching type parameter or
      *         tha actual type topology is not the same as this type and doesn't provide enough
-     *         fidelity (e.g.: formal is Array<R> and actual is Object)
+     *         fidelity (e.g.: formal is {@code Array<R>} and actual is Object)
      */
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         return getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
@@ -7344,7 +7344,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public ClassDesc getJitCCDesc(TypeSystem ts) {
         return ClassDesc.of(getJitCCName(ts));
@@ -7354,7 +7354,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Instance Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public ClassDesc getJitICDesc(TypeSystem ts) {
         return ClassDesc.of(getJitICName(ts));
@@ -7373,7 +7373,7 @@ public abstract class TypeConstant
      * Obtain a unique Java class name that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String getJitCCName(TypeSystem ts) {
         // annotated references use the underlying callable contract, not their allocation class
@@ -7543,7 +7543,7 @@ public abstract class TypeConstant
      *
      * @return {@code true} iff this type is Specializable
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public boolean isJitL2Specializable() {
         if (!isSingleUnderlyingClass(true)) {
@@ -7572,7 +7572,7 @@ public abstract class TypeConstant
      * @return {@code true} iff this type's callable JIT type is a non-canonical parameterization of
      *         a {@link #isJitL2Specializable() specializable} type
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public boolean isJitL2Specialized() {
         TypeConstant jitType = getJitCCType();
@@ -7706,7 +7706,7 @@ public abstract class TypeConstant
      *
      * @return a canonical JIT type
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public TypeConstant getJitCCType() {
         if (isModifyingType()) {
@@ -7722,7 +7722,7 @@ public abstract class TypeConstant
      * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
      * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
@@ -8218,7 +8218,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * Compare for order (<=>) two object handles that both belong to this type.
+     * Compare for order ({@code <=>}) two object handles that both belong to this type.
      *
      * @param frame    the frame
      * @param hValue1  the first handle
