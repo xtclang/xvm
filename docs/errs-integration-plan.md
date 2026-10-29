@@ -170,6 +170,30 @@ resolve to #716's final form. #693 replayed without a conflict; its commit 39 no
   `d3aceb5785`. [errs-693-rebase-2026-10-28.tsv](errs-693-rebase-2026-10-28.tsv) maps the regroup's
   commits to both.
 
+**errs and #693 rebased onto master `636b29d80b` (2026-10-29).** Master gained #742, with
+`setDebugger()`'s javadoc as Gene's review left it: "Set the debugger of this runtime's services. A
+host without a terminal for the console debugger sets `Debugger.NONE`." Both branches keep that text.
+The debugger commits that conflicted with it (errs' R7a `55191879ec`, and #693's "Debug programs from
+VS Code and IntelliJ through the language server") keep master's javadoc, without their sentence on
+what the method does with the debugger it replaces. The copies of #742 (errs' `162e4390d4`, #693's
+commit 71) are dropped, since master has it. [The map](errs-rebase-2026-10-29.tsv) gives errs' 1136
+commits of `9e5bb58feb` and their 1135 replays, and [#693's map](errs-693-rebase-2026-10-29.tsv) its 71
+commits of `d3aceb5785` and their 70.
+
+- Both trees differ from the validated ones, errs' `9e5bb58feb` and #693's `d3aceb5785`, only in that
+  javadoc. `:javatools:compileJava` and `spotlessCheck` pass on both; the suites were not rerun.
+- The comments that Gene's reviews shortened on master are in master's form on both branches: #736's
+  in `InterpreterConnector`, `Debugger` and `Runtime`, and those of #703, #709, #716, #718, #720 and
+  #723. The javadoc the branches add there is for methods master does not have.
+- #693 adds no javadoc errors. javadoc reports 159 on its tip, all of them master's, which #743
+  fixes; #693's `ErrorListener` already removes master's other 3.
+- #693's two review threads, Copilot's on `TestRunner`'s `errs` javadoc and `ParserTest`'s "an
+  Attempt", are fixed on both branches and resolved.
+- Backups: `backup/errs-pre-rebase-20261029` (`9e5bb58feb`) and `backup/693-pre-rebase-20261029`
+  (`d3aceb5785`). #693 was force-pushed with leases from `d3aceb5785` to `8f45b818a5`, which still
+  had that sentence, and then to `51c0b48aed`. errs was force-pushed with a lease from
+  `9e5bb58feb`, with this record as its tip.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
