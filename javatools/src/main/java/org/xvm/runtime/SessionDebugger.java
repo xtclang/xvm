@@ -826,7 +826,7 @@ public final class SessionDebugger implements Debugger {
      * @param stackTrace  the stack where it was thrown, a frame to a line, of its fiber and of the
      *                    fibers that called it, down to where the host called the program
      * @param uncaught    true if no frame of its fiber, nor of the fibers that called it, will
-     *                    catch it
+     *                    catch it, down to where the host called the program
      */
     public record ExceptionInfo(String type, String text, String stackTrace, boolean uncaught) {
     }
@@ -2247,10 +2247,15 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * @return true if a frame of the fiber at the specified frame, or of a fiber that called it,
-     *         will catch the exception
+     *         will catch the exception, down to where the host called the program: the host's own
+     *         code, such as the runner, which takes the program's failure while it is still
+     *         starting it, does not catch it for the program
      */
-    private static boolean isCaught(Frame frame, ExceptionHandle exception) {
+    private boolean isCaught(Frame frame, ExceptionHandle exception) {
         for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
+            if (isHost(stackFrame)) {
+                return false;
+            }
             Frame caller = stackFrame.frame;
             if (caller != null && !caller.isNative() && caller.catches(exception)) {
                 return true;
