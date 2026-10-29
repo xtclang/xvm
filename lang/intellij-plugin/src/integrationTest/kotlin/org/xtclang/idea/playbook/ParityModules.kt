@@ -33,10 +33,8 @@ internal fun ParityScenarios.moduleCases() {
         )
         check(errors(child).none { it.code == data.string("diagnosticCode") })
         check(version(child) == version)
-        check(
-            with(driver) { receivedDiagnostics(root.editor) }
-                .none { it.code == data.string("diagnosticCode") },
-        )
+        // the root's own report for its edited text
+        check(diagnostics(root) { true }.none { it.code == data.string("diagnosticCode") })
         replace(root, fixture(data.string("rootFile")))
         clean(child)
     }
