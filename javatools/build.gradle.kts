@@ -7,6 +7,12 @@ import java.util.Properties
  * Build file for the Java tools portion of the XDK.
  */
 
+buildscript {
+    dependencies {
+        classpath(platform(libs.guava.bom))
+    }
+}
+
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.palantir.git.version)

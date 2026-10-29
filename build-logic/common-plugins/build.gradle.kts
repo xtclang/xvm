@@ -42,6 +42,7 @@ dependencies {
     // public VersionDetails interface directly (no reflection). The plugin
     // itself is applied by consumers (e.g. docker/build.gradle.kts).
     compileOnly("com.palantir.gradle.gitversion:gradle-git-version:${libs.versions.palantir.git.version.get()}")
+    compileOnly(platform(libs.guava.bom))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

@@ -6,6 +6,12 @@
  * are automatically created by the org.xtclang.build.docker convention plugin
  */
 
+buildscript {
+    dependencies {
+        classpath(platform(libs.guava.bom))
+    }
+}
+
 plugins {
     base
     alias(libs.plugins.palantir.git.version)  // Provides git info for Docker builds
