@@ -14,7 +14,11 @@ import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.util.ExecutionTrace
 
-/** Private source members have bounded consumers; public APIs and initialization effects do not. */
+/**
+ * Removes a member that nothing uses. A private member's uses are its source's; a public or protected member's are
+ * looked for in the configured modules, which count as all its consumers, as Rename takes them. Initialization effects,
+ * entry points and members that override, implement or are overridden are not removed.
+ */
 internal object XdkSafeDelete {
     /** Proposed declaration removal and the binding sites intentionally removed with it. */
     data class Candidate(
@@ -22,6 +26,7 @@ internal object XdkSafeDelete {
         val identity: ProofIdentity,
         val edit: XdkRename.Edit,
         val removed: Set<SemanticModel.SourceLocation>,
+        val private: Boolean = true,
     )
 
     fun candidate(
@@ -45,7 +50,7 @@ internal object XdkSafeDelete {
             when (symbol.kind) {
                 SemanticModel.SymbolKind.METHOD -> {
                     parents.keys.filterIsInstance<MethodDeclarationStatement>().singleOrNull {
-                        it.nameToken?.startPosition?.let(::at) == declaration.start && it.defaultAccess == Access.PRIVATE &&
+                        it.nameToken?.startPosition?.let(::at) == declaration.start &&
                             !it.isConstructor && !it.isConstructorFinally && it.childNodes().any { child -> child is StatementBlock }
                     }
                 }
@@ -53,14 +58,27 @@ internal object XdkSafeDelete {
                 SemanticModel.SymbolKind.PROPERTY -> {
                     if (SemanticModel.SourceLocation(source, declaration) !in facts.constantProperties) return null
                     parents.keys.filterIsInstance<PropertyDeclarationStatement>().singleOrNull {
-                        at(it.nameToken.startPosition) == declaration.start && it.defaultAccess == Access.PRIVATE && it.isStatic &&
+                        at(it.nameToken.startPosition) == declaration.start && it.isStatic &&
                             it.childNodes().none { child -> child is StatementBlock }
                     }
                 }
 
                 else -> null
             } ?: return null
-        if (parents[parents[member]] !is TypeCompositionStatement) return null
+        val owner = parents[parents[member]] as? TypeCompositionStatement ?: return null
+        val private =
+            when (member) {
+                is MethodDeclarationStatement -> member.defaultAccess == Access.PRIVATE
+                is PropertyDeclarationStatement -> member.defaultAccess == Access.PRIVATE
+                else -> return null
+            }
+        if (!private) {
+            // A method of the module itself can be a run's entry point, by default or by name.
+            if (member is MethodDeclarationStatement && owner.category.id == Token.Id.MODULE) return null
+            // Calls through a member that this one overrides, implements or is overridden by would reach another body.
+            val chains = if (member is MethodDeclarationStatement) facts.methods.chains else facts.properties.chains
+            if (chains.any { identity in it.members && (it.members.size > 1 || !it.supported) }) return null
+        }
         if (XdkRefactoringSyntax.tree(member).any { (node, _) -> node is AnnotationExpression }) return null
         val edit = removal(text, member) ?: return null
         val members = SemanticModel.Range(at(member.startPosition), at(member.endPosition))
@@ -85,7 +103,7 @@ internal object XdkSafeDelete {
                     view.occurrences.map { it.range } + view.calls.map { it.callee }
                 }.filter { inside(source, it) }
                 .mapTo(linkedSetOf()) { SemanticModel.SourceLocation(source, it) }
-        return Candidate(symbol.name, identity, edit, removed)
+        return Candidate(symbol.name, identity, edit, removed, private)
     }
 
     /**
