@@ -1939,6 +1939,8 @@ public class SessionDebuggerTest {
         var   session = new SessionDebugger(stops);
         session.addModule(input().loadModule("Values"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 34)));
+        // ordinary getters may take a loaded machine longer than ON_DEMAND; spin, below, checks it
+        session.setOnDemandLimit(RUN_LIMIT);
 
         StringWriter output  = new StringWriter();
         Control      control = run("Values", output, session);
@@ -1969,8 +1971,10 @@ public class SessionDebuggerTest {
             assertEquals("6", read(session, box.get("bumped").variablesReference()).getFirst().value());
             assertEquals("6", evaluate(session, frame, "box.count").value());
             assertFails("fail threw IllegalState: no.", session.variables(box.get("fail").variablesReference()));
+            session.setOnDemandLimit(SessionDebugger.ON_DEMAND);
             assertFails("spin did not finish within 1 second, so it was ended.",
                     session.variables(box.get("spin").variablesReference()));
+            session.setOnDemandLimit(RUN_LIMIT);
             assertEquals("\"Box\"", read(session, box.get(SessionDebugger.TO_STRING).variablesReference()).getFirst().value());
 
             // the program is stopped where it was, and goes on with what the getters changed
