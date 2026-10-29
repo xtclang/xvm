@@ -15,7 +15,7 @@ object RunWorkerHost {
         val printed = CountDownLatch(1)
         workers.start(
             RunWorkerProcess.Request(listOf(modulePath), module, "run", emptyList(), rootDir),
-            object : RunWorkerProcess.Listener {
+            object : RunListener {
                 override fun output(text: String) = printed.countDown()
 
                 override fun exited(
