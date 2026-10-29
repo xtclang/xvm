@@ -35,6 +35,7 @@ import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
@@ -229,6 +230,11 @@ class XdkLanguageServerTest {
                 .result
                 .completeExceptionally(IllegalArgumentException("compiler failure"))
         }
+
+        /** Retires the analysis, as the compiler does when a change elsewhere affects its module. */
+        fun retire(index: Int) {
+            pending[index].result.completeExceptionally(CancellationException("retired"))
+        }
     }
 
     @Test
@@ -288,6 +294,21 @@ class XdkLanguageServerTest {
             adapter.finish(0)
             assertThat(outline.get(10, SECONDS).map { it.right.name }).contains("Waiting")
             assertThat(adapter.count).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun `a document whose analysis was retired without a replacement is analyzed again for its next query`() {
+        val adapter = PendingAdapter()
+        Session(adapter).use { session ->
+            session.open("module Retired {}")
+            adapter.retire(0)
+            // without a new analysis the query would end as canceled, and so would every one after it
+            val outline =
+                session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
+            assertThat(adapter.count).isEqualTo(2)
+            adapter.finish(1)
+            assertThat(outline.get(10, SECONDS).map { it.right.name }).contains("Retired")
         }
     }
 
