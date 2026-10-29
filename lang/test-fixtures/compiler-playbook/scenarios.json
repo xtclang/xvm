@@ -10368,6 +10368,36 @@
         ]
       }
     },
+    "X336": {
+      "title": "a debug session attaches to a program that xec runs with --debug, stops it at a breakpoint before it goes on, and the program's exit ends the session",
+      "manual": [
+        "How each editor offers the attach, VS Code's Ecstasy: Attach to Program snippet and Copy Option to Debug a Program Outside the Editor command, and IntelliJ's Ecstasy Attach configuration with the option in its Port comment, and their choice to stop at the program's first line, is checked manually; VS Code checks the protocol messages it receives and the stack it asks for, IntelliJ the paused session's position and frames, and both the exit code the program and the session report and what the program printed."
+      ],
+      "values": {
+        "file": "Attached.x",
+        "module": "Attached",
+        "source": "module Attached {\n    Int run() {\n        @Inject Console console;\n        console.print(\"before\");\n        Int n = twice(21);\n        console.print($\"after {n}\");\n        return n;\n    }\n\n    Int twice(Int n) {\n        Int result = n * 2;\n        return result;\n    }\n}\n",
+        "breakpointLine": 11,
+        "frames": [
+          [
+            "Attached.twice",
+            11
+          ],
+          [
+            "Attached.run",
+            5
+          ]
+        ],
+        "listening": "Listening for the debugger at [^ ]+:(\\d+)",
+        "before": "before",
+        "after": "after 42",
+        "exitCode": 42
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

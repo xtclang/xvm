@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -2000,6 +2000,78 @@ export function gradleProjectCases(): void {
             await fs.rm(generated, { recursive: true, force: true });
         }
     }, 360_000);
+}
+
+/**
+ * X336, registered after X335 in catalog order: a debug session attaches to a program that the XDK's xec runs with
+ * --debug and this extension's language server jar as its agent, outside the editor.
+ */
+export function attachCases(): void {
+    playbook('X336', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        const xec = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xec.bat' : 'xec');
+        assert.ok(await exists(xec), `X336 runs its program with ${xec}; run ./gradlew xdk:installDist first`);
+        const extension = vscode.extensions.getExtension('xtclang.xtc-language');
+        assert.ok(extension, 'The extension under test');
+        const agent = path.join(extension.extensionPath, 'server', 'lsp-server.jar');
+        const output = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-attach-'));
+        const program = spawn(xec, ['-o', output, '--debug', `listen:127.0.0.1:0,suspend,agent=${agent}`, document.uri.fsPath],
+            { shell: process.platform === 'win32' });
+        let printed = '';
+        program.stdout.on('data', (chunk: Buffer) => { printed += chunk.toString('utf8'); });
+        program.stderr.on('data', (chunk: Buffer) => { printed += chunk.toString('utf8'); });
+        let exitCode: number | null | undefined;
+        program.on('exit', code => { exitCode = code; });
+
+        const sent: DapMessage[] = [];
+        const tracker = trackDebugSessions(sent);
+        let ended = false;
+        let started: vscode.DebugSession | undefined;
+        const start = vscode.debug.onDidStartDebugSession(session => {
+            if (session.type === 'xtc') started = session;
+        });
+        const termination = vscode.debug.onDidTerminateDebugSession(session => {
+            if (session.type === 'xtc') ended = true;
+        });
+        const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+        vscode.debug.addBreakpoints([breakpoint]);
+        try {
+            const listening = new RegExp(data.listening);
+            const port = Number(await eventually(async () => listening.exec(printed)?.[1], value => value !== undefined,
+                'The program listens for the debugger'));
+            assert.ok(!printed.includes(data.before), `The program waits for the debugger: ${printed}`);
+            assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                { type: 'xtc', request: 'attach', name: `Attach to ${data.module}`, port }));
+            await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+            const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
+            assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
+            assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
+            const frames = await eventually(
+                async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                    .flatMap(message => message.body?.stackFrames ?? []),
+                values => values.length >= data.frames.length, 'VS Code shows the call stack');
+            assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
+            assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(document.uri.fsPath));
+            assert.ok(printed.includes(data.before) && !printed.includes(data.after), printed);
+
+            await vscode.commands.executeCommand('workbench.action.debug.continue');
+            await eventually(async () => ended, value => value, 'Continue runs the program to its exit, which ends the session');
+            assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+            await eventually(async () => exitCode, code => code !== undefined, 'The program ends');
+            assert.strictEqual(exitCode, data.exitCode, printed);
+            assert.ok(printed.includes(data.after), printed);
+        } finally {
+            vscode.debug.removeBreakpoints([breakpoint]);
+            if (started && !ended) await vscode.debug.stopDebugging(started);
+            program.kill();
+            start.dispose();
+            termination.dispose();
+            tracker.dispose();
+            await fs.rm(output, { recursive: true, force: true });
+        }
+    });
 }
 
 /** X291 is registered after the on-type cases and X301 after X300, in catalog order. */
