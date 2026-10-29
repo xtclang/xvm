@@ -274,6 +274,9 @@ internal fun ParityScenarios.refreshOverlapCases() {
                     protocol.server().getCurrentProcessId()?.let { it != previous } == true &&
                         !ProcessHandle.of(previous).map { it.isAlive }.orElse(false)
                 }
+                // a new PID precedes initialization and LSP4IJ's asynchronous reopening of the consumer; open's
+                // didOpen readiness check waits for that without changing the consumer
+                open(data.string("consumer"))
                 version = version(consumer)
                 visible(data.string("after"))
                 clean(consumer)
