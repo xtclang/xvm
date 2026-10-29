@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.CompletionItemType
 import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
+import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.DataBreakpoint
 import org.eclipse.lsp4j.debug.DataBreakpointAccessType
 import org.eclipse.lsp4j.debug.DataBreakpointInfoArguments
@@ -520,6 +521,45 @@ class XtcDebugServerTest {
         assertThat(runs.steps).containsExactly(12 to StepKind.OVER, 12 to StepKind.IN, 12 to StepKind.OUT)
 
         assertFailsWith(XtcDebugServer.NOT_STOPPED) { server.next(NextArguments().apply { threadId = 13 }) }
+    }
+
+    @Test
+    fun `a stop that comes before a step's answer goes out after the step's response`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        val answer = CompletableFuture<Boolean>()
+        runs.stepAnswer = answer
+
+        val stepped = server.next(NextArguments().apply { threadId = 12 })
+        // the program stops where the step ends before it answers the step
+        runs.events.stopped(StopState("step", null, 12, emptyList()))
+        assertThat(client.stops).hasSize(1)
+
+        // lsp4j sends the response from the future's completion, as this does, and the stop follows it
+        val stopsAtResponse = CompletableFuture<Int>()
+        stepped.whenComplete { _, _ -> stopsAtResponse.complete(client.stops.size) }
+        answer.complete(true)
+        stepped.get(10, SECONDS)
+        assertThat(stopsAtResponse.get(10, SECONDS)).isEqualTo(1)
+        assertThat(client.stops.map { it.reason }).containsExactly("breakpoint", "step")
+    }
+
+    @Test
+    fun `a stop while continue is handled goes out once the endpoint has answered it`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val stopsAtResponse = CompletableFuture<Int>()
+        server.receiving(7) {
+            val continued = server.continue_(ContinueArguments().apply { threadId = 12 })
+            runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+            // the endpoint answers a ready request before it returns from handling it
+            continued.whenComplete { _, _ -> stopsAtResponse.complete(client.stops.size) }
+        }
+        assertThat(stopsAtResponse.get(10, SECONDS)).isEqualTo(1)
+        assertThat(client.stops).hasSize(2)
     }
 
     @Test
@@ -1321,11 +1361,17 @@ class XtcDebugServerTest {
                 reads.add(Triple(filter, start, count))
             }
 
+        /** The answer to the next step, which the test completes; an answer at once when null. */
+        var stepAnswer: CompletableFuture<Boolean>? = null
+
         override fun step(
             runId: String,
             threadId: Int,
             kind: StepKind,
-        ): CompletableFuture<Boolean> = CompletableFuture.completedFuture((threadId == 12).also { if (it) steps.add(threadId to kind) })
+        ): CompletableFuture<Boolean> {
+            if (threadId == 12) steps.add(threadId to kind)
+            return stepAnswer ?: CompletableFuture.completedFuture(threadId == 12)
+        }
 
         /** The calls of frame 1's line, and each step into one of them, by thread and call. */
         val intos = CopyOnWriteArrayList<Pair<Int, Int>>()
