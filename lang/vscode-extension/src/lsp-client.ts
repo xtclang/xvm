@@ -10,7 +10,8 @@ import {
     ServerOptions,
     State,
     Trace,
-    TransportKind
+    TransportKind,
+    vsdiag
 } from 'vscode-languageclient/node';
 
 import { formattingSettings, nativeFormatOnSave, readServiceSettings } from './editor-settings';
@@ -43,6 +44,32 @@ const MAX_CRASH_RESTARTS = 3;
 
 export function getClient(): LanguageClient | undefined {
     return client;
+}
+
+/**
+ * The latest diagnostics report of an open document: the version it was asked for, and its number of items; and the
+ * document's last pulls, each as `version: outcome`, which tell why a report is missing when a test waits for one.
+ */
+export interface DiagnosticReport {
+    readonly version: number;
+    readonly items: number;
+    readonly pulls: readonly string[];
+}
+
+/** The latest report of each open document the current connection pulled diagnostics for, by URI. */
+const diagnosticReports = new Map<string, DiagnosticReport>();
+
+/**
+ * The latest diagnostics report of an open document, which says whether what VS Code shows of it is for the document's
+ * current version; undefined before the first report, or when the server pushes its diagnostics instead.
+ */
+export function diagnosticReport(uri: vscode.Uri): DiagnosticReport | undefined {
+    return diagnosticReports.get(uri.toString());
+}
+
+/** Whether the server's diagnostics are pulled, so that each report is for a known document version. */
+export function pullsDiagnostics(): boolean {
+    return client?.initializeResult?.capabilities.diagnosticProvider !== undefined;
 }
 
 function compilerConfiguration(): { sourceModules: unknown[] | null; buildModels: BuildModel[]; libraries: LibraryOptions } {
@@ -134,6 +161,34 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         // raw JSON-RPC and initialization popups for the same failed process.
         initializationFailedHandler: () => false,
         middleware: {
+            // the version is the one the report is asked for: the client drops a report the document has moved past
+            provideDiagnostics: async (document, previousResultId, token, next) => {
+                const opened = document instanceof vscode.Uri ? undefined : document;
+                const version = opened?.version;
+                const key = opened?.uri.toString();
+                const pulled = (outcome: string) => {
+                    if (key === undefined || client !== connection) return;
+                    const latest = diagnosticReports.get(key);
+                    diagnosticReports.set(key, { version: latest?.version ?? -1, items: latest?.items ?? 0,
+                        pulls: [...(latest?.pulls ?? []), `${version}: ${outcome}`].slice(-5) });
+                };
+                let report: vsdiag.DocumentDiagnosticReport | null | undefined;
+                try {
+                    report = await next(document, previousResultId, token);
+                } catch (error) {
+                    pulled(`failed: ${error instanceof Error ? error.message : String(error)}`);
+                    throw error;
+                }
+                if (!report) {
+                    pulled('no report');
+                } else if (key !== undefined && version !== undefined && client === connection) {
+                    const latest = diagnosticReports.get(key);
+                    const items = report.kind === vsdiag.DocumentDiagnosticReportKind.full ? report.items.length : latest?.items ?? 0;
+                    const outcome = report.kind === vsdiag.DocumentDiagnosticReportKind.full ? `${items} items` : 'unchanged';
+                    diagnosticReports.set(key, { version, items, pulls: [...(latest?.pulls ?? []), `${version}: ${outcome}`].slice(-5) });
+                }
+                return report;
+            },
             provideInlayHints: (document, range, token, next) => {
                 const value = vscode.workspace.getConfiguration('xtc', document.uri).get<unknown>('inlayHints.enabled', true);
                 const enabled = typeof value === 'boolean' ? value : preferences.inlayHints;
@@ -237,6 +292,8 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     );
 
     client = connection;
+    // a report of the previous connection's server says nothing of what this one shows
+    diagnosticReports.clear();
     attachEmbeddedExecution(connection);
     attachDebugSessions(connection);
 

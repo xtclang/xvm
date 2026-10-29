@@ -32,6 +32,21 @@ import java.util.concurrent.atomic.AtomicReference
 class XtcClientFeatures : LSPClientFeatures() {
     internal val preflightedRenames = PreflightedRenames()
     internal val documents = AtomicReference<DocumentStartupMessages?>()
+
+    /** The current connection's pull-diagnostic results, which say what each document's latest report was asked for. */
+    internal val diagnosticResults = AtomicReference<DiagnosticResultMessages?>()
+
+    /**
+     * The number of items of the latest diagnostics report of the open document at [path], if that report was asked
+     * for the document as it is now; null if there is none, or the document has changed since, as a test waiting for
+     * the diagnostics of an edit needs to know.
+     */
+    fun currentDiagnosticItems(path: String): Int? {
+        val results = diagnosticResults.get() ?: return null
+        val uri = results.reported().firstOrNull { serverWrapper.getOpenedDocument(URI(it))?.file?.path == path } ?: return null
+        return results.currentItems(uri)
+    }
+
     private val edits = ConcurrentHashMap.newKeySet<CompletableFuture<ApplyWorkspaceEditResponse>>()
 
     // TODO LSP4IJ: UP04 — expose transmitted document versions and validate workspace/applyEdit inside
@@ -70,6 +85,7 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     override fun dispose() {
         documents.set(null)
+        diagnosticResults.set(null)
         edits.forEach { it.cancel(false) }
         super.dispose()
     }
@@ -118,7 +134,10 @@ class XtcClientFeatures : LSPClientFeatures() {
                 DocumentStartupMessages(::snapshot, ::reached).also {
                     this@XtcClientFeatures.documents.set(it)
                 }
-            private val diagnostics = DiagnosticResultMessages(::snapshot)
+            private val diagnostics =
+                DiagnosticResultMessages(::snapshot).also {
+                    this@XtcClientFeatures.diagnosticResults.set(it)
+                }
             private val pending = PendingRequests()
 
             // TODO LSP4IJ: UP09 — 0.21.0 keeps the version a document synchronizer has reached

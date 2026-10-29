@@ -1,10 +1,14 @@
 package org.xtclang.idea.lsp
 
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentDiagnosticReport
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
+import org.eclipse.lsp4j.RelatedUnchangedDocumentDiagnosticReport
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.CancelParams
@@ -178,6 +182,54 @@ class DiagnosticResultMessagesTest {
         assertThat(sent.last()).isSameAs(request)
     }
 
+    @Test
+    fun `the latest report counts for the document as it is, and not once it has changed`() {
+        assertThat(guard.currentItems(uri)).isNull()
+        request("1")
+        reply("1", "first", items = 2)
+        assertThat(guard.currentItems(uri)).isEqualTo(2)
+        assertThat(guard.reported()).containsExactly(uri)
+
+        buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
+        assertThat(guard.currentItems(uri)).isNull()
+        request("2")
+        reply("2", "second", items = 0)
+        assertThat(guard.currentItems(uri)).isEqualTo(0)
+    }
+
+    @Test
+    fun `an unchanged report keeps the item count of the report before it`() {
+        request("1")
+        reply("1", "first", items = 1)
+        request("2")
+        incoming.consume(
+            ResponseMessage().apply {
+                id = "2"
+                result = DocumentDiagnosticReport(RelatedUnchangedDocumentDiagnosticReport("first"))
+            },
+        )
+        assertThat(guard.currentItems(uri)).isEqualTo(1)
+    }
+
+    @Test
+    fun `a late report for an earlier state does not replace the current one, and a close forgets it`() {
+        request("old")
+        buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
+        request("new")
+        reply("new", "current", items = 0)
+        reply("old", "obsolete", items = 3)
+        assertThat(guard.currentItems(uri)).isEqualTo(0)
+
+        outgoing.consume(
+            NotificationMessage().apply {
+                method = "textDocument/didClose"
+                params = DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
+            },
+        )
+        assertThat(guard.currentItems(uri)).isNull()
+        assertThat(guard.reported()).isEmpty()
+    }
+
     private fun request(
         id: String,
         previous: String? = null,
@@ -200,12 +252,15 @@ class DiagnosticResultMessagesTest {
     private fun reply(
         id: String,
         resultId: String,
+        items: Int = 0,
     ): ResponseMessage =
         ResponseMessage().apply {
             this.id = id
             result =
                 DocumentDiagnosticReport(
-                    RelatedFullDocumentDiagnosticReport(emptyList()).apply {
+                    RelatedFullDocumentDiagnosticReport(
+                        List(items) { Diagnostic(Range(Position(0, 0), Position(0, 1)), "problem $it") },
+                    ).apply {
                         this.resultId = resultId
                     },
                 )
