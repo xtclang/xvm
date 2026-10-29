@@ -562,6 +562,61 @@ internal object XdkRename {
         return oldDispatch == newDispatch
     }
 
+    /**
+     * Copy the member's expression at every use and remove the member: each copy binds as the expression did and has
+     * the use's type, the member's own chain goes, and every other binding and dispatch stays exact.
+     */
+    fun preservesMemberRemoval(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+        candidate: XdkMemberInline.Removal,
+    ): Boolean {
+        if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val source = candidate.source
+        val original = plan.original[source] ?: return false
+        val proposed = plan.proposed[source] ?: return false
+        if (plan.edits != mapOf(source to candidate.edits)) return false
+        val expressionStart = offset(original, candidate.expression.start) ?: return false
+        val expressionEnd = offset(original, candidate.expression.end) ?: return false
+        // The expression goes with the declaration: its sites are kept relative to it, beyond any offset in the
+        // proposed text, and placed at each copy.
+        val relative = Int.MAX_VALUE / 2
+        val expected =
+            edges(before, plan.original, ignored = candidate.ignored, ignoredCalls = candidate.ignored) { path, at ->
+                if (path == source && at in expressionStart..expressionEnd) relative + at - expressionStart else plan.map(path, at)
+            } ?: return false
+        val (copied, kept) = expected.entries.partition { (site, _) -> site.source == source && site.start >= relative }
+        val copies =
+            candidate.uses.flatMap { use ->
+                val copyStart = (plan.map(source, use.edit.start) ?: return false) + 1
+                copied.map { (site, target) ->
+                    site.copy(start = copyStart + site.start - relative, end = copyStart + site.end - relative) to target
+                }
+            }
+        val actual = edges(after, plan.proposed) { _, at -> at } ?: return false
+        if (actual != kept.associate { it.toPair() } + copies) return false
+
+        fun at(offset: Int) = position(proposed, offset).let { SemanticModel.Position(it.line, it.column) }
+        if (candidate.uses.any { use ->
+                val copyStart = (plan.map(source, use.edit.start) ?: return false) + 1
+                val copy =
+                    SemanticModel.SourceLocation(
+                        source,
+                        SemanticModel.Range(at(copyStart), at(copyStart + expressionEnd - expressionStart)),
+                    )
+                val oldType = before.extraction.types[SemanticModel.SourceLocation(source, use.range)] ?: return false
+                val newType = after.extraction.types[copy] ?: return false
+                !sameType(oldType, newType, plan)
+            }
+        ) {
+            return false
+        }
+        val oldDispatch = dispatch(before, plan.original, removedMembers = setOf(candidate.identity), translate = plan::map) ?: return false
+        val newDispatch = dispatch(after, plan.proposed) { _, at -> at } ?: return false
+        return oldDispatch == newDispatch
+    }
+
     /** Removing a local may remove its declaration, written type and sole read, but no other edges. */
     fun preservesLocalRemoval(
         before: CompilerRenameFacts,
