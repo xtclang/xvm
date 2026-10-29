@@ -113,9 +113,10 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   2026-10-28): the program stopped at the exception its filter names, but no exception hint showed
   in 30 s. LSP4IJ shows the hint once, and IntelliJ drops an editor hint while the IDE is not the
   active application; the failure's screenshot, and X307's of 2026-10-26, have Safari in front.
-  Choose: make the IDE active before a debug session (more focus taken), say in the failure that
-  the IDE was not active, or run the native playbooks in a Linux container on Xvfb, where nothing
-  else takes the focus.
+  Decided 2026-10-29: the IntelliJ playbook runs in a Linux container on Xvfb, where nothing else
+  is in front (`lang/intellij-plugin/container/playbook.sh`, in `testing.md`); X307 passes there 3
+  of 3 on 0.21.0. To do: X312 runs in IntelliJ only with LSP4IJ's fixes, so check it there with
+  the 0.30.0 branch.
 - [x] The server never deleted its `xtc-library-sources-*` temporary directories
   (`XdkLibrarySources`); 2,068 had piled up by 2026-10-28. A JVM shutdown hook now deletes the
   directory when the server exits (`4cf5450acd`; `LibraryCopiesCleanupTest` in compilerStdioTest).
