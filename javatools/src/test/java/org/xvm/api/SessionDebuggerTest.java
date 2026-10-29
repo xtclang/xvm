@@ -2369,20 +2369,26 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("Cancels"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
-        Control control = run("Cancels", new StringWriter(), session);
+        // each run's code reads a line before it loops, so its read shows that the run is in
+        // progress, not still waiting for the stopped fiber to start it
+        Semaphore reading = new Semaphore(0);
+        Control   control = run("Cancels", new StringWriter(), session, _ -> {
+            reading.release();
+            return "";
+        });
         try (control) {
             Stop stop  = stops.next();
             int  frame = session.stackTrace(stop.threadId()).getFirst().id();
 
             // a cancelled run's code unwinds, so the next run starts
-            CompletableFuture<Variable> cancelled = session.run(frame, "forever(n)", RUN_LIMIT);
-            Thread.sleep(200);
+            CompletableFuture<Variable> cancelled = session.run(frame, "forever(n + console.readLine().size)", RUN_LIMIT);
+            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(cancelled));
             assertTrue(cancelled.cancel(true));
             assertEquals("4", runCode(session, frame, "n + 1").value());
 
             // the program's resume ends a run in progress, and the program goes on
-            CompletableFuture<Variable> resumed = session.run(frame, "forever(n)", RUN_LIMIT);
-            Thread.sleep(200);
+            CompletableFuture<Variable> resumed = session.run(frame, "forever(n + console.readLine().size)", RUN_LIMIT);
+            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(resumed));
             session.resume();
             assertFails("The program resumed before the expression was evaluated.", resumed);
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
@@ -2398,12 +2404,17 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("Terminates"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
-        Control control = run("Terminates", new StringWriter(), session);
-        Stop    stop    = stops.next();
-        int     frame   = session.stackTrace(stop.threadId()).getFirst().id();
+        // the run's code reads a line before it loops, so its read shows that the run is in progress
+        Semaphore reading = new Semaphore(0);
+        Control   control = run("Terminates", new StringWriter(), session, _ -> {
+            reading.release();
+            return "";
+        });
+        Stop stop  = stops.next();
+        int  frame = session.stackTrace(stop.threadId()).getFirst().id();
 
-        CompletableFuture<Variable> running = session.run(frame, "forever(n)", RUN_LIMIT);
-        Thread.sleep(200);
+        CompletableFuture<Variable> running = session.run(frame, "forever(n + console.readLine().size)", RUN_LIMIT);
+        assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(running));
         // not in a try-with-resources: closing again after a close that timed out would wait without a limit
         assertTimeoutPreemptively(RUN_LIMIT, control::close);
         assertFails("The program was stopped before the expression ran to its end.", running);
