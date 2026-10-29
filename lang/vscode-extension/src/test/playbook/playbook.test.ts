@@ -105,6 +105,7 @@ suite('XdkAdapter playbook', function () {
     gradleProjectCases();
     debugSessionCases();
     localRefactoringCases(['X332', 'X333', 'X334']);
+    typeMoveCases(['X335']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
