@@ -183,6 +183,8 @@ class CompilerPlaybookTest {
             "X297",
             "X298",
             "X299",
+            "X332",
+            "X333",
         ).forEach { id ->
             val data = shared.scenarios.getValue(id)
             fixture("$id/Extract.x", data.text("source"))
