@@ -87,6 +87,26 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Test harness stability
 
+- [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
+  from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
+  `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
+  waits now take only the report for the document as it is now: VS Code's language client
+  records each report's version, IntelliJ's UP07 bridge each report's snapshot. A document not
+  open in an editor has no version to tie a report to; its waits are as before. Every case
+  passed with them: VS Code's 337 but X218 (UP23), IntelliJ's 329 in the container.
+- [x] X116 in VS Code (Undo of a module rename) waited for its diagnostics until it timed out
+  (2026-10-29, `c2817f91da`). The open `Library.x` kept an analysis the compiler had retired, which
+  nothing replaced, so every query on it ended as RequestCancelled, and VS Code, which pulls again
+  at once after a cancel, pulled without end; the stricter waits showed it, with the pull history
+  their timeout gives. The server now analyzes such a document again as a query starts. What left
+  the analysis without a replacement is not known: the loop had rotated out the trace logs of the
+  rename and its Undo.
+- [x] The container's first full IntelliJ run (2026-10-29, `1b22011ddd`) failed four cases on the
+  container's setup: X35 as root, for whom a read-only file is writable; X260, whose canceled
+  Gradle daemon most likely stayed a zombie, which Java reports alive, with no init process to reap
+  it (`podman run --init`); X336, whose `xec` found the image's JDK 21; and X303, whose mavenLocal
+  went with the container. With those fixed, each case IntelliJ implements has passed there; X218
+  timed out once under the full run's load and passed in the next run.
 - [x] X259 failed with LSP4IJ 0.21.0 at its last step (2026-10-29, `41c6acc221`, `2be4a17414`,
   `6949564dba`). A restart that disposed the library's document synchronizer while LSP4IJ still
   held its change until the PSI commit let the old synchronizer send that change, numbered after
@@ -966,9 +986,11 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 - [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881), a duplicate of the older
   [IJPL-29917](https://youtrack.jetbrains.com/issue/IJPL-29917) and [IJPL-223024](https://youtrack.jetbrains.com/issue/IJPL-223024); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28). To do: get it
   merged.
-- [ ] UP20 (IntelliJ test Driver): filed as [IJPL-259883](https://youtrack.jetbrains.com/issue/IJPL-259883); our [#3729](https://github.com/JetBrains/intellij-community/pull/3729) (open, 2026-10-28).
+- [ ] UP20 (IntelliJ test Driver): filed as [IJPL-259883](https://youtrack.jetbrains.com/issue/IJPL-259883), restricted by JetBrains on 2026-10-29
+  at about 17:37 UTC (it now answers "not found", to our token too); our [#3729](https://github.com/JetBrains/intellij-community/pull/3729) (open, 2026-10-28).
   To do: get it merged.
-- [ ] UP29 (IntelliJ test Driver): filed as [IJPL-259884](https://youtrack.jetbrains.com/issue/IJPL-259884); our [#3730](https://github.com/JetBrains/intellij-community/pull/3730) (open, 2026-10-28).
+- [ ] UP29 (IntelliJ test Driver): filed as [IJPL-259884](https://youtrack.jetbrains.com/issue/IJPL-259884), restricted by JetBrains on 2026-10-29
+  at about 17:37 UTC (it now answers "not found", to our token too); our [#3730](https://github.com/JetBrains/intellij-community/pull/3730) (open, 2026-10-28).
   To do: get it merged.
 - [ ] UP16 (VS Code): our [microsoft/vscode#344760](https://github.com/microsoft/vscode/pull/344760) (open, 2026-10-28) for the existing
   microsoft/vscode#219122. To do: get it merged.
