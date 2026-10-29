@@ -11,8 +11,9 @@ import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
 /**
- * Checks safe deletion of bounded private declarations. Public consumers, surviving references,
- * initialization effects and comment loss must prevent removal despite an apparently unused local view.
+ * Checks safe deletion of unused declarations: private ones within their source, public and protected ones within the
+ * configured modules. Surviving references, entry points, overriding members, initialization effects and comment loss
+ * must prevent removal despite an apparently unused local view.
  */
 class XdkSafeDeleteTest {
     @TempDir lateinit var directory: Path
@@ -39,7 +40,32 @@ class XdkSafeDeleteTest {
             "private Int §unused() { /* keep this explanation */ return 1; }",
         ],
     )
-    fun `unknown external consumers initialization and comment loss refuse removal`(member: String) {
+    fun `module methods, which can be entry points, initialization and comment loss refuse removal`(member: String) {
+        query(member, "", expected = false)
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "class Box { Int §unused() { return 1; } }",
+            "class Box { protected Int §unused(Int input) { return input + kept(); } }",
+            "static Int §unused = 3;",
+        ],
+    )
+    fun `unused public and protected members are removed, naming the modules that were checked`(member: String) {
+        query(member, "", expected = true, title = "Safely delete member 'unused', unused in Delete")
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            // calls through the interface reach the implementation
+            "interface Shape { Int unused(); } class Square implements Shape { @Override Int §unused() { return 4; } }",
+            // the subclass's method would override nothing
+            "class Base { Int §unused() { return 1; } } class Sub extends Base { @Override Int unused() { return 2; } }",
+        ],
+    )
+    fun `a method that implements, overrides or is overridden is not removed`(member: String) {
         query(member, "", expected = false)
     }
 
@@ -69,6 +95,7 @@ class XdkSafeDeleteTest {
         member: String,
         consumer: String,
         expected: Boolean,
+        title: String? = null,
     ) {
         CompilerTestSupport.configure()
         val marked =
@@ -97,6 +124,7 @@ class XdkSafeDeleteTest {
                 assertThat(actions).isEmpty()
             } else {
                 assertThat(actions).hasSize(1)
+                title?.let { assertThat(actions.single().title).isEqualTo(it) }
                 val edit = requireNotNull(actions.single().edit)
                 assertThat(edit.versioned).isTrue()
                 val change = edit.changes.getValue(uri).single()
