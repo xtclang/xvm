@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **333 scenarios**: X1–X331 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **335 scenarios**: X1–X333 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 333 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 335 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 333 scenarios: X1–X331 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 335 scenarios: X1–X333 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1530,7 +1530,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 333 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 335 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3902,6 +3902,13 @@ last published to mavenLocal.
 | X329 | In Restarts.x, set a breakpoint on line 16, in `inner`, and start debugging Restarts. When it stops, look at the call stack, remove the breakpoint, and restart `Restarts.outer`'s frame (VS Code: Restart Frame in the Call Stack view's context menu). Then continue. IntelliJ has no Reset Frame for the session (UP47). | The call stack is `Restarts.inner`, `Restarts.outer` and `Restarts.run`; Restart Frame is offered on the first two, not on `Restarts.run`, which the runtime called. Restarting `Restarts.outer` stops on line 10, its first line, with `Restarts.run` below it on line 4. Continue prints `outer 20` again and `n=42`, so `outer 20` shows twice, and the program ends with exit code 42. |
 | X330 | In Watched.x, set a breakpoint on line 5 and start debugging Watched. When it stops, expand `counter` in the Variables view and choose Break on Value Change on its `count`. Remove the line breakpoint and continue three times. IntelliJ has no data breakpoints (UP48). | The data breakpoint is `Counter.count`, for writes. The first continue stops on line 17, in `Counter.add`, saying `Counter.count changed from 0 to 2`; the second stops there again with `Counter.count changed from 2 to 5`. The third prints `count=5`, and the program ends with exit code 5. |
 | X331 | In Inline.x, set a breakpoint on line 12, `count = before + n;`, and start debugging Inline, with `debug.inlineValues` on its default. When it stops, look at the code of `add`. Then remove the breakpoint and continue. IntelliJ: its inline values come from LSP4IJ, not the language server (UP50). | Beside line 10 VS Code shows `n = 2`, and beside lines 11 and 12 `before = 3` and `n = 2`; nothing for `count`, a field, nor for `after`, on line 13. Continue runs the program to its exit with exit code 5. |
+
+### Inline every use and remove the member (X332–X333)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X332 | Inline every call of a private method and remove the method: select `helper();`, choose **Inline and remove private method 'helper'**, apply, then Undo/Redo/Undo. | Both calls become `(probe() + 2)` and the method is gone; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X333 | Select `amount + f`, where a lambda also reads `amount`. | No **Inline and remove constant property 'amount'** action; the source stays unchanged. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

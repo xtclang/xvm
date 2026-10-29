@@ -10239,6 +10239,41 @@
         ]
       }
     },
+    "X332": {
+      "title": "inline every call of a private method and remove the method",
+      "manual": [
+        "Select helper(); and inspect Inline and remove private method 'helper'. Apply it, inspect exact text and diagnostics, then Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int probe() = 1;\n    private Int helper() { return probe() + 2; }\n    Int read() { return helper(); }\n    Int twice() = helper() * 2;\n}",
+        "selected": "helper();",
+        "title": "Inline and remove private method 'helper'",
+        "expected": "module Extract {\n    Int probe() = 1;\n    Int read() { return (probe() + 2); }\n    Int twice() = (probe() + 2) * 2;\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X333": {
+      "title": "refuse inlining and removing a constant read inside a lambda",
+      "manual": [
+        "Select amount + f and inspect Inline and remove constant property 'amount'. Verify refusal and unchanged sources."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    private static Int amount = 1 + 2;\n    Int read() { function Int() f = () -> amount; return amount + f(); }\n}",
+        "selected": "amount + f",
+        "title": "Inline and remove constant property 'amount'",
+        "expected": "module Extract {\n    private static Int amount = 1 + 2;\n    Int read() { function Int() f = () -> amount; return amount + f(); }\n}",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
