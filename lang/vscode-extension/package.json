@@ -257,7 +257,7 @@
     },
     "dependencies": {
         "jdk-utils": "^0.7.0",
-        "vscode-languageclient": "^10.1.2"
+        "vscode-languageclient": "^11.0.0"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
