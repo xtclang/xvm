@@ -889,8 +889,9 @@ passes with the workaround disabled. The gates are in
 
 - [x] UP28: #1896 (fix for #1307) merged by the maintainer on 2026-10-21 (`49328700`); #1307 is
   still open.
-- [ ] UP28: after a release with #1867 and #1896 (the latest is still 10.1.2, 2026-09-25), remove
-  the double observation of `start()` and the `stop()` override; gate: X272.
+- [x] UP28: `vscode-languageclient` 11.0.0 (2026-10-22) has #1867 and #1896; the extension takes it
+  in `40013e5306` (2026-10-29), without the double observation of `start()` or the `stop()`
+  override. X272 passes on 11.0.0 without them and fails on 10.1.2 without them.
 
 ### Not filed yet: fixes ready locally
 
