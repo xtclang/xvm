@@ -644,7 +644,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the formal type (e.g. Map<Key, Value>)
+     * @return the formal type (e.g. {@code Map<Key, Value>})
      */
     public TypeConstant getFormalType() {
         TypeConstant typeFormal = m_typeFormal;
@@ -706,7 +706,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the normalized canonical type (e.g. Map<Object, Object>)
+     * @return the normalized canonical type (e.g. {@code Map<Object, Object>})
      */
     public TypeConstant getNormalizedType() {
         TypeConstant typeNormalized = m_typeNormalized;
