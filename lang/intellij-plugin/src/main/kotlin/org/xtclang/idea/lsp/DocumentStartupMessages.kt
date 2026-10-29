@@ -16,16 +16,19 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import java.net.URI
 
-// TODO LSP4IJ: UP09 — serialize didOpen/change/close and reject folding responses for retired editors.
+// TODO LSP4IJ: UP09 — serialize didOpen/change/close, reject folding responses for retired editors,
+// and drop the change a synchronizer retired by a restart still sends.
 // Remove this transport bridge once upstream passes startup typing and close/reopen regressions.
 
 /**
  * LSP4IJ 0.21 dispatches didOpen independently of its ordered change/close executor. Keep changes
  * behind that open, and bind folding responses to the requesting editor incarnation. State belongs
- * to one transport and uses the client's existing versions and document identities.
+ * to one transport and uses the client's existing versions and document identities; [reached] is
+ * the version the document's current synchronizer has given its latest message.
  */
 internal class DocumentStartupMessages(
     private val snapshot: (String) -> Snapshot?,
+    private val reached: (String) -> Int?,
 ) {
     private val lock = Any()
     private val opening = mutableMapOf<String, Opening>()
@@ -108,11 +111,12 @@ internal class DocumentStartupMessages(
             // the write lock while waiting for this transport to finish didOpen/didChange.
             // Capture before our lock so document lookup never runs under the transport lock.
             val current = uri?.let(snapshot)
+            val version = (params as? DidChangeTextDocumentParams)?.textDocument?.uri?.let(reached)
             synchronized(lock) {
                 when (params) {
                     is DidOpenTextDocumentParams -> open(message, params, current, next)
 
-                    is DidChangeTextDocumentParams -> change(message, params, current, next)
+                    is DidChangeTextDocumentParams -> change(message, params, current, version, next)
 
                     is DidCloseTextDocumentParams -> close(params.textDocument.uri, current, next)
 
@@ -182,10 +186,15 @@ internal class DocumentStartupMessages(
         message: NotificationMessage,
         params: DidChangeTextDocumentParams,
         current: Snapshot?,
+        reached: Int?,
         next: MessageConsumer,
     ) {
         val uri = params.textDocument.uri
         if (current == null) return
+        // LSP4IJ 0.21.0 still sends a change that was pending when a restart disposed its synchronizer,
+        // through the next connection and numbered after the old ones. The reopened document's
+        // synchronizer counts from 1 again, so that number would hide its own change of that version.
+        if (reached != null && params.textDocument.version > reached) return
         if (opened[URI(uri)]?.owner === current.owner) {
             val before = opened.getValue(URI(uri))
             if (params.textDocument.version <= before.version) return
