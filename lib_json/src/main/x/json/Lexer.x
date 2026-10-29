@@ -447,6 +447,20 @@ class Lexer
         TextPosition  start = reader.position;
         Int           count = 0;
         StringBuffer? buf   = Null;
+
+        UInt32 eatHexits() {
+            UInt32 value = 0;
+            for (Int i : 0 ..< 4) {
+                Char ch = reader.take();
+                if (UInt8 hexit := ch.asciiHexit()) {
+                    value = (value << 4) | hexit.toUInt32();
+                } else {
+                    throw new IOException($"expected hexit; found '{ch}'");
+                }
+            }
+            return value;
+        }
+
         while (Char ch := reader.next()) {
             switch (ch) {
             case '\"':
@@ -500,10 +514,19 @@ class Lexer
 
                 case 'u':
                     // 'u' hex hex hex hex
-                    UInt32 codepoint = Nibble.of(reader.take()).toUInt32() << 8
-                                     | Nibble.of(reader.take()).toUInt32() << 8
-                                     | Nibble.of(reader.take()).toUInt32() << 8
-                                     | Nibble.of(reader.take()).toUInt32();
+                    UInt32 codepoint = eatHexits();
+                    // UTF-16 encodes codepoints above 0xFFFF as a high/low surrogate pair
+                    if (0xD800 <= codepoint <= 0xDBFF) {
+                        require("\\u");
+                        UInt32 low = eatHexits();
+                        if (!(0xDC00 <= low <= 0xDFFF)) {
+                            throw new IOException("expected the low surrogate of a surrogate pair");
+                        }
+                        codepoint = ((codepoint - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
+                    } else if (0xDC00 <= codepoint <= 0xDFFF) {
+                        throw new IOException("unexpected low surrogate");
+                    }
+                    buf.add(new Char(codepoint));
                     break;
                 }
                 break;
