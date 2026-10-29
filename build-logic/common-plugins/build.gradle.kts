@@ -42,9 +42,6 @@ dependencies {
     // public VersionDetails interface directly (no reflection). The plugin
     // itself is applied by consumers (e.g. docker/build.gradle.kts).
     compileOnly("com.palantir.gradle.gitversion:gradle-git-version:${libs.versions.palantir.git.version.get()}")
-    // kotlin-dsl resolves it with its runtime dependencies to generate the precompiled script
-    // plugin accessors, which brings in Guava 33.7.1-jre. The Guava BOM raises it to at least
-    // the patched version.
     compileOnly(platform(libs.guava.bom))
 
     testImplementation(platform(libs.junit.bom))
