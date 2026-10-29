@@ -167,9 +167,14 @@ Only if a real need comes up; each is a documented refusal today.
   workspace edit's move and text edits do share one undo group (`BulkEditService`).
   - [ ] The refusal only works for Rename. In an Explorer move (`willRenameFiles`) the thrown
     refusal is only logged, so the move goes ahead without the Ecstasy edits; and Explorer moves
-    never auto-save, so the setting does not protect them.
-  - [ ] X103 applies an edit-and-move with a plain `applyEdit` and, after Undo, never checks the
-    moved member's text at its old path, which is the documented failure.
+    never auto-save, so the setting does not protect them. VS Code lets no extension cancel an
+    Explorer move, so each way out costs something. The user chose (2026-10-29) to apply and save the
+    moved file's own edit before the move, for an Undo in two steps, over warning and refusing or
+    applying every edit with an Undo that leaves the moved file's text changed; in progress.
+  - [x] X103 applies an edit-and-move with a plain `applyEdit` and, after Undo, never checks the
+    moved member's text at its old path, which is the documented failure. Done 2026-10-29: VS Code's
+    X103 applies the edit as native Rename does, as a refactoring, and checks the member at its old
+    path after Undo; it passes (`run-LArbjP`).
 - [x] Rename: host discovery of external repositories beyond the explicit `sourceModules`. Done
   2026-10-21: `xtc/discoverConsumers` and **Add consumers from folders** in both editors; discovered
   modules join the graph only through `sourceModules`.
@@ -179,11 +184,16 @@ Only if a real need comes up; each is a documented refusal today.
 - [x] L63 mutable captures (2026-10-21): a local changed before the selection is passed by its
   current value (X184 is now positive), and statements that write one local return it to the caller
   (X231 is now positive). This also fixed a hole: a local named with `&` counted as unchanging.
-- [ ] L63 broader inline: inlining every read of a constant, or inlining and removing a single-use
+- [x] L63 broader inline: inlining every read of a constant, or inlining and removing a single-use
   member. `XdkRename.Plan` relocates each original range to one place, so N copies need their own
-  proof, like member inline's single copy.
+  proof, like member inline's single copy. Done 2026-10-29: **Inline and remove** a private method or
+  constant replaces every use by a copy and removes the member, with the single copy's proof made for
+  N copies and a removal; X332 and X333 pass in both editors.
 - [ ] L63 global safe delete: deleting public or protected members needs an explicit closed-world or
-  consumer-manifest decision first; the proof itself is not the obstacle.
+  consumer-manifest decision first; the proof itself is not the obstacle. The user chose
+  (2026-10-29) to take the configured graph as the whole world, as Rename does, and name the modules
+  checked, still refusing overrides, implementations, entry points and annotated members; in
+  progress.
 - [x] Remove the leftover `System.err.println("DECL owner ...")` in `XdkMissingDeclarations.kt`
   (from `b970b7f56`, also on #693); it wrote to stderr whenever a method was not a direct class
   member (`33558e8ad`; mirrored into #693 as `b5015fc13`, where `:lang:lsp-server:test` passes 2,374
