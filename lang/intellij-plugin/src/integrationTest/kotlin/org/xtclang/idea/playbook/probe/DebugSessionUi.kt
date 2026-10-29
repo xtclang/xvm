@@ -81,7 +81,10 @@ import com.redhat.devtools.lsp4ij.dap.settings.UserDefinedDebugAdapterServerSett
 import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
 import org.eclipse.lsp4j.debug.Module
 import org.eclipse.lsp4j.debug.Source
+import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
+import org.xtclang.idea.run.XtcAttachConfiguration
+import org.xtclang.idea.run.XtcAttachConfigurationType
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
@@ -168,6 +171,37 @@ object DebugSessionUi {
                 this.evaluationRunsProgram = evaluationRunsProgram
                 this.stopOnEntry = stopOnEntry
             }
+            runManager.setTemporaryConfiguration(settings)
+            ProgramRunnerUtil.executeConfiguration(settings, DefaultDebugExecutor.getDebugExecutorInstance())
+        }
+    }
+
+    /** The language server jar of the plugin under test, which a program run with `--debug` takes as its agent. */
+    @JvmStatic
+    fun agent(): String = PluginPaths.findServerJar("xtc-lsp-server.jar").toString()
+
+    /**
+     * Sets a line breakpoint on the 1-based [breakpointLine] of the module's source and starts Debug of an Ecstasy
+     * Attach configuration, which attaches to the program that listens on [port], under the session name that
+     * [debug] gives the module's.
+     */
+    @JvmStatic
+    fun attach(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+        port: Int,
+    ) {
+        watch(project)
+        sessions.remove(name(module))
+        ApplicationManager.getApplication().invokeAndWait {
+            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
+            XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, breakpointLine - 1)
+            val runManager = RunManager.getInstance(project)
+            val factory = ConfigurationTypeUtil.findConfigurationType(XtcAttachConfigurationType::class.java).configurationFactories.first()
+            val settings = runManager.createConfiguration(name(module), factory)
+            (settings.configuration as XtcAttachConfiguration).port = port
             runManager.setTemporaryConfiguration(settings)
             ProgramRunnerUtil.executeConfiguration(settings, DefaultDebugExecutor.getDebugExecutorInstance())
         }

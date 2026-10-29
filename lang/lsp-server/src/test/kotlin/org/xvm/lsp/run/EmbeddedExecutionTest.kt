@@ -223,7 +223,7 @@ class EmbeddedExecutionTest {
                 val id =
                     workers.start(
                         RunWorkerProcess.Request(listOf(lib.path), module, "run", args, directory.toString()),
-                        object : RunWorkerProcess.Listener {
+                        object : RunListener {
                             override fun output(text: String) {
                                 output.append(text)
                             }
@@ -433,7 +433,7 @@ class EmbeddedExecutionTest {
         val id =
             worker.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Forever", "run", emptyList(), directory.toString()),
-                object : RunWorkerProcess.Listener {
+                object : RunListener {
                     override fun output(text: String) {
                         output.append(text)
                         if ("started" in output) started.complete(Unit)
@@ -462,7 +462,7 @@ class EmbeddedExecutionTest {
             (0..1).map { index ->
                 worker.start(
                     RunWorkerProcess.Request(listOf(lib.path), "Forever", "run", emptyList(), directory.toString()),
-                    object : RunWorkerProcess.Listener {
+                    object : RunListener {
                         override fun output(text: String) {
                             outputs[index].append(text)
                         }
@@ -492,7 +492,7 @@ class EmbeddedExecutionTest {
         val id =
             worker.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Ask", "run", emptyList(), directory.toString()),
-                object : RunWorkerProcess.Listener {
+                object : RunListener {
                     override fun output(text: String) {
                         output.append(text)
                         if ("Name? " in output) prompted.complete(Unit)
@@ -524,7 +524,7 @@ class EmbeddedExecutionTest {
         val id =
             worker.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Waiter", "run", emptyList(), directory.toString()),
-                object : RunWorkerProcess.Listener {
+                object : RunListener {
                     override fun output(text: String) {
                         output.append(text)
                         if ("waiting" in output) waiting.complete(Unit)
@@ -2342,35 +2342,6 @@ class EmbeddedExecutionTest {
         }
     }
 
-    /** Records the DAP messages that debug sessions send their client. */
-    private class DebugClient :
-        XtcLanguageClient,
-        LanguageClient by mock(LanguageClient::class.java) {
-        private val messages = LinkedBlockingQueue<DebugMessageParams>()
-
-        override fun debugMessage(params: DebugMessageParams) {
-            messages.add(params)
-        }
-
-        // a debug session's program reports through DAP events, not the run notifications
-        override fun runOutput(params: RunOutputParams) = error("run output outside the debug session: $params")
-
-        override fun runExited(params: RunExitedParams) = error("run exit outside the debug session: $params")
-
-        /** The session's messages, in order, up to the first that satisfies [last]. */
-        fun until(
-            sessionId: String,
-            last: (JsonObject) -> Boolean,
-        ): List<JsonObject> {
-            val received = mutableListOf<JsonObject>()
-            while (received.none(last)) {
-                val next = messages.poll(60, SECONDS) ?: error("no DAP message within 60 s after $received")
-                if (next.sessionId == sessionId) received += next.message
-            }
-            return received
-        }
-    }
-
     /** Records each run's output and exit by run ID, and the debug sessions' messages, as [DebugClient] does. */
     private class SoakClient(
         private val debug: DebugClient = DebugClient(),
@@ -2396,26 +2367,6 @@ class EmbeddedExecutionTest {
         ) = debug.until(sessionId, last)
     }
 
-    /** Sends a DAP request; without [arguments], it has none, as VS Code sends `configurationDone`. */
-    private fun DebugSessions.request(
-        sessionId: String,
-        seq: Int,
-        command: String,
-        arguments: String? = null,
-    ) = receive(
-        DebugMessageParams(
-            sessionId,
-            JsonParser
-                .parseString(
-                    """{"seq": $seq, "type": "request", "command": "$command"${arguments?.let { ", \"arguments\": $it" }.orEmpty()}}""",
-                ).asJsonObject,
-        ),
-    )
-
-    private val JsonObject.event get() = takeIf { it["type"]?.asString == "event" }?.get("event")?.asString
-
-    private val JsonObject.response get() = takeIf { it["type"]?.asString == "response" }?.get("command")?.asString
-
     private data class Outcome(
         val output: String,
         val code: Long?,
@@ -2434,7 +2385,7 @@ class EmbeddedExecutionTest {
         val exited = CompletableFuture<Pair<Long?, String?>>()
         workers.start(
             RunWorkerProcess.Request(modulePath, module, method, args, directory.toString()),
-            object : RunWorkerProcess.Listener {
+            object : RunListener {
                 override fun output(text: String) {
                     event()
                     output.append(text)
