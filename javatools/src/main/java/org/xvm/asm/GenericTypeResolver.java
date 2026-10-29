@@ -35,7 +35,7 @@ public interface GenericTypeResolver {
 
     /**
      * Trivial GenericTypeResolver implementation for generic properties based on a
-     * Map<String, TypeConstant>.
+     * {@code Map<String, TypeConstant>}.
      */
     class TypeParameterResolver
             implements GenericTypeResolver {

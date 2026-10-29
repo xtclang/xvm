@@ -15,8 +15,8 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 /**
- * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
- * @Interval Range<Date>).
+ * TypeComposition represents a fully resolved class (e.g. {@code ArrayList<String>} or
+ * {@code @Interval Range<Date>}).
  */
 public interface TypeComposition {
     /**

@@ -22,7 +22,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 /**
- * IP_SHL rvalue-target, rvalue2 ; T <<= T
+ * {@code IP_SHL rvalue-target, rvalue2 ; T <<= T}
  */
 public class IP_Shl
         extends OpInPlaceAssign

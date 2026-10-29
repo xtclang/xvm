@@ -163,14 +163,14 @@ public class Register
      *
      * <p>To be technically correct, there are scenarios when typeNarrowed is actually wider than
      * the original type. Imagine a following Ecstasy code:
-     *   <pre><code>
+     *   <pre>{@code
      *   Element el = ...;
      *   Consumer<Element> consumer1 = new Consumer(Element>();
      *   if (Element.is(Type<Int>))
      *       {
      *       Consumer<Element> consumer2 = new Consumer(Element);
      *   }
-     *   </code></pre>
+     *   }</pre>
      *
      * <p>In the enclosed "if" context it's known that the Element is an Int, which makes
      * consumer2 not assignable to (not narrower than) consumer1, but in effect wider.

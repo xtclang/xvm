@@ -75,7 +75,8 @@ public abstract class nObject
     /**
      * Resolve a named generic parameter against this object's runtime type.
      *
-     * @throws {@link XvmError} if the runtime type has no formal with the specified name
+     * @throws nException wrapping an {@link XvmError} if the runtime type has no formal with the
+     *         specified name
      *
      * @see org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty
      */

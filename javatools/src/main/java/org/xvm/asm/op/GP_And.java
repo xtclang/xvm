@@ -19,7 +19,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 /**
- * GP_AND rvalue1, rvalue2, lvalue ; T & T -> T
+ * {@code GP_AND rvalue1, rvalue2, lvalue ; T & T -> T}
  */
 public class GP_And
         extends OpGeneral

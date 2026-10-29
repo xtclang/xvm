@@ -20,7 +20,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 /**
- * PIP_AND PROPERTY, rvalue-target, rvalue2 ; T &= T
+ * {@code PIP_AND PROPERTY, rvalue-target, rvalue2 ; T &= T}
  */
 public class PIP_And
         extends OpPropInPlaceAssign

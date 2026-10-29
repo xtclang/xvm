@@ -718,7 +718,7 @@ public class xArray
     }
 
     /**
-     * slice(Interval<Int>) implementation.
+     * {@code slice(Interval<Int>)} implementation.
      */
     protected int invokeSlice(Frame frame, ObjectHandle hTarget, long ixLower, boolean fExLower,
                               long ixUpper, boolean fExUpper, boolean fReverse, int iReturn) {
@@ -757,7 +757,7 @@ public class xArray
     }
 
     /**
-     * deleteAll(Interval<Int>) implementation.
+     * {@code deleteAll(Interval<Int>)} implementation.
      */
     protected int invokeDeleteAll(Frame frame, ObjectHandle hTarget, long ixLower, boolean fExLower,
                                  long ixUpper, boolean fExUpper, int iReturn) {
@@ -858,7 +858,7 @@ public class xArray
     // ----- TypeComposition helpers ---------------------------------------------------------------
 
     /**
-     * @return the TypeComposition for Array<Boolean>.
+     * @return the TypeComposition for {@code Array<Boolean>}.
      */
     public static TypeComposition getBooleanArrayComposition() {
         return BOOLEAN_ARRAY_CLZ;

@@ -46,23 +46,21 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p>Method signatures are not necessarily exact, however. Consider the support in Ecstasy for auto-
  * narrowing types:
  *
- * <p><code><pre>
- *     interface I
- *         {
+ * <pre>
+ *     interface I {
  *         I foo();
  *         void bar(I i);
  *     }
- * </pre></code>
+ * </pre>
  *
  * <p>Now consider a class:
  *
- * <p><code><pre>
- *     class C
- *         {
+ * <pre>
+ *     class C {
  *         C! foo() {...}
  *         void bar(C! c) {...}
  *     }
- * </pre></code>
+ * </pre>
  *
  * <p>While the class does not explicitly implement the interface I, and while the methods on the class
  * are explicit (not auto-narrowing), the class C does implicitly implement interface I, and thus an

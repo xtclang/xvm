@@ -632,8 +632,8 @@ public class xRef
 
     /**
      * Implementation of "isProperty" method:
-     *      <Container> conditional (Property<Container, Referent, Ref<Referent>>, Container)
-     *          isProperty();
+     *      {@code <Container> conditional (Property<Container, Referent, Ref<Referent>>, Container)
+     *          isProperty();}
      *
      * @param frame    the current frame
      * @param hRef     the Ref object
@@ -802,7 +802,7 @@ public class xRef
         /**
          * Create an unassigned RefHandle for a given clazz.
          *
-         * @param clazz  the class of the Ref (e.g. FutureRef<String>)
+         * @param clazz  the class of the Ref (e.g. {@code FutureRef<String>})
          * @param sName  an optional name
          */
         protected RefHandle(TypeComposition clazz, String sName) {
@@ -816,7 +816,7 @@ public class xRef
         /**
          * Create a RefHandle for a referent of a given class.
          *
-         * @param clazz      the class of the Ref (e.g. FutureRef<String>)
+         * @param clazz      the class of the Ref (e.g. {@code FutureRef<String>})
          * @param sName      an optional name
          * @param hReferent  the referent handle
          */
@@ -829,7 +829,7 @@ public class xRef
         /**
          * Create a RefHandle for a given property.
          *
-         * @param clazz    the class of the Ref (e.g. FutureRef<String>)
+         * @param clazz    the class of the Ref (e.g. {@code FutureRef<String>})
          * @param frame    the current frame
          * @param hTarget  the target object
          * @param idProp   the property id

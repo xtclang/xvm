@@ -271,7 +271,7 @@ public class xTuple
     }
 
     /**
-     * Native "Element Tuple!<> add(Element value)" implementation.
+     * Native {@code Element Tuple!<> add(Element value)} implementation.
      */
     protected int invokeAdd(Frame frame, TupleHandle hThis, TypeHandle hType, ObjectHandle hValue, int iReturn) {
         ObjectHandle[] ahValue = hThis.m_ahValue;
@@ -304,7 +304,7 @@ public class xTuple
     }
 
     /**
-     * Native "Tuple!<> addAll(Tuple! that)" implementation.
+     * Native {@code Tuple!<> addAll(Tuple! that)} implementation.
      */
     protected int invokeAddAll(Frame frame, TupleHandle hThis, TupleHandle hThat, int iReturn) {
         ObjectHandle[] ahValue = hThis.m_ahValue;
@@ -429,7 +429,7 @@ public class xTuple
     }
 
     /**
-     * Native "Tuple!<> slice(Interval<Int>)" implementation.
+     * Native {@code Tuple!<> slice(Interval<Int>)} implementation.
      */
     protected int invokeSlice(Frame   frame,   TupleHandle hTuple,
                               long    ixLower, boolean     fExLower,

@@ -19,7 +19,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.numbers.xConstrainedInteger;
 
 /**
- * Native implementation for AtomicIntNumber<Referent> for any Referent that uses JavaLong handle.
+ * Native implementation for {@code AtomicIntNumber<Referent>} for any Referent that uses JavaLong
+ * handle.
  */
 public class xAtomicIntNumber
         extends xAtomic {

@@ -189,7 +189,7 @@ public class xRTFunction
     // ----- method implementations --------------------------------------------------------------
 
     /**
-     * Method implementation: `Function!<> bind(Map<Parameter, Object> params)`
+     * Method implementation: `{@code Function!<> bind(Map<Parameter, Object> params)}`
      */
     public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn) {
         Frame.Continuation stepBind = frameCaller -> {
@@ -226,7 +226,8 @@ public class xRTFunction
     }
 
     /**
-     * Method implementation: `Function!<> bind(Parameter<ParamType> param, ParamType value)`
+     * Method implementation:
+     * `{@code Function!<> bind(Parameter<ParamType> param, ParamType value)}`
      */
     public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle[] ahArg, int iReturn) {
         // (TypeHandle) ahArg[0] -- unused
@@ -285,7 +286,8 @@ public class xRTFunction
     }
 
     /**
-     * Method implementation: `conditional (MethodTemplate, Function!<>, Map<Parameter, Object>) isFunction()`
+     * Method implementation:
+     * `{@code conditional (MethodTemplate, Function!<>, Map<Parameter, Object>) isFunction()}`
      */
     public int invokeIsFunction(Frame frame, FunctionHandle hFunc, int[] aiReturn) {
         MethodStructure method = hFunc.getMethod();
@@ -320,7 +322,8 @@ public class xRTFunction
     }
 
     /**
-     * Method implementation: `<Target> conditional (Target, Method<Target>, Map<Parameter, Object>) isMethod();`
+     * Method implementation:
+     * `{@code <Target> conditional (Target, Method<Target>, Map<Parameter, Object>) isMethod();}`
      */
     public int invokeIsMethod(Frame frame, FunctionHandle hFunc, int[] aiReturn) {
         MethodStructure method = hFunc.getMethod();
@@ -1531,7 +1534,7 @@ public class xRTFunction
     }
 
     /**
-     * @return the TypeConstant for a ListMap<Parameter, Object>
+     * @return the TypeConstant for a {@code ListMap<Parameter, Object>}
      */
     public static TypeConstant ensureListMapType() {
         TypeConstant type = LISTMAP_TYPE;

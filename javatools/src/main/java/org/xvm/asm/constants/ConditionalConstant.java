@@ -114,8 +114,7 @@ public abstract class ConditionalConstant
     /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *
-     * @param terminals
-     * @return a set of terminals that are referenced by this ConditionalConstant
+     * @param terminals  a set to collect the terminals into
      */
     protected void collectTerminals(Set<ConditionalConstant> terminals) {
         assert isTerminal();
@@ -616,8 +615,8 @@ public abstract class ConditionalConstant
      *
      * <ul>
      * <li><b>Independent:</b> <i>(Unrelated)</i> This condition is independent of that
-     *     condition;</li>
-     *     <code><pre>
+     *     condition;
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -625,9 +624,9 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T | x │ x |
      *              +===+===+
-     *      </pre></code>
-     * <li><b>Equivalent:</b> This condition is equivalent to that condition;</li>
-     *     <code><pre>
+     *      </pre></li>
+     * <li><b>Equivalent:</b> This condition is equivalent to that condition;
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -635,9 +634,9 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T |   │ x |
      *              +===+===+
-     *      </pre></code>
-     * <li><b>Inverse:</b> This condition is the inverse of that condition;</li>
-     *     <code><pre>
+     *      </pre></li>
+     * <li><b>Inverse:</b> This condition is the inverse of that condition;
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -645,9 +644,9 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T | x │   |
      *              +===+===+
-     *      </pre></code>
-     * <li><b>Mutual-Exclusion:</b> This condition is mutually exclusive with that condition;</li>
-     *     <code><pre>
+     *      </pre></li>
+     * <li><b>Mutual-Exclusion:</b> This condition is mutually exclusive with that condition;
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -655,9 +654,9 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T | x │   |
      *              +===+===+
-     *      </pre></code>
-     * <li><b>Mutual-Inclusion:</b> This condition is mutually inclusive with that condition;</li>
-     *     <code><pre>
+     *      </pre></li>
+     * <li><b>Mutual-Inclusion:</b> This condition is mutually inclusive with that condition;
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -665,9 +664,9 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T | x │ x |
      *              +===+===+
-     *      </pre></code>
-     * <li><b>Implies:</b> If this is true, it implies that is true;</li>
-     *     <code><pre>
+     *      </pre></li>
+     * <li><b>Implies:</b> If this is true, it implies that is true;
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -675,9 +674,9 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T | x │ x |
      *              +===+===+
-     *      </pre></code>
-     * <li><b>Implied:</b> If that is true, this is implied to be true.</li>
-     *     <code><pre>
+     *      </pre></li>
+     * <li><b>Implied:</b> If that is true, this is implied to be true.
+     *     <pre>
      *                this
      *                F   T
      *              +===+===+
@@ -685,7 +684,7 @@ public abstract class ConditionalConstant
      *       that   +===+===+
      *            T |   │ x |
      *              +===+===+
-     *      </pre></code>
+     *      </pre></li>
      * </ul>
      */
     public enum Relation {
@@ -724,7 +723,7 @@ public abstract class ConditionalConstant
     /**
      * Represents a 3x3 truth table:
      *
-     * <p><code><pre>
+     * <pre>
      *                          Input of True
      *                          Result is ...
      *
@@ -736,7 +735,7 @@ public abstract class ConditionalConstant
      *                         |──────────┼──────────┼──────────|
      *                  True   | INVERSE  │ INV_OR   │ ALWAYS_T |
      *                         +==========+==========+==========+
-     * </pre></code>
+     * </pre>
      *
      * <p>The NONE influence is used to indicate that an input is not related to, and thus does not
      * influence, the result of a condition.

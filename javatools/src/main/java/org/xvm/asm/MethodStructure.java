@@ -807,8 +807,8 @@ public class MethodStructure
      * Given arrays of actual argument types and return types, return a ListMap with the actual
      * (resolved) type parameters types.
      *
-     * <p>For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
-     * actual return type: Number this method would return a map {"T":Number, "U":String}
+     * <p>For example: given a method: {@code <T, U> T foo(U u, T t)} actual argument types: String,
+     * Int and actual return type: Number this method would return a map {"T":Number, "U":String}
      *
      * @param pool           the ConstantPool to use
      * @param typeTarget     (optional) the target type; if specified must be used to validate and
@@ -1130,13 +1130,13 @@ public class MethodStructure
      * Determine if this method might act as a property initializer. For example, in the property
      * declaration:
      *
-     * <p><code><pre>
+     * <pre>
      *     Int MB = KB * KB;
-     * </pre></code>
+     * </pre>
      *
      * <p>... the value of the property could be compiled as an initializer function named "=":
      *
-     * <p><code><pre>
+     * <pre>
      *     Int MB
      *       {
      *       Int "="()
@@ -1144,7 +1144,7 @@ public class MethodStructure
      *         return KB * KB;
      *     }
      *   }
-     * </pre></code>
+     * </pre>
      *
      *
      * @return true iff this method is a public method (not function) named "get" that takes no

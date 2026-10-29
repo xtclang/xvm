@@ -661,11 +661,11 @@ public abstract class TypeConstant
      * Replace this VirtualChild's parent with the specified parent type.
      *
      * <p>Consider the following class inheritance diagram:
-     * <pre>
+     * <pre>{@code
      *    B.C0 <- D.C0
      *     ^
      *    B.C1 <- D.C1
-     * </pre>
+     * }</pre>
      *
      * <p>When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
      * resulting type need to "retain" the origin parent type. That retained parent type is then
@@ -741,31 +741,32 @@ public abstract class TypeConstant
      * Obtain the canonical type for this type. This method may be used by the linker and runtime,
      * but should not be used within the Ecstasy compiler, because this method requires the type
      * system to be fully resolved.
-     * <p/>
+     * <p>
      * For a class that has type parameters and uses the "incorporates conditional" feature, there
      * exists more than one canonical type, because the class composition is specialized for each
      * conditional incorporation being incorporated vs not-incorporated. (For context, this
      * specialization is referred to as "layer one specialization".) By way of example, the Range
-     * class implies two specializations: (0) when Element is NOT Sequential ("Range<Orderable>"),
-     * and (1) when Element IS Sequential ("Range<Sequential>"). Another example is ListMap, which
-     * has four specializations: (00) when Key is NOT immutable Hashable and Value is NOT Shareable
-     * ("ListMap<Object, Object>"), (01) when Key is NOT immutable Hashable but Key IS immutable
-     * Object and Value IS Shareable  ("ListMap<immutable Object, Shareable>"), (10) when Key IS
-     * immutable Hashable and Value is NOT Shareable ("ListMap<immutable Hashable, Object>"), and
-     * (11) when Key IS immutable Hashable and Value IS Shareable ("ListMap<immutable Hashable,
-     * Shareable>").
-     * <p/>
+     * class implies two specializations: (0) when Element is NOT Sequential
+     * ({@code Range<Orderable>}), and (1) when Element IS Sequential
+     * ({@code Range<Sequential>}). Another example is ListMap, which has four specializations:
+     * (00) when Key is NOT immutable Hashable and Value is NOT Shareable
+     * ({@code ListMap<Object, Object>}), (01) when Key is NOT immutable Hashable but Key IS
+     * immutable Object and Value IS Shareable ({@code ListMap<immutable Object, Shareable>}),
+     * (10) when Key IS immutable Hashable and Value is NOT Shareable
+     * ({@code ListMap<immutable Hashable, Object>}), and (11) when Key IS immutable Hashable and
+     * Value IS Shareable ({@code ListMap<immutable Hashable, Shareable>}).
+     * <p>
      * A class with no reachable conditional incorporations has only one canonical type, with no
      * type parameters specified; for example, "KeyBasedMap" is used as the canonical form, rather
-     * than the normalized "KeyBasedMap<Object, Object>".
-     * <p/>
+     * than the normalized {@code KeyBasedMap<Object, Object>}.
+     * <p>
      * With virtual child relationships, this is additionally complicated by the ability of a child
      * class to (i) specify "incorporates conditional" clauses that reference a formal type
      * parameter from a parent class, and (ii) specify formal type parameter constraints that are
      * defined using a formal type parameter from a parent class. In these cases, the parent class
      * canonical types must reflect the specializations of the virtual child classes (and their
      * virtual child classes, and so on).
-     * <p/>
+     * <p>
      * The "true" canonical type for a given type is the simplest form of the type that represents
      * the compositional shape of that type. For a type to be canonicalizable, it must correspond to
      * a single underlying class (including interfaces). Access and immutability modifiers would be
@@ -1533,12 +1534,13 @@ public abstract class TypeConstant
     }
 
     /**
-     * Given this (formal) type A<B<C>, D<R>> that may contain a type parameter "R" and an actual
-     * type A<X<Y>, W<Z>>, find out what is the actual type of the type parameter "R".
+     * Given this (formal) type {@code A<B<C>, D<R>>} that may contain a type parameter "R" and an
+     * actual type {@code A<X<Y>, W<Z>>}, find out what is the actual type of the type parameter
+     * "R".
      *
      * @return the resolved actual type or null if there is no matching type parameter or
      *         tha actual type topology is not the same as this type and doesn't provide enough
-     *         fidelity (e.g.: formal is Array<R> and actual is Object)
+     *         fidelity (e.g.: formal is {@code Array<R>} and actual is Object)
      */
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         return getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
@@ -7238,7 +7240,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public ClassDesc getJitCCDesc(TypeSystem ts) {
         return ClassDesc.of(getJitCCName(ts));
@@ -7248,7 +7250,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Instance Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public ClassDesc getJitICDesc(TypeSystem ts) {
         return ClassDesc.of(getJitICName(ts));
@@ -7267,7 +7269,7 @@ public abstract class TypeConstant
      * Obtain a unique Java class name that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String getJitCCName(TypeSystem ts) {
         TypeConstant type = getJitCCType();
@@ -7281,7 +7283,7 @@ public abstract class TypeConstant
      * Obtain a unique Java class name that represents a "JIT Instance Class Name" for this type in
      * the specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String getJitICName(TypeSystem ts) {
         return getJitICType().ensureJitName(ts);
@@ -7412,7 +7414,7 @@ public abstract class TypeConstant
      *
      * @return {@code true} iff this type is Specializable
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public boolean isJitL2Specializable() {
         if (!isSingleUnderlyingClass(true)) {
@@ -7441,7 +7443,7 @@ public abstract class TypeConstant
      * @return {@code true} iff this type's callable JIT type is a non-canonical parameterization of
      *         a {@link #isJitL2Specializable() specializable} type
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public boolean isJitL2Specialized() {
         TypeConstant jitType = getJitCCType();
@@ -7562,7 +7564,7 @@ public abstract class TypeConstant
      *
      * @return a canonical JIT type
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public TypeConstant getJitCCType() {
         if (isModifyingType()) {
@@ -7579,7 +7581,7 @@ public abstract class TypeConstant
      * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
      * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
@@ -8075,7 +8077,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * Compare for order (<=>) two object handles that both belong to this type.
+     * Compare for order ({@code <=>}) two object handles that both belong to this type.
      *
      * @param frame    the frame
      * @param hValue1  the first handle

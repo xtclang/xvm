@@ -83,9 +83,10 @@ public class nType
 
     /**
      * Resolve a named generic parameter against the represented {@link #$dataType} rather than the
-     * {@link #$xvmType()}, which {@link #$typeForName} would do.
+     * {@link #$xvmType}, which {@link #$typeForName} would do.
      *
-     * @throws an {@link XvmError} if the represented type has no formal with the specified name
+     * @throws nException wrapping an {@link XvmError} if the represented type has no formal with
+     *         the specified name
      *
      * @see org.xvm.javajit.BuildContext#loadFormalType
      */
@@ -112,7 +113,7 @@ public class nType
     }
 
     /**
-     * Native implementation of "conditional Hasher<DataType> hashed()".
+     * Native implementation of {@code conditional Hasher<DataType> hashed()}.
      *
      * TODO: this is temporary - it needs to be removed here and naturally generated
      */
@@ -172,8 +173,8 @@ public class nType
     }
 
     /**
-     * Native implementation of: "static <CompileType extends Type> Boolean equals(CompileType value1,
-     * CompileType value2)".
+     * Native implementation of: {@code static <CompileType extends Type> Boolean
+     * equals(CompileType value1, CompileType value2)}.
      */
     public static boolean equals$p(Ctx ctx, nType CompileType, nType value1, nType value2) {
         return value1.$dataType.equals(value2.$dataType);

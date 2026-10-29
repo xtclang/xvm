@@ -75,7 +75,7 @@ public class nRef
     }
 
     /**
-     * Native implementation of: "Type<Referent> type.get()".
+     * Native implementation of: {@code Type<Referent> type.get()}.
      */
     public nType type$get(Ctx ctx) {
         return nType.$ensureType(ctx, ((nObject) get(ctx)).$xvmType(ctx));

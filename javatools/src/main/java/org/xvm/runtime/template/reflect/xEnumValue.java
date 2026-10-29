@@ -49,7 +49,7 @@ public class xEnumValue
     }
 
     /**
-     * Implements property: Enumeration<BaseType> enumeration
+     * Implements property: {@code Enumeration<BaseType> enumeration}
      */
     protected int getPropertyEnumeration(Frame frame, ClassHandle hClass, int iReturn) {
         TypeConstant   typeEnumValue  = getClassType(hClass);

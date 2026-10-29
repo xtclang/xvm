@@ -300,7 +300,7 @@ public class xString
     }
 
     /**
-     * Call String.appendTo(Appender<Char> appender)
+     * Call {@code String.appendTo(Appender<Char> appender)}
      *
      * @param frame      the current frame
      * @param hString    the string to append

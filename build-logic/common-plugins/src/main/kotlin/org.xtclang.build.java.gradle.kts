@@ -192,3 +192,8 @@ tasks.withType<Test>().configureEach {
     // Skip all tests when -PskipAllTests is set (configuration cache safe)
     onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }
+
+// check runs javadoc, so a doc comment that javadoc rejects fails the build as a compile error does
+tasks.check {
+    dependsOn(tasks.javadoc)
+}

@@ -17,7 +17,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewToBitFromNibble;
 
 /**
- * Native NibbleArray<Bit> implementation.
+ * Native {@code NibbleArray<Bit>} implementation.
  */
 public class xNibbleArray
         extends BitBasedArray {

@@ -20,8 +20,10 @@ import org.xvm.asm.Register;
  *
  * <p>Examples of such a constraint in Ecstasy are:
  *
+ * <ul>
  * <li>{@code interface Tuple<ElementTypes extends Tuple<ElementTypes>>}</li>
  * <li>{@code interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tuple<ReturnTypes>>}</li>
+ * </ul>
  */
 public class TypeSequenceTypeConstant
         extends TypeConstant {

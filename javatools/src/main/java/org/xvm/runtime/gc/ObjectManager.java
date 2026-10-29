@@ -34,7 +34,7 @@ public interface ObjectManager<V> {
      * Set the header for this object.
      *
      * @param o the object
-     * @return the header
+     * @param header the header
      */
     void setHeader(V o, long header);
 

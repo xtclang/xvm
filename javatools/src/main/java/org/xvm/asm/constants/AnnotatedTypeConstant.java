@@ -145,7 +145,7 @@ public class AnnotatedTypeConstant
      * Return the annotation type with any type parameters resolved that overlap with the
      * underlying TypeConstant.
      *
-     * For example, an "@Atomic Var<Int>" type should yield Atomic<Int>.
+     * For example, an {@code @Atomic Var<Int>} type should yield {@code Atomic<Int>}.
      *
      * @return the resolved annotation type
      */

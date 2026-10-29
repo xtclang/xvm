@@ -24,7 +24,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibble;
 
 /**
- * Native BitArray<Bit> implementation.
+ * Native {@code BitArray<Bit>} implementation.
  */
 public class xBitArray
         extends BitBasedArray {
@@ -157,7 +157,7 @@ public class xBitArray
     }
 
     /**
-     * Extract an array of bits from the ArrayDelegate<Bit> handle.
+     * Extract an array of bits from the {@code ArrayDelegate<Bit>} handle.
      */
     public static byte[] getBits(ArrayHandle hArray) {
         DelegateHandle hDelegate = hArray.m_hDelegate;

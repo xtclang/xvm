@@ -16,7 +16,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
 /**
- * IS_LT rvalue, rvalue, lvalue-return ; T < T -> Boolean
+ * {@code IS_LT rvalue, rvalue, lvalue-return ; T < T -> Boolean}
  */
 public class IsLt
         extends OpTest {
