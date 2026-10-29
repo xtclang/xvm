@@ -268,6 +268,10 @@ internal fun ParityScenarios.refreshOverlapCases() {
                 visible()
                 val previous = requireNotNull(protocol.server().getCurrentProcessId())
                 replace(library, data.string("changed"), settle = false)
+                // TODO LSP4IJ: UP09 — 0.21.0 sends a change still pending when the restart disposes its synchronizer,
+                // then fails to make that synchronizer's diagnostics alarm, an IDE error; send it to the old server
+                // first. The server's analysis of it still overlaps the restart
+                flush(library)
                 hints(true)
                 protocol.server().restart()
                 awaitUi("retired refresh producer exits", 45.seconds) {
