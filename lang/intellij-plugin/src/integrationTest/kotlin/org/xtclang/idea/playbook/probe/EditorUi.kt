@@ -5,10 +5,12 @@ import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.openapi.wm.IdeFrame
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.AppIcon
@@ -18,12 +20,29 @@ import java.awt.KeyboardFocusManager
 import java.awt.Window
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.SwingUtilities
 
 /** Small IDE-side observations avoid walking the entire Swing tree for every focus poll. */
 object EditorUi {
+    // Counts switches to another application; IntelliJ shows no editor hint while one is active.
+    private val deactivations =
+        AtomicInteger().also { count ->
+            ApplicationManager.getApplication().messageBus.connect().subscribe(
+                ApplicationActivationListener.TOPIC,
+                object : ApplicationActivationListener {
+                    override fun applicationDeactivated(ideFrame: IdeFrame) {
+                        count.incrementAndGet()
+                    }
+                },
+            )
+        }
+
+    @JvmStatic
+    fun deactivations(): Int = deactivations.get()
+
     @JvmStatic
     fun renameAvailable(editor: Editor): Boolean =
         XtcRenameHandler()
