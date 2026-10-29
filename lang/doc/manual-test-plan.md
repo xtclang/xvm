@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **336 scenarios**: X1–X334 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **337 scenarios**: X1–X335 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 336 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 337 scenarios; a partial-coverage result is not a full pass.
 
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 336 scenarios: X1–X334 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 337 scenarios: X1–X335 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1530,7 +1530,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 336 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 337 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3902,13 +3902,14 @@ last published to mavenLocal.
 | X330 | In Watched.x, set a breakpoint on line 5 and start debugging Watched. When it stops, expand `counter` in the Variables view and choose Break on Value Change on its `count`. Remove the line breakpoint and continue three times. IntelliJ has no data breakpoints (UP48). | The data breakpoint is `Counter.count`, for writes. The first continue stops on line 17, in `Counter.add`, saying `Counter.count changed from 0 to 2`; the second stops there again with `Counter.count changed from 2 to 5`. The third prints `count=5`, and the program ends with exit code 5. |
 | X331 | In Inline.x, set a breakpoint on line 12, `count = before + n;`, and start debugging Inline, with `debug.inlineValues` on its default. When it stops, look at the code of `add`. Then remove the breakpoint and continue. IntelliJ: its inline values come from LSP4IJ, not the language server (UP50). | Beside line 10 VS Code shows `n = 2`, and beside lines 11 and 12 `before = 3` and `n = 2`; nothing for `count`, a field, nor for `after`, on line 13. Continue runs the program to its exit with exit code 5. |
 
-### Inline and remove, and Safe Delete of public members (X332–X334)
+### Inline and remove, Safe Delete of public members, and an Explorer move (X332–X335)
 
 | ID | Actions | Expected result |
 |---|---|---|
 | X332 | Inline every call of a private method and remove the method: select `helper();`, choose **Inline and remove private method 'helper'**, apply, then Undo/Redo/Undo. | Both calls become `(probe() + 2)` and the method is gone; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X333 | Select `amount + f`, where a lambda also reads `amount`. | No **Inline and remove constant property 'amount'** action; the source stays unchanged. |
 | X334 | Select the class `Box`'s public `unused`, choose **Safely delete member 'unused', unused in Extract**, apply, then Undo/Redo/Undo. | The method is gone and the title names the configured modules that were checked; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X335 | VS Code only: with `files.refactoring.autoSave` off and `App/tools/Box.x` open, move it to `App/util` in the Explorer, then Undo and Redo from the Explorer. | The move rewrites `Box.x`, the alias in `App.x` and the closed consumer as X161 does, although nothing saves the moved file; one Undo restores every file and Redo applies them again. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

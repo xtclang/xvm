@@ -4,11 +4,11 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules } from '../../rename-proposal';
 import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
-import { PlaybookTimeout } from '../wait';
+import { PlaybookTimeout, withPlaybookCleanup } from '../wait';
 import { discovered } from './liveWorkspace';
 import { client, eventually, noErrors, playbook, symbols } from './support';
 
-export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219')[] = ['X161', 'X162', 'X163']): void {
+export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219' | 'X335')[] = ['X161', 'X162', 'X163']): void {
     ids.forEach(id => playbook(id, async (workspace, data) => {
         for (const file of data.files) await workspace.write(file.file, file.source);
         if ('directories' in data) {
@@ -39,49 +39,64 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
             await noErrors(document.uri);
             return;
         }
-        const move = new vscode.WorkspaceEdit();
-        for (const item of moves) move.renameFile(workspace.uri(item.from), workspace.uri(item.to), { overwrite: false });
-        assert.ok(await vscode.workspace.applyEdit(move, { isRefactoring: true }));
-
-        const verify = async (moved: boolean) => {
-            await eventually(async () => Promise.all(data.files.map(async file => {
-                const uri = workspace.uri(moved ? file.destination : file.file);
-                const buffer = vscode.workspace.textDocuments.find(value => !value.isClosed && value.uri.toString() === uri.toString());
-                return buffer?.getText() ?? fs.readFile(uri.fsPath, 'utf8').catch(() => '');
-            })), texts => texts.every((text, index) => text === (moved ? data.files[index].expected : data.files[index].source)),
-            `Move ${moved ? 'applied' : 'undone'}: all sources and resources agree`);
+        // X335 moves as the Explorer does, not as a refactoring, so nothing saves the moved file's edits: with
+        // files.refactoring.autoSave off and the moved files open in editors.
+        const explorer = 'explorerMove' in data && data.explorerMove;
+        const refactoring = vscode.workspace.getConfiguration('files.refactoring');
+        if (explorer) {
             for (const file of data.files.filter(value => value.destination !== value.file)) {
-                assert.strictEqual(await fs.stat(workspace.uri(moved ? file.file : file.destination).fsPath).catch(() => null), null);
+                await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(workspace.uri(file.file)), { preview: false });
             }
-            if ('afterModules' in data) {
-                const expected = sourceGraphKey(graph(moved ? data.afterModules : data.modules));
-                await eventually(async () => sourceGraphKey(compilerSourceModules()), value => value === expected, 'Persisted graph follows Move/Undo/Redo');
-                await noErrors((await workspace.open(moved ? data.afterRoot : data.root)).uri);
-                await noErrors((await workspace.open(data.consumer)).uri);
-            } else {
-                await symbols(document);
-                await noErrors(document.uri);
-            }
-        };
-        await verify(true);
-        for (const [action, moved] of [['undo', false], ['redo', true]] as const) {
-            // Graph moves also edit settings. Use the settings editor
-            // as the undo context so the native transaction includes its file operations as well.
-            if ('afterModules' in data) {
-                await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(compilerSettingsLocation()!.uri), { preview: false });
-            }
-            await focusTestWindow();
-            await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
-            await vscode.commands.executeCommand(action);
-            // TODO VSCODE: UP23 — VS Code undoes overlapping parent and child moves in forward order, which fails with
-            // "target already exists", so X218's Undo never restores them; fail that as the assertion the register
-            // records, not as a timeout, which stops the rest of the playbook
-            await verify(moved).catch(error => {
-                throw id === 'X218' && action === 'undo' && error instanceof PlaybookTimeout
-                    ? new assert.AssertionError({ message: `UP23: ${error.message}` })
-                    : error;
-            });
+            await vscode.window.showTextDocument(document, { preview: false });
+            await refactoring.update('autoSave', false, vscode.ConfigurationTarget.Global);
         }
+        await withPlaybookCleanup(async () => {
+            const move = new vscode.WorkspaceEdit();
+            for (const item of moves) move.renameFile(workspace.uri(item.from), workspace.uri(item.to), { overwrite: false });
+            assert.ok(await vscode.workspace.applyEdit(move, explorer ? undefined : { isRefactoring: true }));
+
+            const verify = async (moved: boolean) => {
+                await eventually(async () => Promise.all(data.files.map(async file => {
+                    const uri = workspace.uri(moved ? file.destination : file.file);
+                    const buffer = vscode.workspace.textDocuments.find(value => !value.isClosed && value.uri.toString() === uri.toString());
+                    return buffer?.getText() ?? fs.readFile(uri.fsPath, 'utf8').catch(() => '');
+                })), texts => texts.every((text, index) => text === (moved ? data.files[index].expected : data.files[index].source)),
+                `Move ${moved ? 'applied' : 'undone'}: all sources and resources agree`);
+                for (const file of data.files.filter(value => value.destination !== value.file)) {
+                    assert.strictEqual(await fs.stat(workspace.uri(moved ? file.file : file.destination).fsPath).catch(() => null), null);
+                }
+                if ('afterModules' in data) {
+                    const expected = sourceGraphKey(graph(moved ? data.afterModules : data.modules));
+                    await eventually(async () => sourceGraphKey(compilerSourceModules()), value => value === expected, 'Persisted graph follows Move/Undo/Redo');
+                    await noErrors((await workspace.open(moved ? data.afterRoot : data.root)).uri);
+                    await noErrors((await workspace.open(data.consumer)).uri);
+                } else {
+                    await symbols(document);
+                    await noErrors(document.uri);
+                }
+            };
+            await verify(true);
+            for (const [action, moved] of [['undo', false], ['redo', true]] as const) {
+                // Graph moves also edit settings. Use the settings editor
+                // as the undo context so the native transaction includes its file operations as well.
+                if ('afterModules' in data) {
+                    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(compilerSettingsLocation()!.uri), { preview: false });
+                }
+                await focusTestWindow();
+                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                await vscode.commands.executeCommand(action);
+                // TODO VSCODE: UP23 — VS Code undoes overlapping parent and child moves in forward order, which fails with
+                // "target already exists", so X218's Undo never restores them; fail that as the assertion the register
+                // records, not as a timeout, which stops the rest of the playbook
+                await verify(moved).catch(error => {
+                    throw id === 'X218' && action === 'undo' && error instanceof PlaybookTimeout
+                        ? new assert.AssertionError({ message: `UP23: ${error.message}` })
+                        : error;
+                });
+            }
+        }, async () => {
+            if (explorer) await refactoring.update('autoSave', undefined, vscode.ConfigurationTarget.Global);
+        });
     }));
 }
 
