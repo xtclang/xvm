@@ -4,10 +4,11 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.process.CommandLineArgumentProvider
 import java.nio.charset.StandardCharsets.UTF_8
 
@@ -178,6 +179,10 @@ tasks.withType<JavaCompile>().configureEach {
 
     // Compiler options must be set before Gradle snapshots task inputs.
     options.encoding = UTF_8.toString()
+}
+
+tasks.withType<Javadoc>().configureEach {
+    (options as StandardJavadocDocletOptions).addBooleanOption("Xdoclint:all,-missing", true)
 }
 
 // Test: JVM args provider + typed Action for logging (no doFirst lambda)

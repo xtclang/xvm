@@ -132,8 +132,7 @@ public class Runtime {
     }
 
     /**
-     * @return the debugger of this runtime's services: the one a host set, else none if the system
-     *         property {@code org.xvm.runtime.debugger} is {@code off}, else the console debugger
+     * @return the debugger of this runtime's services; the console debugger if none was set
      */
     public Debugger getDebugger() {
         Debugger debugger = m_debugger;
@@ -144,10 +143,7 @@ public class Runtime {
     }
 
     /**
-     * Set the debugger of this runtime's services. A host without a terminal for the console
-     * debugger sets {@link Debugger#NONE}.
-     *
-     * @param debugger  the debugger to use
+     * Set the debugger of this runtime's services.
      */
     public void setDebugger(Debugger debugger) {
         m_debugger = Objects.requireNonNull(debugger);
