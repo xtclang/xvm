@@ -952,7 +952,15 @@ passes with the workaround disabled. The gates are in
 
 ### LSP4J
 
-- [ ] UP15: get LSP4J #997 reviewed and merged. @pisv was asked on 2026-10-20; no reply yet.
+- [x] UP15: LSP4J #997 merged on 2026-10-29 (`37565290`, by @pisv), closing #996. Before the merge,
+  @cdietrich found that its rethrow of a failure without a cause let `EitherTypeAdapter`'s
+  cause-less `JsonParseException` escape, so the request got no response; #997 now rethrows only a
+  failure whose causes hold an `IOException` or an `Error` (`fee81751`, with a test that fails
+  without it). Unreleased: LSP4J 1.1.0 has no date.
+- [ ] LSP4J #1010 (filed 2026-10-29): a numeric message id outside the `int` range fails
+  `nextInt()`, and the request is logged and dropped without a response. Our
+  [#1011](https://github.com/eclipse-lsp4j/lsp4j/pull/1011) (open, on `37565290`) reads such an id
+  as a `Long` and keeps `Integer` for the ids in range. To do: get it merged.
 - [ ] UP15: after an LSP4J release with #997, adopt it and change `XdkStdioTest`'s assertion to
   `ResponseErrorCode.InvalidParams`, keeping reader recovery.
 - [ ] UP06: after an LSP4IJ release with #1723 (0.30.0), remove the `DiagnosticReportJson` adapter;
