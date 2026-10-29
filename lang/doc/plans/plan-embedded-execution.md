@@ -626,6 +626,17 @@ this bridge; they cannot be inferred from compiler type hints.
     in the test.
   - *Limits.* A JIT run and a DIRECT Gradle run cannot be debugged; a program started without
     `--debug` has no agent to attach to; a library's sources are those of the program's XDK.
+  - *Done (2026-10-29, `0637f0d281`): steps (1) to (3), with X336.* As designed, but for these.
+    The agent's `ready` gives the protocol, the process and the module, not an XDK fingerprint: the
+    program runs its own XDK, which need not be the language server's, so the program's XDK must
+    have this javatools instead. The IDE's side is `AttachedProgram`, with `EmbeddedRuns.attach`
+    and `DebugRuns.attach`, not a `RemoteRuns`; it shares `RunDebugClient` with
+    `RunWorkerProcess`, as the agent shares `RunDebuggers` with the worker. The launcher loads the
+    agent from `agent=<jar>`, or from its class path, and closes the jar once the debugging has
+    ended, so the agent's `close()` waits for its own thread. With no debugger attached, a stop is
+    resumed at once, and a detach drops what the debugger asked for (`SessionDebugger.reset()`).
+    The attach takes `stopOnEntry`. IntelliJ's attach keeps LSP4IJ's `LAUNCH` mode for its
+    transport and makes only its client in `ATTACH` mode (UP64).
 
 Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
 execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;

@@ -447,13 +447,22 @@ recorded partial coverage.
   Modules view (UP39). IntelliJ has neither (UP45), so X326 is not implemented there.
 - [ ] R13: Debug for Gradle-mode and command-line runs.
 - [ ] R13: debugging tests, which needs the editors to run tests first.
-- [ ] R13: attaching to a program that already runs.
+- [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
+  `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
+  [,agent=<jar>]`, through javatools' new `DebuggerProvider`; the language server's jar is the
+  agent, `XtcDebugAgent`, on loopback only. The worker and the agent share `RunDebuggers`, the
+  worker client and `AttachedProgram` share `RunDebugClient` (protocol 23). VS Code's attach
+  configuration, snippet and Copy Option to Debug a Program Outside the Editor; IntelliJ's Ecstasy
+  Attach configuration (UP64). Both take stop at the first line, for a program under `suspend`.
+  Detaching drops the debugger's breakpoints, and the program runs on. Limits: the program's XDK
+  must have this javatools; its console stays its own; one debugger at a time.
   Design for all three (2026-10-27) in
   [the execution plan's R13](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance):
   a debug agent in the program's JVM, which `Runner` and `TestRunner` install through a new
   `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
-  to a new `RemoteRuns` in the language server; Gradle-mode Debug connects back, `xec` listens for
-  an attach.
+  to the language server; Gradle-mode Debug connects back, `xec` listens for an attach. Still to
+  come for the first two: the Gradle plugin's `xtcDebug` properties, Gradle-mode Debug in both
+  editors, and running and debugging tests.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and
@@ -679,6 +688,14 @@ passes with the workaround disabled. The gates are in
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
+
+### LSP4IJ: an attach cannot use the adapter's own process (UP64): not filed
+
+- [ ] UP64 (2026-10-29): LSP4IJ's `DebugMode.ATTACH` replaces the adapter's process with a
+  `NopProcessHandler` and reaches the adapter by its socket, so an adapter whose transport is its
+  process handler, as ours is, can only be launched. The Ecstasy Attach configuration keeps the
+  descriptor's mode at `LAUNCH` and makes only its client in `ATTACH` mode. To do: file it, with a
+  change that lets an attach keep the descriptor's process.
 
 ### LSP4IJ: LSP4J's debug modules at 0.21.0 (UP63): our #1793, merged
 
