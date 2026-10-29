@@ -3,6 +3,8 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
+import com.intellij.driver.client.utility
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
@@ -28,6 +30,30 @@ fun Driver.receivedDiagnostics(editor: JEditorUiComponent): List<ReceivedDiagnos
                 range.getEnd().let { position -> position.getLine() to position.getCharacter() },
             )
         }
+}
+
+/**
+ * What IntelliJ's language client received for the editor's document, once it is the server's report for the document
+ * as it is now; null while the latest report is for an earlier state, as from before an edit, or the client does not
+ * hold it yet. When the server pushes its diagnostics, no report is asked for a known state, and what the client
+ * received is taken as it is.
+ */
+fun Driver.currentDiagnostics(editor: JEditorUiComponent): List<ReceivedDiagnostic>? {
+    val received = receivedDiagnostics(editor)
+    val items = utility(DiagnosticReportsProbe::class).currentItems(singleProject(), editor.editor.getVirtualFile().getPath())
+    return received.takeIf { items == PUSHED_DIAGNOSTICS || items == received.size }
+}
+
+/** What [DiagnosticReportsProbe.currentItems] answers when the server pushes its diagnostics. */
+private const val PUSHED_DIAGNOSTICS = -2
+
+/** Whether the diagnostics the client holds for a document are the server's report for it as it is now. */
+@Remote("org.xtclang.idea.playbook.probe.DiagnosticReports", plugin = "org.xtclang.playbook.probe")
+interface DiagnosticReportsProbe {
+    fun currentItems(
+        project: Project,
+        path: String,
+    ): Int
 }
 
 /** Copies the client's received diagnostic coordinates and classification into the test process. */

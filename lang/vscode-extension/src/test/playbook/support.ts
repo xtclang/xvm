@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { getClient } from '../../lsp-client';
+import { diagnosticReport, getClient, pullsDiagnostics, type DiagnosticReport } from '../../lsp-client';
 import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
@@ -89,8 +89,43 @@ export async function noErrors(uri: vscode.Uri): Promise<void> {
     await diagnostics(uri, values => values.length === 0, 'Expected no diagnostics');
 }
 
+/**
+ * Waits until what VS Code shows of a document's diagnostics satisfies [accept], and returns it. For an open document
+ * whose diagnostics the server's report gives, only a report of the document's current version counts, once VS Code
+ * shows it: an earlier one, as from before an edit, may still be shown. A document that is not open in a tab, or a
+ * server that pushes its diagnostics, has no such version; what VS Code shows is taken as it is.
+ */
 export async function diagnostics(uri: vscode.Uri, accept: (values: vscode.Diagnostic[]) => boolean, message: string) {
-    return eventually(async () => vscode.languages.getDiagnostics(uri), accept, `${message} in ${uri.fsPath}`);
+    const shown = await eventually(async () => currentDiagnostics(uri), state => state.current && accept(state.values),
+        `${message} in ${uri.fsPath}`);
+    return shown.values;
+}
+
+/**
+ * Whether the language client pulls the document's diagnostics: it pulls those of the documents in a tab or a visible
+ * editor, as a peek is, and VS Code keeps a document whose tab was closed among its text documents for a while.
+ */
+function shown(uri: vscode.Uri): boolean {
+    const key = uri.toString();
+    const inTab = vscode.window.tabGroups.all.flatMap(group => group.tabs).some(tab => {
+        const input = tab.input;
+        const tabUri = input instanceof vscode.TabInputTextDiff ? input.modified
+            : input instanceof vscode.TabInputText || input instanceof vscode.TabInputCustom || input instanceof vscode.TabInputNotebook
+                ? input.uri : undefined;
+        return tabUri?.toString() === key;
+    });
+    return inTab || vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === key);
+}
+
+/** What VS Code shows of a document's diagnostics, and whether it is the server's report for the current version. */
+function currentDiagnostics(uri: vscode.Uri): { values: vscode.Diagnostic[]; current: boolean; version?: number; report?: DiagnosticReport } {
+    const values = vscode.languages.getDiagnostics(uri);
+    const document = vscode.workspace.textDocuments.find(item => item.uri.toString() === uri.toString());
+    if (!document || !pullsDiagnostics() || !shown(uri)) return { values, current: true };
+    const report = diagnosticReport(uri);
+    // the client shows a report once it has it, and drops one that the document has moved past
+    const current = report?.version === document.version && report.items === values.length;
+    return { values, current, version: document.version, report };
 }
 
 export function diagnosticCode(item: vscode.Diagnostic): string {
