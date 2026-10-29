@@ -254,16 +254,18 @@ Linux container under Podman, on Xvfb, where nothing else is on the display:
 
 ```bash
 lang/intellij-plugin/container/playbook.sh image                # build localhost/xvm-playbook once
-lang/intellij-plugin/container/playbook.sh build                # xdk:installDist, for X303 and X336
+lang/intellij-plugin/container/playbook.sh build                # xdk:installDist and publishLocal, for X303 and X336
 lang/intellij-plugin/container/playbook.sh playbook X307,X324   # the features session for those cases
+lang/intellij-plugin/container/playbook.sh playbook all         # the whole catalog
 lang/intellij-plugin/container/playbook.sh playbook X257 -Plsp4ijChannel=nightly \
     -Plsp4ijVersion=<version> -PintellijPlaybookReplacementGates=UP26          # with an LSP4IJ nightly
 ```
 
 Each run exports the checkout as it is, uncommitted changes included, and copies its run
 directories to `build/reports/compiler-playbook`, as a native run does. The container is
-aarch64 Linux on an Apple machine, with its own fonts and timing; a full-catalog run there is
-untested. Pin an LSP4IJ nightly's version: the latest may not compile against the plugin.
+aarch64 Linux on an Apple machine, with its own fonts and timing; every case IntelliJ implements
+has passed there (2026-10-29). Pin an LSP4IJ nightly's version: the latest may not compile against
+the plugin.
 
 ### When to Use
 
