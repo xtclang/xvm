@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
+import org.xvm.debug.AttachTarget
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
 import org.xvm.debug.DataBreakpointRequest
@@ -21,7 +22,7 @@ import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
-import org.xvm.lsp.run.RunWorkerProcess
+import org.xvm.lsp.run.RunListener
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.Path
@@ -127,27 +128,19 @@ internal class DebugSessions(
             return runs
                 .launch(
                     RunParams(target.module, target.method, target.args, target.workingDirectory, runId, target.moduleName),
-                    object : RunWorkerProcess.Listener {
-                        override fun output(text: String) = events.output(text)
-
-                        override fun exited(
-                            code: Long?,
-                            error: String?,
-                        ) = events.exited(code, error)
-
-                        override fun breakpoints(
-                            path: String,
-                            states: List<BreakpointState>,
-                        ) = events.breakpoints(path, states)
-
-                        override fun functionBreakpoints(states: List<BreakpointState>) = events.functionBreakpoints(states)
-
-                        override fun stopped(stop: StopState) = events.stopped(stop)
-
-                        override fun logged(text: String) = events.logged(text)
-                    },
+                    listener(events),
                     ready,
                 ).thenApply { LaunchResult(it.runId, describe(it.build)) }
+        }
+
+        override fun attach(
+            runId: String,
+            target: AttachTarget,
+            events: ProgramEvents,
+            ready: CompletionStage<out DebugSetup>,
+        ): CompletableFuture<String> {
+            logger.info("debug session attaches: session={} run={} at={}:{}", session, runId, target.host, target.port)
+            return runs.attach(runId, target, listener(events), ready)
         }
 
         override fun input(
@@ -276,6 +269,30 @@ internal class DebugSessions(
 
     private companion object {
         val logger = LoggerFactory.getLogger(DebugSessions::class.java)
+
+        /** A session's program events, as a run's listener receives them. */
+        fun listener(events: ProgramEvents) =
+            object : RunListener {
+                override fun output(text: String) = events.output(text)
+
+                override fun exited(
+                    code: Long?,
+                    error: String?,
+                ) = events.exited(code, error)
+
+                override fun breakpoints(
+                    path: String,
+                    states: List<BreakpointState>,
+                ) = events.breakpoints(path, states)
+
+                override fun functionBreakpoints(states: List<BreakpointState>) = events.functionBreakpoints(states)
+
+                override fun stopped(stop: StopState) = events.stopped(stop)
+
+                override fun logged(text: String) = events.logged(text)
+
+                override fun detached(reason: String?) = events.detached(reason)
+            }
 
         /** A build's module outcomes and diagnostics as `file:line:column` lines, as the embedded build task shows them. */
         fun describe(build: BuildResponse): String =

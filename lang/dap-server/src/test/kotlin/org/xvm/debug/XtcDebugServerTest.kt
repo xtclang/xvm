@@ -52,6 +52,7 @@ import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CopyOnWriteArrayList
@@ -1047,8 +1048,65 @@ class XtcDebugServerTest {
     }
 
     @Test
-    fun `attach and a pause before the launch fail with the reason, and a breakpoint needs a file`() {
-        assertFailsWith("Attaching is not available; launch the module instead.") { server.attach(mutableMapOf()) }
+    fun `an attach installs the breakpoints once the configuration is done, and a terminate detaches`() {
+        server.setBreakpoints(breakpoints("/src/App.x", 4)).get(10, SECONDS)
+        // a client's JSON numbers arrive as doubles
+        val attached = server.attach(mutableMapOf("port" to 5005.0, "token" to "t"))
+        assertThat(runs.attachTarget).isEqualTo(AttachTarget("localhost", 5005, "t"))
+        assertThat(attached).isNotDone()
+
+        server.configurationDone(ConfigurationDoneArguments())
+        attached.get(10, SECONDS)
+        val setup = runs.ready.toCompletableFuture().get(10, SECONDS)!!
+        assertThat(
+            setup.breakpoints
+                .single()
+                .breakpoints
+                .map { it.line },
+        ).containsExactly(4)
+        assertThat(setup.stopOnEntry).isFalse()
+        assertThat(client.events).contains("thread")
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE))
+            .contains("Attaching to the program at localhost:5005...", "Attached to App.")
+
+        server.terminate(TerminateArguments()).get(10, SECONDS)
+        assertThat(runs.stopped).containsExactly(runs.runId)
+        assertThat(client.events).doesNotContain("terminated")
+        runs.events.detached(null)
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE)).contains("Detached from App, which runs on.")
+        assertThat(client.events).contains("terminated").noneMatch { it.startsWith("exited") }
+    }
+
+    @Test
+    fun `an attach needs a port, and one that cannot reach the program fails with the reason`() {
+        assertFailsWith("An attach requires the port the program listens on") { server.attach(mutableMapOf("port" to "none")) }
+
+        runs.attachFailure = IOException("Connection refused")
+        server.configurationDone(ConfigurationDoneArguments())
+        assertFailsWith("Attach failed: Connection refused") { server.attach(mutableMapOf("port" to "5005")) }
+        assertFailsWith("This debug session has already launched a program.") { server.launch(mutableMapOf("module" to "App")) }
+    }
+
+    @Test
+    fun `an attach can stop the program at its first line, and one whose connection is lost ends the session with the reason`() {
+        server.configurationDone(ConfigurationDoneArguments())
+        server.attach(mutableMapOf("port" to 5005, "host" to "127.0.0.1", "stopOnEntry" to true)).get(10, SECONDS)
+        assertThat(runs.attachTarget).isEqualTo(AttachTarget("127.0.0.1", 5005))
+        // the program that waits for the debugger stops at its first line
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .get(10, SECONDS)!!
+                .stopOnEntry,
+        ).isTrue()
+
+        runs.events.detached("The connection to the program was lost")
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE)).contains("The connection to the program was lost")
+        assertThat(client.events).contains("terminated")
+    }
+
+    @Test
+    fun `a pause before the launch fails with the reason, and a breakpoint needs a file`() {
         assertFailsWith(XtcDebugServer.NOT_PAUSABLE) { server.pause(PauseArguments()) }
         val response =
             server
@@ -1134,6 +1192,8 @@ class XtcDebugServerTest {
         lateinit var ready: CompletionStage<out DebugSetup?>
         var result: LaunchResult? = null
         var onReady: () -> Unit = {}
+        var attachTarget: AttachTarget? = null
+        var attachFailure: Exception? = null
         val inputs = CopyOnWriteArrayList<String>()
         val stopped = CopyOnWriteArrayList<String>()
         val installed = CopyOnWriteArrayList<SourceBreakpoints>()
@@ -1174,6 +1234,20 @@ class XtcDebugServerTest {
                 onReady()
                 result ?: LaunchResult(runId, "  ✓ App")
             }
+        }
+
+        override fun attach(
+            runId: String,
+            target: AttachTarget,
+            events: ProgramEvents,
+            ready: CompletionStage<out DebugSetup>,
+        ): CompletableFuture<String> {
+            this.runId = runId
+            this.attachTarget = target
+            this.events = events
+            this.ready = ready
+            attachFailure?.let { return CompletableFuture.failedFuture(it) }
+            return ready.toCompletableFuture().thenApply { "App" }
         }
 
         override fun input(

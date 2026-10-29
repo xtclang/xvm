@@ -4,13 +4,20 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import java.util.stream.Collectors;
 
 import org.xvm.api.Connector;
+import org.xvm.api.DebuggerProvider;
 import org.xvm.api.InterpreterConnector;
 
 import org.xvm.asm.ConstantPool;
@@ -49,6 +56,16 @@ import static org.xvm.util.Severity.WARNING;
  * <p>where the default method is "run" with no arguments.
  */
 public class Runner extends Launcher<RunnerOptions> {
+
+    /**
+     * The option of {@code --debug} that names the jar of the debugger provider.
+     */
+    private static final String AGENT = "agent=";
+
+    /**
+     * The debugging of the program that {@code --debug} asked for, while the program runs.
+     */
+    private DebuggerProvider.Session m_debug;
 
     /**
      * Runner constructor for programmatic use.
@@ -219,6 +236,23 @@ public class Runner extends Launcher<RunnerOptions> {
 
         log(INFO, "Executing {} from {}", sName, binLocDesc);
 
+        var debug = opts.getDebug();
+        return debug.isPresent()
+                ? debug(debug.get(), repo, module, sName)
+                : execute(repo, module, sName);
+    }
+
+    /**
+     * Run the program's method, which the options name, in a new connector.
+     *
+     * @param repo    the repository of the program's modules
+     * @param module  the program's module
+     * @param sName   the program's name, for messages
+     *
+     * @return the program's exit code
+     */
+    private int execute(ModuleRepository repo, ModuleStructure module, String sName) {
+        var       opts      = options();
         Connector connector = createConnector(repo, module);
 
         ConstantPool pool = connector.getConstantPool();
@@ -249,6 +283,74 @@ public class Runner extends Launcher<RunnerOptions> {
             e.printStackTrace(System.err);
             log(FATAL, e, "Unhandled exception");
             return 1;  // Unreachable - log(FATAL) throws
+        }
+    }
+
+    /**
+     * Run the program under a debugger outside it, as {@code --debug} asks, with a debugger
+     * provider: the one in the jar that the option's {@code agent=<jar>} names, or one on the
+     * class path. The debugger is installed in the program's runtime when its connector is made,
+     * before the program starts, and the jar is closed once the debugging has ended.
+     *
+     * @param options  the options of {@code --debug}
+     * @param repo     the repository of the program's modules
+     * @param module   the program's module
+     * @param sName    the program's name, for messages
+     *
+     * @return the program's exit code, or the errors' if the debugging cannot start
+     */
+    private int debug(String options, ModuleRepository repo, ModuleStructure module, String sName) {
+        if (options().isJit()) {
+            log(ERROR, "--debug is not supported with --jit");
+            return checkErrors("debugger start");
+        }
+        var parts = new ArrayList<>(List.of(options.split(",")));
+        var agent = parts.stream().filter(part -> part.startsWith(AGENT)).findFirst()
+                .map(part -> new File(part.substring(AGENT.length())));
+        parts.removeIf(part -> part.startsWith(AGENT));
+        if (agent.isPresent() && !agent.get().isFile()) {
+            log(ERROR, "--debug names an agent {} that is not a file", quoted(agent.get()));
+            return checkErrors("debugger start");
+        }
+
+        ClassLoader    classes = getClass().getClassLoader();
+        URLClassLoader jar;
+        try {
+            jar = agent.isPresent() ? new URLClassLoader(new URL[] {agent.get().toURI().toURL()}, classes) : null;
+        } catch (MalformedURLException e) {
+            log(ERROR, "--debug names an agent {} that cannot be loaded: {}", quoted(agent.get()), e.getMessage());
+            return checkErrors("debugger start");
+        }
+        try {
+            var provider = ServiceLoader.load(DebuggerProvider.class, jar == null ? classes : jar).findFirst();
+            if (provider.isEmpty()) {
+                log(ERROR, "--debug needs a debugger provider, such as the Ecstasy language server's agent;"
+                        + " name its jar with agent=<jar>, or put it on the class path");
+                return checkErrors("debugger start");
+            }
+            DebuggerProvider.Session session;
+            try {
+                session = provider.get().start(String.join(",", parts), repo, module);
+            } catch (IOException | IllegalArgumentException e) {
+                log(ERROR, "The debugger could not start: {}", e.getMessage());
+                return checkErrors("debugger start");
+            }
+            try (session) {
+                m_debug = session;
+                int code = execute(repo, module, sName);
+                session.ended(code);
+                return code;
+            } finally {
+                m_debug = null;
+            }
+        } finally {
+            if (jar != null) {
+                try {
+                    jar.close();
+                } catch (IOException e) {
+                    log(WARNING, e, "The agent {} could not be closed", quoted(agent.get()));
+                }
+            }
         }
     }
 
@@ -337,14 +439,23 @@ public class Runner extends Launcher<RunnerOptions> {
 
     /**
      * Create the base Connector instance (with or without JIT).
-     * Helper method for subclasses that need to customize connector setup.
+     * Helper method for subclasses that need to customize connector setup. An interpreted one
+     * gets the debugger that {@code --debug} started, before the program starts.
      *
      * @param repo  the module repository
      * @param isJit true to use JIT connector, false for interpreted
      * @return a new Connector (not yet started)
      */
     protected Connector createBaseConnector(ModuleRepository repo, boolean isJit) {
-        return isJit ? new JitConnector(repo) : new InterpreterConnector(repo);
+        if (isJit) {
+            return new JitConnector(repo);
+        }
+        var connector = new InterpreterConnector(repo);
+        var debug     = m_debug;
+        if (debug != null) {
+            connector.setDebugger(debug.debugger());
+        }
+        return connector;
     }
 
     @Override

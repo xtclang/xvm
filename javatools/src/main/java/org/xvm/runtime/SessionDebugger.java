@@ -1803,6 +1803,22 @@ public final class SessionDebugger implements Debugger {
         release();
     }
 
+    /**
+     * Forget what the host asked for, as when it leaves a program that runs on: the breakpoints,
+     * function and data breakpoints, exception stops, a step and a pause are dropped, and a
+     * stopped program resumes, as at {@link #resume}. The program then runs as without a debugger
+     * until a host asks for more; the known modules stay known.
+     */
+    public synchronized void reset() {
+        installed      = new Installed(Map.of(), Map.of(), List.of(), Map.of());
+        exceptionStops = ExceptionStops.NONE;
+        stepping       = null;
+        pendingPause   = null;
+        watchables.clear();
+        release();
+        updateActive();
+    }
+
     // ----- Debugger interface --------------------------------------------------------------------
 
     /**

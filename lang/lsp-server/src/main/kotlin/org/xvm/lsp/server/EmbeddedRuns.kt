@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
+import org.xvm.debug.AttachTarget
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
 import org.xvm.debug.CompletionsState
@@ -27,12 +28,16 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
 import org.xvm.lsp.adapter.xdk.XdkBuiltModule
 import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.run.AttachedProgram
+import org.xvm.lsp.run.RunDebugClient
+import org.xvm.lsp.run.RunListener
 import org.xvm.lsp.run.RunWorkerProcess
 import java.io.Closeable
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
@@ -129,6 +134,9 @@ internal class EmbeddedRuns(
 ) : Closeable {
     private val workerIds = ConcurrentHashMap<String, Long>()
 
+    /** The programs a debugger attached to, by run ID, while it is attached. */
+    private val attached = ConcurrentHashMap<String, AttachedProgram>()
+
     /** The sources each run under the debugger was compiled from, by run ID, while it runs. */
     private val compiled = ConcurrentHashMap<String, CompiledSources>()
 
@@ -151,7 +159,7 @@ internal class EmbeddedRuns(
         val runId = params.runId ?: UUID.randomUUID().toString()
         return launch(
             params.copy(runId = runId),
-            object : RunWorkerProcess.Listener {
+            object : RunListener {
                 override fun output(text: String) {
                     (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
                 }
@@ -174,7 +182,7 @@ internal class EmbeddedRuns(
      */
     internal fun launch(
         params: RunParams,
-        events: RunWorkerProcess.Listener,
+        events: RunListener,
         ready: CompletionStage<out DebugSetup?> = CompletableFuture.completedFuture(null),
     ): CompletableFuture<RunResponse> {
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
@@ -203,13 +211,52 @@ internal class EmbeddedRuns(
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
     }
 
+    /**
+     * Attaches the debugger to a program that the launcher runs with `--debug`, whose debugger agent listens at
+     * [target]'s host and port, once [ready] completes with the debugger's setup; the workspace's modules are the
+     * program's own. Answers with the program's module once it has taken the setup; [events] receives the debugged
+     * program's breakpoints and stops, and its exit, or the detach, as the run's last event. The program's console is
+     * its own: no output comes, and none goes to it.
+     */
+    internal fun attach(
+        runId: String,
+        target: AttachTarget,
+        events: RunListener,
+        ready: CompletionStage<out DebugSetup>,
+    ): CompletableFuture<String> {
+        val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
+        val listener =
+            object : RunListener by events {
+                override fun exited(
+                    code: Long?,
+                    error: String?,
+                ) {
+                    attached.remove(runId)
+                    events.exited(code, error)
+                }
+
+                override fun detached(reason: String?) {
+                    attached.remove(runId)
+                    events.detached(reason)
+                }
+            }
+        return ready.toCompletableFuture().thenComposeAsync({ setup ->
+            val program = AttachedProgram.attach(target.host, target.port, target.token, listener)
+            attached[runId] = program
+            logger.info("run attached: run={} module={} at={}:{}", runId, program.module, target.host, target.port)
+            program.debug(modules, setup).thenApply { program.module }.whenComplete { _, failure ->
+                if (failure != null && attached.remove(runId) != null) program.close()
+            }
+        }, ATTACHING)
+    }
+
     private fun start(
         runId: String,
         params: RunParams,
         result: XdkBuildResult,
         module: String,
         setup: DebugSetup?,
-        events: RunWorkerProcess.Listener,
+        events: RunListener,
     ) {
         val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
         if (stoppedEarly) {
@@ -255,7 +302,7 @@ internal class EmbeddedRuns(
                     placed,
                     runId,
                 ),
-                object : RunWorkerProcess.Listener {
+                object : RunListener {
                     override fun output(text: String) = events.output(text)
 
                     override fun breakpoints(
@@ -320,10 +367,15 @@ internal class EmbeddedRuns(
 
     /**
      * Stops the run, or keeps it from starting while it still builds; the client still receives its `xtc/runExited`,
-     * unless the build fails. False when no such run is active.
+     * unless the build fails. A program a debugger attached to is not stopped: the debugger detaches from it, and it
+     * runs on. False when no such run is active.
      */
     fun stop(params: StopRunParams): Boolean {
         val runId = params.runId ?: return false
+        attached[runId]?.let { program ->
+            program.detach()
+            return true
+        }
         val id =
             synchronized(inputLock) {
                 workerIds[runId] ?: waiting[runId]?.let { typed ->
@@ -339,11 +391,7 @@ internal class EmbeddedRuns(
     internal fun setExceptionStops(
         runId: String,
         stops: ExceptionStops,
-    ): Boolean {
-        val id = workerIds[runId] ?: return false
-        worker.setExceptionStops(id, stops)
-        return true
-    }
+    ): Boolean = commanded(runId) { setExceptionStops(it, stops) }
 
     /**
      * Replaces one file's breakpoints in a running program under the debugger, on the lines the program was compiled
@@ -355,7 +403,7 @@ internal class EmbeddedRuns(
     ): CompletableFuture<List<BreakpointState>> {
         val lines = lines(runId, breakpoints.path)
         val refused = refused(breakpoints, lines).associateBy { it.id }
-        return debugged(runId) { worker.setBreakpoints(it, placed(breakpoints, lines)) }.thenApply { states ->
+        return debugged(runId) { setBreakpoints(it, placed(breakpoints, lines)) }.thenApply { states ->
             val installed = states.associateBy { it.id }
             // in the order they were asked for, on their lines now
             breakpoints.breakpoints.mapNotNull { request ->
@@ -369,20 +417,20 @@ internal class EmbeddedRuns(
         runId: String,
         reference: Int,
         name: String,
-    ): CompletableFuture<DataInfoState> = debugged(runId) { worker.dataBreakpointInfo(it, reference, name) }
+    ): CompletableFuture<DataInfoState> = debugged(runId) { dataBreakpointInfo(it, reference, name) }
 
     /** Replaces the data breakpoints of a running program under the debugger. */
     internal fun setDataBreakpoints(
         runId: String,
         breakpoints: List<DataBreakpointRequest>,
-    ): CompletableFuture<List<BreakpointState>> = debugged(runId) { worker.setDataBreakpoints(it, breakpoints) }
+    ): CompletableFuture<List<BreakpointState>> = debugged(runId) { setDataBreakpoints(it, breakpoints) }
 
     /** Replaces the function breakpoints of a running program under the debugger, each on its line now. */
     internal fun setFunctionBreakpoints(
         runId: String,
         breakpoints: List<FunctionBreakpointRequest>,
     ): CompletableFuture<List<BreakpointState>> =
-        debugged(runId) { worker.setFunctionBreakpoints(it, breakpoints) }.thenApply { states ->
+        debugged(runId) { setFunctionBreakpoints(it, breakpoints) }.thenApply { states ->
             states.map { state -> now(state) { path -> lines(runId, path) } }
         }
 
@@ -393,36 +441,36 @@ internal class EmbeddedRuns(
     ) = state.path?.let { path -> state.copy(line = lines(path).now(state.line)) } ?: state
 
     /** The fibers of a stopped program under the debugger. */
-    internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, worker::threads)
+    internal fun threads(runId: String): CompletableFuture<List<ThreadState>> = debugged(runId, RunDebugClient::threads)
 
     /** The calls that the line of a stopped frame of a program under the debugger makes. */
     internal fun stepInTargets(
         runId: String,
         frame: Int,
-    ): CompletableFuture<List<StepTargetState>> = debugged(runId) { worker.stepInTargets(it, frame) }
+    ): CompletableFuture<List<StepTargetState>> = debugged(runId) { stepInTargets(it, frame) }
 
     /** Steps a stopped fiber of a program under the debugger into one of the calls of its line. */
     internal fun stepInto(
         runId: String,
         thread: Int,
         target: Int,
-    ): CompletableFuture<Boolean> = debugged(runId) { worker.stepInto(it, thread, target) }
+    ): CompletableFuture<Boolean> = debugged(runId) { stepInto(it, thread, target) }
 
     /** Restarts a stopped frame of a program under the debugger, which its caller calls again. */
     internal fun restartFrame(
         runId: String,
         frame: Int,
-    ): CompletableFuture<Boolean> = debugged(runId) { worker.restartFrame(it, frame) }
+    ): CompletableFuture<Boolean> = debugged(runId) { restartFrame(it, frame) }
 
     /** The modules of a program under the debugger, its own and the libraries it uses. */
-    internal fun modules(runId: String): CompletableFuture<List<ModuleState>> = debugged(runId, worker::modules)
+    internal fun modules(runId: String): CompletableFuture<List<ModuleState>> = debugged(runId, RunDebugClient::modules)
 
     /** A stopped fiber's stack, with each frame's line where it is now in its file, which may have changed since the build. */
     internal fun stackTrace(
         runId: String,
         thread: Int,
     ): CompletableFuture<List<FrameState>> =
-        debugged(runId) { worker.stackTrace(it, thread) }.thenApply { frames ->
+        debugged(runId) { stackTrace(it, thread) }.thenApply { frames ->
             val maps = HashMap<String?, LineMap>()
             frames.map { frame -> frame.copy(line = maps.getOrPut(frame.path) { lines(runId, frame.path) }.now(frame.line)) }
         }
@@ -458,7 +506,7 @@ internal class EmbeddedRuns(
     internal fun scopes(
         runId: String,
         frame: Int,
-    ): CompletableFuture<List<ScopeState>> = debugged(runId) { worker.scopes(it, frame) }
+    ): CompletableFuture<List<ScopeState>> = debugged(runId) { scopes(it, frame) }
 
     /**
      * The variables of a scope, or the fields or elements of a variable, with integers in hexadecimal if [hex]: those
@@ -471,7 +519,7 @@ internal class EmbeddedRuns(
         filter: ChildFilter,
         start: Int,
         count: Int,
-    ): CompletableFuture<List<VariableState>> = debugged(runId) { worker.variables(it, reference, hex, filter, start, count) }
+    ): CompletableFuture<List<VariableState>> = debugged(runId) { variables(it, reference, hex, filter, start, count) }
 
     /** Evaluates an expression in a frame of a stopped program under the debugger, an integer in hexadecimal if [hex]. */
     internal fun evaluate(
@@ -479,7 +527,7 @@ internal class EmbeddedRuns(
         frame: Int,
         expression: String,
         hex: Boolean,
-    ): CompletableFuture<VariableState> = debugged(runId) { worker.evaluate(it, frame, expression, hex) }
+    ): CompletableFuture<VariableState> = debugged(runId) { evaluate(it, frame, expression, hex) }
 
     /** Changes a variable of a stopped program under the debugger to an expression's value, an integer in hexadecimal if [hex]. */
     internal fun setVariable(
@@ -488,7 +536,7 @@ internal class EmbeddedRuns(
         name: String,
         expression: String,
         hex: Boolean,
-    ): CompletableFuture<VariableState> = debugged(runId) { worker.setVariable(it, reference, name, expression, hex) }
+    ): CompletableFuture<VariableState> = debugged(runId) { setVariable(it, reference, name, expression, hex) }
 
     /** The names that complete the name typed at [offset] in [text], in a frame of a stopped program under the debugger. */
     internal fun completions(
@@ -496,7 +544,7 @@ internal class EmbeddedRuns(
         frame: Int,
         text: String,
         offset: Int,
-    ): CompletableFuture<CompletionsState> = debugged(runId) { worker.completions(it, frame, text, offset) }
+    ): CompletableFuture<CompletionsState> = debugged(runId) { completions(it, frame, text, offset) }
 
     /**
      * Runs code in a frame of a stopped program under the debugger, for at most [limit], and with [program], the whole
@@ -509,48 +557,57 @@ internal class EmbeddedRuns(
         limit: Duration,
         program: Boolean,
         hex: Boolean,
-    ): CompletableFuture<VariableState> = debugged(runId) { worker.runCode(it, frame, expression, limit, program, hex) }
+    ): CompletableFuture<VariableState> = debugged(runId) { runCode(it, frame, expression, limit, program, hex) }
 
     /** The exception a fiber of a stopped program under the debugger stopped it at; null for another stop. */
     internal fun exceptionInfo(
         runId: String,
         thread: Int,
-    ): CompletableFuture<ExceptionInfoState?> = debugged(runId) { worker.exceptionInfo(it, thread) }
+    ): CompletableFuture<ExceptionInfoState?> = debugged(runId) { exceptionInfo(it, thread) }
 
     /** Steps a fiber of a stopped program under the debugger; false when that fiber does not wait. */
     internal fun step(
         runId: String,
         thread: Int,
         kind: StepKind,
-    ): CompletableFuture<Boolean> = debugged(runId) { worker.step(it, thread, kind) }
+    ): CompletableFuture<Boolean> = debugged(runId) { step(it, thread, kind) }
 
     /** Pauses a running program under the debugger. False when no such run is active. */
-    internal fun pause(runId: String): Boolean {
-        val id = workerIds[runId] ?: return false
-        worker.pause(id)
-        return true
-    }
+    internal fun pause(runId: String): Boolean = commanded(runId, RunDebugClient::pause)
 
     /** Resumes a stopped program under the debugger. False when no such run is active. */
-    internal fun resume(runId: String): Boolean {
-        val id = workerIds[runId] ?: return false
-        worker.resume(id)
+    internal fun resume(runId: String): Boolean = commanded(runId, RunDebugClient::resume)
+
+    /** Asks the debugger of a run, in its execution worker or in the program a debugger attached to. */
+    private fun <T> debugged(
+        runId: String,
+        request: RunDebugClient.(Long) -> CompletableFuture<T>,
+    ): CompletableFuture<T> =
+        workerIds[runId]?.let { worker.request(it) }
+            ?: attached[runId]?.let { it.request(AttachedProgram.RUN) }
+            ?: CompletableFuture.failedFuture(IllegalStateException("The program is not running"))
+
+    /** Sends a command to the debugger of a run, as [debugged] does; false when no such run is active. */
+    private fun commanded(
+        runId: String,
+        command: RunDebugClient.(Long) -> Unit,
+    ): Boolean {
+        workerIds[runId]?.let { worker.command(it) } ?: attached[runId]?.let { it.command(AttachedProgram.RUN) } ?: return false
         return true
     }
 
-    private fun <T> debugged(
-        runId: String,
-        request: (Long) -> CompletableFuture<T>,
-    ): CompletableFuture<T> =
-        workerIds[runId]?.let(request) ?: CompletableFuture.failedFuture(IllegalStateException("The program is not running"))
-
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
-    internal fun tracked(): Int = synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + worker.tracked()
+    internal fun tracked(): Int =
+        synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + attached.size + worker.tracked()
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun workerPids(): List<Long> = worker.workerPids()
 
-    override fun close() = worker.close()
+    /** Ends the runs: the programs in the execution workers stop, and those a debugger attached to run on. */
+    override fun close() {
+        attached.values.toList().forEach(AttachedProgram::close)
+        worker.close()
+    }
 
     private fun compiler(): XdkAdapter? = adapter as? XdkAdapter
 
@@ -573,6 +630,9 @@ internal class EmbeddedRuns(
 
     companion object {
         private val logger = LoggerFactory.getLogger(EmbeddedRuns::class.java)
+
+        /** Where attaching waits for the program to answer: a thread of its own for each. */
+        private val ATTACHING = Executor { Thread.ofVirtual().name("xtc-attach").start(it) }
 
         /** The exit of a run stopped while its module was still building. */
         const val STOPPED_BEFORE_START = "Stopped before the program started."

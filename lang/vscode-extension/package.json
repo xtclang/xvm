@@ -82,6 +82,11 @@
                 "toggled": "xtc.debug.hexValues"
             },
             {
+                "command": "xtc.debug.copyOption",
+                "title": "Copy Option to Debug a Program Outside the Editor",
+                "category": "Ecstasy"
+            },
+            {
                 "command": "xtc.showCompilerPaths",
                 "title": "Ecstasy: Show Effective Compiler Paths"
             },
@@ -637,6 +642,30 @@
                                 "default": false
                             }
                         }
+                    },
+                    "attach": {
+                        "required": ["port"],
+                        "properties": {
+                            "port": {
+                                "type": "number",
+                                "description": "The port the program listens on, as its --debug option names it",
+                                "default": 5005
+                            },
+                            "host": {
+                                "type": "string",
+                                "description": "This machine's name or loopback address, where the program listens",
+                                "default": "localhost"
+                            },
+                            "token": {
+                                "type": "string",
+                                "description": "The token that the program's --debug option gives, if it gives one"
+                            },
+                            "stopOnEntry": {
+                                "type": "boolean",
+                                "description": "Stop the program at its first line, when its --debug option has suspend",
+                                "default": false
+                            }
+                        }
                     }
                 },
                 "configurationSnippets": [
@@ -648,6 +677,16 @@
                             "request": "launch",
                             "name": "Debug ${1:module}",
                             "module": "${1:myapp}"
+                        }
+                    },
+                    {
+                        "label": "Ecstasy: Attach to Program",
+                        "description": "Attach to a program run with xec --debug listen:127.0.0.1:5005,suspend,agent=<the language server's jar>",
+                        "body": {
+                            "type": "xtc",
+                            "request": "attach",
+                            "name": "Attach to Ecstasy Program",
+                            "port": 5005
                         }
                     }
                 ]
