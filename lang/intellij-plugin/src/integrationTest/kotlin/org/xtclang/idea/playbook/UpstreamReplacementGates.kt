@@ -114,7 +114,13 @@ internal fun ParityWorkspace.nativeInlineAlternatives(
             "Visible inline text: '${visible()}'; requests: ${requests()}"
         },
     ) { visible() in setOf("other", "swer") }
-    check(requests().any { it["context"].asJsonObject.int("triggerKind") == InlineCompletionTriggerKind.Invoked.value })
+    // The trace lags the editor. LSP4IJ moves traced messages from its queue to the console in a batch 500 ms after
+    // a message, and the console shows a batch 200 ms after it is printed, so a request just sent can be in neither.
+    awaitUi(
+        "explicit inline invocation is traced as Invoked",
+        15.seconds,
+        errorMessage = { "Missing Invoked request; requests: ${requests()}" },
+    ) { requests().any { it["context"].asJsonObject.int("triggerKind") == InlineCompletionTriggerKind.Invoked.value } }
     val first = visible()
     invokeAction("NextInlineCompletionSuggestionAction", component = editor.component)
     awaitUi(
