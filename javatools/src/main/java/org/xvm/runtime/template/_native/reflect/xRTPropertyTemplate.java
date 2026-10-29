@@ -175,12 +175,12 @@ public class xRTPropertyTemplate
      * @return the TypeComposition for an RTPropertyTemplate
      */
     public static TypeComposition ensurePropertyTemplateComposition() {
-        TypeComposition clz = PROPERTY_TEMPLATE_COMP;
+        TypeComposition clz = INSTANCE.m_clzPropertyTemplate;
         if (clz == null) {
             ClassTemplate templateRT   = INSTANCE;
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-            PROPERTY_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
+            INSTANCE.m_clzPropertyTemplate = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
             assert clz != null;
         }
         return clz;
@@ -190,12 +190,12 @@ public class xRTPropertyTemplate
      * @return the TypeComposition for an Array of PropertyTemplate
      */
     public static TypeComposition ensureArrayComposition() {
-        TypeComposition clz = ARRAY_PROP_COMP;
+        TypeComposition clz = INSTANCE.m_clzPropertyArray;
         if (clz == null) {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typePropertyTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
             TypeConstant typePropertyArray = pool.ensureArrayType(typePropertyTemplate);
-            ARRAY_PROP_COMP = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
+            INSTANCE.m_clzPropertyArray = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
             assert clz != null;
         }
         return clz;
@@ -214,8 +214,8 @@ public class xRTPropertyTemplate
         return new ComponentTemplateHandle(ensurePropertyTemplateComposition(), prop);
     }
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- data fields ---------------------------------------------------------------------------
 
-    private static TypeComposition PROPERTY_TEMPLATE_COMP;
-    private static TypeComposition ARRAY_PROP_COMP;
+    private TypeComposition m_clzPropertyTemplate;
+    private TypeComposition m_clzPropertyArray;
 }

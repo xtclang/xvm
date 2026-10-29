@@ -428,10 +428,10 @@ public class xString
      * @return the handle for an empty Array of String
      */
     public static ArrayHandle ensureEmptyArray() {
-        if (EMPTY_STRING_ARRAY == null) {
-            EMPTY_STRING_ARRAY = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
+        if (INSTANCE.m_hEmptyStringArray == null) {
+            INSTANCE.m_hEmptyStringArray = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
         }
-        return EMPTY_STRING_ARRAY;
+        return INSTANCE.m_hEmptyStringArray;
     }
 
     // ----- data members --------------------------------------------------------------------------
@@ -441,6 +441,7 @@ public class xString
     public static StringHandle ZERO;
     public static StringHandle ONE;
 
-    private static ArrayHandle     EMPTY_STRING_ARRAY;
     private static MethodStructure METHOD_APPEND_TO;
+
+    private ArrayHandle m_hEmptyStringArray;
 }

@@ -76,6 +76,8 @@ import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
 import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -93,12 +95,25 @@ import static org.xvm.compiler.Lexer.isWhitespace;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A type declaration.
  */
 public class TypeCompositionStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
+
+    /** Written syntax for recovery subclasses that deliberately register no component. */
+    protected TypeCompositionStatement(Source source, Token category, Token name, long start, long end) {
+        super(start, end);
+        this.source   = source;
+        this.category = category;
+        this.name     = name;
+    }
 
     public TypeCompositionStatement(
             Source                     source,
@@ -228,6 +243,13 @@ public class TypeCompositionStatement
         return category;
     }
 
+    /**
+     * @return the type's simple name token
+     */
+    public Token getNameToken() {
+        return name;
+    }
+
     public String getName() {
         if (category.getId() == Token.Id.MODULE) {
             StringBuilder sb = new StringBuilder();
@@ -250,39 +272,33 @@ public class TypeCompositionStatement
      */
     public Zone getDeclarationZone() {
         Component structThis = getComponent();
-        switch (structThis.getFormat()) {
-        case MODULE:
-        case PACKAGE:
+        return switch (structThis.getFormat()) {
             // modules and components are always top level
-            return Zone.TopLevel;
-
-        case CLASS, INTERFACE, SERVICE, CONST, ENUM, ANNOTATION, MIXIN:
-            Component structParent = structThis.getParent();
-            return switch (structParent.getFormat()) {
-                case MODULE,
-                     PACKAGE     -> Zone.TopLevel;
-                case CLASS,
-                     INTERFACE,
-                     SERVICE,
-                     CONST,
-                     ENUM,
-                     ENUMVALUE,
-                     ANNOTATION,
-                     MIXIN       -> Zone.InClass;
-                case METHOD      -> Zone.InMethod;
-                case PROPERTY    -> Zone.InProperty;
-
-                default          -> throw new IllegalStateException("this=" + structThis.getFormat()
-                                    + ", parent=" + structParent.getFormat());
-            };
-
-        case ENUMVALUE:
-            // enum values are ALWAYS nested inside an enumeration class
-            return Zone.InClass;
-
-        default:
-            throw new IllegalStateException("this=" + structThis.getFormat());
-        }
+            case MODULE, PACKAGE -> Zone.TopLevel;
+            case CLASS, INTERFACE, SERVICE, CONST, ENUM, ANNOTATION, MIXIN -> {
+                Component structParent = structThis.getParent();
+                yield switch (structParent.getFormat()) {
+                    case MODULE,
+                         PACKAGE -> Zone.TopLevel;
+                    case CLASS,
+                         INTERFACE,
+                         SERVICE,
+                         CONST,
+                         ENUM,
+                         ENUMVALUE,
+                         ANNOTATION,
+                         MIXIN -> Zone.InClass;
+                    case METHOD -> Zone.InMethod;
+                    case PROPERTY -> Zone.InProperty;
+                    default -> throw new IllegalStateException("this=" + structThis.getFormat()
+                            + ", parent=" + structParent.getFormat());
+                };
+            }
+            case ENUMVALUE ->
+                // enum values are ALWAYS nested inside an enumeration class
+                    Zone.InClass;
+            default -> throw new IllegalStateException("this=" + structThis.getFormat());
+        };
     }
 
     @Override
@@ -423,10 +439,8 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
-                            new String[] {sModule}, source,
-                            qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size() - 1).getEndPosition());
+                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.getFirst().getStartPosition(),
+                            qualified.getLast().getEndPosition()), sModule);
                     return;
                 }
 
@@ -471,6 +485,17 @@ public class TypeCompositionStatement
 
         case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUM_VAL, ANNOTATION, MIXIN:
             if (container != null && container.isClassContainer()) {
+                // The assembler supports conditional siblings, so createClass() can accept two
+                // unconditional declarations too. Reject that source conflict before name
+                // resolution can mistake their CompositeComponent for a ClassStructure.
+                if (constCond == null && container.getCondition() == null &&
+                        container.getChild(sName) instanceof ClassStructure sibling &&
+                        sibling.getCondition() == null) {
+                    name.log(errs, getSource(), Severity.ERROR, Compiler.DUPLICATE_NAME, sName);
+                    mgr.deferChildren();
+                    return;
+                }
+
                 Format format = switch (category.getId()) {
                     case CLASS     -> Format.CLASS;
                     case INTERFACE -> Format.INTERFACE;
@@ -796,7 +821,8 @@ public class TypeCompositionStatement
                         TypeConstant   constType = exprType == null
                                 ? pool.typeObject()
                                 : exprType.ensureTypeConstant();
-                        component.addTypeParam(sParam, constType);
+                        param.setResolvedTarget(component.addTypeParam(sParam, constType)
+                                .getIdentityConstant());
                     } else {
                         log(errs, Severity.ERROR, Compiler.DUPLICATE_TYPE_PARAM, sName);
                     }
@@ -894,10 +920,10 @@ public class TypeCompositionStatement
             }
         }
 
-        int                  cImports      = 0;
-        boolean              fHasDefault   = false;
-        Format               format        = component.getFormat();
-        ComponentBifurcator  bifurcator    = new ComponentBifurcator(component);
+        int     cImports    = 0;
+        boolean fHasDefault = false;
+        Format  format      = component.getFormat();
+        ComponentBifurcator bifurcator = new ComponentBifurcator(component);
         ConditionalConstant  condPrev      = null;
         List<ClassStructure> componentList = new ArrayList<>();
 
@@ -916,8 +942,7 @@ public class TypeCompositionStatement
             Expression          exprCond = composition.getCondition();
             ConditionalConstant condCur  = exprCond == null ? null : exprCond.toConditionalConstant();
             if (!Handy.equals(condCur, condPrev)) {
-                componentList.clear();
-                bifurcator.collectMatchingComponents(condCur, (List<Component>) (List) componentList);
+                componentList = collectClassComponents(bifurcator, condCur);
                 condPrev = condCur;
             }
 
@@ -1273,8 +1298,7 @@ public class TypeCompositionStatement
         }
 
         // need to go through all components for the next bit
-        componentList.clear();
-        bifurcator.collectMatchingComponents(null, (List<Component>) (List) componentList);
+        componentList = collectClassComponents(bifurcator, null);
 
         // add default "implement" and/or "extend"
         if (!fAlreadyExtends && (typeDefaultImpl != null || typeDefaultSuper != null)) {
@@ -1315,7 +1339,9 @@ public class TypeCompositionStatement
         }
 
         // recursively register structures
-        mgr.processChildren();
+        if (!mgr.isChildrenDeferred()) {
+            mgr.processChildren();
+        }
 
         // if there are any constructor parameters, then that implies the existence both of
         // properties and of a constructor; we will handle the constructor creation later (the
@@ -1347,7 +1373,12 @@ public class TypeCompositionStatement
                     // "Registered" stage (it will create the property structure)
                     body.addStatement(prop);
                     new StageMgr(prop, Stage.Registered, errs).fastForward(1);
-                } else if (!(child instanceof PropertyStructure)) {
+                    if (prop.getComponent() != null) {
+                        param.setResolvedTarget(prop.getComponent().getIdentityConstant());
+                    }
+                } else if (child instanceof PropertyStructure prop) {
+                    param.setResolvedTarget(prop.getIdentityConstant());
+                } else {
                     // the parameter implies a property, but we found something else instead
                     param.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sParam);
                 }
@@ -1404,11 +1435,10 @@ public class TypeCompositionStatement
         long lStart = name.getStartPosition();
         long lEnd   = name.getEndPosition();
         if (cParams > 0) {
-            lStart = listParams.get(0).getStartPosition();
+            lStart = listParams.getFirst().getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
-        errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-            new String[] {sb.toString()}, getSource(), lStart, lEnd);
+        errs.error(Compiler.SIGNATURE_AMBIGUOUS, in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**
@@ -1481,12 +1511,9 @@ public class TypeCompositionStatement
                 lEndPos   = compositions.getFirst().getEndPosition();
             }
 
-            errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    new Object[] {
-                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.getTypeConstant().getValueString()
-                    },
-                    getSource(), lStartPos, lEndPos);
+            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION, in(getSource(), lStartPos, lEndPos),
+                    contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                    contribCyclical.getTypeConstant().getValueString());
             return;
         }
 
@@ -1522,11 +1549,7 @@ public class TypeCompositionStatement
                 break;
 
             case Implements:
-                if (typeContrib.isExplicitClassIdentity(true)) {
-                    // TODO CP it needs to be an interface, but apparently we don't check that here
-                } else {
-                    // TODO CP this used to be an error, but we need to allow all pure types
-                }
+                // TODO verify interface compatibility while still allowing pure types
                 break;
             }
         }
@@ -1558,7 +1581,7 @@ public class TypeCompositionStatement
             for (CompositionNode composition : compositions) {
                 if (composition instanceof Import compImport) {
                     PackageStructure structPkg = (PackageStructure) component;
-                    ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
+                    ModuleStructure  structMod = structPkg.getImportedModule();
                     ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
                     if (structAct == null) {
                         // this is obviously an error -- we can't compile without the module
@@ -1687,7 +1710,7 @@ public class TypeCompositionStatement
                         // copy this constructor's arguments
                         List<Parameter> listParams = constructorParams;
                         if (listParams != null) {
-                            List<Expression> listArgs = new ArrayList(listParams.size());
+                            List<Expression> listArgs = new ArrayList<>(listParams.size());
                             for (Parameter listParam : listParams) {
                                 listArgs.add(new NameExpression(this, listParam.name, null));
                             }
@@ -1823,7 +1846,9 @@ public class TypeCompositionStatement
             }
         }
 
-        mgr.processChildren();
+        if (!mgr.isChildrenDeferred()) {
+            mgr.processChildren();
+        }
 
         Map<String, Component> mapChildren        = component.getChildByNameMap();
         MultiMethodStructure   constructors       = (MultiMethodStructure) mapChildren.get("construct");
@@ -1851,7 +1876,7 @@ public class TypeCompositionStatement
             }
         } else {
             if (fModuleImport) {
-                listParams.get(0).log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
+                listParams.getFirst().log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
             }
 
             // resolve the type of each constructor parameter
@@ -2000,6 +2025,8 @@ public class TypeCompositionStatement
             constructor.setSynthetic(true);
             constructor.markAsShorthand();
         } else if (component.isSingleton()) {
+            assert constructors != null;
+
             // for a singleton, constructor parameters are not permitted unless they all have
             // default values (since the module is a singleton, and is automatically created,
             // i.e. it has to have all of its construction parameters available)
@@ -2231,6 +2258,13 @@ public class TypeCompositionStatement
         return true;
     }
 
+    /** Bifurcating a class preserves its structure type; narrow the heterogeneous repository API here. */
+    private static List<ClassStructure> collectClassComponents(ComponentBifurcator bifurcator, ConditionalConstant condition) {
+        List<Component> components = new ArrayList<>();
+        bifurcator.collectMatchingComponents(condition, components);
+        return components.stream().map(ClassStructure.class::cast).toList();
+    }
+
     /**
      * If there are any undeclared formal parameters for the Annotation contributions of this class,
      * resolve the corresponding annotation types based on this class's formal type.
@@ -2240,12 +2274,7 @@ public class TypeCompositionStatement
      */
     private void resolveAnnotationTypes(ClassStructure component, ErrorListener errs) {
         for (Contribution contrib : component.getContributionsAsList()) {
-            switch (contrib.getComposition()) {
-            case Annotation:
-                break;
-
-            default:
-                // disregard any other contribution
+            if (contrib.getComposition() != Composition.Annotation) {
                 continue;
             }
 
@@ -2312,8 +2341,8 @@ public class TypeCompositionStatement
                 if (typeConstraint != null) {
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
-                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            fAllowInto, ErrorListener.BLACKHOLE);
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto,
+                                silent(PROBE));
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();
@@ -2365,7 +2394,7 @@ public class TypeCompositionStatement
                 break ValidateShorthand;
             }
 
-            RootContext ctxConstruct = createConstructorContext(constructor);
+            RootContext ctxConstruct = createConstructorContext(constructor, mgr.getInvocationBindings(), mgr.getCursorBindings());
             Context     ctx          = ctxConstruct.validatingContext();
 
             if (constructorParams != null && !constructorParams.isEmpty()) {
@@ -2495,12 +2524,13 @@ public class TypeCompositionStatement
     /**
      * A simple helper to create a new context for shorthand constructor processing.
      */
-    private RootContext createConstructorContext(MethodStructure constructor) {
+    private RootContext createConstructorContext(MethodStructure constructor,
+                                                 InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         StatementBlock blockBody = body;
         if (body == null) {
             blockBody = adopt(new StatementBlock(Collections.emptyList()));
         }
-        return new RootContext(blockBody, constructor);
+        return new RootContext(blockBody, constructor, bindings, cursors);
     }
 
     /**
@@ -2670,14 +2700,14 @@ public class TypeCompositionStatement
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
         }
-        return listSuperArgs == null ? Collections.EMPTY_LIST : listSuperArgs;
+        return listSuperArgs == null ? Collections.emptyList() : listSuperArgs;
     }
 
     private void disallowTypeParams(ErrorListener errs) {
         // type parameters are not permitted
         List<Parameter> listParams = typeParams;
         if (listParams != null && !listParams.isEmpty()) {
-            listParams.get(0).log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+            listParams.getFirst().log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
         }
     }
 
@@ -2715,7 +2745,7 @@ public class TypeCompositionStatement
         ConstantPool   pool      = pool();
         ClassStructure component = (ClassStructure) getComponent();
         Code           code      = constructor.ensureCode();
-        Context        ctxEmit   = ctxConstruct.emittingContext(code);
+        Context        ctxEmit   = ctxConstruct.emittingContext();
 
         if (args == null) {
             // parameters that don't exist on the super and mixins must be properties on "this"

@@ -188,44 +188,44 @@ public class xByteArray
     }
 
     private TypeComposition getInt8ArrayComposition() {
-        TypeComposition clz = INT8_ARRAY_CLZ;
+        TypeComposition clz = m_clzInt8Array;
         if (clz == null) {
             TypeConstant typeInt8 = pool().typeInt8();
 
-            INT8_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(typeInt8));
+            m_clzInt8Array = clz = f_container.resolveClass(pool().ensureArrayType(typeInt8));
         }
         return clz;
     }
 
     private TypeComposition getInt16ArrayComposition() {
-        TypeComposition clz = INT16_ARRAY_CLZ;
+        TypeComposition clz = m_clzInt16Array;
         if (clz == null) {
             TypeConstant typeInt16 = pool().typeInt16();
-            INT16_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(typeInt16));
+            m_clzInt16Array = clz = f_container.resolveClass(pool().ensureArrayType(typeInt16));
         }
         return clz;
     }
 
     private TypeComposition getInt64ArrayComposition() {
-        TypeComposition clz = INT64_ARRAY_CLZ;
+        TypeComposition clz = m_clzInt64Array;
         if (clz == null) {
-            INT64_ARRAY_CLZ = clz =
+            m_clzInt64Array = clz =
                     f_container.resolveClass(pool().ensureArrayType(pool().typeInt64()));
         }
         return clz;
     }
 
     private TypeComposition getFloat64ArrayComposition() {
-        TypeComposition clz = FLOAT64_ARRAY_CLZ;
+        TypeComposition clz = m_clzFloat64Array;
         if (clz == null) {
-            FLOAT64_ARRAY_CLZ = clz =
+            m_clzFloat64Array = clz =
                     f_container.resolveClass(pool().ensureArrayType(pool().typeFloat64()));
         }
         return clz;
     }
 
-    private static TypeComposition INT8_ARRAY_CLZ;
-    private static TypeComposition INT16_ARRAY_CLZ;
-    private static TypeComposition INT64_ARRAY_CLZ;
-    private static TypeComposition FLOAT64_ARRAY_CLZ;
+    private TypeComposition m_clzInt8Array;
+    private TypeComposition m_clzInt16Array;
+    private TypeComposition m_clzInt64Array;
+    private TypeComposition m_clzFloat64Array;
 }

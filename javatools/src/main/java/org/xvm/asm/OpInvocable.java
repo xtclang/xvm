@@ -104,6 +104,13 @@ public abstract class OpInvocable extends Op {
         return false;
     }
 
+    /**
+     * @return the method that this op invokes, as the specified frame has it
+     */
+    public MethodConstant getInvokedMethod(Frame frame) {
+        return frame.getConstant(m_nMethodId, MethodConstant.class);
+    }
+
     @Override
     public void resetSimulation() {
         if (isMultiReturn()) {

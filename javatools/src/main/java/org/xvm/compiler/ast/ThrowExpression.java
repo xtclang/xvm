@@ -321,29 +321,13 @@ public class ThrowExpression
     }
 
     private ClassConstant computeExceptionClass() {
-        String sThrow;
-        switch (keyword.getId()) {
-        case ASSERT:
-            sThrow = "IllegalState";
-            break;
-
-        case ASSERT_ARG:
-            sThrow = "IllegalArgument";
-            break;
-
-        case ASSERT_BOUNDS:
-            sThrow = "OutOfBounds";
-            break;
-
-        case ASSERT_TODO:
-        case TODO:
-            sThrow = "NotImplemented";
-            break;
-
-        default:
-            throw new IllegalStateException("keyword=" + keyword);
-        }
-        return pool().ensureEcstasyClassConstant(sThrow);
+        return pool().ensureEcstasyClassConstant(switch (keyword.getId()) {
+            case ASSERT            -> "IllegalState";
+            case ASSERT_ARG        -> "IllegalArgument";
+            case ASSERT_BOUNDS     -> "OutOfBounds";
+            case ASSERT_TODO, TODO -> "NotImplemented";
+            default                -> throw new IllegalStateException("keyword=" + keyword);
+        });
     }
 
     private String computeMessage() {

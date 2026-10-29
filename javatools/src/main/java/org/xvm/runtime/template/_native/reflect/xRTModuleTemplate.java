@@ -137,10 +137,10 @@ public class xRTModuleTemplate
      * @return the TypeConstant for ListMap<String, ModuleTemplate>
      */
     private static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
+        TypeConstant type = INSTANCE.m_typeListMap;
         if (type == null) {
             ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
+            INSTANCE.m_typeListMap = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), MODULE_TEMPLATE_TYPE);
         }
@@ -172,5 +172,6 @@ public class xRTModuleTemplate
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeConstant MODULE_TEMPLATE_TYPE;
-    private static TypeConstant LISTMAP_TYPE;
+
+    private TypeConstant m_typeListMap;
 }

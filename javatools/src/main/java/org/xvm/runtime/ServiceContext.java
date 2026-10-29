@@ -81,6 +81,18 @@ public class ServiceContext {
         return f_container.f_runtime;
     }
 
+    public Container getContainer() {
+        return f_container;
+    }
+
+    public String getName() {
+        return f_sName;
+    }
+
+    public long getId() {
+        return f_lId;
+    }
+
     public LinkerContext getLinkerContext() {
         return f_container;
     }
@@ -556,7 +568,7 @@ public class ServiceContext {
             while (iPC >= 0) { // most common op return loop
                 frame.m_iPC = iPC;
 
-                if (++cOps > MAX_OPS_PER_RUN && !isDebuggerActive()) {
+                if (++cOps > MAX_OPS_PER_RUN && !(isDebuggerActive() && getDebugger().holdsFibers())) {
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
                 }

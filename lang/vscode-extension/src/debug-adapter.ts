@@ -1,49 +1,191 @@
-import * as path from 'node:path';
-import * as fs from 'node:fs';
 import * as vscode from 'vscode';
+import type { LanguageClient } from 'vscode-languageclient/node';
 
-import { buildJvmArgs, findJavaExecutable } from './java';
+import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
+import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
 
-export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
-    constructor(private readonly context: vscode.ExtensionContext) {}
+type ClientAccess = () => LanguageClient | undefined;
 
-    async createDebugAdapterDescriptor(
-        _session: vscode.DebugSession,
-        _executable: vscode.DebugAdapterExecutable | undefined
-    ): Promise<vscode.DebugAdapterDescriptor | undefined> {
-        const serverJar = this.context.asAbsolutePath(path.join('server', 'dap-server.jar'));
-        if (!fs.existsSync(serverJar)) {
-            void vscode.window.showErrorMessage(
-                'XTC DAP server JAR not found. Build lang:vscode-extension to enable debugging.',
-                'Show Build Command'
-            ).then(choice => {
-                if (choice === 'Show Build Command') {
-                    void vscode.commands.executeCommand('xtc.showServerOutput');
-                }
-            });
-            return undefined;
-        }
+/** The live adapters, by the language server's ID for their session, which routes the server's messages. */
+const adapters = new Map<string, LanguageServerDebugAdapter>();
 
-        const javaExecutable = await findJavaExecutable(this.context);
-        const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
-        const jvmArgs = buildJvmArgs(serverJar, logLevel);
+/**
+ * Routes the language server's debug session messages to their adapters. JSON-RPC keeps one handler per method,
+ * so this is registered once per client rather than per session.
+ */
+export function attachDebugSessions(client: LanguageClient): vscode.Disposable {
+    return client.onNotification('xtc/debugMessage', (params: { sessionId: string; message: vscode.DebugProtocolMessage }) =>
+        adapters.get(params.sessionId)?.receive(params.message));
+}
 
-        return new vscode.DebugAdapterExecutable(javaExecutable, jvmArgs);
+/** A stopped or restarted language server takes its debug sessions, and the programs they launched, with it. */
+export function endAllDebugSessions(reason: string): void {
+    for (const adapter of [...adapters.values()]) {
+        adapter.serverStopped(reason);
     }
 }
 
+/**
+ * An Ecstasy debug session lives in the language server, which builds and runs its program the way Run does. This
+ * adapter carries the session's Debug Adapter Protocol messages over the language client's connection:
+ * `xtc/debugStart` creates the session, `xtc/debugMessage` notifications carry its messages both ways, and
+ * `xtc/debugEnd` ends it, which stops its program.
+ */
+class LanguageServerDebugAdapter implements vscode.DebugAdapter {
+    private readonly messages = new vscode.EventEmitter<vscode.DebugProtocolMessage>();
+    readonly onDidSendMessage = this.messages.event;
+
+    constructor(private readonly client: LanguageClient, private readonly sessionId: string,
+                private readonly notice: string | undefined) {
+        adapters.set(sessionId, this);
+    }
+
+    handleMessage(message: vscode.DebugProtocolMessage): void {
+        void this.client.sendNotification('xtc/debugMessage', { sessionId: this.sessionId, message })
+            .catch(error => this.serverStopped(`The Ecstasy language server did not take the debug message: ${error}`));
+        if (this.notice && (message as { command?: string }).command === 'launch') {
+            this.event('output', { category: 'console', output: `${this.notice}\n` });
+        }
+    }
+
+    receive(message: vscode.DebugProtocolMessage): void {
+        this.messages.fire(message);
+    }
+
+    serverStopped(reason: string): void {
+        if (adapters.delete(this.sessionId)) {
+            this.event('output', { category: 'stderr', output: `\n${reason}\n` });
+            this.event('terminated', {});
+        }
+    }
+
+    dispose(): void {
+        if (adapters.delete(this.sessionId) && this.client.isRunning()) {
+            void this.client.sendNotification('xtc/debugEnd', { sessionId: this.sessionId }).catch(() => undefined);
+        }
+        this.messages.dispose();
+    }
+
+    /** An event of the adapter's own, which VS Code shows like the server's. */
+    private event(event: string, body: object): void {
+        this.messages.fire({ type: 'event', seq: 0, event, body } as vscode.DebugProtocolMessage);
+    }
+}
+
+/** The context key that says whether Ecstasy debug sessions show integers in hexadecimal, for the menu's check mark. */
+const HEX_VALUES = 'xtc.debug.hexValues';
+
+/**
+ * The Variables and Watch views' "Show Values as Hexadecimal" item. VS Code never asks a debug adapter for a value
+ * format, so the item sets the Ecstasy sessions' own with `xtc/valueFormat`, now and for each session that starts
+ * while it is on; the language server's session then tells VS Code to read the variables again.
+ */
+export function registerValueFormat(context: vscode.ExtensionContext): void {
+    let hex = false;
+    const sessions = new Set<vscode.DebugSession>();
+    const send = (session: vscode.DebugSession) =>
+        Promise.resolve(session.customRequest('xtc/valueFormat', { hex })).catch(() => undefined);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('xtc.debug.toggleHexValues', async () => {
+            hex = !hex;
+            await vscode.commands.executeCommand('setContext', HEX_VALUES, hex);
+            await Promise.all([...sessions].map(send));
+        }),
+        vscode.debug.onDidStartDebugSession(session => {
+            if (session.type === 'xtc') {
+                sessions.add(session);
+                if (hex) {
+                    void send(session);
+                }
+            }
+        }),
+        vscode.debug.onDidTerminateDebugSession(session => { sessions.delete(session); }),
+    );
+}
+
+export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    constructor(private readonly client: ClientAccess) {}
+
+    async createDebugAdapterDescriptor(session: vscode.DebugSession): Promise<vscode.DebugAdapterDescriptor> {
+        const client = this.client();
+        if (!client?.isRunning()) {
+            throw new Error('The Ecstasy language server is not running.');
+        }
+        const { sessionId } = await client.sendRequest<{ sessionId: string }>('xtc/debugStart');
+        const notice = hasGradleBuild(session.workspaceFolder) ? GRADLE_NOT_USED : undefined;
+        return new vscode.DebugAdapterInlineImplementation(new LanguageServerDebugAdapter(client, sessionId, notice));
+    }
+}
+
+/** The port that the copied `--debug` option listens on, and the attach snippet attaches to. */
+export const ATTACH_PORT = 5005;
+
+/**
+ * The `--debug` option of `xec` and `xtc run` for a program that an "Ecstasy: Attach" configuration debugs: it waits
+ * before its first line, on [port] of this machine, and this language server's jar is its debugger agent.
+ */
+export function debugOption(serverJar: string, port = ATTACH_PORT): string {
+    const value = `listen:127.0.0.1:${port},suspend,agent=${serverJar}`;
+    return /\s/.test(value) ? `--debug "${value}"` : `--debug ${value}`;
+}
+
+/** The "Copy Option to Debug a Program Outside the Editor" command, which copies [debugOption]. */
+export function registerDebugOption(context: vscode.ExtensionContext, serverJar: string): void {
+    context.subscriptions.push(vscode.commands.registerCommand('xtc.debug.copyOption', async () => {
+        const option = debugOption(serverJar);
+        await vscode.env.clipboard.writeText(option);
+        void vscode.window.showInformationMessage(
+            `Copied ${option}. Run the program with it, as in xec ${option} App.x, then start an "Ecstasy: Attach to Program" configuration on port ${ATTACH_PORT}.`);
+    }));
+}
+
+/**
+ * Launches in embedded mode start a debug session in the language server, which builds and runs the module as the
+ * Run button does, under the runtime debugger. In Gradle mode, Run and Debug launches run the module's Gradle task
+ * instead, without a debug session. An attach, to a program run with `--debug`, starts a session in either mode.
+ */
 export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-    resolveDebugConfiguration(
-        _folder: vscode.WorkspaceFolder | undefined,
+    constructor(private readonly client: ClientAccess) {}
+
+    async resolveDebugConfiguration(
+        folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
         _token?: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    ): Promise<vscode.DebugConfiguration | undefined> {
+        const resolved = this.fill(config);
+        if (!resolved) {
+            return undefined;
+        }
+        if (resolved.request === 'attach' || buildMode(folder) === 'embedded') {
+            return resolved;
+        }
+        if (!resolved.noDebug) {
+            void vscode.window.showInformationMessage('Ecstasy debugging is not available yet; running with Gradle without the debugger.');
+        }
+        const editor = vscode.window.activeTextEditor;
+        const definition: XtcTaskDefinition = {
+            type: 'xtc',
+            moduleName: resolved.module,
+            methodName: resolved.method,
+            moduleArguments: typeof resolved.args === 'string' ? resolved.args : undefined,
+            args: Array.isArray(resolved.args) ? resolved.args : undefined,
+            moduleUri: editor?.document.languageId === 'xtc' ? editor.document.uri.toString() : undefined,
+            mode: 'gradle',
+        };
+        await vscode.tasks.executeTask(createXtcRunTask(definition, this.client));
+        // returning undefined ends the launch without starting a debug session
+        return undefined;
+    }
+
+    /** Fills a launch without a configuration from the active editor's module, which its file then identifies. */
+    private fill(config: vscode.DebugConfiguration): vscode.DebugConfiguration | undefined {
         if (!config.type && !config.request && !config.name) {
             const editor = vscode.window.activeTextEditor;
             if (editor?.document.languageId === 'xtc') {
                 config.type = 'xtc';
-                config.name = 'Debug Ecstasy Module';
+                config.name = 'Run Ecstasy Module';
                 config.request = 'launch';
+                config.moduleUri = editor.document.uri.toString();
                 const text = editor.document.getText();
                 const match = /^\s*module\s+(\w+)/m.exec(text);
                 if (match) {
@@ -51,8 +193,9 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
                 }
             }
         }
-        if (!config.module) {
-            return vscode.window.showInformationMessage('Cannot find an Ecstasy module to debug').then(() => undefined);
+        if (config.request !== 'attach' && !config.module) {
+            void vscode.window.showInformationMessage('Cannot find an Ecstasy module to run');
+            return undefined;
         }
         return config;
     }

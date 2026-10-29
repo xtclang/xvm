@@ -8,8 +8,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 
 /**
- * Produces XTC run configurations automatically when the user invokes
- * Run (Ctrl+Shift+R) from a .x file context.
+ * Produces XTC run configurations automatically when the user invokes Run (Ctrl+Shift+R) from a .x
+ * file context.
  *
  * This allows users to run XTC modules without manually creating run configurations.
  */
@@ -32,8 +32,9 @@ class XtcRunConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfigura
         val moduleName = extractModuleName(file)
         if (moduleName != null) {
             configuration.moduleName = moduleName
+            configuration.moduleUri = sourceUri(file).orEmpty()
             configuration.name = "Run $moduleName"
-            configuration.useGradle = true
+            configuration.runWith = XtcRunMode.PROJECT
             sourceElement.set(file)
             return true
         }
@@ -55,9 +56,16 @@ class XtcRunConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfigura
         return moduleName != null && configuration.moduleName == moduleName
     }
 
+    private fun sourceUri(file: PsiFile): String? =
+        file.virtualFile
+            ?.takeIf { it.isInLocalFileSystem }
+            ?.toNioPath()
+            ?.toUri()
+            ?.toString()
+
     /**
-     * Extract the module name from an XTC source file.
-     * Looks for "module <name>" declaration in the file content.
+     * Extract the module name from an XTC source file. Looks for "module <name>" declaration in the
+     * file content.
      */
     private fun extractModuleName(file: PsiFile): String? {
         val text = file.text

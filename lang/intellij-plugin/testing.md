@@ -1,0 +1,966 @@
+# IntelliJ Plugin Testing Infrastructure
+
+Comprehensive reference for testing the Ecstasy IntelliJ plugin (`lang/intellij-plugin`),
+covering headless CI testing, the IntelliJ Platform Test Framework, the Starter+Driver
+E2E framework, log harvesting, and how each approach maps to the plugin's extension points.
+
+## Table of Contents
+
+- [Current State](#current-state)
+- [Testing Approaches Overview](#testing-approaches-overview)
+- [1. Unit Tests (What We Have Now)](#1-unit-tests-what-we-have-now)
+- [2. IntelliJ Platform Test Framework (Headless)](#2-intellij-platform-test-framework-headless)
+- [3. Starter+Driver Framework (E2E)](#3-starterdriver-framework-e2e)
+- [4. Can runIde Run Headlessly?](#4-can-runide-run-headlessly)
+- [5. Log Harvesting](#5-log-harvesting)
+- [6. What to Test in the Ecstasy Plugin](#6-what-to-test-in-the-ecstasy-plugin)
+- [7. Build Configuration Changes Required](#7-build-configuration-changes-required)
+- [8. CI Pipeline Considerations](#8-ci-pipeline-considerations)
+- [9. Development Run Configurations](#9-development-run-configurations)
+- [10. Debugging](#10-debugging)
+- [11. Plugin Verifier](#11-plugin-verifier)
+- [12. Testing with Third-Party Plugin Dependencies](#12-testing-with-third-party-plugin-dependencies)
+- [13. Gradle Task Reference](#13-gradle-task-reference)
+
+---
+
+## Current State
+
+Headless unit and manifest tests live under `src/test/kotlin`; the native Starter/Driver harness
+lives under `src/integrationTest/kotlin`. They cover project configuration/import ownership,
+watchers, source graphs, lifecycle, edit guards, startup, diagnostics and packaged resources.
+
+The native suite uses the shared **284-scenario catalog**. It launches a disposable IntelliJ
+profile with Ultimate disabled and released LSP4IJ. Startup editing, focus recovery, settings
+persistence and project lifecycle are separate tests in the same task. The large-file diagnostic
+is opt-in. See the [manual playbook](../doc/manual-test-plan.md) for fixtures and
+[client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
+
+```bash
+./gradlew :lang:intellij-plugin:test \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+Use `--tests '*CompilerPlaybookTest.compilerPlaybook'` to select only feature tests, and
+`-PintellijPlaybookCases=X145,X146,X147,X259` for a bounded selection. Omit the case property for
+the full implemented catalog. Run native editors sequentially: the driver can restore desktop
+focus, and fixture modifications during a test fail explicitly. Completed mutations are not replayed.
+
+JUnit XML is under `build/test-results/`; per-case results, IDE errors, traces and screenshots are
+under `build/reports/compiler-playbook/run-*`. Read the actual case statuses and `ideFailures`;
+a green task summary is insufficient. Partial and unselected cases do not count as full native
+acceptance. Test history from older builds does not substitute for running the current artifact.
+
+The compiler is the default adapter. Native tests reuse the cached signed IntelliJ distribution
+and JBR, with isolated configuration, plugins and indices. Report cleanup retains five completed
+payloads; `-PplaybookRetainedRuns=N` changes that count, and a `.keep-artifacts` marker preserves a run.
+
+## Testing Approaches Overview
+
+| Approach | Headless? | GUI? | What It Tests | Complexity | CI-Ready? |
+|---|---|---|---|---|---|
+| **Unit tests** (current) | Yes | No | Pure utility logic | Lowest | Yes |
+| **Platform test framework** | Yes | No | Extensions, services, PSI, actions | Low–Medium | Yes |
+| **`testIde` custom tasks** | Yes | No | Same as above, multi-version | Medium | Yes |
+| **Starter+Driver (`testIdeUi`)** | Xvfb on Linux | Yes | Full UI interaction, real IDE | High | Yes (with Xvfb) |
+| **`runIde`** | No | Yes | Manual exploratory testing | N/A | No |
+
+---
+
+## 1. Unit Tests (What We Have Now)
+
+Pure JUnit 5 tests that exercise utility/helper methods with no IntelliJ dependencies.
+These run instantly (`< 1s`) and require no special infrastructure.
+
+**Good for**: File resolution, path manipulation, provisioning logic, serialization,
+configuration parsing — anything that doesn't touch IntelliJ APIs.
+
+**Limitations**: Cannot test extension point registration, IDE services, project model
+integration, or anything that requires the IntelliJ application environment.
+
+---
+
+## 2. IntelliJ Platform Test Framework (Headless)
+
+The IntelliJ Platform provides a functional test framework that boots a **real IntelliJ
+application environment** entirely in-process, with no GUI. Tests run against real
+implementations of the plugin API — extensions are registered, services are available,
+the project model works — but UI rendering is stubbed out.
+
+### How It Works
+
+1. The test JVM boots IntelliJ's application container (headlessly)
+2. Your plugin's `plugin.xml` extensions are registered
+3. A test project/fixture is created (light or heavy)
+4. Your test code interacts with real IntelliJ APIs
+5. Teardown cleans up the project and application state
+
+### Base Classes
+
+| Base Class | Use Case | Weight |
+|---|---|---|
+| `BasePlatformTestCase` | General plugin tests without Java PSI | Light |
+| `LightPlatformCodeInsightFixtureTestCase` | Code insight (completion, highlighting) without Java | Light |
+| `LightJavaCodeInsightFixtureTestCase5` | JUnit 5 + Java PSI (since 2025.1) | Light |
+| `HeavyPlatformTestCase` | Multi-module projects, complex project setup | Heavy |
+| `CodeInsightFixtureTestCase` | Lower-level fixture control | Light |
+
+**Light tests** share a project instance across the test class (fast, ~100ms each).
+**Heavy tests** create a new project for each test (slower, ~1–2s each, but isolated).
+
+### Test Data
+
+Test files (`.x` sources, project configs) go in `src/test/testData/`. The fixture
+loads them into the test project:
+
+```kotlin
+class XtcCompletionTest : BasePlatformTestCase() {
+    override fun getTestDataPath() = "src/test/testData"
+
+    fun testCompletionInXFile() {
+        myFixture.configureByFile("simple.x")
+        myFixture.completeBasic()
+        // assert completion items
+    }
+}
+```
+
+### What Can Be Tested
+
+- **Extension registration**: Verify `plugin.xml` extensions are loaded
+- **File type recognition**: `.x` files recognized, icons assigned
+- **Run configurations**: `XtcRunConfigurationType` registered and creates configs
+- **LSP4IJ integration**: Language server descriptor registered
+- **TextMate bundle**: Grammar loaded for `.x` files
+- **Project wizard**: `XtcNewProjectWizard` appears in New Project dialog
+- **Settings/preferences**: Plugin settings pages render and persist
+
+### Example Test
+
+```kotlin
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+
+class XtcPluginRegistrationTest : BasePlatformTestCase() {
+    fun testRunConfigurationTypeRegistered() {
+        val configType = ConfigurationTypeUtil.findConfigurationType("XtcRunConfiguration")
+        assertNotNull("XTC run configuration type should be registered", configType)
+        assertEquals("XTC Application", configType.displayName)
+    }
+
+    fun testTextMateBundleProviderRegistered() {
+        val extensions = TextMateBundleProvider.EP_NAME.extensionList
+        val xtcBundle = extensions.filterIsInstance<XtcTextMateBundleProvider>()
+        assertFalse("XtcTextMateBundleProvider should be registered", xtcBundle.isEmpty())
+    }
+}
+```
+
+### Key Characteristics
+
+- Runs via standard `./gradlew :lang:intellij-plugin:test`
+- No display required — fully headless
+- Real IntelliJ internals, not mocks
+- First test in a class pays ~2–5s for application bootstrap, subsequent tests are fast
+- Requires `testFramework(TestFrameworkType.Platform)` dependency (see section 7)
+
+---
+
+## 3. Starter+Driver Framework (E2E)
+
+For full end-to-end testing where you interact with the actual IDE UI — opening files,
+clicking menus, inspecting tool windows.
+
+### Architecture
+
+The Starter+Driver framework uses a **two-process model**:
+
+```
+┌───────────────┐     JMX/RMI      ┌───────────────┐
+│  Test Process │ ◄──────────────► │  IDE Process  │
+│  (JUnit)      │                  │  (IntelliJ)   │
+│               │  - Open file     │               │
+│  assertions   │  - Click menu    │  plugin.xml   │
+│  + driver API │  - Type text     │  extensions   │
+│               │  - Read UI tree  │  LSP server   │
+└───────────────┘                  └───────────────┘
+```
+
+The test process launches a real IDE instance (as a subprocess), then sends commands
+via a driver API. The IDE process runs with the plugin installed in its sandbox.
+
+### Gradle Configuration
+
+```kotlin
+intellijPlatformTesting {
+    testIdeUi {
+        register("uiTest") {
+            task {
+                testClassesDirs = sourceSets["uiTest"].output.classesDirs
+                classpath = sourceSets["uiTest"].runtimeClasspath
+                useJUnitPlatform()
+            }
+        }
+    }
+}
+```
+
+### Required Dependency
+
+```kotlin
+intellijPlatform {
+    testFramework(TestFrameworkType.Starter)
+}
+```
+
+### Example E2E Test
+
+```kotlin
+@ExtendWith(StarterRule::class)
+class XtcIdeUiTest {
+    @Test
+    fun lspServerStartsWhenOpeningXFile(driver: Driver) {
+        driver.openProject("/path/to/test-project")
+        driver.openFile("src/main.x")
+
+        // Wait for LSP server startup notification
+        driver.waitForNotification("Ecstasy Language Server Started", timeout = 30.seconds)
+
+        // Verify hover works
+        driver.moveCursorTo(line = 5, column = 10)
+        driver.triggerAction("QuickJavaDoc")
+        driver.assertPopupContains("module")
+    }
+}
+```
+
+### CI Requirements
+
+- **macOS/Windows**: Works with native display (or headless with virtual display)
+- **Linux CI**: Requires `Xvfb` (X Virtual Frame Buffer) for the IDE subprocess:
+  ```bash
+  apt-get install xvfb
+  xvfb-run --auto-servernum ./gradlew :lang:intellij-plugin:uiTest
+  ```
+- **Docker**: Use a container with Xvfb preinstalled
+
+### The playbook in a Linux container
+
+On a desktop, the playbook's IDE takes the focus, and whatever another window does reaches it:
+keystrokes typed elsewhere land in its editor (X150, X283), and IntelliJ drops an editor hint
+while it is not the active application (X74, X307, X312). The playbook therefore runs in a
+Linux container under Podman, on Xvfb, where nothing else is on the display:
+
+```bash
+lang/intellij-plugin/container/playbook.sh image                # build localhost/xvm-playbook once
+lang/intellij-plugin/container/playbook.sh build                # xdk:installDist and publishLocal, for X303 and X336
+lang/intellij-plugin/container/playbook.sh playbook X307,X324   # the features session for those cases
+lang/intellij-plugin/container/playbook.sh playbook all         # the whole catalog
+lang/intellij-plugin/container/playbook.sh playbook X257 -Plsp4ijChannel=nightly \
+    -Plsp4ijVersion=<version> -PintellijPlaybookReplacementGates=UP26          # with an LSP4IJ nightly
+```
+
+Each run exports the checkout as it is, uncommitted changes included, and copies its run
+directories to `build/reports/compiler-playbook`, as a native run does. The container is
+aarch64 Linux on an Apple machine, with its own fonts and timing; every case IntelliJ implements
+has passed there (2026-10-29). Pin an LSP4IJ nightly's version: the latest may not compile against
+the plugin.
+
+### When to Use
+
+- Testing real user workflows end-to-end
+- Verifying that the LSP server actually starts and serves responses
+- Testing the New Project wizard UI flow
+- Screenshot-based visual regression testing
+- Performance profiling (startup time, indexing time)
+
+### Limitations
+
+- Slow: each test takes 10–30s (IDE startup + shutdown)
+- Flaky: UI timing, focus changes, popup positioning
+- Infrastructure-heavy: needs display server on CI
+- Not suitable for unit-level logic testing
+
+---
+
+## 4. Can `runIde` Run Headlessly?
+
+**No, not meaningfully.** `runIde` launches a full IntelliJ IDEA instance and expects
+a display. You could pass `-Djava.awt.headless=true` via JVM args, but most IDE
+subsystems (editors, tool windows, dialogs) throw `HeadlessException` when they try
+to render.
+
+The one headless IDE task that already exists is `buildSearchableOptions` (line 398 of
+`build.gradle.kts`), which launches a constrained headless IDE to index settings pages.
+This proves that *some* IDE functionality works headlessly, but it's limited to settings
+indexing. It's disabled by default (`-Plsp.buildSearchableOptions=true` to enable) because
+it adds ~30–60s to the build.
+
+**For automated testing, use the Platform Test Framework or Starter+Driver instead.**
+
+---
+
+## 5. Log Harvesting
+
+### IDE Sandbox Logs
+
+The IntelliJ sandbox persists on disk at:
+
+```
+lang/intellij-plugin/build/idea-sandbox/
+├── config/           # IDE settings, disabled_plugins.txt, log-categories.xml
+├── plugins/          # Built plugin + dependencies
+├── system/           # IDE caches, indices
+└── log/
+    └── idea.log      # Main IDE log file
+```
+
+The `runIde` task logs the path at startup (line 611–613 of `build.gradle.kts`):
+
+```
+[runIde]   IDE log:   .../build/idea-sandbox/log/idea.log
+[runIde]              tail -f .../build/idea-sandbox/log/idea.log
+```
+
+Logs **persist after the IDE exits** — you can always read them post-hoc.
+
+### LSP Server Logs
+
+The LSP server writes to a separate log file:
+
+```
+~/.xtc/logs/lsp/server-*/server.log
+```
+
+This is independent of the IDE sandbox and persists across IDE sessions.
+
+### Test Sandbox Logs
+
+When using the Platform Test Framework, tests get their own sandbox at:
+
+```
+lang/intellij-plugin/build/idea-sandbox-test/
+└── log/
+    └── idea.log      # Test harness log
+```
+
+### Harvesting for CI
+
+After any Gradle test or IDE run, archive these paths as CI artifacts:
+
+| Artifact | Path | When |
+|---|---|---|
+| IDE log | `build/idea-sandbox/log/idea.log` | After `runIde` or `testIdeUi` |
+| LSP server log | `~/.xtc/logs/lsp/server-*/server.log` | After any LSP session |
+| Test results (XML) | `build/test-results/test/` | After `test` |
+| Test report (HTML) | `build/reports/tests/test/` | After `test` |
+| Test sandbox log | `build/idea-sandbox-test/log/idea.log` | After platform tests |
+
+### Live Monitoring During `runIde`
+
+To watch logs while the IDE is running:
+
+```bash
+# IDE log
+tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log
+
+# LSP server log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
+
+# Both, interleaved
+tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log ~/.xtc/logs/lsp/server-*/server.log
+```
+
+---
+
+## 6. What to Test in the Ecstasy Plugin
+
+The plugin registers these extension points in `plugin.xml`:
+
+| Extension | Class | What to Test |
+|---|---|---|
+| `notificationGroup` | — | Notification group "Ecstasy Language Server" exists |
+| `newProjectWizard.generator` | `XtcNewProjectWizard` | Wizard registered, generates valid project structure |
+| `configurationType` | `XtcRunConfigurationType` | Type registered with ID `XtcRunConfiguration`, factory creates configs |
+| `runConfigurationProducer` | `XtcRunConfigurationProducer` | Produces config from `.x` file context |
+| `iconProvider` | `XtcIconProvider` | Returns XTC icon for `.x` files |
+| `textmate.bundleProvider` | `XtcTextMateBundleProvider` | Bundle registered, grammar loaded for `.x` |
+| `lsp4ij:server` | `XtcLanguageServerFactory` | Server descriptor registered, factory creates connection |
+| `lsp4ij:fileNamePatternMapping` | — | `*.x` pattern maps to `xtcLanguageServer` |
+
+### Suggested Test Plan
+
+**Tier 1 — Platform Tests (headless, fast, high value)**:
+
+1. **Plugin loads**: `PluginManagerCore.getPlugin("org.xtclang.idea")` is not null
+2. **Run configuration type registered**: `ConfigurationTypeUtil.findConfigurationType("XtcRunConfiguration")` exists
+3. **Icon provider returns icon for `.x` files**: Create `.x` fixture file, assert icon is non-null
+4. **TextMate bundle registered**: `XtcTextMateBundleProvider` in `TextMateBundleProvider.EP_NAME.extensionList`
+5. **Run configuration producer**: Given a `.x` file, `XtcRunConfigurationProducer` offers a run config
+6. **New project wizard**: `XtcNewProjectWizard` appears in new project wizard generators
+
+**Tier 2 — Platform Tests (headless, medium complexity)**:
+
+7. **LSP4IJ server descriptor**: Verify `xtcLanguageServer` is registered for `*.x` files
+8. **Run configuration serialization**: Create, serialize, deserialize a run config, verify fields
+9. **TextMate highlighting**: Open `.x` file in fixture, verify syntax highlighting tokens
+
+**Tier 3 — E2E / Starter+Driver (requires display)**:
+
+10. **LSP server starts**: Open `.x` file in real IDE, verify server process spawns
+11. **Hover works**: Position cursor on symbol, trigger hover, verify response
+12. **Completion works**: Trigger completion in `.x` file, verify items appear
+13. **New Project wizard flow**: Walk through wizard steps, verify project created on disk
+
+---
+
+## 7. Build Configuration Changes Required
+
+### For Platform Test Framework (Tier 1 + 2)
+
+Add the test framework dependency in `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    intellijPlatform {
+        // ... existing dependencies ...
+        testFramework(TestFrameworkType.Platform)
+    }
+}
+```
+
+Create test data directory:
+
+```
+lang/intellij-plugin/src/test/testData/
+├── simple.x          # Minimal valid XTC file
+├── module.x          # Module declaration
+└── ...
+```
+
+No changes needed to the `test` task — the IntelliJ Platform Gradle Plugin already
+configures it with the correct JVM args and sandbox.
+
+### For Starter+Driver (Tier 3)
+
+Add a separate source set and `testIdeUi` configuration:
+
+```kotlin
+sourceSets {
+    create("uiTest") {
+        kotlin.srcDir("src/uiTest/kotlin")
+        resources.srcDir("src/uiTest/resources")
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
+    }
+}
+
+dependencies {
+    intellijPlatform {
+        testFramework(TestFrameworkType.Starter)
+    }
+    "uiTestImplementation"(platform(libs.junit.bom))
+    "uiTestImplementation"(libs.junit.jupiter)
+}
+
+intellijPlatformTesting {
+    testIdeUi {
+        register("uiTest") {
+            task {
+                testClassesDirs = sourceSets["uiTest"].output.classesDirs
+                classpath = sourceSets["uiTest"].runtimeClasspath
+                useJUnitPlatform()
+            }
+        }
+    }
+}
+```
+
+### For Multi-Version Testing
+
+Test against multiple IntelliJ versions with `testIde`:
+
+```kotlin
+intellijPlatformTesting {
+    testIde {
+        register("testAgainst2024_3") {
+            version = "2024.3"
+            task {
+                useJUnitPlatform()
+            }
+        }
+        register("testAgainst2025_1") {
+            version = "2025.1"
+            task {
+                useJUnitPlatform()
+            }
+        }
+    }
+}
+```
+
+---
+
+## 8. CI Pipeline Considerations
+
+### Standard Test Run (Headless)
+
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
+```bash
+# Unit tests + platform tests (no display required)
+./gradlew :lang:intellij-plugin:test
+
+# Archive artifacts
+mkdir -p artifacts
+cp -r lang/intellij-plugin/build/test-results/ artifacts/
+cp -r lang/intellij-plugin/build/reports/tests/ artifacts/
+cp lang/intellij-plugin/build/idea-sandbox/log/idea.log artifacts/ 2>/dev/null || true
+```
+
+### E2E Test Run (Linux CI with Xvfb)
+
+```bash
+# Install Xvfb
+apt-get install -y xvfb
+
+# Run E2E tests with virtual display
+xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+    ./gradlew :lang:intellij-plugin:uiTest
+```
+
+### GitHub Actions Example
+
+```yaml
+test-intellij-plugin:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'corretto'
+    - name: Run tests
+      run: ./gradlew :lang:intellij-plugin:test
+    - name: Archive test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: intellij-plugin-test-results
+        path: |
+          lang/intellij-plugin/build/test-results/
+          lang/intellij-plugin/build/reports/tests/
+          lang/intellij-plugin/build/idea-sandbox/log/idea.log
+```
+
+### Performance Characteristics
+
+| Test Type | Bootstrap Time | Per-Test Time | Total for 20 Tests |
+|---|---|---|---|
+| Unit tests (current) | ~0s | ~10ms | < 1s |
+| Platform tests (light) | ~3–5s | ~100ms | ~5–7s |
+| Platform tests (heavy) | ~3–5s | ~1–2s | ~25–45s |
+| Starter+Driver (E2E) | ~15–30s per test | ~10–30s | ~5–10min |
+
+The Platform Test Framework (light fixtures) is the sweet spot: fast enough for CI,
+powerful enough to test real plugin integration, no display infrastructure required.
+
+---
+
+## 9. Development Run Configurations
+
+### Why There's No "Run Plugin in IDE" Button
+
+In a wizard-created IntelliJ plugin project, the IDE auto-generates a "Run Plugin" run
+configuration. This project doesn't get one because:
+
+1. It's a **composite Gradle build** — the plugin module (`lang/intellij-plugin`) is
+   nested inside the `xtc-lang` included build, and IntelliJ doesn't auto-generate
+   run configurations for tasks in included builds
+2. `.idea/` is gitignored (root `.gitignore` line 74), so any manually created run
+   configurations in `.idea/runConfigurations/` aren't shared across clones
+
+### Shared Run Configurations (`.run/` Directory)
+
+The modern solution is the `.run/` directory at the project root. IntelliJ automatically
+discovers `*.run.xml` files here and shows them in the toolbar dropdown. Unlike
+`.idea/runConfigurations/`, the `.run/` directory is not gitignored and can be committed.
+
+The following shared run configurations are provided:
+
+| File | Name | Gradle Task |
+|---|---|---|
+| `.run/Run Plugin in IDE.run.xml` | Run Plugin in IDE | `lang:runIntellijPlugin` |
+| `.run/Run Plugin Tests.run.xml` | Run Plugin Tests | `lang:intellij-plugin:test` |
+| `.run/Build Plugin ZIP.run.xml` | Build Plugin ZIP | `lang:intellij-plugin:buildPlugin` |
+
+After syncing the Gradle project, these appear in the run configuration dropdown in the
+IntelliJ toolbar. Select "Run Plugin in IDE" and click the green play button (or
+Shift+F10) to launch the development IDE with the plugin installed.
+
+### Task Paths
+
+The `lang:runIntellijPlugin` task is an aggregation task defined in `lang/build.gradle.kts`
+(line 132) that depends on `:intellij-plugin:runIde`. This is the same task executed by
+`./gradlew lang:runIntellijPlugin` on the command line. The run configuration uses this
+path because IntelliJ resolves tasks relative to the root composite build.
+
+---
+
+## 10. Debugging
+
+### Debugging the Plugin (In-IDE)
+
+The "Run Plugin in IDE" run configuration has `GradleScriptDebugEnabled=true`, which
+means you can **debug directly**:
+
+1. Set breakpoints in any `lang/intellij-plugin/src/main/kotlin/` file
+2. Click the debug button (or Shift+F9) instead of run
+3. The development IDE launches with JDWP attached
+4. Breakpoints fire when the plugin code executes in the development IDE
+
+This works for all plugin code: extension points, services, actions, settings panels.
+
+### Debugging the LSP Server (Separate Process)
+
+The LSP server runs **out-of-process** as a separate Java process for classloader
+isolation (avoids lsp4j version conflicts with LSP4IJ). This means plugin debugging
+does NOT debug the LSP server — they're separate JVMs.
+
+To debug the LSP server:
+
+**Option A — LSP4IJ debug port configuration:**
+
+LSP4IJ has built-in debug support per language server. The `JavaProcessCommandBuilder`
+automatically adds JDWP flags when a debug port is configured in LSP4IJ's settings
+for the `xtcLanguageServer` server ID.
+
+Then attach a Remote JVM Debug configuration to `localhost:<port>` from the outer IDE.
+
+**Option B — Manual JVM debug flags:**
+
+Add JDWP args to the command list in `XtcLspConnectionProvider.init {}`:
+
+```kotlin
+commands.addAll(jarIndex, listOf(
+    "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005",
+    // ... other args
+))
+```
+
+Then attach a Remote JVM Debug configuration to `localhost:5005` from the outer IDE.
+Use `suspend=y` instead of `suspend=n` if you need to debug startup.
+
+**Option B — System property toggle:**
+
+A cleaner approach is to check a system property:
+
+```kotlin
+if (System.getProperty("xtc.debug.lsp") != null) {
+    add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005")
+}
+```
+
+Then launch the development IDE with `-Dxtc.debug.lsp=true` in the `runIde` JVM args.
+
+### Debugging Platform Tests
+
+Platform tests run in the same JVM, so standard IntelliJ test debugging works:
+
+1. Open the test file
+2. Click the gutter icon next to the test method
+3. Select "Debug"
+
+The test JVM boots IntelliJ's application container, registers extensions, and hits
+breakpoints in both test code and plugin code.
+
+---
+
+## 11. Plugin Verifier
+
+The IntelliJ Plugin Verifier checks binary compatibility of the plugin against a range
+of IDE versions. It catches issues like:
+
+- Using APIs removed in newer IDE versions
+- Using APIs not available in the declared `sinceBuild`
+- Missing transitive dependencies
+- Deprecated API usage that will break in future versions
+
+### Current State
+
+Plugin verifier is commented out in `build.gradle.kts` (line 281):
+
+```kotlin
+// pluginVerifier() - only enable when publishing to verify compatibility
+```
+
+### Enabling It
+
+```kotlin
+intellijPlatform {
+    pluginVerifier()
+}
+```
+
+Then configure the IDE versions to verify against:
+
+```kotlin
+intellijPlatform {
+    pluginVerification {
+        ides {
+            recommended()  // Automatically selects recent stable releases
+            // Or specify explicitly:
+            // ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
+            // ide(IntelliJPlatformType.IntellijIdeaCommunity, "2025.1")
+        }
+    }
+}
+```
+
+Run with:
+
+```bash
+./gradlew :lang:intellij-plugin:verifyPlugin
+```
+
+This is primarily useful before publishing to the JetBrains Marketplace, but can also
+be run in CI to catch compatibility regressions early.
+
+---
+
+## 12. Testing with Third-Party Plugin Dependencies
+
+The XTC plugin depends on three bundled/third-party plugins:
+
+| Plugin | Dependency Type | Impact on Testing |
+|---|---|---|
+| `com.intellij.java` | Bundled | Available in platform test framework automatically |
+| `com.intellij.gradle` | Bundled | Available in platform test framework automatically |
+| `org.jetbrains.plugins.textmate` | Bundled | Available, but TextMate bundle loading requires sandbox setup |
+| `com.redhat.devtools.lsp4ij` (0.21.0) | Third-party | Must be explicitly added to test dependencies |
+
+### LSP4IJ in Tests
+
+Ordinary builds, `runIde` and the native playbook use the Marketplace version pinned in the
+catalog (currently 0.21.0). To test an unpushed local repair, first run `prepareSandbox` in its checkout, then
+pass the same explicit override to the XVM task:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.compilerPlaybook' \
+  -Plsp4ijPlugin="$HOME/src/lsp4ij/build/idea-sandbox/IC-2024.2/plugins/lsp4ij" \
+  -PintellijPlaybookCases=X130,X138,X139,X146,X162,X181,X185,X259 \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+`lsp4ijPlugin` must be an absolute path to the built plugin directory containing `lib/`. Gradle's
+`localPlugin` dependency handles the compile/test sandbox; Starter copies that same directory
+instead of downloading the Marketplace release. The native report records its path, descriptor
+version and SHA-256 of sorted relative filenames and contents; startup verifies the loaded version.
+The directory contents are declared task inputs, including when the snapshot version stays the
+same. Omit the property to return to the released dependency. Using the built directory avoids
+the Gradle plugin's temporary ZIP metadata extraction invalidating configuration-cache reuse.
+No local path or snapshot is committed as a default, and no plugin is published by this task.
+
+To test LSP4IJ fixes that are merged but not released, take LSP4IJ from a Marketplace channel
+instead. `-Plsp4ijChannel=nightly` takes the newest nightly that the IDE line accepts, which
+LSP4IJ's own build publishes to the Marketplace's nightly channel. `-Plsp4ijVersion=<version>`
+names a version, from that channel or, without one, from the default channel:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.compilerPlaybook' \
+  -Plsp4ijChannel=nightly \
+  -PintellijPlaybookCases=X304,X306 \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+The compile classpath, `runIde` and the playbook's IDE all take that version, and the native report
+records it with its channel. Finding the newest nightly asks the Marketplace on each build, so a
+newer one invalidates the configuration cache. Such a version can't be published:
+`verifyPluginInternalApis` accepts only the version that its policy names. `lsp4ijPlugin` takes
+neither property.
+
+The release build retains the Ecstasy compatibility bridges for LSP4IJ 0.21.0.
+An experiment against a locally repaired dependency does not justify removing them from the
+published plugin. Validate each bridge independently, then repeat native acceptance with the
+released dependency. Standalone formatting Undo/Redo and reconnection of closed dirty buffers
+are separate requirements. See the [client limits](../doc/manual-test-plan.md#client-compatibility-limits).
+
+Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
+Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement. `UiWaitsTest` covers this race, actual expiry, pending reads, cancellation and null values;
+`PlaybookFailureTest` retains fatal timeout/cancellation behavior. These tests run without opening
+an IDE through `testCompilerPlaybook --tests '*UiWaitsTest' --tests '*PlaybookFailureTest'`.
+The wrapper only retries observations; edit/refactoring actions remain outside polling loops.
+
+Multi-target navigation chooses the visible Show Usages table through its locally registered
+Enter callback, once. Driver's `popup.keyboard` sends a global key rather than addressing the
+popup, which left X36's visible chooser unsubmitted in a full run. The helper checks row/action
+validity, then native acceptance still requires closure and exact file/caret destinations.
+`NavigationChooserTest` covers the binding/selection guards without opening an IDE. This is a
+harness input correction, not a production LSP4IJ workaround or a replacement protocol request.
+
+X147's controlled asynchronous report probe selects **Build import** through the settings
+navigation list before reading `xtc.compiler.details`. Unselected pages are detached from the
+component tree. Keep its EDT publication barriers and stale-response assertions when changing
+settings layouts; selecting the page does not replace the production report implementation.
+
+LSP4IJ is the most complex dependency. For platform tests, you need it on the test
+classpath so that the `lsp4ij:server` and `lsp4ij:fileNamePatternMapping` extensions
+in `plugin.xml` resolve correctly.
+
+Add it to the test sandbox:
+
+```kotlin
+intellijPlatformTesting {
+    testIde {
+        register("test") {
+            plugins {
+                plugin("com.redhat.devtools.lsp4ij", libs.versions.lang.intellij.lsp4ij.get())
+            }
+        }
+    }
+}
+```
+
+Or for the standard test task, the plugin should already be available since it's declared
+in the main `intellijPlatform` dependencies block.
+
+### Testing Without a Real LSP Server
+
+For platform tests that verify extension registration (Tier 1), you don't need a running
+LSP server. The tests only check that descriptors are registered, not that the server
+responds.
+
+For tests that need LSP responses (Tier 2–3), consider:
+
+1. **Mock server**: Start a lightweight LSP server in the test that responds to
+   `initialize`, `textDocument/hover`, etc. with canned responses
+2. **Test adapter**: The LSP server has an adapter layer (`lsp.adapter` property) —
+   a `mock` adapter could be used in tests
+3. **Starter+Driver**: For full E2E, let the real server start (it self-provisions
+   its JRE and starts within seconds)
+
+### TextMate Bundle in Tests
+
+The `XtcTextMateBundleProvider` looks for the bundle at `<plugin-dir>/lib/textmate/`.
+In tests, the `prepareTestSandbox` task must include the TextMate grammar files. The
+`copyTextMateToSandbox` task (which runs for `prepareSandbox`) may need a corresponding
+test variant, or the test can set up the fixture path manually.
+
+---
+
+## 13. Gradle Task Reference
+
+All testing and development tasks for the IntelliJ plugin, runnable from the project root:
+
+### Development
+
+| Task | Description |
+|---|---|
+| `lang:runIntellijPlugin` | Launch development IDE with plugin (aggregation task) |
+| `lang:intellij-plugin:runIde` | Same, direct task path |
+| `lang:intellij-plugin:buildPlugin` | Build distributable ZIP for manual installation |
+| `lang:intellij-plugin:buildSearchableOptions` | Index settings pages (headless IDE, disabled by default) |
+
+### Testing
+
+| Task | Description |
+|---|---|
+| `lang:intellij-plugin:test` | Run all tests (unit + platform if configured) |
+| `lang:intellij-plugin:verifyPlugin` | Check plugin structure and `plugin.xml` validity |
+| `lang:intellij-plugin:verifyPluginProjectConfiguration` | Verify Gradle plugin configuration |
+
+### Sandbox Management
+
+| Task | Description |
+|---|---|
+| `lang:intellij-plugin:prepareSandbox` | Build and install plugin into IDE sandbox |
+| `lang:intellij-plugin:prepareTestSandbox` | Prepare sandbox for test execution |
+| `lang:intellij-plugin:clean` | Delete sandbox (forces fresh IDE state on next run) |
+
+### Publishing
+
+| Task | Description |
+|---|---|
+| `lang:intellij-plugin:publishPlugin` | Publish to JetBrains Marketplace (requires `-PenablePublish=true`) |
+| `lang:intellij-plugin:signPlugin` | Sign plugin for Marketplace distribution |
+| `lang:intellij-plugin:patchPluginXml` | Patch `plugin.xml` with version and changelog |
+
+---
+
+## References
+
+- [IntelliJ Platform SDK — Testing Overview](https://plugins.jetbrains.com/docs/intellij/testing-plugins.html)
+- [IntelliJ Platform SDK — Tests and Fixtures](https://plugins.jetbrains.com/docs/intellij/tests-and-fixtures.html)
+- [IntelliJ Platform SDK — Light and Heavy Tests](https://plugins.jetbrains.com/docs/intellij/light-and-heavy-tests.html)
+- [IntelliJ Platform Gradle Plugin — Testing Extension](https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-testing-extension.html)
+- [Integration Tests for Plugin Developers (Feb 2025)](https://blog.jetbrains.com/platform/2025/02/integration-tests-for-plugin-developers-intro-dependencies-and-first-integration-test/)
+- [Integration Tests: API Interaction (Mar 2025)](https://blog.jetbrains.com/platform/2025/03/integration-tests-for-plugin-developers-api-interaction/)
+- [IntelliJ Platform SDK — IDE Development Instance](https://plugins.jetbrains.com/docs/intellij/ide-development-instance.html)
+
+### Refresh and VFS regression selection
+
+X146 additionally keeps 16 extra documents connected and schedules 64 lens, hint and semantic-token
+refreshes each while a write action delays their read passes. The test temporarily raises the sandbox
+IDE tab limit and restores it afterward. The untouched consumer must still show Int, then String,
+then Int hints. X259 covers hint settings and connection retirement during restart. Hints stay enabled.
+
+The refresh and move selection is X103/X118/X130/X146/X161/X162/X163/X169/
+X173/X174/X175/X176/X216/X217/X218/X259. Keep the full-suite IDE-error gate;
+do not suppress upstream alerts. `PreflightedRenamesTest` also tests the production launcher
+with an unset optional class loader.
+
+Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
+aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
+Both clients preserve explicit settings and the last accepted inputs after failed refresh.
+Late daemon publication after
+cancellation is guarded by import identity; the configuration cache is reused across identities.
+Automatic exports require an initial imported report; VS Code uses public Gradle task events in
+trusted local workspaces.
+
+Ordered library settings add X266–X268. The driver operates the installed Compiler settings
+components, checks cancel/reset/apply and ordering, opens the compiler-selected read-only source
+snapshot, restarts the server, and checks invalid-input retention and library removal/restoration.
+The shared `prepareLibraryPlaybook` task produces two versions of a binary and matching sources;
+neither editor bundles test binaries in source control. Use
+`-PintellijPlaybookCases=X266,X267,X268` for this selection. The new URI round-trip regression
+keeps case-sensitive module names in the virtual URI path because hosts normalize URI authorities.
+See the [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
+for native results; a successful fallback-file check does not close LSP4IJ's virtual-library-editor gap.
+
+### Machine-local JVM tuning and log support
+
+Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+(e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
+button restarts running Ecstasy servers in this IDE using the saved settings.
+
+Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
+Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
+caps, active processes are protected and stopped sessions are pruned on the next server start.
+Legacy shared logs and the IDE's own protocol console are outside this policy.
+
+**Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
+the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
+logged diagnostics; it does not collect source files. When stopped, export uses only this project’s
+last recorded launch, including up to 64 KiB of launcher output. Its manifest identifies offline
+mode and truncation and lists included files; another project’s logs are never substituted. Shared
+X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
+launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
+layout and rollover stress remain manual checks. See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for
+how these checks are recorded.
+
+The UI completion gate includes `--tests '*CompilerPlaybookTest.settingsPersistence'` on
+`testCompilerPlaybook`, with the usual compiler adapter and both lang inclusion flags. It starts
+and completely exits two IDE processes using one disposable project/profile. See the
+[settings acceptance steps](../doc/manual-test-plan.md#settings-persistence-and-layout-acceptance-ui1ui7)
+for exact commands and layout checks.
+
+X276 checks compiler-resolved annotations, aliases, shadowing and bundled ownership, including
+installed decorator markup. X277 checks lexical string/escape/keyword styles against controls,
+absence of broad semantic overlays and exact damage/repair recovery. It explicitly requires
+TextMate token types, rejecting a plain-text lexical fallback. Select either by its stable
+X ID. Normal runs retain the current color scheme. Selected X41/X154/X276/X277 and the final X277
+regression run pass with zero IDE failures; see the
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).

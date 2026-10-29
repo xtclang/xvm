@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -21,7 +22,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Loop;
 import org.xvm.asm.op.LoopEnd;
@@ -30,7 +30,6 @@ import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -40,8 +39,7 @@ import static org.xvm.util.Handy.indentLines;
  * A "while" or "do while" statement.
  */
 public class WhileStatement
-        extends ConditionalStatement
-        implements LabelAble {
+        extends LoopStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public WhileStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
@@ -68,30 +66,10 @@ public class WhileStatement
         return true;
     }
 
-    @Override
-    public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
-        Context ctxDest = ensureValidationContext();
-        Label   label   = getContinueLabel();
-
-        if (ctxOrigin.isReachable()) {
-            // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            // record the jump that landed on this statement by recording its assignment impact
-            if (m_listContinues == null) {
-                m_listContinues = new ArrayList<>();
-            }
-            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
-        }
-
-        return label;
-    }
-
     /**
      * @return the continue label for this statement
      */
+    @Override
     public Label getContinueLabel() {
         Label label = m_labelContinue;
         if (label == null) {
@@ -110,45 +88,10 @@ public class WhileStatement
         return CHILD_FIELDS;
     }
 
-    // ----- LabelAble methods ---------------------------------------------------------------------
-
-    @Override
-    public boolean hasLabelVar(String sName) {
-        return "first".equals(sName) || "count".equals(sName);
-    }
-
-    @Override
-    public Register getLabelVar(Context ctx, String sName) {
-        assert hasLabelVar(sName);
-
-        boolean fFirst = "first".equals(sName);
-
-        Register reg = fFirst ? m_regFirst : m_regCount;
-        if (reg == null) {
-            // this occurs only during validate()
-            assert m_ctxLabelVars != null;
-
-            String sLabel   = ((LabeledStatement) getParent()).getName();
-            String sRegName = sLabel + '.' + sName;
-            Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sRegName);
-
-            reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sRegName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
-
-            if (fFirst) {
-                m_regFirst = reg;
-            } else {
-                m_regCount = reg;
-            }
-        }
-
-        return reg;
-    }
-
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Statement validateImpl(Context ctx, ErrorListener errs) {
+    protected Statement validateLoop(Context ctx, ErrorListener errs) {
         // there are a set of assumptions coming in:
         // - the loop is actually going to loop, as in "it is able to execute more than once"
         //   -> while(False) obviously does not result in any execution of the body whatsoever (the
@@ -236,9 +179,8 @@ public class WhileStatement
 
             // the current context and error list are required by getLabelVar() if, in the process
             // of validation, one of the nested AST nodes requires a loop variable
-            m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
-            m_listContinues = null;
+            labelVars = new ValidationScope(ctx, errs);
+            continues = null;
 
             // either enter normal or loop, depending on the assumption
             if (fLoops) {
@@ -271,21 +213,7 @@ public class WhileStatement
                         // the condition is either a boolean expression or an assignment
                         // statement whose R-value is a multi-value with the first value
                         // being a boolean
-                        if (condOld instanceof AssignmentStatement stmtCond) {
-                            if (stmtCond.isNegated()) {
-                                ctx = ctx.enterNot();
-                            }
-
-                            condNew = stmtCond.validate(ctx, errs);
-
-                            if (stmtCond.isNegated()) {
-                                ctx = ctx.exit();
-                            }
-                        } else {
-                            // the node must be cloned, because we may end up repeating this
-                            // validation process with a different set of assumptions
-                            condNew = ((Expression) condOld).validate(ctx, pool().typeBoolean(), errs);
-                        }
+                        condNew = validateCondition(ctx, condOld, errs);
 
                         if (condNew == null) {
                             fValid = false;
@@ -310,7 +238,7 @@ public class WhileStatement
                                         fValid = false;
                                     }
                                 } else {
-                                    assert ((Expression) condNew).isConstantTrue();
+                                    assert exprCond.isConstantTrue();
                                     fAlwaysTrue = true;
                                 }
                             }
@@ -344,8 +272,8 @@ public class WhileStatement
 
                     // apply the assignment contributions from the various continue statements, if any
                     boolean fContinues = false;
-                    if (m_listContinues != null) {
-                        for (Iterator<Break> iter = m_listContinues.iterator(); iter.hasNext();) {
+                    if (continues != null) {
+                        for (Iterator<Break> iter = continues.iterator(); iter.hasNext();) {
                             Break continueInfo = iter.next();
                             if (continueInfo.node().isDiscarded()) {
                                 iter.remove();
@@ -383,10 +311,7 @@ public class WhileStatement
                     mapLoopArg = mapArgAfter;
 
                     // discard the clones created in this pass
-                    for (AstNode cond : conds) {
-                        cond.discard(true);
-                    }
-                    block.discard(true);
+                    discardNodes(conds, block);
                     continue; // repeat
                 }
 
@@ -397,14 +322,10 @@ public class WhileStatement
             }
 
             // discard the original nodes (we cloned them already)
-            for (AstNode cond : condsOrig) {
-                cond.discard(true);
-            }
-            blockOrig.discard(true);
+            discardNodes(condsOrig, blockOrig);
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
+            labelVars = null;
 
             if (ctxFork != null && !hasBreaks()) {
                 // there are no breaks out of the loop, therefore the only way to get out is for the
@@ -429,13 +350,26 @@ public class WhileStatement
         }
     }
 
+    /**
+     * Discard one generation of loop nodes: either the clones from a validation pass that is being
+     * repeated, or the originals once a pass has been kept.
+     *
+     * @param listConds  the condition nodes to discard
+     * @param stmtBody   the body block to discard
+     */
+    private static void discardNodes(List<AstNode> listConds, StatementBlock stmtBody) {
+        for (AstNode cond : listConds) {
+            cond.discard(true);
+        }
+        stmtBody.discard(true);
+    }
+
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean  fCompletes    = fReachable;
-        boolean  fDoWhile      = isDoWhile();
-        Register regFirst      = m_regFirst;
-        Register regCount      = m_regCount;
-        boolean  fHasLabelVars = regFirst != null || regCount != null;
+        boolean  fCompletes = fReachable;
+        boolean  fDoWhile   = isDoWhile();
+        Register regFirst   = firstRegister;
+        Register regCount   = countRegister;
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -497,9 +431,7 @@ public class WhileStatement
             //   LOOP_END
             //   EXIT
             //   Break:
-            code.add(new Enter());
-            emitLabelVarCreation(code, regFirst, regCount);
-            code.add(new Loop());
+            emitLoopStart(code, regFirst, regCount);
 
             Op opLast = code.getLastOp();
             block.suppressScope();
@@ -510,9 +442,7 @@ public class WhileStatement
             }
 
             code.add(getContinueLabel());
-            emitLabelVarUpdate(code, regFirst, regCount);
-            code.add(new LoopEnd());
-            code.add(new Exit());
+            emitLoopEnd(code, regFirst, regCount);
 
             return false; // while(true) never completes naturally
         }
@@ -533,9 +463,7 @@ public class WhileStatement
             //   LOOP_END
             //   EXIT
             //   Break:
-            code.add(new Enter());
-            emitLabelVarCreation(code, regFirst, regCount);
-            code.add(new Loop());
+            emitLoopStart(code, regFirst, regCount);
 
             // we explicitly do NOT check the block completion, since our completion is not dependent on
             // the block's ability to complete (since the loop may execute zero times)
@@ -543,9 +471,7 @@ public class WhileStatement
 
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
-            emitLabelVarUpdate(code, regFirst, regCount);
-            code.add(new LoopEnd());
-            code.add(new Exit());
+            emitLoopEnd(code, regFirst, regCount);
 
             return fCompletes;
         }
@@ -565,9 +491,7 @@ public class WhileStatement
         //   LOOP_END
         //   EXIT
         //   Break:
-        code.add(new Enter());
-        emitLabelVarCreation(code, regFirst, regCount);
-        code.add(new Loop());
+        emitLoopStart(code, regFirst, regCount);
         fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -575,16 +499,40 @@ public class WhileStatement
         block.completes(ctx, fCompletes, code, errs);
 
         code.add(getContinueLabel());
-        emitLabelVarUpdate(code, regFirst, regCount);
-        code.add(new LoopEnd());
-        code.add(new Exit());
+        emitLoopEnd(code, regFirst, regCount);
 
         return fCompletes;
     }
 
     /**
-     * Internal method: create the variables for the "first" and "count" label variables, but only
-     * if necessary and set the {@link #m_aAllocSpecial}.
+     * Emit the scope entry, label variable declarations and loop start shared by every looping
+     * form.
+     *
+     * @param code      the code to emit
+     * @param regFirst  the (optional) register for the "first" variable
+     * @param regCount  the (optional) register for the "count" variable
+     */
+    private void emitLoopStart(Code code, Register regFirst, Register regCount) {
+        code.add(new Enter());
+        emitLabelVarCreation(code, regFirst, regCount);
+        code.add(new Loop());
+    }
+
+    /**
+     * Emit the label variable update, loop end and scope exit shared by every looping form.
+     *
+     * @param code      the code to emit
+     * @param regFirst  the (optional) register for the "first" variable
+     * @param regCount  the (optional) register for the "count" variable
+     */
+    private void emitLoopEnd(Code code, Register regFirst, Register regCount) {
+        emitLabelVarUpdate(code, regFirst, regCount);
+        code.add(new LoopEnd());
+        code.add(new Exit());
+    }
+
+    /**
+     * Emit declarations for the requested "first" and "count" label variables.
      *
      * @param code      the code to emit
      * @param regFirst  the (optional) register for the "first" variable
@@ -630,25 +578,7 @@ public class WhileStatement
 
         for (int i = 0; i < cConds; ++i) {
             AstNode cond = getCondition(i);
-            if (cond instanceof AssignmentStatement stmtCond) {
-                boolean fNegated = stmtCond.isNegated();
-                Label   labelNeg = fNegated ? new Label("negated") : null;
-
-                stmtCond.setConditionFalseLabel(fNegated ? labelNeg : getEndLabel());
-
-                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-
-                assert stmtCond.isConditionFalseLabelTaken();
-
-                if (fNegated) {
-                    code.add(new Jump(getEndLabel()));
-                    code.add(labelNeg);
-                }
-            } else {
-                Expression exprCond = (Expression) cond;
-                exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-                fCompletes &= exprCond.isCompletable();
-            }
+            fCompletes &= emitCondition(ctx, cond, fCompletes, code, getEndLabel(), errs);
         }
 
         return fCompletes;
@@ -658,37 +588,15 @@ public class WhileStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        String sConds = conds.stream().map(Object::toString).collect(Collectors.joining(", "));
+        String sBody  = indentLines(block.toString(), "    ");
 
-        if (keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR) {
-            sb.append(keyword.getId().TEXT)
-              .append(" (")
-              .append(conds.get(0));
-
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
-
-            sb.append(")\n")
-              .append(indentLines(block.toString(), "    "));
-        } else {
-            assert keyword.getId() == Token.Id.DO;
-
-            sb.append("do")
-              .append('\n')
-              .append(indentLines(block.toString(), "    "))
-              .append("\nwhile (");
-
-            sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
-            sb.append(");");
+        if (keyword.getId() == Token.Id.DO) {
+            return "do\n" + sBody + "\nwhile (" + sConds + ");";
         }
 
-        return sb.toString();
+        assert keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR;
+        return keyword.getId().TEXT + " (" + sConds + ")\n" + sBody;
     }
 
     @Override
@@ -701,16 +609,7 @@ public class WhileStatement
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private transient Label         m_labelContinue;
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
-    private transient Register      m_regFirst;
-    private transient Register      m_regCount;
-
-    /**
-     * Generally null, unless there is a "continue" that jumps to this statement.
-     */
-    private transient List<Break> m_listContinues;
+    private transient Label m_labelContinue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
 }

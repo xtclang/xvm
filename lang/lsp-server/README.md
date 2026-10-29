@@ -1,5 +1,10 @@
 # Ecstasy LSP Server
 
+Compiler mode provides diagnostics and semantic editor features across configured source and binary
+dependencies. It is the default shipped adapter. Tree-sitter remains an explicit syntax-only
+alternative. The [manual playbook](../doc/manual-test-plan.md) describes supported operations,
+deliberate refusals, native test commands and client compatibility limits.
+
 Language Server Protocol (LSP) implementation for the Ecstasy programming language.
 
 ## Overview
@@ -16,11 +21,11 @@ This project provides the LSP server that powers IDE features like:
 The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
 [VS Code extension](../vscode-extension/).
 
-For the canonical cross-adapter feature matrix and current implementation status, see
-[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md). This
-README focuses on LSP-server-specific build/runtime/configuration details.
+The [backend comparison](#backend-comparison) and [supported features](#supported-lsp-features)
+describe the adapter boundaries. For the architectural changes required in the compiler, start with
+[the javatools guide](../../javatools/README.md#compiler-architecture-for-language-tooling).
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite build semantics](../../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
 ## Adapter Architecture
 
@@ -46,39 +51,47 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
 │ MockAdapter   │   │ TreeSitter-   │   │ XdkAdapter    │
 │               │   │ Adapter       │   │               │
 │               │   │               │   │               │
-│ - Regex-based │   │ - Tree-sitter │   │ - Stub for    │
-│ - For testing │   │ - Syntax AST  │   │   future      │
-│               │   │ - Default     │   │   semantic    │
+│ - Regex-based │   │ - Tree-sitter │   │ - Compiler    │
+│ - For testing │   │ - Syntax AST  │   │ - Diagnostics │
+│               │   │               │   │ - Default     │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
 ## Adapter Selection
 
-The adapter is selected at **build time** via the `lsp.adapter` Gradle property.
-The selection is embedded in `lsp-version.properties` inside the JAR.
+Both the compiler and Tree-sitter adapters are bundled in the server JAR. Select an adapter
+in VS Code with **Ecstasy: Switch Language Adapter**, in IntelliJ with **Tools → Switch Ecstasy
+Language Adapter**, or with **Ctrl+Alt+X, then A** (**Control+Option+X, then A** on macOS).
+The IDE saves the choice, restarts the server and reopens unsaved buffers. Compiler provides
+semantic analysis; Tree-sitter provides syntax-based features without compiler type checking.
+
+The **Bundled default** choice uses `lsp.adapter` from `lsp-version.properties`, set by the
+`lsp.adapter` Gradle property (normally `compiler`). A standalone server can override that
+default at startup with `java -Dxtc.lsp.adapter=treesitter -jar <server.jar>`. Each server process
+uses one adapter for its lifetime; switching requires a new process to negotiate capabilities.
 
 ### Available Adapters
 
 | Adapter | Value | Description |
 |---------|-------|-------------|
-| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
-| **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **XDK** | `xdk` | Stub adapter. All methods logged but return empty. Placeholder for future semantic integration. |
+| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. Also the fallback when Tree-sitter's native library cannot load, which the server then tells the user in a warning; it advertises only the features it implements, so selection ranges, signature help, semantic tokens, workspace symbols, code lenses, on-type formatting and linked editing disappear rather than answer empty. |
+| **Tree-sitter** | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
+| **XDK** (default) | `compiler` | Compiler diagnostics, semantic navigation and hierarchy across source graphs and binary dependencies. The full matching XDK library set is bundled. |
 
 ### Build Commands
 
 ```bash
-# Build with Tree-sitter adapter (default)
+# Build with the compiler adapter and bundled XDK (default)
 ./gradlew :lang:lsp-server:fatJar
 
 # Build with Mock adapter (no native dependencies)
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# Build with XDK stub (all calls logged)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
+# Build with the XTC compiler and bundled XDK modules
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 
 # Run IntelliJ with specific adapter
-./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=compiler
 ```
 
 ### Setting a Default Adapter
@@ -86,7 +99,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 Create or edit `gradle.properties`:
 
 ```properties
-lsp.adapter=treesitter
+lsp.adapter=compiler
 ```
 
 ### Verifying the Active Backend
@@ -105,26 +118,121 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 ### Backend Comparison
 
-| Feature | Mock | Tree-sitter | Compiler Stub |
-|---------|:----:|:-----------:|:-------------:|
-| Symbol detection | Regex (basic) | AST-based (accurate) | None (logged) |
-| Nested symbols | ❌ Limited | ✅ Full hierarchy | ❌ None |
-| Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
-| Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
-| Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
-| Code actions | ✅ Organize imports | ✅ Organize/remove imports + doc comment + auto-import | ❌ None |
-| Formatting | ✅ Trailing WS | ✅ Trailing WS + auto-indent | ❌ None |
-| Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
-| Signature help | ❌ None | ✅ Same-file methods | ❌ None |
-| Document links | ✅ Import regex | ✅ Import AST + workspace index navigation | ❌ None |
+Compiler mode has implementations for all 27 capabilities in this project's adapter interface,
+plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
+bounded; the interface does not cover every LSP feature. Notebooks and broader refactorings
+remain incomplete. The fixture-only color constructor prototype was removed; a public Ecstasy
+color-library contract remains deferred. See the
+[feature boundaries below](#supported-lsp-features) and
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
+Capability coverage, semantic completeness and native test coverage are tracked separately.
+Compiler code actions include expression/local extraction, private helper extraction for contiguous
+call statements and nested expressions, adjacent single-evaluation local inline, wider constant-local
+inline, selected private zero-argument method/constant-property inline and safe deletion of unused
+private methods/static constants. Compiler-selected types, stable captures, evaluation order and
+all remaining bindings/dispatch must survive complete proposed-graph compilation. Mutable captures,
+control-flow outputs, parameter substitution and externally visible safe deletion remain refused.
+
+Missing methods support exact generic-owner formals, method formals/constraints, conditional returns,
+validated computed/chained receivers, singleton qualifiers, named arguments and typed expressions.
+Destinations include writable source owners in the same module and reachable configured dependencies,
+including closed companions. Required destination imports can accompany the member atomically, but
+the action does not invent dependencies. Runtime Class/Type values without a proven source owner,
+ambiguous inverse generic substitutions, binary/read-only destinations and unproven result contexts
+remain refused. A bare zero-argument unknown constructor can create a same-module class; an unresolved
+whole return value can create a same-owner read-only property with a TODO getter. Static properties
+require an initializer; the action does not invent one. Property inline/delete require compiler-proven
+constant values without runtime initialization.
+
+Type spelling reuses resolved module imports and the compiler's implicit Ecstasy module constants;
+this does not restrict the module path to the core library. Recursive typedef identities support
+diagnostics and rename; member generation refuses aliases whose destination spelling/import route
+is not proven, without suppressing unrelated actions. Both source and binary dependency types
+have extraction regression coverage. Shared X221–X242 exercise these operations in both editor drivers.
+Explicit declaration lookup returns local/import-alias declarations or the inherited written
+contracts of an overriding method/property, including multiple source targets. Definition and
+implementation retain their separate meanings. Indexed library sources remain read-only.
+
+| Feature | Mock | Tree-sitter | XDK compiler |
+|---------|------|-------------|--------------|
+| Symbol detection | Regex | Syntax AST | Compiler AST |
+| Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
+| Semantic diagnostics | None | None | Compiler errors and warnings |
+| Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
+| Definition / references | By spelling | Syntax and workspace index | Source identities across discovered/configured graphs; definitions also use host-supplied dependency source indices |
+| Symbol monikers | None | None | Artifact-versioned import/export/local identities; source, binary consumers and matching library declarations |
+| Library document content | None | None | Negotiated LSP 3.18 content; revision-owned bundled source, whose URIs never change content, so no refresh; read-only file fallback |
+| Hover | Declaration | Declaration | Declaration and validated type |
+| Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
+| Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
+| Inline completion | No | No | Compiler names/argument values; automatic ambiguity suppression and explicit alternatives |
+| Rename | Basic | Implemented with syntax limits | Proven source families, parameter slots, aliases and cross-module/resource moves; graph proofs and versioned edits |
+| Code actions / formatting | Basic | Implemented with syntax limits | Proven import/member/local fixes and bounded refactorings; lexer indentation, continuations and token-boundary wrapping with literal-preservation checks |
+| Documentation actions | None | None | Compiler-derived declaration comment skeletons; parameter/return entries, preserved formatting and versioned edits |
+| Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
+| Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
+| Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
+| Workspace symbols | None | Workspace index | Discovered/configured source graph, including unopened modules; detached per-module index reused from editor/diagnostic compilation |
+| Semantic tokens | None | Syntax-based | Resolved names, annotations and bundled-library ownership; declaration/read-only/static/abstract/write and documentation modifiers. Editor lexical scopes retain string/keyword/literal detail |
+| Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
+| Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
+| Inlay hints | None | None | Inferred local/destructured types, lambda parameters/returns and selected positional parameter names |
+| Type hierarchy | None | None | Declared extends/implements across the source graph, with generic parents |
+| Code lenses / linked editing | Basic | Implemented | Module Run and source-reference counts with native navigation / identity-based local/lambda ranges and lexical import aliases |
 | Native library | Not needed | Required | Not needed |
-| All LSP calls logged | ✅ | ✅ | ✅ |
+
+The compiler backend bundles the same complete library set as the XDK distribution through a shared
+Gradle dependency bundle. All bundled modules are available as read-only binary dependencies, with
+matching read-only source targets for declarations with unambiguous compiler metadata. Application sources are discovered from workspace
+folders unless an explicit source graph is configured. `sourceModules: []` disables discovery;
+`sourceModules: null` restores it. Discovery refreshes on startup, watched files, unsaved header edits, close and workspace-folder changes.
+Invalid edited graphs retire old semantic facts and report `SOURCE-GRAPH` until repaired. Workspace symbol
+search compiles unopened modules on demand and retains healthy independent modules when others fail.
+The navigation index holds one detached build per configured root, reused only when captured source
+text, resources and dependency binary/source-index revisions match. Editor and workspace-diagnostic
+compilation seed the same index; changing a module rebuilds its affected dependency closure. Removed
+roots are evicted, and stale/cancelled work cannot republish an older index generation. Refactoring
+proofs remain fresh compilations. There is no disk-persistent index or incremental compiler; warm
+queries still capture the graph inputs to detect closed-file changes without relying on watchers.
+Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
+compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary
+revisions. Detached query results are reused for unchanged inputs; healthy modules remain navigable
+when independent neighbors fail. Exact references and refactoring require complete graph proof.
+Graph rename additionally covers inline source types and static members through recompilation and
+binding/dispatch comparison. Import actions remove proven-unused ordinary imports or sort contiguous
+imports while retaining comments; they use versioned edits. Source property/accessor families,
+explicit import aliases and member-file type/package moves also use compiler proof. Resource moves
+include existing companion directories and simple discovery-owned module roots, updating closed
+imports while retaining local package aliases. Versioned text edits precede file/directory moves.
+They require client resource-operation support and reject collisions and symlinks. Qualified modules,
+implicit package directories and bounded cross-module ownership moves use compiler proof across the affected source graph.
+Explicit source-graph replacement is available through guarded native `xtc/rename` and
+`xtc/renameFiles` proposals with configuration persistence and Undo; generic LSP clients cannot
+apply that configuration change through a standard rename. The `construct` keyword stays unchanged.
+Compiler mode handles `workspace/didRenameFiles` for local XTC files, refreshing old and new
+locations even without watcher events. This also enables LSP4IJ's close/open sequence for renamed
+buffers, preventing stale overlays when an open member is renamed again.
+Unresolved public type imports are offered only when the proposed import repairs the complete graph
+without changing known bindings. Automatic discovery can add source edges; explicit graphs must
+already declare them. Binary contracts, annotation/delegation dispatch and unresolved graphs remain
+outside rename scope.
+Retention regressions exercise multiple module roots under a 512 MiB server heap and verify that
+compiler objects are released after analysis. Native startup, focus-recovery and project lifecycle
+tests cover restart, replacement and close/reopen. Both editor harnesses display completed and
+remaining cases; negotiated LSP work-done progress is tested separately.
+
+The standalone server closes resources and exits when its stdio client disconnects, including
+without a shutdown/exit handshake. Lifecycle regressions cover Tree-sitter, compiler and mock;
+see the [server process lifecycle checks](../doc/manual-test-plan.md#server-process-lifecycle-acceptance).
+
+The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
+and its member tree together, including unsaved member files and packages. Non-file URIs remain
+single-source inputs. Source roots use the normal file/same-name-directory module layout.
 
 ## Supported LSP Features
 
-The canonical feature matrix lives in
-[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md).
-At a high level, the current tree-sitter-backed default provides:
+The [manual playbook](../doc/manual-test-plan.md) supplies examples and acceptance checks for these
+features. At a high level, the explicit Tree-sitter backend provides:
 
 - document symbols, same-file navigation, workspace-symbol search, and best-effort cross-file navigation
 - context-aware completion
@@ -133,7 +241,442 @@ At a high level, the current tree-sitter-backed default provides:
 - document/range formatting and on-type formatting
 - selection ranges, linked editing, folding ranges, document links, and signature help
 
-The XDK adapter remains a placeholder for future semantic/compiler-backed behavior.
+The opt-in XDK adapter publishes versioned diagnostics and supports hover, definition, references,
+highlights, outline, folding, selection, type-definition, implementation lookup and type hierarchy. Definitions and references span the
+current module, including closed member files. Workspace-symbol search covers active module
+sessions. Immutable Kotlin snapshots supply semantic queries; structural queries use per-source
+ASTs. Member edits invalidate all sibling views, and filesystem notifications refresh disk inputs.
+Closing an overlay restores the disk version while another document keeps the module session open.
+
+Quick fixes name the diagnostics they resolve (`CodeAction.diagnostics`): those of the request that
+overlap the code a fix repairs, returned as the client's own objects, so editors offer the fix on the
+problem itself (the Problems view, the error hover, IntelliJ's error tooltip). Code the compiler proves
+can never run carries the `Unnecessary` tag, which editors may render faded: an operand a constant
+short-circuits away (`COMPILER-208`) and a `catch` an earlier clause already catches (`COMPILER-118`).
+Similar messages reported on wider or unplaced code are not tagged. Tags are sent only on response
+paths whose client declares tag support. Nothing is tagged `Deprecated`: the compiler has no
+deprecation contract.
+
+Type hierarchy follows direct declared `extends` and `implements` edges and retains generic parent
+arguments. It requires successful compilation and source locations in the current module. Type-definition
+uses copied type identities, including flow narrowing, generic parameters and union targets.
+Implementation lookup follows nominal source types and actual method override chains, including
+generic, inherited and default bodies. Ordinary properties lead to their effective accessor bodies
+or written backing fields; getter/setter declarations have separate implementation sets. Composed
+mixin accessors are included, with no standalone inspection of the mixin's constraint.
+Ref/Var annotation accessors use the host's existing composed chains, respecting annotation order
+and explicit property overrides. Native annotation storage has no invented source body.
+A host-supplied dependency source index also permits
+definition, type-definition and inherited implementation-body links into that dependency. It does
+not supply synthetic redirect targets. A discovered/configured source graph supplies workspace
+implementation queries across unopened source modules. Concrete
+delegation follows compiler-selected method/property signatures;
+interface-valued or cyclic delegates remain unresolved. No forwarding code is generated for lookup. Old hierarchy items cannot resolve into a new compilation. Hierarchy spans the complete source graph; unindexed binary types have no source hierarchy target. Exact references additionally compile all configured source modules,
+including unopened consumers and source uses of bundled binary members. No persistent index or
+source target for an unindexed binary is invented.
+
+Completion supplies visible locals/parameters with flow narrowing, implicit members, imported and
+enclosing types, and static functions/constants. Qualified member prefixes and bare-name/empty
+statement cursors return exact replacement edits. Empty final positional and pending named
+argument slots, including direct final bare-name prefixes, offer compatible readable locals/parameters
+and implicit properties/constants, fitted by the compiler with inference, conversions and
+receiver-specific types. Suggestions combine applicable overloads without selecting one; edits
+insert at empty slots or replace the original prefix token.
+Qualified property prefixes, grouped values and slots before later written arguments now use
+compiler argument-type fitting, preserving the written labels, groups and later arguments.
+Compound operand expressions retain ordinary scope/member completion without argument-type filtering. Literal values are not synthesized.
+Property reads follow compiler narrowing rules; ordinary properties do not gain local-variable flow
+narrowing. Enclosing-instance and imported-constant enumeration remain follow-ups.
+Signature help uses exact selected signatures
+for completed calls. Incomplete qualified/implicit/static calls expose compiler-fitted candidates,
+generic expected types and named parameter mappings, including a pending `name=|` and an existing
+closing parenthesis. Function-valued calls also show their full function type while arguments are
+missing, with active positional slots and no guessed parameter names or runtime targets. Constructor
+candidates include overload filtering, named slots and defaults. Qualified/implicit inner,
+virtual, annotated and formal construction reuse compiler preparation. Expected assignment/return
+types constrain omitted class parameters; written arguments provide provisional class inference
+that can change as more arguments are supplied. Parenthesized array initializers retain their
+written dimension arguments and highlight the supplier parameter correctly. Anonymous construction
+uses constructors declared inside the retained body or accessible superclass constructors, including
+abstract and interface bases. Its declaration is source-owned within the cursor attempt; signature
+queries do not emit forwarding constructors or run capture analysis. Repaired normal compilation
+still checks the body and its captures. Single-dimensional array brackets support empty/final-name
+size completion and signature help, including a missing closing bracket. Proposals fit the real
+fixed-size Array constructor's Int parameter. A following supplier is parsed for recovery but is
+outside that prefix proof; normal compilation still validates suppliers and element defaults.
+Multidimensional construction remains unsupported. Candidates never claim final overload selection. Requests propagate cancellation
+and reject stale document/module results. Missing call/group parentheses and index
+brackets around the cursor retain completion and signature help at statement/outer-delimiter
+boundaries; a cursor at EOF also tolerates missing block braces. Normal compiler diagnostics remain
+visible until the text is repaired. Tuple, typed-tuple, list/set/collection and map closers also
+recover around a cursor hole. Expression-bodied declarations/property initializers can lack their
+terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
+their real source-owned compiler context. Member/return and parameter type prefixes use the
+enclosing compiler scope, including flat qualified names, without registering incomplete declarations.
+Explicit cursor queries also recover missing operands inside compound call arguments and validate
+the complete proposed expression. Declaration/parameter names, missing map entries and
+unterminated literal contents remain outside this recovery. The
+[manual completion checks](../doc/manual-test-plan.md#xdkadapter-playbook) exercise the supported
+syntax and callable boundaries.
+
+Declaration-header recovery retains malformed method names and source extents for outline and
+folding. Compiler folds keep the heading line and a real closing brace visible; precise end columns
+prevent a client from extending a method fold into following declarations. Unclosed bodies retain
+their actual EOF boundary without a fabricated delimiter. Explicit cursor queries complete
+member/return and parameter type prefixes through the
+compiler, including unqualified empty parameter slots and flat qualified names such as
+`ecstasy.text.Str`. Qualifiers respect visibility and aliases; candidates include inherited nested
+types and typedefs. Only the final written identifier is replaced. No partial signatures or
+parameter names are invented. Written leaf names inside parameterized/compound types and bounded
+missing angle/group closers also work. These are visible-type suggestions; normal compilation
+checks generic constraints. Registered class/method formals, empty generic slots and complete
+parameterized qualifiers also work; aliases retain their substituted type. Mid-token queries
+replace the entire final identifier, including a generic base before written type arguments.
+Empty type operands, qualifier-middle edits, trailing dots, generic-method/multi-return declarations,
+constraints and module/package composition headers now have bounded recovery. Unregistered header
+formals retain their written constraints for bound-labelled completion and hover, including
+sibling constraints and virtual child types reached through those bounds. Unresolved/cyclic bounds
+hide outer names without producing candidates. They do not register fabricated components; see
+[shared X91–X98 and X106–X108](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
+
+Class/interface headers now retain their written name and body for structure when a bounded header
+fails. Explicit queries complete visible types in `extends`, `implements`, `delegates`, ordinary
+`incorporates` and `into`, including qualified/generic leaf names. Empty composition slots also
+work. The retained type has no compiler component or inheritance facts; its body never registers
+against the enclosing type. Suggestions prove visibility, while normal compilation checks legal
+inheritance and constraints. Shared X95 exercises both editor consumers; X96 adds eight
+generic/formal and whole-token acceptance variants.
+
+Static call hierarchy groups selected source call sites by method/lambda, including unopened source
+modules. It does not expand virtual dispatch, function values, constructors or binary-only sources.
+Semantic tokens classify resolved names and modifiers; highlights distinguish reads and writes.
+Inlay hints show inferred local/destructured types, inferred lambda parameters and validated
+lambda return types after successful compilation, plus selected positional
+parameter names, omitting named arguments and synthetic defaults. These queries use copied facts
+and expire with the module snapshot.
+Both editor plugins enable compiler hints by default; native editor inlay settings also control
+their display. Tree-sitter does not advertise inferred-type hints because it has no compiler type
+model. Its negative capability test is active; compiler hint coverage is separate (X42/X259).
+
+Rename covers locals, lambda and method/constructor parameter slots, source method/property
+families, primary-header properties, types, static members and aliases. Configured graphs also
+support bounded mixin/delegation/annotation routes, qualified module/package moves and cross-module
+ownership changes. Every proposal recompiles the affected graph and compares bindings and dispatch;
+binary contracts and unsupported runtime/generated routes remain read-only or refused.
+Versioned edits, current source/resource snapshots and complete graph proof are
+mandatory. An explicit graph declares the proof boundary; omitted consumers remain unknown.
+Completed function-valued calls expose signature types without invented runtime targets or parameter
+names. Explicit cursor analysis also retains binary/conditional expressions and following call
+arguments, while incomplete values still cannot emit code. Structure-only diagnostics map to source
+declaration tokens where available; binary-only structures keep the document fallback.
+Compiler-only editor features use the Java lexer for bounded formatting and HTTP(S) links,
+compiler proof for ordinary import cleanup, and copied syntax/identities for module run lenses
+and local linked editing. See the bounds in the capability matrix above.
+A member parse failure clears the module's normal semantic answers until a later correction;
+explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser
+recovery retains available per-source syntax for outline, folding and selection, including valid
+sibling files. Malformed statements may be omitted; their surrounding declarations can survive.
+Compiler mode uses no Tree-sitter fallback or native parser.
+
+The adapter uses `compileModule(ModuleInfo, ...)`, with a fresh text/membership snapshot for each
+attempt, and `semanticSnapshots(errors)` to copy per-source views sharing one identity domain and
+inspect implementation chains through the cancellable host listener. The no-argument
+`semanticSnapshots()` remains passive. Both implementation and explicit cursor inspection can build
+TypeInfo on the serialized compiler worker; request threads query copied facts.
+Because those facts are immutable, compiler-mode requests hold the server's document lock only to
+check that the document is current, not while they wait for the worker (`Adapter.concurrentQueries`).
+A hover or cross-module navigation that waits for a compilation therefore never delays `didChange`,
+`$/cancelRequest` or other requests on the JSON-RPC reader; a result for a document that changed
+meanwhile is still rejected with `ContentModified`. The Tree-sitter and mock adapters keep queries
+and document updates serialized.
+`Compilation.sourceTrees()` supplies structural
+views even when parsing errors prevent an assembled `parsed()` tree. See the
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports) for verification and
+remaining limits.
+
+### Editor source-module configuration
+
+With a compiler build, VS Code can configure automatic source dependency compilation in workspace
+settings, without a custom Kotlin host:
+
+```json
+{
+  "xtc.compiler.sourceModules": [
+    { "name": "Library", "uri": "Library.x", "resourceRoots": ["assets/templates"] },
+    { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
+  ]
+}
+```
+
+A root is an absolute `file:` URI or a URI relative to the sole workspace folder. Multi-root
+workspaces use absolute file URIs; URI-encode spaces. Names must match the module declarations.
+Settings changes apply without restarting and reanalyse open consumers at their existing versions.
+Malformed, cyclic, overlapping or duplicate graphs are rejected as a whole, preserving the previous
+graph and showing an error. Identical graphs preserve current analyses; an empty list clears the
+configured graph and disables discovery. Setting `sourceModules` to `null` restores discovery.
+No Gradle process is started by analysis or edits.
+
+Each module may supply ordered `resourceRoots` using the same URI rules. Explicit roots replace
+conventions; an empty array disables resource lookup, and omitted/null uses compiler layout
+deduction (including conventional `src/main/resources`). The evaluated Gradle model
+can supply custom source sets and processed resource roots. IntelliJ exposes these
+paths in **Languages & Frameworks > Ecstasy Compiler**, and VS Code uses the workspace schema.
+Resource contents and root changes invalidate the owning module and its consumers, including
+closed-file diagnostic pulls. Resource watchers cover external roots when the client supports
+dynamic registration. The [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook)
+covers model import, generated directories and paths/origins controls.
+
+Other LSP clients can send the same `{ "sourceModules": [...] }` object in
+`initializationOptions.xtcCompiler`, answer `workspace/configuration` for `xtc.compiler`, or send
+`workspace/didChangeConfiguration` with `{ "xtc": { "compiler": { "sourceModules": [...] } } }`.
+Absent settings preserve the current host graph; late replies and replies after shutdown are ignored.
+
+Consumers outside the workspace are never found on their own: rename covers exactly the graph. A host can
+search folders with `xtc/discoverConsumers` (`{ "roots": [folder URIs] }`). It returns the modules there
+that import the current graph, directly or through each other, as `modules`, and modules whose names
+the graph or another found module already uses as `conflicts`. It installs nothing; the host adds the
+modules it wants to `sourceModules`, which stays the only manifest. Both editors offer this as
+**Add consumers from folders**.
+This configures source graphs only; binary artifacts/source indices still use the host API below.
+The explicit Tree-sitter backend ignores compiler settings.
+
+### Dependency artifacts supplied by a host
+
+The Kotlin `Compilation.toDependency()` extension exports a successful module as immutable bytes
+with a detached declaration source index. `XdkDependency.fromBinary(bytes)` accepts a binary without
+source locations. A host installs the complete dependency set with
+`XtcLanguageServer.replaceCompilerDependencies(dependencies)`; the server invalidates affected
+analyses and republishes diagnostics at the current document versions. Direct adapter users can
+call `XdkAdapter.replaceDependencies(dependencies)` and reschedule the returned scope keys themselves.
+Each compiler attempt deserializes fresh structures. Symbol keys identify a constant only within
+the exact artifact/source-index revision; they are not permanent identities across library rebuilds.
+
+This is the Kotlin host API. Editor clients also configure ordered libraries and attached sources
+through their Compiler settings. There is no persistent workspace reference database. Bundled XDK sources use the matching `xtc-sources` Gradle
+variant and existing compiler source/debug metadata. Library files open as read-only source views;
+they do not become editable compiler sessions. Missing or ambiguous metadata supplies no target. See the
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
+for ownership, cancellation and replacement guarantees.
+
+### Automatic recompilation of configured source modules
+
+The host can register source roots and direct dependency edges with
+`XtcLanguageServer.replaceCompilerSourceModules(listOf(XdkSourceModule(...), ...))`.
+Edits, closes and watched file changes then rebuild affected dependencies and open consumers
+automatically, preserving unchanged consumer document versions. Unsaved buffers override disk.
+The whole source closure is captured before compiling in dependency order on the serialized worker;
+100 ms debouncing coalesces edits. Only detached artifacts with matching source/dependency inputs
+are reused, and obsolete compiler/cursor results cannot publish.
+
+Failed dependencies publish their original source diagnostics and block consumers with
+`DEPENDENCY-FAILED`; an old successful artifact is not reused. Deleted/unreadable roots report
+`SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
+Blocked consumers keep their syntax-only views, the outline, folding and selection ranges, parsed
+from their own sources; semantic views (hover, navigation, semantic tokens, completion) and their
+own compiler diagnostics return when the dependencies recover. Cyclic or
+overlapping source graphs are rejected (`SOURCE-GRAPH`). Closing sessions prunes unused cached artifacts.
+These server-reported codes, `ANALYSIS-FAILED` for an unexpected analysis failure,
+`DOCUMENT-OUT-OF-SYNC` (see [document synchronization](#document-synchronization)) and the `Ecstasy`
+diagnostic source are defined once in `Diagnostic.Codes` and `Diagnostic.SOURCE`
+(`org.xvm.lsp.model`); compiler codes such as `COMPILER-43` come from the compiler.
+
+This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
+declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
+settings. After startup, a file event updates discovery before the server reads its next message, so
+a request sent after the event sees it: only the paths the event names are read (a source file again,
+a new folder walked, anything deleted dropped with what was under it). A walk of the whole workspace
+then runs on a background `xtc-discovery` thread to catch events the watcher missed; a burst of events
+costs one or two walks, no lock is held while the walk reads the disk, and it changes the graph only if
+it finds a difference. A walk is adopted only if no edit or newer graph changed what it read; otherwise
+it walks again. Workspace folders a client adds are walked on that thread too, and workspace-wide
+requests sent after the change start once the walk has finished. Unsaved import-edge edits and
+document close also refresh discovery.
+
+A file event for a module whose analysis is still running is judged against the sources that analysis
+reads: one that has not read them yet already includes the change, so the watcher reporting a file or
+folder the editor has just created does not cancel the first compile or the requests waiting for it.
+It runs no Gradle build on edits and adds no Java/AST API. See the
+[two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
+
+### Document synchronization
+
+The server uses full-text synchronization unless a client sets
+`initializationOptions.xtcDocumentSync.incremental`; then it applies UTF-16 range edits in order,
+preserving CRLF and bare CR. A batch is applied whole or not at all, and stale versions are ignored.
+If a batch cannot be applied (a range outside the document, or a range edit without negotiated
+incremental sync), the editor has the edit and the server does not, so the server no longer knows the
+text. It then reports only `DOCUMENT-OUT-OF-SYNC` for that file, shows one warning, and refuses other
+requests on it with `RequestFailed` instead of answering for the wrong text. Later range edits are
+ignored. A change that carries the whole text (with any edits after it) resynchronizes, as does
+closing and reopening the file; in full-sync mode the next keystroke does this.
+
+### Embedded build and run
+
+IDE clients can build and run source modules without Gradle. The editor integrations use this as
+their *embedded* mode ([VS Code](../vscode-extension/README.md#building-and-running),
+[IntelliJ](../intellij-plugin/README.md#running-your-application)). Only the compiler adapter supports it;
+other adapters fail these requests. `xtc/languageServiceStatus` reports `embeddedExecution: true`.
+
+| Message | Direction | Purpose |
+|---------|-----------|---------|
+| `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
+| `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
+| `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
+| `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
+| `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
+| `xtc/runLenses` `{uri}` | request | The document's Run lenses, each its `module` and zero-based `line`; IntelliJ marks these lines with its gutter Run icons |
+| `xtc/runOutput` `{runId, text}` | notification | Program output, in order, after the runtime's warnings for the run, such as `Warning: Method "run" does not take any parameters; ignoring the specified arguments.` |
+| `xtc/runExited` `{runId, exitCode?, error?}` | notification | The run's single terminal outcome. As with `xtc run`, a run ends once its entry method has returned and its services have nothing left to do: one still at work or waiting, or a server or `keepAlive` alarm, keeps it running until it is stopped, and then nothing of it runs on. A run that cannot start has no exit code, and `error` says why as `xtc run` does, such as `Missing method "run" in module Library` |
+| `xtc/debugStart` | request | Starts a Debug Adapter Protocol (DAP) session carried by this connection, and returns its `sessionId` |
+| `xtc/debugMessage` `{sessionId, message}` | notification, both ways | One DAP message of the session: the client's requests, the server's responses and events |
+| `xtc/debugEnd` `{sessionId}` | notification | Ends the session, which stops the program it launched |
+
+Builds compile the text the server holds when the build is requested, open documents included,
+saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
+IntelliJ saves before a run). Edits made after that belong to the next build. They
+run on the same serialized compile queue and through the same module-closure compile as editor
+analysis, and write `build/xtc/embedded/lib` and `build/xtc/embedded/dependencies` in the workspace
+folder that owns the module. A module whose sources and dependency revisions are exactly those of an
+earlier compile, by an earlier build or by editor analysis, is not compiled again: its outcome
+reports `reused: true`, and every module reports its artifact's SHA-256 `revision`. `rebuild`
+compiles every requested module again. A module that fails loses its previous artifact, so a run can
+never pick up an old one, and a module whose dependency fails is reported as skipped.
+`build/xtc/embedded/manifest.json` records, for each module, the SHA-256 of every source document as
+compiled, the revisions of the modules it compiled against, and its own revision. A run whose module
+no longer declares the requested entry method is refused by the runner's entry check before any of
+its code runs.
+
+Clients choose `runId` so they can route output that arrives before the `xtc/run` response.
+`module` is a module name or root URI. Both clients send a saved run target's root URI there and
+its name as `moduleName`, which the server uses when the URI no longer names a source module, as
+after the root file was renamed or moved; a module renamed in its source is still found by its URI.
+`args` reach the method exactly as given, never shell-parsed. The entry method follows the
+command-line runner's rule: exactly one method of that name on the module's type, including methods
+its annotations contribute (a function of that name is not an entry point, since the runtime calls
+methods), with at most one required parameter; a `String[]` is passed when the
+method requires one, or when arguments are given and it accepts a parameter. The Run lens appears
+only on modules with such a `run` method, found the same way when the module compiles. A module that
+does not build yet offers Run when it declares `run` itself, so the run can report why it failed.
+
+Programs run in separate execution worker JVMs, started from the server's own classpath and Java
+runtime; each run gets a fresh application container, and the runner's HTTP host is not started.
+Each running program has a worker of its own, so up to four programs run at once; a fifth run
+fails with a message saying four are already running. A worker is reused for later runs: one idle
+worker is kept and exits after 10 minutes idle, any other exits when its run ends. The server
+supervises the workers: one that does not report ready within 60 seconds is ended and its run
+fails with that reason; a program still running 10 seconds after Stop has its worker ended, and the
+run reports why; a worker that dies ends its run with an error, and the next run gets a new worker.
+Shutting down the server shuts down every worker and ends active runs.
+
+A worker receives nothing until it reports its protocol version and the bundled XDK it runs, and
+these must be the server's own. They differ when the server's files are replaced while it runs, as
+by a plugin update; such a worker is ended, and its run says to restart the language server. After
+each run a worker reports the heap the JVM left in use after its own latest collections (the worker
+forces none), its live threads, the threads of the runtime's own pool, and the consoles and runs it
+still holds for ended programs, which the server logs. A worker is not used again when it keeps more
+than 512 MB after a collection or 200 threads, when its runtime pool grew, or when it still holds a
+console or run of an ended program. A worker exits when the server's pipe closes, also when the
+server process is killed. A program's output
+is sent in batches: text goes out 20 ms after it is printed, or as soon as 16,384 characters wait,
+and no more than that waits in the worker. The server forwards output to the client as it reads it,
+so a program printing faster than the client reads waits in its print rather than piling up output.
+
+`Console.readLine()` reads the lines clients send with `xtc/runInput`. Input sent while the module is
+still building is held and delivered when the program starts. After `end`, or when the run is stopped,
+a program waiting for a line gets an empty one, as at the end of terminal input. Clients echo what the
+user types, so `readLine`'s `suppressEcho` is not honored. A run stopped while its module still builds
+never starts, and its exit says `Stopped before the program started.`
+
+A debug session's `launch` builds and runs the module the same way, in the same execution workers.
+Its arguments are `module` (a name), `moduleUri` (a source URI of the module, used in place of the
+name when given), `method`, `args` (an array passed as given, or a comma-separated string), `cwd` (the
+program's root directory) and `noDebug`. The program starts after the client's `configurationDone`,
+or two seconds after its build when the client sends none, and the launch is answered once it has
+started. Its output arrives as DAP `output` events and its exit as `exited` and `terminated`; a failed
+build reports its diagnostics as output and fails the launch. The session owns the program it
+launched: `terminate` and `disconnect` stop it, also while it still builds, and so do `xtc/debugEnd`
+and the server shutting down. A line the client sends as a `repl` `evaluate` while the program runs
+is its console input.
+
+A launch without `noDebug` runs the program under the runtime debugger (`SessionDebugger`), in the
+execution worker beside it. The breakpoints the client sets before the program starts are
+answered as pending and installed before its first line, and `breakpoint` events then report each
+as installed, on the line it was put on, or not installed, with the reason. A breakpoint on a line
+without code moves to the next line with code in its method. Breakpoints set later are installed
+at once. A breakpoint or `assert:debug` stops the program with every fiber stopped:
+`threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
+frame's file and line, and `continue` resumes it. A frame of a bundled XDK library's code is in the
+library's bundled source, the read-only copy that navigation opens, since the source directory the
+library records is the one it was built in. `scopes` gives a stopped frame's Locals, and
+`variables` its `this` and named variables, an object's fields and an array's elements (the first
+100, or the part a request's `start` and `count` name, as its `filter` of `named` or `indexed`
+takes them; an array's variable has `indexedVariables`, its size), each with its value and type in words; they are read on the waiting fiber's own thread, and a
+reference lasts until the program resumes. An object's fields are followed by lazy variables
+(`presentationHint.lazy`), its computed properties and its `toString()`, valued `(...)`: `variables`
+of a lazy variable's reference runs its code on the waiting fiber, for at most a second, and answers
+with one variable that has the value, or fails with the reason. A mutable object's or array's value
+ends with its identity code, such as `#1023456`. With `supportsValueFormattingOptions`, a `variables`
+or `evaluate` request's `format` with `hex` shows integers in hexadecimal (`0xFF`, a negative one in
+its type's two's complement); the session's own request `xtc/valueFormat` (`{"hex": true}`) sets the
+format of the requests that name none, which VS Code's Variables view uses, since VS Code never sends
+a format, and is followed by `invalidated` for `variables`. `setVariable` (`supportsSetVariable`)
+gives a local, a field or an array element the value of an expression, evaluated as a watch is, a
+literal of the variable's type; a value of another type, `this`, a field of an immutable object, a
+computed property or what a `Ref` holds is refused with the reason. `completions`
+(`supportsCompletionsRequest`, triggered by `.`) completes the name that ends at the request's
+column: after a dot, with the public fields, properties and methods of the value of the path before
+it, evaluated as a watch is; otherwise with the frame's variables, innermost first, `this` and its
+members; only the names that start with what is typed of it. Each replaces what is typed, its
+`length` before the cursor, and has no `start`, which LSP4IJ and VS Code read as a 0-based index
+although `columnsStartAt1` says otherwise. A frame of a fiber that called the stopped one has no
+scopes, and another service's state is not expanded. `next`, `stepIn` and `stepOut` step a fiber
+over a call, into one, or out of its method, and the program stops again with the reason `step`;
+a step over a return, or out of a method, stops at the caller's next line, and a breakpoint on the
+way ends the step. A breakpoint may have a condition, an expression whose `Boolean` value must be
+`True`; a hit condition, `N` to stop at the Nth hit or `>= N`, `> N` or `% N`, counting the hits
+whose condition holds; and a log message, which makes it a logpoint: the message, with each
+`{expression}` in it replaced by its value, is console output, and the program runs on. A condition
+that cannot be evaluated stops the program and says why; one that is not such an expression leaves
+the breakpoint unverified, with the reason. Breakpoints and stacks follow the text the program was
+built from: once a debugged file is edited, saved or not, a breakpoint's line is matched to that
+text, line by line, ignoring whitespace at a line's ends, and a frame's line to where it is now; a
+breakpoint on a line changed since the build is unverified, with the reason. The exception filters "Uncaught Exceptions", on by default, and "All Exceptions"
+stop the program where such an exception is thrown, with the reason `exception` and the exception's
+type and text; it is the frame's first variable, `<exception>`. Each filter takes exception classes,
+separated by commas, as its condition (`filterOptions`), and then stops only at them and the classes
+that extend them. `exceptionInfo` answers the exception's type, text and stack trace, `unhandled`
+when no frame catches it and `always` otherwise. `pause` stops a running program at
+the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at the first line
+of its own modules, with the reason `entry`; while it runs and no fiber is stopped, `threads` shows
+one thread, named after the module, for an editor's Pause to act on. `evaluate` in a stopped frame,
+for a watch, a hover or a line typed in the debug console, evaluates an expression without running
+the program's code: names (`this`, `<exception>`, the frame's innermost variable of that name, or
+else a field of `this`), their fields (`.name`) and array elements (`[i - 1]`); integer, decimal,
+character and string literals, `True`, `False` and `Null`; and Ecstasy's operators with its
+precedence, such as `point.x + 1` or `0 < i && ints[i] > 0`, which run the runtime's own native
+operations, so they compute what the program would. The value expands like a variable, and what
+cannot be evaluated fails with the reason, such as `There is no variable "nope" in this frame.`, or,
+for an operation that would run the program's code, the method it would run: `s + i would run
+Stringable.toString(), which the debugger does not run here.` A line typed in the debug console
+that this refuses, such as a call, runs as code, compiled in the frame, on the fiber that waits
+there, for at most two seconds; only the fibers of the services it calls run meanwhile, and the
+program stays stopped. Its answer is its value's `toString()`, `(no value)` for a statement, or the
+reason it failed: a compile error, what it threw, or its time limit. `cancel` ends it sooner, and
+it answers `cancelled`. What the code changes stays changed, and once it has run, an `invalidated`
+event for the `variables` area tells a client that takes it to read the variables again. A launch
+with `evaluationRunsProgram` lets the whole program run while such code does, for code that waits
+on work that the program's other fibers do: they run without stopping at breakpoints, exceptions or
+pauses, its clocks run, and once the code has run they wait again at their next line, so the
+`invalidated` event is then for `all` areas. Without a
+frame, a line typed in the debug console is the program's input. What
+the program printed before it stopped is sent before the stop. Terminating or disconnecting a
+stopped program ends it where it is, without running more of it. The session advertises
+`configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
+logpoints, `exceptionInfo`, `cancel`, value formatting options, `setVariable`, `completions` with `.`
+as its trigger character, and its exception filters with their options, and refuses `attach`. A
+run without the debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an
+embedding host has no terminal for the command-line debugger.
 
 ## Context-Aware Completion
 
@@ -164,19 +707,14 @@ is limited to the current class body's declarations. It cannot resolve:
 - Method overloads or return type narrowing
 - Conditional mixins or generic type parameters
 
-### What a semantic compiler adapter would add
+### Further compiler-backed completion work
 
-A future compiler adapter with full type resolution would enable:
-- **Type-resolved member access**: `person.` would show all members of `Person`,
-  including inherited ones from `Object`, `Hashable`, etc.
-- **Overload-aware signatures**: Show all applicable overloads ranked by match quality
-- **Smart import suggestions**: Suggest imports for unresolved types based on what
-  would make the code compile
-- **Generic type inference**: Show members on `List<String>` with `String`-substituted
-  type parameters
-- **Scope-aware locals**: Only show variables that are actually in scope at the cursor,
-  respecting shadowing and block structure
-- **Ranked results**: Sort completions by relevance (local > member > imported > global)
+Compiler completion now enumerates accessible members with receiver-substituted types, visible
+locals/parameters with shadowing and narrowing, and static/imported names in supported cursor
+contexts. Incomplete-call signatures use compiler argument fitting and generic inference, without
+claiming an overload has been selected. Remaining work includes broader malformed expressions and
+callable forms, smart import suggestions and relevance ranking. The canonical matrix records the
+precise supported contexts and exclusions.
 
 ## Key Components
 
@@ -189,45 +727,43 @@ A future compiler adapter with full type resolution would enable:
 | `XtcLanguageConstants` | Shared keywords, built-in types, symbol mappings |
 | `MockAdapter` | Regex-based implementation for testing |
 | `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
-| `XdkAdapter` | Minimal placeholder for future compiler / semantic integration |
+| `XdkAdapter` | Serialized compiler worker, bundled XDK, diagnostics and document lifecycle |
+| `SemanticModel` / builder | Immutable per-analysis semantic facts and queries; no retained compiler objects |
+| `XdkDependency` | Immutable module bytes, revisioned symbol keys and optional detached source locations |
+| `XdkBuild` | Embedded build of a source-module order into `build/xtc/embedded`, with per-module outcomes |
+| `EmbeddedRuns` | `xtc/build`/`xtc/run` service: builds on the compile queue, then runs in the execution worker |
+| `DebugSessions` | DAP sessions over the client connection; each is `dap-server`'s `XtcDebugServer`, launching through `EmbeddedRuns` |
+| `RunWorkerProcess` / `RunWorker` | The execution worker JVM and its JSON-lines control protocol |
 
 ## Building
 
 ```bash
 # Build the project (with lang enabled)
-./gradlew :lang:lsp-server:build
+./gradlew :lang:lsp-server:build -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
-# Run tests
-./gradlew :lang:lsp-server:test
+# Run tests, including the extended retention workload
+./gradlew :lang:lsp-server:test -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
 # Create fat JAR with all dependencies
-./gradlew :lang:lsp-server:fatJar
+./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
-## Compiler-consumer validation
+Tests use two separate JVM workers, each reusing its own bundled XDK repository. Test methods
+remain sequential within each JVM because some tests change compiler globals. Use
+`-PlspTestForks=1` to run with one worker on memory-constrained machines.
 
-Run the required compiler smoke test from the composite root:
+PR CI runs the compiler and Tree-sitter regressions, packaged-server stdio tests, and a 36-cycle
+retention test covering every expression/header variant. It passes `-PlspTestHeavy=false` to
+exclude only JUnit tests tagged `heavy`, currently the extended 120-cycle retention workload.
+Local runs include that workload by default; `-Plsp.retentionCycles=N` controls its length.
+For a fresh run, add `--rerun-tasks --no-build-cache` and inspect the JUnit XML under
+`build/test-results/test` and `build/test-results/compilerStdioTest`.
 
-```bash
-./gradlew :lang:lsp-server:test --tests org.xvm.lsp.adapter.CompilerConsumerTest --rerun-tasks --no-build-cache \
-    -PincludeBuildLang=true -PincludeBuildAttachLang=true
-```
-
-The test compiles a module through the existing Java embedding API. Gradle supplies `javatools`
-and the compiled Ecstasy/native-bridge module variants, including their dependencies. No installed
-XDK, `XDK_HOME`, distribution archive or IDE packaging task is required. Missing module inputs fail
-the test rather than skipping it. `compilerTestModules` declares the inputs, and a test JVM argument
-provider carries their directories into the shared fixture without task-action access to Gradle's
-project model.
-
-The shared CI change classifier includes compiler, libraries and shared build inputs in the core
-checks and their cache fingerprint, independently of IDE publication. Its result gate requires
-this suite to execute with zero skips, failures or errors. Add consumer suites to that gate as
-later integration slices land.
-
-Lang's lifecycle leaves IntelliJ and VS Code packaging detached unless explicitly enabled with
-`-PincludeBuildAttachIntellijPlugin=true` or `-PincludeBuildAttachVsCodeExtension=true`; direct plugin
-tasks remain available. The root's existing lang inclusion defaults are unchanged.
+To run the extended workload before merging, dispatch **Verify Commit** on the branch with
+both **include-lang** and **lsp-heavy-tests** enabled. Master push builds include it as well.
+CI keeps one compiler-default server artifact throughout the job; tests select the Tree-sitter
+backend explicitly, avoiding a second full suite run caused by rebuilding the JAR with a different
+default adapter.
 
 ## Tree-sitter Native Library
 
@@ -257,8 +793,8 @@ included build, which has no `gradle.properties` of its own.
 | Property | Default | Description |
 |----------|---------|-------------|
 | `log` | `INFO` | Log level for XTC LSP/DAP servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
-| `lsp.adapter` | `treesitter` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
-| `lsp.semanticTokens` | `true` | Enable semantic token highlighting (tree-sitter lexer-based) |
+| `lsp.adapter` | `compiler` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
+| `lsp.semanticTokens` | `true` | Enable semantic token highlighting for the selected adapter |
 | `includeBuildLang` | `false` | Include `lang` as a composite build (IDE visibility, task addressability) |
 | `includeBuildAttachLang` | `false` | Wire lang lifecycle tasks to root build (requires `includeBuildLang=true`) |
 | `lsp.buildSearchableOptions` | `false` | Build IntelliJ searchable options index |
@@ -304,7 +840,7 @@ The LSP server logs to both stderr (for IntelliJ's Language Servers panel) and a
 ### Log File Location
 
 ```bash
-~/.xtc/logs/lsp-server.log
+~/.xtc/logs/lsp/server-*/server.log
 ```
 
 Log messages use SLF4J with a short class name (`%logger{0}`) to identify their source:
@@ -320,10 +856,69 @@ Log messages use SLF4J with a short class name (`%logger{0}`) to identify their 
 | `WorkspaceIndexer` | Background file scanner |
 | `WorkspaceIndex` | Symbol index |
 
+### Compiler queue and API timing
+
+Execution tracing is enabled at INFO in ordinary runs and tests. Each process writes JSON lines to
+`~/.xtc/logs/lsp/server-<pid>-<process-start>/lsp-trace-<pid>-<process-start>.jsonl`, as well as the existing stderr/server log.
+Use `XTC_LSP_TRACE_DIR` or `-Dxtc.trace.directory` to select a directory; use
+`XTC_LSP_TRACE_LEVEL=OFF` or `-Dxtc.trace.level=OFF` to disable it. System properties take precedence.
+Files roll at 10 MB by default with seven days/50 MB of archives retained per stream.
+Active files are additional. Machine-local plugin settings control these limits and keep up to
+five stopped-server sessions; pruning runs on startup and protects active processes. Use
+`XTC_LSP_LOG_DIR` or `-Dxtc.logs.directory` to change the parent directory for both logs; an
+explicit trace-directory override remains independent. Export from either plugin saves bounded
+recent tails and status, with truncation described in the ZIP manifest.
+
+Each event records sequence, wall time, process/thread, operation, URI and span/parent IDs.
+Compiler queue events include `queueSize` and the ordered `queuedJobs` list, plus separate
+`debouncingSize`/`debouncingJobs` and `runningSize`/`runningJobs`. Job labels have the form
+`#91 compile file:///workspace/Startup.x`; cursor, project-query and rename-proof jobs are named too.
+Submission, enqueue and execution counters distinguish debounce/coalescing from actual compiler work.
+Cancellation of running work remains visible until the worker returns. `waitMs` includes debounce;
+`runMs` measures execution and `elapsedMs` includes the entire job lifetime.
+
+Javatools spans time full/source-tree/cursor compilation, parser/lexer operations, dependency
+read/write, TypeInfo queries, footprint inspection and semantic-copy phases. AST/constant getters
+inside a copy phase are included in its duration rather than emitting a line for every getter.
+`activeApiThreads` counts threads inside instrumented API boundaries; nested calls on the same
+thread do not imply parallel compilation. A returned compilation can still contain diagnostics.
+Request spans run from server receipt through reply serialization/write; they include asynchronous
+queue waits, but not the editor's later rendering time. Notifications record document versions and
+diagnostic counts. Source buffers, protocol payloads and exception messages are excluded.
+
+JVM test logs and traces share retained `build/reports/server-logs/server-<PID>-<start>/` directories; packaged-server tests use per-test
+subdirectories there so their traces survive temporary workspace cleanup. IntelliJ playbook runs
+place each child server's trace in their report's `server-trace/` directory, preserving restarts as
+separate files.
+The IntelliJ provider forwards the trace directory/level JVM properties to its child server.
+
+### Following a run through the logs
+
+Embedded builds, runs and the execution workers log lines with the same `key=value` fields, so one
+run can be followed from its build to the worker that ran it:
+
+- `XdkAdapter`: `embedded build: build=28 scope=... outcome=succeeded modules=Logged@614fdb35d3c9`.
+  A build's ID is that of its compiler queue job, the `id` of the trace's `embedded-build` events.
+  Each module is given with the start of its artifact's revision (SHA-256), and `(reused)` when an
+  earlier compile supplied it.
+- `DebugSessions`: `debug session launches a run: session=... run=...`, for a debug session's run.
+- `EmbeddedRuns`: `run starting: run=correlated build=28 artifact=Logged@614fdb35d3c9 debug=false`;
+  instead `run not started` when the build failed, or `run stopped before it started`.
+- `RunWorkerProcess`: `run assigned: workerRun=1 run=correlated worker=87623 generation=1 module=Logged
+  method=run`, then `run exited: ... code=7` (or `error=...`) and `execution worker after a run:` with
+  what the worker kept. `worker` is the worker's process ID, `generation` counts the workers this
+  server started, from 1, and `workerRun` is the worker's own number for the run. A worker's
+  `started`, `ready`, `serves no further run` and `exited` lines give the same `worker` and
+  `generation`.
+
+```bash
+grep -E 'run=correlated|build=28 |worker=87623 ' ~/.xtc/logs/lsp/server-*/server.log
+```
+
 ### Tailing Logs
 
 ```bash
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 ## Code Formatting
@@ -332,13 +927,20 @@ The LSP server provides three levels of formatting support:
 
 | Capability | Trigger | What It Does |
 |------------|---------|--------------|
-| **Document Formatting** | Reformat action (`Ctrl+Alt+L`) | Cleans trailing whitespace and final newline |
-| **Range Formatting** | Format selection | Same cleanup on a selected region |
-| **On-Type Formatting** | Typing `Enter`, `}`, `;` | AST-aware auto-indentation as you type |
+| **Document Formatting** | Reformat action (`Ctrl+Alt+L`) | Adapter-specific indentation/layout plus configured whitespace cleanup |
+| **Range Formatting** | Format selection | The same rules, confined to the selected lines |
+| **On-Type Formatting** | Typing `Enter`, `}`, `;` | Auto-indentation using the adapter's syntax model; compiler mode uses its Java lexer |
+
+Compiler mode uses the Java lexer for nesting/operator continuation indentation, wrapping at
+expression/list token boundaries using `maxLineWidth`, and standalone block-comment margins.
+Code and literal token spellings are verified after formatting. Literal/template contents and
+relative comment layout are preserved; comments are not reflowed and literals are not split.
+Range formatting is confined to selected lines. On-type formatting adjusts indentation without
+wrapping lines. A lexical error refuses formatting. Shared X249/X250 cover exact output and history.
 
 ### On-Type Formatting (Auto-Indent)
 
-When you type a trigger character, the LSP server uses tree-sitter AST context to
+In Tree-sitter mode, typing a trigger character uses the Tree-sitter AST context to
 determine the correct indentation and sends back edits to fix it. This is strictly
 better than regex-based TextMate indentation rules because it understands:
 
@@ -400,8 +1002,8 @@ where users can configure indent size, continuation indent, tab usage, and right
 settings are forwarded to the LSP server via `workspace/configuration` at startup and whenever
 the configuration changes. The server uses them as a fallback when no `xtc-format.toml` is present.
 
-See [formatting-plan.md](../doc/plans/formatting-plan.md) for the full implementation plan
-including the `xtc-format.toml` config file schema and the configuration architecture.
+See the [formatting design reference](../doc/plans/formatting-plan.md#configuration-architecture)
+for the `xtc-format.toml` schema and configuration precedence.
 
 ## Known Issues: IntelliJ Platform and LSP4IJ
 
@@ -413,7 +1015,7 @@ but behaviors we must work around.
 | Issue | Impact | Workaround | Reference |
 |-------|--------|------------|-----------|
 | **Duplicate server spawning** | LSP4IJ may call `start()` concurrently for multiple `.x` files, briefly spawning extra LSP server processes | Harmless -- extras are killed within milliseconds. We guard notifications with `AtomicBoolean` to avoid duplicates | [lsp4ij#888](https://github.com/redhat-developer/lsp4ij/issues/888) |
-| **"Show Logs" link in error popups** | When the LSP server returns an error (e.g., internal exception), the error notification shows "Show Logs" / "Disable error reporting". The "Show Logs" link opens `idea.log`, **not** the LSP server log file, and may be unclickable | Tail the actual LSP log directly: `tail -f ~/.xtc/logs/lsp-server.log`. Also check the LSP Console: **View -> Tool Windows -> Language Servers -> Logs tab** | LSP4IJ limitation |
+| **"Show Logs" link in error popups** | When the LSP server returns an error (e.g., internal exception), the error notification shows "Show Logs" / "Disable error reporting". The "Show Logs" link opens `idea.log`, **not** the LSP server log file, and may be unclickable | Tail the actual LSP log directly: `tail -f ~/.xtc/logs/lsp/server-*/server.log`. Also check the LSP Console: **View -> Tool Windows -> Language Servers -> Logs tab** | LSP4IJ limitation |
 | **Error notification popup not actionable** | The `textDocument/semanticTokens Internal error` popup's links ("Show Logs", "Disable error reporting", "More") may not respond to clicks in some IntelliJ versions | The popup auto-dismisses. Check the LSP Console Logs tab for the actual server-side stack trace | LSP4IJ UI limitation |
 
 ### IntelliJ Platform Issues
@@ -430,7 +1032,7 @@ but behaviors we must work around.
 
 | Log | Location | Contents |
 |-----|----------|----------|
-| LSP server log | `~/.xtc/logs/lsp-server.log` | All `XtcLanguageServer`, `TreeSitterAdapter`, `XtcParser`, `XtcQueryEngine` messages |
+| LSP server log | `~/.xtc/logs/lsp/server-*/server.log` | All `XtcLanguageServer`, `TreeSitterAdapter`, `XtcParser`, `XtcQueryEngine` messages |
 | IntelliJ `idea.log` | Sandbox `log/idea.log` (path shown at `runIde` startup) | Platform errors, plugin loading, EDT violations |
 | LSP Console (IDE) | **View -> Tool Windows -> Language Servers -> Logs** | JSON-RPC traces, server stderr |
 | Gradle console | Terminal running `runIde` | Build output + tailed LSP log (real-time) |
@@ -443,7 +1045,7 @@ contain the actual LSP server error. Instead:
 1. Open the **Language Servers** tool window (bottom panel, next to Terminal)
 2. Select **Ecstasy Language Server** -> **Logs** tab
 3. Look for `SEVERE:` or stack traces in the log output
-4. Or tail the server log directly: `tail -f ~/.xtc/logs/lsp-server.log`
+4. Or tail the server log directly: `tail -f ~/.xtc/logs/lsp/server-*/server.log`
 
 **When IntelliJ complains about "slow operations":**
 
@@ -457,5 +1059,58 @@ in slow operation reports:
 ## Documentation
 
 - [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
-- [Tree-sitter Integration Plan](../doc/plans/plan-tree-sitter.md) - Full implementation details
-- [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey
+- [Compiler architecture](../../javatools/README.md#compiler-architecture-for-language-tooling) - Embedding, diagnostics and source-analysis contracts
+- [Manual playbook](../doc/manual-test-plan.md) - Feature examples, native tests and client limitations
+
+
+The server uses UTF-16 positions and adapts hover, outline, symbol
+kinds and push diagnostic metadata to client capabilities. Long compiler queries support negotiated
+work-done progress and request-owned cancellation. Refresh requests are coalesced for negotiated
+diagnostics, semantic tokens, inlays, lenses and folding. `$/setTrace` accepts `off`, `messages` and
+`verbose`; server `$/logTrace` messages include timing and correlation metadata without source
+buffers. Client-supplied partial-result tokens now stream bounded batches for references, workspace
+symbols/diagnostics, outlines, navigation and hierarchy relations. Ordinary requests retain full
+responses. Initial Tree-sitter scanning reports its actual future lifetime and progress.
+
+The compiler adapter copies successful constant-initializer facts before temporary-method disposal, preserving
+navigation and rename provenance without retaining clone ASTs. Shared X142/X143 exercise initializer
+semantics and partial symbols. X140/X141 exercise UTF-16 positions and runtime trace settings.
+Completion kinds and code-action forms/preferred metadata follow negotiation; legacy action clients
+use one-use, revision-checked commands only if they support `workspace.applyEdit`.
+
+### Portable compiler symbol identities
+
+`textDocument/moniker` uses the `ecstasy-artifact-v1` scheme and scheme-level uniqueness.
+Exported declarations and their binary consumers match by normalized artifact content and constant
+index. Build timestamps, absolute checkout paths and optional source attachments do not define the
+identity; code/signature/resource changes do. Private and method-local components are local. Register locals,
+lambdas, unresolved bindings and unsuccessful compilations supply no IDs. Identical normalized
+artifacts intentionally match across projects; module-name spelling alone never establishes a match.
+See [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
+
+Matching bundled library declarations now answer moniker requests directly, including declarations
+not previously referenced by a consumer. Ambiguous source spans still return no identity.
+Supporting clients receive `ecstasy-library` URIs through LSP 3.18 `workspace/textDocumentContent`.
+URIs include the binary and source-archive revisions; registered content comes from the matching
+bundle, never from an arbitrary path or an editor overlay. Compiler input replacement refreshes
+fetched views; immutable revision URIs keep their original text. Closing the server retires its
+content registry. Line-ending normalization preserves declaration positions; other client text
+rewrites withhold monikers until matching presentation is restored. Clients without this capability retain protected file views (LSP4IJ).
+External host source indexes remain host-owned file locations: they supply declaration ranges,
+not verified source text, and are not silently promoted to virtual library snapshots.
+Selected X31/X252/X253 pass in both editors; full-catalog/release acceptance remains separate.
+
+## Compiler inline completion
+
+Compiler mode negotiates `textDocument/inlineCompletion` separately from popup completion.
+Suggestions reuse copied semantic facts and replace only a prefix ending at the caret. Automatic
+requests offer one unambiguous name/value; explicit requests can offer alternatives. Selected
+popup items constrain both range and extension. Imports requiring additional edits, snippets with
+placeholders, mid-token edits and read-only libraries are excluded. Cancellation and newer
+versions retire pending suggestions. No new embedding/AST API or generative service is involved.
+
+Both editor clients have native providers. IntelliJ's direct invocation currently sends Automatic
+and omits popup selection; shared X255–X258 distinguish native from protocol coverage.
+
+See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for how native
+and protocol coverage are recorded.

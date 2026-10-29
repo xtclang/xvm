@@ -133,6 +133,10 @@ public abstract class Container
         return f_setServices;
     }
 
+    public Container getParent() {
+        return f_parent;
+    }
+
     /**
      * Terminate every service that belongs to this container.
      *
