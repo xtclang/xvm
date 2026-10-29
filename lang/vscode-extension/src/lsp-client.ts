@@ -203,12 +203,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     const connection = new class extends LanguageClient {
         override async start(): Promise<void> {
             try {
-                // TODO VSCODE: UP28 — start() can lose its internal startup promise when the
-                // transport closes during initialize. Observe the idempotent in-flight start
-                // immediately too, before upstream clears it, so its rejection is handled.
-                // Remove when upstream always returns/observes that captured promise (X272).
-                const starting = super.start();
-                await Promise.all([starting, super.start()]);
+                await super.start();
                 if (!this.isRunning()) throw new Error('Server stopped before initialization completed');
             } catch (error) {
                 if (client === this) {
@@ -224,11 +219,6 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         override error(message: string, data?: unknown, showNotification?: boolean | 'force'): void {
             // Keep full transport detail in Output. Startup/disconnect notifications have an owner.
             super.error(message, data, this.isRunning() ? showNotification : false);
-        }
-
-        override stop(timeout?: number): Promise<void> {
-            // Upstream invokes void stop() during initialization failure, when stopping is invalid.
-            return super.stop(timeout).catch(() => {});
         }
 
         protected override async createMessageTransports(encoding: string): Promise<MessageTransports> {
