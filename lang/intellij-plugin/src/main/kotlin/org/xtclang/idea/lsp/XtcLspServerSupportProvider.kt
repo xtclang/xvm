@@ -96,7 +96,7 @@ class XtcLspConnectionProvider(
     private val adapterName = if (adapter == LanguageAdapter.DEFAULT) LspBuildProperties.adapter else adapter.setting
 
     companion object {
-        private const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
+        internal const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
         private const val LANGUAGE_SERVER_ID = "xtcLanguageServer"
         private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
         private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"

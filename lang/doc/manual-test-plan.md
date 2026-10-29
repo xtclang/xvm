@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **337 scenarios**: X1–X335 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **338 scenarios**: X1–X336 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 337 scenarios: X1–X335 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 338 scenarios: X1–X336 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3910,6 +3910,12 @@ last published to mavenLocal.
 | X333 | Select `amount + f`, where a lambda also reads `amount`. | No **Inline and remove constant property 'amount'** action; the source stays unchanged. |
 | X334 | Select the class `Box`'s public `unused`, choose **Safely delete member 'unused', unused in Extract**, apply, then Undo/Redo/Undo. | The method is gone and the title names the configured modules that were checked; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X335 | VS Code only: with `files.refactoring.autoSave` off and `App/tools/Box.x` open, move it to `App/util` in the Explorer, then Undo and Redo from the Explorer. | The move rewrites `Box.x`, the alias in `App.x` and the closed consumer as X161 does, although nothing saves the moved file; one Undo restores every file and Redo applies them again. |
+
+### Attaching the debugger to a program run outside the editor (X336)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X336 | Copy the option (VS Code: **Ecstasy: Copy Option to Debug a Program Outside the Editor**; IntelliJ: the Port comment of a new **Ecstasy Attach** configuration) and run `xec <option> Attached.x` in a terminal, from an XDK built from this tree. Set a breakpoint on line 11 of `Attached.x` and start the attach (VS Code: the **Ecstasy: Attach to Program** configuration; IntelliJ: Debug the Ecstasy Attach configuration). When it stops, look at the call stack. Then continue (IntelliJ: Resume Program). | `xec` prints `Listening for the debugger at 127.0.0.1:5005` and waits; the terminal shows nothing more until the debugger attaches. The program then prints `before` and stops on line 11, in `Attached.twice`, called from line 5 of `Attached.run`. Continue prints `after 42` in the terminal, the program ends with exit code 42, and the debug session ends saying so. Stopping the session while the program is stopped instead detaches: the program prints `after 42` and ends on its own. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

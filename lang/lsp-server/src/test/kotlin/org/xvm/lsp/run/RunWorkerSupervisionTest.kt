@@ -17,7 +17,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 class RunWorkerSupervisionTest {
     /** One run's output and its single exit. */
-    private class Run : RunWorkerProcess.Listener {
+    private class Run : RunListener {
         val output = StringBuffer()
         val exited = CompletableFuture<Pair<Long?, String?>>()
 

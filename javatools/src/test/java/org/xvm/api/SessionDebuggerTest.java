@@ -83,9 +83,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the exception, pausing and stopping on entry, assert:debug,
  * other fibers waiting while the program is stopped, with their variables, fibers yielding to each
  * other while breakpoints are set and while one steps, steps into and out of another service's
- * calls, handles that last only until the program resumes, reads asked for as it resumes, and
- * closing a stopped run. The compiled XDK modules come from the test
- * resources, as for {@link EmbeddingSupportTest}.
+ * calls, handles that last only until the program resumes, reads asked for as it resumes, a
+ * reset that drops what the host asked for, and closing a stopped run. The compiled XDK modules
+ * come from the test resources, as for {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
     private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
@@ -1468,6 +1468,25 @@ public class SessionDebuggerTest {
             again.resume();
             assertTimeoutPreemptively(RUN_LIMIT, second::join);
             assertEquals(null, counted.poll());
+        }
+    }
+
+    @Test
+    public void aResetResumesTheProgramWhichThenRunsWithoutStopping() throws Exception {
+        Path  source  = compile("Resets", LOOP.replace("Loop", "Resets"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Resets"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 7, null, null, null)));
+        session.setExceptionStops(true, false);
+
+        try (Control control = run("Resets", new StringWriter(), session)) {
+            stops.next();
+            session.reset();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(10L, control.result());
+            assertEquals(null, stops.poll());
+            assertFalse(session.isStopped());
         }
     }
 

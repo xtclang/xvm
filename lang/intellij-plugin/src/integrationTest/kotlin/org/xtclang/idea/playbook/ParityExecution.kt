@@ -8,8 +8,10 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -1612,6 +1614,75 @@ internal fun ParityScenarios.runEntryCases() {
     }
 }
 
+/**
+ * X336: a debug session attaches to a program that the XDK's xec runs with --debug and the plugin's language server jar
+ * as its agent, outside the IDE.
+ */
+internal fun ParityScenarios.attachCases() {
+    case("X336") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        clean(document)
+        // the scenarios are in lang/test-fixtures/compiler-playbook of the repository whose XDK the program runs with
+        val repository =
+            Path
+                .of(System.getProperty("xtc.playbook.scenarios"))
+                .toAbsolutePath()
+                .parent.parent.parent.parent
+        val windows = "win" in System.getProperty("os.name").lowercase()
+        val xec = repository.resolve("xdk/build/install/xdk/bin").resolve(if (windows) "xec.bat" else "xec")
+        check(Files.isRegularFile(xec)) { "X336 runs its program with $xec; run ./gradlew xdk:installDist first" }
+        val project = with(driver) { singleProject() }
+        val debugger = with(driver) { utility(DebugSessionProbe::class) }
+        val module = data.string("module")
+        val line = data.int("breakpointLine")
+        val output = Files.createTempDirectory("xtc-attach")
+        val program =
+            ProcessBuilder(
+                xec.toString(),
+                "-o",
+                output.toString(),
+                "--debug",
+                "listen:127.0.0.1:0,suspend,agent=${debugger.agent()}",
+                Path.of(URI(uri(data.string("file")))).toString(),
+            ).redirectErrorStream(true).start()
+        val printed = StringBuffer()
+        Thread.ofVirtual().start { program.inputReader().forEachLine { printed.append(it).append('\n') } }
+        try {
+            val listening = Regex(data.string("listening"))
+            awaitUi("the program listens for the debugger", 60.seconds, { "Printed: $printed" }) { listening.containsMatchIn(printed) }
+            val port = listening.find(printed)!!.groupValues[1].toInt()
+            check(data.string("before") !in printed) { "The program waits for the debugger: $printed" }
+
+            debugger.attach(project, module, uri(data.string("file")), line, port)
+            val stopped =
+                debugger.awaitState(project, module, "the program stops at the breakpoint", 60.seconds) {
+                    it["suspended"]?.asBoolean == true
+                }
+            check(stopped.int("line") == line && stopped.string("file").endsWith(data.string("file"))) { "Stopped at: $stopped" }
+            val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+            data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
+                val frame = frames.getOrNull(index)
+                check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
+                    "Frame $index is not ${expected[0].asString} at ${expected[1].asInt}: $frames"
+                }
+            }
+            check(data.string("before") in printed && data.string("after") !in printed) { "Printed while paused: $printed" }
+
+            debugger.resume(project, module)
+            val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 60.seconds) { it.has("exitCode") }
+            check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+            check(program.waitFor(60, TimeUnit.SECONDS)) { "The program did not end: $printed" }
+            check(program.exitValue() == data.int("exitCode")) { "Exit code ${program.exitValue()}: $printed" }
+            check(data.string("after") in printed) { "Printed: $printed" }
+        } finally {
+            debugger.clearBreakpoints(project)
+            program.destroyForcibly()
+            output.toFile().deleteRecursively()
+        }
+    }
+}
+
 /** Waits until the module's debug session satisfies [accept], and returns that state. */
 private fun DebugSessionProbe.awaitState(
     project: Project,
@@ -1667,6 +1738,16 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
         uri: String,
+    )
+
+    fun agent(): String
+
+    fun attach(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+        port: Int,
     )
 
     fun state(
