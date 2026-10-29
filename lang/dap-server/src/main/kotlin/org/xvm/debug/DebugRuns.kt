@@ -18,6 +18,16 @@ data class LaunchTarget(
 )
 
 /**
+ * A program a debug session attaches to: one that the launcher runs with `--debug listen:<host>:<port>`, whose debugger
+ * agent listens at [host] and [port] on this machine, with the [token] the program was given, if any.
+ */
+data class AttachTarget(
+    val host: String,
+    val port: Int,
+    val token: String? = null,
+)
+
+/**
  * A breakpoint a session asks for: its DAP ID, which the session chooses, its 1-based line, and how it stops, each
  * null when not given: a [condition], an expression whose Boolean value must be True; a [hitCondition], `N` for the
  * Nth hit, or `>= N`, `> N` or `% N`; and a [logMessage], which makes it a logpoint that logs the message, with each
@@ -240,6 +250,12 @@ interface ProgramEvents {
 
     /** A logpoint of a debugged program logged a message; the program runs on. */
     fun logged(text: String) {}
+
+    /**
+     * The session has left a program it attached to, which runs on: as asked, or for the [reason] given, as when the
+     * connection to the program was lost. The last event, as the exit is.
+     */
+    fun detached(reason: String?) = exited(null, reason ?: "Detached from the program")
 }
 
 /** A launch's outcome: the run's ID when the program was started, or what a failed build reported. */
@@ -265,13 +281,29 @@ interface DebugRuns {
         ready: CompletionStage<out DebugSetup?>,
     ): CompletableFuture<LaunchResult>
 
+    /**
+     * Attaches to a program that runs under the launcher's `--debug` once [ready] completes, with the debugger's setup,
+     * under [runId], and answers with the program's module once it has taken the setup; fails with the reason when it
+     * cannot. [events] receives its breakpoints and stops, and its exit or the detach; [stop] detaches, and the program
+     * runs on. The program's console is its own.
+     */
+    fun attach(
+        runId: String,
+        target: AttachTarget,
+        events: ProgramEvents,
+        ready: CompletionStage<out DebugSetup>,
+    ): CompletableFuture<String> = CompletableFuture.failedFuture(UnsupportedOperationException("Attaching is not available here"))
+
     /** Console input for the run, with its line end. False when no such run is building or running. */
     fun input(
         runId: String,
         text: String,
     ): Boolean
 
-    /** Stops the run, or keeps it from starting if it is still building. False when no such run is active. */
+    /**
+     * Stops the run, or keeps it from starting if it is still building; detaches from an attached one, which runs on.
+     * False when no such run is active.
+     */
     fun stop(runId: String): Boolean
 
     /** Replaces the exception stops of a debugged program that runs. False when no such run is active. */

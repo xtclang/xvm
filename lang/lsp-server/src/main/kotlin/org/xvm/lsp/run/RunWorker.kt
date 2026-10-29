@@ -7,21 +7,6 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
-import org.xvm.debug.BreakpointState
-import org.xvm.debug.CompletionState
-import org.xvm.debug.CompletionsState
-import org.xvm.debug.DataBreakpointRequest
-import org.xvm.debug.ExceptionInfoState
-import org.xvm.debug.ExceptionStops
-import org.xvm.debug.FrameState
-import org.xvm.debug.FunctionBreakpointRequest
-import org.xvm.debug.ModuleState
-import org.xvm.debug.ScopeState
-import org.xvm.debug.SourceBreakpoints
-import org.xvm.debug.StepTargetState
-import org.xvm.debug.StopState
-import org.xvm.debug.ThreadState
-import org.xvm.debug.VariableState
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.runtime.SessionDebugger
 import org.xvm.util.Severity
@@ -38,8 +23,6 @@ import java.io.Reader
 import java.io.Writer
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryType
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -84,9 +67,6 @@ import kotlin.time.toJavaDuration
  * (`id`, `request`, and the answer or `error`).
  */
 object RunWorker {
-    /** The error of a request for the debugger of a run without one, or of one that ended. */
-    private const val NOT_DEBUGGED = "The program is not running under the debugger"
-
     /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
     private val STOP_LIMIT = 5.seconds
 
@@ -111,30 +91,8 @@ object RunWorker {
                     "input" -> runs.input(command["id"].asLong, command["text"].asString)
                     "endInput" -> runs.endInput(command["id"].asLong)
                     "stop" -> runs.stop(command["id"].asLong)
-                    "setBreakpoints" -> runs.setBreakpoints(command)
-                    "setFunctionBreakpoints" -> runs.setFunctionBreakpoints(command)
-                    "dataBreakpointInfo" -> runs.dataBreakpointInfo(command)
-                    "setDataBreakpoints" -> runs.setDataBreakpoints(command)
-                    "threads" -> runs.threads(command)
-                    "modules" -> runs.modules(command)
-                    "stepInTargets" -> runs.stepInTargets(command)
-                    "stepInto" -> runs.stepInto(command)
-                    "restartFrame" -> runs.restartFrame(command)
-                    "stackTrace" -> runs.stackTrace(command)
-                    "scopes" -> runs.scopes(command)
-                    "variables" -> runs.variables(command)
-                    "evaluate" -> runs.evaluate(command)
-                    "setVariable" -> runs.setVariable(command)
-                    "completions" -> runs.completions(command)
-                    "runCode" -> runs.runCode(command)
-                    "cancel" -> runs.cancel(command)
-                    "exceptionInfo" -> runs.exceptionInfo(command)
-                    "step" -> runs.step(command)
-                    "exceptionStops" -> runs.exceptionStops(command)
-                    "pause" -> runs.pause(command["id"].asLong)
-                    "continue" -> runs.resume(command["id"].asLong)
                     "shutdown" -> break
-                    else -> channel.log("Unknown worker command: $line")
+                    else -> if (!runs.debug(command)) channel.log("Unknown worker command: $line")
                 }
             }
         }
@@ -155,10 +113,7 @@ object RunWorker {
         private val inputs = ConcurrentHashMap<Long, ConsoleInput>()
 
         /** The runtime debugger of each run started with breakpoints. */
-        private val debuggers = ConcurrentHashMap<Long, SessionDebugger>()
-
-        /** Code that runs on a stopped fiber, by the request that ran it, which a `cancel` names. */
-        private val running = ConcurrentHashMap<Long, CompletableFuture<SessionDebugger.Variable>>()
+        private val debuggers = RunDebuggers(channel)
 
         /** The running program's output, which text the runtime prints directly joins in order. */
         @Volatile
@@ -184,13 +139,7 @@ object RunWorker {
             val control =
                 try {
                     val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
-                    val debugger =
-                        command.getAsJsonArray("breakpoints")?.let { breakpoints ->
-                            val exceptions = RunWorkerDebug.exceptionsOf(command["exceptions"])
-                            val stopOnEntry = command["stopOnEntry"]?.asBoolean == true
-                            val functions = RunWorkerDebug.functionsOf(command.getAsJsonArray("functions"))
-                            debugger(id, repositories, RunWorkerDebug.sourcesOf(breakpoints), exceptions, stopOnEntry, functions, output)
-                        }
+                    val debugger = command.getAsJsonArray("breakpoints")?.let { debugger(id, repositories, command, output) }
                     EmbeddingSupport.instance().runMethod(
                         LinkedRepository(*repositories.toTypedArray()),
                         command["module"].asString,
@@ -238,7 +187,7 @@ object RunWorker {
                             Kept(
                                 poolThreads(),
                                 EmbeddingSupport.instance().registeredConsoles(),
-                                active.size + inputs.size + debuggers.size + running.size,
+                                active.size + inputs.size + debuggers.held,
                             )
                         channel.exit(id, control.result(), errors.failure())
                         channel.usage(id, kept)
@@ -266,353 +215,26 @@ object RunWorker {
         }
 
         /**
-         * The runtime debugger of a run started with breakpoints: it knows the program's own modules, so the
-         * breakpoints in their files are verified, and installs the breakpoints and the function breakpoints, reporting
-         * how each file's and the function breakpoints were installed, the exception stops and the stop on entry before
-         * the program starts. Its stops are reported as `stopped` events, after the program's output so far.
+         * The runtime debugger of a run started with breakpoints: it knows the program's own modules, the run's, and is
+         * set up as the `run` command asks before the program starts. Its stops are reported as `stopped` events, after
+         * the program's output so far.
          */
         private fun debugger(
             id: Long,
             repositories: List<ModuleRepository>,
-            sources: List<SourceBreakpoints>,
-            exceptions: ExceptionStops,
-            stopOnEntry: Boolean,
-            functions: List<FunctionBreakpointRequest>,
+            command: JsonObject,
             output: OutputBatches,
         ): SessionDebugger {
-            val debugger =
-                SessionDebugger(
-                    object : SessionDebugger.Listener {
-                        override fun stopped(stop: SessionDebugger.Stop) {
-                            output.sendNow()
-                            channel.send("stopped") {
-                                addProperty("id", id)
-                                RunWorkerDebug.stop(
-                                    this,
-                                    StopState(stop.reason(), stop.description(), stop.threadId(), stop.breakpointIds()),
-                                )
-                            }
-                        }
-
-                        override fun logged(message: String) {
-                            // after what the program printed before it reached the logpoint
-                            output.sendNow()
-                            channel.send("logged") {
-                                addProperty("id", id)
-                                addProperty("text", message)
-                            }
-                        }
-                    },
-                )
+            val debugger = SessionDebugger(debuggers.listener(id, output::sendNow))
             repositories.forEach { repository ->
                 repository.moduleNames.forEach { name -> repository.loadModule(name)?.let(debugger::addModule) }
             }
-            sources.forEach { source ->
-                channel.send("breakpoints") {
-                    addProperty("id", id)
-                    addProperty("path", source.path)
-                    add("breakpoints", RunWorkerDebug.states(install(debugger, source)))
-                }
-            }
-            if (functions.isNotEmpty()) {
-                channel.send("functionBreakpoints") {
-                    addProperty("id", id)
-                    add("breakpoints", RunWorkerDebug.states(install(debugger, functions)))
-                }
-            }
-            debugger.setExceptionStops(exceptions.all, exceptions.allTypes, exceptions.uncaught, exceptions.uncaughtTypes)
-            // after the modules are known, so it stops in the program's code, not in the libraries before it
-            if (stopOnEntry) debugger.stopOnEntry()
-            debuggers[id] = debugger
+            debuggers.start(id, debugger, command)
             return debugger
         }
 
-        fun setBreakpoints(command: JsonObject) =
-            reply(command) { debugger -> add("breakpoints", RunWorkerDebug.states(install(debugger, RunWorkerDebug.sourceOf(command)))) }
-
-        fun setFunctionBreakpoints(command: JsonObject) =
-            reply(command) { debugger ->
-                add(
-                    "breakpoints",
-                    RunWorkerDebug.states(install(debugger, RunWorkerDebug.functionsOf(command.getAsJsonArray("breakpoints")))),
-                )
-            }
-
-        fun dataBreakpointInfo(command: JsonObject) =
-            reply(command) { debugger ->
-                val info = debugger.watchable(command["reference"].asInt, command["name"].asString)
-                info.dataId()?.let { addProperty("dataId", it) }
-                addProperty("description", info.description())
-            }
-
-        fun setDataBreakpoints(command: JsonObject) =
-            reply(command) { debugger ->
-                val data = RunWorkerDebug.dataOf(command.getAsJsonArray("breakpoints"))
-                add("breakpoints", RunWorkerDebug.states(watch(debugger, data)))
-            }
-
-        fun threads(command: JsonObject) =
-            reply(command) { debugger ->
-                add("threads", RunWorkerDebug.threads(debugger.threads().map { ThreadState(it.id(), it.name()) }))
-            }
-
-        fun modules(command: JsonObject) =
-            reply(command) { debugger ->
-                add(
-                    "modules",
-                    RunWorkerDebug.modules(
-                        debugger.modules().map { ModuleState(it.name(), it.version(), it.sourceDir(), it.sources(), it.own()) },
-                    ),
-                )
-            }
-
-        fun stackTrace(command: JsonObject) =
-            reply(command) { debugger ->
-                val frames =
-                    debugger.stackTrace(command["thread"].asInt).map {
-                        FrameState(it.id(), it.name(), it.path(), it.line(), it.module(), it.source(), it.restartable())
-                    }
-                add("frames", RunWorkerDebug.frames(frames))
-            }
-
-        fun scopes(command: JsonObject) =
-            reply(command) { debugger ->
-                val scopes = debugger.scopes(command["frame"].asInt).map { ScopeState(it.name(), it.variablesReference()) }
-                add("scopes", RunWorkerDebug.scopes(scopes))
-            }
-
-        /**
-         * Answers once the waiting fiber that holds the variables has read them on its own thread, so the commands
-         * that follow, such as `continue`, do not wait for the read.
-         */
-        fun variables(command: JsonObject) {
-            val read =
-                debuggers[command["id"].asLong]?.variables(
-                    command["reference"].asInt,
-                    command["hex"].asBoolean,
-                    SessionDebugger.Filter.valueOf(command["filter"].asString),
-                    command["start"].asInt,
-                    command["count"].asInt,
-                )
-                    ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
-            read.whenComplete { variables, failure ->
-                answer(command) {
-                    if (failure != null) {
-                        addProperty("error", reason(failure))
-                    } else {
-                        add("variables", RunWorkerDebug.variables(variables.map(::state)))
-                    }
-                }
-            }
-        }
-
-        /** Answers, as `variables` does, with an expression's value, or the reason it cannot be evaluated. */
-        fun evaluate(command: JsonObject) {
-            val read =
-                debuggers[command["id"].asLong]?.evaluate(
-                    command["frame"].asInt,
-                    command["expression"].asString,
-                    command["hex"].asBoolean,
-                )
-                    ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
-            read.whenComplete { variable, failure ->
-                answer(command) {
-                    if (failure != null) {
-                        addProperty("error", reason(failure))
-                    } else {
-                        add("variable", RunWorkerDebug.variable(state(variable)))
-                    }
-                }
-            }
-        }
-
-        /** Answers, as `evaluate` does, with the variable a change gave a new value, or the reason it is not changed. */
-        fun setVariable(command: JsonObject) {
-            val change =
-                debuggers[command["id"].asLong]?.setVariable(
-                    command["reference"].asInt,
-                    command["name"].asString,
-                    command["expression"].asString,
-                    command["hex"].asBoolean,
-                ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
-            change.whenComplete { variable, failure ->
-                answer(command) {
-                    if (failure != null) {
-                        addProperty("error", reason(failure))
-                    } else {
-                        add("variable", RunWorkerDebug.variable(state(variable)))
-                    }
-                }
-            }
-        }
-
-        /** Answers, as `evaluate` does, with the names that complete the name typed at the offset of the text in the frame. */
-        fun completions(command: JsonObject) {
-            val completion =
-                debuggers[command["id"].asLong]?.completions(
-                    command["frame"].asInt,
-                    command["text"].asString,
-                    command["offset"].asInt,
-                ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
-            completion.whenComplete { completions, failure ->
-                answer(command) {
-                    if (failure != null) {
-                        addProperty("error", reason(failure))
-                    } else {
-                        add(
-                            "completions",
-                            RunWorkerDebug.completions(
-                                CompletionsState(
-                                    completions.start(),
-                                    completions.length(),
-                                    completions.items().map { CompletionState(it.label(), it.kind()) },
-                                ),
-                            ),
-                        )
-                    }
-                }
-            }
-        }
-
-        /**
-         * Answers, as `evaluate` does, with the value of code run on the fiber that waits at the frame, for at most
-         * the request's `limit` in milliseconds, which the server chooses, and with `program`, the whole program
-         * meanwhile.
-         */
-        fun runCode(command: JsonObject) {
-            val run =
-                debuggers[command["id"].asLong]?.run(
-                    command["frame"].asInt,
-                    command["expression"].asString,
-                    command["limit"].asLong.milliseconds.toJavaDuration(),
-                    command["program"].asBoolean,
-                    command["hex"].asBoolean,
-                ) ?: return answer(command) { addProperty("error", NOT_DEBUGGED) }
-            val request = command["request"].asLong
-            running[request] = run
-            run.whenComplete { variable, failure ->
-                running.remove(request)
-                answer(command) {
-                    if (failure != null) {
-                        addProperty("error", reason(failure))
-                    } else {
-                        add("variable", RunWorkerDebug.variable(state(variable)))
-                    }
-                }
-            }
-        }
-
-        /** Ends the code that the `request` of a `runCode` runs, before its limit; it then answers that it was cancelled. */
-        fun cancel(command: JsonObject) {
-            running[command["request"].asLong]?.cancel(false)
-        }
-
-        private fun state(variable: SessionDebugger.Variable) =
-            VariableState(
-                variable.name(),
-                variable.value(),
-                variable.type(),
-                variable.variablesReference(),
-                variable.lazy(),
-                variable.elements(),
-            )
-
-        /** A failed read's reason, as the runtime debugger put it. */
-        private fun reason(failure: Throwable): String {
-            val cause = (failure as? CompletionException)?.cause ?: failure
-            return cause.message ?: cause.toString()
-        }
-
-        /** Answers whether the fiber was stepped; one that does not wait is not, and the program stays stopped. */
-        fun step(command: JsonObject) =
-            reply(command) { debugger ->
-                val step = SessionDebugger.Step.valueOf(command["step"].asString.uppercase())
-                addProperty("stepped", debugger.step(command["thread"].asInt, step))
-            }
-
-        fun stepInTargets(command: JsonObject) =
-            reply(command) { debugger ->
-                val targets = debugger.stepInTargets(command["frame"].asInt).map { StepTargetState(it.id(), it.label()) }
-                add("targets", RunWorkerDebug.stepTargets(targets))
-            }
-
-        fun stepInto(command: JsonObject) =
-            reply(command) { debugger -> addProperty("stepped", debugger.stepInto(command["thread"].asInt, command["target"].asInt)) }
-
-        fun restartFrame(command: JsonObject) =
-            reply(command) { debugger -> addProperty("restarted", debugger.restartFrame(command["frame"].asInt)) }
-
-        fun exceptionStops(command: JsonObject) {
-            val stops = RunWorkerDebug.exceptionsOf(command)
-            debuggers[command["id"].asLong]?.setExceptionStops(stops.all, stops.allTypes, stops.uncaught, stops.uncaughtTypes)
-        }
-
-        /** Answers with the exception the fiber stopped the program at; none when it stopped it for another reason. */
-        fun exceptionInfo(command: JsonObject) =
-            reply(command) { debugger ->
-                debugger.exceptionInfo(command["thread"].asInt)?.let { info ->
-                    add(
-                        "exception",
-                        RunWorkerDebug.exceptionInfo(ExceptionInfoState(info.type(), info.text(), info.stackTrace(), info.uncaught())),
-                    )
-                }
-            }
-
-        fun pause(id: Long) {
-            debuggers[id]?.pause()
-        }
-
-        fun resume(id: Long) {
-            debuggers[id]?.resume()
-        }
-
-        private fun install(
-            debugger: SessionDebugger,
-            source: SourceBreakpoints,
-        ): List<BreakpointState> =
-            debugger
-                .setBreakpoints(
-                    source.path,
-                    source.breakpoints.map { SessionDebugger.Line(it.id, it.line, it.condition, it.hitCondition, it.logMessage) },
-                ).map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
-
-        private fun watch(
-            debugger: SessionDebugger,
-            data: List<DataBreakpointRequest>,
-        ): List<BreakpointState> =
-            debugger
-                .setDataBreakpoints(data.map { SessionDebugger.Data(it.id, it.dataId, it.condition, it.hitCondition) })
-                .map { BreakpointState(it.id(), it.line(), it.verified(), it.message()) }
-
-        private fun install(
-            debugger: SessionDebugger,
-            functions: List<FunctionBreakpointRequest>,
-        ): List<BreakpointState> =
-            debugger
-                .setMethodBreakpoints(functions.map { SessionDebugger.Method(it.id, it.name, it.condition, it.hitCondition) })
-                .map { BreakpointState(it.id(), it.line(), it.verified(), it.message(), it.path()) }
-
-        /** Answers a request for a run's debugger; a run without one, or one that ended, answers with an error. */
-        private fun reply(
-            command: JsonObject,
-            fill: JsonObject.(SessionDebugger) -> Unit,
-        ) {
-            val debugger = debuggers[command["id"].asLong]
-            answer(command) { if (debugger == null) addProperty("error", NOT_DEBUGGED) else fill(debugger) }
-        }
-
-        /** Sends a reply; its content is made first, since asking the debugger must not wait while holding the channel. */
-        private fun answer(
-            command: JsonObject,
-            fill: JsonObject.() -> Unit,
-        ) {
-            val content = JsonObject().apply(fill)
-            channel.send("reply") {
-                addProperty("id", command["id"].asLong)
-                addProperty("request", command["request"].asLong)
-                content.entrySet().forEach { (name, value) -> add(name, value) }
-            }
-        }
+        /** Handles a command to a run's debugger; false when it is not one. */
+        fun debug(command: JsonObject) = debuggers.handle(command)
 
         /**
          * Threads of the runtime's own worker pool, which is fixed in size. Not those in its thread group: a thread that a
@@ -809,7 +431,7 @@ internal data class RunWorkerIdentity(
 
     companion object {
         /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 22
+        const val PROTOCOL = 23
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
