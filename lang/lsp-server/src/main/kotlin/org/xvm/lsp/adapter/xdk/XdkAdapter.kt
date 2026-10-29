@@ -1305,7 +1305,7 @@ class XdkAdapter
 
         /**
          * Atomically replace host-supplied artifacts and retire affected analyses/cursor probes. The
-         * host must reanalyse the returned scopes to publish diagnostics for current document versions;
+         * host must reanalyze the returned scopes to publish diagnostics for current document versions;
          * XtcLanguageServer.replaceCompilerDependencies performs that step under its lock. Failed and
          * pending attempts are conservatively retried because their import set is incomplete.
          */
