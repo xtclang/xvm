@@ -199,6 +199,35 @@ commits of `d3aceb5785` and their 70.
   had that sentence, and then to `51c0b48aed`. errs was force-pushed with a lease from
   `9e5bb58feb`, with this record as its tip.
 
+**#693's CI made green (2026-10-29).** From `d3aceb5785` on, #693's CI failed on a different
+debugger test each run, all of them passing locally: three timing races that only CI's smaller,
+busier runner met. Each has a fix on errs and #693, and CI passes on #693's `37cf6396d9` and on its
+tip `ac19f15d8a` (run 40875614212).
+
+- A step's response after its stop (`EmbeddedExecutionTest`'s step into a call, runs on
+  `51c0b48aed` and `4a5f624b67`): the execution worker resumes the fiber while it builds its answer,
+  so a short step's `stopped` event could go out before the step's response, which DAP sends first.
+  `XtcDebugServer` holds the stops until the response of a step, continue, pause or restart frame is
+  out (errs `4bf6de1185`, #693 `e02a25e6fb`); two new DAP server cases fail without it.
+- An uncaught exception that did not stop (`SessionDebuggerTest`'s uncaught filter on
+  `d3aceb5785`, `EmbeddedExecutionTest`'s uncaught exception on `e02a25e6fb`): the frame walk that
+  decides whether something catches the exception took in the runner's frames. The runner starts
+  the program with an asynchronous invoke inside `try { ... } catch (Exception e)`, and while its
+  fiber had not come back from that call, the walk reached `Task.start` at `runner.x:268`, inside the
+  `try`, as the program's stack trace in CI's output shows; the exception counted as caught. The
+  walk now ends where the host called the program (errs `39630f39f3`, #693 `37cf6396d9`). No test
+  forces that state: a runner made to wait at a synchronous call does not reach it, since the walk
+  skips a waiting fiber's calling frame.
+- A lazy variable's read that failed (`SessionDebuggerTest`'s lazy variables on `652bb6ebd4`, run
+  40870858571): CI's report showed only an `IllegalArgumentException` from `SessionDebugger.fail()`.
+  Confirmed afterwards: holding each lazy run 1.5 s, as a slow machine would, makes the old code fail
+  exactly so, at `SessionDebuggerTest.java:2571` with "sum did not finish within 1 second, so it was
+  ended.", and the new code pass. The code a lazy read runs may take `ON_DEMAND`, one second; a host
+  can now set another limit with `setOnDemandLimit`, and the test gives its ordinary reads its run
+  limit, still checking with `spin` that `ON_DEMAND` ends a getter that does not end (errs
+  `da17e6606f`, #693 `ac19f15d8a`). That commit's message calls the cause the likeliest one; this
+  confirms it.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
