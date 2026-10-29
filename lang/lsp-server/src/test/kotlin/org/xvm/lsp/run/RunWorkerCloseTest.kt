@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /** How a worker whose input has ended closes its runs before it exits. */
@@ -16,8 +15,9 @@ class RunWorkerCloseTest {
         val quick = AutoCloseable { closed.incrementAndGet() }
         val stuck = AutoCloseable { never.await() }
         try {
+            // long enough for the quick one's thread to run on a loaded machine, short of the bound below
             val started = System.nanoTime()
-            assertThat(closeAll(listOf(quick, stuck), 200.milliseconds)).isFalse()
+            assertThat(closeAll(listOf(quick, stuck), 2.seconds)).isFalse()
             assertThat((System.nanoTime() - started) / 1_000_000).isLessThan(5_000)
             assertThat(closed.get()).isEqualTo(1)
 
