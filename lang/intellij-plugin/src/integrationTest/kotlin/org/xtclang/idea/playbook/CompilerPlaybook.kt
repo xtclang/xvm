@@ -191,13 +191,13 @@ class CompilerPlaybook(
                 val changed = open(scenario.consumer)
                 changed.awaitError()
                 awaitUi("consumer owns its type mismatch", 45.seconds) {
-                    receivedDiagnostics(changed).let { items ->
+                    currentDiagnostics(changed)?.let { items ->
                         items.isNotEmpty() &&
                             items.none {
                                 it.code ==
                                     shared.scenarios.getValue(scenario.id).text("diagnosticCode")
                             }
-                    }
+                    } == true
                 }
                 check(
                     cast(changed.document, DocumentVersion::class).getModificationStamp() == version,
@@ -232,14 +232,15 @@ class CompilerPlaybook(
                     editor.text = text
                     val range = offset(text, expected.rangeStart)..offset(text, expected.rangeEnd)
                     awaitUi("compiler diagnostic at shared source span", 45.seconds) {
-                        editor.diagnostics().any {
-                            it.severity == expected.severity &&
-                                it.start in range &&
-                                it.description.contains(expected.messageContains, ignoreCase = true)
-                        }
+                        currentDiagnostics(editor) != null &&
+                            editor.diagnostics().any {
+                                it.severity == expected.severity &&
+                                    it.start in range &&
+                                    it.description.contains(expected.messageContains, ignoreCase = true)
+                            }
                     }
                     awaitUi("compiler diagnostic codes, source, and nonempty ranges", 45.seconds) {
-                        receivedDiagnostics(editor).let { items ->
+                        currentDiagnostics(editor)?.let { items ->
                             items.isNotEmpty() &&
                                 items.all {
                                     it.code?.startsWith(expected.codePrefix) == true &&
@@ -247,7 +248,7 @@ class CompilerPlaybook(
                                         it.start.first > 0 &&
                                         it.start != it.end
                                 }
-                        }
+                        } == true
                     }
                     problems(editor)
                     nextProblem(editor)
@@ -299,22 +300,23 @@ class CompilerPlaybook(
                 val scenario = shared.warning
                 val editor = open(scenario.file)
                 awaitUi("one duplicate-annotation warning", 45.seconds) {
-                    editor.diagnostics().let { values ->
-                        values.size == scenario.count &&
-                            values.all {
-                                it.severity == scenario.severity &&
-                                    it.start == offset(editor.text, scenario.declaration) &&
-                                    it.description.contains(
-                                        scenario.messageContains,
-                                        ignoreCase = true,
-                                    )
-                            }
-                    }
+                    currentDiagnostics(editor) != null &&
+                        editor.diagnostics().let { values ->
+                            values.size == scenario.count &&
+                                values.all {
+                                    it.severity == scenario.severity &&
+                                        it.start == offset(editor.text, scenario.declaration) &&
+                                        it.description.contains(
+                                            scenario.messageContains,
+                                            ignoreCase = true,
+                                        )
+                                }
+                        }
                 }
                 problems(editor)
                 val data = shared.scenarios.getValue(scenario.id)
                 awaitUi("compiler warning metadata", 45.seconds) {
-                    receivedDiagnostics(editor).let { items ->
+                    currentDiagnostics(editor)?.let { items ->
                         items.size == scenario.count &&
                             items.all {
                                 it.code == scenario.code &&
@@ -324,7 +326,7 @@ class CompilerPlaybook(
                                     it.end.second - it.start.second ==
                                     data.values["warningCount"].asInt
                             }
-                    }
+                    } == true
                 }
                 nextProblem(editor)
                 val error = open(data.text("errorFile"))
@@ -343,9 +345,9 @@ class CompilerPlaybook(
                 val restored = open(scenario.file)
                 restored.text = fixtures.getValue(scenario.file)
                 awaitUi("restored compiler warning", 45.seconds) {
-                    receivedDiagnostics(restored).let { items ->
+                    currentDiagnostics(restored)?.let { items ->
                         items.size == scenario.count && items.single().code == scenario.code
-                    }
+                    } == true
                 }
             }
             recoveryStructure()
@@ -782,7 +784,7 @@ class CompilerPlaybook(
                     editor.awaitDiagnostics(emptyList())
                 } else {
                     awaitUi("missing array bracket remains a diagnostic", 30.seconds) {
-                        editor.diagnostics().isNotEmpty()
+                        currentDiagnostics(editor)?.isNotEmpty() == true && editor.diagnostics().isNotEmpty()
                     }
                 }
                 val accepted =
@@ -1237,12 +1239,12 @@ class CompilerPlaybook(
                 data.text("moduleEnd")
             editor.awaitError()
             awaitUi("bounded source diagnostics without an internal compiler failure", 45.seconds) {
-                receivedDiagnostics(editor).let { items ->
+                currentDiagnostics(editor)?.let { items ->
                     items.isNotEmpty() &&
                         items.count { it.severity == "Error" } <=
                         data.values["maximumErrors"].asInt &&
                         items.none { it.code == data.text("diagnosticCode") }
-                }
+                } == true
             }
             problems(editor)
             editor.text = data.text("moduleStart") + data.text("moduleEnd")
@@ -2047,13 +2049,14 @@ class CompilerPlaybook(
             null
         }
 
+    // the editor's diagnostics count once the client holds the server's report for its current text
     private fun JEditorUiComponent.awaitError() {
         awaitUi(
             message = "compiler error in editor",
             timeout = 45.seconds,
             errorMessage = { "Source: $text; editor diagnostics: ${readDiagnostics()}" },
         ) {
-            readDiagnostics()?.any { it.severity == "ERROR" } == true
+            driver.currentDiagnostics(this)?.isNotEmpty() == true && readDiagnostics()?.any { it.severity == "ERROR" } == true
         }
     }
 
@@ -2063,7 +2066,7 @@ class CompilerPlaybook(
             errorMessage = { "Expected $expected; editor diagnostics: ${readDiagnostics()}" },
             timeout = 45.seconds,
         ) {
-            readDiagnostics() == expected
+            driver.currentDiagnostics(this)?.size == expected.size && readDiagnostics() == expected
         }
     }
 }
