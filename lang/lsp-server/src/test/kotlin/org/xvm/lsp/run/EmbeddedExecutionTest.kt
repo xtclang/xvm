@@ -2180,7 +2180,9 @@ class EmbeddedExecutionTest {
             assertThatThrownBy { runs.run(RunParams(module = "Before", runId = "stale")).get(60, SECONDS) }
                 .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
                 .hasRootCauseMessage("Unknown source module: Before")
-            assertThat(client.exits.poll(1, SECONDS)).isNull()
+            // no run is held, so none can exit later
+            assertThat(runs.tracked()).isZero()
+            assertThat(client.exits).isEmpty()
             assertThat(client.output.toString()).doesNotContain("before the rename")
         }
     }
