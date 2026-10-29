@@ -200,7 +200,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * program's other fibers stay where they wait; a time limit, a cancel, or the program's resume or
  * end ends such a run before its code does. An object's fields are followed by lazy variables, its
  * computed properties and its {@code toString()}, whose values take running its code: reading a
- * lazy variable's reference runs that code as such a run, for at most {@link #ON_DEMAND}.
+ * lazy variable's reference runs that code as such a run, for at most {@link #ON_DEMAND}, or the
+ * limit the host sets ({@link #setOnDemandLimit}).
  *
  * <p><b>Breakpoints.</b> A breakpoint is installed by file and line: it stops every fiber that
  * reaches the first op of that line in any method compiled from that file. A file is the module's
@@ -435,6 +436,12 @@ public final class SessionDebugger implements Debugger {
      * The container of the host's own code, which this debugger leaves alone, or null.
      */
     private volatile Container hostContainer;
+
+    /**
+     * How long the code that computes a lazy variable's value may run: {@link #ON_DEMAND}, unless
+     * the host sets another limit with {@link #setOnDemandLimit}.
+     */
+    private volatile Duration onDemand = ON_DEMAND;
 
     /**
      * True once another debugger has replaced this one.
@@ -1042,6 +1049,17 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * Let the code that computes a lazy variable's value run for at most the specified time, in
+     * place of {@link #ON_DEMAND}, such as on a machine slow enough that ordinary getters take
+     * longer. The host may call it at any time; it applies from the next read.
+     *
+     * @param limit  how long the code may run
+     */
+    public void setOnDemandLimit(Duration limit) {
+        onDemand = Objects.requireNonNull(limit);
+    }
+
+    /**
      * Choose which thrown exceptions stop the program, at the frame that throws them, of any
      * class. The host may call it at any time; the choice replaces the one before.
      *
@@ -1239,7 +1257,7 @@ public final class SessionDebugger implements Debugger {
      * {@code toString()} ({@link #TO_STRING}). Reading a lazy variable's reference runs its code, the
      * getter or {@code toString()}, on the waiting fiber, as {@link #run} runs code, so what it
      * changes stays changed and nothing in it stops the program; it may take at most
-     * {@link #ON_DEMAND}. The answer is one variable, named as the lazy one, with the value: a
+     * {@link #ON_DEMAND}, or the limit the host set. The answer is one variable, named as the lazy one, with the value: a
      * property's value as {@link #run} shows it, or the String that {@code toString()} returned, in
      * quotes as other strings are shown. A run
      * that throws, or that does not end in time, fails the read with the reason, such as
@@ -1302,8 +1320,8 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Run the code that computes a lazy variable's value, on the waiting fiber the variable belongs
-     * to, as {@link #run} runs code, for at most {@link #ON_DEMAND}. Called while holding this
-     * debugger's monitor.
+     * to, as {@link #run} runs code, for at most {@link #ON_DEMAND} or the limit the host set.
+     * Called while holding this debugger's monitor.
      *
      * @return the variable with the value, or none if its fiber no longer waits; fails, with the
      *         reason in words, if the code throws or does not end in time. Cancelling it ends the run.
@@ -1315,7 +1333,7 @@ public final class SessionDebugger implements Debugger {
 
         Computed computed = lazy.computed();
         String   name     = computed.property() == null ? TO_STRING : computed.property().getName();
-        Run      request  = new Run(current.stacks.get(lazy.thread()).frame(), name, computed, ON_DEMAND, false, hex,
+        Run      request  = new Run(current.stacks.get(lazy.thread()).frame(), name, computed, onDemand, false, hex,
                 new CompletableFuture<>());
         queue(current, lazy.thread(), request);
 
