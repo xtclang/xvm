@@ -271,6 +271,10 @@ class ParityWorkspace(
 
     fun errors(document: Document) = diagnostics(document) { it.isNotEmpty() }
 
+    /**
+     * Waits until the diagnostics of [document] satisfy [matches]: only the server's report for the document as it is
+     * now counts, not one from before an edit (see [currentDiagnostics]).
+     */
     fun diagnostics(
         document: Document,
         matches: (List<ReceivedDiagnostic>) -> Boolean,
@@ -279,9 +283,13 @@ class ParityWorkspace(
             awaitUi(
                 message = "current diagnostics for $id/${document.file}",
                 timeout = 45.seconds,
-                getter = { receivedDiagnostics(document.editor) },
-                checker = matches,
-            )
+                errorMessage = { shown ->
+                    "Diagnostics of $id/${document.file}: " +
+                        (shown?.toString() ?: "no report for its current text; received ${receivedDiagnostics(document.editor)}")
+                },
+                getter = { currentDiagnostics(document.editor) },
+                checker = { it != null && matches(it) },
+            )!!
         }
 
     fun project(): Document {
