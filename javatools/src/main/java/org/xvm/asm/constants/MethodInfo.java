@@ -1526,14 +1526,7 @@ public class MethodInfo
      * @return the identity of the method to be used by the JIT compiler
      */
     public MethodConstant getJitIdentity() {
-        return getJitIdentity(m_aBody);
-    }
-
-    /**
-     * @return the identity of the method to be used by the JIT compiler
-     */
-    public static MethodConstant getJitIdentity(MethodBody[] aBody) {
-        return getJitIdentity(aBody, 0);
+        return getJitIdentity(m_aBody, 0);
     }
 
     /**

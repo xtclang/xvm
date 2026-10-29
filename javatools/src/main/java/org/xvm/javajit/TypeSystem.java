@@ -21,6 +21,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.builders.AnnotatedBuilder;
 import org.xvm.javajit.builders.CommonBuilder;
 import org.xvm.javajit.builders.EnumBuilder;
 import org.xvm.javajit.builders.EnumValueBuilder;
@@ -433,6 +434,10 @@ public class TypeSystem {
 
         if (Builder.isEmbedded(type.getExplicitClassFormat())) {
             return new PureBuilder(this, art);
+        }
+
+        if (type.isAnnotated()) {
+            return new AnnotatedBuilder(this, art);
         }
 
         if (type.isA(pool.typeModule())) {

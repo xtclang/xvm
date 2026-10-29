@@ -106,6 +106,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 
+import static org.xvm.javajit.TypeSystem.AT;
 import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 
 import static org.xvm.util.Handy.lazyAdd;
@@ -511,6 +512,17 @@ public abstract class TypeConstant
      */
     public boolean isAnnotated() {
         return isModifyingType() && getUnderlyingType().isAnnotated();
+    }
+
+    /**
+     * Remove this type's annotations, preserving other modifiers and type parameters.
+     *
+     * @return this TypeConstant without annotations
+     */
+    public TypeConstant removeAnnotations() {
+        return isAnnotated()
+                ? replaceUnderlying(getConstantPool(), TypeConstant::removeAnnotations)
+                : this;
     }
 
     /**
@@ -5846,9 +5858,13 @@ public abstract class TypeConstant
             Constant[]      args = annotation.getParams();
             MethodStructure ctor = infoMixin.getClassStructure().findConstructor(args, typeTarget);
             if (ctor == null) {
-                log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                        annotation.getValueString(),
-                        typeTarget.getValueString());
+                // annotation arguments may have been stripped for type analysis; without them,
+                // constructor-dependent property defaults are unknown
+                if (args.length > 0) {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            annotation.getValueString(),
+                            typeTarget.getValueString());
+                }
             } else {
                 mapDefaults = new HashMap<>();
                 ctor.collectDefaultParams(args, mapDefaults);
@@ -7272,7 +7288,8 @@ public abstract class TypeConstant
      * @see "doc/jit_class_names.txt"
      */
     public String getJitCCName(TypeSystem ts) {
-        TypeConstant type = getJitCCType();
+        // annotated references use the underlying callable contract, not their allocation class
+        TypeConstant type = getJitCCType().removeAnnotations();
         String       name = type.ensureJitName(ts);
 
         // derived virtual child classes use their pure interface for all virtual calls
@@ -7319,6 +7336,22 @@ public abstract class TypeConstant
     }
 
     protected synchronized String buildJitClassName(TypeSystem ts, ModuleLoader loader) {
+        if (isAnnotated()) {
+            StringBuilder sb       = new StringBuilder();
+            TypeConstant  typeBase = this;
+
+            while (typeBase instanceof AnnotatedTypeConstant typeAnno) {
+                sb.append('$').append(typeAnno.getAnnotationClass().getName());
+                typeBase = typeAnno.getUnderlyingType();
+            }
+            sb.append('$').append(typeBase.getSingleUnderlyingClass(true).getName());
+
+            // the suffix fully identifies the type; names are for diagnostic only
+            TypeSystem.appendJitSuffix(sb,
+                    loader.module.getConstantPool().register(this).getPosition());
+            return loader.prefix + AT + TypeSystem.escapeJitName(sb.substring(1), true);
+        }
+
         String name = ts.xvm.nativeTypeSystem.getReservedName(this);
         if (name != null) {
             return name;
@@ -7405,6 +7438,14 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff the Java class can represent different Ecstasy types and each instance must
+     *         retain its actual Ecstasy type
+     */
+    public boolean hasJitRuntimeType() {
+        return isAnnotated() || ensureTypeInfo().hasGenericTypes();
+    }
+
+    /**
      * An Ecstasy type is called "layer two specializable" iff:
      * <ul>
      *   <li>it is parameterized (has generic types); and</li>
@@ -7462,12 +7503,13 @@ public abstract class TypeConstant
      *         requires a "checkcast"
      */
     public boolean isJitAssignableTo(TypeConstant that) {
-        TypeConstant typeThatJit = that.getJitCCType();
+        // annotations are not part of the widened receiver's Java class hierarchy
+        TypeConstant typeThisJit = getJitCCType().removeAnnotations();
+        TypeConstant typeThatJit = that.getJitCCType().removeAnnotations();
+
         if (typeThatJit.equals(getConstantPool().typeObject())) {
             return true;
         }
-
-        TypeConstant typeThisJit = getJitCCType();
 
         // D_iC1 is an interface even though its instances extend the hard-left B_C0;
         // assigning that interface reference to B_C0 still requires a Java checkcast
@@ -7478,12 +7520,15 @@ public abstract class TypeConstant
         // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
         // Ecstasy: M --into--> C, so M.isA(C), but
         // Java:    C --implements--> M, so M -> C requires a checkcast
-        boolean fMixinCast =
-                typeThisJit.getExplicitClassFormat() == Component.Format.MIXIN &&
+        //
+        // likewise, for an annotation A into C:
+        // Ecstasy: A --into--> C, so A.isA(C), but
+        // Java:    JCC(A) is not a subtype of JCC(C); A -> C requires a checkcast
+        boolean fIntoCast = Builder.isEmbedded(typeThisJit.getExplicitClassFormat()) &&
                 typeThisJit.getExplicitClassInto(true).isA(typeThatJit);
 
-        return typeThisJit.equals(typeThatJit) || !fMixinCast &&
-                !isJitL2Specialized() && typeThisJit.isA(typeThatJit);
+        return typeThisJit.equals(typeThatJit) || !fIntoCast &&
+                !typeThisJit.isJitL2Specialized() && typeThisJit.isA(typeThatJit);
     }
 
     /**

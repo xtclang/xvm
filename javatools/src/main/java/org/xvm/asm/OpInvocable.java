@@ -453,6 +453,16 @@ public abstract class OpInvocable extends Op {
         TypeConstant typeInvoke = typeTarget;
         ClassDesc    cdInvoke   = cdTarget;
 
+        if (typeTarget.getJitCCType().isAnnotated()) {
+            // annotated targets are widened; dispatch through the declaring callable contract
+            typeInvoke = bodyHead.resolveDeclaringType(bctx.pool(), typeTarget);
+            cdInvoke   = bctx.builder.getCCDesc(typeInvoke);
+            if (!cdInvoke.equals(cdTarget)) {
+                code.checkcast(cdInvoke);
+            }
+            infoTarget = bctx.getTypeInfo(typeInvoke);
+        }
+
         if (bodyHead.getImplementation() == Implementation.FromInto) {
             TypeConstant typeOwner = bctx.getConstant(m_nMethodId, MethodConstant.class).
                     getNamespace().getType();
@@ -525,7 +535,7 @@ public abstract class OpInvocable extends Op {
         } else if (fPrimitive) {
             cdInvoke = typeInvoke.getJitCCDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
-        } else if (infoTarget.getType().isJitCCInterface()) {
+        } else if (typeInvoke.isJitCCInterface()) {
             code.invokeinterface(typeInvoke.isDerivedVirtualChildClass()
                     ? typeInvoke.getJitCCDesc(bctx.typeSystem) : cdInvoke, methodName, md);
         } else {

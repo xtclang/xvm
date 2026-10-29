@@ -7,6 +7,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.List;
+
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.CastTypeConstant;
@@ -218,9 +220,8 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void assembleNew(
-            ClassBuilder classBuilder,
-            MethodInfo constructor, String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         // all constructors are native
     }
 

@@ -287,17 +287,15 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleNew(
-            ClassBuilder classBuilder, MethodInfo constructor,
-            String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         MethodModel mm = jmd.isOptimized
                 ? findMethod(jitName + OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
 
-        if (mm != null) {
-            return;
+        if (mm == null) {
+            super.assembleNew(classBuilder, constructor, jitName, jmd, annoConstructors);
         }
-        super.assembleNew(classBuilder, constructor, jitName, jmd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------

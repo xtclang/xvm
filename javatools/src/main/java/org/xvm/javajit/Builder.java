@@ -30,6 +30,7 @@ import org.xvm.asm.constants.*;
 import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
+import org.xvm.javajit.builders.AnnotatedBuilder;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
@@ -240,7 +241,13 @@ public abstract class Builder {
                     break;
                 }
 
-                case Implements, Incorporates:
+                case Into:
+                    if (isInterface && contribType.isJitCCInterface()) {
+                        interfaces.add(getCCDesc(contribType));
+                    }
+                    break;
+
+                case Annotation, Implements, Incorporates:
                     interfaces.add(getCCDesc(contribType));
                     break;
             }
@@ -1230,7 +1237,7 @@ public abstract class Builder {
 
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
-            typeOwner = jitInfo.getOwnerType(this, typeContainer);
+            typeOwner = jitInfo.getCallableOwnerType(this, typeContainer);
             typeOwner = typeOwner.getJitCCType();
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
@@ -2111,7 +2118,7 @@ public abstract class Builder {
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        boolean        hasType          = typeInfo.hasGenericTypes();
+        boolean        hasType          = typeInfo.getType().hasJitRuntimeType();
         boolean        hasOuter         = typeInfo.getClassStructure().isInstanceChild();
         return hasType || hasOuter
             ? new JitCtorDesc(typeInfo.getType(),
@@ -2235,16 +2242,26 @@ public abstract class Builder {
             instorMD = convertConstructToNew(targetInfo, targetCD,
                         (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
+            JitMethodDesc callMD = instorMD;
+            if (targetType.isAnnotated()) {
+                assert bctx  != null : "Out of context";
+
+                JitCallDesc call = AnnotatedBuilder.getInstantiatorCall(
+                        bctx, targetType, instorName, (JitCtorDesc) instorMD);
+                instorName = call.name();
+                callMD     = call.jmd();
+            }
+
             MethodTypeDesc md;
-            if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
+            if (callMD.isOptimized) {
+                md          = callMD.optimizedMD;
                 instorName += Builder.OPT;
             } else {
-                md = instorMD.standardMD;
+                md = callMD.standardMD;
             }
 
             code.aload(ctxSlot);
-            if (targetInfo.hasGenericTypes()) {
+            if (targetType.hasJitRuntimeType()) {
                 loadTypeConstant(bctx, code, targetType);
             }
             if (outer != null) {
@@ -2254,7 +2271,11 @@ public abstract class Builder {
                 }
             }
             argsLoader.accept(instorMD);
+            if (targetType.isAnnotated()) {
+                AnnotatedBuilder.loadAnnotationConstructorArgs(bctx, code, targetType);
+            }
             code.invokestatic(targetCD, instorName, md);
+            instorMD = callMD;
         }
         return instorMD;
     }
