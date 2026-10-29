@@ -7758,15 +7758,15 @@
       }
     },
     "X237": {
-      "title": "refuse deleting a public API with unknown external consumers",
+      "title": "refuse deleting a module's public method, which can be a run's entry point",
       "manual": [
-        "Select unused and inspect Safely delete private member 'unused'. Verify refusal and unchanged sources."
+        "Select unused and inspect Safely delete member 'unused', unused in Extract. Verify refusal and unchanged sources."
       ],
       "values": {
         "file": "Extract.x",
         "source": "module Extract {\n    Int unused(Int input) { return input + kept(); }\n    Int kept() = 2;\n    Int read() { return kept(); }\n}",
         "selected": "unused",
-        "title": "Safely delete private member 'unused'",
+        "title": "Safely delete member 'unused', unused in Extract",
         "expected": "module Extract {\n    Int unused(Int input) { return input + kept(); }\n    Int kept() = 2;\n    Int read() { return kept(); }\n}",
         "refused": true
       },
@@ -10268,6 +10268,23 @@
         "title": "Inline and remove constant property 'amount'",
         "expected": "module Extract {\n    private static Int amount = 1 + 2;\n    Int read() { function Int() f = () -> amount; return amount + f(); }\n}",
         "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X334": {
+      "title": "safely delete an unused public method of a class, naming the modules that were checked",
+      "manual": [
+        "Select unused and inspect Safely delete member 'unused', unused in Extract. Apply it, inspect exact text and diagnostics, then Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box {\n        Int unused(Int input) { return input + kept(); }\n        Int kept() = 2;\n    }\n    Int read() = new Box().kept();\n}",
+        "selected": "unused",
+        "title": "Safely delete member 'unused', unused in Extract",
+        "expected": "module Extract {\n    class Box {\n        Int kept() = 2;\n    }\n    Int read() = new Box().kept();\n}"
       },
       "intellij": {
         "coverage": "full",
