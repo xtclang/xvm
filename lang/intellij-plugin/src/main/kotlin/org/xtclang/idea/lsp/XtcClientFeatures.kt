@@ -3,6 +3,7 @@ package org.xtclang.idea.lsp
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.psi.PsiFile
+import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
 import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
@@ -114,11 +115,19 @@ class XtcClientFeatures : LSPClientFeatures() {
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
             private val documents =
-                DocumentStartupMessages(::snapshot).also {
+                DocumentStartupMessages(::snapshot, ::reached).also {
                     this@XtcClientFeatures.documents.set(it)
                 }
             private val diagnostics = DiagnosticResultMessages(::snapshot)
             private val pending = PendingRequests()
+
+            // TODO LSP4IJ: UP09 — 0.21.0 keeps the version a document synchronizer has reached
+            // package-private. Reflect only this getter, never the synchronizer's fields.
+            private val synchronizerVersion by lazy {
+                DocumentContentSynchronizer::class.java
+                    .getDeclaredMethod("getVersion")
+                    .apply { check(trySetAccessible()) { "LSP4IJ document version is inaccessible" } }
+            }
 
             @Suppress("UNCHECKED_CAST") // LSP4J's multiple-interface proxy factory returns Object.
             override fun createProxy(remoteEndpoint: RemoteEndpoint): S {
@@ -144,6 +153,12 @@ class XtcClientFeatures : LSPClientFeatures() {
                     document.modificationStamp,
                     document.immutableCharSequence.toString(),
                 )
+            }
+
+            private fun reached(uri: String): Int? {
+                if (project.isDisposed || serverWrapper.isDisposed) return null
+                val synchronizer = serverWrapper.getOpenedDocument(URI(uri))?.synchronizer ?: return null
+                return synchronizerVersion.invoke(synchronizer) as Int
             }
 
             override fun createMessageProducer(
