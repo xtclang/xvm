@@ -1,7 +1,12 @@
 # Integrating the embedding diagnostics work
 
-Latest full-catalog checkpoint: [October 7 acceptance](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)
-covers all 284 shared cases: IntelliJ 282 passed/two partial in one uninterrupted process;
+Latest full-catalog runs (2026-10-28), of all 333 cases: VS Code `run-Pc161s` at `5e6a0f2391`, 332
+passed and X218 failed on UP23, in one window; IntelliJ with LSP4IJ 0.21.0
+`run-17527198196716738382` at `c2a9b296d5`, 310 passed, 15 partial as the catalog declares and 8 not
+implemented there, with X283 failing once to stray keystrokes. On 2026-10-29, with
+`vscode-languageclient` 11.0.0, VS Code passed 332 again, X218 failing. The earlier checkpoint,
+[October 7 acceptance](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07), covered all 284
+shared cases then: IntelliJ 282 passed/two partial in one uninterrupted process;
 VS Code 281 passed/three failed across the full attempt and recorded continuations. UP16/UP23
 remain host failures; X273 exposed an experimental color-picker refresh failure (the prototype
 and X273–X275 were [removed on 2026-10-21](#l77-color-prototype-removed-2026-10-21)). The earlier
@@ -1807,10 +1812,11 @@ debugger (R7) stops, steps and evaluates in both editors.
 
 Current native automation inventory (2026-10-27): the shared catalog,
 `lang/test-fixtures/compiler-playbook/scenarios.json`, has **333 cases**: X1–X331 except the retired
-X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog run is the
-[October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07); the cases
-added since, among them the embedded run cases above, have selected native receipts recorded with
-their features. The earlier 113- and 128-case inventories, and the
+X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog runs are those of
+2026-10-28 named at the top of this plan; before them, the
+[October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07). The cases
+added between those, among them the embedded run cases above, also have selected native receipts
+recorded with their features. The earlier 113- and 128-case inventories, and the
 [native demo continuation](#native-intellij-demo-continuation-2026-09-29), are historical.
 Completion still requires explicit evidence per feature; neither 24 capability flags nor a selected
 passing playbook is a percentage of total LSP completeness.
