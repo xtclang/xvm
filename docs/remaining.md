@@ -87,24 +87,35 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Test harness stability
 
-- [ ] X259 fails with LSP4IJ 0.21.0 at its last step: once the library is back to `Int`, the
-  consumer's hints don't follow (`run-1660337404068710181`, twice); it passes with the nightly
-  (`run-481780523334095669`). It then passed in both full 0.21.0 runs of 2026-10-28
-  (`run-7875402505096583343`, `run-17527198196716738382`), so it is intermittent; find the race.
-- [ ] X74 and X150 each stopped a full IntelliJ run, with the nightly, and pass alone with both
-  LSP4IJs: X150's popup inspection saw the source change under it ("Before: cl; now: clhis lo").
-  Both passed in the three full IntelliJ runs of 2026-10-28.
-- [ ] X257 and X324 failed only in the full nightly run of 2026-10-28 (`run-793652569316991787`).
-  X257 (the UP26 gate) found no Invoked inline completion request for its document in the LSP
-  console, though the alternative showed; it passes alone (`run-266543211336496817`). X324's library
-  frame had no source position, though the read-only copy of `Collection.x` it named was written
-  36 s before; it passes alone, after X323, and after X304-X322 (`run-6424025512923475166`).
+- [x] X259 failed with LSP4IJ 0.21.0 at its last step (2026-10-29, `41c6acc221`, `2be4a17414`,
+  `6949564dba`). A restart that disposed the library's document synchronizer while LSP4IJ still
+  held its change until the PSI commit let the old synchronizer send that change, numbered after
+  its own versions, through the new connection; UP09's bridge forwarded it as the reopened
+  document's v2 and then dropped the real v2. The bridge now drops a change numbered above what
+  the document's current synchronizer has reached (UP09), the case waits for LSP4IJ to reopen the
+  consumer, and it flushes the library's edit before the restart, since 0.21.0 still logs an IDE
+  error for the late send. In a Linux container it failed 2 of 3 without the check and passed 4
+  of 4 with all three; on macOS X74, X259 and X324 pass with them (`run-3574220030596104685`).
+- [x] X74 and X150 each stopped a full IntelliJ run (2026-10-29, `ed4d091919`). X74: IntelliJ drops an
+  editor hint while the IDE is not the active application, and the harness reopened the popup only
+  when a poll saw the IDE unfocused; it now counts the IDE's deactivations, and reopens after any.
+  That the IDE was deactivated then is inferred. X150 needs no fix: keystrokes typed elsewhere
+  ("his lo") reached the test IDE, as in X283.
+- [x] X257 and X324 failed only in the full nightly run of 2026-10-28 (2026-10-29, `e077e44cb4`,
+  `e18c34a93b`). X257's check read the LSP console once, about 130 ms after the request, while
+  LSP4IJ moves its trace there 500 ms after a message; it now waits. X324: LSP4IJ's `DAPStackFrame`
+  finds a frame's file with `findFileByPath`, which never refreshes, and keeps the null, so a library
+  copy in a folder made after the VFS listed its parent has no source (UP65). The debug process
+  handler now refreshes, before a `stackTrace` response goes on, the nearest folder above each
+  unknown frame file; with the parent listed first, X324 failed 4 of 6 without it and passed 5 of 5.
+  What listed the temporary folder in the full run is not known.
 - [ ] X312 failed once, in the full run on the 0.30.0 branch (`run-11663425380226624296`,
   2026-10-28): the program stopped at the exception its filter names, but no exception hint showed
-  in 30 s, and no hint label was showing at all. It passed in the 70-case run before
-  (`run-6838369535683503954`) and in the rerun after (`run-10037495088984883693`). LSP4IJ shows the
-  hint in the first editor of the stop's file 1 s after `exceptionInfo` answers, or after 1 s
-  without an answer, and hides it for another hint or Escape; which step failed is unknown.
+  in 30 s. LSP4IJ shows the hint once, and IntelliJ drops an editor hint while the IDE is not the
+  active application; the failure's screenshot, and X307's of 2026-10-26, have Safari in front.
+  Choose: make the IDE active before a debug session (more focus taken), say in the failure that
+  the IDE was not active, or run the native playbooks in a Linux container on Xvfb, where nothing
+  else takes the focus.
 - [x] The server never deleted its `xtc-library-sources-*` temporary directories
   (`XdkLibrarySources`); 2,068 had piled up by 2026-10-28. A JVM shutdown hook now deletes the
   directory when the server exits (`4cf5450acd`; `LibraryCopiesCleanupTest` in compilerStdioTest).
@@ -127,7 +138,9 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   the 79 cases that ran before it in `run-8615971651239916856`: X105 passes on the current code, with
   the UP07 equal-report bridge off (`run-1679585523095307991`), and with that bridge off and fixture
   files opened before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Not
-  reproduced; the trigger is still unknown.
+  reproduced; the trigger is still unknown. The 2026-10-02 run's logs were pruned on 2026-10-06; the
+  likeliest cause, an intention request reopened at a moved caret, was fixed on 2026-10-05
+  (`84855993e6`, `549a5edd02`), and X105 has passed the 21 runs it took part in since.
 - [x] The opt-in IntelliJ `projectLifecycle` check failed most runs, at "closed project's pending
   reply retires" or at "Close must overlap a pending native request"; it also failed on
   `ef1491a6c`, before the R6–R7 work (`run-15132038242161374573`). Fixed in `3813e27a9`: requests
@@ -688,6 +701,14 @@ passes with the workaround disabled. The gates are in
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
+
+### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): not filed
+
+- [ ] UP65 (2026-10-29): LSP4IJ's `DAPStackFrame` finds a frame's file with
+  `LocalFileSystem.findFileByPath`, which never refreshes, and keeps the null, so a file in a
+  folder made after the VFS listed its parent has no source. The debug process handler refreshes
+  the nearest known folder before a `stackTrace` response goes on (X324). To do: file it, with a
+  lookup that refreshes, as `refreshAndFindFileByPath` does, off the EDT.
 
 ### LSP4IJ: an attach cannot use the adapter's own process (UP64): not filed
 
