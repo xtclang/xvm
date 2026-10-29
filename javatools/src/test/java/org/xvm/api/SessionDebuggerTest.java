@@ -151,6 +151,25 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module whose run() prints "spinning" and then loops on lines 7 to 9 forever, printing "tick N"
+     * every 100,000 rounds.
+     */
+    private static final String TICKS = """
+            module Ticks {
+                void run() {
+                    @Inject Console console;
+                    console.print("spinning");
+                    Int count = 0;
+                    while (True) {
+                        if (++count % 100_000 == 0) {
+                            console.print($"tick {count / 100_000}");
+                        }
+                    }
+                }
+            }
+            """;
+
+    /**
      * A module whose run() catches the IllegalState that check() throws on line 14 and prints
      * "caught", then calls check() again, which throws an IllegalArgument on line 16 that nothing
      * catches.
@@ -1644,11 +1663,11 @@ public class SessionDebuggerTest {
 
     @Test
     public void pauseStopsARunningProgramAtTheNextLineItReaches() throws Exception {
-        compile("Spins", SPINS);
+        compile("Ticks", TICKS);
         Stops        stops   = new Stops();
         var          session = new SessionDebugger(stops);
         StringWriter output  = new StringWriter();
-        Control      control = run("Spins", output, session);
+        Control      control = run("Ticks", output, session);
         try (control) {
             assertTimeoutPreemptively(RUN_LIMIT, () -> {
                 while (!output.toString().contains("spinning")) {
@@ -1659,13 +1678,19 @@ public class SessionDebuggerTest {
             Stop stop = stops.next();
             assertEquals("pause", stop.reason());
             StackFrameInfo top = session.stackTrace(stop.threadId()).getFirst();
-            assertEquals("Spins.run", top.name());
-            assertTrue(top.line() == 6 || top.line() == 7, "stopped in the loop: " + top.line());
+            assertEquals("Ticks.run", top.name());
+            assertTrue(top.line() >= 7 && top.line() <= 9, "stopped in the loop: " + top.line());
 
-            // a pause while stopped does nothing: the program runs on after it resumes
+            // a pause while stopped does nothing: the program runs on after it resumes, as a tick
+            // it prints after the resume shows, which a pause still pending would have stopped first
             session.pause();
+            int ticks = ticks(output);
             session.resume();
-            Thread.sleep(300);
+            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+                while (ticks(output) <= ticks) {
+                    Thread.sleep(10);
+                }
+            });
             assertEquals(null, stops.poll());
             assertFalse(session.isStopped());
         }
@@ -2305,15 +2330,20 @@ public class SessionDebuggerTest {
             assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(line));
             CompletableFuture<List<Variable>> vars   = session.variables(locals);
             CompletableFuture<Variable>       second = session.run(twice, "n + 1", RUN_LIMIT);
-            Thread.sleep(200);
-            assertFalse(line.isDone(), () -> "answered first: " + answer(line));
-            assertFalse(vars.isDone());
-            assertFalse(second.isDone(), () -> "answered first: " + answer(second));
+            // the run cannot answer before its line is typed, so a read or a run that did not wait
+            // for it would answer first
+            List<String>           answered = new CopyOnWriteArrayList<>();
+            CompletableFuture<?>[] answers  = {
+                    line.whenComplete((_, _) -> answered.add("line")),
+                    vars.whenComplete((_, _) -> answered.add("variables")),
+                    second.whenComplete((_, _) -> answered.add("second"))};
 
             lines.add("typed");
             assertEquals("typed", line.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
             assertEquals("21", byName(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS)).get("n").value());
             assertEquals("22", second.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            CompletableFuture.allOf(answers).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+            assertEquals(List.of("line", "variables", "second"), answered);
 
             // a run that the program's resume finds in progress ends at once; its code, which waits
             // for input, unwinds once it has its line, and the program then goes on
@@ -2678,6 +2708,13 @@ public class SessionDebuggerTest {
         assertTrue(support.compile(file.toFile(), null, new DirRepository(outputDir.toFile(), false), errs),
                 () -> "compile failed: " + errs.getErrors());
         return file;
+    }
+
+    /**
+     * @return how many ticks the Ticks module has printed so far
+     */
+    private static int ticks(StringWriter output) {
+        return output.toString().split("tick ", -1).length - 1;
     }
 
     /**
