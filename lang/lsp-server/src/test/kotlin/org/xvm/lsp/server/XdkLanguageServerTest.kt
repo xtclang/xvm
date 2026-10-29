@@ -36,6 +36,7 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -208,6 +209,11 @@ class XdkLanguageServerTest {
             val result =
                 object : CompletableFuture<CompilationResult>() {
                     override fun cancel(mayInterruptIfRunning: Boolean): Boolean = false
+
+                    // The server publishes an analysis in an asynchronous stage of this future. Running
+                    // that stage on the completing thread makes finish() and fail() return after any
+                    // publication they cause, so a test that finds none knows that none was made.
+                    override fun defaultExecutor(): Executor = Executor(Runnable::run)
                 }
             pending.add(Pending(uri, content, result))
             return result
