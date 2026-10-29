@@ -661,11 +661,11 @@ public abstract class TypeConstant
      * Replace this VirtualChild's parent with the specified parent type.
      *
      * <p>Consider the following class inheritance diagram:
-     * <pre>
-     *    B.C0 &lt;- D.C0
+     * <pre>{@code
+     *    B.C0 <- D.C0
      *     ^
-     *    B.C1 &lt;- D.C1
-     * </pre>
+     *    B.C1 <- D.C1
+     * }</pre>
      *
      * <p>When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
      * resulting type need to "retain" the origin parent type. That retained parent type is then
@@ -8077,7 +8077,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * Compare for order (&lt;=&gt;) two object handles that both belong to this type.
+     * Compare for order ({@code <=>}) two object handles that both belong to this type.
      *
      * @param frame    the frame
      * @param hValue1  the first handle

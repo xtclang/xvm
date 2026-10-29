@@ -114,7 +114,7 @@ public abstract class ConditionalConstant
     /**
      * Determine the set of terminal conditions that make up this ConditionalConstant.
      *
-     * @param terminals  a set of terminals that are referenced by this ConditionalConstant
+     * @param terminals  a set to collect the terminals into
      */
     protected void collectTerminals(Set<ConditionalConstant> terminals) {
         assert isTerminal();
