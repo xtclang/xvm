@@ -114,6 +114,133 @@ class XdkMemberInlineTest {
         )
     }
 
+    @Test
+    fun `every call of a private method is inlined and the method removed`() {
+        everyUse(
+            """
+            module Inline {
+                Int stored = 3;
+                private Int helper() { return stored + 1; }
+                Int read() { return 2 * §helper(); }
+                Int twice() = helper() + helper();
+            }
+            """.trimIndent(),
+            "Inline and remove private method 'helper'",
+            """
+            module Inline {
+                Int stored = 3;
+                Int read() { return 2 * (stored + 1); }
+                Int twice() = (stored + 1) + (stored + 1);
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `every read of a constant is inlined and the constant removed, also from its declaration`() {
+        everyUse(
+            """
+            module Inline {
+                private static Int §amount = 1 + 2;
+                Int read() { return 2 * amount; }
+                Int more() = amount + amount;
+            }
+            """.trimIndent(),
+            "Inline and remove constant property 'amount'",
+            """
+            module Inline {
+                Int read() { return 2 * (1 + 2); }
+                Int more() = (1 + 2) + (1 + 2);
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `a member with one use is inlined and removed`() {
+        everyUse(
+            """
+            module Inline {
+                private Int helper() { return 7; }
+                Int read() = §helper();
+            }
+            """.trimIndent(),
+            "Inline and remove private method 'helper'",
+            """
+            module Inline {
+                Int read() = (7);
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            // a use in a lambda can have another receiver or captures
+            "Int read() { function Int() f = () -> helper(); return §helper() + f(); }",
+            // a method value is not a call that a copy can replace
+            "Int read() { function Int() f = helper; return §helper() + f(); }",
+            // the expression names a parameter of the caller's
+            "Int read(Int stored) = §helper();",
+        ],
+    )
+    fun `members with a use that a copy cannot replace stay unchanged`(uses: String) {
+        everyUse(
+            """
+            module Inline {
+                Int stored = 3;
+                private Int helper() { return stored; }
+                $uses
+            }
+            """.trimIndent(),
+            "Inline and remove private method 'helper'",
+            null,
+        )
+    }
+
+    /** Applies the selected action's every edit and compares the whole result. */
+    private fun everyUse(
+        marked: String,
+        title: String,
+        expected: String?,
+    ) {
+        CompilerTestSupport.configure()
+        val text = marked.replace("§", "")
+        val file =
+            directory
+                .resolve("Inline.x")
+                .toFile()
+                .canonicalFile
+                .apply { writeText(text) }
+        val uri = file.toURI().toString()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            val at = XdkRename.position(text, marked.indexOf('§'))
+            val actions = adapter.getCodeActions(uri, Range(at, at), emptyList()).filter { it.title == title }
+            if (expected == null) {
+                assertThat(actions).isEmpty()
+            } else {
+                assertThat(actions).hasSize(1)
+                val edit = requireNotNull(actions.single().edit)
+                assertThat(edit.versioned).isTrue()
+
+                fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
+                val changed =
+                    edit.changes
+                        .getValue(uri)
+                        .sortedByDescending { offset(it.range.start) }
+                        .fold(
+                            text,
+                        ) { value, change -> value.replaceRange(offset(change.range.start), offset(change.range.end), change.newText) }
+                assertThat(changed).isEqualTo(expected)
+                assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            }
+            assertThat(file.readText()).isEqualTo(text)
+        }
+    }
+
     private fun query(
         marked: String,
         title: String,

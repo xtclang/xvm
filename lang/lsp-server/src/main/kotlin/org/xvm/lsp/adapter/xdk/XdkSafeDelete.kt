@@ -6,6 +6,7 @@ import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
+import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
@@ -61,15 +62,7 @@ internal object XdkSafeDelete {
             } ?: return null
         if (parents[parents[member]] !is TypeCompositionStatement) return null
         if (XdkRefactoringSyntax.tree(member).any { (node, _) -> node is AnnotationExpression }) return null
-        val start = XdkRename.offset(text, at(member.startPosition)) ?: return null
-        val end = XdkRename.offset(text, at(member.endPosition)) ?: return null
-        val terminator = Regex("[ \t]*;").find(text, end)?.takeIf { it.range.first == end }
-        val syntaxEnd = terminator?.range?.last?.plus(1) ?: end
-        val tokens =
-            ExecutionTrace.api("Lexer.lex(safe-delete)") {
-                Lexer(Source(text.substring(start, syntaxEnd)), errors).asSequence().toList()
-            }
-        if (errors.hasSeriousErrors() || tokens.any { it.id in setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT) }) return null
+        val edit = removal(text, member) ?: return null
         val members = SemanticModel.Range(at(member.startPosition), at(member.endPosition))
 
         fun inside(
@@ -92,14 +85,34 @@ internal object XdkSafeDelete {
                     view.occurrences.map { it.range } + view.calls.map { it.callee }
                 }.filter { inside(source, it) }
                 .mapTo(linkedSetOf()) { SemanticModel.SourceLocation(source, it) }
+        return Candidate(symbol.name, identity, edit, removed)
+    }
+
+    /**
+     * Removes a member's declaration, with its `;`, and with its line when nothing else is on it; null when a comment
+     * in it would go too.
+     */
+    fun removal(
+        text: String,
+        member: AstNode,
+    ): XdkRename.Edit? {
+        fun at(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
+        val start = XdkRename.offset(text, at(member.startPosition)) ?: return null
+        val end = XdkRename.offset(text, at(member.endPosition)) ?: return null
+        val terminator = Regex("[ \t]*;").find(text, end)?.takeIf { it.range.first == end }
+        val syntaxEnd = terminator?.range?.last?.plus(1) ?: end
+        val errors = ErrorList()
+        val tokens =
+            ExecutionTrace.api("Lexer.lex(safe-delete)") {
+                Lexer(Source(text.substring(start, syntaxEnd)), errors).asSequence().toList()
+            }
+        if (errors.hasSeriousErrors() || tokens.any { it.id in setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT) }) return null
         val lineStart = maxOf(text.lastIndexOf('\n', start - 1), text.lastIndexOf('\r', start - 1)) + 1
         val lineEnd = Regex("[ \t]*(?:\r\n|\r|\n)").find(text, syntaxEnd)?.takeIf { it.range.first == syntaxEnd }
-        val edit =
-            if (text.substring(lineStart, start).isBlank() && lineEnd != null) {
-                XdkRename.Edit(lineStart, lineEnd.range.last + 1, "")
-            } else {
-                XdkRename.Edit(start, syntaxEnd, "")
-            }
-        return Candidate(symbol.name, identity, edit, removed)
+        return if (text.substring(lineStart, start).isBlank() && lineEnd != null) {
+            XdkRename.Edit(lineStart, lineEnd.range.last + 1, "")
+        } else {
+            XdkRename.Edit(start, syntaxEnd, "")
+        }
     }
 }
