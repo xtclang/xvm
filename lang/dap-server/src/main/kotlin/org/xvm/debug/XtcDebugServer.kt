@@ -128,7 +128,9 @@ import kotlin.time.Duration.Companion.seconds
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
  * session's transport or the server itself goes away. A line typed in the client's debug console while the program
- * runs is the program's console input.
+ * runs is the program's console input. A session that attaches instead, to a program the launcher runs with
+ * `--debug`, does not own it: terminating or disconnecting detaches, the program runs on without the session's
+ * breakpoints, and the session ends with `terminated`; the program's own exit ends it as a launched one's does.
  *
  * [afterResponse] runs a task after the message being handled has been answered, which is when the `initialized`
  * event may be sent.
@@ -620,10 +622,55 @@ class XtcDebugServer(
             }
     }
 
-    /** DAP: attach. A session launches its program; there is nothing to attach to. */
+    /**
+     * DAP: attach
+     *
+     * Attaches to a program that the launcher runs with `--debug listen:<host>:<port>`, with the breakpoints set by
+     * then, answering once the program has taken them. Arguments: `port`, `host` (this machine's, `localhost` when
+     * not given), `token`, the one the program was given, and `stopOnEntry`, which stops a program that waits for the
+     * debugger (`suspend`) at its first line. Terminate and disconnect detach: the program runs on without the
+     * session's breakpoints. The program's console is its own, so the debug console only evaluates.
+     */
     override fun attach(args: Map<String, Any>?): CompletableFuture<Void> {
-        logger.info("attach: refused: args={}", args)
-        return failed("Attaching is not available; launch the module instead.")
+        logger.info("attach: args={}", args)
+        val target =
+            try {
+                attachTarget(args.orEmpty())
+            } catch (e: IllegalArgumentException) {
+                return failed(e.message ?: "Invalid attach arguments")
+            }
+        if (!launched.compareAndSet(false, true)) {
+            return failed("This debug session has already launched a program.")
+        }
+        val stopOnEntry = args?.get("stopOnEntry") == true
+        console("Attaching to the program at ${target.host}:${target.port}...")
+        val ready =
+            configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
+                installed = breakpoints.toMap()
+                installedExceptions = exceptionStops
+                installedFunctions = functionBreakpoints
+                DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions)
+            }
+        return runs
+            .attach(runId, target, events, ready)
+            .handle<Void> { module, failure ->
+                if (failure != null) {
+                    end(sendTerminated = false)
+                    val cause = (failure as? CompletionException)?.cause ?: failure
+                    throw error("Attach failed: ${cause.message}")
+                }
+                programName = module
+                started = true
+                console("Attached to $module.")
+                client?.thread(
+                    ThreadEventArguments().apply {
+                        reason = ThreadEventArgumentsReason.STARTED
+                        threadId = RUNNING_THREAD
+                    },
+                )
+                installChanged()
+                null
+            }
     }
 
     /** DAP: threads. The fibers of the stopped program, those that wait at a line first; while it runs, [RUNNING_THREAD]. */
@@ -1116,6 +1163,11 @@ class XtcDebugServer(
                 synchronized(heldStops) {
                     if (unanswered > 0) heldStops += stop else sendStopped(stop)
                 }
+
+            override fun detached(reason: String?) {
+                console(reason ?: "\nDetached from $programName, which runs on.")
+                end(sendTerminated = true)
+            }
         }
 
     private fun sendStopped(stop: StopState) {
@@ -1287,6 +1339,20 @@ class XtcDebugServer(
         if (condition.isNullOrBlank()) return emptyList()
         val names = condition.split(',').map { it.trim() }
         return names.takeIf { it.all(EXCEPTION_TYPE::matches) }
+    }
+
+    private fun attachTarget(args: Map<String, Any>): AttachTarget {
+        val port =
+            when (val given = args["port"]) {
+                is Number -> given.toInt()
+                is String -> given.trim().toIntOrNull()
+                else -> null
+            }?.takeIf { it in 1..65535 } ?: throw IllegalArgumentException("An attach requires the port the program listens on")
+        return AttachTarget(
+            host = (args["host"] as? String)?.takeIf { it.isNotBlank() } ?: "localhost",
+            port = port,
+            token = (args["token"] as? String)?.takeIf { it.isNotEmpty() },
+        )
     }
 
     private fun target(args: Map<String, Any>): LaunchTarget {

@@ -117,10 +117,32 @@ export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDesc
     }
 }
 
+/** The port that the copied `--debug` option listens on, and the attach snippet attaches to. */
+export const ATTACH_PORT = 5005;
+
+/**
+ * The `--debug` option of `xec` and `xtc run` for a program that an "Ecstasy: Attach" configuration debugs: it waits
+ * before its first line, on [port] of this machine, and this language server's jar is its debugger agent.
+ */
+export function debugOption(serverJar: string, port = ATTACH_PORT): string {
+    const value = `listen:127.0.0.1:${port},suspend,agent=${serverJar}`;
+    return /\s/.test(value) ? `--debug "${value}"` : `--debug ${value}`;
+}
+
+/** The "Copy Option to Debug a Program Outside the Editor" command, which copies [debugOption]. */
+export function registerDebugOption(context: vscode.ExtensionContext, serverJar: string): void {
+    context.subscriptions.push(vscode.commands.registerCommand('xtc.debug.copyOption', async () => {
+        const option = debugOption(serverJar);
+        await vscode.env.clipboard.writeText(option);
+        void vscode.window.showInformationMessage(
+            `Copied ${option}. Run the program with it, as in xec ${option} App.x, then start an "Ecstasy: Attach to Program" configuration on port ${ATTACH_PORT}.`);
+    }));
+}
+
 /**
  * Launches in embedded mode start a debug session in the language server, which builds and runs the module as the
  * Run button does, under the runtime debugger. In Gradle mode, Run and Debug launches run the module's Gradle task
- * instead, without a debug session.
+ * instead, without a debug session. An attach, to a program run with `--debug`, starts a session in either mode.
  */
 export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private readonly client: ClientAccess) {}
@@ -134,7 +156,7 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
         if (!resolved) {
             return undefined;
         }
-        if (buildMode(folder) === 'embedded') {
+        if (resolved.request === 'attach' || buildMode(folder) === 'embedded') {
             return resolved;
         }
         if (!resolved.noDebug) {
@@ -171,7 +193,7 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
                 }
             }
         }
-        if (!config.module) {
+        if (config.request !== 'attach' && !config.module) {
             void vscode.window.showInformationMessage('Cannot find an Ecstasy module to run');
             return undefined;
         }

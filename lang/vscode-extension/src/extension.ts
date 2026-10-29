@@ -16,7 +16,7 @@ import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTr
 import { selectLanguageAdapter } from './adapter-selection';
 import { createBuildModeStatus, selectBuildMode } from './build-mode-selection';
 import { XtcTaskProvider } from './task-provider';
-import { registerValueFormat, XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
+import { registerDebugOption, registerValueFormat, XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
 import { registerCompilerPaths } from './compiler-paths';
 import { readServiceSettings } from './editor-settings';
@@ -124,6 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Setup LSP server
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));
     const serverExists = fs.existsSync(serverJar);
+    registerDebugOption(context, serverJar);
 
     // Keep control in the extension host, including when the language-server process has failed.
     let controlClosed = false;

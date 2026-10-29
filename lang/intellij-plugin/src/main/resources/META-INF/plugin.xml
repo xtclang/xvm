@@ -105,6 +105,9 @@
         <!-- Run Configuration -->
         <configurationType
             implementation="org.xtclang.idea.run.XtcRunConfigurationType"/>
+        <!-- Ecstasy Attach: Debug attaches to a program that the launcher runs under its debug option -->
+        <configurationType
+            implementation="org.xtclang.idea.run.XtcAttachConfigurationType"/>
 
         <!-- Run Configuration Producer - auto-creates run configs from .x file context -->
         <runConfigurationProducer
