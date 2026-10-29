@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 # Runs inside the xvm-playbook container; playbook.sh starts it.
-#   in-container.sh build                      sync /src into /work/xvm and run xdk:installDist
-#   in-container.sh playbook <ids> [gradle args] sync, then run the features playbook for <ids> on Xvfb
+#   in-container.sh build                      sync /src into /work/xvm and run xdk:installDist and publishLocal
+#   in-container.sh playbook <ids>|all [args]  sync, then run the features playbook for <ids>, or all, on Xvfb
 #   in-container.sh gradle <args...>           sync, then run ./gradlew <args> on Xvfb
-# /src is the read-only exported checkout, /out receives the run reports, /work and /gradle are volumes.
+# /src is the read-only exported checkout, /out receives the run reports, /work, /gradle and
+# /home/playbook/.m2 are volumes.
 set -euo pipefail
+
+# started as root, which owns the volumes: hand them to the playbook user, once, and run as it
+if [ "$(id -u)" = 0 ]; then
+    mkdir -p /work /gradle /out /home/playbook/.m2
+    find /work /gradle /out /home/playbook/.m2 -xdev ! -user playbook -exec chown playbook:playbook {} + 2>/dev/null || true
+    exec runuser -u playbook -- env HOME=/home/playbook GRADLE_USER_HOME=/gradle bash "$0" "$@"
+fi
 
 mode="${1:?mode}"
 shift || true
@@ -68,17 +76,20 @@ copy_runs() {
 
 case "$mode" in
     build)
-        ./gradlew xdk:installDist "$@"
+        ./gradlew xdk:installDist publishLocal "$@"
         ;;
     playbook)
-        cases="${1:?case ids}"
+        cases="${1:?case ids, or all}"
         shift || true
+        # all cases is the playbook's default, without a selection
+        selection=()
+        [ "$cases" = "all" ] || selection=("-PintellijPlaybookCases=$cases")
         start_display
         status=0
         ./gradlew :lang:intellij-plugin:testCompilerPlaybook \
             -PincludeBuildLang=true -PincludeBuildAttachLang=true \
             --tests '*CompilerPlaybookTest.compilerPlaybook' \
-            "-PintellijPlaybookCases=$cases" "$@" || status=$?
+            "${selection[@]}" "$@" || status=$?
         copy_runs
         exit "$status"
         ;;
