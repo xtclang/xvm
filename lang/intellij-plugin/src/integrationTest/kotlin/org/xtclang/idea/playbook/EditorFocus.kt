@@ -107,12 +107,21 @@ internal class PopupInspection(
     private val nativeEditor = editor.editor
     private val caretOffset = driver.withContext(OnDispatcher.EDT) { nativeEditor.getCaretModel().getOffset() }
 
+    // IntelliJ drops an editor hint shown while another application is active, and the popup's
+    // controller never shows it again. A switch away and back between two polls leaves no focus
+    // loss to observe, so the IDE's own deactivations count as focus loss too.
+    private var deactivations = deactivations()
+
     fun recover() {
-        if (driver.restorePopupFocus(nativeEditor)) {
+        val deactivated = deactivations() != deactivations
+        if (driver.restorePopupFocus(nativeEditor) || deactivated) {
+            deactivations = deactivations()
             reopenUnapplied()
             println("IntelliJ playbook: reopened an unapplied popup after focus loss")
         }
     }
+
+    private fun deactivations(): Int = driver.withContext(OnDispatcher.DEFAULT) { driver.utility(NativeEditorUi::class).deactivations() }
 
     /** A cold intention request may populate its cache without opening a menu. */
     fun reopenUnapplied() {
@@ -157,6 +166,8 @@ internal interface NativeEditorUi {
     fun closeCompletion(editor: Editor)
 
     fun hasFocus(editor: Editor): Boolean
+
+    fun deactivations(): Int
 
     fun popupFocus(
         editor: Editor,
