@@ -1043,6 +1043,24 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
+        val memberRemoval =
+            if (complete) {
+                before.models.singleOrNull { it.sourceName == source }?.let { model ->
+                    XdkMemberInline.everyUse(text, range, model, before)?.let { candidate ->
+                        checkCurrent()
+                        val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        if (!XdkRename.preservesMemberRemoval(before, after, plan, candidate)) return@let null
+                        CodeAction(
+                            candidate.title,
+                            CodeAction.CodeActionKind.REFACTOR_INLINE,
+                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        )
+                    }
+                }
+            } else {
+                null
+            }
         val removal =
             if (complete) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
@@ -1112,6 +1130,7 @@ internal class XdkProjectQueries(
                     extraction,
                     inline,
                     memberInline,
+                    memberRemoval,
                     removal,
                     safeDelete,
                     method,
