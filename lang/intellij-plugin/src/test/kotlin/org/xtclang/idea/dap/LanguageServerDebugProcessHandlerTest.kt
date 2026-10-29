@@ -15,6 +15,7 @@ import org.xtclang.idea.lsp.DebugSessionResponse
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.IOException
 import java.lang.reflect.Proxy
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
@@ -76,6 +77,47 @@ class LanguageServerDebugProcessHandlerTest {
         // the session is gone: later messages go nowhere
         sessions.receive(DebugMessageParams("session-1", JsonObject()))
         assertThat(events.text(ProcessOutputTypes.STDOUT)).isEqualTo(DapFrames.frame(JsonParser.parseString(event).toString()))
+    }
+
+    @Test
+    fun `a stack trace's source files go to be found before the client reads its frames`() {
+        val sessions = DebugSessions()
+        val server = FakeServer().apply { started.complete(Unit) }
+        val order = CopyOnWriteArrayList<String>()
+        val handler =
+            LanguageServerDebugProcessHandler(sessions, frameSources = { files -> order += files.map(Path::toString) }) {
+                CompletableFuture.completedFuture(server.proxy)
+            }
+        handler.addProcessListener(
+            object : ProcessListener {
+                override fun onTextAvailable(
+                    event: ProcessEvent,
+                    outputType: Key<*>,
+                ) {
+                    order += "output"
+                }
+            },
+        )
+        handler.startNotify()
+
+        val frames =
+            """{"seq":16,"type":"response","request_seq":11,"command":"stackTrace","success":true,"body":{"stackFrames":[
+            {"id":1,"name":"run","source":{"name":"Run.x","path":"/work/Run.x"},"line":6},
+            {"id":2,"name":"forEach","source":{"name":"Collection.x","path":"/copies/ecstasy/collections/Collection.x"},"line":222},
+            {"id":3,"name":"native","source":{"name":"Native.x","sourceReference":7},"line":1},
+            {"id":4,"name":"again","source":{"name":"Run.x","path":"/work/Run.x"},"line":5}]}}"""
+        sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(frames).asJsonObject))
+        assertThat(order).containsExactly(
+            Path.of("/work/Run.x").toString(),
+            Path.of("/copies/ecstasy/collections/Collection.x").toString(),
+            "output",
+        )
+
+        // other messages go straight on
+        sessions.receive(
+            DebugMessageParams("session-1", JsonParser.parseString("""{"seq":17,"type":"event","event":"stopped"}""").asJsonObject),
+        )
+        assertThat(order).endsWith("output", "output").hasSize(4)
     }
 
     @Test
