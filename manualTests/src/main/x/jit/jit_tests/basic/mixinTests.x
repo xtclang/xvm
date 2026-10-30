@@ -1,60 +1,61 @@
 package mixinTests {
     void run() {
 
-        test1();
-        test2();
-        test3();
-        test4();
-        test5();
-        test6();
-        test7();
+        testInit();
+        testSuperCall();
+        testClassChain();
+        testMixinChain();
+        testCovariant();
+        testAutoNarrow();
+        testPrivateCalls();
         testValidators();
+        testInheritance();
     }
 
-    void test1() {
-        import t1.*;
+    void testInit() {
+        import init.*;
 
         Base b = new Base();
         assert b.f1() == 42;
     }
 
-    void test2() {
-        import t2.*;
+    void testSuperCall() {
+        import superCall.*;
 
         Base b = new Base();
         assert b.f() == 42;
     }
 
-    void test3() {
-        import t3.*;
+    void testClassChain() {
+        import classChain.*;
 
         Derived d = new Derived();
         assert d.f() == 42;
     }
 
-    void test4() {
-        import t4.*;
+    void testMixinChain() {
+        import mixinChain.*;
 
         Derived d = new Derived();
         assert d.f() == 42;
     }
 
-    void test5() {
-        import t5.*;
+    void testCovariant() {
+        import covariant.*;
 
         Base base = new Base();
         assert base.self().value() == 42;
     }
 
-    void test6() {
-        import t6.*;
+    void testAutoNarrow() {
+        import autoNarrow.*;
 
         Base base = new Base();
         assert base.self().value() == 42;
     }
 
-    void test7() {
-        import t7.*;
+    void testPrivateCalls() {
+        import privateCalls.*;
 
         Base base = new Base();
         assert base.nestedValue() == 41;
@@ -62,7 +63,7 @@ package mixinTests {
     }
 
     void testValidators() {
-        import t8.*;
+        import validators.*;
 
         new Derived(1, 1);
 
@@ -91,7 +92,17 @@ package mixinTests {
         assert derivedRejected;
     }
 
-    package t1 {
+    void testInheritance() {
+        import inheritance.*;
+
+        Mix1 child = new C();
+        Mix0 parent = asParent(child);
+        assert parent.value() == "parent";
+
+        Mix0 asParent(Mix1 child) = child;
+    }
+
+    package init {
         class Base incorporates Mix {
             Int f1() = f0() + 1;
 
@@ -116,7 +127,7 @@ package mixinTests {
         }
     }
 
-    package t2 {
+    package superCall {
         class Base
                 incorporates Mix {
             @Override Int f() = super() + 1;
@@ -127,7 +138,7 @@ package mixinTests {
         }
     }
 
-    package t3 {
+    package classChain {
         class Base
                 incorporates Mix {
             @Override Int f() = super() + 1;
@@ -142,7 +153,7 @@ package mixinTests {
         }
     }
 
-    package t4 {
+    package mixinChain {
         class Base {}
 
         mixin Mix0 into Base {
@@ -158,7 +169,7 @@ package mixinTests {
         }
     }
 
-    package t5 {
+    package covariant {
         interface Root {
             Root self();
         }
@@ -176,7 +187,7 @@ package mixinTests {
         }
     }
 
-    package t6 {
+    package autoNarrow {
         class Base incorporates Mix {
             Int value() = 42;
         }
@@ -186,7 +197,7 @@ package mixinTests {
         }
     }
 
-    package t7 {
+    package privateCalls {
         class Base incorporates Mix1 {}
 
         mixin Mix0 into Base {
@@ -202,7 +213,7 @@ package mixinTests {
         mixin Mix1 extends Mix0 {}
     }
 
-    package t8 {
+    package validators {
         class Base(Int value) {
             assert() {
                 assert value >= 0 as "base validator";
@@ -222,5 +233,15 @@ package mixinTests {
                 assert extra >= 0 as "derived validator";
             }
         }
+    }
+
+    package inheritance {
+        class C incorporates Mix1 {}
+
+        mixin Mix0 into C {
+            String value() = "parent";
+        }
+
+        mixin Mix1 extends Mix0 {}
     }
 }
