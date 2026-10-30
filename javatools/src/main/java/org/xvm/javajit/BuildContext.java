@@ -3322,10 +3322,7 @@ public class BuildContext {
      */
     private void assignReturn(CodeBuilder code, JitMethodDesc jmd, boolean isOptimized,
                               int regId, TypeConstant destType, RegisterInfo reg, int returnIndex) {
-        int          optReturnIndex = isOptimized ? jmd.getOptimizedReturnIndex(returnIndex) : -1;
-        JitParamDesc pdRet          = isOptimized
-                ? jmd.optimizedReturns[optReturnIndex]
-                : jmd.standardReturns[returnIndex];
+        JitParamDesc pdRet = jmd.getReturn(returnIndex);
 
         if (destType == null) {
             // the return is explicitly ignored or its destination has gone out of scope;
@@ -3351,26 +3348,19 @@ public class BuildContext {
                 assert isOptimized;
                 // process the remaining primitives by loading from the context
                 loadFromContext(code, jmd, returnIndex);
-                Builder.box(code, destType);
+                Builder.box(code, pdRet.type);
             }
 
             case "NullablePrimitive->Specific",
-                 "NullablePrimitive->Widened" -> {
+                 "NullablePrimitive->Widened",
+                 "NullableXvmPrimitive->Specific",
+                 "NullableXvmPrimitive->Widened" -> {
                 assert isOptimized;
-                JitParamDesc pdExt = jmd.optimizedReturns[optReturnIndex + 1];
 
                 // if the value is `True`, then the return value is Ecstasy `Null`
-                loadFromContext(code, CD_boolean, pdExt.altIndex);
-
-                Label ifTrue = code.newLabel();
-                Label endIf = code.newLabel();
-                code.ifne(ifTrue);
-                Builder.box(code, destType);
-                code.goto_(endIf)
-                    .labelBinding(ifTrue);
-                Builder.pop(code, pdRet.cd);
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
+                // load the remaining components, including the null flag, from the context
+                loadFromContext(code, jmd, returnIndex);
+                Builder.boxNullable(code, pdRet.type);
             }
 
             case "Primitive->Primitive",
@@ -3380,23 +3370,6 @@ public class BuildContext {
                 assert isOptimized;
                 // process the remaining primitives by loading from the context
                 loadFromContext(code, jmd, returnIndex);
-            }
-            case "NullableXvmPrimitive->Specific",
-                 "NullableXvmPrimitive->Widened" -> {
-                assert isOptimized;
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
-
-                loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
-                Label ifTrue = code.newLabel();
-                Label endIf = code.newLabel();
-                code.ifne(ifTrue);
-
-                loadFromContext(code, jmd, optIndexes, 1, optIndexes.length - 2);
-                Builder.box(code, destType);
-                code.goto_(endIf).labelBinding(ifTrue);
-                Builder.pop(code, jmd.optimizedReturns[0].cd);
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
             }
 
             case "Specific->Specific" -> {
@@ -3441,7 +3414,7 @@ public class BuildContext {
                 assert isOptimized;
                 // process the primitives by loading from the context
                 loadFromContext(code, jmd, returnIndex);
-                Builder.box(code, destType);
+                Builder.box(code, pdRet.type);
             }
 
             case "Primitive->Primitive",
@@ -3454,42 +3427,14 @@ public class BuildContext {
             }
 
             case "NullablePrimitive->Specific",
-                 "NullablePrimitive->Widened" -> {
-                assert isOptimized;
-                JitParamDesc pdExt = jmd.optimizedReturns[optReturnIndex + 1];
-
-                loadFromContext(code, tdDest.cd, pdRet.altIndex);
-                loadFromContext(code, pdExt.cd, pdExt.altIndex);
-                // if the value is `True`, then the return value is Ecstasy `Null`
-
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-                code.ifeq(ifTrue);
-                Builder.box(code, destType);
-                code.goto_(endIf);
-                code.labelBinding(ifTrue)
-                    .pop();
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
-            }
-
-            case "NullableXvmPrimitive->Specific",
+                 "NullablePrimitive->Widened",
+                 "NullableXvmPrimitive->Specific",
                  "NullableXvmPrimitive->Widened" -> {
                 assert isOptimized;
-                int[] optIndexes = jmd.getAllOptimizedReturnIndexes(returnIndex);
 
-                loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-                code.iconst_0().if_icmpeq(ifTrue);
+                // if the value is `True`, then the return value is Ecstasy `Null`
                 loadFromContext(code, jmd, returnIndex);
-                Builder.box(code, destType);
-                code.goto_(endIf);
-                code.labelBinding(ifTrue);
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
-
-                loadFromContext(code, jmd, returnIndex);
+                Builder.boxNullable(code, pdRet.type);
             }
 
             case "Specific->Specific",

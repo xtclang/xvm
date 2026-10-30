@@ -244,7 +244,8 @@ public class NumberBuilder extends AugmentingBuilder {
             JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
             if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
                     !isNativeMethod(jitName + OPT, jmdDeclared.optimizedMD)) {
-                assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd);
+                assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd,
+                        method.isConditionalReturn(typeInfo));
             }
         }
     }
