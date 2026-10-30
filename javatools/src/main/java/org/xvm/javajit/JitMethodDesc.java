@@ -149,6 +149,13 @@ public class JitMethodDesc {
     }
 
     /**
+     * @return a JitParamDesc for the specified standard return index
+     */
+    public JitParamDesc getReturn(int retIndex) {
+        return isOptimized ? getOptimizedReturn(retIndex) : standardReturns[retIndex];
+    }
+
+    /**
      * @return an optimized JitParamDesc for the specified standard return index
      */
     public JitParamDesc getOptimizedReturn(int retIndex) {

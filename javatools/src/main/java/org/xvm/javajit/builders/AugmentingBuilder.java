@@ -258,7 +258,8 @@ public class AugmentingBuilder extends CommonBuilder {
                 JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
                 if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
                         findMethod(jitName + OPT, jmdDeclared.optimizedMD) == null) {
-                    assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd);
+                    assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd,
+                            method.isConditionalReturn(typeInfo));
                 }
             }
 
