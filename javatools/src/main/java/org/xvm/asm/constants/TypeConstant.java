@@ -8114,8 +8114,9 @@ public abstract class TypeConstant
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
     public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn) {
-        xConst template = (xConst) frame.f_context.f_container.getTemplate(this);
-        return template.callHashCode(frame, this, hValue, iReturn);
+        Container container = frame.f_context.f_container;
+        xConst    template  = (xConst) container.getTemplate(this);
+        return template.callHashCode(frame, template.getCanonicalClass(container), hValue, iReturn);
     }
 
     /**

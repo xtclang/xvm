@@ -34,7 +34,13 @@ public abstract class xNumber
     public void initNative() {
         markNativeProperty("bits");
 
-        ClassStructure structure = getStructure();
+        // numeric hashCode calls can resolve to the abstract Number implementation
+        ClassStructure structure = f_container.getClassStructure("numbers.Number");
+        structure.findMethod("equals",   3).markNative();
+        structure.findMethod("compare",  3).markNative();
+        structure.findMethod("hashCode", 2).markNative();
+
+        structure = getStructure(); // the actual structure, e.g. Float64
         structure.findMethodDeep("equals",   m -> m.getParamCount() == 3).markNative();
         structure.findMethodDeep("compare",  m -> m.getParamCount() == 3).markNative();
         structure.findMethodDeep("hashCode", m -> m.getParamCount() == 2).markNative();

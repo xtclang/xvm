@@ -613,6 +613,14 @@ module TestMisc {
         AnyValue foo = new AnyValue(1, "foo");
         AnyValue bar = new AnyValue(1, "bar");
         assert foo == bar;
+
+        Hasher<String> hasherS = new NaturalHasher();
+        String         s       = "hello";
+        assert hasherS.hashOf(s) == String.hashCode(s);
+
+        Hasher<Double> hasherD = new NaturalHasher();
+        Double d = 1.2;
+        assert hasherD.hashOf(d) == Double.hashCode(d);
     }
 
     const Point(Int x, Int y) {
