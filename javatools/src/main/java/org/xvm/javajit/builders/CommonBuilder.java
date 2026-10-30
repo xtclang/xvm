@@ -3632,7 +3632,8 @@ public class CommonBuilder
         assembleStandardCap(classBuilder, srcName, dstName, jmdSrc, jmdDst);
         if (jmdSrc.isOptimized) {
             assert jmdDst.isOptimized;
-            assembleOptimizedCap(classBuilder, srcName + OPT, dstName + OPT, jmdSrc, jmdDst);
+            assembleOptimizedCap(classBuilder, srcName + OPT, dstName + OPT, jmdSrc, jmdDst,
+                    srcMethod.isConditionalReturn(typeInfo));
         }
     }
 
@@ -3695,7 +3696,7 @@ public class CommonBuilder
      * Assemble an "optimized" routing call from one method signature to another.
      */
     protected void assembleOptimizedCap(ClassBuilder classBuilder, String srcName, String dstName,
-                                        JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
+                                        JitMethodDesc jmdSrc, JitMethodDesc jmdDst, boolean isConditional) {
         int flags = ClassFile.ACC_PUBLIC;
         if (jmdSrc.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
@@ -3826,7 +3827,7 @@ public class CommonBuilder
             }
 
             JitParamDesc[] srcReturns = jmdSrc.optimizedReturns;
-            int            retCount   = srcReturns.length;
+            int            retCount   = jmdSrc.standardReturns.length;
             if (retCount == 0) {
                 code.return_();
                 return;
@@ -3835,81 +3836,77 @@ public class CommonBuilder
             // the natural return is at the top of the stack now;
             JitParamDesc[] dstReturns = jmdDst.optimizedReturns;
 
-            for (int i = 0; i < retCount; i++) {
-                JitParamDesc srcPd     = srcReturns[i];
-                JitParamDesc dstPd     = dstReturns[i];
+            if (isConditional) {
+                // a False return leaves the payload context slots undefined
+                Label ifTrue = code.newLabel();
+                code.dup().ifne(ifTrue)
+                    .ireturn()
+                    .labelBinding(ifTrue);
+            }
+
+            // we need to load the rest of the primitive returns from the context
+            // read all components before remapping context slots; boxing can move a return from
+            // primitive slots into an object slot still holding a later return
+            for (int i = 1; i < dstReturns.length && dstReturns[i].index < retCount; i++) {
+                JitParamDesc dstPd = dstReturns[i];
+                loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
+            }
+
+            // process logical returns rather than pairing differently expanded component arrays
+            for (int i = retCount - 1; i >= 0; i--) {
+                JitParamDesc srcPd     = jmdSrc.getOptimizedReturn(i);
+                JitParamDesc dstPd     = jmdDst.getOptimizedReturn(i);
                 JitFlavor    srcFlavor = srcPd.flavor;
                 JitFlavor    dstFlavor = dstPd.flavor;
 
                 if (srcFlavor == dstFlavor) {
-                    if (i == 0) {
-                        addReturn(code, srcPd.cd);
-                    } else {
-                        if (srcPd.altIndex != dstPd.altIndex) {
-                            throw new UnsupportedOperationException("Copy context");
-                        }
+                    if (!srcPd.cd.isPrimitive() && !dstPd.type.isJitAssignableTo(srcPd.type)) {
+                        generateCheckCast(code, srcPd.type, ctxSlot);
                     }
                 } else {
                     switch (srcFlavor.name() + "->" + dstFlavor.name()) {
                     case "Widened->Specific":
-                        if (i == 0) {
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
                         break;
 
                     case "Specific->Widened":
-                        if (i == 0) {
-                            generateCheckCast(code, srcPd.type, ctxSlot);
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
-                            generateCheckCast(code, srcPd.type, ctxSlot);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
+                        generateCheckCast(code, srcPd.type, ctxSlot);
                         break;
 
-                    case "Specific->Primitive":
-                        if (i == 0) {
-                            box(code, dstPd.type);
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
-                            box(code, dstPd.type);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
-                        break;
-
-                    case "Specific->XvmPrimitive": {
-                        // we need to load the rest of the primitive returns from the context
-                        // if i == 0 then the first primitive value is already on the stack
-                        boolean doReturn = i == 0;
-                        int     index    = doReturn ? i + 1 : i;
-                        while (index < dstReturns.length
-                               && dstReturns[index].index == dstPd.index) {
-                            assert dstPd.index != -1;
-                            loadFromContext(code, dstReturns[index].cd,
-                                    dstReturns[index].altIndex, ctxSlot);
-                            index++;
-                        }
-                        // skip over the returns we have processed from the context
-                        i = index - 1;
-
+                    case "Specific->Primitive",
+                         "Specific->XvmPrimitive",
+                         "Widened->Primitive",
+                         "Widened->XvmPrimitive":
                         box(code, dstPd.type);
-                        if (doReturn) {
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
                         break;
-                    }
+
+                    case "Specific->NullablePrimitive",
+                         "Specific->NullableXvmPrimitive",
+                         "Widened->NullablePrimitive",
+                         "Widened->NullableXvmPrimitive":
+                        boxNullable(code, dstPd.type);
+                        break;
+
+                    case "NullablePrimitive->Primitive",
+                         "NullableXvmPrimitive->XvmPrimitive":
+                        code.iconst_0(); // the narrowed return is not Null
+                        break;
 
                     default:
                         throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
                                                                 "; dst=" + dstFlavor);
                     }
+                }
+
+                // store this logical return's components in reverse stack order
+                int[] srcIndexes = jmdSrc.getAllOptimizedReturnIndexes(i);
+                int   first      = i == 0 ? 1 : 0;
+                for (int j = srcIndexes.length - 1; j >= first; j--) {
+                    JitParamDesc srcRet = srcReturns[srcIndexes[j]];
+                    storeToContext(code, srcRet.cd, srcRet.altIndex, ctxSlot);
+                }
+                if (i == 0) {
+                    // if i == 0 then the first primitive value is already on the stack
+                    addReturn(code, srcPd.cd);
                 }
             }
         });
