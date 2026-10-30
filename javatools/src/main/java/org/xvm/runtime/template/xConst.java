@@ -350,8 +350,17 @@ public class xConst
         }
 
         case "hashCode": {
-            TypeHandle hType = (TypeHandle) ahArg[0];
-            return callHashCode(frame, hType.getDataType(), ahArg[1], iReturn);
+            Container  container = frame.f_context.f_container;
+            TypeHandle hType     = (TypeHandle) ahArg[0];
+            xConst     template  = this;
+
+            // allow for narrower native implementations
+            if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst) {
+                template = templateConst;
+            }
+
+            return template.callHashCode(
+                    frame, getCanonicalClass(container), ahArg[1], iReturn);
         }
         }
 
@@ -382,16 +391,16 @@ public class xConst
      * Compute the hash code of the specified object handle that belongs to the specified type.
      *
      * @param frame    the current frame
-     * @param type     the type to use for the hash computation
+     * @param clazz    the class to use for the hash computation
      * @param hValue   the value
      * @param iReturn  the register id to place an Int64 result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn) {
+    public int callHashCode(Frame frame, TypeComposition clazz, ObjectHandle hValue, int iReturn) {
         return this == INSTANCE
                 ? frame.raiseException(xException.abstractMethod(frame, "Const.hashCode()"))
-                : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
+                : buildHashCode(frame, clazz, hValue, iReturn);
     }
 
     /**
