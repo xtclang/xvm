@@ -113,6 +113,13 @@ public class JitMethodDesc {
     }
 
     /**
+     * @return a JitParamDesc for the specified standard argument index
+     */
+    public JitParamDesc getParam(int argIndex) {
+        return isOptimized ? getOptimizedParam(argIndex) : standardParams[argIndex];
+    }
+
+    /**
      * @return an optimized JitParamDesc for the specified standard argument index
      */
     public JitParamDesc getOptimizedParam(int argIndex) {

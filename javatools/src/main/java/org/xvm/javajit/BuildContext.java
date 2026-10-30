@@ -2116,7 +2116,7 @@ public class BuildContext {
 
         for (int i = 0, c = jmd.standardParams.length; i < c; i++ ) {
             int          iArg = i < argCount ? anArgValue[i] : Op.A_DEFAULT;
-            JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
+            JitParamDesc pd   = jmd.getParam(i);
 
             JitFlavor dstFlavor = pd.flavor;
             if (iArg == Op.A_DEFAULT) {
@@ -2875,23 +2875,22 @@ public class BuildContext {
         assert !propInfo.isConstant();
 
         JitMethodDesc jmd        = propInfo.getSetterJitDesc(builder, targetType);
+        JitParamDesc  pd         = jmd.getParam(0);
         String        setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
-        JitParamDesc   pd;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
-            pd         = jmd.getOptimizedParam(0);
             setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
-            pd = jmd.standardParams[0];
         }
 
         RegisterInfo targetReg = targetLoader.load(code);
         if (!targetReg.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
+
         boolean useField = targetType.getAccess() == Access.STRUCT;
         if (!useField) {
             loadCtx(code);
