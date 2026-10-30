@@ -82,7 +82,7 @@ public class xListMap
      * @param frame         the current frame
      * @param typeMap       the map type
      * @param ahKey         the array of keys
-     * @param ahKey         the array of values
+     * @param ahVal         the array of values
      * @param fDeferredKey  if true, some key handles could be deferred
      * @param fDeferredVal  if true, some value handles could be deferred
      * @param iReturn       the register to place the resulting map to
