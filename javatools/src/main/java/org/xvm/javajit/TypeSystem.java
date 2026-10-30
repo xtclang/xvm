@@ -32,6 +32,7 @@ import org.xvm.javajit.builders.PackageBuilder;
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
 
+import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.require;
 
 import static java.lang.Math.max;
@@ -721,5 +722,20 @@ public class TypeSystem {
             escaped = !escaped;
         }
         return escaped ? -1 : suffix;
+    }
+
+    public static String removeJitSuffix(String name) {
+        int start = findJitSuffix(name);
+        if (start < 0) {
+            return name;
+        }
+
+        int end = start + 1;
+        int len = name.length();
+        while (end <  && isDigit(name.charAt(end))) {
+            ++end;
+        }
+        return end == name.
+        name.delete(start, end);
     }
 }

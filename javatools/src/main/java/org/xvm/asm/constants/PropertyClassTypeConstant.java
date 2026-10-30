@@ -24,6 +24,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -266,8 +267,9 @@ public class PropertyClassTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType(TypeSystem ts) {
-        return getRefType().getJitCCType(ts);
+    protected TypeConstant buildJitCCType(ModuleLoader loader) {
+        // TODO
+        return getRefType().buildJitCCType(loader);
     }
 
     // ----- TypeInfo support ----------------------------------------------------------------------

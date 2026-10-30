@@ -15,6 +15,7 @@ import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -727,8 +728,8 @@ public class IntersectionTypeConstant
     }
 
     @Override
-    public TypeConstant getJitCCType(TypeSystem ts) {
-        return combineJitType(ts, m_constType1, m_constType2);
+    protected TypeConstant buildJitCCType(ModuleLoader loader) {
+        return combineJitType(loader.typeSystem, m_constType1, m_constType2);
     }
 
     private static TypeConstant combineJitType(TypeSystem ts, TypeConstant type1, TypeConstant type2) {

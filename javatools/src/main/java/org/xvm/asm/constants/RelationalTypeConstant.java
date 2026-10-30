@@ -19,6 +19,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
 
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -633,7 +634,7 @@ public abstract class RelationalTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType(TypeSystem ts) {
+    protected TypeConstant buildJitCCType(ModuleLoader loader) {
         return getConstantPool().typeObject();
     }
 

@@ -849,7 +849,7 @@ public class ParameterizedTypeConstant
     }
 
     @Override
-    public TypeConstant getJitCCType(TypeSystem ts) {
+    protected TypeConstant buildJitCCType(ModuleLoader loader) {
         assert isSingleUnderlyingClass(true);
 
         TypeConstant typeJit = m_typeJitCallable;

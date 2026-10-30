@@ -1937,9 +1937,19 @@ public class TerminalTypeConstant
             return constId.getReferredToType().ensureJitInfo(loader.typeSystem);
         }
 
-// JIC
-//        TypeConstant type = getJitCCType();
-//        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        TypeConstant jccType      = buildJitCCType(loader);
+        String       jccName      = jccType.buildJitClassName(loader, false);
+        boolean      jccInterface = false;
+        TypeConstant jicType      = jccType;
+        String       jicName      = jccName;
+        JICForm      jicForm      = JICForm.Simple;
+        if (!isJitJicJcc(loader.typeSystem)) {
+            jicType = jccType;
+            jicType = buildJitCCType(loader);
+        }
+        JICForm      jicForm = JICForm.Abstract;
+        if (jicType == null)
+        assert jicType.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
 //        return type;
 // JCC
 //        //TODO
@@ -1951,7 +1961,6 @@ public class TerminalTypeConstant
 //        return removeAutoNarrowing();
 
         TypeConstant jicType = null; // TODO
-        JICForm      jicForm = null;
         TypeConstant jccType;
         if (isFormalType()) {
             jicType = null;
@@ -1961,9 +1970,6 @@ public class TerminalTypeConstant
             assert isSingleUnderlyingClass(true);
             jccType = removeAutoNarrowing();
         }
-
-        String jicName = jicType.buildJitClassName(loader, true);
-        String jccName = jccType.buildJitClassName(loader, false);
 
 // interface calc from TypeConstant
 //        // Tuple and Type are always represented by native classes
@@ -1976,7 +1982,7 @@ public class TerminalTypeConstant
 //                ? resolveConstraints().isJitInterface(bctx.typeSystem)
 //                : super.isJitInterface(ts);
 
-        return new JitInfo(this, jicType, jicForm, jicName, jccType, jccType.isInterfaceType(), jccName);
+        return new JitInfo(this, jicType, jicForm, jicName, jccType, jccInterface, jccName);
     }
 
     @Override

@@ -7251,6 +7251,34 @@ public abstract class TypeConstant
     }
 
     /**
+     * TODO
+     *
+     * @param loader
+     *
+     * @return
+     */
+    protected TypeConstant buildJitICType(ModuleLoader loader) {
+        if (isModifyingType()) {
+            return getUnderlyingType().buildJitICType(loader);
+        }
+        throw new UnsupportedOperationException("type=" + this.toString());
+    }
+
+    /**
+     * TODO
+     *
+     * @param loader
+     *
+     * @return
+     */
+    protected TypeConstant buildJitCCType(ModuleLoader loader) {
+        if (isModifyingType()) {
+            return getUnderlyingType().buildJitCCType(loader);
+        }
+        throw new UnsupportedOperationException("type=" + this.toString());
+    }
+
+    /**
      * @param ts  the TypeSystem within which this type exists
      *
      * @return true iff the JIT JIC name is the same as the JIT JCC name
@@ -7268,75 +7296,50 @@ public abstract class TypeConstant
     }
 
     /**
-     * A cacheable snapshot of information about the JIT transformation of a given Ecstasy type.
-     * <p/>
-     * Terms are defined in the "jit_class_names.txt" doc.
+     * Determine the JIT Instance Class (JIC) type for a "newable" Ecstasy type, which represents a
+     * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
+     * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
+     *
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
-    public record JitInfo(
-                TypeConstant type,              // the type for which this JitInfo exists
-                TypeConstant jicType,           // the JIT Instance Class' type
-                JICForm      jicForm,           // an indicator of how the JIC is to be instantiated
-                String       jicName,           // the Java class name to instantiate
-                TypeConstant jccType,           // the JIT Call Class' type
-                boolean      jccInterface,      // true iff the JCC is a Java interface
-                String       jccName) {         // the Java class name to call
-        public JitInfo {
-            assert jicForm != null && (jicType == null) == (jicForm == JICForm.Abstract) && jccType != null;
-        }
-
-        /**
-         * @return the Java {@link ClassDesc} for the JIC
-         */
-        public ClassDesc jicDesc() {
-            // it would be nice to cache this value, but no reason to hold it after the JIT phase
-            return ClassDesc.of(jicName);
-        }
-
-        /**
-         * @return the Java {@link ClassDesc} for the JCC
-         */
-        public ClassDesc jccDesc() {
-            // it would be nice to cache this value, but no reason to hold it after the JIT phase
-            return ClassDesc.of(jccName);
-        }
+    public TypeConstant getJitICType(TypeSystem ts) {
+        return ensureJitInfo(ts).jicType;
     }
 
     /**
-     * Defines the meaning of a JIT Instance Class (JIC).
+     * Determine the JIT Callable Class (JCC) type for an arbitrary Ecstasy type represents a type
+     * that JIT compiler uses for Java variables and properties that hold non-primitive instances of
+     * the corresponding type. It's the minimal (the widest) type that produces the same "JIT Call
+     * Class Name' CC(T).
      *
-     * For a given type, there is a "JIT Instance Class" (JIC), which may be null if the type cannot
-     * be instantiated ("Abstract"), may be directly newable ("Simple"), and so on.
+     * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
+     * class} that could parameterized by non-parameterized callable JIT types as parameters.
      *
-     * @see org.xvm.javajit.builders.CommonBuilder#assembleNew
+     * <p>The following should hold :
+     *  <ul>
+     *    <li>for any type T: T is-a C(T)</li>
+     *    <li>if T2 is-a T1, then C(T2) is-a C(T1)</li>
+     *    <li>for any type T, the CC(T) == CC(C(T)))</li>
+     *  </ul>
+     *
+     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying
+     * class} (regardless of access and immutability modifications) the canonical type is the
+     * corresponding {@link TerminalTypeConstant}.
+     * <br/>
+     * For a parameterized type with parameters of non-primitive types with trivial constraints,
+     * the canonical type is also the corresponding {@link TerminalTypeConstant}; otherwise it s
+     * the parameterized type with parameters of primitive or constraint types.
+     * <br/>
+     * For union or difference types, the canonical type is {@link ConstantPool#typeObject()}.
+     * <br/>
+     * For intersection types, it's the most specific canonical type across the contributing types.
+     *
+     * @return a canonical JIT type
+     *
+     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
-    public enum JICForm {
-        /**
-         * There is no JIC because the type is not instantiable.
-         */
-        Abstract,
-        /**
-         * The JIC has the simple (Ctx-only) instantiation helper.
-         */
-        Simple,
-        /**
-         * The JIC has the simple-with-type (Ctx, TypeConstant) instantiation helper.
-         */
-        Generic,
-        /**
-         * The JIC has a virtual child (Ctx, Outer) instantiation helper.
-         */
-        Child,
-        /**
-         * The JIC has a virtual child with type (Ctx, TypeConstant, Outer) instantiation helper.
-         */
-        GenericChild,
-        /**
-         * The JIC requires runtime evaluation, because its name depends on type information that is
-         * only available at runtime. For example, the code "new Element[]" (where "Element" is a
-         * Type Parameter Type) needs to have the actual value of "Element" in order to know what
-         * L1/L2 specialized class of "Array" to instantiate.
-         */
-        Dynamic,
+    public TypeConstant getJitCCType(TypeSystem ts) {
+        return ensureJitInfo(ts).jicType;
     }
 
     /**
@@ -7385,6 +7388,14 @@ public abstract class TypeConstant
      */
     public ClassDesc getJitCCDesc(TypeSystem ts) {
         return ensureJitInfo(ts).jccDesc();
+    }
+
+    /**
+     * @return true iff the specified type is represented by the Java interface and needs to be
+     *         cast explicitly to {@code nObject} class to invoke its methods
+     */
+    public boolean isJitInterface(TypeSystem ts) {
+        return ensureJitInfo(ts).jccInterface();
     }
 
     /**
@@ -7483,14 +7494,6 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return true iff the specified type is represented by the Java interface and needs to be
-     *         cast explicitly to {@code nObject} class to invoke its methods
-     */
-    public boolean isJitInterface(TypeSystem ts) {
-        return ensureJitInfo(ts).jccInterface();
-    }
-
-    /**
      * @return the JitTypeDesc for this type
      */
     public JitTypeDesc getJitDesc(Builder builder) {
@@ -7515,53 +7518,6 @@ public abstract class TypeConstant
         assert isSingleUnderlyingClass(true);
 
         return new JitTypeDesc(getJitCCType(ts), Specific, builder.getCCDesc(this));
-    }
-
-    /**
-     * Determine the JIT Callable Class (JCC) type for an arbitrary Ecstasy type represents a type
-     * that JIT compiler uses for Java variables and properties that hold non-primitive instances of
-     * the corresponding type. It's the minimal (the widest) type that produces the same "JIT Call
-     * Class Name' CC(T).
-     *
-     * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
-     * class} that could parameterized by non-parameterized callable JIT types as parameters.
-     *
-     * <p>The following should hold :
-     *  <ul>
-     *    <li>for any type T: T is-a C(T)</li>
-     *    <li>if T2 is-a T1, then C(T2) is-a C(T1)</li>
-     *    <li>for any type T, the CC(T) == CC(C(T)))</li>
-     *  </ul>
-     *
-     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying
-     * class} (regardless of access and immutability modifications) the canonical type is the
-     * corresponding {@link TerminalTypeConstant}.
-     * <br/>
-     * For a parameterized type with parameters of non-primitive types with trivial constraints,
-     * the canonical type is also the corresponding {@link TerminalTypeConstant}; otherwise it s
-     * the parameterized type with parameters of primitive or constraint types.
-     * <br/>
-     * For union or difference types, the canonical type is {@link ConstantPool#typeObject()}.
-     * <br/>
-     * For intersection types, it's the most specific canonical type across the contributing types.
-     *
-     * @return a canonical JIT type
-     *
-     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
-     */
-    public TypeConstant getJitCCType(TypeSystem ts) {
-        return ensureJitInfo(ts).jicType;
-    }
-
-    /**
-     * Determine the JIT Instance Class (JIC) type for a "newable" Ecstasy type, which represents a
-     * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
-     * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
-     *
-     * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
-     */
-    public TypeConstant getJitICType(TypeSystem ts) {
-        return ensureJitInfo(ts).jicType;
     }
 
     /**
@@ -7976,6 +7932,78 @@ public abstract class TypeConstant
         bctx.loadConstant(code, pool.valGreater());
 
         code.labelBinding(lblEnd);
+    }
+
+    /**
+     * A cacheable snapshot of information about the JIT transformation of a given Ecstasy type.
+     * <p/>
+     * Terms are defined in the "jit_class_names.txt" doc.
+     */
+    public record JitInfo(
+            TypeConstant type,              // the type for which this JitInfo exists
+            TypeConstant jicType,           // the JIT Instance Class' type
+            JICForm      jicForm,           // an indicator of how the JIC is to be instantiated
+            String       jicName,           // the Java class name to instantiate
+            TypeConstant jccType,           // the JIT Call Class' type
+            boolean      jccInterface,      // true iff the JCC is a Java interface
+            String       jccName) {         // the Java class name to call
+        public JitInfo {
+            assert jicForm != null && (jicType == null) == (jicForm == JICForm.Abstract) && jccType != null;
+        }
+
+        /**
+         * @return the Java {@link ClassDesc} for the JIC
+         */
+        public ClassDesc jicDesc() {
+            // it would be nice to cache this value, but no reason to hold it after the JIT phase
+            return ClassDesc.of(jicName);
+        }
+
+        /**
+         * @return the Java {@link ClassDesc} for the JCC
+         */
+        public ClassDesc jccDesc() {
+            // it would be nice to cache this value, but no reason to hold it after the JIT phase
+            return ClassDesc.of(jccName);
+        }
+    }
+
+    /**
+     * Defines the meaning of a JIT Instance Class (JIC).
+     *
+     * For a given type, there is a "JIT Instance Class" (JIC), which may be null if the type cannot
+     * be instantiated ("Abstract"), may be directly newable ("Simple"), and so on.
+     *
+     * @see org.xvm.javajit.builders.CommonBuilder#assembleNew
+     */
+    public enum JICForm {
+        /**
+         * There is no JIC because the type is not instantiable.
+         */
+        Abstract,
+        /**
+         * The JIC has the simple (Ctx-only) instantiation helper.
+         */
+        Simple,
+        /**
+         * The JIC has the simple-with-type (Ctx, TypeConstant) instantiation helper.
+         */
+        Generic,
+        /**
+         * The JIC has a virtual child (Ctx, Outer) instantiation helper.
+         */
+        Child,
+        /**
+         * The JIC has a virtual child with type (Ctx, TypeConstant, Outer) instantiation helper.
+         */
+        GenericChild,
+        /**
+         * The JIC requires runtime evaluation, because its name depends on type information that is
+         * only available at runtime. For example, the code "new Element[]" (where "Element" is a
+         * Type Parameter Type) needs to have the actual value of "Element" in order to know what
+         * L1/L2 specialized class of "Array" to instantiate.
+         */
+        Dynamic,
     }
 
     // ----- interpreter support -------------------------------------------------------------------
