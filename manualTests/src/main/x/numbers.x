@@ -20,6 +20,7 @@ module TestNumbers {
         testConverter();
         testAggregator();
         testDec28();
+        testDestringable();
         // testIntParsing();
     }
 
@@ -732,6 +733,33 @@ module TestNumbers {
                                              |expected "{expected[i]}"
                                             ;
         }
+    }
+
+    void testDestringable() {
+        assert new Int8("0") == 0;
+        assert new Int16("0") == 0;
+        assert new Int32("0") == 0;
+        assert new Int64("0") == 0;
+        assert new Int128("0") == 0;
+        assert new IntN("0") == 0;
+
+        assert new UInt8("0") == 0;
+        assert new UInt16("0") == 0;
+        assert new UInt32("0") == 0;
+        assert new UInt64("0") == 0;
+        assert new UInt128("0") == 0;
+        assert new UIntN("0") == 0;
+
+        assert new BFloat16("0.0") == 0.0;
+        assert new Float16("0.0") == 0.0;
+        assert new Float32("0.0") == 0.0;
+        assert new Float64("0.0") == 0.0;
+
+        assert new Dec32("0.0") == 0.0;
+        assert new Dec64("0.0") == 0.0;
+        assert new Dec128("0.0") == 0.0;
+
+        assert new Double("0.0") == 0.0;
     }
 
     void testIntParsing() {

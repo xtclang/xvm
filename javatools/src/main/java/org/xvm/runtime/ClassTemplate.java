@@ -639,7 +639,7 @@ public abstract class ClassTemplate
                         case Op.R_NEXT -> frame.assignTuple(iReturn, frame.popStack());
                         case Op.R_CALL -> {
                             frame.m_frameNext.addContinuation(frameCaller ->
-                                frameCaller.assignValue(iReturn, frameCaller.popStack()));
+                                frameCaller.assignTuple(iReturn, frameCaller.popStack()));
                             yield Op.R_CALL;
                         }
                         case Op.R_EXCEPTION -> Op.R_EXCEPTION;
