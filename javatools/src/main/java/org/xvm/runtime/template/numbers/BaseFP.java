@@ -3,7 +3,6 @@ package org.xvm.runtime.template.numbers;
 import java.math.RoundingMode;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -81,7 +80,7 @@ public abstract class BaseFP
     @Override
     protected int constructFromString(Frame frame, String sText, int iReturn) {
         try {
-            return frame.assignValue(Op.A_STACK, makeHandle(Double.valueOf(sText)));
+            return frame.assignValue(iReturn, makeHandle(Double.valueOf(sText)));
         } catch (NumberFormatException e) {
             return frame.raiseException(
                 xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
