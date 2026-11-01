@@ -7600,7 +7600,7 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
-        buildCompare(bctx, code, nOp, reg1, reg2::load, lblTrue);
+        buildCompare(bctx, code, nOp, reg1, () -> reg2.load(code), lblTrue);
     }
 
     /**
@@ -7619,7 +7619,7 @@ public abstract class TypeConstant
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Constant constant, Label lblTrue) {
         buildCompare(bctx, code, nOp, reg1,
-                loaderCode -> bctx.loadConstant(loaderCode, constant), lblTrue);
+                () -> bctx.loadConstant(code, constant), lblTrue);
     }
 
     /**
@@ -7655,7 +7655,7 @@ public abstract class TypeConstant
             }
             convertIfUnsignedPrimitive(code);
 
-            RegisterInfo argReg = argLoader.load(code);
+            RegisterInfo argReg = argLoader.load();
             if (!argReg.cd().isPrimitive()) {
                 Builder.unbox(code, this);
             }
@@ -7758,7 +7758,7 @@ public abstract class TypeConstant
             }
 
             reg1.load(code);
-            argLoader.load(code);
+            argLoader.load();
 
             switch (nOp) {
             case Op.OP_CMP:
@@ -7874,7 +7874,7 @@ public abstract class TypeConstant
 
             }
             reg1.load(code);
-            argLoader.load(code);
+            argLoader.load();
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
