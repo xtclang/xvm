@@ -57,6 +57,7 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static org.xvm.asm.Constant.Format.Int128;
 import static org.xvm.asm.Constant.Format.Tuple;
 
+import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -2260,6 +2261,173 @@ public abstract class Builder {
     }
 
     /**
+     * Convert a supplied argument on the Java stack to the parameter's calling convention.
+     *
+     * @param argIndex  the zero-based explicit argument index
+     * @param srcReg    the description of the value already loaded on the Java stack
+     * @param ctxSlot   the local slot containing Ctx
+     */
+    public void convertCallArgument(CodeBuilder code, JitMethodDesc jmd, int argIndex,
+                                    RegisterInfo srcReg, int ctxSlot) {
+        JitParamDesc pd        = jmd.getParam(argIndex);
+        JitFlavor    dstFlavor = pd.flavor;
+        JitFlavor    srcFlavor = srcReg.flavor();
+
+        if (srcFlavor == AlwaysNull) {
+            // a narrowed Null is loaded as the boxed singleton, just like a Null constant
+            srcFlavor = Specific;
+        }
+        if (srcFlavor == dstFlavor) {
+            if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
+                    !srcReg.type().isJitAssignableTo(pd.type)) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            return;
+        }
+
+        // possible transformations are:
+        //  - Specific  -> Specific           (String s; f(s) with f(Stringable))
+        //  - Specific  -> Widened            (String s; f(s) with f(Int|String))
+        //  - Specific  -> NullablePrimitive  (f(Null) with f(Int?))
+        //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
+        //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
+        //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
+        //  - Widened -> Primitive            (Int|String n narrowed to Int; f(n) with f(Int))
+        //  - Widened -> NullablePrimitive    (Int?|String n narrowed to Int?; f(n) with f(Int?))
+        switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+        case "Specific->SpecificWithDefault":
+        case "Widened->Specific",
+             "Widened->SpecificWithDefault":
+            if (!srcReg.cd().equals(pd.cd)) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            return;
+
+        case "Widened->WidenedWithDefault":
+            return;
+
+        case "Widened->Primitive",
+             "Widened->XvmPrimitive":
+            if (!srcReg.cd().equals(getCCDesc(pd.type))) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            unbox(code, pd.type);
+            return;
+
+        case "Widened->NullablePrimitive",
+             "Widened->NullableXvmPrimitive":
+            unboxNullable(code, pd.type, getCCDesc(pd.type.removeNullable()));
+            return;
+
+        case "Specific->Widened",
+             "Specific->WidenedWithDefault":
+            if (srcReg.type().isJitCCInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            return;
+
+        case "Specific->NullablePrimitive",
+             "Specific->NullablePrimitiveWithDefault":
+            assert srcReg.type().isOnlyNullable();
+            code.pop(); // throw away Null; load the default value and "true"
+            defaultLoad(code, pd.cd);
+            code.iconst_1();
+            return;
+
+        case "Specific->NullableXvmPrimitive",
+             "Specific->NullableXvmPrimitiveWithDefault": {
+            assert srcReg.type().isOnlyNullable();
+            code.pop(); // throw away Null; load the default primitive values and "true"
+            assert pd.index != -1;
+            int[] anIndexes = jmd.getAllOptimizedParamIndexes(pd.index);
+            // the last opt arg will be the boolean flag, fill the others with the default
+            for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
+                defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
+            }
+            // add the boolean "true" (same as int "1") to indicate Null
+            code.iconst_1();
+            return;
+        }
+
+        case "Primitive->Specific",
+             "Primitive->SpecificWithDefault",
+             "Primitive->Widened",
+             "Primitive->WidenedWithDefault",
+             "XvmPrimitive->Specific",
+             "XvmPrimitive->SpecificWithDefault",
+             "XvmPrimitive->Widened",
+             "XvmPrimitive->WidenedWithDefault":
+            assert srcReg.type().isJitAssignableTo(pd.type);
+            box(code, srcReg.type());
+            return;
+
+        case "Primitive->NullablePrimitive",
+             "Primitive->PrimitiveWithDefault",
+             "Primitive->NullablePrimitiveWithDefault",
+             "XvmPrimitive->NullableXvmPrimitive",
+             "XvmPrimitive->XvmPrimitiveWithDefault",
+             "XvmPrimitive->NullableXvmPrimitiveWithDefault":
+            // loadArgument() has already loaded the value; just load "false"
+            code.iconst_0();
+            return;
+
+        case "NullablePrimitive->Specific",
+             "NullablePrimitive->SpecificWithDefault",
+             "NullablePrimitive->Widened",
+             "NullablePrimitive->WidenedWithDefault": {
+            // loadArgument() has already loaded the value and the boolean
+            Label ifTrue = code.newLabel();
+            Label endIf  = code.newLabel();
+
+            code.ifne(ifTrue);
+            box(code, srcReg.type().removeNullable());
+            code.goto_(endIf)
+                    .labelBinding(ifTrue);
+            pop(code, srcReg.cd());
+            loadNull(code);
+            code.labelBinding(endIf);
+            return;
+        }
+
+        case "NullablePrimitive->Primitive",
+             "NullableXvmPrimitive->XvmPrimitive":
+            assert !srcReg.type().isOnlyNullable();
+            // pop the nullable flag
+            code.pop();
+            return;
+
+        case "NullablePrimitive->NullablePrimitiveWithDefault":
+            // loadArgument() has already loaded an int representing a boolean value; both
+            // 0 and 1 will work as expected (-1 representing a default is never coming in)
+            return;
+
+        case "NullableXvmPrimitive->Specific",
+             "NullableXvmPrimitive->SpecificWithDefault",
+             "NullableXvmPrimitive->Widened",
+             "NullableXvmPrimitive->WidenedWithDefault": {
+            // loadArgument() has already loaded the value and the boolean
+            Label ifTrue = code.newLabel();
+            Label endIf  = code.newLabel();
+
+            code.ifne(ifTrue);
+            box(code, srcReg.type().removeNullable());
+            code.goto_(endIf)
+                    .labelBinding(ifTrue);
+            for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
+                pop(code, cd);
+            }
+            loadNull(code);
+            code.labelBinding(endIf);
+            return;
+        }
+
+        default:
+            throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                    "; dst=" + dstFlavor);
+        }
+    }
+
+    /**
      * For a given class name create a name for an associated class of the specified shape.
      */
     public static String getShapeName(String className, ClassfileShape shape) {
@@ -2399,7 +2567,23 @@ public abstract class Builder {
          *
          * @return the register information describing the loaded value
          */
-        RegisterInfo load(CodeBuilder code);
+        RegisterInfo load();
+    }
+
+    /**
+     * Represents an operation that loads an explicit call argument onto the Java stack.
+     */
+    @FunctionalInterface
+    public interface ArgLoader {
+        /**
+         * Load an explicit call argument onto the Java stack.
+         *
+         * @param argIndex  the zero-based explicit argument index
+         *
+         * @return the register information describing the loaded value, or {@code null} for an
+         *         omitted argument or explicit default marker, leaving the stack unchanged
+         */
+        RegisterInfo load(int argIndex);
     }
 
     // ----- native class names --------------------------------------------------------------------

@@ -67,6 +67,7 @@ import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.Nop;
 
+import org.xvm.javajit.Builder.ArgLoader;
 import org.xvm.javajit.Builder.Loader;
 
 import org.xvm.javajit.builders.VirtualChildBuilder;
@@ -2110,37 +2111,51 @@ public class BuildContext {
      * @param typeTarget if not null, the call represents a "new" call for the specified target
      */
     public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue,
-                                  TypeConstant typeTarget) {
-        boolean isOptimized = jmd.isOptimized;
-        int     argCount    = anArgValue.length;
+                                 TypeConstant typeTarget) {
+        loadCallArguments(code, jmd,
+                i -> i < anArgValue.length && anArgValue[i] != Op.A_DEFAULT
+                        ? loadArgument(code, anArgValue[i])
+                        : null,
+                typeTarget);
+    }
 
+    /**
+     * Load call arguments using the supplied value loader.
+     *
+     * @param argLoader  for a zero-based explicit argument index, if an argument value is supplied,
+     *                   push that value onto the Java stack and return {@link RegisterInfo};
+     *                   if the argument is omitted or represented by an explicit default marker,
+     *                   return {@code null} and leave the stack unchanged
+     */
+    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd,
+                                  ArgLoader argLoader, TypeConstant typeTarget) {
         for (int i = 0, c = jmd.standardParams.length; i < c; i++ ) {
-            int          iArg = i < argCount ? anArgValue[i] : Op.A_DEFAULT;
-            JitParamDesc pd   = jmd.getParam(i);
+            JitParamDesc pd        = jmd.getParam(i);
+            RegisterInfo srcReg    = argLoader.load(i);
+            JitFlavor    dstFlavor = pd.flavor;
 
-            JitFlavor dstFlavor = pd.flavor;
-            if (iArg == Op.A_DEFAULT) {
+            if (srcReg == null) {
                 switch (dstFlavor) {
                 case SpecificWithDefault, WidenedWithDefault:
                     code.aconst_null();
                     break;
 
                 case PrimitiveWithDefault:
-                    assert isOptimized;
+                    assert jmd.isOptimized;
                     // default primitive with an additional `true`
                     Builder.defaultLoad(code, pd.cd);
                     code.iconst_1();
                     break;
 
                 case NullablePrimitiveWithDefault:
-                    assert isOptimized;
+                    assert jmd.isOptimized;
                     // default primitive with an additional `-1`
                     Builder.defaultLoad(code, pd.cd);
                     code.iconst_m1();
                     break;
 
                 case XvmPrimitiveWithDefault: {
-                    assert isOptimized;
+                    assert jmd.isOptimized;
                     // default primitives with an additional `true`
                     ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(pd.type);
                     for (ClassDesc cd : cds) {
@@ -2151,7 +2166,7 @@ public class BuildContext {
                 }
 
                 case NullableXvmPrimitiveWithDefault: {
-                    assert isOptimized;
+                    assert jmd.isOptimized;
                     // default primitives with an additional `-1`
                     ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(pd.type);
                     for (ClassDesc cd : cds) {
@@ -2187,161 +2202,7 @@ public class BuildContext {
                 continue;
             }
 
-            RegisterInfo srcReg    = loadArgument(code, iArg);
-            JitFlavor    srcFlavor = srcReg.flavor();
-            if (srcFlavor == AlwaysNull) {
-                // a narrowed Null is loaded as the boxed singleton, just like a Null constant
-                srcFlavor = Specific;
-            }
-            if (srcFlavor == dstFlavor) {
-                if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
-                        !srcReg.type().isJitAssignableTo(pd.type)) {
-                    generateCheckCast(code, pd.type);
-                }
-                continue;
-            }
-
-            // possible transformations are:
-            //  - Specific  -> Specific           (String s; f(s) with f(Stringable))
-            //  - Specific  -> Widened            (String s; f(s) with f(Int|String))
-            //  - Specific  -> NullablePrimitive  (f(Null) with f(Int?))
-            //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
-            //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
-            //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
-            //  - Widened -> Primitive            (Int|String n narrowed to Int; f(n) with f(Int))
-            //  - Widened -> NullablePrimitive    (Int?|String n narrowed to Int?; f(n) with f(Int?))
-            switch (srcFlavor.name() + "->" + dstFlavor.name()) {
-            case "Specific->SpecificWithDefault":
-            case "Widened->Specific",
-                 "Widened->SpecificWithDefault":
-                if (!srcReg.cd().equals(pd.cd)) {
-                    generateCheckCast(code, pd.type);
-                }
-                continue;
-
-            case "Widened->WidenedWithDefault":
-                continue;
-
-            case "Widened->Primitive",
-                 "Widened->XvmPrimitive":
-                if (!srcReg.cd().equals(builder.getCCDesc(pd.type))) {
-                    generateCheckCast(code, pd.type);
-                }
-                Builder.unbox(code, pd.type);
-                continue;
-
-            case "Widened->NullablePrimitive",
-                 "Widened->NullableXvmPrimitive":
-                Builder.unboxNullable(code, pd.type,
-                        builder.getCCDesc(pd.type.removeNullable()));
-                continue;
-
-            case "Specific->Widened",
-                 "Specific->WidenedWithDefault":
-                if (srcReg.type().isJitCCInterface()) {
-                    code.checkcast(CD_nObject);
-                }
-                continue;
-
-            case "Specific->NullablePrimitive",
-                 "Specific->NullablePrimitiveWithDefault":
-                assert srcReg.type().isOnlyNullable();
-                code.pop(); // throw away Null; load the default value and "true"
-                Builder.defaultLoad(code, pd.cd);
-                code.iconst_1();
-                continue;
-
-            case "Specific->NullableXvmPrimitive",
-                 "Specific->NullableXvmPrimitiveWithDefault": {
-                assert srcReg.type().isOnlyNullable();
-                code.pop(); // throw away Null; load the default primitive values and "true"
-                assert pd.index != -1;
-                int[] anIndexes = jmd.getAllOptimizedParamIndexes(pd.index);
-                // the last opt arg will be the boolean flag, fill the others with the default
-                for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
-                    Builder.defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
-                }
-                // add the boolean "true" (same as int "1") to indicate Null
-                code.iconst_1();
-                continue;
-            }
-
-            case "Primitive->Specific",
-                 "Primitive->SpecificWithDefault",
-                 "Primitive->Widened",
-                 "Primitive->WidenedWithDefault",
-                 "XvmPrimitive->Specific",
-                 "XvmPrimitive->SpecificWithDefault",
-                 "XvmPrimitive->Widened",
-                 "XvmPrimitive->WidenedWithDefault":
-                assert srcReg.type().isJitAssignableTo(pd.type);
-                Builder.box(code, srcReg.type());
-                continue;
-
-            case "Primitive->NullablePrimitive",
-                 "Primitive->PrimitiveWithDefault",
-                 "Primitive->NullablePrimitiveWithDefault",
-                 "XvmPrimitive->NullableXvmPrimitive",
-                 "XvmPrimitive->XvmPrimitiveWithDefault",
-                 "XvmPrimitive->NullableXvmPrimitiveWithDefault":
-                // loadArgument() has already loaded the value; just load "false"
-                code.iconst_0();
-                continue;
-
-            case "NullablePrimitive->Specific",
-                 "NullablePrimitive->SpecificWithDefault",
-                 "NullablePrimitive->Widened",
-                 "NullablePrimitive->WidenedWithDefault": {
-                // loadArgument() has already loaded the value and the boolean
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-
-                code.ifne(ifTrue);
-                Builder.box(code, srcReg.type().removeNullable());
-                code.goto_(endIf)
-                    .labelBinding(ifTrue);
-                Builder.pop(code, srcReg.cd());
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
-                continue;
-            }
-
-            case "NullablePrimitive->Primitive",
-                 "NullableXvmPrimitive->XvmPrimitive":
-                assert !srcReg.type().isOnlyNullable();
-                // pop the nullable flag
-                code.pop();
-                continue;
-
-            case "NullablePrimitive->NullablePrimitiveWithDefault":
-                // loadArgument() has already loaded an int representing a boolean value; both
-                // 0 and 1 will work as expected (-1 representing a default is never coming in)
-                continue;
-
-            case "NullableXvmPrimitive->Specific",
-                 "NullableXvmPrimitive->SpecificWithDefault",
-                 "NullableXvmPrimitive->Widened",
-                 "NullableXvmPrimitive->WidenedWithDefault": {
-                // loadArgument() has already loaded the value and the boolean
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-
-                code.ifne(ifTrue);
-                Builder.box(code, srcReg.type().removeNullable());
-                code.goto_(endIf)
-                        .labelBinding(ifTrue);
-                for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
-                    Builder.pop(code, cd);
-                }
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
-                continue;
-            }
-
-            default:
-                throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
-                                                        "; dst=" + dstFlavor);
-            }
+            builder.convertCallArgument(code, jmd, i, srcReg, ctxSlot(code));
         }
     }
 
@@ -2836,8 +2697,8 @@ public class BuildContext {
         TypeConstant     type = getArgumentType(targetId);
 
         buildSetProperty(code,
-                type, code_ -> loadArgument(code_, targetId),
-                prop, code_ -> loadArgument(code_, argId));
+                type, () -> loadArgument(code, targetId),
+                prop, () -> loadArgument(code, argId));
     }
 
     /**
@@ -2856,7 +2717,7 @@ public class BuildContext {
         RegisterInfo     src  = storeTempRegister(code, Op.A_THIS, srcType, srcFlavor);
         TypeConstant     type = getRegisterInfo(Op.A_THIS).type();
 
-        buildSetProperty(code, type, this::loadThis, prop, src::load);
+        buildSetProperty(code, type, () -> loadThis(code), prop, () -> src.load(code));
     }
 
     /**
@@ -2886,7 +2747,7 @@ public class BuildContext {
             md = jmd.standardMD;
         }
 
-        RegisterInfo targetReg = targetLoader.load(code);
+        RegisterInfo targetReg = targetLoader.load();
         if (!targetReg.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
@@ -2896,7 +2757,7 @@ public class BuildContext {
             loadCtx(code);
         }
 
-        RegisterInfo srcReg    = valueLoader.load(code);
+        RegisterInfo srcReg    = valueLoader.load();
         TypeConstant srcType   = srcReg.type();
         JitFlavor    srcFlavor = srcReg.flavor();
         JitFlavor    dstFlavor = pd.flavor;

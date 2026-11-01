@@ -85,7 +85,7 @@ public abstract class OpReturn
         Loader[] loaders = new Loader[cRets];
         for (int i = 0; i < cRets; i++) {
             int retId = anRet[i];
-            loaders[i] = code_ -> bctx.loadArgument(code_, retId);
+            loaders[i] = () -> bctx.loadArgument(code, retId);
         }
         return buildReturn(bctx, code, loaders);
     }
@@ -129,7 +129,7 @@ public abstract class OpReturn
 
                 String       slotName = GuardAll.returnSlotName(pdRet);
                 int          slotR    = bctx.scope.getSynthetic(slotName, true);
-                RegisterInfo regRet   = retLoaders[i].load(code);
+                RegisterInfo regRet   = retLoaders[i].load();
                 ClassDesc    cd       = regRet.cd();
 
                 String sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
@@ -262,7 +262,7 @@ public abstract class OpReturn
                     pdExt      = null;
                 }
 
-                RegisterInfo regRet     = retLoaders[i].load(code);
+                RegisterInfo regRet     = retLoaders[i].load();
                 ClassDesc    cd         = regRet.cd();
                 String       sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
 

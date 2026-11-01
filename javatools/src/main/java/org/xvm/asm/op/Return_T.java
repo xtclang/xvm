@@ -138,13 +138,13 @@ public class Return_T
             JitParamDesc ret   = returns[i];
             ClassDesc    cd    = ret.cd;
 
-            loaders[i] = code_ -> {
-                code_.aload(tupleSlot)
+            loaders[i] = () -> {
+                code.aload(tupleSlot)
                     .getfield(CD_nTuple, "$values", CD_nObject.arrayType())
                     .loadConstant(index)
                     .aaload();
                 if (!cd.equals(CD_nObject)) {
-                    code_.checkcast(cd);
+                    code.checkcast(cd);
                 }
                 return new SingleSlot(ret.type, ret.flavor, cd, "");
             };
