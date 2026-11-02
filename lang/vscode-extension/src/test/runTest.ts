@@ -123,8 +123,9 @@ async function main(): Promise<void> {
                 XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_CANCEL_UI: String(cancelUi),
                 XTC_PLAYBOOK_UI_PORT: String(uiPort),
-                XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
-                XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
+                // A checkout exported without .git, such as the container's, gets them from its caller.
+                XTC_PLAYBOOK_COMMIT: process.env.XTC_PLAYBOOK_COMMIT ?? git(extensionDevelopmentPath, 'rev-parse', 'HEAD'),
+                XTC_PLAYBOOK_DIRTY: process.env.XTC_PLAYBOOK_DIRTY ?? git(extensionDevelopmentPath, 'status', '--porcelain')
             } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
                 XTC_EXPLORER_PROBE_REFRESH: String(refreshDuringMove) } : { XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'), XTC_SETTINGS_PHASE: phase },
         });
@@ -136,6 +137,10 @@ async function main(): Promise<void> {
         await fs.rm(profile, { recursive: true, force: true });
         await fs.writeFile(path.join(runDirectory, '.completed'), 'VS Code exited\n');
     }
+}
+
+function git(cwd: string, ...args: string[]): string {
+    return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 }
 
 main().catch((err: unknown) => {

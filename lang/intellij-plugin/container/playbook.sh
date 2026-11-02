@@ -1,30 +1,57 @@
 #!/usr/bin/env bash
-# Runs the IntelliJ compiler playbook in a Linux container under Podman, on a virtual display (Xvfb),
-# so that no IDE window opens on the desktop and nothing typed or focused there reaches the test IDE.
+# Runs the IntelliJ and VS Code compiler playbooks in a Linux container, on a virtual display (Xvfb), so that no IDE
+# window opens on the desktop and nothing typed or focused there reaches the test IDE.
 #
-#   playbook.sh image                       build the image, localhost/xvm-playbook
+#   playbook.sh image                       build the image, localhost/xvm-playbook; the other modes build it when
+#                                           it is missing
 #   playbook.sh build                       xdk:installDist and publishLocal in the container (X336 runs the XDK's xec,
 #                                           X303 and X337 build with the plugin and XDK from mavenLocal)
-#   playbook.sh playbook X259,X324 [args]   the features playbook for those cases, or all, with Gradle args such as
-#                                           -Plsp4ijChannel=nightly -Plsp4ijVersion=<pinned version>
-#   playbook.sh gradle <args...>            any Gradle invocation in the container, on the virtual display
+#   playbook.sh playbook X259,X324 [args]   IntelliJ's features playbook for those cases, or all, with Gradle args
+#                                           such as -Plsp4ijChannel=nightly -Plsp4ijVersion=<pinned version>
+#   playbook.sh vscode X259,X324 [args]     VS Code's playbook for those cases, or all, with Gradle args
+#   playbook.sh gradle <args...>            any Gradle invocation in the container, on the virtual display, such as
+#                                           the VS Code extension's suite (:lang:vscode-extension:testVscodeExtension),
+#                                           with the lang build flags
+#
+# The root build's containerPlaybook* tasks run these modes. The container engine is $XTC_CONTAINER_COMMAND, which
+# those tasks set from org.xtclang.docker.command, as the docker build does; without it, docker, or podman when
+# docker is not installed. Podman on macOS needs its machine started (podman machine start).
 #
 # Each run exports this checkout as it is, uncommitted changes included, and copies the playbook's run
-# directories to lang/intellij-plugin/build/reports/compiler-playbook, where a native run puts them. The
+# directories to lang/intellij-plugin/build/reports/compiler-playbook, where a native run puts them, and the
+# VS Code extension's reports to lang/vscode-extension/build/reports. The
 # volumes xvm-playbook-gradle, xvm-playbook-work and xvm-playbook-m2 keep Gradle's caches, the build and
 # mavenLocal between runs.
 # The container is aarch64 Linux on an Apple machine: its fonts and timing are not macOS's. The export
-# has no .git, so the build's version information says it found none.
+# has no .git, so the build's version information says it found none; the VS Code playbook's commit and
+# uncommitted paths are passed in.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(git -C "$here" rev-parse --show-toplevel)"
 container="$root/lang/intellij-plugin/build/container"
 image=localhost/xvm-playbook:latest
-mode="${1:?mode: image, build, playbook or gradle}"
+mode="${1:?mode: image, build, playbook, vscode or gradle}"
+engine="${XTC_CONTAINER_COMMAND:-}"
+if [ -z "$engine" ]; then
+    if command -v docker > /dev/null; then engine=docker; else engine=podman; fi
+fi
 
 if [ "$mode" = "image" ]; then
-    exec podman build -t "$image" -f "$here/Containerfile" "$here"
+    exec "$engine" build -t "$image" -f "$here/Containerfile" "$here"
+fi
+if ! "$engine" image inspect "$image" > /dev/null 2>&1; then
+    "$engine" build -t "$image" -f "$here/Containerfile" "$here"
+fi
+
+# VS Code's playbook is a Gradle invocation in the container
+lang=(-PincludeBuildLang=true -PincludeBuildAttachLang=true)
+args=("$@")
+if [ "$mode" = "vscode" ]; then
+    cases="${2:?case ids, or all}"
+    args=(gradle :lang:vscode-extension:testCompilerPlaybook "${lang[@]}")
+    [ "$cases" = "all" ] || args+=("-PcompilerPlaybookCases=$cases")
+    args+=("${@:3}")
 fi
 
 # the checkout's files, tracked or not, without what git ignores, such as build outputs, and without
@@ -42,10 +69,14 @@ mv "$container/src.new" "$container/src"
 
 stamp="$(date +%Y%m%d-%H%M%S)"
 status=0
+# the export has no .git, so the commit and the uncommitted paths, which the VS Code playbook records, come from here
+commit="$(git -C "$root" rev-parse HEAD)"
+dirty="$(git -C "$root" status --porcelain)"
 # --init makes PID 1 reap orphans: without it, a Gradle daemon that exits on a cancel stays a zombie, which Java
 # reports alive (X260 waits for the canceled daemon to exit)
-podman run --rm --init --name "xvm-playbook-$stamp" \
+"$engine" run --rm --init --name "xvm-playbook-$stamp" \
     --memory 7g --shm-size 1g --security-opt label=disable \
+    -e XTC_PLAYBOOK_COMMIT="$commit" -e XTC_PLAYBOOK_DIRTY="$dirty" \
     -v xvm-playbook-gradle:/gradle \
     -v xvm-playbook-work:/work \
     -v xvm-playbook-m2:/home/playbook/.m2 \
@@ -53,12 +84,16 @@ podman run --rm --init --name "xvm-playbook-$stamp" \
     -v "$container/out:/out" \
     -v "$here/in-container.sh:/in-container.sh:ro" \
     "$image" \
-    bash /in-container.sh "$@" 2>&1 | tee "$container/out/$mode-$stamp.log" || status=$?
+    bash /in-container.sh "${args[@]}" 2>&1 | tee "$container/out/$mode-$stamp.log" || status=$?
 
 # where a native run's reports are, so that the same tools read them
 reports="$root/lang/intellij-plugin/build/reports/compiler-playbook"
 if [ -d "$container/out/runs" ]; then
     mkdir -p "$reports"
     rsync -a "$container/out/runs/" "$reports/"
+fi
+if [ -d "$container/out/vscode-reports" ]; then
+    mkdir -p "$root/lang/vscode-extension/build/reports"
+    rsync -a "$container/out/vscode-reports/" "$root/lang/vscode-extension/build/reports/"
 fi
 exit "$status"
