@@ -37,6 +37,28 @@ class DebugSessions {
         sessions[params.sessionId]?.message(params.message)
     }
 
+    /** Output for a session's console from outside the session, as from its Gradle task, in a DAP `output` event. */
+    fun output(
+        sessionId: String,
+        text: String,
+        category: String,
+    ) {
+        sessions[sessionId]?.message(
+            JsonObject().apply {
+                addProperty("type", "event")
+                addProperty("seq", 0)
+                addProperty("event", "output")
+                add(
+                    "body",
+                    JsonObject().apply {
+                        addProperty("category", category)
+                        addProperty("output", text)
+                    },
+                )
+            },
+        )
+    }
+
     /** A stopped or restarted language server takes every debug session, and the programs they launched, with it. */
     fun endAll(reason: String) {
         sessions.keys.toList().forEach { sessions.remove(it)?.ended(reason) }

@@ -4,7 +4,7 @@
 #
 #   playbook.sh image                       build the image, localhost/xvm-playbook
 #   playbook.sh build                       xdk:installDist and publishLocal in the container (X336 runs the XDK's xec,
-#                                           X303 builds with the plugin and XDK from mavenLocal)
+#                                           X303 and X337 build with the plugin and XDK from mavenLocal)
 #   playbook.sh playbook X259,X324 [args]   the features playbook for those cases, or all, with Gradle args such as
 #                                           -Plsp4ijChannel=nightly -Plsp4ijVersion=<pinned version>
 #   playbook.sh gradle <args...>            any Gradle invocation in the container, on the virtual display

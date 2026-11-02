@@ -186,6 +186,23 @@ xtcCompile {
 }
 ```
 
+#### Debugging with an Ecstasy Debugger
+
+To debug the Ecstasy program itself, with breakpoints in its `.x` sources, a run task can run it under
+the launcher's `--debug`, which an IDE's Ecstasy debugger attaches to. The Gradle properties `xtcDebug`
+and `xtcDebugAgent` set it for `runXtc`, the other run tasks and `testXtc`; the `debug` and
+`debugAgent` properties of `xtcRun`, `xtcTest` or a task set it in the build script:
+
+```bash
+./gradlew runXtc --module=MyApp -PxtcDebug=listen:127.0.0.1:5005,suspend -PxtcDebugAgent=<the language server's jar>
+```
+
+The program then waits for a debugger, such as VS Code's or IntelliJ's Ecstasy Attach configuration on
+port 5005. The IDEs set these properties themselves when they debug a module in Gradle mode, with
+`connect:` to their own port. `xtcDebugAgent` names the jar the launcher loads the debugger's agent from.
+A `DIRECT` run cannot be debugged so, since the agent would run in the Gradle daemon; run it with
+`--mode=ATTACHED`. A debugged `testXtc` always runs, and its results are not cached.
+
 #### Debugging Tips
 
 - **In-Process (fork=false)**: Best for debugging plugin code and compiler internals

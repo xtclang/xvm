@@ -42,6 +42,22 @@ class XtcRunConfigurationTest {
     }
 
     @Test
+    void debugIsInheritedAndRefusedForDirectRuns() {
+        final var project = newProject();
+        final var tasks = project.getTasks();
+        final var run = tasks.named("runXtc", XtcRunTask.class).get();
+        final var test = tasks.named("testXtc", XtcTestTask.class).get();
+        XtcProjectDelegate.resolveXtcRuntimeExtension(project).getDebug().set("connect:127.0.0.1:5005,suspend");
+
+        assertEquals("connect:127.0.0.1:5005,suspend", run.getDebug().get());
+        assertFalse(test.getDebug().isPresent());
+
+        run.getExecutionMode().set(ExecutionMode.DIRECT);
+        final var refusal = assertThrows(GradleException.class, run::createStrategy);
+        assertTrue(refusal.getMessage().contains("--mode=ATTACHED"), refusal.getMessage());
+    }
+
+    @Test
     void testCliSelectionOverridesAutomaticDiscovery() {
         final var project = newProject();
         final var task = project.getTasks().named("testXtc", XtcTestTask.class).get();

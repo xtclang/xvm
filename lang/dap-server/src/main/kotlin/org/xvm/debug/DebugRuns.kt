@@ -294,6 +294,21 @@ interface DebugRuns {
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> = CompletableFuture.failedFuture(UnsupportedOperationException("Attaching is not available here"))
 
+    /**
+     * Has [target]'s module run by its Gradle task, which the client runs with the launcher's `--debug connect:`, and
+     * attaches to the program as [attach] does once it connects and [ready] completes, under [runId]. Answers with the
+     * program's module once it has taken the setup; fails with the reason when the task ends before the program
+     * connects. [events] receives what an attached program's do, the program's exit last; [stop] ends the task, and
+     * the program with it. The program's console is the task's.
+     */
+    fun launchWithGradle(
+        runId: String,
+        target: LaunchTarget,
+        events: ProgramEvents,
+        ready: CompletionStage<out DebugSetup>,
+    ): CompletableFuture<String> =
+        CompletableFuture.failedFuture(UnsupportedOperationException("Debugging a Gradle run is not available here"))
+
     /** Console input for the run, with its line end. False when no such run is building or running. */
     fun input(
         runId: String,
