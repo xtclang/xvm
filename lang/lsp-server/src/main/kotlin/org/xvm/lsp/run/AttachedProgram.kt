@@ -11,6 +11,7 @@ import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintStream
 import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
@@ -18,8 +19,9 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * A program that the launcher runs with `--debug`, which the language server's debugger attached to through the
- * program's debugger agent ([XtcDebugAgent]), over a socket: the program's one run, whose ID is [RUN], and its debug
- * events, which go to [listener] in order on a reader thread of their own. [module] is the program's module.
+ * program's debugger agent ([XtcDebugAgent]), over a socket that the debugger opened ([attach]) or the program did
+ * ([accept]): the program's one run, whose ID is [RUN], and its debug events, which go to [listener] in order on a
+ * reader thread of their own. [module] is the program's module.
  */
 internal class AttachedProgram private constructor(
     private val socket: Socket,
@@ -146,9 +148,34 @@ internal class AttachedProgram private constructor(
         ): AttachedProgram {
             val socket = Socket()
             try {
-                val limit = CONNECT_LIMIT.inWholeMilliseconds.toInt()
-                socket.connect(InetSocketAddress(host, port), limit)
-                socket.soTimeout = limit
+                socket.connect(InetSocketAddress(host, port), CONNECT_LIMIT.inWholeMilliseconds.toInt())
+            } catch (failure: IOException) {
+                runCatching { socket.close() }
+                throw failure
+            }
+            return answer(socket, "at $host:$port", token, listener)
+        }
+
+        /**
+         * Takes the connection of a program that the launcher runs with `--debug connect:` and [server]'s port, with
+         * the [token] the program was given; fails as [attach] does, or when [server] is closed first. Blocks until a
+         * program has connected and answered.
+         */
+        fun accept(
+            server: ServerSocket,
+            token: String?,
+            listener: RunListener,
+        ): AttachedProgram = answer(server.accept(), "that connected to port ${server.localPort}", token, listener)
+
+        /** Introduces the debugger to the program [where] at the other end of [socket], and waits for its answer. */
+        private fun answer(
+            socket: Socket,
+            where: String,
+            token: String?,
+            listener: RunListener,
+        ): AttachedProgram {
+            try {
+                socket.soTimeout = CONNECT_LIMIT.inWholeMilliseconds.toInt()
                 val out = PrintStream(socket.getOutputStream(), true, Charsets.UTF_8)
                 out.println(
                     JsonObject()
@@ -161,7 +188,7 @@ internal class AttachedProgram private constructor(
                 val lines = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
                 val ready =
                     lines.readLine()?.let { runCatching { JsonParser.parseString(it).asJsonObject }.getOrNull() }
-                        ?: throw IOException("The program at $host:$port did not answer as an Ecstasy program under --debug")
+                        ?: throw IOException("The program $where did not answer as an Ecstasy program under --debug")
                 ready["error"]?.asString?.let { throw IOException("The program refused the debugger: $it") }
                 val protocol = ready["protocol"]?.asInt
                 if (ready["event"]?.asString != "ready" || protocol != RunWorkerIdentity.PROTOCOL) {
@@ -172,7 +199,7 @@ internal class AttachedProgram private constructor(
                 }
                 socket.soTimeout = 0
                 val module = ready["module"].asString
-                logger.info("attached to a program: module={} pid={} at={}:{}", module, ready["pid"]?.asLong, host, port)
+                logger.info("attached to a program: module={} pid={} {}", module, ready["pid"]?.asLong, where)
                 return AttachedProgram(socket, lines, listener, module)
             } catch (failure: IOException) {
                 runCatching { socket.close() }

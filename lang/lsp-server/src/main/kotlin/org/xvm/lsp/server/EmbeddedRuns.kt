@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.AttachTarget
@@ -15,6 +16,7 @@ import org.xvm.debug.ExceptionInfoState
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.FunctionBreakpointRequest
+import org.xvm.debug.LaunchTarget
 import org.xvm.debug.ModuleState
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
@@ -27,12 +29,17 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
 import org.xvm.lsp.adapter.xdk.XdkBuiltModule
+import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.RunDebugClient
 import org.xvm.lsp.run.RunListener
 import org.xvm.lsp.run.RunWorkerProcess
+import org.xvm.lsp.run.XtcDebugAgent
 import java.io.Closeable
+import java.io.IOException
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -109,6 +116,25 @@ data class RunExitedParams(
     val error: String?,
 )
 
+/**
+ * `xtc/debugTask` parameters: the Gradle task that runs a debug session's ([sessionId]) module under the debugger: its
+ * [module], [method] and [args], as a Gradle run takes them, with the Gradle properties `xtcDebug`, set to [debug],
+ * and `xtcDebugAgent`, set to [agent] when given, the jar of the agent that the launcher loads.
+ */
+data class DebugTaskParams(
+    val sessionId: String,
+    val module: String,
+    val method: String?,
+    val args: List<String>,
+    val debug: String,
+    val agent: String?,
+)
+
+/** The end of an `xtc/debugTask`: the task's exit code, when it has one. */
+data class DebugTaskResult(
+    val exitCode: Int? = null,
+)
+
 /** Client side of the embedded execution notifications. */
 interface XtcLanguageClient : LanguageClient {
     @JsonNotification("xtc/runOutput")
@@ -120,6 +146,14 @@ interface XtcLanguageClient : LanguageClient {
     /** One DAP message from a debug session to the client; see [DebugSessions]. */
     @JsonNotification("xtc/debugMessage")
     fun debugMessage(params: DebugMessageParams) {}
+
+    /**
+     * Runs a debug session's module with its Gradle task, as [DebugTaskParams] says, and answers once the task has
+     * ended; canceling the request ends the task.
+     */
+    @JsonRequest("xtc/debugTask")
+    fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> =
+        CompletableFuture.failedFuture(UnsupportedOperationException(EmbeddedRuns.NO_GRADLE_TASKS))
 }
 
 /**
@@ -137,12 +171,31 @@ internal class EmbeddedRuns(
     /** The programs a debugger attached to, by run ID, while it is attached. */
     private val attached = ConcurrentHashMap<String, AttachedProgram>()
 
+    /** The Gradle tasks that run programs under the debugger, by run ID, until their program ends. */
+    private val gradleRuns = ConcurrentHashMap<String, GradleRun>()
+
     /** The sources each run under the debugger was compiled from, by run ID, while it runs. */
     private val compiled = ConcurrentHashMap<String, CompiledSources>()
 
     /** Input typed while a run is still building, forwarded in order when the program starts. */
     private val waiting = HashMap<String, WaitingInput>()
     private val inputLock = Any()
+
+    /** A Gradle task that runs a program under the debugger, and where the debugger waits for it to connect. */
+    private class GradleRun(
+        val task: CompletableFuture<DebugTaskResult>,
+        val server: ServerSocket,
+    ) {
+        @Volatile
+        var stopped = false
+
+        /** Ends the task, and the program with it, as Gradle ends a run it cancels, and stops waiting for it. */
+        fun stop() {
+            stopped = true
+            task.cancel(true)
+            runCatching { server.close() }
+        }
+    }
 
     private class WaitingInput {
         val text = StringBuilder()
@@ -248,6 +301,106 @@ internal class EmbeddedRuns(
                 if (failure != null && attached.remove(runId) != null) program.close()
             }
         }, ATTACHING)
+    }
+
+    /**
+     * Has the client run [target]'s module with its Gradle task for the debug session [sessionId], and attaches the
+     * debugger to the program, as [attach] does, once it connects and [ready] completes: the task runs the program with
+     * `--debug connect:`, this server's port and the launch's own token. Answers with the program's module once it has
+     * taken the setup; fails with the reason when the task ends first. [events] receives what an attached program's
+     * do, but the program's end is an exit: stopping the run ends the task, and the program with it.
+     */
+    internal fun launchWithGradle(
+        runId: String,
+        sessionId: String,
+        target: LaunchTarget,
+        events: RunListener,
+        ready: CompletionStage<out DebugSetup>,
+    ): CompletableFuture<String> {
+        val client =
+            client() as? XtcLanguageClient
+                ?: return CompletableFuture.failedFuture(UnsupportedOperationException(NO_GRADLE_TASKS))
+        val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
+        val token = UUID.randomUUID().toString()
+        // IPv4's loopback address, which the agent's --debug options can name
+        val server = ServerSocket(0, 1, InetAddress.getByName(LOOPBACK))
+        val debug = "connect:$LOOPBACK:${server.localPort},suspend,token=$token"
+        val task =
+            client.debugTask(
+                DebugTaskParams(sessionId, gradleModule(target), target.method, target.args, debug, XtcDebugAgent.jar()?.path),
+            )
+        val run = GradleRun(task, server)
+        gradleRuns[runId] = run
+        // a task that ends before its program connects ends the wait
+        task.whenComplete { _, _ -> runCatching { server.close() } }
+        val listener =
+            object : RunListener by events {
+                override fun exited(
+                    code: Long?,
+                    error: String?,
+                ) {
+                    attached.remove(runId)
+                    gradleRuns.remove(runId)
+                    events.exited(code, error)
+                }
+
+                override fun detached(reason: String?) {
+                    attached.remove(runId)
+                    gradleRuns.remove(runId)
+                    events.exited(null, reason.takeUnless { run.stopped } ?: STOPPED_WITH_TASK)
+                }
+            }
+        return CompletableFuture
+            .supplyAsync({
+                try {
+                    AttachedProgram.accept(server, token, listener)
+                } catch (failure: IOException) {
+                    throw IOException(neverConnected(run, failure), failure)
+                } finally {
+                    runCatching { server.close() }
+                }
+            }, ATTACHING)
+            .thenCompose { program ->
+                attached[runId] = program
+                logger.info("run attached after Gradle started it: run={} module={}", runId, program.module)
+                ready
+                    .toCompletableFuture()
+                    .thenCompose { setup -> program.debug(modules, setup) }
+                    .thenApply { program.module }
+                    .whenComplete { _, failure -> if (failure != null && attached.remove(runId) != null) program.close() }
+            }.whenComplete { _, failure -> if (failure != null) gradleRuns.remove(runId)?.stop() }
+    }
+
+    /** The name of [target]'s module, which a Gradle task takes: a source URI names the workspace module it roots. */
+    private fun gradleModule(target: LaunchTarget): String {
+        target.moduleName?.let { return it }
+        val file = XdkSources.file(target.module) ?: return target.module
+        return compiler()?.sourceModuleInputs()?.firstOrNull { it.root == file }?.name ?: target.module
+    }
+
+    /** Why the program of a Gradle [run] never connected: it was stopped, or its task ended first. */
+    private fun neverConnected(
+        run: GradleRun,
+        failure: IOException,
+    ): String {
+        val task = run.task
+        return when {
+            run.stopped -> STOPPED_BEFORE_START
+
+            task.isCompletedExceptionally -> "The Gradle task could not run: ${task.exceptionNow().message}"
+
+            task.isDone -> {
+                val code =
+                    task
+                        .join()
+                        .exitCode
+                        ?.let { " with exit code $it" }
+                        .orEmpty()
+                "Gradle ended$code before the program started; its output says why."
+            }
+
+            else -> failure.message ?: "The program did not connect"
+        }
     }
 
     private fun start(
@@ -372,6 +525,10 @@ internal class EmbeddedRuns(
      */
     fun stop(params: StopRunParams): Boolean {
         val runId = params.runId ?: return false
+        gradleRuns[runId]?.let { run ->
+            run.stop()
+            return true
+        }
         attached[runId]?.let { program ->
             program.detach()
             return true
@@ -598,13 +755,17 @@ internal class EmbeddedRuns(
 
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
     internal fun tracked(): Int =
-        synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + attached.size + worker.tracked()
+        synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + attached.size + gradleRuns.size + worker.tracked()
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun workerPids(): List<Long> = worker.workerPids()
 
-    /** Ends the runs: the programs in the execution workers stop, and those a debugger attached to run on. */
+    /**
+     * Ends the runs: the programs in the execution workers and the Gradle tasks stop, and those a debugger attached to
+     * run on.
+     */
     override fun close() {
+        gradleRuns.values.toList().forEach(GradleRun::stop)
         attached.values.toList().forEach(AttachedProgram::close)
         worker.close()
     }
@@ -636,6 +797,15 @@ internal class EmbeddedRuns(
 
         /** The exit of a run stopped while its module was still building. */
         const val STOPPED_BEFORE_START = "Stopped before the program started."
+
+        /** The end of a program that Gradle ran under the debugger, once its task was stopped. */
+        const val STOPPED_WITH_TASK = "Stopped, with its Gradle task."
+
+        /** Where a debugger waits for a program that Gradle runs to connect. */
+        private const val LOOPBACK = "127.0.0.1"
+
+        /** Why a client that cannot run a Gradle task cannot debug a Gradle run. */
+        const val NO_GRADLE_TASKS = "This client does not run Gradle tasks"
 
         /** Why a breakpoint on a line changed since the program was built is not installed. */
         const val CHANGED_SINCE_BUILD =
