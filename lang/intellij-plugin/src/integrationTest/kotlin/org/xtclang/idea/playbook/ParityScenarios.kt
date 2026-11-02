@@ -41,6 +41,7 @@ class ParityScenarios(
         onTypeCases()
         runEntryCases()
         attachCases()
+        gradleDebugCases()
     }
 
     internal fun case(
