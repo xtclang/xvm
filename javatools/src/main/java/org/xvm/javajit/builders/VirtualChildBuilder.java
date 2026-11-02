@@ -40,6 +40,8 @@ import org.xvm.javajit.TypeSystem.Artifact;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.javajit.TypeSystem.HASH;
+
 /**
  * Builds virtual children using the effective parent composition.
  *
@@ -77,7 +79,8 @@ public class VirtualChildBuilder extends CommonBuilder {
 
     @Override
     public boolean shouldGenerate(IdentityConstant id) {
-        if (id instanceof PropertyConstant propId && !propId.isConstant() &&
+        if (!hasConstructionSiteAnnotations() &&
+                id instanceof PropertyConstant propId && !propId.isConstant() &&
                 propId.getClassIdentity().getComponent() instanceof ClassStructure clz &&
                 clz.isVirtualChildClass()) {
             // a contribution from a differently named child (e.g. D.C0 on D.C1) may need
@@ -144,16 +147,21 @@ public class VirtualChildBuilder extends CommonBuilder {
         if (bctx.methodDesc instanceof JitDetachedBodyDesc body) {
             return body.receiverCD;
         }
-        // everywhere, except constructors, we need to refer to "this" as an interface
-        return bctx.isConstructor
+        // child constructor bodies use the callable interface; annotation constructors use JIC
+        return bctx.isConstructor && !hasConstructionSiteAnnotations()
                 ? thisType.getJitCCDesc(typeSystem)
                 : super.getThisCD(bctx);
     }
 
     @Override
     protected void assembleInterfaces(ClassBuilder classBuilder) {
-        // the callable interface contains both the child topology and ordinary interface contracts
-        classBuilder.withInterfaceSymbols(getPureImplDesc(thisType));
+        if (hasConstructionSiteAnnotations()) {
+            // the unannotated superclass already implements the child interface
+            super.assembleInterfaces(classBuilder);
+        } else {
+            // the callable interface contains both the child topology and ordinary interface contracts
+            classBuilder.withInterfaceSymbols(getPureImplDesc(thisType));
+        }
     }
 
     @Override
@@ -229,10 +237,24 @@ public class VirtualChildBuilder extends CommonBuilder {
      * predecessor; routing it virtually again would re-enter D.C0.
      */
     public JitCallDesc resolveChildSuperCall(BuildContext bctx) {
-        MethodBody   body       = bctx.callChain[bctx.callDepth + 1];
+        int          depth      = bctx.callDepth + 1;
+        MethodBody   body       = bctx.callChain[depth];
         TypeConstant targetType = resolveType(body.getIdentity().getClassIdentity());
 
-        if (!(bctx.methodDesc instanceof JitDetachedBodyDesc) || !targetType.isVirtualChildClass()) {
+        if (!(bctx.methodDesc instanceof JitDetachedBodyDesc detached)) {
+            return null;
+        }
+
+        if (isEmbedded(targetType.getExplicitClassFormat())) {
+            // an embedded super body must retain the detached receiver, which can be an interface
+            String name = DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
+                    .ensureJitMethodName(typeSystem) + HASH + depth;
+            bctx.buildSuper(name, depth);
+            return new JitCallDesc(art.CD(), name, body.getJitDesc(this, thisType), Kind.Static,
+                    false, detached.receiverCD);
+        }
+
+        if (!targetType.isVirtualChildClass()) {
             return null;
         }
 
@@ -254,14 +276,16 @@ public class VirtualChildBuilder extends CommonBuilder {
     /**
      * Resolve a child method or property accessor to its exact Java call target.
      */
-    private JitCallDesc resolveChildCall(MethodBody body, TypeConstant ownerType) {
+    public JitCallDesc resolveChildCall(MethodBody body, TypeConstant ownerType) {
         if (body.getIdentity().getNamespace() instanceof PropertyConstant id) {
-            PropertyInfo prop = ownerType.ensureAccess(Access.PRIVATE).ensureTypeInfo()
-                    .findProperty(id.getName());
+            PropertyInfo prop = ownerType.ensureAccess(Access.PRIVATE).ensureTypeInfo().
+                                    findProperty(id.getName());
             if (prop == null) {
                 // a derived child can introduce a property absent from the hard-left contract
-                prop = id.getPropertyInfo(resolveType(id.getClassIdentity()));
+                prop = id.getPropertyInfo(id.getClassIdentity().getFormalType().
+                            resolveGenerics(pool(), getThisType()));
             }
+
             boolean isGetter = body.getIdentity().getName().equals("get");
             String  name     = isGetter
                     ? prop.ensureGetterJitMethodName(typeSystem)
@@ -341,7 +365,8 @@ public class VirtualChildBuilder extends CommonBuilder {
     private void assemblePropertyBody(ClassBuilder classBuilder, PropertyInfo prop,
                                       boolean isGetter) {
         MethodBody body = getPropertyChain(prop, isGetter)[0];
-        if (body.isAbstract() || !body.getIdentity().getClassIdentity().equals(thisId)) {
+        if (body.isAbstract() || hasConstructionSiteAnnotations() ||
+                !body.getIdentity().getClassIdentity().equals(thisId)) {
             return;
         }
 
@@ -408,7 +433,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         }
         if (isGetter) {
             normalizePrimitiveField(code, prop.getType());
-            addReturn(code, values[0].cd);
+            addReturn(code, jmd.getReturn(0).cd);
         } else {
             code.return_();
         }
@@ -602,14 +627,21 @@ public class VirtualChildBuilder extends CommonBuilder {
             return;
         }
 
+        if (!hasConstructionSiteAnnotations()) {
+            // a declaration site annotation can place the child's own body below the head of the
+            // call chain
+            MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
+            for (int depth = 0; depth < chain.length; depth++) {
+                if (chain[depth].getIdentity().getClassIdentity().equals(thisId)) {
+                    assembleDetachedBody(classBuilder, method, depth);
+                }
+            }
+        }
+
         TypeConstant targetType = resolveType(owner);
         if (!targetType.isVirtualChildClass()) {
             super.assembleMethod(classBuilder, method, name, jmd);
             return;
-        }
-
-        if (owner.equals(thisId)) {
-            assembleDetachedBody(classBuilder, method, name, jmd);
         }
 
         // private methods and property initializers need no virtual routing; their callers invoke
@@ -672,22 +704,23 @@ public class VirtualChildBuilder extends CommonBuilder {
         });
     }
 
-    private void assembleDetachedBody(ClassBuilder classBuilder, MethodInfo method, String name,
-                                      JitMethodDesc jmd) {
-        if (!method.getHead().getMethodStructure().hasCode()) {
+    private void assembleDetachedBody(ClassBuilder classBuilder, MethodInfo method, int depth) {
+        MethodBody body = method.ensureOptimizedMethodChain(typeInfo)[depth];
+        if (!body.getMethodStructure().hasCode()) {
             return;
         }
 
-        JitDetachedBodyDesc bodyJmd  = new JitDetachedBodyDesc(jmd, getCCDesc(thisType));
-        String              bodyName = DetachedBody + name;
-        BuildContext        bctx     = new BuildContext(this, typeInfo, method, bodyJmd);
+        JitCallDesc         call     = resolveChildMethodCall(this, body, thisType);
+        JitDetachedBodyDesc bodyJmd  = new JitDetachedBodyDesc(call.jmd(), call.receiverCD());
+        String              bodyName = call.name();
+        BuildContext        bctx     = new BuildContext(this, typeInfo, method, bodyJmd, depth);
 
-        if (jmd.isOptimized) {
+        if (bodyJmd.isOptimized) {
             assembleMethodWrapper(classBuilder, bodyName, bodyJmd.staticWrapper());
             bodyName += OPT;
         }
 
-        MethodTypeDesc bodyMD = jmd.isOptimized ? bodyJmd.optimizedMD : bodyJmd.standardMD;
+        MethodTypeDesc bodyMD = bodyJmd.isOptimized ? bodyJmd.optimizedMD : bodyJmd.standardMD;
 
         doAssembleMethod(classBuilder, bctx, method, bodyName, bodyMD,
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC);
@@ -759,6 +792,10 @@ public class VirtualChildBuilder extends CommonBuilder {
      * composition through interfaces and routing, not through Java class inheritance.
      */
     private TypeConstant computeJavaSuperType() {
+        if (hasConstructionSiteAnnotations()) {
+            return annotated.getBaseType();
+        }
+
         // a phantom has no local declaration; its underlying identity can already be
         // the inherited child that must supply the Java superclass
         TypeConstant superType = getSuperChild(thisType);

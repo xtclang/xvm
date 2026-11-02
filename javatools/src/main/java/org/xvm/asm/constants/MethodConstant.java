@@ -252,6 +252,16 @@ public class MethodConstant
     }
 
     /**
+     * Similarly to the above: this is just a helper method.
+     *
+     * @return true iff this method represents a validator
+     */
+    public boolean isValidator() {
+        MethodStructure method = (MethodStructure) getComponent();
+        return method != null && method.isValidator();
+    }
+
+    /**
      * @return true iff this method is nested directly inside of a class
      */
     public boolean isTopLevel() {

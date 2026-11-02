@@ -1,6 +1,9 @@
 package org.xvm.javajit;
 
 import java.lang.constant.ClassDesc;
+
+import java.util.Arrays;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.javajit.Builder.CD_CtorCtx;
@@ -80,5 +83,44 @@ public class JitCtorDesc
             paramCDs[ix++] = targetCD;
         }
         return ix;
+    }
+
+    @Override
+    public JitCtorDesc standardOnly() {
+        return isOptimized
+                ? new JitCtorDesc(typeTarget, targetCD, addCtorCtx, addType, addOuter,
+                                  standardReturns, standardParams, null, null)
+                : this;
+    }
+
+    /**
+     * Append constructor parameters, preserving both calling conventions.
+     */
+    public JitCtorDesc appendParams(JitMethodDesc suffix) {
+        boolean        isOpt     = isOptimized || suffix.isOptimized;
+        int            stdCount  = standardParams.length;
+        JitParamDesc[] params    = appendParams(standardParams, suffix.standardParams, stdCount);
+        JitParamDesc[] optParams = isOpt
+                ? appendParams(isOptimized ? optimizedParams : standardParams,
+                        suffix.isOptimized ? suffix.optimizedParams : suffix.standardParams, stdCount)
+                : null;
+
+        return new JitCtorDesc(typeTarget, targetCD, addCtorCtx, addType, addOuter, standardReturns,
+                params, isOpt ? isOptimized ? optimizedReturns : standardReturns : null, optParams);
+    }
+
+    private static JitParamDesc[] appendParams(JitParamDesc[] prefix, JitParamDesc[] suffix,
+                                               int stdOffset) {
+        int            pxCount = prefix.length;
+        int            sxCount = suffix.length;
+        JitParamDesc[] params  = Arrays.copyOf(prefix, pxCount + sxCount);
+
+        // logical argument indexes and Java parameter indexes have different offsets
+        for (int i = 0; i < sxCount; i++) {
+            JitParamDesc pd = suffix[i];
+            params[pxCount + i] = new JitParamDesc(pd.type, pd.flavor, pd.cd,
+                    pd.index + stdOffset, pd.altIndex + pxCount, pd.extension);
+        }
+        return params;
     }
 }

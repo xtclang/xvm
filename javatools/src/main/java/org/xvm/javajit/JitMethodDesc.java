@@ -500,7 +500,11 @@ public class JitMethodDesc {
                 : null;
 
         if (isConstructor) {
-            return new JitCtorDesc(targetType, builder.getCCDesc(targetType),
+            ClassDesc targetCd = targetType.isAnnotated()
+                    ? builder.getICDesc(targetType)
+                    : builder.getCCDesc(targetType);
+
+            return new JitCtorDesc(targetType, targetCd,
                     hasFinalizer, /*fAddType*/ false, /*fAddOuter*/ false,
                     stdReturns, stdParams, optReturns, optParams);
         } else {

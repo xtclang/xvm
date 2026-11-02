@@ -30,6 +30,7 @@ import org.xvm.asm.constants.*;
 import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
+import org.xvm.javajit.builders.AnnotationHelper;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
@@ -241,8 +242,14 @@ public abstract class Builder {
                     break;
                 }
 
-                case Implements, Incorporates:
+                case Annotation, Implements, Incorporates:
                     interfaces.add(getCCDesc(contribType));
+                    break;
+
+                case Into:
+                    if (isInterface && contribType.isJitCCInterface()) {
+                        interfaces.add(getCCDesc(contribType));
+                    }
                     break;
             }
         }
@@ -1231,7 +1238,7 @@ public abstract class Builder {
 
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
-            typeOwner = jitInfo.getOwnerType(this, typeContainer);
+            typeOwner = jitInfo.getCallableOwnerType(this, typeContainer);
             typeOwner = typeOwner.getJitCCType();
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
@@ -2112,7 +2119,7 @@ public abstract class Builder {
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        boolean        hasType          = typeInfo.hasGenericTypes();
+        boolean        hasType          = typeInfo.getType().hasJitRuntimeType();
         boolean        hasOuter         = typeInfo.getClassStructure().isInstanceChild();
         return hasType || hasOuter
             ? new JitCtorDesc(typeInfo.getType(),
@@ -2128,11 +2135,20 @@ public abstract class Builder {
      * Obtain a virtual child's instantiator-router descriptor for class-of-class dispatch.
      * The instantiator interface declares this router with the resolved type and outer object,
      * even when the corresponding static instantiator does not need a TypeConstant argument.
+     * The original child supplies the return contract; the target supplies its annotations.
+     *
+     * @param constructor  the original virtual-child constructor
+     * @param targetType   the child type being constructed
      */
-    public JitMethodDesc getChildConstructorDesc(MethodInfo constructor) {
-        TypeInfo      info = constructor.getTypeInfo();
-        TypeConstant  type = info.getType().getJitCCType();
-        JitMethodDesc jmd  = convertConstructToNew(info, getCCDesc(type),
+    public JitCtorDesc getChildConstructorDesc(MethodInfo constructor, TypeConstant targetType) {
+        TypeInfo     info = constructor.getTypeInfo();
+        TypeConstant type = info.getType().removeAnnotations().getJitCCType();
+
+        if (targetType.isAnnotated()) {
+            type = type.adoptAnnotations(pool(), targetType.getJitCCType());
+        }
+
+        JitMethodDesc jmd = convertConstructToNew(info, getCCDesc(type),
                 (JitCtorDesc) constructor.getJitDesc(this, type));
         return new JitCtorDesc(type, null, false, true, true,
                 jmd.standardReturns, jmd.standardParams, jmd.optimizedReturns, jmd.optimizedParams);
@@ -2175,28 +2191,35 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     targetCD = getICDesc(targetType);
-        JitMethodDesc instorMD;
+        ClassDesc targetCD = targetJIC.isVirtualChild()
+                ? getCCDesc(targetType)
+                : getICDesc(targetType);
 
         if (targetJIC.isVirtualChild()) {
             assert outer != null : "Virtual child without an outer";
             assert bctx  != null : "Out of context";
 
             MethodInfo    origin       = ctor.getChildConstructorOrigin();
-            JitMethodDesc instorRouter = getChildConstructorDesc(origin);
+            JitCtorDesc   instorRouter = getChildConstructorDesc(origin, targetType);
             String        targetName   = instorRouter.typeTarget.getJitImplName(typeSystem);
             ClassDesc     instorIface  = ClassDesc.of(TypeSystem.funkyInterface(targetName));
-            String        name         = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            String        instorName   = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc instorMD     = convertConstructToNew(targetInfo, targetCD,
+                                                (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
-            instorMD = convertConstructToNew(targetInfo, targetCD,
-                    (JitCtorDesc) ctor.getJitDesc(this, targetType));
+            JitMethodDesc callMD = instorRouter;
+            if (targetType.isAnnotated()) {
+                JitCallDesc call = AnnotationHelper.getInstantiatorCall(bctx, targetType, instorName, instorRouter);
+                instorName = call.name();
+                callMD     = call.jmd();
+            }
 
             MethodTypeDesc md;
-            if (instorRouter.isOptimized) {
-                md    = instorRouter.optimizedMD;
-                name += OPT;
+            if (callMD.isOptimized) {
+                md          = callMD.optimizedMD;
+                instorName += OPT;
             } else {
-                md = instorRouter.standardMD;
+                md = callMD.standardMD;
             }
 
             // evaluate the outer once; its runtime type selects both the child override and JIC
@@ -2225,27 +2248,43 @@ public abstract class Builder {
                 .aload(typeSlot)
                 .aload(outerSlot);
             argsLoader.accept(instorRouter);
-            code.invokeinterface(instorIface, name, md);
+
+            if (targetType.isAnnotated()) {
+                AnnotationHelper.loadAnnotationConstructorArgs(bctx, code, targetType);
+            }
+            code.invokeinterface(instorIface, instorName, md);
 
             if (!md.returnType().equals(targetCD)) {
                 // every override returns the base child type in its Java descriptor
                 code.checkcast(targetCD);
             }
+            return instorMD;
         } else {
-            String instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-            instorMD = convertConstructToNew(targetInfo, targetCD,
-                        (JitCtorDesc) ctor.getJitDesc(this, targetType));
+            String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc instorMD   = convertConstructToNew(targetInfo, targetCD,
+                                        (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
-            MethodTypeDesc md;
-            if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
-                instorName += Builder.OPT;
-            } else {
-                md = instorMD.standardMD;
+            JitMethodDesc callMD = instorMD;
+            if (targetType.isAnnotated()) {
+                assert bctx  != null : "Out of context";
+
+                JitCallDesc call = AnnotationHelper.getInstantiatorCall(
+                        bctx, targetType, instorName, (JitCtorDesc) instorMD);
+                instorName = call.name();
+                callMD     = call.jmd();
             }
 
+            MethodTypeDesc md;
+            if (callMD.isOptimized) {
+                md          = callMD.optimizedMD;
+                instorName += OPT;
+            } else {
+                md = callMD.standardMD;
+            }
+
+            // target = Target.$new(ctx, [type], [outer], args...); // or $new$p
             code.aload(ctxSlot);
-            if (targetInfo.hasGenericTypes()) {
+            if (targetType.hasJitRuntimeType()) {
                 loadTypeConstant(bctx, code, targetType);
             }
             if (outer != null) {
@@ -2255,9 +2294,13 @@ public abstract class Builder {
                 }
             }
             argsLoader.accept(instorMD);
+
+            if (targetType.isAnnotated()) {
+                AnnotationHelper.loadAnnotationConstructorArgs(bctx, code, targetType);
+            }
             code.invokestatic(targetCD, instorName, md);
+            return callMD;
         }
-        return instorMD;
     }
 
     /**
@@ -2431,7 +2474,7 @@ public abstract class Builder {
      * For a given class name create a name for an associated class of the specified shape.
      */
     public static String getShapeName(String className, ClassfileShape shape) {
-        int simpleOffset = className.lastIndexOf('.');
+        int simpleOffset = Math.max(className.lastIndexOf('.'), className.lastIndexOf('$'));
         assert simpleOffset > 0;
         String simpleName = className.substring(simpleOffset + 1);
         return className.substring(0, simpleOffset + 1) + shape.prefix + simpleName;
@@ -2902,7 +2945,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_L2D          = md(CD_double, CD_long);
     public static final MethodTypeDesc MD_F2I          = md(CD_int, CD_float);
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
-    public static final MethodTypeDesc MD_xvmClass     = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
     public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);

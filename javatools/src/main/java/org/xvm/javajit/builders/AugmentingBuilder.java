@@ -28,6 +28,8 @@ import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
+import org.xvm.javajit.builders.AnnotationHelper.AnnotationConstructor;
+
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
 
@@ -288,17 +290,15 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleNew(
-            ClassBuilder classBuilder, MethodInfo constructor,
-            String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         MethodModel mm = jmd.isOptimized
                 ? findMethod(jitName + OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
 
-        if (mm != null) {
-            return;
+        if (mm == null) {
+            super.assembleNew(classBuilder, constructor, jitName, jmd, annoConstructors);
         }
-        super.assembleNew(classBuilder, constructor, jitName, jmd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------

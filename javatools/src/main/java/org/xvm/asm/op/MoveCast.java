@@ -5,6 +5,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -139,6 +140,18 @@ public class MoveCast
                 Builder.box(code, typeFrom);
             }
         }
+        if (typeTo.isAnnotated() && !typeFrom.isA(typeTo)) {
+            // the widened Java descriptor alone cannot validate the full annotated Ecstasy type;
+            // e.g. C and @A C share JCC(C); a Java cast accepts a plain C even if it is not an @A C
+            Label lblCompatible = code.newLabel();
+            code.dup();
+            bctx.generateIsA(code, typeFrom, typeTo)
+                .ifne(lblCompatible)
+                .pop();
+            Builder.throwTypeMismatch(code, typeTo.getValueString(), bctx.ctxSlot(code));
+            code.labelBinding(lblCompatible);
+        }
+
         bctx.builder.generateCheckCast(code, typeCast, bctx.ctxSlot(code));
         if (typeTo.isJitPrimitive()) {
             if (typeTo.isNullable()) {

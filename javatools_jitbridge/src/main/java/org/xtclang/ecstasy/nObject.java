@@ -104,6 +104,9 @@ public abstract class nObject
         if (childType.isParamsSpecified()) {
             targetType = pool.ensureParameterizedTypeConstant(targetType, childType.getParamTypesArray());
         }
+        if (childType.isAnnotated()) {
+            targetType = targetType.adoptAnnotations(pool, childType);
+        }
         return targetType.resolveGenerics(pool, parentType);
     }
 
