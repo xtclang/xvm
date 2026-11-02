@@ -52,6 +52,8 @@ class PendingRequestsTest {
         val pending = PendingRequests()
         val endpoint = pending.endpoint(fakeEndpoint { replies.removeFirst() })
         val answered = endpoint.request("textDocument/hover", null)
+        // the endpoint answers with a future of an unknown type, which the test completes as the server would
+        @Suppress("UNCHECKED_CAST")
         (answered as CompletableFuture<Any?>).complete("hover")
 
         pending.producer(MessageProducer { }).listen { }

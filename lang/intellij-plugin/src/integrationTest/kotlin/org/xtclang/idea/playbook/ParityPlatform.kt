@@ -804,7 +804,7 @@ internal fun ParityScenarios.platformCases() {
             replace(document, "\n" + data.string("source"))
             check(
                 assertThrows(ClientRequestFailure::class.java) { protocol.query("codeAction/resolve", action) }
-                    ?.message
+                    .message
                     ?.contains("expired or changed") == true,
             )
         } else {
@@ -1071,7 +1071,7 @@ internal fun ParityScenarios.platformCases() {
             .forEach { (method, item) ->
                 check(
                     assertThrows(ClientRequestFailure::class.java) { protocol.query(method, item) }
-                        ?.message
+                        .message
                         ?.contains("expired or changed") == true,
                 )
             }
