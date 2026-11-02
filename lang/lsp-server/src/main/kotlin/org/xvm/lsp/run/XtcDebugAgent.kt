@@ -8,6 +8,7 @@ import org.xvm.asm.ModuleStructure
 import org.xvm.runtime.Debugger
 import org.xvm.runtime.SessionDebugger
 import java.io.BufferedReader
+import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintStream
@@ -49,9 +50,22 @@ class XtcDebugAgent : DebuggerProvider {
         module: ModuleStructure,
     ): DebuggerProvider.Session = Agent(AgentOptions.of(options), repository, module).also(Agent::open)
 
-    private companion object {
+    companion object {
         /** How long closing waits for the agent's thread, which a debugger that does not read could hold up. */
-        val CLOSE_LIMIT = 5.seconds
+        private val CLOSE_LIMIT = 5.seconds
+
+        /**
+         * The jar the agent is in, which a launcher loads for `--debug` with its `agent=` option; null when the agent
+         * is not in a jar, as in this module's own tests.
+         */
+        fun jar(): File? =
+            runCatching {
+                File(
+                    XtcDebugAgent::class.java.protectionDomain.codeSource.location
+                        .toURI(),
+                )
+            }.getOrNull()
+                ?.takeIf(File::isFile)
     }
 
     /** One program's debugging: the program's runtime debugger, and the debugger attached to it, if any. */
