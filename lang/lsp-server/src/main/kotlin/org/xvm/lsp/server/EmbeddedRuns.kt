@@ -606,12 +606,13 @@ internal class EmbeddedRuns(
         frame: Int,
     ): CompletableFuture<List<StepTargetState>> = debugged(runId) { stepInTargets(it, frame) }
 
-    /** Steps a stopped fiber of a program under the debugger into one of the calls of its line. */
+    /** Steps a stopped fiber of a program under the debugger into one of the calls of its line, [alone] if so asked. */
     internal fun stepInto(
         runId: String,
         thread: Int,
         target: Int,
-    ): CompletableFuture<Boolean> = debugged(runId) { stepInto(it, thread, target) }
+        alone: Boolean,
+    ): CompletableFuture<Boolean> = debugged(runId) { stepInto(it, thread, target, alone) }
 
     /** Restarts a stopped frame of a program under the debugger, which its caller calls again. */
     internal fun restartFrame(
@@ -722,18 +723,25 @@ internal class EmbeddedRuns(
         thread: Int,
     ): CompletableFuture<ExceptionInfoState?> = debugged(runId) { exceptionInfo(it, thread) }
 
-    /** Steps a fiber of a stopped program under the debugger; false when that fiber does not wait. */
+    /** Steps a fiber of a stopped program under the debugger, [alone] if so asked; false when that fiber does not wait. */
     internal fun step(
         runId: String,
         thread: Int,
         kind: StepKind,
-    ): CompletableFuture<Boolean> = debugged(runId) { step(it, thread, kind) }
+        alone: Boolean,
+    ): CompletableFuture<Boolean> = debugged(runId) { step(it, thread, kind, alone) }
 
     /** Pauses a running program under the debugger. False when no such run is active. */
     internal fun pause(runId: String): Boolean = commanded(runId, RunDebugClient::pause)
 
     /** Resumes a stopped program under the debugger. False when no such run is active. */
     internal fun resume(runId: String): Boolean = commanded(runId, RunDebugClient::resume)
+
+    /** Continues one fiber of a stopped program under the debugger alone; false when that fiber does not wait. */
+    internal fun resumeAlone(
+        runId: String,
+        thread: Int,
+    ): CompletableFuture<Boolean> = debugged(runId) { resumeAlone(it, thread) }
 
     /** Asks the debugger of a run, in its execution worker or in the program a debugger attached to. */
     private fun <T> debugged(

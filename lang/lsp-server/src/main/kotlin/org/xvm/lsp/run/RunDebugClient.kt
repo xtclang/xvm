@@ -128,15 +128,17 @@ internal abstract class RunDebugClient {
             id,
         ) { addProperty("frame", frame) }.thenApply { RunWorkerDebug.stepTargetsOf(it.getAsJsonArray("targets")) }
 
-    /** Steps a stopped fiber into one of the calls of its line. */
+    /** Steps a stopped fiber into one of the calls of its line, [alone] while the program's other fibers stay stopped. */
     fun stepInto(
         id: Long,
         thread: Int,
         target: Int,
+        alone: Boolean = false,
     ): CompletableFuture<Boolean> =
         request("stepInto", id) {
             addProperty("thread", thread)
             addProperty("target", target)
+            addProperty("alone", alone)
         }.thenApply { it["stepped"].asBoolean }
 
     /** Restarts a stopped frame, which its caller calls again. */
@@ -268,15 +270,17 @@ internal abstract class RunDebugClient {
         request("exceptionInfo", id) { addProperty("thread", thread) }
             .thenApply { reply -> reply.getAsJsonObject("exception")?.let(RunWorkerDebug::exceptionInfoOf) }
 
-    /** Steps a stopped run's fiber; false when that fiber does not wait. */
+    /** Steps a stopped run's fiber, [alone] while the others stay stopped; false when that fiber does not wait. */
     fun step(
         id: Long,
         thread: Int,
         kind: StepKind,
+        alone: Boolean = false,
     ): CompletableFuture<Boolean> =
         request("step", id) {
             addProperty("thread", thread)
             addProperty("step", kind.name.lowercase())
+            addProperty("alone", alone)
         }.thenApply { it["stepped"].asBoolean }
 
     /** Pauses a debugged run at the next line one of its fibers reaches. */
@@ -284,6 +288,12 @@ internal abstract class RunDebugClient {
 
     /** Resumes a stopped run. */
     fun resume(id: Long) = command("continue", id)
+
+    /** Continues one fiber of a stopped run alone, while the others stay stopped; false when that fiber does not wait. */
+    fun resumeAlone(
+        id: Long,
+        thread: Int,
+    ): CompletableFuture<Boolean> = request("continueAlone", id) { addProperty("thread", thread) }.thenApply { it["continued"].asBoolean }
 
     /**
      * Sends a request to a run's debugger and answers with the reply; fails when the run's program cannot be
