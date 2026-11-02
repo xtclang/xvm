@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **338 scenarios**: X1–X336 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **339 scenarios**: X1–X337 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 338 scenarios: X1–X336 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 339 scenarios: X1–X337 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3917,6 +3917,16 @@ last published to mavenLocal.
 | ID | Actions | Expected result |
 |---|---|---|
 | X336 | Copy the option (VS Code: **Ecstasy: Copy Option to Debug a Program Outside the Editor**; IntelliJ: the Port comment of a new **Ecstasy Attach** configuration) and run `xec <option> Attached.x` in a terminal, from an XDK built from this tree. Set a breakpoint on line 11 of `Attached.x` and start the attach (VS Code: the **Ecstasy: Attach to Program** configuration; IntelliJ: Debug the Ecstasy Attach configuration). When it stops, look at the call stack. Then continue (IntelliJ: Resume Program). | `xec` prints `Listening for the debugger at 127.0.0.1:5005` and waits; the terminal shows nothing more until the debugger attaches. The program then prints `before` and stops on line 11, in `Attached.twice`, called from line 5 of `Attached.run`. Continue prints `after 42` in the terminal, the program ends with exit code 42, and the debug session ends saying so. Stopping the session while the program is stopped instead detaches: the program prints `after 42` and ends on its own. |
+
+### Debugging a project built with Gradle (X337)
+
+Like X303, this case makes its project at the folder root (VS Code) or project root (IntelliJ) and
+removes it afterwards. It needs `./gradlew publishLocal` first, for the Gradle plugin's `xtcDebug`
+properties and the launcher's `--debug`, and, for VS Code's `xtc init`, `./gradlew xdk:installDist`.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X337 | Make the application project `GradleDebugged` as X303 makes `GradleBuilt`, choose the Gradle build mode, and replace `src/main/x/GradleDebugged.x` with a `run` that prints `before`, calls `twice(21)` on line 5 and prints `after {n}`. Set a breakpoint on line 10, in `twice`, and start debugging GradleDebugged (VS Code: `F5`; IntelliJ: Debug its Ecstasy Application configuration). When it stops, look at the call stack. Then continue (IntelliJ: Resume Program). | The module's Gradle run task starts under the debugger (VS Code: a **Debug GradleDebugged** task in the terminal), and the program it starts connects to the session. The program prints `before` and stops on line 10, in `GradleDebugged.twice`, called from line 5 of `GradleDebugged.run`. Continue prints `after 42`, the program ends with exit code 0, and the session and the task end with it. VS Code shows the program's output in the task's terminal, IntelliJ in the Debug console. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
