@@ -411,7 +411,7 @@ settings, without a custom Kotlin host:
 
 A root is an absolute `file:` URI or a URI relative to the sole workspace folder. Multi-root
 workspaces use absolute file URIs; URI-encode spaces. Names must match the module declarations.
-Settings changes apply without restarting and reanalyse open consumers at their existing versions.
+Settings changes apply without restarting and reanalyze open consumers at their existing versions.
 Malformed, cyclic, overlapping or duplicate graphs are rejected as a whole, preserving the previous
 graph and showing an error. Identical graphs preserve current analyses; an empty list clears the
 configured graph and disables discovery. Setting `sourceModules` to `null` restores discovery.

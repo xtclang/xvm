@@ -678,7 +678,9 @@ passes with the workaround disabled. The gates are in
 - [ ] UP27 (#1700): remove `EditorRefresh`; gate: the many-file X146 burst and the long
   X137/X146/X259 run. On the 0.30.0 branch: `bba29c4b4d`.
 - [ ] UP03 (#1720, #1739): narrow the guarded Rename/Move entry points; gate: X103 and X130.
-- [ ] UP03: follow LSP4IJ #1740 (generic UI wait during the `will*` requests), still open.
+- [x] UP03: LSP4IJ #1740, the UI wait during the `will*` requests of an IDE rename or move, was fixed by our
+  [#1755](https://github.com/redhat-developer/lsp4ij/pull/1755), merged 2026-10-26 (`d85f2c9b`), unreleased; the
+  guarded entry points stay until a release with it passes X103 and X130 without them.
 - [ ] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757), merged 2026-10-26): `DAPDebugProcess` did not implement `startPausing()`,
   so IntelliJ's Pause Program did nothing for any DAP session; X308 passes natively with it. Gate:
   X308 in IntelliJ with coverage full, and its IntelliJ case restored.
@@ -1116,7 +1118,7 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 - [ ] Candidates for master on their own, found by a scan of this branch's fixes outside `lang/` against
   master (2026-10-23), each reproduced on master. State on 2026-10-29: #716, #717, #718, #720, #723,
   #731 and #735 are merged; #719, #721 and #722 are closed, and #730 is closed with its fix in #724,
-  which is the one still open; `814153a42` stays on this branch.
+  merged on 2026-10-29 (`5ba865f16e`); `814153a42` stays on this branch.
   - `1473c7e89`: an embedded run ended when `run()` returned, and the services it left at work ran on
     with nothing able to stop them; now it lasts until they have nothing left to do, as `xtc run` does,
     and is then killed. Master has the runner and `EmbeddingSupport` (#703); the `xtc/runExited`
