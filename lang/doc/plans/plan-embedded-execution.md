@@ -536,7 +536,7 @@ this bridge; they cannot be inferred from compiler type hints.
   frame's names or the members of the value before a dot, without running code (`8178cd03d`,
   R10e, protocol 16, shared X320). Other collections, such as a `Map`, show their fields, since
   their entries would take running their code.
-- [ ] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
+- [x] **R11 — Execution control.** Run to Cursor in both editors (the console's `SL`; VS Code's sets a
   temporary breakpoint, so it may already work and needs checking), choosing which call on a line
   to step into (`stepInTargets`), restarting a frame (the console's `T`), and continuing, stepping or
   pausing one fiber while the others stay stopped.
@@ -552,9 +552,18 @@ this bridge; they cannot be inferred from compiler type hints.
   reason `restart`; `canRestart` says which frames can (worker protocol 21, shared X329). IntelliJ
   has no Reset Frame for the session (UP47); with a plugin built from our LSP4IJ #1778, IntelliJ's
   X329 passes through the Reset Frame action (`run-17331679936087029005`).
-  *One fiber at a time (2026-10-27):* not built. Neither editor sends DAP's `singleThread` (UP49,
-  VS Code #166450), so continuing, stepping or pausing one fiber while the others stay stopped
-  would be reachable from no editor; it waits on one that sends it.
+  *One fiber at a time (2026-11-02):* with `singleThread` on `continue`, `next`, `stepIn` and
+  `stepOut` (`supportsSingleThreadExecutionRequests`), one fiber continues, steps or is paused alone while the program's other fibers stay stopped, with
+  the fibers of other services it calls; when it stops again, at a breakpoint, an exception stop,
+  its step's end or a pause, that is the program's stop again, with the same waiting fibers, and if
+  it ends first, the program stops at one of them with the reason `pause`.
+  `SessionDebugger.resume(int)` and `step(int, Step, boolean)` let the fiber leave the stop, which
+  stays the program's, with the other fibers waiting in it; the fibers it starts in other services
+  run with it, as with a run of code in a stop, whose rule they share. The clocks stand still
+  meanwhile, as for a run. The worker and the agent share the commands, `continueAlone` and the
+  steps' `alone` (worker protocol 24), through `RunDebuggers` and `RunDebugClient`. Neither editor
+  sends `singleThread` yet (UP49, VS Code #166450, LSP4IJ none), so it is checked at the protocol
+  level, over a real worker and a real agent; it was left unbuilt on 2026-10-27 for that reason.
 - [ ] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
   containers, also those that run or wait for a reply (the console's `VF`), not only those stopped
   at a line, and thread events as they start and end; frames whose source file is not on the
