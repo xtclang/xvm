@@ -887,11 +887,15 @@ passes with the workaround disabled. The gates are in
   (`run-8879176847449743226`, gate UP52 passed). To do: after a release with it,
   make X131's UP52 step pass without the gate.
 
-### LSP4IJ: no linked editing (UP53): not filed
+### LSP4IJ: no linked editing (UP53): our #1812, open
 
-- UP53 (2026-10-28): LSP4IJ never sends `textDocument/linkedEditingRange`, so IntelliJ users get no
+- [ ] UP53 (2026-10-28): LSP4IJ never sends `textDocument/linkedEditingRange`, so IntelliJ users get no
   rename-on-type for locals, which XVM's server answers. IntelliJ's X133 sends the request itself,
-  a protocol check rather than native coverage.
+  a protocol check rather than native coverage. Fixed by our
+  [#1812](https://github.com/redhat-developer/lsp4ij/pull/1812) (filed 2026-11-02, open, `a793b896`):
+  when the caret stops, the ranges linked at it are asked for, and typing in one edits the others in
+  the same command. To do: get #1812 merged; check it natively with a plugin built from it; after a
+  release with it, make IntelliJ's X133 type in a local's declaration and see its uses follow.
 
 ### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
