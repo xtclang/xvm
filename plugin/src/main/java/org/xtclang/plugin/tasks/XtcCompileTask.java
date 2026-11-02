@@ -175,9 +175,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     /**
      * Module boundaries are inputs too: adding a nested source root can turn an existing
      * source file into a module without changing the files in the complete source tree.
+     * Their absolute paths are inputs as well: the compiler records the directory of each
+     * module's source, which the debugger finds the module's files by, so a module compiled
+     * in another copy of the project, such as another checkout, is not one to reuse.
      */
     @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @PathSensitive(PathSensitivity.ABSOLUTE)
     public FileCollection getModuleSources() {
         return getSource().filter(this::isTopLevelXtcSourceFile);
     }
