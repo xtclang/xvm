@@ -65,6 +65,19 @@ subprojects {
 }
 
 // =============================================================================
+// Compiler warnings
+// =============================================================================
+// A compiler warning fails the build in the lang tree, in Kotlin and Java alike, so that none is pushed.
+subprojects {
+    tasks.withType<KotlinCompile>().configureEach {
+        compilerOptions.allWarningsAsErrors.set(true)
+    }
+    tasks.withType<JavaCompile>().configureEach {
+        options.compilerArgs.add("-Werror")
+    }
+}
+
+// =============================================================================
 // Update generated-examples directory
 // =============================================================================
 //
