@@ -580,7 +580,7 @@ class XtcDebugServer(
                 return failed(e.message ?: "Invalid launch arguments")
             }
         val gradle = args?.get("buildMode") == GRADLE
-        if (gradle && args?.get("noDebug") == true) {
+        if (gradle && args["noDebug"] == true) {
             return failed("A Gradle run without the debugger is the module's Gradle task; run that instead.")
         }
         if (!launched.compareAndSet(false, true)) {
