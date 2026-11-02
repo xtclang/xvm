@@ -419,7 +419,7 @@ With the compiler backend, create `Project.x` containing `module Project { class
 | Check | Action | Expected |
 |---|---|---|
 | Member diagnostics | Open Child.x; change Base to Missing in its extends clause | A compiler diagnostic points into Child.x, with no generic internal error on Project.x. |
-| Sibling invalidation | Restore Child.x; rename Base in the open Project.x buffer | Child.x is reanalysed and its diagnostic updates even without an edit there. |
+| Sibling invalidation | Restore Child.x; rename Base in the open Project.x buffer | Child.x is reanalyzed and its diagnostic updates even without an edit there. |
 | Unsaved member | Open a new `Project/pkg/Added.x` buffer containing `class Added extends Base {}` | It joins the module without being saved; no temporary source files appear on disk. |
 | Cross-file navigation | Navigate from Base in Child.x; find references on the Base declaration | Definition points into Project.x; references include Child.x. Highlights remain document-local. |
 | Hierarchy | Prepare hierarchy on Base and expand its subtypes; inspect Child's supertype | Child and Base point to their own files. A generic parent retains its type arguments. |
