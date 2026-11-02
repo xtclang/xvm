@@ -250,15 +250,26 @@ class XtcIdeUiTest {
 On a desktop, the playbook's IDE takes the focus, and whatever another window does reaches it:
 keystrokes typed elsewhere land in its editor (X150, X283), and IntelliJ drops an editor hint
 while it is not the active application (X74, X307, X312). The playbook therefore runs in a
-Linux container under Podman, on Xvfb, where nothing else is on the display:
+Linux container, on Xvfb, where nothing else is on the display. The root build's tasks start it,
+with the container command that `org.xtclang.docker.command` names, as the docker build does:
+`docker` by default, or `-Porg.xtclang.docker.command=podman`:
 
 ```bash
-lang/intellij-plugin/container/playbook.sh image                # build localhost/xvm-playbook once
-lang/intellij-plugin/container/playbook.sh build                # xdk:installDist and publishLocal, for X303, X336 and X337
-lang/intellij-plugin/container/playbook.sh playbook X307,X324   # the features session for those cases
-lang/intellij-plugin/container/playbook.sh playbook all         # the whole catalog
+./gradlew containerPlaybookBuild                                 # xdk:installDist and publishLocal, for X303, X336 and X337
+./gradlew containerPlaybookIntellij -PplaybookCases=X307,X324    # IntelliJ's features session for those cases
+./gradlew containerPlaybookVsCode -PplaybookCases=X307,X324      # VS Code's playbook for them
+./gradlew containerPlaybook                                      # both editors, the whole catalog
+```
+
+The first run builds the image, `localhost/xvm-playbook`. The tasks run
+`lang/intellij-plugin/container/playbook.sh`, which takes other Gradle arguments too, with the
+engine in `XTC_CONTAINER_COMMAND` (else `docker`, or `podman` without it):
+
+```bash
 lang/intellij-plugin/container/playbook.sh playbook X257 -Plsp4ijChannel=nightly \
     -Plsp4ijVersion=<version> -PintellijPlaybookReplacementGates=UP26          # with an LSP4IJ nightly
+lang/intellij-plugin/container/playbook.sh gradle :lang:vscode-extension:testVscodeExtension \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true                     # the VS Code suite
 ```
 
 Each run exports the checkout as it is, uncommitted changes included, and copies its run
