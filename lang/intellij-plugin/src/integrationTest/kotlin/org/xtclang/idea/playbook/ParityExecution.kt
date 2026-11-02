@@ -373,27 +373,7 @@ internal fun ParityScenarios.runEntryCases() {
     }
 
     case("X303") { data ->
-        // Gradle mode runs ./gradlew in the project root, so the project goes there; nothing of it may be there yet,
-        // apart from the build directory, which embedded builds share
-        val rootEntries = data.strings("rootEntries").map(projectRoot::resolve)
-        rootEntries.forEach { check(!Files.exists(it)) { "X303 needs a project root without ${projectRoot.relativize(it)}" } }
-        val project = with(driver) { singleProject() }
-        val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
-        val generated = Files.createTempDirectory("xtc-new-project")
-        val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, "GRADLE") } }
-        try {
-            val created = JsonParser.parseString(execution.newProject(generated.toString(), data.string("project"))).asJsonObject
-            check(created["success"].asBoolean) { created.string("message") }
-            generated.resolve(data.string("project")).toFile().copyRecursively(projectRoot.toFile())
-            projectRoot.resolve("gradlew").toFile().setExecutable(true)
-            val catalog = Files.readString(projectRoot.resolve(data.string("catalog")))
-            val version = Regex(data.string("versionPattern"), RegexOption.MULTILINE).find(catalog)?.groupValues?.get(1)
-            checkNotNull(version) { "An XTC version in ${data.string("catalog")}" }
-            data.strings("mavenLocal").forEach { artifact ->
-                check(Files.isDirectory(Path.of(System.getProperty("user.home"), ".m2", "repository", artifact, version))) {
-                    "X303 builds with $artifact $version from mavenLocal; run ./gradlew publishLocal first"
-                }
-            }
+        gradleProject("X303", data) { project, execution ->
             val module = data.string("module")
             val file = projectRoot.resolve(data.string("moduleFile"))
 
@@ -415,12 +395,6 @@ internal fun ParityScenarios.runEntryCases() {
             val failed = gradleRun("Gradle run of the broken module finishes")
             check(execution.exitCode(module) != 0) { "The broken module must not run: $failed" }
             check(data.string("brokenCode") in failed && data.string("brokenLocation") in failed) { failed }
-        } finally {
-            with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, previous) } }
-            rootEntries.forEach { it.toFile().deleteRecursively() }
-            // only when nothing else, such as embedded build output, is left in them
-            data.strings("sharedDirectories").forEach { projectRoot.resolve(it).toFile().delete() }
-            generated.toFile().deleteRecursively()
         }
     }
 
@@ -1680,6 +1654,93 @@ internal fun ParityScenarios.attachCases() {
             program.destroyForcibly()
             output.toFile().deleteRecursively()
         }
+    }
+}
+
+/**
+ * X337: Debug of an Ecstasy Application configuration in Gradle mode, in a project made as X303 makes it, runs the
+ * module's Gradle task under the debugger, whose program connects to the debug session.
+ */
+internal fun ParityScenarios.gradleDebugCases() {
+    case("X337") { data ->
+        gradleProject("X337", data) { project, _ ->
+            val module = data.string("module")
+            val file = projectRoot.resolve(data.string("moduleFile"))
+            Files.writeString(file, data.string("source"))
+            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val line = data.int("breakpointLine")
+            try {
+                debugger.debug(project, module, file.toUri().toString(), line)
+                val stopped =
+                    debugger.awaitState(project, module, "Gradle runs the program, which stops at the breakpoint", 180.seconds) {
+                        it["suspended"]?.asBoolean == true
+                    }
+                check(stopped.int("line") == line && stopped.string("file").endsWith(data.string("moduleFile"))) { "Stopped at: $stopped" }
+                val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+                data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
+                    val frame = frames.getOrNull(index)
+                    check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
+                        "Frame $index is not ${expected[0].asString} at ${expected[1].asInt}: $frames"
+                    }
+                }
+                // the task's output, the program's included, reaches the Debug console through Gradle, so it may come later
+                val paused =
+                    debugger.awaitState(project, module, "the program's output reaches the Debug console", 60.seconds) {
+                        data.string("before") in it.string("console")
+                    }
+                check(data.string("after") !in paused.string("console")) { "Console while paused: ${paused.string("console")}" }
+
+                debugger.resume(project, module)
+                val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 120.seconds) { it.has("exitCode") }
+                check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+                debugger.awaitState(project, module, "the rest of the program's output reaches the Debug console", 60.seconds) {
+                    data.string("after") in it.string("console")
+                }
+            } finally {
+                debugger.clearBreakpoints(project)
+            }
+        }
+    }
+}
+
+/**
+ * Makes a project with the plugin's project creator, as New Project does, at the project root, where Gradle mode runs
+ * ./gradlew, with the project in Gradle mode, runs [body] with it, and removes it again, with the mode as it was. Its
+ * build takes the XTC Gradle plugin and XDK last published to mavenLocal.
+ */
+private fun ParityWorkspace.gradleProject(
+    id: String,
+    data: JsonObject,
+    body: (Project, EmbeddedExecutionProbe) -> Unit,
+) {
+    // Gradle mode runs ./gradlew in the project root, so the project goes there; nothing of it may be there yet,
+    // apart from the build directory, which embedded builds share
+    val rootEntries = data.strings("rootEntries").map(projectRoot::resolve)
+    rootEntries.forEach { check(!Files.exists(it)) { "$id needs a project root without ${projectRoot.relativize(it)}" } }
+    val project = with(driver) { singleProject() }
+    val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
+    val generated = Files.createTempDirectory("xtc-new-project")
+    val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, "GRADLE") } }
+    try {
+        val created = JsonParser.parseString(execution.newProject(generated.toString(), data.string("project"))).asJsonObject
+        check(created["success"].asBoolean) { created.string("message") }
+        generated.resolve(data.string("project")).toFile().copyRecursively(projectRoot.toFile())
+        projectRoot.resolve("gradlew").toFile().setExecutable(true)
+        val catalog = Files.readString(projectRoot.resolve(data.string("catalog")))
+        val version = Regex(data.string("versionPattern"), RegexOption.MULTILINE).find(catalog)?.groupValues?.get(1)
+        checkNotNull(version) { "An XTC version in ${data.string("catalog")}" }
+        data.strings("mavenLocal").forEach { artifact ->
+            check(Files.isDirectory(Path.of(System.getProperty("user.home"), ".m2", "repository", artifact, version))) {
+                "$id builds with $artifact $version from mavenLocal; run ./gradlew publishLocal first"
+            }
+        }
+        body(project, execution)
+    } finally {
+        with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, previous) } }
+        rootEntries.forEach { it.toFile().deleteRecursively() }
+        // only when nothing else, such as embedded build output, is left in them
+        data.strings("sharedDirectories").forEach { projectRoot.resolve(it).toFile().delete() }
+        generated.toFile().deleteRecursively()
     }
 }
 

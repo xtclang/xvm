@@ -1078,6 +1078,47 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a launch in Gradle mode runs the module's Gradle task under the debugger, and answers once the program connects`() {
+        server.setBreakpoints(breakpoints("/src/App.x", 4)).get(10, SECONDS)
+        val launched = server.launch(mutableMapOf("module" to "App", "method" to "check", "buildMode" to "gradle"))
+        assertThat(runs.gradleTarget).isEqualTo(LaunchTarget("App", moduleName = "App", method = "check"))
+        assertThat(launched).isNotDone()
+
+        server.configurationDone(ConfigurationDoneArguments())
+        launched.get(10, SECONDS)
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .get(10, SECONDS)!!
+                .breakpoints
+                .single()
+                .breakpoints
+                .map { it.line },
+        ).containsExactly(4)
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE))
+            .contains("Running App with Gradle under the debugger...", "Debugging App, which Gradle runs.")
+            .doesNotContain("embedded compiler")
+        assertThat(client.events).contains("thread")
+
+        // the program's end is its exit, as a launch's is
+        runs.events.exited(0, null)
+        assertThat(client.events).contains("exited 0", "terminated")
+    }
+
+    @Test
+    fun `a Gradle launch without the debugger is refused, and one whose task ends first fails with the reason`() {
+        assertFailsWith("A Gradle run without the debugger is the module's Gradle task; run that instead.") {
+            server.launch(mutableMapOf("module" to "App", "buildMode" to "gradle", "noDebug" to true))
+        }
+
+        runs.attachFailure = IOException("Gradle ended with exit code 1 before the program started; its output says why.")
+        server.configurationDone(ConfigurationDoneArguments())
+        assertFailsWith("Run failed: Gradle ended with exit code 1 before the program started; its output says why.") {
+            server.launch(mutableMapOf("module" to "App", "buildMode" to "gradle"))
+        }
+    }
+
+    @Test
     fun `an attach needs a port, and one that cannot reach the program fails with the reason`() {
         assertFailsWith("An attach requires the port the program listens on") { server.attach(mutableMapOf("port" to "none")) }
 
@@ -1194,6 +1235,7 @@ class XtcDebugServerTest {
         var onReady: () -> Unit = {}
         var attachTarget: AttachTarget? = null
         var attachFailure: Exception? = null
+        var gradleTarget: LaunchTarget? = null
         val inputs = CopyOnWriteArrayList<String>()
         val stopped = CopyOnWriteArrayList<String>()
         val installed = CopyOnWriteArrayList<SourceBreakpoints>()
@@ -1244,6 +1286,20 @@ class XtcDebugServerTest {
         ): CompletableFuture<String> {
             this.runId = runId
             this.attachTarget = target
+            this.events = events
+            this.ready = ready
+            attachFailure?.let { return CompletableFuture.failedFuture(it) }
+            return ready.toCompletableFuture().thenApply { "App" }
+        }
+
+        override fun launchWithGradle(
+            runId: String,
+            target: LaunchTarget,
+            events: ProgramEvents,
+            ready: CompletionStage<out DebugSetup>,
+        ): CompletableFuture<String> {
+            this.runId = runId
+            this.gradleTarget = target
             this.events = events
             this.ready = ready
             attachFailure?.let { return CompletableFuture.failedFuture(it) }
