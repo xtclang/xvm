@@ -219,3 +219,47 @@ dockerTaskAliases.forEach { (alias, target) ->
         dependsOn(dockerSubproject.task(":$target"))
     }
 }
+
+/*
+ * The compiler playbooks in a Linux container, on a virtual display, so that no IDE window opens on the desktop and
+ * nothing typed there reaches the test IDE: lang/intellij-plugin/container/playbook.sh, with the container command
+ * that org.xtclang.docker.command names, as the docker build does (docker by default; podman with
+ * -Porg.xtclang.docker.command=podman). -PplaybookCases=X303,X337 selects cases, all of them without it. The first
+ * run builds the image; cases that run the XDK's tools or a Gradle project's build, such as X303, X336 and X337, need
+ * containerPlaybookBuild first.
+ */
+val playbookScript = layout.projectDirectory.file("lang/intellij-plugin/container/playbook.sh").asFile.absolutePath
+val containerCommand = xdkProperties.string("org.xtclang.docker.command", "docker")
+val playbookCases = providers.gradleProperty("playbookCases").orElse("all")
+
+fun containerPlaybookTask(name: String, description: String, vararg mode: String) =
+    tasks.register<Exec>(name) {
+        group = "playbook"
+        this.description = description
+        commandLine(playbookScript, *mode)
+        environment("XTC_CONTAINER_COMMAND", containerCommand.get())
+    }
+
+containerPlaybookTask("containerPlaybookImage", "Build the playbook container's image, localhost/xvm-playbook.", "image")
+val containerPlaybookBuild = containerPlaybookTask(
+    "containerPlaybookBuild",
+    "Run xdk:installDist and publishLocal in the playbook container, for the cases that need them.",
+    "build"
+)
+val containerPlaybookIntellij = containerPlaybookTask(
+    "containerPlaybookIntellij",
+    "Run IntelliJ's features playbook in the container, for -PplaybookCases or all cases.",
+    "playbook", playbookCases.get()
+)
+val containerPlaybookVsCode = containerPlaybookTask(
+    "containerPlaybookVsCode",
+    "Run VS Code's playbook in the container, for -PplaybookCases or all cases.",
+    "vscode", playbookCases.get()
+)
+containerPlaybookIntellij.configure { mustRunAfter(containerPlaybookBuild) }
+containerPlaybookVsCode.configure { mustRunAfter(containerPlaybookBuild, containerPlaybookIntellij) }
+tasks.register("containerPlaybook") {
+    group = "playbook"
+    description = "Run both editors' playbooks in the container, IntelliJ's first, for -PplaybookCases or all cases."
+    dependsOn(containerPlaybookIntellij, containerPlaybookVsCode)
+}
