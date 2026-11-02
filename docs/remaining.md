@@ -485,7 +485,7 @@ recorded partial coverage.
   cache, which gave a project in another directory a module compiled in the first, and IntelliJ's
   server stop when the last Ecstasy file closes during a run or session. Limits: VS Code shows the
   program's output in the task's terminal; LSP4IJ still stops the server for a run started within
-  5 s of closing the last file.
+  5 s of closing the last file (UP66).
 - [ ] R13: Debug in command-line mode, which runs `xtc run`.
 - [ ] R13: debugging tests, which needs the editors to run tests first.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
@@ -730,6 +730,17 @@ passes with the workaround disabled. The gates are in
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
+
+### LSP4IJ: a kept-alive server is still stopped (UP66): our #1835, open
+
+- [ ] UP66 (2026-11-02): LSP4IJ asks `keepAlive()` only when it schedules the stop after the last
+  document closes, so a lease or `keepServerAlive()` that starts during those 5 s doesn't keep the
+  server, and a run or debug session started then loses it. `XtcClientFeatures.keepServerAlive()`
+  keeps the server while a run or session runs (`c36c8f6e68`), which covers closing files during one.
+  Filed as [#1834](https://github.com/redhat-developer/lsp4ij/issues/1834); fixed by our
+  [#1835](https://github.com/redhat-developer/lsp4ij/pull/1835) (open, `6b034fc6`, all checks pass),
+  which also fixes [#1836](https://github.com/redhat-developer/lsp4ij/issues/1836), a
+  `WorkspaceDiagnosticsTest` flake (`fb689ea0`). To do: get #1835 merged; nothing of ours to remove.
 
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
