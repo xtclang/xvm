@@ -675,7 +675,10 @@ the program printed before it stopped is sent before the stop. Terminating or di
 stopped program ends it where it is, without running more of it. The session advertises
 `configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
 logpoints, `exceptionInfo`, `cancel`, value formatting options, `setVariable`, `completions` with `.`
-as its trigger character, and its exception filters with their options, and refuses `attach`. A
+as its trigger character, and its exception filters with their options. It attaches to a program
+that the launcher runs with `--debug` (`attach`), and a launch with `buildMode` `gradle` has the
+client run the module's Gradle task under the debugger (`xtc/debugTask`), attaching to the program
+as it connects; stopping that launch ends the task. A
 run without the debugger, such as `xtc/run` or a `noDebug` launch, passes `assert:debug`, since an
 embedding host has no terminal for the command-line debugger.
 
