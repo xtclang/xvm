@@ -2060,8 +2060,10 @@ export function gradleDebugCases(): void {
             try {
                 assert.ok(await vscode.debug.startDebugging(folder,
                     { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0,
+                // a session that ends without stopping says what it did, instead of the wait running out
+                await eventually(async () => dapEvents(sent, 'stopped').length > 0 || ended, value => value,
                     'Gradle runs the program, which stops at the breakpoint', GRADLE_WAIT_MS);
+                assert.ok(dapEvents(sent, 'stopped').length > 0, `The session ended without stopping: ${JSON.stringify(sent)}`);
                 const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
                 assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
                 assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
