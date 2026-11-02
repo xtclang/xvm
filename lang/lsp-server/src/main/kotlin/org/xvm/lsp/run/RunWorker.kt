@@ -260,13 +260,13 @@ object RunWorker {
      * stops. A read waits for text; after the end, it returns end of input.
      */
     private class ConsoleInput : Reader() {
-        private val lock = ReentrantLock()
-        private val available = lock.newCondition()
+        private val inputLock = ReentrantLock()
+        private val available = inputLock.newCondition()
         private val pending = StringBuilder()
         private var ended = false
 
         fun offer(text: String) =
-            lock.withLock {
+            inputLock.withLock {
                 if (!ended) {
                     pending.append(text)
                     available.signalAll()
@@ -274,7 +274,7 @@ object RunWorker {
             }
 
         fun end() =
-            lock.withLock {
+            inputLock.withLock {
                 ended = true
                 available.signalAll()
             }
@@ -284,7 +284,7 @@ object RunWorker {
             offset: Int,
             length: Int,
         ): Int =
-            lock.withLock {
+            inputLock.withLock {
                 try {
                     while (pending.isEmpty() && !ended) available.await()
                 } catch (_: InterruptedException) {
@@ -293,7 +293,7 @@ object RunWorker {
                 }
                 if (pending.isEmpty()) return -1
                 val count = minOf(length, pending.length)
-                pending.getChars(0, count, buffer, offset)
+                pending.toCharArray(buffer, offset, 0, count)
                 pending.delete(0, count)
                 count
             }

@@ -685,7 +685,7 @@ private class SemanticModelBuilder(
                         }
                     val target = callees[node] ?: node.resolvedTarget ?: delegate
                     refer(node.nameToken, target, expressionType, node.source, writes[at])
-                    if (node.isSuppressDeref) (normalized(target as? Argument) as? Register)?.let(referenced::add)
+                    if (node.isSuppressDeref) (normalized(target) as? Register)?.let(referenced::add)
                     if (complete && target is Register && target.isSuper) {
                         val method =
                             generateSequence(node.parent) { it.parent }

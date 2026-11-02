@@ -1371,6 +1371,7 @@ object DebugSessionUi {
                     if (last) done.complete(collected)
                 }
 
+                @Deprecated("Deprecated in Java")
                 override fun tooManyChildren(remaining: Int) {
                     done.complete(collected)
                 }
