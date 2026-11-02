@@ -22,8 +22,10 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.UnregistrationParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.xtclang.idea.XtcIntelliJLanguage
 import org.xtclang.idea.dap.DebugSessions
+import org.xtclang.idea.dap.DebugTasks
 import org.xtclang.idea.run.EmbeddedRunSessions
 import org.xtclang.idea.run.RunGutterIcons
 import java.util.concurrent.CompletableFuture
@@ -117,6 +119,10 @@ class XtcLanguageClient(
     fun debugMessage(params: DebugMessageParams) {
         if (!project.isDisposed) DebugSessions.getInstance(project).receive(params)
     }
+
+    /** Runs a Gradle-mode debug session's module with its Gradle task, and answers once the task has ended. */
+    @JsonRequest("xtc/debugTask")
+    fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> = DebugTasks.run(project, params)
 
     override fun setServerWrapper(wrapper: LanguageServerWrapper) {
         super.setServerWrapper(wrapper)

@@ -106,9 +106,11 @@ class XtcRunConfiguration(
         }
     }
 
-    /** Debug is offered with the embedded compiler only, whose runs a debug session in the language server launches. */
-    override fun canRun(executorId: String): Boolean =
-        executorId == DefaultDebugExecutor.EXECUTOR_ID && effectiveRunMode() == XtcRunMode.EMBEDDED
+    /**
+     * Debug is offered with the embedded compiler, whose runs a debug session in the language server launches, and
+     * with Gradle, whose task runs the program under the session's debugger (see [org.xtclang.idea.dap.DebugTasks]).
+     */
+    override fun canRun(executorId: String): Boolean = executorId == DefaultDebugExecutor.EXECUTOR_ID && effectiveRunMode() in DEBUGGABLE
 
     override fun getDebugAdapterServer(): DebugAdapterServerDefinition? =
         DebugAdapterManager.getInstance().getDebugAdapterServerById(XtcDebugAdapterFactory.SERVER_ID)
@@ -117,11 +119,7 @@ class XtcRunConfiguration(
 
     private fun createGradleCommandLine() =
         GeneralCommandLine().apply {
-            exePath =
-                when {
-                    "win" in System.getProperty("os.name").lowercase() -> "gradlew.bat"
-                    else -> "./gradlew"
-                }
+            exePath = gradleWrapper()
             if (quietMode) addParameter("-q")
             addParameter("runXtc")
             // Pass configuration as Gradle task options (--module, --method, --args)
@@ -167,6 +165,12 @@ class XtcRunConfiguration(
     }
 
     internal companion object {
+        /** The run modes whose runs Debug can run under the debugger. */
+        private val DEBUGGABLE = setOf(XtcRunMode.EMBEDDED, XtcRunMode.GRADLE)
+
+        /** The project's Gradle wrapper, which Gradle runs go through. */
+        fun gradleWrapper(): String = if ("win" in System.getProperty("os.name").lowercase()) "gradlew.bat" else "./gradlew"
+
         /**
          * Configurations saved before [runWith] carry `useGradle`. Gradle was the default for every new
          * configuration, so it becomes the project default, which is Gradle in a Gradle project.
