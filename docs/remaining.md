@@ -751,7 +751,7 @@ passes with the workaround disabled. The gates are in
   [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (merged 2026-10-28, unreleased, `2afdaf45`)
   bundles them at LSP4J's one version. UP41's LSP4J part needs it to reach IntelliJ.
 
-### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): LSP4J part our draft #1009
+### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): LSP4J part our #1009
 
 - [ ] UP41 (2026-10-24, cause found 2026-10-26): an IntelliJ evaluation that runs code cannot be ended
   before its time limit; X314 checks cancel in VS Code only. LSP4IJ never sends DAP `cancel`, but the
@@ -760,7 +760,7 @@ passes with the workaround disabled. The gates are in
   dialog neither cancels an evaluation when it closes or evaluates again nor offers to stop one, so an
   evaluator never learns that its result is no longer wanted. LSP4IJ could only cancel at a resume,
   step or stop, where our server ends the run itself. To do: an IntelliJ Platform ticket (IJPL) for an
-  evaluation's obsolescence or cancel; then the LSP4J part, our draft [LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009)
+  evaluation's obsolescence or cancel; then the LSP4J part, our [LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009)
   (2026-10-28): `DebugRemoteEndpoint.sendCancelNotification()` sends DAP `cancel` with the request's
   `seq` as `requestId` (LSP4J sent LSP's `$/cancelRequest` notification, which a DAP endpoint writes
   as an `event`), and an incoming `cancel` cancels the request it names; it waits on the maintainer's
@@ -994,13 +994,16 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 - [ ] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
   of 80,000 highlighters installed, so it never measured the decorated case.
 - [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881), a duplicate of the older
-  [IJPL-29917](https://youtrack.jetbrains.com/issue/IJPL-29917) and [IJPL-223024](https://youtrack.jetbrains.com/issue/IJPL-223024); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28). To do: get it
+  [IJPL-29917](https://youtrack.jetbrains.com/issue/IJPL-29917) and [IJPL-223024](https://youtrack.jetbrains.com/issue/IJPL-223024); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28; JetBrains asked
+  vobal-jb to review it on 2026-11-02). To do: get it
   merged.
 - [ ] UP20 (IntelliJ test Driver): filed as [IJPL-259883](https://youtrack.jetbrains.com/issue/IJPL-259883), restricted by JetBrains on 2026-10-29
-  at about 17:37 UTC (it now answers "not found", to our token too); our [#3729](https://github.com/JetBrains/intellij-community/pull/3729) (open, 2026-10-28).
+  at about 17:37 UTC (it now answers "not found", to our token too); our [#3729](https://github.com/JetBrains/intellij-community/pull/3729) (open, 2026-10-28;
+  JetBrains asked anastakats to review it on 2026-11-02).
   To do: get it merged.
 - [ ] UP29 (IntelliJ test Driver): filed as [IJPL-259884](https://youtrack.jetbrains.com/issue/IJPL-259884), restricted by JetBrains on 2026-10-29
-  at about 17:37 UTC (it now answers "not found", to our token too); our [#3730](https://github.com/JetBrains/intellij-community/pull/3730) (open, 2026-10-28).
+  at about 17:37 UTC (it now answers "not found", to our token too); our [#3730](https://github.com/JetBrains/intellij-community/pull/3730) (open, 2026-10-28;
+  JetBrains asked anastakats to review it on 2026-11-02).
   To do: get it merged.
 - [ ] UP16 (VS Code): our [microsoft/vscode#344760](https://github.com/microsoft/vscode/pull/344760) (open, 2026-10-28) for the existing
   microsoft/vscode#219122. To do: get it merged.
