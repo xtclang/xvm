@@ -455,22 +455,34 @@ interface DebugRuns {
 
     /**
      * Resumes the stopped program, stepping one of its fibers: it stops again, with the reason `step`, where the step
-     * ends. False when that fiber does not wait; the program then stays stopped.
+     * ends. [alone], only that fiber runs, with the fibers of other services it calls, while the others stay stopped.
+     * False when that fiber does not wait; the program then stays stopped.
      */
     fun step(
         runId: String,
         threadId: Int,
         kind: StepKind,
+        alone: Boolean,
     ): CompletableFuture<Boolean>
 
     /**
-     * Pauses the running program: it stops, with the reason `pause`, at the next line any of its fibers reaches.
-     * False when no such run is active.
+     * Pauses the running program: it stops, with the reason `pause`, at the next line any of its fibers reaches, or,
+     * while a fiber runs alone, at the next line that fiber reaches. False when no such run is active.
      */
     fun pause(runId: String): Boolean
 
     /** Resumes the stopped program. False when no such run is active. */
     fun resume(runId: String): Boolean
+
+    /**
+     * Resumes one fiber of the stopped program alone, with the fibers of other services it calls, while the others stay
+     * stopped, until it stops again, which is the program's stop again; if it ends first, the program stops at another
+     * fiber, with the reason `pause`. False when that fiber does not wait.
+     */
+    fun resumeAlone(
+        runId: String,
+        threadId: Int,
+    ): CompletableFuture<Boolean> = CompletableFuture.completedFuture(false)
 
     /**
      * The file with the bundled source of a library's source [path] in its [module], for a frame of that library's code,
@@ -493,12 +505,14 @@ interface DebugRuns {
 
     /**
      * Steps the stopped fiber into one of the calls of its line, which [stepInTargets] gave: the program stops again in
-     * that call's code, or at the next line if the line does not make it. False when no such fiber or call waits.
+     * that call's code, or at the next line if the line does not make it; [alone], as [step] steps. False when no such
+     * fiber or call waits.
      */
     fun stepInto(
         runId: String,
         threadId: Int,
         targetId: Int,
+        alone: Boolean,
     ): CompletableFuture<Boolean> = CompletableFuture.completedFuture(false)
 
     /**
