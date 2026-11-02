@@ -21,6 +21,8 @@ import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
 import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.LanguageServer
+import org.xtclang.idea.dap.DebugSessions
+import org.xtclang.idea.run.EmbeddedRunSessions
 import java.io.InputStream
 import java.net.URI
 import java.util.concurrent.Callable
@@ -82,6 +84,17 @@ class XtcClientFeatures : LSPClientFeatures() {
         }
         return result
     }
+
+    /**
+     * The project's embedded runs and debug sessions run in the language server, so it stays up while one does, also
+     * with no Ecstasy file open: LSP4IJ stops a server a few seconds after its last open file closes, which ended them.
+     */
+    override fun keepServerAlive(): Boolean =
+        !project.isDisposed &&
+            (
+                project.getServiceIfCreated(EmbeddedRunSessions::class.java)?.active == true ||
+                    project.getServiceIfCreated(DebugSessions::class.java)?.active == true
+            )
 
     override fun dispose() {
         documents.set(null)
