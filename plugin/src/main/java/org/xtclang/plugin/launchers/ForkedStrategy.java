@@ -7,6 +7,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.gradle.api.logging.Logger;
 
@@ -26,6 +27,7 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
 public abstract class ForkedStrategy implements ExecutionStrategy {
 
     private static final int STD_BUFFER_SIZE = 8192;
+    private static final long DESTROY_WAIT_SECONDS = 5;
     protected record StreamPlan(boolean copyStdout, boolean copyStderr) {}
 
     protected final ExecutionMode mode;
@@ -236,7 +238,31 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
      * Subclasses override for detached processes that don't wait.
      */
     protected int waitForProcess(final Process process) throws InterruptedException {
-        return process.waitFor();
+        try {
+            return process.waitFor();
+        } catch (final InterruptedException e) {
+            // A canceled build interrupts its task, and the program must not outlive it
+            logger.lifecycle("[plugin] The build was canceled; stopping process {}", process.pid());
+            destroy(process);
+            throw e;
+        }
+    }
+
+    /**
+     * Ends a process and its descendants, forcibly if they have not ended after a few seconds.
+     */
+    protected static void destroy(final Process process) {
+        process.descendants().forEach(ProcessHandle::destroy);
+        process.destroy();
+        try {
+            if (!process.waitFor(DESTROY_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                process.descendants().forEach(ProcessHandle::destroyForcibly);
+                process.destroyForcibly();
+            }
+        } catch (final InterruptedException e) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

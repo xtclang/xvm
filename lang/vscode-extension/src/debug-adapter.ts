@@ -10,12 +10,84 @@ type ClientAccess = () => LanguageClient | undefined;
 const adapters = new Map<string, LanguageServerDebugAdapter>();
 
 /**
- * Routes the language server's debug session messages to their adapters. JSON-RPC keeps one handler per method,
- * so this is registered once per client rather than per session.
+ * Routes the language server's debug session messages to their adapters, and runs the Gradle tasks its Gradle-mode
+ * launches ask for. JSON-RPC keeps one handler per method, so this is registered once per client rather than per
+ * session.
  */
 export function attachDebugSessions(client: LanguageClient): vscode.Disposable {
-    return client.onNotification('xtc/debugMessage', (params: { sessionId: string; message: vscode.DebugProtocolMessage }) =>
-        adapters.get(params.sessionId)?.receive(params.message));
+    return vscode.Disposable.from(
+        client.onNotification('xtc/debugMessage', (params: { sessionId: string; message: vscode.DebugProtocolMessage }) =>
+            adapters.get(params.sessionId)?.receive(params.message)),
+        client.onRequest('xtc/debugTask', (params: DebugTaskParams, token: vscode.CancellationToken) =>
+            runDebugTask(params, token)),
+    );
+}
+
+/** A Gradle-mode launch's task, as the language server asks for it with `xtc/debugTask`. */
+export interface DebugTaskParams {
+    sessionId: string;
+    module: string;
+    method?: string;
+    args: string[];
+    /** The value of the Gradle property `xtcDebug`: the launcher's `--debug`, which connects to the debug session. */
+    debug: string;
+    /** The value of the Gradle property `xtcDebugAgent`: the jar of the debugger's agent. */
+    agent?: string;
+}
+
+/**
+ * The Gradle wrapper and its arguments for a Gradle-mode launch's task: the module's run, in a JVM of its own, with
+ * the debug properties that make the launcher run the program under the debugger.
+ */
+export function gradleDebugCommand(params: DebugTaskParams, platform = process.platform): { command: string; args: string[] } {
+    return {
+        command: platform === 'win32' ? 'gradlew.bat' : './gradlew',
+        args: [
+            '-q',
+            'runXtc',
+            '--mode=ATTACHED',
+            `--module=${params.module}`,
+            ...(params.method ? [`--method=${params.method}`] : []),
+            ...(params.args.length > 0 ? [`--args=${params.args.join(',')}`] : []),
+            `-PxtcDebug=${params.debug}`,
+            ...(params.agent ? [`-PxtcDebugAgent=${params.agent}`] : []),
+        ],
+    };
+}
+
+/**
+ * Runs a Gradle-mode launch's task in the terminal, as Run does in Gradle mode, and answers with its exit code once
+ * it has ended; the server's cancel, when the session stops, ends the task, and the program with it.
+ */
+async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationToken): Promise<{ exitCode?: number }> {
+    const folder = adapters.get(params.sessionId)?.folder;
+    const { command, args } = gradleDebugCommand(params);
+    const definition: XtcTaskDefinition = { type: 'xtc', moduleName: params.module, methodName: params.method, mode: 'gradle' };
+    const task = new vscode.Task(definition, folder ?? vscode.TaskScope.Workspace, `Debug ${params.module}`, 'xtc',
+        new vscode.ShellExecution(command, args), []);
+    task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
+    const execution = await vscode.tasks.executeTask(task);
+    return new Promise(resolve => {
+        const subscriptions: vscode.Disposable[] = [];
+        const end = (exitCode?: number) => {
+            subscriptions.forEach(each => each.dispose());
+            resolve({ exitCode });
+        };
+        subscriptions.push(
+            vscode.tasks.onDidEndTaskProcess(event => {
+                if (event.execution === execution) {
+                    end(event.exitCode);
+                }
+            }),
+            // a task whose process never started ends without an exit code
+            vscode.tasks.onDidEndTask(event => {
+                if (event.execution === execution) {
+                    end(undefined);
+                }
+            }),
+            token.onCancellationRequested(() => execution.terminate()),
+        );
+    });
 }
 
 /** A stopped or restarted language server takes its debug sessions, and the programs they launched, with it. */
@@ -36,7 +108,7 @@ class LanguageServerDebugAdapter implements vscode.DebugAdapter {
     readonly onDidSendMessage = this.messages.event;
 
     constructor(private readonly client: LanguageClient, private readonly sessionId: string,
-                private readonly notice: string | undefined) {
+                private readonly notice: string | undefined, readonly folder: vscode.WorkspaceFolder | undefined) {
         adapters.set(sessionId, this);
     }
 
@@ -112,8 +184,10 @@ export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDesc
             throw new Error('The Ecstasy language server is not running.');
         }
         const { sessionId } = await client.sendRequest<{ sessionId: string }>('xtc/debugStart');
-        const notice = hasGradleBuild(session.workspaceFolder) ? GRADLE_NOT_USED : undefined;
-        return new vscode.DebugAdapterInlineImplementation(new LanguageServerDebugAdapter(client, sessionId, notice));
+        const gradle = session.configuration.buildMode === 'gradle';
+        const notice = !gradle && hasGradleBuild(session.workspaceFolder) ? GRADLE_NOT_USED : undefined;
+        return new vscode.DebugAdapterInlineImplementation(
+            new LanguageServerDebugAdapter(client, sessionId, notice, session.workspaceFolder));
     }
 }
 
@@ -141,8 +215,9 @@ export function registerDebugOption(context: vscode.ExtensionContext, serverJar:
 
 /**
  * Launches in embedded mode start a debug session in the language server, which builds and runs the module as the
- * Run button does, under the runtime debugger. In Gradle mode, Run and Debug launches run the module's Gradle task
- * instead, without a debug session. An attach, to a program run with `--debug`, starts a session in either mode.
+ * Run button does, under the runtime debugger. In Gradle mode, a Debug launch starts a session too, whose module the
+ * Gradle task runs under the debugger (`xtc/debugTask`), and a Run launch runs the task without a session. An
+ * attach, to a program run with `--debug`, starts a session in either mode.
  */
 export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private readonly client: ClientAccess) {}
@@ -160,7 +235,8 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
             return resolved;
         }
         if (!resolved.noDebug) {
-            void vscode.window.showInformationMessage('Ecstasy debugging is not available yet; running with Gradle without the debugger.');
+            resolved.buildMode = 'gradle';
+            return resolved;
         }
         const editor = vscode.window.activeTextEditor;
         const definition: XtcTaskDefinition = {
