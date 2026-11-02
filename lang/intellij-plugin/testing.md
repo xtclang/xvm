@@ -254,7 +254,7 @@ Linux container under Podman, on Xvfb, where nothing else is on the display:
 
 ```bash
 lang/intellij-plugin/container/playbook.sh image                # build localhost/xvm-playbook once
-lang/intellij-plugin/container/playbook.sh build                # xdk:installDist and publishLocal, for X303 and X336
+lang/intellij-plugin/container/playbook.sh build                # xdk:installDist and publishLocal, for X303, X336 and X337
 lang/intellij-plugin/container/playbook.sh playbook X307,X324   # the features session for those cases
 lang/intellij-plugin/container/playbook.sh playbook all         # the whole catalog
 lang/intellij-plugin/container/playbook.sh playbook X257 -Plsp4ijChannel=nightly \
