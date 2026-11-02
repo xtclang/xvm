@@ -1949,32 +1949,59 @@ const GRADLE_WAIT_MS = 120_000;
 
 const exists = (file: string) => fs.access(file).then(() => true, () => false);
 
+/** The values of a case whose project xtc init makes at the folder root: X303 and X337. */
+interface GradleProjectValues {
+    project: string;
+    rootEntries: readonly string[];
+    sharedDirectories: readonly string[];
+    catalog: string;
+    versionPattern: string;
+    mavenLocal: readonly string[];
+}
+
+/**
+ * Makes a project with xtc init, which Ecstasy: Create Project runs, at the folder root, where Gradle mode runs
+ * ./gradlew, runs [body] with it, and removes it again, with the folder's build mode as it was. Its build takes the
+ * XTC Gradle plugin and XDK last published to mavenLocal.
+ */
+async function withGradleProject(id: string, data: GradleProjectValues,
+    body: (folder: vscode.WorkspaceFolder, root: (file: string) => string) => Promise<void>): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(folder, 'The playbook opens a folder');
+    // Gradle mode runs ./gradlew at the folder root, so the project goes there; nothing of it may be there yet,
+    // apart from the build directory, which embedded builds share
+    const root = (file: string) => path.join(folder.uri.fsPath, file);
+    for (const entry of data.rootEntries) assert.ok(!await exists(root(entry)), `${id} needs a folder root without ${entry}`);
+    const xtc = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xtc.bat' : 'xtc');
+    assert.ok(await exists(xtc), `${id} makes its project with ${xtc} init; run ./gradlew xdk:installDist first`);
+    const settings = vscode.workspace.getConfiguration('xtc');
+    const original = settings.inspect<string>('build.mode')?.workspaceValue;
+    const generated = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-init-'));
+    try {
+        await promisify(execFile)(xtc, ['init', data.project, '--type', 'application', '--dir', generated],
+            { shell: process.platform === 'win32' });
+        await fs.cp(path.join(generated, data.project), folder.uri.fsPath, { recursive: true });
+        await fs.chmod(root('gradlew'), 0o755);
+        const version = new RegExp(data.versionPattern, 'm').exec(await fs.readFile(root(data.catalog), 'utf8'))?.[1];
+        assert.ok(version, `An XTC version in ${data.catalog}`);
+        for (const artifact of data.mavenLocal) {
+            const published = path.join(os.homedir(), '.m2', 'repository', artifact, version);
+            assert.ok(await exists(published), `${id} builds with ${artifact} ${version} from mavenLocal; run ./gradlew publishLocal first`);
+        }
+        await body(folder, root);
+    } finally {
+        await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
+        await Promise.all(data.rootEntries.map(entry => fs.rm(root(entry), { recursive: true, force: true })));
+        // only when nothing else, such as embedded build output, is left in them
+        for (const directory of data.sharedDirectories) await fs.rmdir(root(directory)).catch(() => undefined);
+        await fs.rm(generated, { recursive: true, force: true });
+    }
+}
+
 /** X303, registered after X302 in catalog order: a project made by xtc init, which Ecstasy: Create Project runs. */
 export function gradleProjectCases(): void {
     playbook('X303', async (_workspace, data) => {
-        const folder = vscode.workspace.workspaceFolders?.[0];
-        assert.ok(folder, 'The playbook opens a folder');
-        // Gradle mode runs ./gradlew at the folder root, so the project goes there; nothing of it may be there yet,
-        // apart from the build directory, which embedded builds share
-        const root = (file: string) => path.join(folder.uri.fsPath, file);
-        for (const entry of data.rootEntries) assert.ok(!await exists(root(entry)), `X303 needs a folder root without ${entry}`);
-        const xtc = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xtc.bat' : 'xtc');
-        assert.ok(await exists(xtc), `X303 makes its project with ${xtc} init; run ./gradlew xdk:installDist first`);
-        const settings = vscode.workspace.getConfiguration('xtc');
-        const original = settings.inspect<string>('build.mode')?.workspaceValue;
-        const generated = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-init-'));
-        try {
-            await promisify(execFile)(xtc, ['init', data.project, '--type', 'application', '--dir', generated],
-                { shell: process.platform === 'win32' });
-            await fs.cp(path.join(generated, data.project), folder.uri.fsPath, { recursive: true });
-            await fs.chmod(root('gradlew'), 0o755);
-            const version = new RegExp(data.versionPattern, 'm').exec(await fs.readFile(root(data.catalog), 'utf8'))?.[1];
-            assert.ok(version, `An XTC version in ${data.catalog}`);
-            for (const artifact of data.mavenLocal) {
-                const published = path.join(os.homedir(), '.m2', 'repository', artifact, version);
-                assert.ok(await exists(published), `X303 builds with ${artifact} ${version} from mavenLocal; run ./gradlew publishLocal first`);
-            }
-
+        await withGradleProject('X303', data, async (folder, root) => {
             await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
             await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
             const build = () => shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build'), GRADLE_WAIT_MS);
@@ -1992,13 +2019,71 @@ export function gradleProjectCases(): void {
             await eventually(async () => vscode.languages.getDiagnostics(module),
                 values => values.some(item => diagnosticCode(item) === data.brokenCode && item.range.start.line === data.brokenLine),
                 'The build error in Problems');
-        } finally {
-            await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
-            await Promise.all(data.rootEntries.map(entry => fs.rm(root(entry), { recursive: true, force: true })));
-            // only when nothing else, such as embedded build output, is left in them
-            for (const directory of data.sharedDirectories) await fs.rmdir(root(directory)).catch(() => undefined);
-            await fs.rm(generated, { recursive: true, force: true });
-        }
+        });
+    }, 360_000);
+}
+
+/**
+ * X337, registered after X336 in catalog order: Debug in Gradle mode, in a project made as X303 makes it, runs the
+ * module's Gradle task under the debugger, whose program connects to the debug session.
+ */
+export function gradleDebugCases(): void {
+    playbook('X337', async (_workspace, data) => {
+        await withGradleProject('X337', data, async (folder, root) => {
+            const module = vscode.Uri.file(root(data.moduleFile));
+            await fs.writeFile(module.fsPath, data.source);
+            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
+            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+
+            const sent: DapMessage[] = [];
+            const tracker = trackDebugSessions(sent);
+            let ended = false;
+            let started: vscode.DebugSession | undefined;
+            let taskExit: number | undefined;
+            let taskEnded = false;
+            const subscriptions = [
+                vscode.debug.onDidStartDebugSession(session => {
+                    if (session.type === 'xtc') started = session;
+                }),
+                vscode.debug.onDidTerminateDebugSession(session => {
+                    if (session.type === 'xtc') ended = true;
+                }),
+                vscode.tasks.onDidEndTaskProcess(event => {
+                    if (event.execution.task.name === `Debug ${data.module}`) {
+                        taskEnded = true;
+                        taskExit = event.exitCode;
+                    }
+                }),
+            ];
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(module, new vscode.Position(data.breakpointLine - 1, 0)));
+            vscode.debug.addBreakpoints([breakpoint]);
+            try {
+                assert.ok(await vscode.debug.startDebugging(folder,
+                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
+                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0,
+                    'Gradle runs the program, which stops at the breakpoint', GRADLE_WAIT_MS);
+                const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
+                assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
+                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
+                const frames = await eventually(
+                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                        .flatMap(message => message.body?.stackFrames ?? []),
+                    values => values.length >= data.frames.length, 'VS Code shows the call stack');
+                assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
+                assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(module.fsPath));
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue runs the program to its exit, which ends the session');
+                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
+                await eventually(async () => taskEnded, value => value, 'The Gradle task ends with its program', GRADLE_WAIT_MS);
+                assert.strictEqual(taskExit, 0, 'Gradle task exit code');
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                subscriptions.forEach(each => each.dispose());
+                tracker.dispose();
+            }
+        });
     }, 360_000);
 }
 
