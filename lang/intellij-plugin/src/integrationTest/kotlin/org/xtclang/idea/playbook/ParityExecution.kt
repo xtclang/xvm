@@ -1667,6 +1667,8 @@ internal fun ParityScenarios.gradleDebugCases() {
             val module = data.string("module")
             val file = projectRoot.resolve(data.string("moduleFile"))
             Files.writeString(file, data.string("source"))
+            // the breakpoint is set in the module's editor, as a user sets it
+            val document = open(file, data.string("moduleFile"))
             val debugger = with(driver) { utility(DebugSessionProbe::class) }
             val line = data.int("breakpointLine")
             try {
@@ -1689,6 +1691,13 @@ internal fun ParityScenarios.gradleDebugCases() {
                         data.string("before") in it.string("console")
                     }
                 check(data.string("after") !in paused.string("console")) { "Console while paused: ${paused.string("console")}" }
+
+                // the session runs in the language server, which LSP4IJ stops some seconds after its last open file
+                // closes, unless a run or session keeps it: closing the module's editor must leave the session stopped
+                discard(document)
+                Thread.sleep(LSP4IJ_STOP_DELAY.inWholeMilliseconds)
+                val kept = JsonParser.parseString(debugger.state(project, module)).asJsonObject
+                check(kept["suspended"]?.asBoolean == true) { "The session did not outlive the module's editor: $kept" }
 
                 debugger.resume(project, module)
                 val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 120.seconds) { it.has("exitCode") }
@@ -1759,6 +1768,9 @@ private fun DebugSessionProbe.awaitState(
     }
     return state
 }
+
+/** Longer than LSP4IJ waits to stop a language server once its last open file has closed, five seconds by default. */
+private val LSP4IJ_STOP_DELAY = 8.seconds
 
 /** What the Build tool window shows when the embedded compiler takes Build Project. */
 private const val EMBEDDED_BUILD = "with the embedded compiler"
