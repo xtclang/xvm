@@ -637,6 +637,17 @@ this bridge; they cannot be inferred from compiler type hints.
     resumed at once, and a detach drops what the debugger asked for (`SessionDebugger.reset()`).
     The attach takes `stopOnEntry`. IntelliJ's attach keeps LSP4IJ's `LAUNCH` mode for its
     transport and makes only its client in `ATTACH` mode (UP64).
+  - *Done (2026-11-02, `ec33120824` to `596e6bfb66`): steps (4) and (5)'s Gradle-mode Debug, with
+    X337.* `runXtc`, the alias tasks and `testXtc` take `xtcDebug` and `xtcDebugAgent`, and a
+    canceled Gradle run stops its program. A Gradle-mode launch listens on loopback and asks the
+    editor for the module's task (`xtc/debugTask`); VS Code runs it as a shell task, IntelliJ's
+    `DebugTasks` with its output in the Debug console, and the program connects back. Validated in
+    the playbook container in both editors (`a23adf884b` to `ce1bc35784`), which also fixed what
+    X337 found: compileXtc's build cache gave a project in another directory a module whose
+    recorded sources were the other's, so breakpoints did not bind, and IntelliJ's LSP4IJ stopped
+    the server, and the session with it, once the last Ecstasy file closed. Still to come:
+    command-line mode's Debug, and running and debugging tests. VS Code shows the program's output
+    in the task's terminal, not the Debug Console.
 
 Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
 execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;

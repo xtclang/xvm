@@ -479,7 +479,14 @@ recorded partial coverage.
   its bundled source, as its frames are, which `XdkLibrarySources` now writes without parsing its
   declarations, since a library has hundreds. VS Code shows them in Loaded Scripts; it has no
   Modules view (UP39). IntelliJ has neither (UP45), so X326 is not implemented there.
-- [ ] R13: Debug for Gradle-mode and command-line runs.
+- [x] R13: Debug in Gradle mode (2026-11-02, `ec33120824` to `596e6bfb66`, validated with
+  `a23adf884b` to `ce1bc35784`; shared X337). A Gradle-mode Debug runs the module's Gradle task with
+  `xtcDebug`, and the program connects to the session. The validation fixed compileXtc's build
+  cache, which gave a project in another directory a module compiled in the first, and IntelliJ's
+  server stop when the last Ecstasy file closes during a run or session. Limits: VS Code shows the
+  program's output in the task's terminal; LSP4IJ still stops the server for a run started within
+  5 s of closing the last file.
+- [ ] R13: Debug in command-line mode, which runs `xtc run`.
 - [ ] R13: debugging tests, which needs the editors to run tests first.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
@@ -495,8 +502,7 @@ recorded partial coverage.
   a debug agent in the program's JVM, which `Runner` and `TestRunner` install through a new
   `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
   to the language server; Gradle-mode Debug connects back, `xec` listens for an attach. Still to
-  come for the first two: the Gradle plugin's `xtcDebug` properties, Gradle-mode Debug in both
-  editors, and running and debugging tests.
+  come: command-line mode's Debug, and running and debugging tests.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and
