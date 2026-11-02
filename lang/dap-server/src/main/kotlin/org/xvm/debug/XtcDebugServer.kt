@@ -297,6 +297,9 @@ class XtcDebugServer(
 
         /** How long a disconnect waits for the program it stopped to report its exit. */
         private const val STOP_WAIT_SECONDS = 10L
+
+        /** The `buildMode` of a launch that the client's Gradle task builds and runs. */
+        private const val GRADLE = "gradle"
     }
 
     /** Connect to the DAP client (IDE). */
@@ -564,7 +567,9 @@ class XtcDebugServer(
      * name), `moduleUri` (a source URI of the module, used in place of the name when given), `method`, `args` (an
      * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, `stopOnEntry`, which stops the
      * program at its first line, and `evaluationRunsProgram`, which lets the whole program run while code from the
-     * console does.
+     * console does. With `buildMode` `gradle`, the client's Gradle task builds and runs the module instead, and the
+     * session attaches to the program once it connects, answering then ([DebugRuns.launchWithGradle]); a Gradle run
+     * without the debugger is the task itself, so `noDebug` is refused.
      */
     override fun launch(args: Map<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
@@ -574,6 +579,10 @@ class XtcDebugServer(
             } catch (e: IllegalArgumentException) {
                 return failed(e.message ?: "Invalid launch arguments")
             }
+        val gradle = args?.get("buildMode") == GRADLE
+        if (gradle && args?.get("noDebug") == true) {
+            return failed("A Gradle run without the debugger is the module's Gradle task; run that instead.")
+        }
         if (!launched.compareAndSet(false, true)) {
             return failed("This debug session has already launched a program.")
         }
@@ -581,6 +590,9 @@ class XtcDebugServer(
         evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
         val stopOnEntry = args?.get("stopOnEntry") == true
+        if (gradle) {
+            return launchWithGradle(target, stopOnEntry)
+        }
         console("Building and running ${target.moduleName ?: target.module} with the embedded compiler...")
         val ready =
             configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
@@ -644,33 +656,65 @@ class XtcDebugServer(
         }
         val stopOnEntry = args?.get("stopOnEntry") == true
         console("Attaching to the program at ${target.host}:${target.port}...")
-        val ready =
-            configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
-                installed = breakpoints.toMap()
-                installedExceptions = exceptionStops
-                installedFunctions = functionBreakpoints
-                DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions)
-            }
         return runs
-            .attach(runId, target, events, ready)
+            .attach(runId, target, events, debugSetup(stopOnEntry))
             .handle<Void> { module, failure ->
                 if (failure != null) {
                     end(sendTerminated = false)
                     val cause = (failure as? CompletionException)?.cause ?: failure
                     throw error("Attach failed: ${cause.message}")
                 }
-                programName = module
-                started = true
-                console("Attached to $module.")
-                client?.thread(
-                    ThreadEventArguments().apply {
-                        reason = ThreadEventArgumentsReason.STARTED
-                        threadId = RUNNING_THREAD
-                    },
-                )
-                installChanged()
+                running(module, "Attached to $module.")
                 null
             }
+    }
+
+    /**
+     * Has the client run [target]'s module with its Gradle task under the debugger, and answers once the program has
+     * connected and taken the debugger's setup; see [launch].
+     */
+    private fun launchWithGradle(
+        target: LaunchTarget,
+        stopOnEntry: Boolean,
+    ): CompletableFuture<Void?> {
+        console("Running $programName with Gradle under the debugger...")
+        return runs
+            .launchWithGradle(runId, target, events, debugSetup(stopOnEntry))
+            .handle<Void?> { module, failure ->
+                if (failure != null) {
+                    end(sendTerminated = false)
+                    val cause = (failure as? CompletionException)?.cause ?: failure
+                    throw error("Run failed: ${cause.message}")
+                }
+                running(module, "Debugging $module, which Gradle runs.")
+                null
+            }
+    }
+
+    /** The debugger's setup, once the client has finished its configuration or the time for that has passed. */
+    private fun debugSetup(stopOnEntry: Boolean): CompletableFuture<DebugSetup> =
+        configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
+            installed = breakpoints.toMap()
+            installedExceptions = exceptionStops
+            installedFunctions = functionBreakpoints
+            DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions)
+        }
+
+    /** A program the session attached to, or that Gradle runs for it, has taken the debugger's setup and runs. */
+    private fun running(
+        module: String,
+        message: String,
+    ) {
+        programName = module
+        started = true
+        console(message)
+        client?.thread(
+            ThreadEventArguments().apply {
+                reason = ThreadEventArgumentsReason.STARTED
+                threadId = RUNNING_THREAD
+            },
+        )
+        installChanged()
     }
 
     /** DAP: threads. The fibers of the stopped program, those that wait at a line first; while it runs, [RUNNING_THREAD]. */

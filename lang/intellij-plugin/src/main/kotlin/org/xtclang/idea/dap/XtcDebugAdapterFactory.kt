@@ -20,6 +20,7 @@ import com.redhat.devtools.lsp4ij.settings.ServerTrace
 import org.xtclang.idea.run.EmbeddedExecution
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcRunConfiguration
+import org.xtclang.idea.run.XtcRunMode
 
 /**
  * The Ecstasy debug adapter for LSP4IJ's DAP client, registered with the `com.redhat.devtools.lsp4ij.debugAdapterServer`
@@ -85,6 +86,8 @@ class XtcDebugAdapterDescriptor(
             parameters["args"] = configuration.embeddedRequest().args
             if (configuration.stopOnEntry) parameters["stopOnEntry"] = true
             if (configuration.evaluationRunsProgram) parameters["evaluationRunsProgram"] = true
+            // the module's Gradle task runs the program, under the session's debugger
+            if (configuration.effectiveRunMode() == XtcRunMode.GRADLE) parameters["buildMode"] = "gradle"
         }
         return parameters
     }
