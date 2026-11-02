@@ -962,7 +962,10 @@ passes with the workaround disabled. The gates are in
 - [ ] LSP4J #1010 (filed 2026-10-29): a numeric message id outside the `int` range fails
   `nextInt()`, and the request is logged and dropped without a response. Our
   [#1011](https://github.com/eclipse-lsp4j/lsp4j/pull/1011) (open, on `37565290`) reads such an id
-  as a `Long` and keeps `Integer` for the ids in range. To do: get it merged.
+  exactly: an `Integer` in the `int` range, a `Long` in the `long` range, and otherwise a
+  `BigDecimal`, which the response gives back (`b7f7823b`, 2026-11-02, after @cdietrich's note that
+  larger ids were still dropped). Approved by @pisv and @cdietrich before its last two commits;
+  both were asked to look again. To do: get it merged.
 - [ ] UP15: after an LSP4J release with #997, adopt it and change `XdkStdioTest`'s assertion to
   `ResponseErrorCode.InvalidParams`, keeping reader recovery.
 - [ ] UP06: after an LSP4IJ release with #1723 (0.30.0), remove the `DiagnosticReportJson` adapter;
