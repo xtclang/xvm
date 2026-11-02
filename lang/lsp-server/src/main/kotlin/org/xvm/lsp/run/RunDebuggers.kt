@@ -126,6 +126,7 @@ internal class RunDebuggers(
             "exceptionStops" -> exceptionStops(command)
             "pause" -> debuggers[command["id"].asLong]?.pause()
             "continue" -> debuggers[command["id"].asLong]?.resume()
+            "continueAlone" -> continueAlone(command)
             else -> return false
         }
         return true
@@ -327,12 +328,25 @@ internal class RunDebuggers(
         return cause.message ?: cause.toString()
     }
 
-    /** Answers whether the fiber was stepped; one that does not wait is not, and the program stays stopped. */
+    /**
+     * Answers whether the fiber was stepped; one that does not wait is not, and the program stays stopped. Stepped
+     * alone, only it runs, while the program's other fibers stay stopped.
+     */
     private fun step(command: JsonObject) =
         reply(command) { debugger ->
             val step = SessionDebugger.Step.valueOf(command["step"].asString.uppercase())
-            addProperty("stepped", debugger.step(command["thread"].asInt, step))
+            addProperty("stepped", debugger.step(command["thread"].asInt, step, alone(command)))
         }
+
+    /**
+     * Answers whether the fiber was continued alone, while the program's other fibers stay stopped; one that does not
+     * wait is not, and the program stays as it is.
+     */
+    private fun continueAlone(command: JsonObject) =
+        reply(command) { debugger -> addProperty("continued", debugger.resume(command["thread"].asInt)) }
+
+    /** True when a command's fiber runs alone, while the program's other fibers stay stopped. */
+    private fun alone(command: JsonObject) = command["alone"]?.asBoolean == true
 
     private fun stepInTargets(command: JsonObject) =
         reply(command) { debugger ->
@@ -341,7 +355,9 @@ internal class RunDebuggers(
         }
 
     private fun stepInto(command: JsonObject) =
-        reply(command) { debugger -> addProperty("stepped", debugger.stepInto(command["thread"].asInt, command["target"].asInt)) }
+        reply(command) { debugger ->
+            addProperty("stepped", debugger.stepInto(command["thread"].asInt, command["target"].asInt, alone(command)))
+        }
 
     private fun restartFrame(command: JsonObject) =
         reply(command) { debugger -> addProperty("restarted", debugger.restartFrame(command["frame"].asInt)) }

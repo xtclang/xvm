@@ -107,6 +107,7 @@ class XtcDebugServerTest {
                 "supportsModulesRequest",
                 "supportsLoadedSourcesRequest",
                 "supportsStepInTargetsRequest",
+                "supportsSingleThreadExecutionRequests",
                 "supportsRestartFrame",
                 "exceptionBreakpointFilters",
             )
@@ -522,6 +523,68 @@ class XtcDebugServerTest {
         assertThat(runs.steps).containsExactly(12 to StepKind.OVER, 12 to StepKind.IN, 12 to StepKind.OUT)
 
         assertFailsWith(XtcDebugServer.NOT_STOPPED) { server.next(NextArguments().apply { threadId = 13 }) }
+    }
+
+    @Test
+    fun `with singleThread, continue and the steps run only the thread's fiber, while the others stay stopped`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        val continued =
+            server
+                .continue_(
+                    ContinueArguments().apply {
+                        threadId = 12
+                        singleThread = true
+                    },
+                ).get(10, SECONDS)
+        // the client learns that only that thread runs
+        assertThat(continued.allThreadsContinued).isFalse()
+        assertThat(runs.continuedAlone).containsExactly(12)
+        assertThat(runs.resumed).isZero()
+        assertFailsWith(XtcDebugServer.NOT_CONTINUABLE) {
+            server.continue_(
+                ContinueArguments().apply {
+                    threadId = 13
+                    singleThread = true
+                },
+            )
+        }
+
+        server
+            .next(
+                NextArguments().apply {
+                    threadId = 12
+                    singleThread = true
+                },
+            ).get(10, SECONDS)
+        server
+            .stepIn(
+                StepInArguments().apply {
+                    threadId = 12
+                    singleThread = true
+                },
+            ).get(10, SECONDS)
+        server
+            .stepOut(
+                StepOutArguments().apply {
+                    threadId = 12
+                    singleThread = true
+                },
+            ).get(10, SECONDS)
+        server
+            .stepIn(
+                StepInArguments().apply {
+                    threadId = 12
+                    targetId = 31
+                    singleThread = true
+                },
+            ).get(10, SECONDS)
+        assertThat(runs.aloneSteps).containsExactly(12 to StepKind.OVER, 12 to StepKind.IN, 12 to StepKind.OUT)
+        assertThat(runs.aloneIntos).containsExactly(12 to 31)
+        assertThat(runs.steps).isEmpty()
+        assertThat(runs.intos).isEmpty()
     }
 
     @Test
@@ -1240,6 +1303,11 @@ class XtcDebugServerTest {
         val stopped = CopyOnWriteArrayList<String>()
         val installed = CopyOnWriteArrayList<SourceBreakpoints>()
         val steps = CopyOnWriteArrayList<Pair<Int, StepKind>>()
+
+        /** The steps, steps into a call and continues of one fiber alone, with `singleThread`. */
+        val aloneSteps = CopyOnWriteArrayList<Pair<Int, StepKind>>()
+        val aloneIntos = CopyOnWriteArrayList<Pair<Int, Int>>()
+        val continuedAlone = CopyOnWriteArrayList<Int>()
         val exceptionStops = CopyOnWriteArrayList<ExceptionStops>()
         val evaluated = CopyOnWriteArrayList<Pair<Int, String>>()
 
@@ -1498,8 +1566,9 @@ class XtcDebugServerTest {
             runId: String,
             threadId: Int,
             kind: StepKind,
+            alone: Boolean,
         ): CompletableFuture<Boolean> {
-            if (threadId == 12) steps.add(threadId to kind)
+            if (threadId == 12) (if (alone) aloneSteps else steps).add(threadId to kind)
             return stepAnswer ?: CompletableFuture.completedFuture(threadId == 12)
         }
 
@@ -1523,7 +1592,10 @@ class XtcDebugServerTest {
             runId: String,
             threadId: Int,
             targetId: Int,
-        ) = CompletableFuture.completedFuture((threadId == 12 && targetId in 31..32).also { if (it) intos.add(threadId to targetId) })
+            alone: Boolean,
+        ) = CompletableFuture.completedFuture(
+            (threadId == 12 && targetId in 31..32).also { if (it) (if (alone) aloneIntos else intos).add(threadId to targetId) },
+        )
 
         val restarts = CopyOnWriteArrayList<Int>()
 
@@ -1535,6 +1607,11 @@ class XtcDebugServerTest {
         override fun pause(runId: String) = (runId == this.runId).also { if (it) paused++ }
 
         override fun resume(runId: String) = true.also { resumed++ }
+
+        override fun resumeAlone(
+            runId: String,
+            threadId: Int,
+        ) = CompletableFuture.completedFuture((threadId == 12).also { if (it) continuedAlone.add(threadId) })
     }
 
     /** Records the events the session sends its client. */
