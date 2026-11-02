@@ -165,6 +165,9 @@ class EmbeddedRunSessions {
         sessions.remove(runId)
     }
 
+    /** Whether a run runs in the language server's execution worker. */
+    val active: Boolean get() = sessions.isNotEmpty()
+
     fun output(params: RunOutputParams) {
         sessions[params.runId]?.output(params.text)
     }
