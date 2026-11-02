@@ -753,7 +753,7 @@ passes with the workaround disabled. The gates are in
   [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (merged 2026-10-28, unreleased, `2afdaf45`)
   bundles them at LSP4J's one version. UP41's LSP4J part needs it to reach IntelliJ.
 
-### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): LSP4J part our #1009
+### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): IJPL-260358, LSP4J part our #1009
 
 - [ ] UP41 (2026-10-24, cause found 2026-10-26): an IntelliJ evaluation that runs code cannot be ended
   before its time limit; X314 checks cancel in VS Code only. LSP4IJ never sends DAP `cancel`, but the
@@ -761,8 +761,11 @@ passes with the workaround disabled. The gates are in
   (`XValueCallback` has no `isObsolete()`, and `XEvaluationCallbackBase` adds none), and the Evaluate
   dialog neither cancels an evaluation when it closes or evaluates again nor offers to stop one, so an
   evaluator never learns that its result is no longer wanted. LSP4IJ could only cancel at a resume,
-  step or stop, where our server ends the run itself. To do: an IntelliJ Platform ticket (IJPL) for an
-  evaluation's obsolescence or cancel; then the LSP4J part, our [LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009)
+  step or stop, where our server ends the run itself. Filed for IntelliJ as
+  [IJPL-260358](https://youtrack.jetbrains.com/issue/IJPL-260358) (2026-11-02, Tools. Debugger): it
+  proposes that `XEvaluationCallback` extend `Obsolescent`, and that the dialog's callback, whose
+  `XCompositeNode` the dialog already marks obsolete before it evaluates again, return its node's
+  `isObsolete()`. To do: get it fixed; then the LSP4J part, our [LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009)
   (2026-10-28): `DebugRemoteEndpoint.sendCancelNotification()` sends DAP `cancel` with the request's
   `seq` as `requestId` (LSP4J sent LSP's `$/cancelRequest` notification, which a DAP endpoint writes
   as an `event`), and an incoming `cancel` cancels the request it names; it waits on the maintainer's
