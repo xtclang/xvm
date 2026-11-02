@@ -157,7 +157,7 @@ class EmbeddedExecutionTest {
         val request = server.requests.poll(30, SECONDS)!!
         assertThat(request.module).isEqualTo("file:///work/App.x")
         sessions.output(RunOutputParams(request.runId!!, "Hello, World!\n"))
-        sessions.exited(RunExitedParams(request.runId!!, 7, null))
+        sessions.exited(RunExitedParams(request.runId, 7, null))
         assertThat(handler.waitFor(30_000)).isTrue()
         assertThat(handler.exitCode).isEqualTo(7)
         assertThat(handler.stdout()).isEqualTo("Hello, World!\n")
