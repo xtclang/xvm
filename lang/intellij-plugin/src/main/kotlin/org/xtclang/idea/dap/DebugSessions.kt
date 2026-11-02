@@ -33,6 +33,9 @@ class DebugSessions {
         sessions.remove(sessionId)
     }
 
+    /** Whether a debug session runs in the language server. */
+    val active: Boolean get() = sessions.isNotEmpty()
+
     fun receive(params: DebugMessageParams) {
         sessions[params.sessionId]?.message(params.message)
     }
