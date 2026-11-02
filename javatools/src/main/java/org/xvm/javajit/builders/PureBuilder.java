@@ -25,7 +25,7 @@ import org.xvm.javajit.TypeSystem.ClassfileShape;
  */
 public class PureBuilder extends CommonBuilder {
     public PureBuilder(TypeSystem typeSystem, Artifact art) {
-        assert art.shape() == ClassfileShape.Pure;
+        assert art.shape() == ClassfileShape.Pure || isEmbedded(art.clz().getFormat());
         super(typeSystem, art);
     }
 

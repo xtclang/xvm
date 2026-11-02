@@ -363,15 +363,8 @@ public class NativeTypeSystem
             nativeByType.put(iterable, "org.xtclang.ecstasy.Iterable" + L_ANGLE + typeName + R_ANGLE);
         }
 
-        TypeConstant typeInt       = pool.typeInt64();
-        TypeConstant rangeᐸIntᐳ    = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
-        TypeConstant intervalᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeInterval(), typeInt);
-
-        // a Range<Int64> is conditionally an Interval<Int64>; both views use the native class
-        nativeByType.put(rangeᐸIntᐳ,    Builder.N_nRangeInt64);
-        nativeByType.put(intervalᐸIntᐳ, Builder.N_nRangeInt64);
-
-        // pre-register functions used by the native classes:
+        TypeConstant rangeᐸIntᐳ = pool.ensureRangeType(pool.typeInt64());
+        nativeByType.put(rangeᐸIntᐳ, Builder.N_RangeInt64);
 
         // prime the function name counter
         xvm.createUniqueSuffix("");

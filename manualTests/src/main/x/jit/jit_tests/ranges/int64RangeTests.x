@@ -20,6 +20,12 @@ package int64RangeTests {
         Range<Int> r = new Range(10, 20);
         assert r.lowerBound == 10 && r.upperBound == 20;
         assert !r.lowerExclusive && !r.upperExclusive;
+
+        Range<Int64> i = asInterval(r);
+        assert i.effectiveFirst == 10;
+        assert i.effectiveLast  == 20;
+
+        Interval<Int64> asInterval(Range<Int64> range) = range;
     }
 
     void newRangeLowerExclusive() {

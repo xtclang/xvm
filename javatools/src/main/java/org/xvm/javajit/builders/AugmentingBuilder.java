@@ -28,6 +28,8 @@ import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
+import org.xvm.javajit.builders.AnnotationHelper.AnnotationConstructor;
+
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
 
@@ -162,15 +164,21 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assemblePropertyAccessor(
-            ClassBuilder classBuilder,
-            PropertyInfo prop, String jitName,
-            JitMethodDesc jmd, boolean isGetter) {
+    protected void assemblePropertyAccessor(ClassBuilder classBuilder, PropertyInfo prop,
+                                            String jitName, JitMethodDesc jmd, boolean isGetter) {
         MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
         MethodModel    mm = findMethod(jitName, md);
         if (mm != null && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     prop.isAbstract() || prop.isNative())) {
-            // the property is already copied by the NativeTypeSystem
+            // the native accessor still need its boxed entry point
+            if (jmd.isOptimized) {
+                String standardName = isGetter
+                        ? prop.ensureGetterJitMethodName(typeSystem)
+                        : prop.ensureSetterJitMethodName(typeSystem);
+                if (findMethod(standardName, jmd.standardMD) == null) {
+                    assembleMethodWrapper(classBuilder, standardName, jmd);
+                }
+            }
             return;
         }
 
@@ -179,14 +187,30 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
-        if (findMethod(prop.ensureGetterJitMethodName(typeSystem), null) == null) {
+        String        jitName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
+
+        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+            // the native optimized getter still needs its boxed entry point
+            if (findMethod(jitName, jmd.standardMD) == null) {
+                assembleMethodWrapper(classBuilder, jitName, jmd);
+            }
+        } else if (findMethod(jitName, jmd.standardMD) == null) {
             super.generateTrivialGetter(classBuilder, prop);
         }
     }
 
     @Override
     protected void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop) {
-        if (findMethod(prop.ensureSetterJitMethodName(typeSystem), null) == null) {
+        String        jitName = prop.ensureSetterJitMethodName(typeSystem);
+        JitMethodDesc jmd     = prop.getSetterJitDesc(this, thisType);
+
+        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+            // the native optimized setter still needs its boxed entry point
+            if (findMethod(jitName, jmd.standardMD) == null) {
+                assembleMethodWrapper(classBuilder, jitName, jmd);
+            }
+        } else if (findMethod(jitName, jmd.standardMD) == null) {
             super.generateTrivialSetter(classBuilder, prop);
         }
     }
@@ -236,7 +260,8 @@ public class AugmentingBuilder extends CommonBuilder {
                 JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
                 if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
                         findMethod(jitName + OPT, jmdDeclared.optimizedMD) == null) {
-                    assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd);
+                    assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd,
+                            method.isConditionalReturn(typeInfo));
                 }
             }
 
@@ -265,17 +290,15 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleNew(
-            ClassBuilder classBuilder, MethodInfo constructor,
-            String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         MethodModel mm = jmd.isOptimized
                 ? findMethod(jitName + OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
 
-        if (mm != null) {
-            return;
+        if (mm == null) {
+            super.assembleNew(classBuilder, constructor, jitName, jmd, annoConstructors);
         }
-        super.assembleNew(classBuilder, constructor, jitName, jmd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------

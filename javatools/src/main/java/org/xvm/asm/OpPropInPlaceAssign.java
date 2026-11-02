@@ -123,13 +123,14 @@ public abstract class OpPropInPlaceAssign
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         PropertyConstant prop      = bctx.getConstant(m_nPropId, PropertyConstant.class);
-        RegisterInfo     regTarget = bctx.loadArgument(code, m_nTarget);
-        regTarget = bctx.storeTempRegister(code, m_nTarget, regTarget);
+        RegisterInfo     regTarget = bctx.storeTempRegister(code, m_nTarget,
+                                        bctx.loadArgument(code, m_nTarget));
 
         RegisterInfo regValue  = bctx.buildGetProperty(code, regTarget.load(code), m_nPropId);
         TypeConstant typeValue = buildInPlaceAssign(bctx, code, regValue, m_nValue);
         bctx.storeValue(code, regValue, typeValue);
-        bctx.buildSetProperty(code, regTarget.type(), regTarget::load, prop, regValue::load);
+        bctx.buildSetProperty(code, regTarget.type(), () -> regTarget.load(code),
+                prop, () -> regValue.load(code));
         return -1;
     }
 

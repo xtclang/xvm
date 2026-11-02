@@ -30,6 +30,7 @@ import org.xvm.asm.constants.*;
 import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
+import org.xvm.javajit.builders.AnnotationHelper;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
@@ -57,6 +58,7 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static org.xvm.asm.Constant.Format.Int128;
 import static org.xvm.asm.Constant.Format.Tuple;
 
+import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -100,15 +102,32 @@ public abstract class Builder {
      * @return TypeConstant for "this" type
      */
     public TypeConstant getThisType() {
-        // in theory, we could provide this info from art, or cache it as in CommonBuilder
-        throw new UnsupportedOperationException();
+        return art.type();
     }
 
     /**
      * Obtain the JVM receiver descriptor for a generated Ecstasy body.
      */
-    public ClassDesc getThisClassDesc(BuildContext bctx) {
+    public ClassDesc getThisCD(BuildContext bctx) {
         return art.CD();
+    }
+
+    /**
+     * Compute the type supplying the Java superclass implementation.
+     */
+    public TypeConstant getSuperType() {
+        return getThisType().ensureTypeInfo().getExtends();
+    }
+
+    /**
+     * Compute the ClassDesc for the super class of the class built by this builder.
+     */
+    public ClassDesc getSuperCD() {
+        TypeConstant thisType  = getThisType();
+        TypeConstant superType = getSuperType();
+        return superType == null
+            ? thisType.isConst() ? CD_nConst : CD_nObject
+            : getImplDesc(superType);
     }
 
     /**
@@ -120,41 +139,6 @@ public abstract class Builder {
     public JitCallDesc resolveConstructorCall(MethodInfo constructor, TypeConstant targetType,
                                               ClassDesc targetCD, String name) {
         return JitCallDesc.static_(targetCD, name, constructor.getJitDesc(this, targetType), false);
-    }
-
-    /**
-     * Ensure the backing-field target used by an accessor super call.
-     *
-     * @param body  the Field implementation of a property getter or setter
-     *
-     * @return the call descriptor for accessing the backing field without re-entering
-     *         the custom accessor
-     */
-    public JitCallDesc ensureFieldAccessor(MethodBody body) {
-        throw new UnsupportedOperationException("Field super: " + body);
-    }
-
-    /**
-     * Load a backing field without invoking an Ecstasy property getter. Virtual-child contracts
-     * expose raw accessors because the declaring JIC need not be a Java ancestor of the receiver.
-     */
-    public void loadField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
-        if (owner.isDerivedVirtualChildClass()) {
-            code.invokeinterface(getCCDesc(owner), FieldGet + name, md(cd));
-        } else {
-            code.getfield(getCCDesc(owner), name, cd);
-        }
-    }
-
-    /**
-     * Store a backing field without invoking an Ecstasy property setter or its mutability check.
-     */
-    public void storeField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
-        if (owner.isDerivedVirtualChildClass()) {
-            code.invokeinterface(getCCDesc(owner), FieldSet + name, md(CD_void, cd));
-        } else {
-            code.putfield(getCCDesc(owner), name, cd);
-        }
     }
 
     /**
@@ -179,19 +163,63 @@ public abstract class Builder {
     }
 
     /**
-     * Compute the ClassDesc for the super class of the class built by this builder.
+     * Ensure the backing-field target used by an accessor super call.
+     *
+     * @param body  the Field implementation of a property getter or setter
+     *
+     * @return the call descriptor for accessing the backing field without re-entering
+     *         the custom accessor
      */
-    public ClassDesc getSuperCD() {
-        TypeConstant thisType  = getThisType();
-        TypeInfo     typeInfo  = thisType.ensureTypeInfo();
-        TypeConstant superType = typeInfo.getExtends();
-        return superType == null
-            ? thisType.isConst() ? CD_nConst : CD_nObject
-            : getCCDesc(superType);
+    public JitCallDesc ensureFieldAccessor(MethodBody body) {
+        throw new UnsupportedOperationException("Field super: " + body);
     }
 
     /**
-     * Add the Java interfaces contributed by Ecstasy implements and incorporates clauses.
+     * Load a backing field without invoking an Ecstasy property getter. Virtual-child contracts
+     * expose raw accessors because the declaring JIC need not be a Java ancestor of the receiver.
+     */
+    public void loadField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
+        if (shouldInvokeFieldAccessor(owner)) {
+            code.invokeinterface(getCCDesc(owner), FieldGet + name, md(cd));
+        } else {
+            code.getfield(getImplDesc(owner), name, cd);
+        }
+    }
+
+    /**
+     * Store a backing field without invoking an Ecstasy property setter or its mutability check.
+     */
+    public void storeField(CodeBuilder code, TypeConstant owner, String name, ClassDesc cd) {
+        if (shouldInvokeFieldAccessor(owner)) {
+            code.invokeinterface(getCCDesc(owner), FieldSet + name, md(CD_void, cd));
+        } else {
+            code.putfield(getImplDesc(owner), name, cd);
+        }
+    }
+
+    /**
+     * @return true iff backing fields owned by the specified type should be accessed through
+     *         synthetic virtual calls instead of JVM getfield/putfield instructions
+     */
+    protected boolean shouldInvokeFieldAccessor(TypeConstant owner) {
+        return owner.isDerivedVirtualChildClass();
+    }
+
+    /**
+     * @return true iff the code for the specified method or property accessors should be generated
+     *         inside this class
+     */
+    public boolean shouldGenerate(IdentityConstant id) {
+        IdentityConstant containerId = id instanceof PropertyConstant
+                ? id.getClassIdentity()
+                : id.getNamespace();
+
+        return containerId.equals(getThisType().getSingleUnderlyingClass(true)) ||
+                isEmbedded(containerId.getComponent().getFormat());
+    }
+
+    /**
+     * Add the Java interfaces contributed by Ecstasy annotations and type composition clauses.
      *
      * @param isInterface  true iff the generated Java artifact is an interface
      */
@@ -214,8 +242,14 @@ public abstract class Builder {
                     break;
                 }
 
-                case Implements, Incorporates:
+                case Annotation, Implements, Incorporates:
                     interfaces.add(getCCDesc(contribType));
+                    break;
+
+                case Into:
+                    if (isInterface && contribType.isJitCCInterface()) {
+                        interfaces.add(getCCDesc(contribType));
+                    }
                     break;
             }
         }
@@ -253,21 +287,28 @@ public abstract class Builder {
     }
 
     /**
-     * Obtain a unique ClassDesc for the specified type.
+     * Obtain the ClassDesc that represents the "JIT Call Class Name" for this type.
      */
     public ClassDesc getCCDesc(TypeConstant type) {
         return type.getJitCCDesc(typeSystem);
     }
 
     /**
-     * Obtain the Java descriptor of the specified type's implementation (Impl) shape.
+     * Obtain the ClassDesc that represents the "JIT Instance Class Name" for this type.
+     */
+    public ClassDesc getICDesc(TypeConstant type) {
+        return type.getJitICDesc(typeSystem);
+    }
+
+    /**
+     * Obtain the ClassDesc that represents the specified type's implementation (Impl) shape.
      */
     public ClassDesc getImplDesc(TypeConstant type) {
         return type.getJitImplDesc(typeSystem);
     }
 
     /**
-     * Obtain the Java descriptor of the Pure interface corresponding to the specified type's
+     * Obtain the ClassDesc that represents the Pure interface corresponding to the specified type's
      * Impl shape.
      */
     public ClassDesc getPureImplDesc(TypeConstant type) {
@@ -291,7 +332,6 @@ public abstract class Builder {
      * @see "doc/jit_class_names.txt"
      */
     public String getICName(TypeConstant type) {
-        // TODO
         return type.getJitICName(typeSystem);
     }
 
@@ -1198,7 +1238,7 @@ public abstract class Builder {
 
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
-            typeOwner = jitInfo.getOwnerType(this, typeContainer);
+            typeOwner = jitInfo.getCallableOwnerType(this, typeContainer);
             typeOwner = typeOwner.getJitCCType();
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
@@ -2079,7 +2119,7 @@ public abstract class Builder {
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        boolean        hasType          = typeInfo.hasGenericTypes();
+        boolean        hasType          = typeInfo.getType().hasJitRuntimeType();
         boolean        hasOuter         = typeInfo.getClassStructure().isInstanceChild();
         return hasType || hasOuter
             ? new JitCtorDesc(typeInfo.getType(),
@@ -2095,11 +2135,20 @@ public abstract class Builder {
      * Obtain a virtual child's instantiator-router descriptor for class-of-class dispatch.
      * The instantiator interface declares this router with the resolved type and outer object,
      * even when the corresponding static instantiator does not need a TypeConstant argument.
+     * The original child supplies the return contract; the target supplies its annotations.
+     *
+     * @param constructor  the original virtual-child constructor
+     * @param targetType   the child type being constructed
      */
-    public JitMethodDesc getChildConstructorDesc(MethodInfo constructor) {
-        TypeInfo      info = constructor.getTypeInfo();
-        TypeConstant  type = info.getType().getJitCCType();
-        JitMethodDesc jmd  = convertConstructToNew(info, getCCDesc(type),
+    public JitCtorDesc getChildConstructorDesc(MethodInfo constructor, TypeConstant targetType) {
+        TypeInfo     info = constructor.getTypeInfo();
+        TypeConstant type = info.getType().removeAnnotations().getJitCCType();
+
+        if (targetType.isAnnotated()) {
+            type = type.adoptAnnotations(pool(), targetType.getJitCCType());
+        }
+
+        JitMethodDesc jmd = convertConstructToNew(info, getCCDesc(type),
                 (JitCtorDesc) constructor.getJitDesc(this, type));
         return new JitCtorDesc(type, null, false, true, true,
                 jmd.standardReturns, jmd.standardParams, jmd.optimizedReturns, jmd.optimizedParams);
@@ -2111,10 +2160,10 @@ public abstract class Builder {
      * @param argsLoader the function (consumer) that is responsible for loading the arguments
      *                   on the Java stack
      */
-    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
-                                  MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
-                                  int ctxSlot) {
-        return buildNew(bctx, code, typeTarget, idCtor, null, argsLoader, ctxSlot);
+    public JitMethodDesc callNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
+                                 MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
+                                 int ctxSlot) {
+        return callNew(bctx, code, typeTarget, idCtor, null, argsLoader, ctxSlot);
     }
 
     /**
@@ -2125,9 +2174,9 @@ public abstract class Builder {
      *
      * @see "doc/jit_class_names.txt"
      */
-    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
-                                  MethodConstant ctorId, RegisterInfo outer,
-                                  Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
+    public JitMethodDesc callNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
+                                 MethodConstant ctorId, RegisterInfo outer,
+                                 Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
         TypeConstant targetJIC  = targetType.getJitICType();
         TypeInfo     targetInfo = targetJIC.ensureTypeInfo();
         MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
@@ -2142,28 +2191,35 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     targetCD = getCCDesc(targetType);
-        JitMethodDesc instorMD;
+        ClassDesc targetCD = targetJIC.isVirtualChild()
+                ? getCCDesc(targetType)
+                : getICDesc(targetType);
 
         if (targetJIC.isVirtualChild()) {
             assert outer != null : "Virtual child without an outer";
             assert bctx  != null : "Out of context";
 
             MethodInfo    origin       = ctor.getChildConstructorOrigin();
-            JitMethodDesc instorRouter = getChildConstructorDesc(origin);
+            JitCtorDesc   instorRouter = getChildConstructorDesc(origin, targetType);
             String        targetName   = instorRouter.typeTarget.getJitImplName(typeSystem);
             ClassDesc     instorIface  = ClassDesc.of(TypeSystem.funkyInterface(targetName));
-            String        name         = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            String        instorName   = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc instorMD     = convertConstructToNew(targetInfo, targetCD,
+                                                (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
-            instorMD = convertConstructToNew(targetInfo, targetCD,
-                    (JitCtorDesc) ctor.getJitDesc(this, targetType));
+            JitMethodDesc callMD = instorRouter;
+            if (targetType.isAnnotated()) {
+                JitCallDesc call = AnnotationHelper.getInstantiatorCall(bctx, targetType, instorName, instorRouter);
+                instorName = call.name();
+                callMD     = call.jmd();
+            }
 
             MethodTypeDesc md;
-            if (instorRouter.isOptimized) {
-                md    = instorRouter.optimizedMD;
-                name += OPT;
+            if (callMD.isOptimized) {
+                md          = callMD.optimizedMD;
+                instorName += OPT;
             } else {
-                md = instorRouter.standardMD;
+                md = callMD.standardMD;
             }
 
             // evaluate the outer once; its runtime type selects both the child override and JIC
@@ -2192,27 +2248,43 @@ public abstract class Builder {
                 .aload(typeSlot)
                 .aload(outerSlot);
             argsLoader.accept(instorRouter);
-            code.invokeinterface(instorIface, name, md);
+
+            if (targetType.isAnnotated()) {
+                AnnotationHelper.loadAnnotationConstructorArgs(bctx, code, targetType);
+            }
+            code.invokeinterface(instorIface, instorName, md);
 
             if (!md.returnType().equals(targetCD)) {
                 // every override returns the base child type in its Java descriptor
                 code.checkcast(targetCD);
             }
+            return instorMD;
         } else {
-            String instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-            instorMD = convertConstructToNew(targetInfo, targetCD,
-                        (JitCtorDesc) ctor.getJitDesc(this, targetType));
+            String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+            JitMethodDesc instorMD   = convertConstructToNew(targetInfo, targetCD,
+                                        (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
-            MethodTypeDesc md;
-            if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
-                instorName += Builder.OPT;
-            } else {
-                md = instorMD.standardMD;
+            JitMethodDesc callMD = instorMD;
+            if (targetType.isAnnotated()) {
+                assert bctx  != null : "Out of context";
+
+                JitCallDesc call = AnnotationHelper.getInstantiatorCall(
+                        bctx, targetType, instorName, (JitCtorDesc) instorMD);
+                instorName = call.name();
+                callMD     = call.jmd();
             }
 
+            MethodTypeDesc md;
+            if (callMD.isOptimized) {
+                md          = callMD.optimizedMD;
+                instorName += OPT;
+            } else {
+                md = callMD.standardMD;
+            }
+
+            // target = Target.$new(ctx, [type], [outer], args...); // or $new$p
             code.aload(ctxSlot);
-            if (targetInfo.hasGenericTypes()) {
+            if (targetType.hasJitRuntimeType()) {
                 loadTypeConstant(bctx, code, targetType);
             }
             if (outer != null) {
@@ -2222,16 +2294,187 @@ public abstract class Builder {
                 }
             }
             argsLoader.accept(instorMD);
+
+            if (targetType.isAnnotated()) {
+                AnnotationHelper.loadAnnotationConstructorArgs(bctx, code, targetType);
+            }
             code.invokestatic(targetCD, instorName, md);
+            return callMD;
         }
-        return instorMD;
+    }
+
+    /**
+     * Convert a supplied argument on the Java stack to the parameter's calling convention.
+     *
+     * @param argIndex  the zero-based explicit argument index
+     * @param srcReg    the description of the value already loaded on the Java stack
+     * @param ctxSlot   the local slot containing Ctx
+     */
+    public void convertCallArgument(CodeBuilder code, JitMethodDesc jmd, int argIndex,
+                                    RegisterInfo srcReg, int ctxSlot) {
+        JitParamDesc pd        = jmd.getParam(argIndex);
+        JitFlavor    dstFlavor = pd.flavor;
+        JitFlavor    srcFlavor = srcReg.flavor();
+
+        if (srcFlavor == AlwaysNull) {
+            // a narrowed Null is loaded as the boxed singleton, just like a Null constant
+            srcFlavor = Specific;
+        }
+        if (srcFlavor == dstFlavor) {
+            if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
+                    !srcReg.type().isJitAssignableTo(pd.type)) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            return;
+        }
+
+        // possible transformations are:
+        //  - Specific  -> Specific           (String s; f(s) with f(Stringable))
+        //  - Specific  -> Widened            (String s; f(s) with f(Int|String))
+        //  - Specific  -> NullablePrimitive  (f(Null) with f(Int?))
+        //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
+        //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
+        //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
+        //  - Widened -> Primitive            (Int|String n narrowed to Int; f(n) with f(Int))
+        //  - Widened -> NullablePrimitive    (Int?|String n narrowed to Int?; f(n) with f(Int?))
+        switch (srcFlavor.name() + "->" + dstFlavor.name()) {
+        case "Specific->SpecificWithDefault":
+        case "Widened->Specific",
+             "Widened->SpecificWithDefault":
+            if (!srcReg.cd().equals(pd.cd)) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            return;
+
+        case "Widened->WidenedWithDefault":
+            return;
+
+        case "Widened->Primitive",
+             "Widened->XvmPrimitive":
+            if (!srcReg.cd().equals(getCCDesc(pd.type))) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            unbox(code, pd.type);
+            return;
+
+        case "Widened->NullablePrimitive",
+             "Widened->NullableXvmPrimitive":
+            unboxNullable(code, pd.type, getCCDesc(pd.type.removeNullable()));
+            return;
+
+        case "Specific->Widened",
+             "Specific->WidenedWithDefault":
+            if (srcReg.type().isJitCCInterface()) {
+                code.checkcast(CD_nObject);
+            }
+            return;
+
+        case "Specific->NullablePrimitive",
+             "Specific->NullablePrimitiveWithDefault":
+            assert srcReg.type().isOnlyNullable();
+            code.pop(); // throw away Null; load the default value and "true"
+            defaultLoad(code, pd.cd);
+            code.iconst_1();
+            return;
+
+        case "Specific->NullableXvmPrimitive",
+             "Specific->NullableXvmPrimitiveWithDefault": {
+            assert srcReg.type().isOnlyNullable();
+            code.pop(); // throw away Null; load the default primitive values and "true"
+            assert pd.index != -1;
+            int[] anIndexes = jmd.getAllOptimizedParamIndexes(pd.index);
+            // the last opt arg will be the boolean flag, fill the others with the default
+            for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
+                defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
+            }
+            // add the boolean "true" (same as int "1") to indicate Null
+            code.iconst_1();
+            return;
+        }
+
+        case "Primitive->Specific",
+             "Primitive->SpecificWithDefault",
+             "Primitive->Widened",
+             "Primitive->WidenedWithDefault",
+             "XvmPrimitive->Specific",
+             "XvmPrimitive->SpecificWithDefault",
+             "XvmPrimitive->Widened",
+             "XvmPrimitive->WidenedWithDefault":
+            assert srcReg.type().isJitAssignableTo(pd.type);
+            box(code, srcReg.type());
+            return;
+
+        case "Primitive->NullablePrimitive",
+             "Primitive->PrimitiveWithDefault",
+             "Primitive->NullablePrimitiveWithDefault",
+             "XvmPrimitive->NullableXvmPrimitive",
+             "XvmPrimitive->XvmPrimitiveWithDefault",
+             "XvmPrimitive->NullableXvmPrimitiveWithDefault":
+            // loadArgument() has already loaded the value; just load "false"
+            code.iconst_0();
+            return;
+
+        case "NullablePrimitive->Specific",
+             "NullablePrimitive->SpecificWithDefault",
+             "NullablePrimitive->Widened",
+             "NullablePrimitive->WidenedWithDefault": {
+            // loadArgument() has already loaded the value and the boolean
+            Label ifTrue = code.newLabel();
+            Label endIf  = code.newLabel();
+
+            code.ifne(ifTrue);
+            box(code, srcReg.type().removeNullable());
+            code.goto_(endIf)
+                    .labelBinding(ifTrue);
+            pop(code, srcReg.cd());
+            loadNull(code);
+            code.labelBinding(endIf);
+            return;
+        }
+
+        case "NullablePrimitive->Primitive",
+             "NullableXvmPrimitive->XvmPrimitive":
+            assert !srcReg.type().isOnlyNullable();
+            // pop the nullable flag
+            code.pop();
+            return;
+
+        case "NullablePrimitive->NullablePrimitiveWithDefault":
+            // loadArgument() has already loaded an int representing a boolean value; both
+            // 0 and 1 will work as expected (-1 representing a default is never coming in)
+            return;
+
+        case "NullableXvmPrimitive->Specific",
+             "NullableXvmPrimitive->SpecificWithDefault",
+             "NullableXvmPrimitive->Widened",
+             "NullableXvmPrimitive->WidenedWithDefault": {
+            // loadArgument() has already loaded the value and the boolean
+            Label ifTrue = code.newLabel();
+            Label endIf  = code.newLabel();
+
+            code.ifne(ifTrue);
+            box(code, srcReg.type().removeNullable());
+            code.goto_(endIf)
+                    .labelBinding(ifTrue);
+            for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
+                pop(code, cd);
+            }
+            loadNull(code);
+            code.labelBinding(endIf);
+            return;
+        }
+
+        default:
+            throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                    "; dst=" + dstFlavor);
+        }
     }
 
     /**
      * For a given class name create a name for an associated class of the specified shape.
      */
     public static String getShapeName(String className, ClassfileShape shape) {
-        int simpleOffset = className.lastIndexOf('.');
+        int simpleOffset = Math.max(className.lastIndexOf('.'), className.lastIndexOf('$'));
         assert simpleOffset > 0;
         String simpleName = className.substring(simpleOffset + 1);
         return className.substring(0, simpleOffset + 1) + shape.prefix + simpleName;
@@ -2367,7 +2610,23 @@ public abstract class Builder {
          *
          * @return the register information describing the loaded value
          */
-        RegisterInfo load(CodeBuilder code);
+        RegisterInfo load();
+    }
+
+    /**
+     * Represents an operation that loads an explicit call argument onto the Java stack.
+     */
+    @FunctionalInterface
+    public interface ArgLoader {
+        /**
+         * Load an explicit call argument onto the Java stack.
+         *
+         * @param argIndex  the zero-based explicit argument index
+         *
+         * @return the register information describing the loaded value, or {@code null} for an
+         *         omitted argument or explicit default marker, leaving the stack unchanged
+         */
+        RegisterInfo load(int argIndex);
     }
 
     // ----- native class names --------------------------------------------------------------------
@@ -2429,6 +2688,7 @@ public abstract class Builder {
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
+    public static final String N_RangeInt64   = "org.xtclang.ecstasy.RangeᐸInt64ᐳ";
     public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
     public static final String N_Ref          = "org.xtclang.ecstasy.reflect.Ref";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
@@ -2452,7 +2712,6 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
-    public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nTuple       = "org.xtclang.ecstasy.nTuple";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
@@ -2686,7 +2945,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_L2D          = md(CD_double, CD_long);
     public static final MethodTypeDesc MD_F2I          = md(CD_int, CD_float);
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
-    public static final MethodTypeDesc MD_xvmClass     = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
     public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);

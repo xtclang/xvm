@@ -389,21 +389,23 @@ public class MethodInfo
 
         MethodInfo ctor      = this;
         TypeInfo   childInfo = getTypeInfo();
-        if (childInfo.getType().isPhantom()) {
-            // an undeclared inherited child has no constructor contract of its own
+        while (childInfo.getType().isPhantom() ||
+                childInfo.getClassStructure().isExplicitlyOverride()) {
             TypeConstant typeChild = childInfo.getType();
-            childInfo = typeChild.dropOriginParent(typeChild.getConstantPool()).
-                    ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            ctor = childInfo.getMethodBySignature(getSignature());
-            assert ctor != null;
-        }
-        while (childInfo.getClassStructure().isExplicitlyOverride()) {
-            TypeConstant superType = childInfo.getExtends();
+            boolean      isPhantom = typeChild.isPhantom();
+
+            // an undeclared inherited child has no constructor contract of its own;
+            // it can occur at any level of the enclosing hierarchy
+            TypeConstant superType = isPhantom
+                    ? typeChild.dropOriginParent(typeChild.getConstantPool())
+                    : childInfo.getExtends();
             assert superType != null && superType.isVirtualChild();
 
-            TypeInfo   superInfo = superType.ensureAccess(Access.PROTECTED).ensureTypeInfo();
+            TypeInfo superInfo = superType
+                    .ensureAccess(isPhantom ? Access.PRIVATE : Access.PROTECTED).ensureTypeInfo();
             MethodInfo superCtor = superInfo.getMethodBySignature(ctor.getSignature());
             if (superCtor == null) {
+                assert !isPhantom;
                 break;
             }
             ctor      = superCtor;
@@ -1526,14 +1528,7 @@ public class MethodInfo
      * @return the identity of the method to be used by the JIT compiler
      */
     public MethodConstant getJitIdentity() {
-        return getJitIdentity(m_aBody);
-    }
-
-    /**
-     * @return the identity of the method to be used by the JIT compiler
-     */
-    public static MethodConstant getJitIdentity(MethodBody[] aBody) {
-        return getJitIdentity(aBody, 0);
+        return getJitIdentity(m_aBody, 0);
     }
 
     /**

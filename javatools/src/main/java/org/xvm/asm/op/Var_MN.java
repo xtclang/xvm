@@ -32,7 +32,7 @@ public class Var_MN
      *
      * @param reg        the register
      * @param constName  the name constant
-     * @param aArgVal    the key arguments
+     * @param aArgKey    the key arguments
      * @param aArgVal    the value arguments
      */
     public Var_MN(Register reg, StringConstant constName, Argument[] aArgKey, Argument[] aArgVal) {

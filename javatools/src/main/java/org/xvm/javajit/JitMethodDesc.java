@@ -113,6 +113,13 @@ public class JitMethodDesc {
     }
 
     /**
+     * @return a JitParamDesc for the specified standard argument index
+     */
+    public JitParamDesc getParam(int argIndex) {
+        return isOptimized ? getOptimizedParam(argIndex) : standardParams[argIndex];
+    }
+
+    /**
      * @return an optimized JitParamDesc for the specified standard argument index
      */
     public JitParamDesc getOptimizedParam(int argIndex) {
@@ -139,6 +146,13 @@ public class JitMethodDesc {
      */
     public int getOptimizedParamIndex(int argIndex) {
         return firstIndexOf(optimizedParams, argIndex, "arg");
+    }
+
+    /**
+     * @return a JitParamDesc for the specified standard return index
+     */
+    public JitParamDesc getReturn(int retIndex) {
+        return isOptimized ? getOptimizedReturn(retIndex) : standardReturns[retIndex];
     }
 
     /**
@@ -486,7 +500,11 @@ public class JitMethodDesc {
                 : null;
 
         if (isConstructor) {
-            return new JitCtorDesc(targetType, builder.getCCDesc(targetType),
+            ClassDesc targetCd = targetType.isAnnotated()
+                    ? builder.getICDesc(targetType)
+                    : builder.getCCDesc(targetType);
+
+            return new JitCtorDesc(targetType, targetCd,
                     hasFinalizer, /*fAddType*/ false, /*fAddOuter*/ false,
                     stdReturns, stdParams, optReturns, optParams);
         } else {

@@ -61,6 +61,10 @@ import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
+
+import org.xvm.javajit.builders.AnnotationHelper.AnnotationConstructor;
+import org.xvm.javajit.builders.AnnotationHelper.AnnotationVariant;
+
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
 import org.xvm.javajit.registers.SingleSlot;
@@ -108,6 +112,11 @@ public class CommonBuilder
         this.jitType       = thisType.getJitCCType();
         this.isSpecialized = jitType.isJitL2Specialized();
         this.isPrimitive   = type.isJitPrimitive();
+
+        Annotation[] annotations = typeInfo.getMixinAnnotations();
+        this.annotated = annotations.length == 0
+                ? null
+                : new AnnotationHelper(this, annotations);
     }
 
     public final ClassStructure   classStruct;
@@ -119,6 +128,7 @@ public class CommonBuilder
     public final boolean          isInterface;
     public final boolean          isSpecialized;
     public final boolean          isPrimitive;
+    public final AnnotationHelper annotated;     // not null if composition contains annotations
 
     /**
      * The shallow size of object in bytes.
@@ -264,7 +274,7 @@ public class CommonBuilder
         if (classStruct.isVirtualChild() && !typeInfo.isAbstract()) {
             for (MethodConstant ctorId : typeInfo.findMethods("construct", -1, MethodKind.Constructor)) {
                 MethodInfo    ctor         = typeInfo.getMethodById(ctorId);
-                JitMethodDesc instorRouter = getChildConstructorDesc(ctor.getChildConstructorOrigin());
+                JitMethodDesc instorRouter = getChildConstructorDesc(ctor.getChildConstructorOrigin(), thisType);
                 String        targetName   = instorRouter.typeTarget.getJitImplName(typeSystem);
 
                 interfaces.add(ClassDesc.of(TypeSystem.funkyInterface(targetName)));
@@ -353,23 +363,37 @@ public class CommonBuilder
 
         for (MethodInfo ctor : childCtors) {
             MethodInfo    origin       = ctor.getChildConstructorOrigin();
-            JitMethodDesc instorRouter = getChildConstructorDesc(origin);
+            JitCtorDesc   instorRouter = getChildConstructorDesc(origin, thisType);
             JitMethodDesc targetJmd    = convertConstructToNew(typeInfo, targetCD,
                     (JitCtorDesc) ctor.getJitDesc(this, targetType));
 
             String name       = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
             String targetName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
 
-            assembleVirtualConstructorRouting(classBuilder, name,
-                    instorRouter.standardMD, instorRouter.standardParams,
-                    targetCD, targetName, targetJmd.standardMD, targetJmd.standardParams,
-                    instorRouter.standardCtx());
-            if (instorRouter.isOptimized) {
-                assert targetJmd.isOptimized;
-                assembleVirtualConstructorRouting(classBuilder, name + OPT,
-                        instorRouter.optimizedMD, instorRouter.optimizedParams,
-                        targetCD, targetName + OPT, targetJmd.optimizedMD, targetJmd.optimizedParams,
-                        instorRouter.optimizedCtx());
+            for (AnnotationVariant variant : collectVariants(targetJmd)) {
+                JitCtorDesc routerDesc = instorRouter;
+
+                for (AnnotationConstructor annotation : variant.constructors()) {
+                    if (annotation.isConstructionSite()) {
+                        routerDesc = routerDesc.appendParams(annotation.desc());
+                    }
+                }
+
+                JitMethodDesc targetDesc = variant.desc();
+                String        routerName = name + variant.suffix();
+                String        staticName = targetName + variant.suffix();
+
+                assembleVirtualConstructorRouting(classBuilder, routerName,
+                        routerDesc.standardMD, routerDesc.standardParams,
+                        targetCD, staticName, targetDesc.standardMD, targetDesc.standardParams,
+                        routerDesc.standardCtx());
+                if (routerDesc.isOptimized) {
+                    assert targetDesc.isOptimized;
+                    assembleVirtualConstructorRouting(classBuilder, routerName + OPT,
+                            routerDesc.optimizedMD, routerDesc.optimizedParams,
+                            targetCD, staticName + OPT, targetDesc.optimizedMD,
+                            targetDesc.optimizedParams, routerDesc.optimizedCtx());
+                }
             }
         }
     }
@@ -469,7 +493,7 @@ public class CommonBuilder
             JitParamDesc[] targetParams, int ctxIndex) {
 
         int     ctorExtra = ctorMD.parameterCount() - ctorParams.length;
-        boolean hasType   = typeInfo.hasGenericTypes();
+        boolean hasType   = hasRuntimeType();
         boolean hasOuter  = classStruct.isInstanceChild();
 
         assert ctorParams.length == targetParams.length;
@@ -521,12 +545,17 @@ public class CommonBuilder
         if (classStruct.isVirtualChild() && !isInterface) {
             for (MethodConstant ctorId : typeInfo.findMethods("construct", -1, MethodKind.Constructor)) {
                 MethodInfo    origin = typeInfo.getMethodById(ctorId).getChildConstructorOrigin();
-                JitMethodDesc jmd    = getChildConstructorDesc(origin);
+                JitMethodDesc jmd    = getChildConstructorDesc(origin, thisType);
                 String        name   = origin.ensureJitMethodName(typeSystem).replace("construct", NEW);
 
-                classBuilder.withMethod(name, jmd.standardMD, flags, _ -> {});
-                if (jmd.isOptimized) {
-                    classBuilder.withMethod(name + OPT, jmd.optimizedMD, flags, _ -> {});
+                for (AnnotationVariant variant : collectVariants(jmd)) {
+                    JitMethodDesc desc       = variant.desc();
+                    String        instorName = name + variant.suffix();
+
+                    classBuilder.withMethod(instorName, desc.standardMD, flags, _ -> {});
+                    if (desc.isOptimized) {
+                        classBuilder.withMethod(instorName + OPT, desc.optimizedMD, flags, _ -> {});
+                    }
                 }
             }
             return;
@@ -550,6 +579,40 @@ public class CommonBuilder
     @Override
     public TypeConstant getThisType() {
         return thisType;
+    }
+
+    @Override
+    public TypeConstant getSuperType() {
+        return hasConstructionSiteAnnotations()
+                ? annotated.getBaseType()
+                : super.getSuperType();
+    }
+
+    @Override
+    public boolean shouldGenerate(IdentityConstant id) {
+        return (annotated == null || !annotated.isInherited(id)) && super.shouldGenerate(id);
+    }
+
+    @Override
+    protected boolean shouldInvokeFieldAccessor(TypeConstant owner) {
+        // an annotated implementation's struct receiver includes the annotation fields
+        return !(thisType.isAnnotated() && owner.removeAccess().equals(thisType.removeAccess())) &&
+                super.shouldInvokeFieldAccessor(owner);
+    }
+
+    /**
+     * @return true iff the Java class can represent different Ecstasy types and each instance must
+     *         retain its actual Ecstasy type
+     */
+    protected boolean hasRuntimeType() {
+        return thisType.hasJitRuntimeType();
+    }
+
+    /**
+     * @return true iff this type has construction site annotations that contribute to its instances
+     */
+    protected boolean hasConstructionSiteAnnotations() {
+        return annotated != null && annotated.isConstructionSite;
     }
 
     @Override
@@ -656,7 +719,7 @@ public class CommonBuilder
         boolean done  = false;
 
         switch (classStruct.getFormat()) {
-            case CLASS, CONST, SERVICE, ENUMVALUE:
+            case CLASS, CONST, SERVICE, ENUMVALUE, PACKAGE:
                 flags |= ClassFile.ACC_SUPER; // see JLS 4.1
                 classBuilder.withSuperclass(getSuperCD());
                 break;
@@ -673,7 +736,6 @@ public class CommonBuilder
                 break;
 
             default:
-                // TODO: support for mixin, annotations, etc
                 throw new RuntimeException("Not implemented " + thisType);
         }
         classBuilder.withFlags(flags);
@@ -789,7 +851,7 @@ public class CommonBuilder
             }
         }
 
-        if (format != Format.INTERFACE && typeInfo.hasGenericTypes()) {
+        if (format != Format.INTERFACE && hasRuntimeType()) {
             for (var entry : typeInfo.getTypeParams().entrySet()) {
                 if (entry.getKey() instanceof String name) {
                     assembleGenericProperty(classBuilder, name);
@@ -941,7 +1003,7 @@ public class CommonBuilder
                         ClassDesc      cd     = getCCDesc(type);
                         MethodConstant ctorId = type.ensureTypeInfo().findConstructor(pool.typeString());
 
-                        buildNew(null, code, type, ctorId,
+                        callNew(null, code, type, ctorId,
                                 (_) -> loadString(code, literal.getValue(), ctxSlot), ctxSlot);
                         code.putstatic(CD_this, name, cd);
                     } else {
@@ -1356,7 +1418,7 @@ public class CommonBuilder
         code.aload(0)
             .aload(code.parameterSlot(0));
 
-        TypeConstant superType = typeInfo.getExtends();
+        TypeConstant superType = getSuperType();
         boolean      hasOuter  = superType != null &&
                 superType.getSingleUnderlyingClass(true).getComponent()
                         instanceof ClassStructure superClass && superClass.isInstanceChild();
@@ -1469,7 +1531,7 @@ public class CommonBuilder
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
             if (isOpt) {
-                JitParamDesc pdOpt   = jmd.optimizedReturns[0];
+                JitParamDesc pdOpt   = jmd.getReturn(0);
                 TypeConstant type    = prop.getType();
                 ClassDesc    fieldCD = JitTypeDesc.getFieldClass(type, pdOpt.cd);
                 switch (pdOpt.flavor) {
@@ -1522,7 +1584,7 @@ public class CommonBuilder
                     throw new IllegalStateException("Unsupported property flavor: " + pdOpt.flavor);
                 }
             } else {
-                JitParamDesc pdStd = jmd.standardReturns[0];
+                JitParamDesc pdStd = jmd.getReturn(0);
                 if (prop.isConstant()) {
                     code.getstatic(CD_this, jitFieldName, pdStd.cd);
                 } else {
@@ -1723,7 +1785,7 @@ public class CommonBuilder
             Injection injection = computeInjection(code, prop);
 
             if (isOpt) {
-                JitParamDesc pdOpt   = jmd.optimizedReturns[0];
+                JitParamDesc pdOpt   = jmd.getReturn(0);
                 ClassDesc    fieldCD = pdOpt.cd;
                 switch (pdOpt.flavor) {
                 case Primitive:
@@ -1745,7 +1807,7 @@ public class CommonBuilder
                     throw new IllegalStateException("Unsupported property flavor: " + pdOpt.flavor);
                 }
             } else {
-                JitParamDesc pdStd     = jmd.standardReturns[0];
+                JitParamDesc pdStd     = jmd.getReturn(0);
                 Label        endLbl    = code.newLabel();
                 int          valueSlot = code.allocateLocal(TypeKind.REFERENCE);
                 code.aload(0)
@@ -1815,6 +1877,11 @@ public class CommonBuilder
      * Assemble methods for the "Impl" shape.
      */
     protected void assembleMethods(ClassBuilder classBuilder) {
+        // annotation constructors are not part of our TypeInfo and need to be assembled manually
+        if (annotated != null) {
+            annotated.assembleAnnotationConstructors(classBuilder);
+        }
+
         boolean assembleDeclared = !typeInfo.isAbstract();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
@@ -1854,7 +1921,7 @@ public class CommonBuilder
      *       to at least answer "is(struct)" question
      */
     protected void assembleXvmType(ClassBuilder classBuilder) {
-        boolean hasType = typeInfo.hasGenericTypes();
+        boolean hasType = hasRuntimeType();
 
         if (hasType && !isNativeField("$type")) {
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
@@ -1909,13 +1976,22 @@ public class CommonBuilder
         } else {
             String        jitName = method.ensureJitMethodName(typeSystem);
             JitMethodDesc jmDesc  = method.getJitDesc(this);
-            assembleMethod(classBuilder, method, jitName, jmDesc);
+
+            // skip the base constructor body for construction site annotations
+            if (!(hasConstructionSiteAnnotations() && method.isConstructor())) {
+                assembleMethod(classBuilder, method, jitName, jmDesc);
+            }
 
             if (!typeInfo.isAbstract() && method.isConstructorOnly() ||
                     isInterface && method.isVirtualConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmDesc);
-                assembleNew(classBuilder, method, newName, newDesc);
+                JitMethodDesc newDesc = Builder.convertConstructToNew(
+                        typeInfo, art.CD(), (JitCtorDesc) jmDesc);
+
+                for (AnnotationVariant variant : collectVariants(newDesc)) {
+                    assembleNew(classBuilder, method, newName + variant.suffix(), variant.desc(),
+                            variant.constructors());
+                }
             }
         }
     }
@@ -3632,19 +3708,16 @@ public class CommonBuilder
         assembleStandardCap(classBuilder, srcName, dstName, jmdSrc, jmdDst);
         if (jmdSrc.isOptimized) {
             assert jmdDst.isOptimized;
-            assembleOptimizedCap(classBuilder, srcName + OPT, dstName + OPT, jmdSrc, jmdDst);
+            assembleOptimizedCap(classBuilder, srcName + OPT, dstName + OPT, jmdSrc, jmdDst,
+                    srcMethod.isConditionalReturn(typeInfo));
         }
     }
 
     /**
      * Assemble a "standard" routing call from a cap to its target method.
      */
-    private void assembleStandardCap(
-            ClassBuilder  classBuilder,
-            String        srcName,
-            String        dstName,
-            JitMethodDesc jmdSrc,
-            JitMethodDesc jmdDst) {
+    private void assembleStandardCap(ClassBuilder classBuilder, String srcName, String dstName,
+                                     JitMethodDesc jmdSrc, JitMethodDesc jmdDst) {
         classBuilder.withMethodBody(srcName, jmdSrc.standardMD, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0); // this
 
@@ -3698,12 +3771,8 @@ public class CommonBuilder
     /**
      * Assemble an "optimized" routing call from one method signature to another.
      */
-    protected void assembleOptimizedCap(
-            ClassBuilder  classBuilder,
-            String        srcName,
-            String        dstName,
-            JitMethodDesc jmdSrc,
-            JitMethodDesc jmdDst) {
+    protected void assembleOptimizedCap(ClassBuilder classBuilder, String srcName, String dstName,
+                                        JitMethodDesc jmdSrc, JitMethodDesc jmdDst, boolean isConditional) {
         int flags = ClassFile.ACC_PUBLIC;
         if (jmdSrc.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
@@ -3834,7 +3903,7 @@ public class CommonBuilder
             }
 
             JitParamDesc[] srcReturns = jmdSrc.optimizedReturns;
-            int            retCount   = srcReturns.length;
+            int            retCount   = jmdSrc.standardReturns.length;
             if (retCount == 0) {
                 code.return_();
                 return;
@@ -3843,81 +3912,77 @@ public class CommonBuilder
             // the natural return is at the top of the stack now;
             JitParamDesc[] dstReturns = jmdDst.optimizedReturns;
 
-            for (int i = 0; i < retCount; i++) {
-                JitParamDesc srcPd     = srcReturns[i];
-                JitParamDesc dstPd     = dstReturns[i];
+            if (isConditional) {
+                // a False return leaves the payload context slots undefined
+                Label ifTrue = code.newLabel();
+                code.dup().ifne(ifTrue)
+                    .ireturn()
+                    .labelBinding(ifTrue);
+            }
+
+            // we need to load the rest of the primitive returns from the context
+            // read all components before remapping context slots; boxing can move a return from
+            // primitive slots into an object slot still holding a later return
+            for (int i = 1; i < dstReturns.length && dstReturns[i].index < retCount; i++) {
+                JitParamDesc dstPd = dstReturns[i];
+                loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
+            }
+
+            // process logical returns rather than pairing differently expanded component arrays
+            for (int i = retCount - 1; i >= 0; i--) {
+                JitParamDesc srcPd     = jmdSrc.getReturn(i);
+                JitParamDesc dstPd     = jmdDst.getReturn(i);
                 JitFlavor    srcFlavor = srcPd.flavor;
                 JitFlavor    dstFlavor = dstPd.flavor;
 
                 if (srcFlavor == dstFlavor) {
-                    if (i == 0) {
-                        addReturn(code, srcPd.cd);
-                    } else {
-                        if (srcPd.altIndex != dstPd.altIndex) {
-                            throw new UnsupportedOperationException("Copy context");
-                        }
+                    if (!srcPd.cd.isPrimitive() && !dstPd.type.isJitAssignableTo(srcPd.type)) {
+                        generateCheckCast(code, srcPd.type, ctxSlot);
                     }
                 } else {
                     switch (srcFlavor.name() + "->" + dstFlavor.name()) {
                     case "Widened->Specific":
-                        if (i == 0) {
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
                         break;
 
                     case "Specific->Widened":
-                        if (i == 0) {
-                            generateCheckCast(code, srcPd.type, ctxSlot);
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
-                            generateCheckCast(code, srcPd.type, ctxSlot);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
+                        generateCheckCast(code, srcPd.type, ctxSlot);
                         break;
 
-                    case "Specific->Primitive":
-                        if (i == 0) {
-                            box(code, dstPd.type);
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            loadFromContext(code, dstPd.cd, dstPd.altIndex, ctxSlot);
-                            box(code, dstPd.type);
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
-                        break;
-
-                    case "Specific->XvmPrimitive": {
-                        // we need to load the rest of the primitive returns from the context
-                        // if i == 0 then the first primitive value is already on the stack
-                        boolean doReturn = i == 0;
-                        int     index    = doReturn ? i + 1 : i;
-                        while (index < dstReturns.length
-                               && dstReturns[index].index == dstPd.index) {
-                            assert dstPd.index != -1;
-                            loadFromContext(code, dstReturns[index].cd,
-                                    dstReturns[index].altIndex, ctxSlot);
-                            index++;
-                        }
-                        // skip over the returns we have processed from the context
-                        i = index - 1;
-
+                    case "Specific->Primitive",
+                         "Specific->XvmPrimitive",
+                         "Widened->Primitive",
+                         "Widened->XvmPrimitive":
                         box(code, dstPd.type);
-                        if (doReturn) {
-                            addReturn(code, srcPd.cd);
-                        } else {
-                            storeToContext(code, srcPd.cd, srcPd.altIndex, ctxSlot);
-                        }
                         break;
-                    }
+
+                    case "Specific->NullablePrimitive",
+                         "Specific->NullableXvmPrimitive",
+                         "Widened->NullablePrimitive",
+                         "Widened->NullableXvmPrimitive":
+                        boxNullable(code, dstPd.type);
+                        break;
+
+                    case "NullablePrimitive->Primitive",
+                         "NullableXvmPrimitive->XvmPrimitive":
+                        code.iconst_0(); // the narrowed return is not Null
+                        break;
 
                     default:
                         throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
                                                                 "; dst=" + dstFlavor);
                     }
+                }
+
+                // store this logical return's components in reverse stack order
+                int[] srcIndexes = jmdSrc.getAllOptimizedReturnIndexes(i);
+                int   first      = i == 0 ? 1 : 0;
+                for (int j = srcIndexes.length - 1; j >= first; j--) {
+                    JitParamDesc srcRet = srcReturns[srcIndexes[j]];
+                    storeToContext(code, srcRet.cd, srcRet.altIndex, ctxSlot);
+                }
+                if (i == 0) {
+                    // if i == 0 then the first primitive value is already on the stack
+                    addReturn(code, srcPd.cd);
                 }
             }
         });
@@ -3926,10 +3991,8 @@ public class CommonBuilder
     /**
      * Assemble the "routing" method for a capped method.
      */
-    protected void assemblePropertyDelegation(
-            ClassBuilder     classBuilder,
-            MethodInfo       srcMethod,
-            PropertyConstant propDelegate) {
+    protected void assemblePropertyDelegation(ClassBuilder classBuilder, MethodInfo srcMethod,
+                                              PropertyConstant propDelegate) {
         String        srcName   = srcMethod.ensureJitMethodName(typeSystem);
         JitMethodDesc jmd       = srcMethod.getJitDesc(this);
         PropertyInfo  propInfo  = typeInfo.findProperty(propDelegate);
@@ -3992,7 +4055,17 @@ public class CommonBuilder
     }
 
     /**
-     * Assemble the "$new" method.
+     * Collect the instantiator variants and their complete annotation constructor lists for a base
+     * constructor signature. With no annotations, return one "no-change" variant with an empty list.
+     */
+    protected List<AnnotationVariant> collectVariants(JitMethodDesc baseDesc) {
+        return annotated != null
+                ? annotated.collectVariants(baseDesc)
+                : List.of(new AnnotationVariant("", baseDesc, List.of()));
+    }
+
+    /**
+     * Assemble the "$new" (instantiator) method.
      *
      * <pre><code>
      * Ecstasy:
@@ -4055,8 +4128,7 @@ public class CommonBuilder
      *    // step 4: a constructor context is required if a “finally” chain will exist
      *    CtorCtx cctx = ctx.ctorCtx();
      *
-     *    // step 5: annotation constructors are executed
-     *    // (TODO GG / to discuss)
+     *    // step 5: annotation constructors are called
      *
      *    // step 6: the constructor gets called
      *    // - we do NOT have to save off the arguments for the `finally()` call
@@ -4122,14 +4194,16 @@ public class CommonBuilder
      *    // ...
      * }
      * </code></pre>
+     *
+     * @param jitName                 the constructor's JIT name
+     * @param jmd                     the constructor's JitMethodDesc
+     * @param annotationConstructors  all selected annotation constructors to invoke in order after
+     *                                instance initialization and before the base constructor
      */
-    protected void assembleNew(
-            ClassBuilder  classBuilder,
-            MethodInfo    constructor,
-            String        jitName,
-            JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annotationConstructors) {
         boolean   isSingleton = typeInfo.isSingleton();
-        boolean   hasType     = typeInfo.hasGenericTypes();
+        boolean   hasType     = hasRuntimeType();
         boolean   hasOuter    = classStruct.isInstanceChild();
         ClassDesc CD_this     = art.CD();
 
@@ -4217,9 +4291,10 @@ public class CommonBuilder
             // step 4: a constructor context is required if a “finally” chain will exist
             // CtorCtx cctx = ctx.ctorCtx();
 
-            JitCtorDesc ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this);
-            boolean     hasCtorCtx = ctorDesc.hasCtorCtx();
-            int         cctxSlot   = -1;
+            TypeConstant ownerType  = hasConstructionSiteAnnotations() ? annotated.getBaseType() : thisType;
+            JitCtorDesc  ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this, ownerType);
+            boolean      hasCtorCtx = ctorDesc.hasCtorCtx();
+            int          cctxSlot   = -1;
             if (hasCtorCtx) {
                 cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
                 if (debugInfo) {
@@ -4230,22 +4305,16 @@ public class CommonBuilder
                     .astore(cctxSlot);
             }
 
-            // step 6: call the constructor
-            // construct$17(ctx, [cctx], [type], thi$, x, y, z);
+            // step 5-6: call annotation constructors and the "main" constructor
+            // construct$17(ctx, [cctx], thi$, x, y, z);
             String ctorName = constructor.ensureJitMethodName(typeSystem);
 
-            code.aload(ctxSlot);
-            if (hasCtorCtx) {
-                code.aload(cctxSlot);
-            }
-            code.aload(thisSlot);
-
-            // if this "new$" is optimized, the underlying constructor is optimized and vice versa
-            assert jmd.isOptimized == ctorDesc.isOptimized;
+            // annotation arguments can optimize "$new" while the base constructor stays standard
+            assert !ctorDesc.isOptimized || jmd.isOptimized;
 
             JitParamDesc[] ctorPds;
             MethodTypeDesc ctorMd;
-            if (jmd.isOptimized) {
+            if (ctorDesc.isOptimized) {
                 ctorName += OPT;
                 ctorPds   = ctorDesc.optimizedParams;
                 ctorMd    = ctorDesc.optimizedMD;
@@ -4254,12 +4323,24 @@ public class CommonBuilder
                 ctorMd  = ctorDesc.standardMD;
             }
 
-            for (int i = 0, c = ctorPds.length; i < c; i++) {
-                JitParamDesc pd = ctorPds[i];
-                load(code, pd.cd, code.parameterSlot(extraSlots + i));
+            // annotation constructors go first
+            if (annotated != null) {
+                annotated.invokeAnnotationConstructors(code, annotationConstructors, ctxSlot, cctxSlot,
+                        thisSlot, extraSlots + ctorPds.length);
             }
 
-            code.invokestatic(CD_this, ctorName, ctorMd);
+            // now call the "main" constructor:
+            // construct$17(ctx, [cctx], thi$, x, y, z);
+            code.aload(ctxSlot);
+            if (hasCtorCtx) {
+                code.aload(cctxSlot);
+            }
+            code.aload(thisSlot);
+
+            for (int i = 0, c = ctorPds.length; i < c; i++) {
+                load(code, ctorPds[i].cd, code.parameterSlot(extraSlots + i));
+            }
+            code.invokestatic(getImplDesc(ownerType), ctorName, ctorMd);
 
             // step 7: run each validator in the construction chain
             MethodInfo validator = typeInfo.getMethodBySignature(pool().sigValidator());
@@ -4271,15 +4352,21 @@ public class CommonBuilder
                     IdentityConstant containerId = validatorId.getNamespace();
                     Format           format      = containerId.getComponent().getFormat();
 
-                    // mixin and annotation validator bodies are generated on the incorporating class
-                    TypeConstant typeTarget = containerId.equals(thisId) || isEmbedded(format)
+                    // mixin and annotation validators are generated on this incorporating class;
+                    // this class's own validator is supplied by the constructor owner;
+                    // inherited class validators are supplied by their declaring types
+                    TypeConstant typeTarget = isEmbedded(format)
                             ? thisType
-                            : containerId.getFormalType().resolveGenerics(pool(), thisType);
+                            : containerId.equals(thisId)
+                                    ? ownerType
+                                    : containerId.getFormalType().resolveGenerics(pool(), thisType);
 
                     assert !typeTarget.isXvmPrimitive();
-                    ClassDesc cdReceiver = thisType.isVirtualChildClass() || typeTarget != thisType
-                            ? getCCDesc(typeTarget)
-                            : CD_this;
+                    ClassDesc cdReceiver = typeTarget.isAnnotated()
+                            ? getICDesc(typeTarget)
+                            : thisType.isVirtualChildClass() || typeTarget != thisType
+                                    ? getCCDesc(typeTarget)
+                                    : CD_this;
                     ClassDesc cdTarget = typeTarget.isVirtualChildClass()
                             ? getImplDesc(typeTarget)
                             : cdReceiver;
@@ -4304,12 +4391,8 @@ public class CommonBuilder
     /**
      * Assemble the property accessor (optimized if possible, standard otherwise).
      */
-    protected void assemblePropertyAccessor(
-            ClassBuilder  classBuilder,
-            PropertyInfo  prop,
-            String        jitName,
-            JitMethodDesc jmd,
-            boolean       isGetter) {
+    protected void assemblePropertyAccessor(ClassBuilder classBuilder, PropertyInfo prop,
+                                            String jitName, JitMethodDesc jmd, boolean isGetter) {
         int flags = ClassFile.ACC_PUBLIC;
         if (jmd.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
@@ -4334,11 +4417,8 @@ public class CommonBuilder
     /**
      * Assemble the method and any deferred methods.
      */
-    protected void assembleMethod(
-            ClassBuilder  classBuilder,
-            MethodInfo    method,
-            String        jitName,
-            JitMethodDesc jmd) {
+    protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method, String jitName,
+                                  JitMethodDesc jmd) {
         int flags = ClassFile.ACC_PUBLIC;
         if (!method.getHead().getMethodStructure().hasCode()) {
             if (method.isAbstract()) {
@@ -4393,7 +4473,21 @@ public class CommonBuilder
             }
         }
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
-        assembleDeferredMethods(classBuilder, bctx, flags);
+    }
+
+    /**
+     * Assemble the method body and any deferred methods; used for subclassing.
+     */
+    protected void doAssembleMethod(ClassBuilder classBuilder, BuildContext bctx, MethodInfo method,
+                                    String jitName, MethodTypeDesc md, int flags) {
+        classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
+            if (!method.isAbstract()) {
+                methodBuilder.withCode(code -> generateCode(md, bctx, code));
+            }
+        });
+
+        // the enclosing body can be static while its deferred methods are instance methods
+        assembleDeferredMethods(classBuilder, bctx, flags & ~ClassFile.ACC_STATIC);
     }
 
     /**
@@ -4419,7 +4513,7 @@ public class CommonBuilder
                     nameNext += OPT;
                 }
 
-                int flagsNext = fStatic || jmdNext.isOptimizedStatic
+                int flagsNext = fStatic || jmdNext.isStandardStatic || jmdNext.isOptimizedStatic
                                         || jmdNext instanceof JitDetachedBodyDesc
                         ? flags | ClassFile.ACC_STATIC
                         : flags;
@@ -4429,18 +4523,6 @@ public class CommonBuilder
             }
             bctxDeferred = bctxNext.getDeferred();
         }
-    }
-
-    /**
-     * The final stage of assembling the method; used for subclassing.
-     */
-    protected void doAssembleMethod(ClassBuilder classBuilder, BuildContext bctx, MethodInfo method,
-                                    String jitName, MethodTypeDesc md, int flags) {
-        classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
-            if (!method.isAbstract()) {
-                methodBuilder.withCode(code -> generateCode(md, bctx, code));
-            }
-        });
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
@@ -4469,20 +4551,6 @@ public class CommonBuilder
 
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());
-    }
-
-    // ----- helper methods ------------------------------------------------------------------------
-
-    /**
-     * @return true iff the code for the specified method or property accessors should be generated
-     *         inside this class
-     */
-    protected boolean shouldGenerate(IdentityConstant id) {
-        IdentityConstant containerId = id instanceof PropertyConstant
-                ? id.getClassIdentity()
-                : id.getNamespace();
-
-        return containerId.equals(thisId) || isEmbedded(containerId.getComponent().getFormat());
     }
 
     // ----- debugging support ---------------------------------------------------------------------

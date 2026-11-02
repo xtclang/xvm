@@ -30,7 +30,7 @@ public class Var_M
      * Construct a VAR_M op for the specified register and arguments.
      *
      * @param reg      the register
-     * @param aArgVal  the key arguments
+     * @param aArgKey  the key arguments
      * @param aArgVal  the value arguments
      */
     public Var_M(Register reg, Argument[] aArgKey, Argument[] aArgVal) {

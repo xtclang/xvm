@@ -7,6 +7,8 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.List;
+
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.CastTypeConstant;
@@ -22,6 +24,8 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
+
+import org.xvm.javajit.builders.AnnotationHelper.AnnotationConstructor;
 
 /**
  * The builder for Array types.
@@ -53,6 +57,14 @@ public class ArrayBuilder extends AugmentingBuilder {
             return N_Array;
         }
         return super.getCCName(type);
+    }
+
+    @Override
+    public ClassDesc getICDesc(TypeConstant type) {
+        if (isBaseArrayType(type)) {
+            return CD_Array;
+        }
+        return super.getICDesc(type);
     }
 
     protected boolean isBaseArrayType(TypeConstant type) {
@@ -210,9 +222,8 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected void assembleNew(
-            ClassBuilder classBuilder,
-            MethodInfo constructor, String jitName, JitMethodDesc jmd) {
+    protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
+                               JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
         // all constructors are native
     }
 

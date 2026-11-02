@@ -1385,32 +1385,51 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * @return the type of the property owner to be used by the JIT compiler
+     * @return the type of the field owner for this property to be used by the JIT compiler to
+     *         generate the direct field access
      */
-    public TypeConstant getOwnerType(Builder builder, TypeConstant typeOwner) {
-        // get the lowest explicit in the chain
-        PropertyConstant id = null;
-        for (PropertyBody body : m_aBody) {
-            if (id == null ||
-                    body.getImplementation() == Implementation.Explicit) {
-                id = body.getIdentity();
-            }
-        }
-        assert id != null;
-
+    public TypeConstant getFieldOwnerType(Builder builder, TypeConstant typeOwner) {
         // we need to widen the identity of the owner, but not to lose the type information;
         // note that we do not create classes for annotations and mixins
-        IdentityConstant idOwner = id.getNamespace();
-        Component.Format format  = idOwner.getComponent().getFormat();
-        return switch (format) {
+        IdentityConstant idOwner = getJitOwnerIdentity();
+        return switch (idOwner.getComponent().getFormat()) {
             case MIXIN, ANNOTATION, METHOD, PROPERTY
                     -> typeOwner;
 
             default -> typeOwner.isSingleUnderlyingClass(true) &&
-                    idOwner.equals(typeOwner.getSingleUnderlyingClass(true))
+                        typeOwner.getSingleUnderlyingClass(true).equals(idOwner)
                 ? typeOwner
                 : idOwner.getFormalType().resolveGenerics(builder.pool(), typeOwner);
         };
+    }
+
+    /**
+     * @return the type whose JCC supplies this property's getter and setter methods, resolved
+     *         using the target's generic bindings; this can differ from the implementation class
+     *         containing the backing field
+     */
+    public TypeConstant getCallableOwnerType(Builder builder, TypeConstant targetType) {
+        IdentityConstant idOwner = getJitOwnerIdentity();
+        return switch (idOwner.getComponent().getFormat()) {
+            case METHOD, PROPERTY
+                    -> targetType;
+            default -> idOwner.getFormalType().resolveGenerics(builder.pool(), targetType);
+        };
+    }
+
+    /**
+     * @return the identity of the lowest explicit owner in the property chain
+     */
+    private IdentityConstant getJitOwnerIdentity() {
+        // get the lowest explicit in the chain
+        PropertyConstant id = null;
+        for (PropertyBody body : m_aBody) {
+            if (id == null || body.getImplementation() == Implementation.Explicit) {
+                id = body.getIdentity();
+            }
+        }
+        assert id != null;
+        return id.getNamespace();
     }
 
     /**
