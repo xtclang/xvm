@@ -564,7 +564,7 @@ this bridge; they cannot be inferred from compiler type hints.
   steps' `alone` (worker protocol 24), through `RunDebuggers` and `RunDebugClient`. Neither editor
   sends `singleThread` yet (UP49, VS Code #166450, LSP4IJ none), so it is checked at the protocol
   level, over a real worker and a real agent; it was left unbuilt on 2026-10-27 for that reason.
-- [ ] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
+- [x] **R12 — Program structure and sources.** Every service and fiber in Threads, with their
   containers, also those that run or wait for a reply (the console's `VF`), not only those stopped
   at a line, and thread events as they start and end; frames whose source file is not on the
   machine, such as library code, served through the `source` request from the bundled XDK's
@@ -581,6 +581,10 @@ this bridge; they cannot be inferred from compiler type hints.
   *Loaded modules (2026-10-27):* `modules` and `loadedSources` answer the program's own modules and
   the libraries it uses, a library's sources in their bundled copies (worker protocol 18, shared
   X326). VS Code shows them in Loaded Scripts; IntelliJ has neither (UP45).
+  *Done (2026-10-27):* all three parts, with shared X325, X324 and X326. Two are as decided, not as
+  first written: no thread events are sent, since a fiber starts for every call to a service and
+  both editors ask for the threads at each stop; and a library's frames are in its bundled source
+  file, not served through the `source` request, so that the editors' language features work there.
 - [ ] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
   are refused now; debugging tests; and attaching to a program that already runs.
   *Design (2026-10-27):* one debug agent, in the program's own JVM, that speaks the worker
