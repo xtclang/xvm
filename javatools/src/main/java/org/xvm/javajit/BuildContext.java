@@ -134,10 +134,24 @@ public class BuildContext {
     }
 
     /**
+     * Compile a body at the specified zero-based depth in the method's optimized call chain,
+     * retaining the remaining chain for super calls.
+     */
+    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo,
+                        JitMethodDesc jmd, int callDepth) {
+        this(builder, typeInfo, methodInfo, jmd, typeInfo.getType(), callDepth);
+    }
+
+    /**
      * Compile a contributed body using the incorporating class's receiver type.
      */
     public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo, JitMethodDesc jmd,
                         TypeConstant thisType) {
+        this(builder, typeInfo, methodInfo, jmd, thisType, 0);
+    }
+
+    private BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo,
+                         JitMethodDesc jmd, TypeConstant thisType, int callDepth) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = builder.art.className();
@@ -145,8 +159,8 @@ public class BuildContext {
         this.thisType      = thisType;
         this.jitType       = thisType.getJitCCType();
         this.callChain     = methodInfo.ensureOptimizedMethodChain(typeInfo);
-        this.methodStruct  = callChain[0].getMethodStructure();
-        this.callDepth     = 0;
+        this.methodStruct  = callChain[callDepth].getMethodStructure();
+        this.callDepth     = callDepth;
         this.methodDesc    = jmd;
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
         this.isConstructor = methodInfo.isCtorOrValidator();
@@ -191,7 +205,8 @@ public class BuildContext {
      * Construct {@link BuildContext} for a synthetic method in the call chain.
      */
     private BuildContext(BuildContext bctx, String jitName, int callDepth) {
-        MethodBody body = bctx.callChain[callDepth];
+        MethodBody    body = bctx.callChain[callDepth];
+        JitMethodDesc jmd  = body.getJitDesc(bctx.builder, bctx.thisType);
 
         this.builder       = bctx.builder;
         this.typeSystem    = bctx.builder.typeSystem;
@@ -202,7 +217,8 @@ public class BuildContext {
         this.callChain     = bctx.callChain;
         this.methodStruct  = body.getMethodStructure();
         this.callDepth     = callDepth;
-        this.methodDesc    = body.getJitDesc(builder, thisType);
+        this.methodDesc    = bctx.methodDesc instanceof JitDetachedBodyDesc detached
+                ? new JitDetachedBodyDesc(jmd, detached.receiverCD) : jmd;
         this.methodJitName = jitName;
         this.isStatic      = bctx.isStatic;
         this.isConstructor = bctx.isConstructor;

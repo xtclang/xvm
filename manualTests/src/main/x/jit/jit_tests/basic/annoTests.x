@@ -6,6 +6,7 @@ package annoTests {
         testIntoClass();
         testIntoChild();
         testIntoInheritedChild();
+        testNestedChildDispatch();
         testIntoInterface();
         testIntoException();
         testBuiltInAnnotation();
@@ -352,6 +353,137 @@ package annoTests {
 
                 @Override
                 String describe() = $"derived:{tag}:{super()}";
+            }
+        }
+    }
+
+    void testNestedChildDispatch() {
+        // adapted from testInsane() in manualTests/src/main/x/nesting.x
+        console.reset();
+        new PB().new C().foo();
+        assert console.output() == \|PB.M.foo()
+                                    |PB.C.foo()
+                                    |PB.A.foo()
+                                    |
+                                    ;
+
+        console.reset();
+        new DC().new P().new C().foo();
+        assert console.output() == \|DC.P.C.foo()
+                                    |PB.M.foo()
+                                    |PB.C.foo()
+                                    |DC.P.A.foo()
+                                    |BI.P.A.foo()
+                                    |
+                                    ;
+
+        class PB {              // P is for "parent" and B is for Base
+            class A {           // A is for "abstract"
+                void foo() {
+                    console.print("PB.A.foo()");
+                }
+            }
+
+            interface I {
+                void foo() {
+                    console.print("PB.I.foo()");
+                }
+            }
+
+            annotation M into A {
+                @Override
+                void foo() {
+                    console.print("PB.M.foo()");
+                    super();
+                }
+            }
+
+            @M
+            class C extends A implements I {  // C is for "child"
+                @Override
+                void foo() {
+                    console.print("PB.C.foo()");
+                    super();
+                }
+            }
+        }
+
+        interface BI {
+            class P extends PB {
+                @Override
+                class A {
+                    @Override
+                    void foo() {
+                        console.print("BI.P.A.foo()");
+                    }
+                }
+
+                // implied class A
+                //     {
+                //     }
+
+                // implied annotation M
+                //     {
+                //     }
+
+                // implied interface I
+                //     {
+                //     }
+
+                // implied class C extends PB.C extends BI.P.A extends PB.A
+                //     {
+                //     }
+
+                // a call to C.foo() has the following potential call chain:
+                // 1) BI.P.M.foo()
+                // 2) PB.M.foo()
+                // 3) BI.P.C.foo()
+                // 4) PB.C.foo()
+                // 5) BI.P.A.foo()
+                // 6) PB.A.foo()
+                // 7) Object.foo() (doesn't exist)
+                // 8) <default> I.foo()
+            }
+        }
+
+        interface DI1 extends BI {
+            // implied class P
+            //    {
+            //    implied class C
+            //        {
+            //        }
+            //    }
+        }
+
+        class BC implements DI1 {
+            // implied class P
+            //    {
+            //    implied class C
+            //        {
+            //        }
+            //    }
+        }
+
+        class DC extends BC {
+            @Override
+            class P {
+                @Override
+                class A {
+                    @Override
+                    void foo() {
+                        console.print("DC.P.A.foo()");
+                        super();
+                    }
+                }
+
+                @Override
+                class C { // CANNOT SAY: extends BC.P.C
+                    @Override
+                    void foo() {
+                        console.print("DC.P.C.foo()");
+                        super();
+                    }
+                }
             }
         }
     }

@@ -40,6 +40,8 @@ import org.xvm.javajit.TypeSystem.Artifact;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.javajit.TypeSystem.HASH;
+
 /**
  * Builds virtual children using the effective parent composition.
  *
@@ -235,10 +237,24 @@ public class VirtualChildBuilder extends CommonBuilder {
      * predecessor; routing it virtually again would re-enter D.C0.
      */
     public JitCallDesc resolveChildSuperCall(BuildContext bctx) {
-        MethodBody   body       = bctx.callChain[bctx.callDepth + 1];
+        int          depth      = bctx.callDepth + 1;
+        MethodBody   body       = bctx.callChain[depth];
         TypeConstant targetType = resolveType(body.getIdentity().getClassIdentity());
 
-        if (!(bctx.methodDesc instanceof JitDetachedBodyDesc) || !targetType.isVirtualChildClass()) {
+        if (!(bctx.methodDesc instanceof JitDetachedBodyDesc detached)) {
+            return null;
+        }
+
+        if (isEmbedded(targetType.getExplicitClassFormat())) {
+            // an embedded super body must retain the detached receiver, which can be an interface
+            String name = DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
+                    .ensureJitMethodName(typeSystem) + HASH + depth;
+            bctx.buildSuper(name, depth);
+            return new JitCallDesc(art.CD(), name, body.getJitDesc(this, thisType), Kind.Static,
+                    false, detached.receiverCD);
+        }
+
+        if (!targetType.isVirtualChildClass()) {
             return null;
         }
 
@@ -611,14 +627,21 @@ public class VirtualChildBuilder extends CommonBuilder {
             return;
         }
 
+        if (!hasConstructionSiteAnnotations()) {
+            // a declaration site annotation can place the child's own body below the head of the
+            // call chain
+            MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
+            for (int depth = 0; depth < chain.length; depth++) {
+                if (chain[depth].getIdentity().getClassIdentity().equals(thisId)) {
+                    assembleDetachedBody(classBuilder, method, depth);
+                }
+            }
+        }
+
         TypeConstant targetType = resolveType(owner);
         if (!targetType.isVirtualChildClass()) {
             super.assembleMethod(classBuilder, method, name, jmd);
             return;
-        }
-
-        if (owner.equals(thisId) && !hasConstructionSiteAnnotations()) {
-            assembleDetachedBody(classBuilder, method, name, jmd);
         }
 
         // private methods and property initializers need no virtual routing; their callers invoke
@@ -681,22 +704,23 @@ public class VirtualChildBuilder extends CommonBuilder {
         });
     }
 
-    private void assembleDetachedBody(ClassBuilder classBuilder, MethodInfo method, String name,
-                                      JitMethodDesc jmd) {
-        if (!method.getHead().getMethodStructure().hasCode()) {
+    private void assembleDetachedBody(ClassBuilder classBuilder, MethodInfo method, int depth) {
+        MethodBody body = method.ensureOptimizedMethodChain(typeInfo)[depth];
+        if (!body.getMethodStructure().hasCode()) {
             return;
         }
 
-        JitDetachedBodyDesc bodyJmd  = new JitDetachedBodyDesc(jmd, getCCDesc(thisType));
-        String              bodyName = DetachedBody + name;
-        BuildContext        bctx     = new BuildContext(this, typeInfo, method, bodyJmd);
+        JitCallDesc         call     = resolveChildMethodCall(this, body, thisType);
+        JitDetachedBodyDesc bodyJmd  = new JitDetachedBodyDesc(call.jmd(), call.receiverCD());
+        String              bodyName = call.name();
+        BuildContext        bctx     = new BuildContext(this, typeInfo, method, bodyJmd, depth);
 
-        if (jmd.isOptimized) {
+        if (bodyJmd.isOptimized) {
             assembleMethodWrapper(classBuilder, bodyName, bodyJmd.staticWrapper());
             bodyName += OPT;
         }
 
-        MethodTypeDesc bodyMD = jmd.isOptimized ? bodyJmd.optimizedMD : bodyJmd.standardMD;
+        MethodTypeDesc bodyMD = bodyJmd.isOptimized ? bodyJmd.optimizedMD : bodyJmd.standardMD;
 
         doAssembleMethod(classBuilder, bctx, method, bodyName, bodyMD,
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC);
