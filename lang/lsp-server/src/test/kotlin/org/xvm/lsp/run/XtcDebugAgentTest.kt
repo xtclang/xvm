@@ -14,6 +14,7 @@ import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.SourceBreakpoints
+import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkLibraries
@@ -91,6 +92,43 @@ class XtcDebugAgentTest {
             assertThat(events.next()).isEqualTo("exited 0")
             assertThat(program.exit()).isEqualTo(0)
             assertThat(program.output).contains("sum 3")
+        }
+    }
+
+    @Test
+    fun `a debugger continues and steps one fiber alone, which stops again while the program's other fibers wait`() {
+        launch(COUNTERS, "listen:127.0.0.1:0,suspend").use { program ->
+            val events = Events()
+            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
+            attached.debug(emptyList(), program.firstCounterAt(1000)).get(LIMIT, SECONDS)
+            assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
+            assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
+            val alone =
+                attached
+                    .threads(AttachedProgram.RUN)
+                    .get(LIMIT, SECONDS)
+                    .first()
+                    .id
+
+            attached.setBreakpoints(AttachedProgram.RUN, program.firstCounterAt(1500).breakpoints.single()).get(LIMIT, SECONDS)
+            assertThat(attached.resumeAlone(AttachedProgram.RUN, alone).get(LIMIT, SECONDS)).isTrue()
+            assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
+            // the fiber that ran alone is the stopped one again
+            assertThat(
+                attached
+                    .threads(AttachedProgram.RUN)
+                    .get(LIMIT, SECONDS)
+                    .first()
+                    .id,
+            ).isEqualTo(alone)
+            attached.setBreakpoints(AttachedProgram.RUN, SourceBreakpoints(program.source, emptyList())).get(LIMIT, SECONDS)
+            assertThat(attached.step(AttachedProgram.RUN, alone, StepKind.OVER, alone = true).get(LIMIT, SECONDS)).isTrue()
+            assertThat(events.next()).isEqualTo("stopped step []")
+
+            attached.resume(AttachedProgram.RUN)
+            assertThat(events.next()).isEqualTo("exited 0")
+            assertThat(program.exit()).isEqualTo(0)
+            assertThat(program.output).contains("sum 5000000")
         }
     }
 
@@ -381,6 +419,10 @@ class XtcDebugAgentTest {
 
         fun breakpointAt(line: Int) = DebugSetup(listOf(SourceBreakpoints(source, listOf(BreakpointRequest(1, line)))))
 
+        /** A breakpoint on the line where the first of Counters' counters counts, at the specified count. */
+        fun firstCounterAt(count: Int) =
+            DebugSetup(listOf(SourceBreakpoints(source, listOf(BreakpointRequest(1, COUNT_LINE, "n == $count && limit == 2000000")))))
+
         fun exit(): Int {
             check(process.waitFor(LIMIT, SECONDS)) { "The program did not end within $LIMIT seconds:\n$output" }
             return process.exitValue()
@@ -474,6 +516,37 @@ class XtcDebugAgentTest {
 
         /** The first line of Looped's code: its injection. */
         const val FIRST_LINE = 3
+
+        /**
+         * A module whose run() has two Counter services count at once, one to 2,000,000 and one to 3,000,000, on line
+         * 7, and prints the sum of their counts once both are done.
+         */
+        const val COUNTERS = """
+            module Counters {
+                service Counter {
+                    Int n;
+
+                    void count(Int limit) {
+                        for (Int i : 0 ..< limit) {
+                            ++n;
+                        }
+                    }
+
+                    Int counted() = n;
+                }
+
+                void run() {
+                    Counter first  = new Counter();
+                    Counter second = new Counter();
+                    first.count^(2_000_000);
+                    second.count^(3_000_000);
+                    @Inject Console console;
+                    console.print($"sum {first.counted() + second.counted()}");
+                }
+            }
+            """
+
+        const val COUNT_LINE = 7
 
         const val BREAKS = """
             module Breaks {

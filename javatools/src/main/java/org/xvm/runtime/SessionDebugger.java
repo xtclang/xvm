@@ -123,6 +123,11 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * <li>The host ends the stop: {@link #resume} lets the program run on, and {@link #step} lets it
  *     run until the stepped fiber reaches the line where the step ends, where it stops again. A
  *     program that runs stops at its next line once the host asks for a {@link #pause}.</li>
+ * <li>Or the host lets one fiber run on alone, while the others go on waiting in the stop
+ *     ({@link #resume(int)}, {@link #step(int, Step, boolean)}): that fiber, with the fibers of
+ *     other services that it calls, runs until it stops again, at a breakpoint, a thrown exception,
+ *     where its step ends or for a {@link #pause}, and the stop is the program's again, with the
+ *     same waiting fibers. If it ends first, the program stops at one of them.</li>
  * <li>To stop the program for good, the host calls {@link #terminate}, as closing an embedded
  *     run does. Once another debugger replaces this one ({@link #detach}), it never stops the
  *     program again.</li>
@@ -416,6 +421,12 @@ public final class SessionDebugger implements Debugger {
      * The pause that is pending, or null.
      */
     private volatile Pause pendingPause;
+
+    /**
+     * The fiber that runs alone in the stop, while the program's other fibers go on waiting in it,
+     * or null.
+     */
+    private volatile Solo solo;
 
     /**
      * The restart of a frame in progress, or null.
@@ -1630,8 +1641,8 @@ public final class SessionDebugger implements Debugger {
      * reason "step", at the line where the step ends.
      *
      * <p>The stop ends as at a {@link #resume}, and all of the program's fibers run meanwhile, not
-     * only the stepped one. Any other stop before the step's end, such as at a breakpoint, ends the
-     * step; so does the program's end.
+     * only the stepped one; {@link #step(int, Step, boolean)} steps it alone. Any other stop before
+     * the step's end, such as at a breakpoint, ends the step; so does the program's end.
      *
      * @param threadId  the ID of a fiber that {@link #threads} returned
      * @param step      how to step it
@@ -1639,6 +1650,21 @@ public final class SessionDebugger implements Debugger {
      * @return false if the program runs, or the fiber does not wait; then nothing changes
      */
     public synchronized boolean step(int threadId, Step step) {
+        return step(threadId, step, false);
+    }
+
+    /**
+     * Step the specified fiber, as {@link #step(int, Step)} does, or, if it is to step alone, let
+     * it run alone until the step ends, as at a {@link #resume(int)}, while the program's other
+     * fibers go on waiting in the stop.
+     *
+     * @param threadId  the ID of a fiber that {@link #threads} returned
+     * @param step      how to step it
+     * @param alone     true if only the fiber runs, with the fibers of other services it calls
+     *
+     * @return false if the program runs, or the fiber does not wait; then nothing changes
+     */
+    public synchronized boolean step(int threadId, Step step, boolean alone) {
         Snapshot snapshot = snapshotOf(threadId);
         if (snapshot == null) {
             return false;
@@ -1647,7 +1673,7 @@ public final class SessionDebugger implements Debugger {
         // set first, so lines stay checked as the fibers resume
         Frame frame = snapshot.frame();
         stepping = new Stepping(Objects.requireNonNull(step), frame, frame.f_fiber);
-        release();
+        goOn(halt, threadId, snapshot, alone);
         return true;
     }
 
@@ -1686,6 +1712,22 @@ public final class SessionDebugger implements Debugger {
      *         line's; then nothing changes
      */
     public synchronized boolean stepInto(int threadId, int targetId) {
+        return stepInto(threadId, targetId, false);
+    }
+
+    /**
+     * Step the specified fiber into one of the calls of its line, as {@link #stepInto(int, int)}
+     * does, alone if so specified, as {@link #step(int, Step, boolean)} steps.
+     *
+     * @param threadId  the ID of a fiber that {@link #threads} returned
+     * @param targetId  the ID of one of the calls that {@link #stepInTargets} returned for the
+     *                  fiber's frame, in this stop
+     * @param alone     true if only the fiber runs, with the fibers of other services it calls
+     *
+     * @return false if the program runs, the fiber does not wait, or the call is not one of its
+     *         line's; then nothing changes
+     */
+    public synchronized boolean stepInto(int threadId, int targetId, boolean alone) {
         var current  = halt;
         var call     = current == null ? null : current.calls.get(targetId);
         var snapshot = snapshotOf(threadId);
@@ -1696,8 +1738,20 @@ public final class SessionDebugger implements Debugger {
         // set first, so lines stay checked as the fibers resume
         var frame = snapshot.frame();
         stepping = new Stepping(Step.IN, frame, frame.getFiber(), call.op());
-        release();
+        goOn(current, threadId, snapshot, alone);
         return true;
+    }
+
+    /**
+     * End the stop for the step that was just set: all of the program's fibers run, or only the
+     * stepped one, alone. Called while holding this debugger's monitor.
+     */
+    private void goOn(Halt current, int threadId, Snapshot snapshot, boolean alone) {
+        if (alone) {
+            runAlone(current, threadId, snapshot);
+        } else {
+            release();
+        }
     }
 
     /**
@@ -1770,12 +1824,13 @@ public final class SessionDebugger implements Debugger {
 
     /**
      * Stop the program at the next line any of its fibers reaches, with the reason "pause"; does
-     * nothing while it is stopped. It returns at once; the stop comes through
-     * {@link Listener#stopped} once a fiber next reaches a line, which, while all of them wait, as
-     * for input, is when one of them next runs.
+     * nothing while it is stopped, unless a fiber runs alone in the stop, which then stops at its
+     * next line. It returns at once; the stop comes through {@link Listener#stopped} once a fiber
+     * next reaches a line, which, while all of them wait, as for input, is when one of them next
+     * runs.
      */
     public synchronized void pause() {
-        if (halt == null) {
+        if (halt == null || solo != null) {
             pendingPause = new Pause("pause", false);
             updateActive();
         }
@@ -1801,6 +1856,93 @@ public final class SessionDebugger implements Debugger {
      */
     public synchronized void resume() {
         release();
+    }
+
+    /**
+     * Resume one fiber of the stopped program, while the others go on waiting in the stop: that
+     * fiber leaves the stop, its frame IDs and references find nothing from now on, and it runs,
+     * with the fibers of other services that it calls from now on, until it stops again, at a
+     * breakpoint, a thrown exception that stops the program, where a step ends, or for a
+     * {@link #pause}. That stop is the program's again, with the same waiting fibers, and comes
+     * through {@link Listener#stopped}. If the fiber ends first, the program stops at one of the
+     * fibers that wait at a line, with the reason "pause", or resumes if none does.
+     *
+     * <p>A run in progress ends, as at a {@link #resume}. The program's clocks stand still, as
+     * while a fiber runs code in a stop, and a call that waits for one of the waiting fibers waits
+     * until they run.
+     *
+     * @param threadId  the ID of a fiber that {@link #threads} returned
+     *
+     * @return false if the program runs, or the fiber does not wait at a line; then nothing changes
+     */
+    public synchronized boolean resume(int threadId) {
+        Snapshot snapshot = snapshotOf(threadId);
+        if (snapshot == null) {
+            return false;
+        }
+        runAlone(halt, threadId, snapshot);
+        return true;
+    }
+
+    /**
+     * Let the fiber that waits at the snapshot run on alone, out of the stop, which the program's
+     * other fibers go on waiting in. Called while holding this debugger's monitor.
+     */
+    private void runAlone(Halt current, int threadId, Snapshot snapshot) {
+        Running run = running;
+        if (run != null) {
+            endRun(run, RESUMED_FIRST);
+        }
+        solo = new Solo(current, snapshot.frame().f_fiber, Fiber.nextId(), snapshot.name());
+        forget(current, threadId);
+        // the fibers that do not wait at a line may move with it
+        current.others.clear();
+        notifyAll();
+    }
+
+    /**
+     * @return the stop that the frame's fiber runs alone in, as the fiber that runs alone or one
+     *         of the fibers it calls, or null
+     */
+    private Halt aloneIn(Frame frame) {
+        Solo alone   = solo;
+        Halt current = halt;
+        return alone != null && alone.halt() == current && alone.includes(frame) ? current : null;
+    }
+
+    /**
+     * The fiber that ran alone has ended, before it stopped again: the program, whose other fibers
+     * waited, is stopped at one of those that wait at a line, with the reason "pause", or resumes
+     * if none does. A step of the fiber ends with it.
+     */
+    private void ended(Solo alone) {
+        Stop stop;
+        synchronized (this) {
+            Halt current = halt;
+            if (solo != alone || current != alone.halt()) {
+                return;
+            }
+            solo         = null;
+            stepping     = null;
+            pendingPause = null;
+            Integer waiting = current.stacks.keySet().stream().findFirst().orElse(null);
+            if (waiting == null) {
+                release();
+                return;
+            }
+            current.stoppedAt(waiting, null, current.stacks.get(waiting));
+            stop = new Stop("pause", alone.name() + " ended, while the program's other fibers waited.", waiting,
+                    List.of());
+        }
+        listener.stopped(stop);
+    }
+
+    /**
+     * @return true if the frame is the first of its fiber's frames that runs the program's code,
+     *         so that its fiber ends once it returns, or once an exception leaves it
+     */
+    private static boolean endsFiber(Frame frame) {
+        return !frame.isNative() && (frame.f_framePrev == null || frame.f_framePrev.isNativeStack());
     }
 
     /**
@@ -1947,7 +2089,7 @@ public final class SessionDebugger implements Debugger {
         if (runsOn(frame)) {
             return terminating ? end(frame) : pc + 1;
         }
-        return halt == null ? line(frame, pc) : park(frame, f -> line(f, pc));
+        return halt == null || aloneIn(frame) != null ? line(frame, pc) : park(frame, f -> line(f, pc));
     }
 
     /**
@@ -1959,6 +2101,10 @@ public final class SessionDebugger implements Debugger {
     @Override
     public void onReturn(Frame frame) {
         leave(frame);
+        Solo alone = solo;
+        if (alone != null && frame.f_fiber == alone.fiber() && endsFiber(frame)) {
+            ended(alone);
+        }
     }
 
     /**
@@ -1996,6 +2142,12 @@ public final class SessionDebugger implements Debugger {
             stoppedException = exception;
             return stop(frame, "exception", describe(exception), List.of(), null,
                     infoOf(frame, exception, !isCaught(frame, exception)), _ -> Op.R_NEXT);
+        }
+
+        // the fiber that runs alone ends with an exception that its first frame does not catch
+        Solo alone = solo;
+        if (alone != null && frame.f_fiber == alone.fiber() && endsFiber(frame) && !frame.catches(exception)) {
+            ended(alone);
         }
 
         // asked again at each frame the exception leaves, so a step learns that its frame is left;
@@ -2340,8 +2492,9 @@ public final class SessionDebugger implements Debugger {
         Stop stop;
         Halt current;
         synchronized (this) {
-            // another fiber's stop comes first; this one waits for it like any other fiber
-            for (Halt other = halt; other != null && !detached; other = halt) {
+            // another fiber's stop comes first; this one waits for it like any other fiber, unless
+            // it runs alone in that stop
+            for (Halt other = halt; other != null && !detached && aloneIn(frame) == null; other = halt) {
                 waitAt(other, frame);
                 Running run = waitWhile(other, frame);
                 if (run != null) {
@@ -2359,17 +2512,25 @@ public final class SessionDebugger implements Debugger {
 
             // any stop ends the step and the pause; the program's clocks stand still until the
             // stop ends, also while a fiber runs code in it
-            int       threadId        = threadId(frame.f_fiber);
-            Container nativeContainer = frame.f_context.f_container.getNativeContainer();
+            int  threadId = threadId(frame.f_fiber);
+            Halt alone    = aloneIn(frame);
             if (restartOf(frame) != null) {
                 // the fiber stops before it leaves its frames: the restart ends as a step does
                 restarting = null;
             }
             stepping     = null;
             pendingPause = null;
-            current      = new Halt(threadId, exception, nativeContainer.freezeTime() ? nativeContainer : null);
-            halt         = current;
-            current.stacks.put(threadId, snapshot(current, frame));
+            if (alone != null) {
+                // the fiber that ran alone stops in the stop that the other fibers waited in
+                solo    = null;
+                current = alone;
+                current.stoppedAt(threadId, exception, snapshot(current, frame));
+            } else {
+                Container nativeContainer = frame.f_context.f_container.getNativeContainer();
+                current = new Halt(threadId, exception, nativeContainer.freezeTime() ? nativeContainer : null);
+                halt    = current;
+                current.stacks.put(threadId, snapshot(current, frame));
+            }
             updateActive();
             stop = new Stop(reason, description, threadId, breakpointIds);
         }
@@ -2443,6 +2604,10 @@ public final class SessionDebugger implements Debugger {
     private Running waitWhile(Halt current, Frame frame) {
         int threadId = threadId(frame.f_fiber);
         while (halt == current) {
+            if (aloneIn(frame) != null) {
+                // the fiber leaves the stop to run alone, while the others go on waiting in it
+                return null;
+            }
             if (runsOn(frame)) {
                 // the whole program runs while a run does: the fiber leaves the stop, and waits in
                 // it again at the next line it reaches once the run has ended
@@ -2509,6 +2674,7 @@ public final class SessionDebugger implements Debugger {
                 endRun(run, RESUMED_FIRST);
             }
             halt = null;
+            solo = null;
             if (current.frozen != null) {
                 // on whichever thread ends the stop: its fiber may not come back to do it, as when
                 // the program is stopped for good while that fiber runs code
@@ -3505,6 +3671,8 @@ public final class SessionDebugger implements Debugger {
         current.frames.values().removeIf(at -> at.thread() == threadId);
         current.localsReferences.keySet().retainAll(current.frames.keySet());
         current.targets.values().removeIf(target -> target.thread() == threadId);
+        current.calls.values().removeIf(call -> call.thread() == threadId);
+        current.callsOf.keySet().retainAll(current.frames.keySet());
         abandon(current.reads.remove(threadId));
         abandonRuns(current.runs.remove(threadId));
     }
@@ -3811,8 +3979,8 @@ public final class SessionDebugger implements Debugger {
      * by the debugger's monitor, and dropped as a whole when the program resumes.
      */
     private static final class Halt {
-        final int                      threadId;
-        final ExceptionInfo            exception;
+        int                            threadId;
+        ExceptionInfo                  exception;
         final Container                frozen;
         final Map<Integer, Snapshot>   stacks           = new LinkedHashMap<>();
         final Map<Integer, FrameAt>    frames           = new HashMap<>();
@@ -3837,6 +4005,22 @@ public final class SessionDebugger implements Debugger {
             this.threadId  = threadId;
             this.exception = exception;
             this.frozen    = frozen;
+        }
+
+        /**
+         * The program is stopped at another of its fibers, in this stop, as when the fiber that ran
+         * alone in it stops again: at the exception it stops at, or none, with the fiber's stack
+         * first, as {@link #threads} lists the stopped fiber. Called while holding the debugger's
+         * monitor.
+         */
+        void stoppedAt(int threadId, ExceptionInfo exception, Snapshot stack) {
+            this.threadId  = threadId;
+            this.exception = exception;
+            var waiting = new LinkedHashMap<>(stacks);
+            waiting.remove(threadId);
+            stacks.clear();
+            stacks.put(threadId, stack);
+            stacks.putAll(waiting);
         }
     }
 
@@ -4172,6 +4356,30 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
+     * @return true if the frame runs on the specified fiber, or on a fiber of another service that
+     *         the fiber called, which began once the fiber with the specified first ID did
+     */
+    private static boolean runsFor(Fiber fiber, long firstFiber, Frame frame) {
+        Fiber other = frame.f_fiber;
+        return other == fiber || other.getId() >= firstFiber && other.isAssociated(fiber);
+    }
+
+    /**
+     * The fiber that runs alone in a stop, while the program's other fibers wait in it, named as
+     * {@link #threads} names it, with the fibers of other services that it calls, which begin once
+     * the first ID was given out.
+     */
+    private record Solo(Halt halt, Fiber fiber, long firstFiber, String name) {
+        /**
+         * @return true if the frame runs on the fiber, or on a fiber of another service that it
+         *         called after it left the stop
+         */
+        boolean includes(Frame frame) {
+            return runsFor(fiber, firstFiber, frame);
+        }
+    }
+
+    /**
      * A run in progress: what the host asked for; the fiber it runs on; the ID of the first fiber
      * created after it started; the stop it runs in; its compiled expression, or null for a lazy
      * variable's run, the registers of the frame that the expression reads, and whether it is a
@@ -4185,8 +4393,7 @@ public final class SessionDebugger implements Debugger {
          *         service that the code calls, which began after the run did
          */
         boolean includes(Frame frame) {
-            Fiber other = frame.f_fiber;
-            return other == fiber || other.getId() >= firstFiber && other.isAssociated(fiber);
+            return runsFor(fiber, firstFiber, frame);
         }
 
         /**
