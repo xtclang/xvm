@@ -438,10 +438,10 @@ public class AnnotationHelper {
                                              int ctxSlot, int cctxSlot, int thisSlot,
                                              int paramIndex) {
         for (AnnotationConstructor constructor : constructors) {
-            JitCtorDesc    jmd             = constructor.desc();
-            JitParamDesc[] params          = jmd.isOptimized
+            JitCtorDesc    jmd    = constructor.desc();
+            JitParamDesc[] params = jmd.isOptimized
                     ? jmd.optimizedParams : jmd.standardParams;
-            int           firstParamIndex = paramIndex;
+            int firstParamIndex = paramIndex;
 
             if (constructor.isConstructionSite()) {
                 // consume appended parameters even when the constructor body is a no-op
