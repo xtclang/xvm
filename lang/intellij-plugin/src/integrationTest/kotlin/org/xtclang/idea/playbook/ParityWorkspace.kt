@@ -159,12 +159,20 @@ class ParityWorkspace(
     fun open(
         file: String,
         text: String? = null,
+    ): Document {
+        if (text != null || !Files.exists(directory.resolve(file))) {
+            write(file, text ?: fixture(file))
+        }
+        return open(directory.resolve(file), file)
+    }
+
+    /** Opens the file at [path], which may be outside [directory], in an editor, as [file] names it in messages. */
+    fun open(
+        path: Path,
+        file: String,
     ): Document =
         with(driver) {
-            if (text != null || !Files.exists(directory.resolve(file))) {
-                write(file, text ?: fixture(file))
-            }
-            val target = requireNotNull(refresh(directory.resolve(file)))
+            val target = requireNotNull(refresh(path))
             withContext(OnDispatcher.EDT) {
                 service<FileEditorManager>(singleProject()).openFile(target, false, false)
             }
