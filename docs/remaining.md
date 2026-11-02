@@ -443,10 +443,17 @@ recorded partial coverage.
   (worker protocol 21). VS Code offers it in the Call Stack view. IntelliJ offers Reset Frame through
   our LSP4IJ #1778 (UP47, merged 2026-10-27, unreleased): X329 passes there with a plugin built from
   it, and stays not implemented in the catalog until a release has it.
-- [ ] R11: continuing, stepping or pausing one fiber while the others stay stopped. Not built
-  (decided 2026-10-27): it needs DAP's `singleThread`, which neither editor sends (UP49: VS Code
-  [#166450](https://github.com/microsoft/vscode/issues/166450), open since 2022; LSP4IJ none),
-  and a stop that lets one service run while the rest stay held, which no editor could reach.
+- [x] R11: continuing, stepping or pausing one fiber while the others stay stopped (2026-11-02, worker
+  protocol 24). With DAP's `singleThread` on `continue`, `next`, `stepIn` and `stepOut`,
+  one fiber continues, steps or is paused alone while the program's other fibers stay stopped, with
+  the fibers of other services it calls; when it stops again, at a breakpoint, an exception stop,
+  its step's end or a pause, that is the program's stop again, with the same waiting fibers, and if
+  it ends first, the program stops at one of them with the reason `pause`. `SessionDebugger`
+  holds the others in the same stop, as while a fiber runs code in it; the clocks stand still. The
+  worker and the agent share it through `RunDebuggers` and `RunDebugClient`, so embedded runs and
+  Gradle-launched or attached programs take it alike. Neither editor sends `singleThread` yet (UP49),
+  so it is checked at the protocol level: `SessionDebuggerTest`, `XtcDebugServerTest`, and over a
+  real worker (`EmbeddedExecutionTest`) and a real agent (`XtcDebugAgentTest`); no catalog case.
 - [x] R12: every service and fiber in Threads, with their containers (`VF`) (2026-10-27; shared
   X325). At a stop, `threads` lists the fibers that wait at a line first, as before, then the other
   fibers of the program's services, in its own container and those nested in it, in the order the
@@ -844,7 +851,8 @@ passes with the workaround disabled. The gates are in
 - [ ] UP49 (2026-10-27): neither editor sends `singleThread` with `continue` or a step, so they
   always resume every fiber; VS Code's request
   [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
-  last item waits on it. To do: build it once an editor sends `singleThread`.
+  last item is built anyway (2026-11-02): the server takes `singleThread`. To do: check it from an
+  editor once one sends it, with a catalog case.
 
 ### LSP4IJ: no inline values for Ecstasy (UP50): our #1781, merged
 
