@@ -87,6 +87,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     private final Property<@NotNull Boolean> jit;
     private final Property<@NotNull Boolean> parallel;
+    private final Property<@NotNull String> debug;
+    private final Property<@NotNull String> debugAgent;
 
     // Command-line override properties (set via --module, --method, --args options)
     private final Property<String> cliModuleName;
@@ -120,6 +122,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.cliModuleArgs = objects.listProperty(String.class).convention(project.provider(() -> null));
         this.jit = objects.property(Boolean.class).convention(ext.getJit());
         this.parallel = objects.property(Boolean.class).convention(ext.getParallel());
+        this.debug = objects.property(String.class).convention(ext.getDebug());
+        this.debugAgent = objects.property(String.class).convention(ext.getDebugAgent());
     }
 
     @Input
@@ -198,8 +202,26 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
-    private ExecutionStrategy createStrategy() {
+    @Input
+    @Optional
+    @Override
+    public Property<@NotNull String> getDebug() {
+        return debug;
+    }
+
+    @Input
+    @Optional
+    @Override
+    public Property<@NotNull String> getDebugAgent() {
+        return debugAgent;
+    }
+
+    ExecutionStrategy createStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
+        if (mode == ExecutionMode.DIRECT && getDebug().isPresent()) {
+            throw new GradleException("[plugin] Task '" + getName() + "' cannot debug a DIRECT run: the debugger's agent"
+                + " would run in the Gradle daemon. Run it in its own JVM, with --mode=ATTACHED.");
+        }
         return switch (mode) {
             case DIRECT -> new DirectStrategy(logger, getDirectRuntimeService());
             case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
