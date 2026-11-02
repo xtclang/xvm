@@ -229,8 +229,10 @@ its `toString()` makes it, or the reason it failed, and what the code changed st
 the Variables view shows as it reads the variables again. Only that code, and the services it calls, run
 meanwhile, so code that waits on work the program's other fibers do waits out its time; with a
 configuration's `evaluationRunsProgram`, the rest of the program runs too while it does, without
-stopping at breakpoints, and its threads and stacks may then have moved. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), a launch runs the module's Gradle task instead and
-says that debugging is not available.
+stopping at breakpoints, and its threads and stacks may then have moved. Continue runs the program on, and Stop ends it where it is. In Gradle mode (`xtc.build.mode`), Debug runs the module's Gradle task
+(`runXtc`) in the terminal with the debugger's Gradle properties, and the session attaches to the program as it starts:
+breakpoints are on the files as Gradle built them, the program's output is in the task's terminal, and Stop ends the task,
+and the program with it. Run Without Debugging runs the task alone.
 
 A launch configuration in `.vscode/launch.json` selects the module, entry method and arguments:
 
