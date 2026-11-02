@@ -32,6 +32,7 @@ import org.xvm.javajit.builders.PackageBuilder;
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
 
+import static org.xvm.util.Handy.digitValue;
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.require;
 
@@ -687,12 +688,15 @@ public class TypeSystem {
      * Append a constant-id suffix at the end, replacing the existing suffix while retaining nested
      * class paths. The name must contain at most one internal suffix marker.
      *
-     * @param name  the unescaped class name to update
-     * @param id    the new constant id
+     * @param name  the non-null unescaped class name to update
+     * @param id    the new non-negative constant id
+     *
+     * @return the non-null StringBuilder that was passed in
      *
      * @throws IllegalArgumentException if the name contains more than one internal suffix marker
      */
-    public static void appendJitSuffix(StringBuilder name, int id) {
+    public static StringBuilder appendJitSuffix(StringBuilder name, int id) {
+        assert id >= 0;
         int start = name.indexOf(HASH_MARKER);
         if (start >= 0) {
             if (start != name.lastIndexOf(HASH_MARKER)) {
@@ -704,13 +708,13 @@ public class TypeSystem {
             }
             name.delete(start, end);
         }
-        name.append(HASH_MARKER).append(id);
+        return name.append(HASH_MARKER).append(id);
     }
 
     /**
      * Find the final generated suffix, ignoring an escaped marker in a user-supplied name.
      *
-     * @param name  the escaped class name
+     * @param name  the non-null escaped class name
      *
      * @return the index of the unescaped suffix marker, or -1 if absent
      */
@@ -724,6 +728,37 @@ public class TypeSystem {
         return escaped ? -1 : suffix;
     }
 
+    /**
+     * Determine if a suffix exists in the name, and if it does, return its value.
+     *
+     * @param name  the non-null name that may or may not contain a suffix
+     *
+     * @return the suffix value, or -1 to indicate no suffix
+     */
+    public static int getJitSuffix(String name) {
+        int start = findJitSuffix(name);
+        if (start < 0) {
+            return -1;
+        }
+
+        int end = start + 1;
+        int len = name.length();
+        int id  = 0;
+        while (end < len && isDigit(name.charAt(end))) {
+            id = id * 10 + digitValue(name.charAt(end));
+            ++end;
+        }
+        assert end > start + 1;
+        return id;
+    }
+
+    /**
+     * Determine if a suffix exists in the name, and if it does, remove it.
+     *
+     * @param name  the non-null name that may or may not contain a suffix
+     *
+     * @return the name without a suffix as part of it; never null
+     */
     public static String removeJitSuffix(String name) {
         int start = findJitSuffix(name);
         if (start < 0) {
@@ -732,10 +767,15 @@ public class TypeSystem {
 
         int end = start + 1;
         int len = name.length();
-        while (end <  && isDigit(name.charAt(end))) {
+        while (end < len && isDigit(name.charAt(end))) {
             ++end;
         }
-        return end == name.
-        name.delete(start, end);
+        assert end > start + 1;
+
+        String sansSuffix = name.substring(0, start);
+        if (end < len) {
+            sansSuffix += name.substring(end);
+        }
+        return sansSuffix;
     }
 }
