@@ -1567,6 +1567,57 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `with singleThread, continue and next run one fiber alone, which stops again while the others wait`() {
+        CompilerTestSupport.configure()
+        val counters = source("Counters.x", COUNTERS.trimIndent())
+        val path = directory.resolve("Counters.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Counters", counters)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+
+            /** The first counter's breakpoint on its counting line, at the specified count. */
+            fun firstAt(count: Int) =
+                """{"source": {"path": "$path"}, "breakpoints": [{"line": 7, "condition": "n == $count && limit == 2000000"}]}"""
+
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Counters", "moduleUri": "$counters"}""")
+            sessions.request(id, 3, "setBreakpoints", firstAt(1000))
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+
+            sessions.request(id, 5, "setBreakpoints", firstAt(1500))
+            sessions.request(id, 6, "continue", """{"threadId": $thread, "singleThread": true}""")
+            val again = client.until(id) { it.event == "stopped" }
+            assertThat(again.single { it.response == "continue" }["body"].asJsonObject["allThreadsContinued"].asBoolean).isFalse()
+            assertThat(again.last()["body"].asJsonObject["reason"].asString).isEqualTo("breakpoint")
+            assertThat(again.last()["body"].asJsonObject["threadId"].asInt).isEqualTo(thread)
+
+            sessions.request(id, 7, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
+            sessions.request(id, 8, "next", """{"threadId": $thread, "singleThread": true}""")
+            val stepped = client.until(id) { it.event == "stopped" }
+            assertThat(stepped.single { it.response == "next" }["success"].asBoolean).isTrue()
+            assertThat(stepped.last()["body"].asJsonObject["reason"].asString).isEqualTo("step")
+            assertThat(stepped.last()["body"].asJsonObject["threadId"].asInt).isEqualTo(thread)
+
+            sessions.request(id, 9, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(0)
+            // the program prints the sum once both counters are done, after the last continue
+            assertThat(rest.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                .contains("sum 5000000")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a conditional breakpoint, a logpoint, an exception class and exceptionInfo work on a real program`() {
         CompilerTestSupport.configure()
         val logs = source("Logs.x", LOGS.trimIndent())
@@ -2452,6 +2503,36 @@ class EmbeddedExecutionTest {
                     console.print("started");
                     // runs until stopped: an empty while (True) is rejected as non-terminating
                     for (Int count = 0; count >= 0; ++count) {}
+                }
+            }
+            """
+
+        /**
+         * A module whose run() has two Counter services count at once, one to 2,000,000 and one to 3,000,000, on line 7,
+         * and prints the sum of their counts once both are done.
+         */
+        const val COUNTERS =
+            """
+            module Counters {
+                service Counter {
+                    Int n;
+
+                    void count(Int limit) {
+                        for (Int i : 0 ..< limit) {
+                            ++n;
+                        }
+                    }
+
+                    Int counted() = n;
+                }
+
+                void run() {
+                    Counter first  = new Counter();
+                    Counter second = new Counter();
+                    first.count^(2_000_000);
+                    second.count^(3_000_000);
+                    @Inject Console console;
+                    console.print($"sum {first.counted() + second.counted()}");
                 }
             }
             """
