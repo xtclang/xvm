@@ -18,7 +18,7 @@ object RunGutterUi {
             editor.markupModel.allHighlighters.toList() +
                 DocumentMarkupModel.forDocument(editor.document, editor.project, false)?.allHighlighters.orEmpty()
         ).filter { it.isValid }
-            .mapNotNull { highlighter -> (highlighter.gutterIconRenderer as? GutterIconRenderer)?.let { highlighter to it } }
+            .mapNotNull { highlighter -> highlighter.gutterIconRenderer?.let { highlighter to it } }
             .filter { (_, renderer) -> renderer.tooltipText?.startsWith("Run ") == true }
 
     /** The Run icons' tooltips, each with the zero-based line it is on, as "Run Module@line". */
