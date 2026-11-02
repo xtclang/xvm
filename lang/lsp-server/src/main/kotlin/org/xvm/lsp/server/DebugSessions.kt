@@ -201,7 +201,8 @@ internal class DebugSessions(
             runId: String,
             threadId: Int,
             targetId: Int,
-        ) = runs.stepInto(runId, threadId, targetId)
+            alone: Boolean,
+        ) = runs.stepInto(runId, threadId, targetId, alone)
 
         override fun restartFrame(
             runId: String,
@@ -267,11 +268,17 @@ internal class DebugSessions(
             runId: String,
             threadId: Int,
             kind: StepKind,
-        ) = runs.step(runId, threadId, kind)
+            alone: Boolean,
+        ) = runs.step(runId, threadId, kind, alone)
 
         override fun pause(runId: String) = runs.pause(runId)
 
         override fun resume(runId: String) = runs.resume(runId)
+
+        override fun resumeAlone(
+            runId: String,
+            threadId: Int,
+        ) = runs.resumeAlone(runId, threadId)
 
         override fun librarySource(
             module: String,

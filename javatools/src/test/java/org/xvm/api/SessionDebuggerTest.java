@@ -476,6 +476,41 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module whose run() has two Counter services count at once, one to 2,000,000 and one to
+     * 3,000,000, on line 7, and returns the sum of their counts once both are done, 5,000,000.
+     */
+    private static final String ALONE = """
+            module Alone {
+                service Counter {
+                    Int n;
+
+                    void count(Int limit) {
+                        for (Int i : 0 ..< limit) {
+                            ++n;
+                        }
+                    }
+
+                    Int counted() = n;
+                }
+
+                Int run() {
+                    Counter first  = new Counter();
+                    Counter second = new Counter();
+                    first.count^(2_000_000);
+                    second.count^(3_000_000);
+                    return first.counted() + second.counted();
+                }
+            }
+            """;
+
+    /**
+     * A breakpoint on the line where the first counter counts, at the specified count.
+     */
+    private static Line firstAt(int count) {
+        return new Line(1, 7, "n == " + count + " && limit == 2000000", null, null);
+    }
+
+    /**
      * A module whose run() makes a Box and a Counter service and calls show(box, 5), which prints
      * the box's count on line 37 and returns 5; run() returns that plus the box's count. A Box's
      * bump() adds to its count on line 6, its fail() throws an IllegalState, and its toString()
@@ -906,6 +941,128 @@ public class SessionDebuggerTest {
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
             assertEquals(3_000_000L, control.result());
             assertTrue(session.threads().isEmpty());
+        }
+    }
+
+    @Test
+    public void aFiberThatContinuesAloneStopsAgainWhileTheOtherFibersWait() throws Exception {
+        Path  source  = compile("Alone", ALONE);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Alone"));
+        session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Alone", output, session);
+        try (control) {
+            int    alone = stops.next().threadId();
+            int    other = counting(session, alone);
+            String count = evaluate(session, top(session, other), "n").value();
+            assertFalse(session.resume(Integer.MAX_VALUE));
+
+            session.setBreakpoints(source.toString(), List.of(firstAt(1500)));
+            assertTrue(session.resume(alone));
+            Stop again = stops.next();
+            assertEquals(alone, again.threadId());
+            assertEquals("breakpoint", again.reason());
+            assertEquals(alone, session.threads().getFirst().id());
+            assertEquals("1500", evaluate(session, top(session, alone), "n").value());
+            // the other counter waited all along, at the same count
+            assertEquals(count, evaluate(session, top(session, other), "n").value());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(5_000_000L, control.result());
+        }
+    }
+
+    @Test
+    public void aFiberThatStepsAloneStopsWhereTheStepEndsWhileTheOtherFibersWait() throws Exception {
+        Path  source  = compile("StepsAlone", ALONE.replace("Alone", "StepsAlone"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("StepsAlone"));
+        session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("StepsAlone", output, session);
+        try (control) {
+            int    alone = stops.next().threadId();
+            int    other = counting(session, alone);
+            String count = evaluate(session, top(session, other), "n").value();
+
+            session.setBreakpoints(source.toString(), List.of());
+            assertTrue(session.step(alone, Step.OVER, true));
+            Stop stepped = stops.next();
+            assertEquals(alone, stepped.threadId());
+            assertEquals("step", stepped.reason());
+            assertTrue(where(session, stepped).startsWith("Counter.count:"), where(session, stepped));
+            assertEquals(count, evaluate(session, top(session, other), "n").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(5_000_000L, control.result());
+        }
+    }
+
+    @Test
+    public void aPauseStopsTheFiberThatRunsAloneWhileTheOtherFibersWait() throws Exception {
+        Path  source  = compile("PausesAlone", ALONE.replace("Alone", "PausesAlone"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("PausesAlone"));
+        session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("PausesAlone", output, session);
+        try (control) {
+            int    alone = stops.next().threadId();
+            int    other = counting(session, alone);
+            String count = evaluate(session, top(session, other), "n").value();
+
+            // the first counter has nearly 2,000,000 to count alone, longer than the pause takes
+            session.setBreakpoints(source.toString(), List.of());
+            assertTrue(session.resume(alone));
+            session.pause();
+            Stop paused = stops.next();
+            assertEquals(alone, paused.threadId());
+            assertEquals("pause", paused.reason());
+            assertEquals(count, evaluate(session, top(session, other), "n").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(5_000_000L, control.result());
+        }
+    }
+
+    @Test
+    public void whenTheFiberThatRunsAloneEndsTheProgramStopsAtAFiberThatWaits() throws Exception {
+        Path  source  = compile("EndsAlone", ALONE.replace("Alone", "EndsAlone"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("EndsAlone"));
+        session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("EndsAlone", output, session);
+        try (control) {
+            int    alone = stops.next().threadId();
+            int    other = counting(session, alone);
+            String count = evaluate(session, top(session, other), "n").value();
+
+            session.setBreakpoints(source.toString(), List.of());
+            assertTrue(session.resume(alone));
+            Stop ended = stops.next();
+            assertEquals("pause", ended.reason());
+            assertEquals(other, ended.threadId());
+            assertEquals(other, session.threads().getFirst().id());
+            assertEquals("Counter ended, while the program's other fibers waited.", ended.description());
+            assertEquals(count, evaluate(session, top(session, other), "n").value());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(5_000_000L, control.result());
         }
     }
 
@@ -2642,6 +2799,32 @@ public class SessionDebuggerTest {
 
     private static Variable set(SessionDebugger session, int reference, String name, String expression) throws Exception {
         return session.setVariable(reference, name, expression, false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+    }
+
+    /**
+     * @return the ID of the first frame of the fiber's stack
+     */
+    private static int top(SessionDebugger session, int threadId) {
+        return session.stackTrace(threadId).getFirst().id();
+    }
+
+    /**
+     * @return the ID of a fiber other than the specified one that waits at a line of a Counter's
+     *         count, with the variables of its frames, once one does
+     */
+    private static int counting(SessionDebugger session, int except) throws InterruptedException {
+        long deadline = System.nanoTime() + RUN_LIMIT.toNanos();
+        while (System.nanoTime() < deadline) {
+            for (ThreadInfo thread : session.threads()) {
+                List<StackFrameInfo> stack = thread.id() == except ? List.of() : session.stackTrace(thread.id());
+                if (!stack.isEmpty() && stack.getFirst().name().endsWith("Counter.count")
+                        && !session.scopes(stack.getFirst().id()).isEmpty()) {
+                    return thread.id();
+                }
+            }
+            Thread.sleep(10);
+        }
+        throw new AssertionError("no other counter waited at a line");
     }
 
     private static Completions complete(SessionDebugger session, int frame, String text, int offset) throws Exception {

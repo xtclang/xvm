@@ -255,6 +255,9 @@ class XtcDebugServer(
         /** Why a fiber cannot be stepped. */
         const val NOT_STOPPED = "That thread is not stopped, so it cannot be stepped."
 
+        /** Why a fiber cannot be continued alone, with `singleThread`. */
+        const val NOT_CONTINUABLE = "That thread is not stopped, so it cannot be continued alone."
+
         /** Why a variable cannot be watched by a data breakpoint, as the program also says. */
         const val ONLY_FIELDS = "Only a field of an object can be watched."
 
@@ -345,6 +348,8 @@ class XtcDebugServer(
                 supportsModulesRequest = true
                 supportsLoadedSourcesRequest = true
                 supportsStepInTargetsRequest = true
+                // continue, next, stepIn and stepOut take singleThread: only the thread runs, while the others stay stopped
+                supportsSingleThreadExecutionRequests = true
                 supportsRestartFrame = true
                 completionTriggerCharacters = arrayOf(".")
                 exceptionBreakpointFilters =
@@ -880,27 +885,46 @@ class XtcDebugServer(
         }
     }
 
-    /** DAP: continue. Resumes every fiber of the stopped program. */
-    override fun continue_(args: ContinueArguments?): CompletableFuture<ContinueResponse> =
-        beforeStops {
+    /**
+     * DAP: continue. Resumes every fiber of the stopped program; with `singleThread`, only the thread's fiber, with the
+     * fibers of other services it calls, while the others stay stopped, until it stops again, which the program then is
+     * at. If it ends first, the program stops at another fiber, with the reason `pause`.
+     */
+    override fun continue_(args: ContinueArguments?): CompletableFuture<ContinueResponse> {
+        if (args?.singleThread == true) {
+            if (!debuggedRunning()) return failed(NOT_CONTINUABLE)
+            return beforeStops {
+                runs.resumeAlone(runId, args.threadId).thenApply { continued ->
+                    if (continued) ContinueResponse().apply { allThreadsContinued = false } else throw error(NOT_CONTINUABLE)
+                }
+            }
+        }
+        return beforeStops {
             if (debuggedRunning()) {
                 runs.resume(runId)
             }
             CompletableFuture.completedFuture(ContinueResponse().apply { allThreadsContinued = true })
         }
+    }
 
-    /** DAP: next. Steps the fiber over a call, to its next line; a return continues to the caller's next line. */
-    override fun next(args: NextArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OVER)
+    /**
+     * DAP: next. Steps the fiber over a call, to its next line; a return continues to the caller's next line. With
+     * `singleThread`, as the other steps take it, only the fiber runs, while the others stay stopped.
+     */
+    override fun next(args: NextArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OVER, args.singleThread == true)
 
     /**
      * DAP: stepIn. Steps the fiber to the next line it reaches, also in a method that it calls; with a `targetId`, into
      * that call of its line, which [stepInTargets] gave.
      */
     override fun stepIn(args: StepInArguments): CompletableFuture<Void> {
-        val target = args.targetId ?: return step(args.threadId, StepKind.IN)
+        val alone = args.singleThread == true
+        val target = args.targetId ?: return step(args.threadId, StepKind.IN, alone)
         if (!debuggedRunning()) return failed(NOT_STOPPED)
         return beforeStops {
-            runs.stepInto(runId, args.threadId, target).thenApply<Void> { stepped -> if (stepped) null else throw error(NOT_STOPPED) }
+            runs.stepInto(runId, args.threadId, target, alone).thenApply<Void> { stepped ->
+                if (stepped) null else throw error(NOT_STOPPED)
+            }
         }
     }
 
@@ -938,11 +962,12 @@ class XtcDebugServer(
     }
 
     /** DAP: stepOut. Steps the fiber until its method returns, to the caller's next line. */
-    override fun stepOut(args: StepOutArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OUT)
+    override fun stepOut(args: StepOutArguments): CompletableFuture<Void> = step(args.threadId, StepKind.OUT, args.singleThread == true)
 
     /**
      * DAP: pause. The program stops, with the reason `pause`, at the next line any of its fibers reaches; one whose
-     * fibers all wait, for input say, stops when one of them next runs. A stopped program stays as it is.
+     * fibers all wait, for input say, stops when one of them next runs. A stopped program stays as it is, unless a
+     * fiber runs alone in its stop, after a `continue` or step with `singleThread`: that fiber stops at its next line.
      */
     override fun pause(args: PauseArguments?): CompletableFuture<Void> {
         if (!debuggedRunning()) return failed(NOT_PAUSABLE)
@@ -1228,14 +1253,15 @@ class XtcDebugServer(
         )
     }
 
-    /** Steps a stopped fiber; the stop where the step ends is reported as a `stopped` event. */
+    /** Steps a stopped fiber, [alone] if so asked; the stop where the step ends is reported as a `stopped` event. */
     private fun step(
         threadId: Int,
         kind: StepKind,
+        alone: Boolean,
     ): CompletableFuture<Void> {
         if (!debuggedRunning()) return failed(NOT_STOPPED)
         return beforeStops {
-            runs.step(runId, threadId, kind).thenApply<Void> { stepped ->
+            runs.step(runId, threadId, kind, alone).thenApply<Void> { stepped ->
                 if (stepped) null else throw error(NOT_STOPPED)
             }
         }
