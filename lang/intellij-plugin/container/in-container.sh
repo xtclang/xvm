@@ -24,6 +24,8 @@ rsync -a --delete \
     --exclude 'node_modules/' --exclude 'out/' \
     /src/ /work/xvm/
 cd /work/xvm
+# the VS Code builds which the VS Code extension's tests download, kept in a volume between runs
+export XTC_VSCODE_TEST_CACHE=/gradle/vscode-test
 
 # container-local Gradle settings: modest heaps for an 8 GiB VM, no file watching on overlay storage
 cat > /gradle/gradle.properties <<'EOF'
@@ -98,6 +100,12 @@ case "$mode" in
         status=0
         ./gradlew "$@" || status=$?
         copy_runs
+        # the VS Code extension's reports (its suite, playbook, lifecycle and explorer runs), when there are any
+        vscode_reports=/work/xvm/lang/vscode-extension/build/reports
+        if [ -d "$vscode_reports" ]; then
+            mkdir -p /out/vscode-reports
+            rsync -a "$vscode_reports/" /out/vscode-reports/
+        fi
         exit "$status"
         ;;
     *)
