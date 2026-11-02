@@ -130,11 +130,19 @@ public class BuildContext {
      * Construct {@link BuildContext} for a "top" method in the call chain.
      */
     public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo, JitMethodDesc jmd) {
+        this(builder, typeInfo, methodInfo, jmd, typeInfo.getType());
+    }
+
+    /**
+     * Compile a contributed body using the incorporating class's receiver type.
+     */
+    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo, JitMethodDesc jmd,
+                        TypeConstant thisType) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
-        this.thisType      = typeInfo.getType();
+        this.thisType      = thisType;
         this.jitType       = thisType.getJitCCType();
         this.callChain     = methodInfo.ensureOptimizedMethodChain(typeInfo);
         this.methodStruct  = callChain[0].getMethodStructure();
@@ -1687,16 +1695,36 @@ public class BuildContext {
         ClassDesc        cd;
         String           methodName;
         boolean          isIface;
+
         if (Builder.isEmbedded(owner.getComponent().getFormat())) {
+            TypeConstant superType = builder.getSuperType();
+            if (superType != null) {
+                TypeInfo   superInfo   = superType.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+                MethodInfo superMethod = superInfo.getMethodById(body.getIdentity());
+                if (superMethod != null &&
+                        superMethod.getIdentity().getNamespace().equals(owner)) {
+                    // superclass implementation belongs to the required owner - use invokespecial
+                    return JitCallDesc.special(builder.getSuperCD(),
+                            superMethod.ensureJitMethodName(typeSystem),
+                            superMethod.getJitDesc(builder, superType), false);
+                }
+            }
+
             // we need to generate a synthetic super
             cd         = builder.getThisCD(this);
             isIface    = false;
-            methodName = MethodInfo.getJitIdentity(callChain).ensureJitMethodName(typeSystem) + HASH + depth;
+            methodName = MethodInfo.getJitIdentity(callChain, 0).ensureJitMethodName(typeSystem)
+                            + HASH + depth;
             buildSuper(methodName, depth);
         } else {
             TypeConstant type = isSpecialized
                     ? owner.getFormalType().resolveGenerics(pool(), thisType)
                     : owner.getType();
+
+            if (type.isVirtualChildClass()) {
+                return ((VirtualChildBuilder) builder).resolveChildCall(body, type);
+            }
+
             cd         = builder.getCCDesc(type);
             isIface    = type.isJitCCInterface();
             methodName = MethodInfo.getJitIdentity(callChain, depth).ensureJitMethodName(typeSystem);
@@ -2596,7 +2624,7 @@ public class BuildContext {
      */
     private void loadPropertyAccessor(CodeBuilder code, RegisterInfo targetReg,
                                       PropertyInfo propInfo, String methodName, JitMethodDesc jmd) {
-        TypeConstant ownerType   = propInfo.getOwnerType(builder, targetReg.type());
+        TypeConstant ownerType   = propInfo.getCallableOwnerType(builder, targetReg.type());
         boolean      isInterface = !propInfo.isNative() && ownerType.isJitCCInterface();
 
         assert !jmd.isStandardStatic;
@@ -2628,17 +2656,13 @@ public class BuildContext {
         }
         assert !targetReg.flavor().isOptimized;
 
-        JitParamDesc[] returns;
-        ClassDesc      fieldCD;
-        if (jmd.isOptimized) {
-            returns = jmd.getAllOptimizedReturns(0);
-            fieldCD = JitTypeDesc.getFieldClass(propInfo.getType(), returns[0].cd);
-        } else {
-            returns = new JitParamDesc[] {jmd.standardReturns[0]};
-            fieldCD = jmd.standardReturns[0].cd;
-        }
+        JitParamDesc   first   = jmd.getReturn(0);
+        JitParamDesc[] returns = jmd.isOptimized
+                ? jmd.getAllOptimizedReturns(0) : new JitParamDesc[] {first};
+        ClassDesc      fieldCD = jmd.isOptimized
+                ? JitTypeDesc.getFieldClass(propInfo.getType(), first.cd) : first.cd;
 
-        TypeConstant ownerType = propInfo.getOwnerType(builder, targetReg.type());
+        TypeConstant ownerType = propInfo.getFieldOwnerType(builder, targetReg.type());
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < returns.length; i++) {
@@ -2752,7 +2776,18 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
 
-        boolean useField = targetType.getAccess() == Access.STRUCT;
+        boolean      useField = targetType.getAccess() == Access.STRUCT;
+        TypeConstant callType = targetType;
+        ClassDesc    targetCD = targetReg.cd();
+
+        if (!useField && !jmd.isOptimizedStatic) {
+            callType = propInfo.getCallableOwnerType(builder, targetType);
+            targetCD = builder.getCCDesc(callType);
+            if (!targetCD.equals(targetReg.cd())) {
+                code.checkcast(targetCD);
+            }
+        }
+
         if (!useField) {
             loadCtx(code);
         }
@@ -2869,11 +2904,11 @@ public class BuildContext {
             buildSetPropertyField(code, targetReg, propInfo, jmd);
         } else if (jmd.isOptimizedStatic) {
             code.invokestatic(builder.getCCDesc(jmd.typeTarget), setterName, md);
-        } else if (targetType.isJitCCInterface()) {
-            code.invokeinterface(targetType.isDerivedVirtualChildClass()
-                    ? targetType.getJitCCDesc(typeSystem) : targetReg.cd(), setterName, md);
+        } else if (callType.isJitCCInterface()) {
+            code.invokeinterface(callType.isDerivedVirtualChildClass()
+                    ? callType.getJitCCDesc(typeSystem) : targetCD, setterName, md);
         } else {
-            code.invokevirtual(targetReg.cd(), setterName, md);
+            code.invokevirtual(targetCD, setterName, md);
         }
     }
 
@@ -2900,7 +2935,7 @@ public class BuildContext {
             slots[i] = storeTempValue(code, params[i].cd);
         }
 
-        TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
+        TypeConstant typeOwner = propInfo.getFieldOwnerType(builder, targetReg.type());
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < params.length; i++) {
