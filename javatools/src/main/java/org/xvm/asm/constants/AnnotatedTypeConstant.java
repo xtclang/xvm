@@ -261,6 +261,11 @@ public class AnnotatedTypeConstant
     }
 
     @Override
+    public TypeConstant removeAnnotations() {
+        return getUnderlyingType().removeAnnotations();
+    }
+
+    @Override
     public boolean containsAnnotation(ClassConstant idAnno) {
         return getAnnotationClass().equals(idAnno) || super.containsAnnotation(idAnno);
     }
@@ -544,6 +549,20 @@ public class AnnotatedTypeConstant
                 return typeCurr;
             }
         }
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getJitCCType() {
+        TypeConstant type = replaceUnderlying(getConstantPool(), TypeConstant::getJitCCType);
+        return ((AnnotatedTypeConstant) type).stripParameters();
+    }
+
+    @Override
+    public TypeConstant getJitICType() {
+        TypeConstant type = replaceUnderlying(getConstantPool(), TypeConstant::getJitICType);
+        return ((AnnotatedTypeConstant) type).stripParameters();
     }
 
     // ----- type comparison support ---------------------------------------------------------------

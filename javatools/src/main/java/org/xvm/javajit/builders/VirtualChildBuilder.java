@@ -77,7 +77,8 @@ public class VirtualChildBuilder extends CommonBuilder {
 
     @Override
     public boolean shouldGenerate(IdentityConstant id) {
-        if (id instanceof PropertyConstant propId && !propId.isConstant() &&
+        if (!hasConstructionSiteAnnotations() &&
+                id instanceof PropertyConstant propId && !propId.isConstant() &&
                 propId.getClassIdentity().getComponent() instanceof ClassStructure clz &&
                 clz.isVirtualChildClass()) {
             // a contribution from a differently named child (e.g. D.C0 on D.C1) may need
@@ -144,16 +145,21 @@ public class VirtualChildBuilder extends CommonBuilder {
         if (bctx.methodDesc instanceof JitDetachedBodyDesc body) {
             return body.receiverCD;
         }
-        // everywhere, except constructors, we need to refer to "this" as an interface
-        return bctx.isConstructor
+        // child constructor bodies use the callable interface; annotation constructors use JIC
+        return bctx.isConstructor && !hasConstructionSiteAnnotations()
                 ? thisType.getJitCCDesc(typeSystem)
                 : super.getThisCD(bctx);
     }
 
     @Override
     protected void assembleInterfaces(ClassBuilder classBuilder) {
-        // the callable interface contains both the child topology and ordinary interface contracts
-        classBuilder.withInterfaceSymbols(getPureImplDesc(thisType));
+        if (hasConstructionSiteAnnotations()) {
+            // the unannotated superclass already implements the child interface
+            super.assembleInterfaces(classBuilder);
+        } else {
+            // the callable interface contains both the child topology and ordinary interface contracts
+            classBuilder.withInterfaceSymbols(getPureImplDesc(thisType));
+        }
     }
 
     @Override
@@ -254,14 +260,16 @@ public class VirtualChildBuilder extends CommonBuilder {
     /**
      * Resolve a child method or property accessor to its exact Java call target.
      */
-    private JitCallDesc resolveChildCall(MethodBody body, TypeConstant ownerType) {
+    public JitCallDesc resolveChildCall(MethodBody body, TypeConstant ownerType) {
         if (body.getIdentity().getNamespace() instanceof PropertyConstant id) {
-            PropertyInfo prop = ownerType.ensureAccess(Access.PRIVATE).ensureTypeInfo()
-                    .findProperty(id.getName());
+            PropertyInfo prop = ownerType.ensureAccess(Access.PRIVATE).ensureTypeInfo().
+                                    findProperty(id.getName());
             if (prop == null) {
                 // a derived child can introduce a property absent from the hard-left contract
-                prop = id.getPropertyInfo(resolveType(id.getClassIdentity()));
+                prop = id.getPropertyInfo(id.getClassIdentity().getFormalType().
+                            resolveGenerics(pool(), getThisType()));
             }
+
             boolean isGetter = body.getIdentity().getName().equals("get");
             String  name     = isGetter
                     ? prop.ensureGetterJitMethodName(typeSystem)
@@ -341,7 +349,8 @@ public class VirtualChildBuilder extends CommonBuilder {
     private void assemblePropertyBody(ClassBuilder classBuilder, PropertyInfo prop,
                                       boolean isGetter) {
         MethodBody body = getPropertyChain(prop, isGetter)[0];
-        if (body.isAbstract() || !body.getIdentity().getClassIdentity().equals(thisId)) {
+        if (body.isAbstract() || hasConstructionSiteAnnotations() ||
+                !body.getIdentity().getClassIdentity().equals(thisId)) {
             return;
         }
 
@@ -408,7 +417,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         }
         if (isGetter) {
             normalizePrimitiveField(code, prop.getType());
-            addReturn(code, values[0].cd);
+            addReturn(code, jmd.getReturn(0).cd);
         } else {
             code.return_();
         }
@@ -608,7 +617,7 @@ public class VirtualChildBuilder extends CommonBuilder {
             return;
         }
 
-        if (owner.equals(thisId)) {
+        if (owner.equals(thisId) && !hasConstructionSiteAnnotations()) {
             assembleDetachedBody(classBuilder, method, name, jmd);
         }
 
@@ -759,6 +768,10 @@ public class VirtualChildBuilder extends CommonBuilder {
      * composition through interfaces and routing, not through Java class inheritance.
      */
     private TypeConstant computeJavaSuperType() {
+        if (hasConstructionSiteAnnotations()) {
+            return annotated.getBaseType();
+        }
+
         // a phantom has no local declaration; its underlying identity can already be
         // the inherited child that must supply the Java superclass
         TypeConstant superType = getSuperChild(thisType);
