@@ -73,6 +73,10 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         this.testClasses = objects.listProperty(String.class);
         this.testMethods = objects.listProperty(String.class);
         this.testReport = objects.property(String.class);
+
+        // A debugged run always runs, and its results are not cached
+        getOutputs().upToDateWhen(task -> !((XtcTestTask) task).getDebug().isPresent());
+        getOutputs().doNotCacheIf("the tests are debugged", task -> ((XtcTestTask) task).getDebug().isPresent());
     }
 
     @Input
