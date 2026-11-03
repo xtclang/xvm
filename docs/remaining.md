@@ -502,7 +502,9 @@ recorded partial coverage.
   refuses such a task, saying why. X338 passes in both editors in the playbook container (IntelliJ
   `run-3269813027182721183`, with X337; X336 too in `run-14756361706886847883`). Limits: the `xtc` on
   the `PATH` runs it, whose XDK must have this javatools; `--deduce` finds a module in `src/main/x`
-  only when the project directory has no `.x` files of its own (javatools' `ModuleInfo`).
+  only when the project directory has no `.x` files of its own (javatools' `ModuleInfo`); fixed
+  since (2026-11-03): deduction also looks for the named module's file in the project's
+  conventional source directories, past a directory with other sources.
 - [ ] R13: debugging tests, which needs the editors to run tests first.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
