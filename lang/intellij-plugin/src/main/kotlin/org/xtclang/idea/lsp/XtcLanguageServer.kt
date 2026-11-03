@@ -52,6 +52,10 @@ interface XtcLanguageServer : LanguageServer {
     @JsonRequest("xtc/runnableTargets")
     fun runnableTargets(): CompletableFuture<List<RunnableTarget>>
 
+    /** The xunit tests of each source module, from its latest analysis, as a tree under the module. */
+    @JsonRequest("xtc/tests")
+    fun tests(): CompletableFuture<List<ModuleTests>>
+
     /** Starts a debug session in the server; its DAP messages travel as `xtc/debugMessage` notifications both ways. */
     @JsonRequest("xtc/debugStart")
     fun debugStart(): CompletableFuture<DebugSessionResponse>
@@ -153,7 +157,11 @@ data class BuildPosition(
     val character: Int = 0,
 )
 
-/** `xtc/run` parameters. [args] reach the entry method as given; the client chooses [runId]. */
+/**
+ * `xtc/run` parameters. [args] reach the entry method as given; the client chooses [runId]. With [tests], xunit runs
+ * the module's tests they select instead, all of them for an empty list, and reports each as a TeamCity service
+ * message in the output.
+ */
 data class RunParams(
     val module: String,
     val method: String? = null,
@@ -162,6 +170,48 @@ data class RunParams(
     val runId: String? = null,
     /** The module's name, which the server uses when [module] is a root URI that no longer names a module. */
     val moduleName: String? = null,
+    val tests: List<TestSelector>? = null,
+)
+
+/** A test, or a container of tests, to run: its xunit [selector] and its [kind], as [ServerTest] gives them. */
+data class TestSelector(
+    val selector: String = "",
+    val kind: String = ServerTest.TEST,
+)
+
+/** A source module's tests, under the module, as `xtc/tests` gives them. */
+data class ModuleTests(
+    val module: String = "",
+    val uri: String = "",
+    val tests: ServerTest = ServerTest(),
+)
+
+/**
+ * A test of a module, or a container of tests: its xunit [selector], which runs it alone, its own [name], its
+ * [kind], and its declaration's name at [location].
+ */
+data class ServerTest(
+    val selector: String = "",
+    val name: String = "",
+    val kind: String = MODULE,
+    val location: TestLocation? = null,
+    val children: List<ServerTest> = emptyList(),
+) {
+    companion object {
+        const val MODULE = "module"
+        const val PACKAGE = "package"
+        const val CLASS = "class"
+        const val TEST = "test"
+    }
+}
+
+/** Where a test's declaration is, zero-based. */
+data class TestLocation(
+    val uri: String = "",
+    val startLine: Int = 0,
+    val startColumn: Int = 0,
+    val endLine: Int = 0,
+    val endColumn: Int = 0,
 )
 
 /** The build outcome, and the run's ID when the build succeeded and the run started. */

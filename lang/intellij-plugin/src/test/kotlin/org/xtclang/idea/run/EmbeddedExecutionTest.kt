@@ -18,7 +18,9 @@ import org.xtclang.idea.lsp.RunInputParams
 import org.xtclang.idea.lsp.RunOutputParams
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.RunResponse
+import org.xtclang.idea.lsp.ServerTest
 import org.xtclang.idea.lsp.StopRunParams
+import org.xtclang.idea.lsp.TestSelector
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.lang.reflect.Proxy
 import java.nio.file.Files
@@ -94,6 +96,22 @@ class EmbeddedExecutionTest {
         // a configuration without a source sends only the name
         assertThat(XtcRunConfiguration.embeddedRequest("App", "", "", ""))
             .isEqualTo(RunParams(module = "App", method = null, args = emptyList(), moduleName = null))
+    }
+
+    @Test
+    fun `a configuration's tests read and show as kind and selector, module for all, and go with the run request`() {
+        val tests = listOf(TestSelector("Inner", ServerTest.CLASS), TestSelector("Inner.works", ServerTest.TEST))
+        assertThat(XtcRunConfiguration.testsText(tests)).isEqualTo("class:Inner, test:Inner.works")
+        assertThat(XtcRunConfiguration.testsOf("class:Inner, test:Inner.works")).isEqualTo(tests)
+        // a bare selector is a test's, module: is all of them, and nothing is no tests, an application run
+        assertThat(XtcRunConfiguration.testsOf(" Inner.works ")).containsExactly(TestSelector("Inner.works", ServerTest.TEST))
+        assertThat(XtcRunConfiguration.testsOf("module:")).isEmpty()
+        assertThat(XtcRunConfiguration.testsText(emptyList())).isEqualTo("module:")
+        assertThat(XtcRunConfiguration.testsOf(" , ")).isNull()
+        assertThat(XtcRunConfiguration.testsText(null)).isEmpty()
+
+        assertThat(XtcRunConfiguration.embeddedRequest("Mathy", "file:///work/Mathy.x", "", "", tests).tests).isEqualTo(tests)
+        assertThat(XtcRunConfiguration.embeddedRequest("Mathy", "", "", "").tests).isNull()
     }
 
     @Test

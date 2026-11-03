@@ -80,6 +80,28 @@ class LanguageServerDebugProcessHandlerTest {
     }
 
     @Test
+    fun `the program's output also goes to its receiver, as a test run's Tests tab reads it`() {
+        val sessions = DebugSessions()
+        val server = FakeServer().apply { started.complete(Unit) }
+        val output = StringBuffer()
+        val handler =
+            LanguageServerDebugProcessHandler(sessions, output = { output.append(it) }) { CompletableFuture.completedFuture(server.proxy) }
+        val events = Events(handler)
+        handler.startNotify()
+
+        val message =
+            """{"seq":3,"type":"event","event":"output",""" +
+                """"body":{"category":"telemetry","output":"##teamcity[testStarted name='a']\n"}}"""
+        sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(message).asJsonObject))
+        val stopped = """{"seq":4,"type":"event","event":"stopped","body":{}}"""
+        sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(stopped).asJsonObject))
+        assertThat(output.toString()).isEqualTo("##teamcity[testStarted name='a']\n")
+        // LSP4IJ still reads every message
+        assertThat(events.text(ProcessOutputTypes.STDOUT)).contains("\"event\":\"output\"", "\"event\":\"stopped\"")
+        handler.destroyProcess()
+    }
+
+    @Test
     fun `a stack trace's source files go to be found before the client reads its frames`() {
         val sessions = DebugSessions()
         val server = FakeServer().apply { started.complete(Unit) }
