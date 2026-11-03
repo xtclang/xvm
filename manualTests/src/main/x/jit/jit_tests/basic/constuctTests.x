@@ -4,6 +4,7 @@ package constuctTests {
         testReplicable();
         testDuplicable();
         testOptimizedVirtualConstructor();
+        testConstructorNestedLambda();
         testPrimitiveStringConstructors();
         testCharConstructors();
     }
@@ -63,6 +64,24 @@ package constuctTests {
             Int value;
 
             Boolean hasValue(Int expected) = value == expected;
+        }
+    }
+
+    void testConstructorNestedLambda() {
+        assert new Holder<String>("value").value == "value";
+
+        class Holder<Element> {
+            construct(Element value) {
+                // binding the inner lambda uses a generic function type; the outer lambda is
+                // static despite being declared in a constructor, so slot 0 is Ctx, not "this"
+                function Element(Element) apply = first -> {
+                    function Element(Element) identity = second -> second;
+                    return identity(first);
+                };
+                this.value = apply(value);
+            }
+
+            Element value;
         }
     }
 
