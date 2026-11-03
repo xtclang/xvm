@@ -186,8 +186,16 @@ rest of the program run too, without stopping at breakpoints, for code that wait
 program's other fibers do. **Pause
 Program** does nothing yet: LSP4IJ's DAP client does not pause (fixed in LSP4IJ pull
 request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration's **Stop at the
-program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code. Debug is
-not offered for Gradle or command-line runs.
+program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code.
+
+In Gradle and command-line mode, **Debug** has the module's Gradle task (`runXtc`) or `xtc run` run the program under
+the session's debugger, with the launcher's `--debug` and the language server's jar as its agent, in the project
+directory; the program connects to the session, and its output goes to the Debug console. Command-line mode runs the
+`xtc` on the `PATH`, whose XDK must have this plugin's javatools, as `xtc run --deduce <module>`, for Run and Debug
+alike: it finds the module by its name in the project directory or, as `xtc init` lays a project out, in its
+`src/main/x`, with `src/main/resources`, and writes the compiled module to the project's `build` directory when there
+is one. `xtc run` looks in `src/main/x` only when the project directory itself has no `.x` files. Breakpoints are on
+the files as that build compiled them.
 
 ## Development
 

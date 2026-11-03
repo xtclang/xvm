@@ -25,7 +25,8 @@ import org.xtclang.idea.run.XtcRunMode
 /**
  * The Ecstasy debug adapter for LSP4IJ's DAP client, registered with the `com.redhat.devtools.lsp4ij.debugAdapterServer`
  * extension point. The adapter is a debug session in the Ecstasy language server, which builds and runs the module
- * with its embedded compiler and execution worker, as Run does; see [LanguageServerDebugProcessHandler].
+ * with its embedded compiler and execution worker, as Run does, or in Gradle and command-line mode has the module's
+ * Gradle task or `xtc run` run it ([DebugTasks]); see [LanguageServerDebugProcessHandler].
  *
  * Debugging goes through the Ecstasy Application run configuration ([XtcRunConfiguration]), whose Debug this adapter
  * serves; its Run stays with the configuration's own embedded, Gradle or command-line run. The Ecstasy Attach
@@ -86,8 +87,12 @@ class XtcDebugAdapterDescriptor(
             parameters["args"] = configuration.embeddedRequest().args
             if (configuration.stopOnEntry) parameters["stopOnEntry"] = true
             if (configuration.evaluationRunsProgram) parameters["evaluationRunsProgram"] = true
-            // the module's Gradle task runs the program, under the session's debugger
-            if (configuration.effectiveRunMode() == XtcRunMode.GRADLE) parameters["buildMode"] = "gradle"
+            // the module's Gradle task or xtc run runs the program, under the session's debugger
+            when (configuration.effectiveRunMode()) {
+                XtcRunMode.GRADLE -> parameters["buildMode"] = "gradle"
+                XtcRunMode.COMMAND_LINE -> parameters["buildMode"] = DebugTasks.COMMAND_LINE
+                else -> {}
+            }
         }
         return parameters
     }
