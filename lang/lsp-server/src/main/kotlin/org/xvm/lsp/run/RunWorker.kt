@@ -9,6 +9,9 @@ import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.runtime.SessionDebugger
+import org.xvm.runtime.debug.DebugChannel
+import org.xvm.runtime.debug.DebugCommands
+import org.xvm.runtime.debug.DebugProtocol
 import org.xvm.util.Severity
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
@@ -41,30 +44,11 @@ import kotlin.time.toJavaDuration
  * the process streams directly, travels as events and so can never corrupt the protocol. Stdin closing,
  * which is also what happens when the language server exits or dies, stops any run and ends the worker.
  *
- * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and `breakpoints`, `exceptions`,
- * `stopOnEntry` and `functions` to run under the debugger), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`),
- * `shutdown`;
- * for a run under the debugger, `exceptionStops` (`id`, `all`, `uncaught`, `allTypes`, `uncaughtTypes`), `pause`
- * (`id`), `evaluate` (`id`, `request`, `frame`, `expression`, `hex`), `setVariable` (`id`, `request`, `reference`,
- * `name`, `expression`, `hex`), `completions` (`id`, `request`, `frame`, `text`, `offset`), `runCode` (`id`, `request`, `frame`,
- * `expression`, `limit` in milliseconds, `program`, `hex`), `cancel` (`id`, `request` of a `runCode`),
- * `exceptionInfo` (`id`, `request`, `thread`),
- * `setBreakpoints` (`id`, `request`, `path`, `breakpoints`), `setFunctionBreakpoints` (`id`, `request`,
- * `breakpoints`), `dataBreakpointInfo` (`id`, `request`, `reference`, `name`), `setDataBreakpoints` (`id`, `request`,
- * `breakpoints`), `threads` (`id`, `request`), `modules` (`id`, `request`),
- * `stepInTargets` (`id`, `request`, `frame`), `stepInto` (`id`, `request`, `thread`, `target`), `restartFrame` (`id`,
- * `request`, `frame`), `stackTrace` (`id`,
- * `request`, `thread`), `scopes` (`id`, `request`, `frame`), `variables` (`id`, `request`, `reference`, `hex`,
- * `filter`: `ALL`, `NAMED` or `INDEXED`, `start`, `count`), `step`
- * (`id`, `request`, `thread`, `step`: `over`, `in` or `out`) and `continue` (`id`). The debug data's JSON forms are
- * in [RunWorkerDebug].
- * Events: `ready` (`pid`, `protocol`, `xdk`; see [RunWorkerIdentity]), `started` (`id`), `output` (`id`,
- * `text`), `exit` (`id`, `code`, `error`), `usage` (`id`, `heapUsed`, `heapMax`, `threads`, `poolThreads`,
- * `consoles`, `runs`, sent after the run's exit), `log` (`text`); for a run under the debugger, `breakpoints` (`id`,
- * `path`, `breakpoints`: how a file's breakpoints were installed before the program started), `functionBreakpoints`
- * (`id`, `breakpoints`: how the function breakpoints were installed before it started), `stopped` (`id`,
- * `reason`, `description`, `thread`, `breakpoints`), `logged` (`id`, `text`: a logpoint's message) and `reply`
- * (`id`, `request`, and the answer or `error`).
+ * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and the `setup` of a run under the
+ * debugger, javatools' `DebugProtocol.Setup`), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`,
+ * and the commands to a run's debugger, `DebugProtocol`'s. Events: `output` (`id`, `text`) and `usage` (`id`,
+ * `heapUsed`, `heapMax`, `threads`, `poolThreads`, `consoles`, `runs`, sent after the run's exit), and
+ * `DebugProtocol`'s: `ready` (see [RunWorkerIdentity]), `started`, `exit` and `log`, and those of a run's debugger.
  */
 object RunWorker {
     /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
@@ -77,10 +61,7 @@ object RunWorker {
         System.setOut(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
         System.setErr(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
         XdkLibraries.configure()
-        channel.send("ready") {
-            addProperty("pid", ProcessHandle.current().pid())
-            RunWorkerIdentity.current().addTo(this)
-        }
+        channel.debug.send(RunWorkerIdentity.current().ready(ProcessHandle.current().pid()))
 
         BufferedReader(InputStreamReader(System.`in`, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
@@ -113,7 +94,7 @@ object RunWorker {
         private val inputs = ConcurrentHashMap<Long, ConsoleInput>()
 
         /** The runtime debugger of each run started with breakpoints. */
-        private val debuggers = RunDebuggers(channel)
+        private val debuggers = DebugCommands(channel.debug)
 
         /** The running program's output, which text the runtime prints directly joins in order. */
         @Volatile
@@ -139,7 +120,7 @@ object RunWorker {
             val control =
                 try {
                     val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
-                    val debugger = command.getAsJsonArray("breakpoints")?.let { debugger(id, repositories, command, output) }
+                    val debugger = command["setup"]?.let(DebugProtocol::setup)?.let { debugger(id, repositories, it, output) }
                     EmbeddingSupport.instance().runMethod(
                         LinkedRepository(*repositories.toTypedArray()),
                         command["module"].asString,
@@ -167,7 +148,7 @@ object RunWorker {
 
             active[id] = control
             this.output = output
-            channel.send("started") { addProperty("id", id) }
+            channel.debug.send(DebugProtocol.Started(id))
             Thread
                 .ofPlatform()
                 .name("xtc-run-$id")
@@ -187,7 +168,7 @@ object RunWorker {
                             Kept(
                                 poolThreads(),
                                 EmbeddingSupport.instance().registeredConsoles(),
-                                active.size + inputs.size + debuggers.held,
+                                active.size + inputs.size + debuggers.held(),
                             )
                         channel.exit(id, control.result(), errors.failure())
                         channel.usage(id, kept)
@@ -222,19 +203,25 @@ object RunWorker {
         private fun debugger(
             id: Long,
             repositories: List<ModuleRepository>,
-            command: JsonObject,
+            setup: DebugProtocol.Setup,
             output: OutputBatches,
         ): SessionDebugger {
             val debugger = SessionDebugger(debuggers.listener(id, output::sendNow))
             repositories.forEach { repository ->
                 repository.moduleNames.forEach { name -> repository.loadModule(name)?.let(debugger::addModule) }
             }
-            debuggers.start(id, debugger, command)
+            debuggers.start(id, debugger, setup)
             return debugger
         }
 
-        /** Handles a command to a run's debugger; false when it is not one. */
-        fun debug(command: JsonObject) = debuggers.handle(command)
+        /** Handles a command to a run's debugger; false when it is not one. A command without what it needs fails alone. */
+        fun debug(command: JsonObject): Boolean =
+            try {
+                DebugProtocol.command(command)?.let(debuggers::handle) == true
+            } catch (failure: IllegalArgumentException) {
+                channel.log("The debugger command ${DebugProtocol.commandName(command)} failed: $failure")
+                true
+            }
 
         /**
          * Threads of the runtime's own worker pool, which is fixed in size. Not those in its thread group: a thread that a
@@ -422,24 +409,22 @@ internal data class RunWorkerIdentity(
     val protocol: Int,
     val xdk: String,
 ) {
-    fun addTo(event: JsonObject) {
-        event.addProperty("protocol", protocol)
-        event.addProperty("xdk", xdk)
-    }
+    /** The `ready` event of a worker [pid] with this identity. */
+    fun ready(pid: Long) = DebugProtocol.Ready(pid, protocol, xdk, null)
 
     override fun toString() = "protocol $protocol with XDK ${xdk.take(12)}"
 
     companion object {
-        /** Raised whenever a command or event changes; the first protocol had no number. */
-        const val PROTOCOL = 24
+        /** javatools' [DebugProtocol.VERSION], which its debug agent reports too; the first protocol had no number. */
+        const val PROTOCOL = DebugProtocol.VERSION
 
         /** This JVM's identity. */
         fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
 
         /** The identity a `ready` event reports, or null when it has none, as from a first-protocol worker. */
-        fun of(event: JsonObject): RunWorkerIdentity? {
-            val protocol = event["protocol"]?.takeUnless { it.isJsonNull }?.asInt ?: return null
-            val xdk = event["xdk"]?.takeUnless { it.isJsonNull }?.asString ?: return null
+        fun of(ready: DebugProtocol.Ready): RunWorkerIdentity? {
+            val protocol = ready.protocol() ?: return null
+            val xdk = ready.xdk() ?: return null
             return RunWorkerIdentity(protocol, xdk)
         }
     }
@@ -485,18 +470,20 @@ internal data class Kept(
     val runs: Int,
 )
 
-/** Writes worker events, one JSON object per line, to the protocol stream. */
+/**
+ * Writes worker events, one JSON object per line, to the protocol stream, through [debug], over which the runtime
+ * debugger's commands answer too.
+ */
 internal class RunWorkerChannel(
-    private val out: PrintStream,
+    out: PrintStream,
 ) {
-    @Synchronized
+    /** The protocol stream, as javatools' debug commands write to it. */
+    val debug = DebugChannel(out)
+
     fun send(
         event: String,
         fill: JsonObject.() -> Unit = {},
-    ) {
-        out.println(JsonObject().apply { addProperty("event", event) }.apply(fill).toString())
-        out.flush()
-    }
+    ) = debug.send(event) { it.fill() }
 
     fun output(
         id: Long,
@@ -510,13 +497,9 @@ internal class RunWorkerChannel(
         id: Long,
         code: Long?,
         error: String?,
-    ) = send("exit") {
-        addProperty("id", id)
-        code?.let { addProperty("code", it) }
-        error?.let { addProperty("error", it) }
-    }
+    ) = debug.send(DebugProtocol.Exit(id, code, error))
 
-    fun log(text: String) = send("log") { addProperty("text", text) }
+    fun log(text: String) = debug.log(text)
 
     /**
      * Reports what the worker holds once a run has ended: the heap the JVM left in use after its latest
