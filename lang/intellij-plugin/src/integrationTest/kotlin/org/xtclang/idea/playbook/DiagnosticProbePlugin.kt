@@ -23,6 +23,7 @@ object DiagnosticProbePlugin {
                   <depends>com.intellij.modules.lang</depends>
                   <depends>com.redhat.devtools.lsp4ij</depends>
                   <depends>org.xtclang.idea</depends>
+                  <depends>intellij.testRunner.plugin</depends>
                 </idea-plugin>
                 """.trimIndent()
                     .toByteArray(),

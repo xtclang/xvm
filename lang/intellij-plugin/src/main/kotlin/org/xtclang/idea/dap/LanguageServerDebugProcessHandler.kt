@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class LanguageServerDebugProcessHandler(
     private val sessions: DebugSessions,
     private val frameSources: (List<Path>) -> Unit = ::findFrameSources,
+    /** Receives the program's output, from the session's `output` events, as a test run's Tests tab reads it. */
+    private val output: (String) -> Unit = {},
     private val server: () -> CompletableFuture<XtcLanguageServer>,
 ) : ProcessHandler(),
     DebugSessions.Session {
@@ -106,6 +108,13 @@ internal class LanguageServerDebugProcessHandler(
     }
 
     override fun message(message: JsonObject) {
+        if (message["type"]?.asString == "event" && message["event"]?.asString == "output") {
+            message["body"]
+                ?.asJsonObject
+                ?.get("output")
+                ?.asString
+                ?.let(output)
+        }
         if (message["type"]?.asString == "event" && message["event"]?.asString == "exited") {
             message["body"]
                 ?.asJsonObject

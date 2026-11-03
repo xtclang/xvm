@@ -141,6 +141,7 @@ class PluginManifestTest {
                 "com.intellij.gradle",
                 "org.jetbrains.plugins.textmate",
                 "com.redhat.devtools.lsp4ij",
+                "intellij.testRunner.plugin",
             )
     }
 
