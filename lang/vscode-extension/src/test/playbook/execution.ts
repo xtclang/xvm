@@ -1781,13 +1781,15 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285 and X304-X331 cases check. */
+/** The parts of a Debug Adapter Protocol message that the X285, X304-X331 and X336-X338 cases check. */
 interface DapMessage {
     seq?: number;
     request_seq?: number;
     type: string;
     event?: string;
     command?: string;
+    success?: boolean;
+    message?: string;
     arguments?: { expression?: string };
     body?: {
         areas?: string[];
@@ -2087,6 +2089,50 @@ export function gradleDebugCases(): void {
             }
         });
     }, 360_000);
+}
+
+/**
+ * X338, registered after X337 in catalog order: VS Code has no command-line build mode, which runs a debugged program
+ * with xtc run, so a launch that asks for one fails, with VS Code's reason, instead of running a Gradle task.
+ */
+export function commandLineDebugCases(): void {
+    playbook('X338', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        const sent: DapMessage[] = [];
+        const tracker = trackDebugSessions(sent);
+        let ended = false;
+        let started: vscode.DebugSession | undefined;
+        const tasks: string[] = [];
+        const subscriptions = [
+            vscode.debug.onDidStartDebugSession(session => {
+                if (session.type === 'xtc') started = session;
+            }),
+            vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.type === 'xtc') ended = true;
+            }),
+            vscode.tasks.onDidStartTask(event => { tasks.push(event.execution.task.name); }),
+        ];
+        try {
+            // VS Code shows a failed launch in a dialog, which its test host refuses, so the start fails either way
+            const start = await Promise.resolve(vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, buildMode: 'commandLine' }))
+                .then(value => String(value), (error: Error) => error.message);
+            assert.ok(start === 'false' || start.includes(data.refused), start);
+            const launch = await eventually(
+                async () => sent.find(message => message.type === 'response' && message.command === 'launch'),
+                value => value !== undefined, 'The command-line launch answers');
+            assert.strictEqual(launch?.success, false, JSON.stringify(launch));
+            assert.ok(launch?.message?.includes(data.refused), JSON.stringify(launch));
+            assert.strictEqual(dapEvents(sent, 'stopped').length, 0, JSON.stringify(sent));
+            assert.deepStrictEqual(tasks, [], 'A command-line launch runs no task');
+        } finally {
+            if (started && !ended) await vscode.debug.stopDebugging(started);
+            subscriptions.forEach(each => each.dispose());
+            tracker.dispose();
+        }
+    });
 }
 
 /**

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import org.kodein.di.DI
 import org.kodein.di.bindSingleton
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
@@ -336,6 +337,14 @@ class CompilerPlaybookTest {
                         addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                         addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)
+                        // command-line runs, X338's, run xtc from the PATH: the XDK built from this tree, whose xec
+                        // X336 runs; the scenarios are in lang/test-fixtures/compiler-playbook of that tree
+                        val xdk =
+                            scenarioPath
+                                .toAbsolutePath()
+                                .parent.parent.parent.parent
+                                .resolve("xdk/build/install/xdk/bin")
+                        withEnv("PATH", listOfNotNull(xdk.toString(), System.getenv("PATH")).joinToString(File.pathSeparator))
                     }
             repeat(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase ->
                 configured.runIdeWithDriver(runTimeout = 30.minutes).useDriverAndCloseIde {

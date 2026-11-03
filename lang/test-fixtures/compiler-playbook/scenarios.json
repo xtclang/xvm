@@ -10460,6 +10460,41 @@
         "limitations": []
       }
     },
+    "X338": {
+      "title": "a Debug in command-line mode runs the module with xtc run under the debugger: the program connects to the session, stops at a breakpoint, and Resume runs it to its exit, which ends the session and the command; VS Code, which has no command-line mode, refuses such a launch and says why",
+      "manual": [
+        "Needs ./gradlew xdk:installDist first: IntelliJ runs xtc from the PATH, on which the playbook puts the bin directory of the XDK built from this tree. xtc run --deduce finds the module by its name in the project directory, whose root has the other cases' sources, so the case writes Commanded.x there; it removes it afterwards, with the Commanded.xtc that xtc run compiles next to it, or in build when the root has one",
+        "VS Code has no command-line build mode, so its case checks only that a launch with buildMode commandLine fails, with VS Code's reason. IntelliJ shows the program's output in the Debug console, which the case checks"
+      ],
+      "values": {
+        "file": "Commanded.x",
+        "module": "Commanded",
+        "compiled": [
+          "Commanded.xtc",
+          "build/Commanded.xtc"
+        ],
+        "source": "module Commanded {\n    Int run() {\n        @Inject Console console;\n        console.print(\"before\");\n        Int n = twice(21);\n        console.print($\"after {n}\");\n        return n;\n    }\n\n    Int twice(Int n) {\n        Int result = n * 2;\n        return result;\n    }\n}\n",
+        "breakpointLine": 11,
+        "frames": [
+          [
+            "Commanded.twice",
+            11
+          ],
+          [
+            "Commanded.run",
+            5
+          ]
+        ],
+        "before": "before",
+        "after": "after 42",
+        "exitCode": 42,
+        "refused": "VS Code runs a debugged program only with Gradle, not in build mode commandLine"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

@@ -407,11 +407,19 @@ class ParityWorkspace(
 
     fun discard(document: Document) =
         with(driver) {
-            val connection = protocol.server()
             // Revert via IntelliJ's file/document manager, preserving the disk line separator.
             withContext(OnDispatcher.EDT) {
                 service<ParityDocuments>()
                     .reloadFromDisk(cast(document.editor.document, ParityDocument::class))
+            }
+            closeEditor(document)
+        }
+
+    /** Closes the editor of [document], which has no edits to revert, and waits for the client to close it. */
+    fun closeEditor(document: Document) =
+        with(driver) {
+            val connection = protocol.server()
+            withContext(OnDispatcher.EDT) {
                 service<FileEditorManager>(singleProject())
                     .closeFile(document.editor.editor.getVirtualFile())
             }
