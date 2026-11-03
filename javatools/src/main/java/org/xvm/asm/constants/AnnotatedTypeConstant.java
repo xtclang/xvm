@@ -166,7 +166,7 @@ public class AnnotatedTypeConstant
 
         TypeConstant typeFormal = anno.getFormalType();
         TypeConstant typeInto   = anno.getTypeInto();
-        TypeConstant typeActual = m_constType;
+        TypeConstant typeActual = m_constType.normalizeParameters();
 
         Map<String, TypeConstant> mapResolve = new HashMap<>();
         for (Map.Entry<StringConstant, TypeConstant> entry : anno.getTypeParamsAsList()) {
