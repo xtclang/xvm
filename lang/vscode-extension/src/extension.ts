@@ -25,6 +25,7 @@ import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 import { configuredSettings, configurationProperties } from './settings-report';
 import { supportLogs } from './support-logs';
 import { serviceFailure } from './service-notifications';
+import { registerTestExplorer } from './test-explorer';
 import { ServerControlEndpoint } from './server-control';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
@@ -118,6 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     registerCommands(context, outputChannel, getClient);
+    registerTestExplorer(context, getClient);
     registerCompilerPaths(context);
     registerValueFormat(context);
 
