@@ -355,8 +355,7 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(
     ExecutionTrace.api("Compilation.missingMethodInputs") {
         val root = parsed() ?: return@api CompilerMissingInputs()
         ConstantPool.withPool(pool()).use {
-            fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
-            val nodes = descendants(root).toList()
+            val nodes = root.descendants().toList()
             val receivers =
                 nodes
                     .filterIsInstance<InvocationExpression>()
@@ -514,8 +513,7 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
     ExecutionTrace.api("Compilation.missingMethodDestinations") {
         check(succeeded())
         ConstantPool.withPool(pool()).use {
-            fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
-            val nodes = descendants(requireNotNull(parsed())).filterIsInstance<TypeCompositionStatement>().toList()
+            val nodes = requireNotNull(parsed()).descendants().filterIsInstance<TypeCompositionStatement>().toList()
             // Reuse module-level imports and reserve all source names before planning new aliases.
             // The host supplies only dependencies already available to this source module.
             val existing = compilerModuleAliases(nodes)

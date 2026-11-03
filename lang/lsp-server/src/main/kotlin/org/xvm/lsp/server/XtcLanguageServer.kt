@@ -71,6 +71,7 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.adapter.xdk.XdkModuleTests
 import org.xvm.lsp.adapter.xdk.XdkRunnableTarget
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
@@ -1293,6 +1294,16 @@ class XtcLanguageServer(
     fun runnableTargets(): CompletableFuture<List<XdkRunnableTarget>> =
         supplyAsync("xtc/runnableTargets", "entry points") {
             (adapter as? XdkAdapter)?.runnableTargets().orEmpty()
+        }
+
+    /**
+     * The tests of each source module, from its latest compilation, as trees under the module: a test's selector is
+     * what a run's `tests` take to run it alone ([RunParams.tests]).
+     */
+    @JsonRequest("xtc/tests")
+    fun tests(): CompletableFuture<List<XdkModuleTests>> =
+        supplyAsync("xtc/tests", "test modules") {
+            (adapter as? XdkAdapter)?.tests().orEmpty()
         }
 
     @JsonRequest("xtc/stopRun")
