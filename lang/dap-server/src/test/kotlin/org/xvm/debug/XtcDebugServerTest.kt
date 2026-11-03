@@ -952,6 +952,13 @@ class XtcDebugServerTest {
         assertThat(
             client.output(OutputEventArgumentsCategory.CONSOLE),
         ).contains("Building App with the embedded compiler and running its tests...")
+        // a test run's service messages are for the client's test view: telemetry, which no console shows
+        runs.events.output("##teamcity[testStarted name='adds()' locationHint='xunit:adds']\n")
+        runs.events.output("inside adds\n")
+        assertThat(
+            client.output(OutputEventArgumentsCategory.TELEMETRY),
+        ).isEqualTo("##teamcity[testStarted name='adds()' locationHint='xunit:adds']\n")
+        assertThat(client.output(OutputEventArgumentsCategory.STDOUT)).isEqualTo("inside adds\n")
 
         assertFailsWith("Tests run embedded; a Gradle launch does not run them.") {
             XtcDebugServer(runs, Executor(Runnable::run)).launch(
