@@ -10498,10 +10498,11 @@
       }
     },
     "X339": {
-      "title": "the Test Explorer lists a module's xunit tests under the module and its classes; Run runs them embedded and marks each passed or failed, a failure at the line its stack names; Debug of one test stops at a breakpoint in it, and Continue runs it to its end, which passes it",
+      "title": "the Test Explorer (IntelliJ: the gutter's test icons and its test console) lists a module's xunit tests under the module and its classes; Run runs them embedded and marks each passed or failed, a failure at the line its stack names; Debug of one test stops at a breakpoint in it, and Continue runs it to its end, which passes it",
       "manual": [
         "The tests run embedded, with xunit in a process the language server starts (xtc test), whatever the folder's build mode; xunit reports each test as a TeamCity service message in the run's output, which marks it in the Test Explorer",
-        "Debug at the cursor, on the name of works(), runs that test alone under the debugger, which stops at the breakpoint in it"
+        "Debug at the cursor, on the name of works(), runs that test alone under the debugger, which stops at the breakpoint in it",
+        "IntelliJ shows Run and Debug icons on the lines of the module, its class and each test; Run of the module's icon runs them in IntelliJ's test console, and Debug of a test's icon shows the console in a Tests tab of the debug session"
       ],
       "values": {
         "file": "Tested.x",
@@ -10525,12 +10526,22 @@
         "nameLine": 15,
         "nameColumn": 13,
         "breakpointLine": 17,
-        "printed": "inside works"
+        "printed": "inside works",
+        "icons": [
+          "Tests of Tested@0",
+          "Test adds@2",
+          "Test fails@7",
+          "Test Inner@12",
+          "Test Inner.works@14"
+        ],
+        "runAll": "Tests of Tested",
+        "debugIcon": "Test Inner.works",
+        "debugRun": "Test Inner.works"
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "IntelliJ has no Ecstasy test tree yet: its runs of tests, with LSP4IJ's DAP run configuration and IntelliJ's own test console, are the next slice. The server side, finding the tests and running and debugging them, is covered by EmbeddedTestRunsTest."
+          "IntelliJ's test console goes to a test's declaration, which its locator finds by the xunit://<selector> location; a failure's message is checked there, and its stack is the console's text, not a location of its own as in VS Code."
         ]
       }
     },
