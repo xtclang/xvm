@@ -558,6 +558,10 @@ class XdkAdapter
                 entryMethods(module.uri).map { XdkRunnableTarget(module.name, module.uri, it) }
             }
 
+        /** The tests of each source module, from its latest compilation; a module without tests is left out. */
+        fun tests(): List<XdkModuleTests> =
+            project.buildOrder().mapNotNull { source -> module(source.uri)?.tests?.let { XdkModuleTests(source.name, source.uri, it) } }
+
         /** The modules [uri]'s Run lenses run, each with the zero-based line its lens is on. */
         internal fun runLensLines(uri: String): List<Pair<String, Int>> =
             runLenses(uri).mapNotNull { lens ->
@@ -1177,6 +1181,8 @@ class XdkAdapter
             val sourceTexts: Map<String, String> = emptyMap(),
             /** The module's callable entry methods, found on the compiler worker ([entryMethodsOf]). */
             val entryMethods: List<String> = emptyList(),
+            /** The module's tests, found on the compiler worker ([XdkTests]); null when it has none. */
+            val tests: XdkTest? = null,
         ) {
             private val semanticViews =
                 documents
@@ -1513,6 +1519,7 @@ class XdkAdapter
                 sourceInputs = target.sourceInputs,
                 sourceTexts = target.sourceTexts,
                 entryMethods = target.entryMethods,
+                tests = target.tests,
             )
         }
 
@@ -1713,10 +1720,12 @@ class XdkAdapter
             val declarations = XdkAst.declarationLocations(compilation.sourceTrees(), sourceUris)
             val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris, declarations) }
             val documentUris = sources?.documentUris ?: setOf(uri)
-            val entryMethods =
-                (roots.values.firstNotNullOfOrNull(::moduleDeclaration)?.component as? ModuleStructure)
-                    ?.let { entryMethodsOf(it, compilation.succeeded()) }
-                    .orEmpty()
+            val moduleStructure = roots.values.firstNotNullOfOrNull(::moduleDeclaration)?.component as? ModuleStructure
+            val entryMethods = moduleStructure?.let { entryMethodsOf(it, compilation.succeeded()) }.orEmpty()
+            val tests =
+                moduleStructure?.let { structure ->
+                    ConstantPool.withPool(structure.constantPool).use { XdkTests.of(structure, compilation.sourceTrees(), declarations) }
+                }
             val documents =
                 documentUris.associateWith { uri ->
                     val sourceName = sourceUris.entries.firstOrNull { it.value == uri }?.key ?: uri
@@ -1786,6 +1795,7 @@ class XdkAdapter
                         ?.associate { (file, text) -> file.path to text }
                         ?: mapOf(uri to request.overlays.getValue(uri)),
                 entryMethods = entryMethods,
+                tests = tests,
             )
         }
 
