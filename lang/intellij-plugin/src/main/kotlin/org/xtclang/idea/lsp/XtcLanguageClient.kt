@@ -28,6 +28,7 @@ import org.xtclang.idea.dap.DebugSessions
 import org.xtclang.idea.dap.DebugTasks
 import org.xtclang.idea.run.EmbeddedRunSessions
 import org.xtclang.idea.run.RunGutterIcons
+import org.xtclang.idea.run.TestGutterIcons
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -174,7 +175,10 @@ class XtcLanguageClient(
             file?.let(::invalidateSemanticFacts)
             super.publishDiagnostics(params)
             // a publication follows each analysis, which is what decides whether the module can run
-            file?.let { RunGutterIcons.refresh(project, it) }
+            file?.let {
+                RunGutterIcons.refresh(project, it)
+                TestGutterIcons.refresh(project, it)
+            }
         }.exceptionally { failure ->
             if (!isDisposed && !project.isDisposed) {
                 logger.warn("Failed to publish Ecstasy diagnostics", failure)
@@ -201,8 +205,12 @@ class XtcLanguageClient(
         return refreshEditors(EditorRefresh.Feature.LENSES)
     }
 
-    /** The gutter Run icons follow the Run lenses, from the same analysis. */
-    private fun refreshRunIcons() = FileEditorManager.getInstance(project).openFiles.forEach { RunGutterIcons.refresh(project, it) }
+    /** The gutter Run icons follow the Run lenses, from the same analysis, and the test icons its tests. */
+    private fun refreshRunIcons() =
+        FileEditorManager.getInstance(project).openFiles.forEach {
+            RunGutterIcons.refresh(project, it)
+            TestGutterIcons.refresh(project, it)
+        }
 
     override fun refreshInlayHints(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.HINTS)
 
