@@ -33,6 +33,8 @@ export interface DebugTaskParams {
     debug: string;
     /** The value of the Gradle property `xtcDebugAgent`: the jar of the debugger's agent. */
     agent?: string;
+    /** The launch's `buildMode`: `gradle`, or `commandLine` for `xtc run`, which VS Code does not run. */
+    buildMode?: string;
 }
 
 /**
@@ -60,6 +62,9 @@ export function gradleDebugCommand(params: DebugTaskParams, platform = process.p
  * it has ended; the server's cancel, when the session stops, ends the task, and the program with it.
  */
 async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationToken): Promise<{ exitCode?: number }> {
+    if (params.buildMode !== undefined && params.buildMode !== 'gradle') {
+        throw new Error(`VS Code runs a debugged program only with Gradle, not in build mode ${params.buildMode}`);
+    }
     const folder = adapters.get(params.sessionId)?.folder;
     const { command, args } = gradleDebugCommand(params);
     const definition: XtcTaskDefinition = { type: 'xtc', moduleName: params.module, methodName: params.method, mode: 'gradle' };
