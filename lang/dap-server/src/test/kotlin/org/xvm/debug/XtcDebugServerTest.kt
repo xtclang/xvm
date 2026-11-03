@@ -1144,7 +1144,8 @@ class XtcDebugServerTest {
     fun `a launch in Gradle mode runs the module's Gradle task under the debugger, and answers once the program connects`() {
         server.setBreakpoints(breakpoints("/src/App.x", 4)).get(10, SECONDS)
         val launched = server.launch(mutableMapOf("module" to "App", "method" to "check", "buildMode" to "gradle"))
-        assertThat(runs.gradleTarget).isEqualTo(LaunchTarget("App", moduleName = "App", method = "check"))
+        assertThat(runs.taskTarget).isEqualTo(LaunchTarget("App", moduleName = "App", method = "check"))
+        assertThat(runs.task).isEqualTo(DebugTask.GRADLE)
         assertThat(launched).isNotDone()
 
         server.configurationDone(ConfigurationDoneArguments())
@@ -1179,6 +1180,31 @@ class XtcDebugServerTest {
         assertFailsWith("Run failed: Gradle ended with exit code 1 before the program started; its output says why.") {
             server.launch(mutableMapOf("module" to "App", "buildMode" to "gradle"))
         }
+    }
+
+    @Test
+    fun `a launch in command-line mode runs the module with the xtc command under the debugger`() {
+        server.setBreakpoints(breakpoints("/src/App.x", 4)).get(10, SECONDS)
+        val launched = server.launch(mutableMapOf("module" to "App", "args" to listOf("a"), "buildMode" to "commandLine"))
+        assertThat(runs.taskTarget).isEqualTo(LaunchTarget("App", moduleName = "App", args = listOf("a")))
+        assertThat(runs.task).isEqualTo(DebugTask.COMMAND_LINE)
+        assertThat(launched).isNotDone()
+
+        server.configurationDone(ConfigurationDoneArguments())
+        launched.get(10, SECONDS)
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE))
+            .contains("Running App with xtc under the debugger...", "Debugging App, which xtc runs.")
+            .doesNotContain("embedded compiler", "Gradle")
+        runs.events.exited(0, null)
+        assertThat(client.events).contains("exited 0", "terminated")
+    }
+
+    @Test
+    fun `a command-line launch without the debugger is refused`() {
+        assertFailsWith("A command-line run without the debugger is the module's xtc command; run that instead.") {
+            server.launch(mutableMapOf("module" to "App", "buildMode" to "commandLine", "noDebug" to true))
+        }
+        assertThat(runs.taskTarget).isNull()
     }
 
     @Test
@@ -1298,7 +1324,8 @@ class XtcDebugServerTest {
         var onReady: () -> Unit = {}
         var attachTarget: AttachTarget? = null
         var attachFailure: Exception? = null
-        var gradleTarget: LaunchTarget? = null
+        var taskTarget: LaunchTarget? = null
+        var task: DebugTask? = null
         val inputs = CopyOnWriteArrayList<String>()
         val stopped = CopyOnWriteArrayList<String>()
         val installed = CopyOnWriteArrayList<SourceBreakpoints>()
@@ -1360,14 +1387,16 @@ class XtcDebugServerTest {
             return ready.toCompletableFuture().thenApply { "App" }
         }
 
-        override fun launchWithGradle(
+        override fun launchWithTask(
             runId: String,
             target: LaunchTarget,
+            task: DebugTask,
             events: ProgramEvents,
             ready: CompletionStage<out DebugSetup>,
         ): CompletableFuture<String> {
             this.runId = runId
-            this.gradleTarget = target
+            this.taskTarget = target
+            this.task = task
             this.events = events
             this.ready = ready
             attachFailure?.let { return CompletableFuture.failedFuture(it) }

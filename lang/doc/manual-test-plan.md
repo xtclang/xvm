@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **339 scenarios**: X1–X337 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **340 scenarios**: X1–X338 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1270,7 +1270,7 @@ module Hello {
 | 18a.7 | Rerun | IntelliJ **Rerun**, or VS Code **Tasks: Restart Running Task**, while a run is active | The old run stops and a new one starts in the same console (automated in X283) |
 | 18a.8 | Failed build skips the run | Run a module that does not compile | The diagnostics print and nothing runs |
 | 18a.9 | Gradle mode | Set the mode to Gradle in a Gradle project and Run/Build | `./gradlew runXtc` / `./gradlew build` run as before; the program's output shows in the task terminal or Run console (X303 automates this for a project made by `xtc init`, apart from reading VS Code's terminal) |
-| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A debug session starts; its Debug Console shows the build, the program's output and exit code, and the session ends with the program (automated in X285). A breakpoint stops the program (X304). In Gradle mode, the Gradle run task runs in the terminal and the session debugs the program it starts: a breakpoint stops it, Continue runs it to its exit, and Stop ends the task and the program. IntelliJ's Debug of an Ecstasy Application configuration in Gradle mode does the same, with the task's output in the Debug console |
+| 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A debug session starts; its Debug Console shows the build, the program's output and exit code, and the session ends with the program (automated in X285). A breakpoint stops the program (X304). In Gradle mode, the Gradle run task runs in the terminal and the session debugs the program it starts: a breakpoint stops it, Continue runs it to its exit, and Stop ends the task and the program. IntelliJ's Debug of an Ecstasy Application configuration in Gradle mode does the same, with the task's output in the Debug console, and in command-line mode with `xtc run` (X338) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
 | 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Build, Execution, Deployment › Ecstasy; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 339 scenarios: X1–X337 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 340 scenarios: X1–X338 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3926,6 +3926,18 @@ properties and the launcher's `--debug`, and, for VS Code's `xtc init`, `./gradl
 | ID | Actions | Expected result |
 |---|---|---|
 | X337 | Make the application project `GradleDebugged` as X303 makes `GradleBuilt`, choose the Gradle build mode, and replace `src/main/x/GradleDebugged.x` with a `run` that prints `before`, calls `twice(21)` on line 5 and prints `after {n}`. Set a breakpoint on line 10, in `twice`, and start debugging GradleDebugged (VS Code: `F5`; IntelliJ: Debug its Ecstasy Application configuration). When it stops, look at the call stack, then close `GradleDebugged.x` and wait ten seconds. Then continue (IntelliJ: Resume Program). | The module's Gradle run task starts under the debugger (VS Code: a **Debug GradleDebugged** task in the terminal), and the program it starts connects to the session. The program prints `before` and stops on line 10, in `GradleDebugged.twice`, called from line 5 of `GradleDebugged.run`. With no Ecstasy file open, the program stays stopped: the session keeps the language server running. Continue prints `after 42`, the program ends with exit code 0, and the session and the task end with it. VS Code shows the program's output in the task's terminal, IntelliJ in the Debug console. |
+
+### Debugging a command-line run (X338)
+
+IntelliJ's command-line mode runs `xtc` from the `PATH`, so this case needs `./gradlew xdk:installDist` first and
+that XDK's `bin` directory on the IDE's `PATH`, which the IntelliJ playbook gives it. `xtc run --deduce` finds the
+module by its name in the project directory, whose root has the other cases' sources, so the case writes
+`Commanded.x` there, and removes it afterwards, with the `Commanded.xtc` that `xtc run` compiles next to it, or in
+`build` when the root has one. VS Code has no command-line build mode.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X338 | IntelliJ: write `Commanded.x` at the project root, with a `run` that prints `before`, calls `twice(21)` on line 5, prints `after {n}` and returns `n`. Set a breakpoint on line 11, in `twice`, and Debug an Ecstasy Application configuration for `Commanded` that runs with **xtc command line**. When it stops, look at the call stack. Then Resume Program. VS Code: start a launch of `Commanded` with `"buildMode": "commandLine"`. | IntelliJ runs `xtc run --deduce --debug connect:…,suspend,token=…,agent=… Commanded` in the project directory, and the program connects to the session. It prints `before` in the Debug console and stops on line 11, in `Commanded.twice`, called from line 5 of `Commanded.run`. Resume prints `after 42`, the program ends with exit code 42, and the session ends with it. VS Code refuses the launch, in a dialog: `Run failed: The xtc command could not run: Request xtc/debugTask failed with message: VS Code runs a debugged program only with Gradle, not in build mode commandLine`, and runs no task. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

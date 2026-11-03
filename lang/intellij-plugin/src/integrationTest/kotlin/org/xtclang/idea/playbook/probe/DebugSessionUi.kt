@@ -146,6 +146,15 @@ object DebugSessionUi {
         uri: String,
     ) = debug(project, module, uri, 0, evaluationRunsProgram = false, stopOnEntry = true)
 
+    /** Starts Debug as [debug] does, of a configuration that runs the module with `xtc run`, in command-line mode. */
+    @JvmStatic
+    fun debugCommandLine(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
+    ) = debug(project, module, uri, breakpointLine, evaluationRunsProgram = false, stopOnEntry = false, XtcRunMode.COMMAND_LINE)
+
     private fun debug(
         project: Project,
         module: String,
@@ -153,6 +162,7 @@ object DebugSessionUi {
         breakpointLine: Int,
         evaluationRunsProgram: Boolean,
         stopOnEntry: Boolean,
+        runWith: XtcRunMode = XtcRunMode.PROJECT,
     ) {
         watch(project)
         sessions.remove(name(module))
@@ -167,7 +177,7 @@ object DebugSessionUi {
             (settings.configuration as XtcRunConfiguration).apply {
                 moduleName = module
                 moduleUri = uri
-                runWith = XtcRunMode.PROJECT
+                this.runWith = runWith
                 this.evaluationRunsProgram = evaluationRunsProgram
                 this.stopOnEntry = stopOnEntry
             }
