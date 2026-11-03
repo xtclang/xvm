@@ -493,7 +493,16 @@ recorded partial coverage.
   server stop when the last Ecstasy file closes during a run or session. Limits: VS Code shows the
   program's output in the task's terminal; LSP4IJ 0.21.0 still stops the server for a run started
   within 5 s of closing the last file (UP66, fixed by #1835, merged, unreleased).
-- [ ] R13: Debug in command-line mode, which runs `xtc run`.
+- [x] R13: Debug in command-line mode, which runs `xtc run` (2026-11-03; shared X338). IntelliJ's
+  Debug of a configuration that runs with **xtc command line** has `xtc run --deduce [--method <m>]
+  --debug connect:…,suspend,token=…,agent=<jar> <module> [args]` run in the project directory, the
+  command line its Run has too, which now passes the method and `--deduce`, and the program connects
+  back, as a Gradle-mode Debug's does: `xtc/debugTask` carries the launch's `buildMode`, and
+  `DebugTask` names the task in the session's messages. VS Code, which has no command-line mode,
+  refuses such a task, saying why. X338 passes in both editors in the playbook container (IntelliJ
+  `run-3269813027182721183`, with X337; X336 too in `run-14756361706886847883`). Limits: the `xtc` on
+  the `PATH` runs it, whose XDK must have this javatools; `--deduce` finds a module in `src/main/x`
+  only when the project directory has no `.x` files of its own (javatools' `ModuleInfo`).
 - [ ] R13: debugging tests, which needs the editors to run tests first.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
@@ -508,8 +517,8 @@ recorded partial coverage.
   [the execution plan's R13](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance):
   a debug agent in the program's JVM, which `Runner` and `TestRunner` install through a new
   `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
-  to the language server; Gradle-mode Debug connects back, `xec` listens for an attach. Still to
-  come: command-line mode's Debug, and running and debugging tests.
+  to the language server; Gradle-mode and command-line Debug connect back, `xec` listens for an
+  attach. Still to come: running and debugging tests.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and

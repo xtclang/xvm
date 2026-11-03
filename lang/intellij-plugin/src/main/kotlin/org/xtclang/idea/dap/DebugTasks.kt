@@ -17,20 +17,24 @@ import java.util.concurrent.CompletableFuture
 import kotlin.io.path.Path
 
 /**
- * Runs the Gradle task that a Gradle-mode debug session's launch asks for (`xtc/debugTask`): the module's run, in a
- * JVM of its own, with the debug properties that make the launcher run the program under the session's debugger,
- * which the program then connects to. The task's output goes to the session's console, as an embedded debugged run's
- * does; the server cancels the task when the session stops, which ends Gradle, and the program with it.
+ * Runs the task that a Gradle-mode or command-line debug session's launch asks for (`xtc/debugTask`): the module's
+ * Gradle run, in a JVM of its own, or `xtc run`, with the debug options that make the launcher run the program under the
+ * session's debugger, which the program then connects to. The task's output goes to the session's console, as an
+ * embedded debugged run's does; the server cancels the task when the session stops, which ends it, and the program with
+ * it.
  */
 internal object DebugTasks {
     private val logger = logger<DebugTasks>()
+
+    /** The `buildMode` of a command-line launch, whose task is `xtc run`. */
+    const val COMMAND_LINE = "commandLine"
 
     fun run(
         project: Project,
         params: DebugTaskParams,
     ): CompletableFuture<DebugTaskResult> {
         val command = commandLine(params).withWorkDirectory(project.basePath?.let { Path(it).toFile() })
-        logger.info("Running Gradle under the debugger: ${command.commandLineString}")
+        logger.info("Running under the debugger: ${command.commandLineString}")
         val handler =
             try {
                 OSProcessHandler(command)
@@ -63,13 +67,21 @@ internal object DebugTasks {
         return result
     }
 
-    /** The Gradle wrapper's command line for the task: the module's run, with the debug properties. */
+    /**
+     * The task's command line: for a command-line launch, `xtc run` as a command-line Run runs the module, with
+     * `--debug` and the agent; otherwise the Gradle wrapper's, the module's run with the debug properties.
+     */
     internal fun commandLine(params: DebugTaskParams): GeneralCommandLine =
-        GeneralCommandLine(XtcRunConfiguration.gradleWrapper()).apply {
-            addParameters("-q", "runXtc", "--mode=ATTACHED", "--module=${params.module}")
-            params.method?.let { addParameter("--method=$it") }
-            params.args.takeIf { it.isNotEmpty() }?.let { addParameter("--args=${it.joinToString(",")}") }
-            addParameter("-PxtcDebug=${params.debug}")
-            params.agent?.let { addParameter("-PxtcDebugAgent=$it") }
+        if (params.buildMode == COMMAND_LINE) {
+            val debug = listOfNotNull(params.debug, params.agent?.let { "agent=$it" }).joinToString(",")
+            XtcRunConfiguration.xtcCommandLine(params.module, params.method, params.args, debug)
+        } else {
+            GeneralCommandLine(XtcRunConfiguration.gradleWrapper()).apply {
+                addParameters("-q", "runXtc", "--mode=ATTACHED", "--module=${params.module}")
+                params.method?.let { addParameter("--method=$it") }
+                params.args.takeIf { it.isNotEmpty() }?.let { addParameter("--args=${it.joinToString(",")}") }
+                addParameter("-PxtcDebug=${params.debug}")
+                params.agent?.let { addParameter("-PxtcDebugAgent=$it") }
+            }
         }
 }

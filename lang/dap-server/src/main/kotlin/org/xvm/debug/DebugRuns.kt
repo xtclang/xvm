@@ -28,6 +28,30 @@ data class AttachTarget(
 )
 
 /**
+ * What the client runs for a launch whose program runs outside the language server, under the session's debugger: the
+ * launch's [buildMode]. The client runs the module with the launcher's `--debug connect:`, and the program connects to
+ * the session. [mode], [tool] and [task] name it in messages.
+ */
+enum class DebugTask(
+    val buildMode: String,
+    val mode: String,
+    val tool: String,
+    val task: String,
+) {
+    /** The module's Gradle task, `runXtc`. */
+    GRADLE("gradle", "Gradle", "Gradle", "Gradle task"),
+
+    /** `xtc run`, as the XDK's command line runs a module. */
+    COMMAND_LINE("commandLine", "command-line", "xtc", "xtc command"),
+    ;
+
+    companion object {
+        /** The task of a launch's `buildMode`, or null for a launch that the session builds and runs itself. */
+        fun of(buildMode: Any?): DebugTask? = entries.firstOrNull { it.buildMode == buildMode }
+    }
+}
+
+/**
  * A breakpoint a session asks for: its DAP ID, which the session chooses, its 1-based line, and how it stops, each
  * null when not given: a [condition], an expression whose Boolean value must be True; a [hitCondition], `N` for the
  * Nth hit, or `>= N`, `> N` or `% N`; and a [logMessage], which makes it a logpoint that logs the message, with each
@@ -295,19 +319,20 @@ interface DebugRuns {
     ): CompletableFuture<String> = CompletableFuture.failedFuture(UnsupportedOperationException("Attaching is not available here"))
 
     /**
-     * Has [target]'s module run by its Gradle task, which the client runs with the launcher's `--debug connect:`, and
-     * attaches to the program as [attach] does once it connects and [ready] completes, under [runId]. Answers with the
-     * program's module once it has taken the setup; fails with the reason when the task ends before the program
-     * connects. [events] receives what an attached program's do, the program's exit last; [stop] ends the task, and
-     * the program with it. The program's console is the task's.
+     * Has [target]'s module run by [task], its Gradle task or the xtc command, which the client runs with the
+     * launcher's `--debug connect:`, and attaches to the program as [attach] does once it connects and [ready]
+     * completes, under [runId]. Answers with the program's module once it has taken the setup; fails with the reason
+     * when the task ends before the program connects. [events] receives what an attached program's do, the program's
+     * exit last; [stop] ends the task, and the program with it. The program's console is the task's.
      */
-    fun launchWithGradle(
+    fun launchWithTask(
         runId: String,
         target: LaunchTarget,
+        task: DebugTask,
         events: ProgramEvents,
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> =
-        CompletableFuture.failedFuture(UnsupportedOperationException("Debugging a Gradle run is not available here"))
+        CompletableFuture.failedFuture(UnsupportedOperationException("Debugging a ${task.mode} run is not available here"))
 
     /** Console input for the run, with its line end. False when no such run is building or running. */
     fun input(
