@@ -269,6 +269,27 @@ public class ModuleInfo {
             }
         }
 
+        if (deduce && fileName != null && (sourceFile == null || !sourceFile.exists())) {
+            // the module's source may be in the project's conventional source directory, such as
+            // ./src/main/x, even when the directory searched first, such as the current one, has
+            // other source files of its own, which made it the source directory
+            String name  = fileName;
+            File   found = sourceDirFromPrjDir(projectDir, name);
+            if (found == null && shorterName != null) {
+                name  = shorterName;
+                found = sourceDirFromPrjDir(projectDir, name);
+            }
+            if (found != null) {
+                fileName   = name;
+                sourceDir  = found;
+                sourceFile = new File(found, name + ".x");
+                if (binaryDir != null && binaryDir.equals(dirSpec) && binarySpec == null) {
+                    // the binary goes where the project's does, not beside the other sources
+                    binaryDir = null;
+                }
+            }
+        }
+
         if (sourceFile == null || !sourceFile.exists()) {
             sourceStatus = Status.NotExists;
         } else {
@@ -1779,6 +1800,32 @@ public class ModuleInfo {
         }
 
         return prjDir;
+    }
+
+    /**
+     * Given a project directory, find the conventional source directory, as
+     * {@link #sourceDirFromPrjDir(File)} does, that has the source file of the specified name,
+     * also past directories with other source files.
+     *
+     * @param prjDir    the project directory
+     * @param fileName  the name of the source file, without its ".x" extension
+     *
+     * @return the source directory with that file, or null if none has it
+     */
+    public static File sourceDirFromPrjDir(File prjDir, String fileName) {
+        assert prjDir != null && fileName != null;
+        File curDir = prjDir;
+        for (int level = 0; level <= 2; level++) {
+            if (new File(curDir, fileName + ".x").isFile()) {
+                return curDir;
+            }
+            File subDir = findSourceSubDir(curDir, level);
+            if (subDir == null) {
+                return null;
+            }
+            curDir = subDir;
+        }
+        return new File(curDir, fileName + ".x").isFile() ? curDir : null;
     }
 
     /**
