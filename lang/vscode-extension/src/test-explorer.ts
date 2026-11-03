@@ -100,9 +100,8 @@ export function registerTestExplorer(context: vscode.ExtensionContext, client: (
     const run = async (request: vscode.TestRunRequest, token: vscode.CancellationToken, debug: boolean): Promise<void> => {
         const testRun = controller.createTestRun(request);
         try {
-            const chosen = request.include ?? topLevel(controller.items);
-            const excluded = new Set(request.exclude ?? []);
-            for (const items of byModule(chosen.filter(it => !excluded.has(it)), selections).values()) {
+            const chosen = selected(request.include ?? topLevel(controller.items), new Set(request.exclude ?? []));
+            for (const items of byModule(chosen, selections).values()) {
                 if (token.isCancellationRequested) {
                     break;
                 }
@@ -153,6 +152,24 @@ export function registerTestExplorer(context: vscode.ExtensionContext, client: (
             },
         }),
     );
+}
+
+/**
+ * The fewest items that select exactly the tests under [chosen] that are not under [excluded]: an item that is
+ * under another chosen one goes, so a test chosen with its class runs once, and an item with an excluded test under
+ * it stands for its other children instead, one by one, since xunit's selectors exclude nothing.
+ */
+export function selected(chosen: readonly vscode.TestItem[], excluded: ReadonlySet<vscode.TestItem>): vscode.TestItem[] {
+    const above = (it: vscode.TestItem): vscode.TestItem[] => it.parent ? [it.parent, ...above(it.parent)] : [];
+    const cover = (it: vscode.TestItem): vscode.TestItem[] => {
+        if (excluded.has(it)) {
+            return [];
+        }
+        return under(it).some(below => excluded.has(below)) ? topLevel(it.children).flatMap(cover) : [it];
+    };
+    return chosen
+        .filter((it, index) => chosen.indexOf(it) === index && !above(it).some(parent => chosen.includes(parent)))
+        .flatMap(cover);
 }
 
 /** The items of a collection, without their children. */
