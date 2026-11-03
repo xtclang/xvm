@@ -2270,10 +2270,17 @@ public class SessionDebuggerTest {
             assertEquals(10, page(session, squares.variablesReference(), Filter.ALL, 240, 100).size());
             assertEquals(List.of(), page(session, squares.variablesReference(), Filter.NAMED, 0, 0));
 
+            // a part that starts at the array's end, or past it, is empty, and says no more there, as DAP's
+            // 'variables' request specifies for a start past the available variables
+            assertEquals(List.of(), page(session, squares.variablesReference(), Filter.INDEXED, 250, 50));
+            assertEquals(List.of(), page(session, squares.variablesReference(), Filter.INDEXED, 300, 50));
+            assertEquals(List.of(), page(session, squares.variablesReference(), Filter.ALL, 300, 0));
+
             // a frame's locals are its named children, a part of them at a time too
             assertEquals(List.of(), page(session, scope, Filter.INDEXED, 0, 0));
             assertEquals(read(session, scope).stream().map(Variable::name).toList().subList(1, 2),
                     page(session, scope, Filter.NAMED, 1, 1).stream().map(Variable::name).toList());
+            assertEquals(List.of(), page(session, scope, Filter.NAMED, 100, 0));
 
             session.resume();
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
