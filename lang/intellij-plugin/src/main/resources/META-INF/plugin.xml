@@ -30,6 +30,8 @@
     <depends>org.jetbrains.plugins.textmate</depends>
     <!-- LSP4IJ provides LSP support for Community Edition -->
     <depends>com.redhat.devtools.lsp4ij</depends>
+    <!-- IntelliJ's test console, which shows xunit's tests -->
+    <depends>intellij.testRunner.plugin</depends>
 
     <actions>
         <action id="xtc.selectLanguageAdapter" class="org.xtclang.idea.lsp.SelectLanguageAdapterAction"
