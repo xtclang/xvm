@@ -5,14 +5,14 @@ suite('Test service messages', () => {
     test('a TeamCity message is its name and its attributes, unescaped', () => {
         const message = parseServiceMessage(
             '##teamcity[testFailed name=\'Mathy.fails()\' nodeId=\'Mathy:void fails()\' parentNodeId=\'Mathy:\' ' +
-            'locationHint=\'xunit:fails\' message=\'it|\'s |[not|] three\' details=\'IllegalState: no|n\tat fails() (Mathy.x:10)|n||\']');
+            'locationHint=\'xunit://fails\' message=\'it|\'s |[not|] three\' details=\'IllegalState: no|n\tat fails() (Mathy.x:10)|n||\']');
         assert.ok(message);
         assert.strictEqual(message.name, 'testFailed');
         assert.deepStrictEqual(message.attributes, {
             name: 'Mathy.fails()',
             nodeId: 'Mathy:void fails()',
             parentNodeId: 'Mathy:',
-            locationHint: 'xunit:fails',
+            locationHint: 'xunit://fails',
             message: 'it\'s [not] three',
             details: 'IllegalState: no\n\tat fails() (Mathy.x:10)\n|',
         });
@@ -22,7 +22,7 @@ suite('Test service messages', () => {
     test('other output is no message, and a message without an xunit hint has no selector', () => {
         assert.strictEqual(parseServiceMessage('Started:   Mathy.adds()'), undefined);
         assert.strictEqual(parseServiceMessage('##teamcity[testStarted name=\'x\''), undefined);
-        const suiteStart = parseServiceMessage('  ##teamcity[testSuiteStarted name=\'Mathy\' locationHint=\'xunit:\']  ');
+        const suiteStart = parseServiceMessage('  ##teamcity[testSuiteStarted name=\'Mathy\' locationHint=\'xunit://\']  ');
         assert.strictEqual(suiteStart?.name, 'testSuiteStarted');
         assert.strictEqual(selectorOf(suiteStart!), '');
         assert.strictEqual(selectorOf(parseServiceMessage('##teamcity[testStarted name=\'x\']')!), undefined);
