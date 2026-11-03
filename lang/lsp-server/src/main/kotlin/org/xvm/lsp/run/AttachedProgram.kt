@@ -1,10 +1,10 @@
 package org.xvm.lsp.run
 
-import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.DebugSetup
+import org.xvm.runtime.debug.DebugProtocol
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.IOException
@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * A program that the launcher runs with `--debug`, which the language server's debugger attached to through the
- * program's debugger agent ([XtcDebugAgent]), over a socket that the debugger opened ([attach]) or the program did
+ * program's debugger agent (javatools' `DebugAgent`), over a socket that the debugger opened ([attach]) or the program did
  * ([accept]): the program's one run, whose ID is [RUN], and its debug events, which go to [listener] in order on a
  * reader thread of their own. [module] is the program's module.
  */
@@ -64,19 +64,7 @@ internal class AttachedProgram private constructor(
             .name("xtc-attached-reader-$module")
             .daemon(true)
             .start(::read)
-        val sent =
-            deliver(
-                RUN,
-                JsonObject().apply {
-                    addProperty("command", "debug")
-                    addProperty("id", RUN)
-                    add("modules", JsonArray().apply { modules.forEach(::add) })
-                    add("breakpoints", RunWorkerDebug.sources(setup.breakpoints))
-                    add("exceptions", RunWorkerDebug.exceptions(setup.exceptions))
-                    if (setup.stopOnEntry) addProperty("stopOnEntry", true)
-                    if (setup.functions.isNotEmpty()) add("functions", RunWorkerDebug.functions(setup.functions))
-                },
-            )
+        val sent = deliver(RUN, DebugProtocol.json(DebugProtocol.Debug(RUN, modules, setup.record())))
         if (!sent) started.completeExceptionally(IOException("The connection to the program was lost"))
         return started
     }
@@ -84,7 +72,7 @@ internal class AttachedProgram private constructor(
     /** Detaches from the program, which drops the debugger's breakpoints and runs on; the listener then hears of it. */
     fun detach() {
         detaching = true
-        command("detach", RUN)
+        command(DebugProtocol.Detach(RUN))
         runCatching { socket.shutdownOutput() }
     }
 
@@ -98,20 +86,22 @@ internal class AttachedProgram private constructor(
     private fun read() {
         try {
             for (line in lines.lineSequence()) {
-                val event = runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull() ?: continue
-                when (event["event"]?.asString) {
-                    "started" -> started.complete(Unit)
+                val json = runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull() ?: continue
+                when (val event = runCatching { DebugProtocol.event(json) }.getOrNull()) {
+                    is DebugProtocol.Started -> started.complete(Unit)
 
-                    "exit" -> {
+                    is DebugProtocol.Exit -> {
                         started.complete(Unit)
-                        if (over.compareAndSet(false, true)) listener.exited(event["code"]?.asLong, null)
+                        if (over.compareAndSet(false, true)) listener.exited(event.code(), null)
                     }
 
-                    "log" -> logger.info("attached program log: module={} text={}", module, event["text"]?.asString)
+                    is DebugProtocol.Log -> logger.info("attached program log: module={} text={}", module, event.text())
+
+                    null -> logger.warn("attached program sent an unknown event: module={} event={}", module, line)
 
                     else ->
                         if (!debugEvent(event, listener)) {
-                            logger.warn("attached program sent an unknown event: module={} event={}", module, line)
+                            logger.warn("attached program sent an unexpected event: module={} event={}", module, line)
                         }
                 }
             }
@@ -177,29 +167,22 @@ internal class AttachedProgram private constructor(
             try {
                 socket.soTimeout = CONNECT_LIMIT.inWholeMilliseconds.toInt()
                 val out = PrintStream(socket.getOutputStream(), true, Charsets.UTF_8)
-                out.println(
-                    JsonObject()
-                        .apply {
-                            addProperty("command", "attach")
-                            addProperty("id", RUN)
-                            token?.let { addProperty("token", it) }
-                        }.toString(),
-                )
+                out.println(DebugProtocol.json(DebugProtocol.Attach(RUN, token)))
                 val lines = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
-                val ready =
-                    lines.readLine()?.let { runCatching { JsonParser.parseString(it).asJsonObject }.getOrNull() }
+                val answer =
+                    lines.readLine()?.let { runCatching { DebugProtocol.event(JsonParser.parseString(it).asJsonObject) }.getOrNull() }
                         ?: throw IOException("The program $where did not answer as an Ecstasy program under --debug")
-                ready["error"]?.asString?.let { throw IOException("The program refused the debugger: $it") }
-                val protocol = ready["protocol"]?.asInt
-                if (ready["event"]?.asString != "ready" || protocol != RunWorkerIdentity.PROTOCOL) {
+                if (answer is DebugProtocol.Refused) throw IOException("The program refused the debugger: ${answer.error()}")
+                val ready = answer as? DebugProtocol.Ready
+                if (ready?.protocol() != RunWorkerIdentity.PROTOCOL) {
                     throw IOException(
-                        "The program's debugger agent speaks protocol ${protocol ?: "unknown"}, but the language server " +
-                            "speaks ${RunWorkerIdentity.PROTOCOL}; run the program with this language server's jar as its agent",
+                        "The program's debugger agent speaks protocol ${ready?.protocol() ?: "unknown"}, but the language server " +
+                            "speaks ${RunWorkerIdentity.PROTOCOL}; run the program with an XDK of the language server's version",
                     )
                 }
                 socket.soTimeout = 0
-                val module = ready["module"].asString
-                logger.info("attached to a program: module={} pid={} {}", module, ready["pid"]?.asLong, where)
+                val module = ready.module()
+                logger.info("attached to a program: module={} pid={} {}", module, ready.pid(), where)
                 return AttachedProgram(socket, lines, listener, module)
             } catch (failure: IOException) {
                 runCatching { socket.close() }
