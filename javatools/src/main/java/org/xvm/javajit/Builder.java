@@ -26,6 +26,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.*;
+import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
@@ -63,6 +64,8 @@ import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
+
+import static org.xvm.javajit.TypeSystem.HASH;
 
 /**
  * Base class for JIT class builders.
@@ -139,6 +142,54 @@ public abstract class Builder {
     public JitCallDesc resolveConstructorCall(MethodInfo constructor, TypeConstant targetType,
                                               ClassDesc targetCD, String name) {
         return JitCallDesc.static_(targetCD, name, constructor.getJitDesc(this, targetType), false);
+    }
+
+    /**
+     * Obtain the call descriptor to be used by super calls from the specified method context.
+     */
+    public JitCallDesc resolveSuperCall(BuildContext bctx) {
+        int        depth = bctx.callDepth + 1;
+        MethodBody body  = bctx.callChain[depth];
+
+        if (body.getImplementation() == Implementation.Field) {
+            return ensureFieldAccessor(body);
+        }
+
+        IdentityConstant owner = body.getIdentity().getNamespace();
+        ClassDesc        cd;
+        String           methodName;
+        boolean          isIface;
+
+        if (isEmbedded(owner.getComponent().getFormat())) {
+            TypeConstant superType = getSuperType();
+            if (superType != null) {
+                TypeInfo   superInfo   = superType.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+                MethodInfo superMethod = superInfo.getMethodById(body.getIdentity());
+                if (superMethod != null &&
+                        superMethod.getIdentity().getNamespace().equals(owner)) {
+                    // superclass implementation belongs to the required owner - use invokespecial
+                    return JitCallDesc.special(getSuperCD(),
+                            superMethod.ensureJitMethodName(typeSystem),
+                            superMethod.getJitDesc(this, superType), false);
+                }
+            }
+
+            // we need to generate a synthetic super
+            cd         = getThisCD(bctx);
+            isIface    = false;
+            methodName = MethodInfo.getJitIdentity(bctx.callChain, 0).ensureJitMethodName(typeSystem)
+                            + HASH + depth;
+            bctx.buildSuper(methodName, depth);
+        } else {
+            TypeConstant type = bctx.isSpecialized
+                    ? owner.getFormalType().resolveGenerics(pool(), bctx.thisType)
+                    : owner.getType();
+
+            cd         = getCCDesc(type);
+            isIface    = type.isJitCCInterface();
+            methodName = MethodInfo.getJitIdentity(bctx.callChain, depth).ensureJitMethodName(typeSystem);
+        }
+        return JitCallDesc.special(cd, methodName, body.getJitDesc(this, bctx.thisType), isIface);
     }
 
     /**
