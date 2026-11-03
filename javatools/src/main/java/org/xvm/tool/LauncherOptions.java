@@ -80,8 +80,15 @@ public abstract class LauncherOptions {
         .addOption(builder("I").longOpt("inject").argName("name=value").hasArg()
             .desc("Specifies name/value pairs for injection; format is 'name=value'").get())
         .addOption(builder().longOpt("debug").argName("options").hasArg()
-            .desc("Debug the program with a debugger outside it, such as an IDE's: "
-                + "connect|listen:<host>:<port>[,suspend][,token=<token>][,agent=<jar>]").get());
+            .desc("Debug the program with a debugger outside it, such as an IDE's:\n"
+                + "listen|connect:<host>:<port>[,suspend][,token=<token>][,agent=<jar>]\n"
+                + "  listen   wait for a debugger to attach, and for the next once one has left\n"
+                + "  connect  connect to a debugger that waits for the program\n"
+                + "  <host>   this machine's; listen on port 0 takes a free port, and prints it\n"
+                + "  suspend  hold the program at its first line until a debugger has set it up\n"
+                + "  token    refuse a debugger that does not send this token\n"
+                + "  agent    load another debugger agent than the XDK's\n"
+                + "for example: --debug listen:127.0.0.1:5005,suspend").get());
 
     /**
      * Apache Commons CLI Options schema for the runner.
