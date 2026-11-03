@@ -3944,11 +3944,12 @@ module by its name in the project directory, whose root has the other cases' sou
 
 The Test Explorer's tests run embedded, whatever the folder's build mode: the language server runs them with xunit
 in a process of its own, as `xtc test` does, and xunit reports each test as a TeamCity service message in the run's
-output, which marks it. IntelliJ has no Ecstasy test tree yet.
+output, which marks it: VS Code's Test Explorer, and IntelliJ's test console, which a Run or Debug icon in the
+gutter of each test, and of its module and classes, starts.
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X339 | VS Code: write `Tested.x`, a module with two tests, `adds` and `fails`, whose assertion on line 10 fails with `one and one are not three`, and a class `Inner` with a test `works` that prints `inside works` on line 17. Open the Test Explorer, then Run All Tests. Set a breakpoint on line 17, put the cursor on the name of `works` and choose **Debug Test at Cursor**; when it stops, Continue. | The Test Explorer lists `Tested`, with `adds`, `fails` and `Inner` under it and `works` under `Inner`. Run All marks `adds` and `works` passed and `fails` failed, with the message `one and one are not three` on line 10 of `Tested.x`; the test output shows `inside works`. The debug session stops on line 17 in `works`; Continue runs it to its end, and `works` is marked passed. |
+| X339 | VS Code: write `Tested.x`, a module with two tests, `adds` and `fails`, whose assertion on line 10 fails with `one and one are not three`, and a class `Inner` with a test `works` that prints `inside works` on line 17. Open the Test Explorer, then Run All Tests. Set a breakpoint on line 17, put the cursor on the name of `works` and choose **Debug Test at Cursor**; when it stops, Continue. | The Test Explorer lists `Tested`, with `adds`, `fails` and `Inner` under it and `works` under `Inner`. Run All marks `adds` and `works` passed and `fails` failed, with the message `one and one are not three` on line 10 of `Tested.x`; the test output shows `inside works`. The debug session stops on line 17 in `works`; Continue runs it to its end, and `works` is marked passed. IntelliJ: the gutter has a test icon on the lines of `Tested`, `adds`, `fails`, `Inner` and `works`; Run of `Tested`'s icon shows the test console, with `adds` and `works` passed and `fails` failed with its message, and each test goes to its declaration; Debug of `works`' icon stops at the breakpoint, with the test console in the session's Tests tab, and Resume passes `works` alone. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
