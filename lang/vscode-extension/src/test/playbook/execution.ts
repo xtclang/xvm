@@ -9,6 +9,7 @@ import { buildModeStatus } from '../../build-mode-selection';
 import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
+import { onDidRefreshTests, onDidReportTest, type TestReport } from '../../test-explorer';
 import { discovered } from './liveWorkspace';
 import { client, diagnosticCode, eventually, noErrors, playbook, type Workspace } from './support';
 
@@ -2143,6 +2144,74 @@ export function commandLineDebugCases(): void {
  * X336, registered after X335 in catalog order: a debug session attaches to a program that the XDK's xec runs with
  * --debug outside the editor, through the agent that the XDK's javatools has.
  */
+/**
+ * X339, registered after X338 in catalog order: the Test Explorer lists the module's tests, Run All marks each passed
+ * or failed, and Debug Test at Cursor stops at a breakpoint in the test and runs it to its end.
+ */
+export function testExplorerCases(): void {
+    playbook('X339', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await configureModules(workspace, [{ name: data.module, file: data.file }]);
+        await noErrors(document.uri);
+        const reports: TestReport[] = [];
+        let listed: readonly string[] = [];
+        const sent: DapMessage[] = [];
+        let started: vscode.DebugSession | undefined;
+        let ended = false;
+        const watching = [
+            onDidReportTest(report => reports.push(report)),
+            onDidRefreshTests(ids => { listed = ids; }),
+            trackDebugSessions(sent),
+            vscode.debug.onDidStartDebugSession(session => { if (session.type === 'xtc') started = session; }),
+            vscode.debug.onDidTerminateDebugSession(session => { if (session.type === 'xtc') ended = true; }),
+        ];
+        const result = (id: string) => reports.filter(report => report.id === id).pop();
+        const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
+        try {
+            await eventually(async () => {
+                await vscode.commands.executeCommand('testing.refreshTests');
+                return listed;
+            }, ids => data.items.every((id: string) => ids.includes(id)), 'The Test Explorer lists the module\'s tests');
+
+            await vscode.commands.executeCommand('testing.runAll');
+            await eventually(async () => [...data.passed, data.failed].map(result), states => states.every(state => !!state), 'Run All reports every test');
+            for (const id of data.passed) assert.strictEqual(result(id)?.state, 'passed', JSON.stringify(reports));
+            const failure = result(data.failed);
+            assert.strictEqual(failure?.state, 'failed', JSON.stringify(reports));
+            assert.strictEqual(failure?.message, data.failure);
+            assert.strictEqual(failure?.line, data.failureLine);
+
+            reports.length = 0;
+            vscode.debug.addBreakpoints([breakpoint]);
+            const editor = await vscode.window.showTextDocument(document);
+            const name = new vscode.Position(data.nameLine - 1, data.nameColumn);
+            editor.selection = new vscode.Selection(name, name);
+            // the command answers once its test run has ended, which waits for the session that the breakpoint stops
+            const debugging = vscode.commands.executeCommand('testing.debugAtCursor');
+            await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The debugged test stops at the breakpoint');
+            assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
+            const frames = await eventually(
+                async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                    .flatMap(message => message.body?.stackFrames ?? []),
+                values => values.length > 0, 'VS Code shows the call stack');
+            assert.ok(frames[0].name.endsWith('works'), JSON.stringify(frames[0]));
+            assert.strictEqual(frames[0].line, data.breakpointLine);
+
+            await vscode.commands.executeCommand('workbench.action.debug.continue');
+            await eventually(async () => ended, value => value, 'Continue runs the test to its end');
+            await debugging;
+            await eventually(async () => result(data.debugged)?.state, state => state === 'passed', 'The debugged test passes');
+            assert.ok(dapOutput(sent).includes(data.printed), dapOutput(sent));
+            assert.deepStrictEqual(reports.map(report => report.id), [data.debugged], 'Debug Test at Cursor runs that test alone');
+        } finally {
+            vscode.debug.removeBreakpoints([breakpoint]);
+            // a case that fails while its test is stopped leaves no session for the next one
+            if (started && !ended) await vscode.debug.stopDebugging(started);
+            watching.forEach(item => item.dispose());
+        }
+    });
+}
+
 export function attachCases(): void {
     playbook('X336', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
