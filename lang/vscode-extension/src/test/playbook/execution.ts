@@ -1397,9 +1397,13 @@ export function debugSessionCases(): void {
                 const session = started;
                 assert.ok(session, 'The Ecstasy debug session started');
 
-                // the stopped fiber first, then run()'s, which waits for the worker, with its own stack
+                // the stopped fiber first, then run()'s, which waits for the worker, with its own stack; the worker takes
+                // in the call that run() waits for, as a fiber not started yet, when it next schedules, before the stop
+                // or after it
                 const threads = (await session.customRequest('threads')).threads as { id: number; name: string }[];
-                assert.deepStrictEqual(threads.map(thread => thread.name), data.threads);
+                const names = threads.map(thread => thread.name);
+                assert.ok([JSON.stringify(data.threads), JSON.stringify([...data.threads, data.queuedThread])].includes(JSON.stringify(names)),
+                    JSON.stringify(names));
                 assert.strictEqual(threads[0].id, dapEvents(sent, 'stopped')[0].body?.threadId);
                 const frames = (await session.customRequest('stackTrace', { threadId: threads[1].id })).stackFrames as { name: string; line: number }[];
                 assert.deepStrictEqual(frames.map(frame => [frame.name, frame.line]), data.waitingFrames);
