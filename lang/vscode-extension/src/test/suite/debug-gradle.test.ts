@@ -10,12 +10,11 @@ suite('Gradle-mode debugging', () => {
             method: 'check',
             args: ['one', 'two'],
             debug: 'connect:127.0.0.1:5005,suspend,token=t',
-            agent: '/x/server/lsp-server.jar',
         };
         assert.deepStrictEqual(gradleDebugCommand(params, 'darwin'), {
             command: './gradlew',
             args: ['-q', 'runXtc', '--mode=ATTACHED', '--module=App', '--method=check', '--args=one,two',
-                '-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t', '-PxtcDebugAgent=/x/server/lsp-server.jar'],
+                '-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t'],
         });
         const plain = gradleDebugCommand({ sessionId: 's', module: 'App', args: [], debug: 'connect:127.0.0.1:1' }, 'win32');
         assert.deepStrictEqual(plain, {

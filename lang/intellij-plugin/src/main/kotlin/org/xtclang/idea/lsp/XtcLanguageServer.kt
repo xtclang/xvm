@@ -78,8 +78,8 @@ data class DebugSessionParams(
 /**
  * `xtc/debugTask` parameters: the task that runs a Gradle-mode or command-line debug session's ([sessionId]) module
  * under the debugger, as [buildMode] says: the module's Gradle task for `gradle`, `xtc run` for `commandLine`. Its
- * [module], [method] and [args], with the launcher's `--debug` options [debug], and [agent] when given, the jar of the
- * agent that the launcher loads. The Gradle task takes them as the Gradle properties `xtcDebug` and `xtcDebugAgent`.
+ * [module], [method] and [args], with the launcher's `--debug` options [debug], which the Gradle task takes as the
+ * Gradle property `xtcDebug`. The program's XDK has the debugger's agent.
  */
 data class DebugTaskParams(
     val sessionId: String,
@@ -87,7 +87,6 @@ data class DebugTaskParams(
     val method: String?,
     val args: List<String>,
     val debug: String,
-    val agent: String?,
     val buildMode: String? = null,
 )
 
