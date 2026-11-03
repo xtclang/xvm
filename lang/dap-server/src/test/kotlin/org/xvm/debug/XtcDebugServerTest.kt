@@ -937,6 +937,37 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a launch's tests are the selectors xunit runs, and a launch with a build mode does not take them`() {
+        server.launch(
+            mutableMapOf(
+                "module" to "App",
+                "tests" to
+                    listOf(
+                        mapOf("selector" to "MathTest.adds", "kind" to "test"),
+                        mapOf("selector" to "tests", "kind" to "package"),
+                    ),
+            ),
+        )
+        assertThat(runs.target.tests).containsExactly(TestSelector("MathTest.adds", "test"), TestSelector("tests", "package"))
+        assertThat(
+            client.output(OutputEventArgumentsCategory.CONSOLE),
+        ).contains("Building App with the embedded compiler and running its tests...")
+
+        assertFailsWith("Tests run embedded; a Gradle launch does not run them.") {
+            XtcDebugServer(runs, Executor(Runnable::run)).launch(
+                mutableMapOf(
+                    "module" to "App",
+                    "buildMode" to "gradle",
+                    "tests" to emptyList<Any>(),
+                ),
+            )
+        }
+        assertFailsWith("Launch tests must be an array") {
+            XtcDebugServer(runs, Executor(Runnable::run)).launch(mutableMapOf("module" to "App", "tests" to "MathTest"))
+        }
+    }
+
+    @Test
     fun `terminate stops the program, whose exit ends the session`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App")).get(10, SECONDS)

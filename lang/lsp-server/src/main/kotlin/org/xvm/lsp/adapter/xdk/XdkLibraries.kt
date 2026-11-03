@@ -4,6 +4,8 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.util.ExecutionTrace
+import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Properties
@@ -66,6 +68,27 @@ internal object XdkLibraries {
                 .joinToString("\n") { (name, artifact) -> "$name=${artifact.revision}" }
         HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(revisions.toByteArray()))
     }
+
+    /**
+     * A directory with the bundled libraries' files, for a launcher in a process of its own, such as `xtc test`'s for
+     * an embedded test run, whose module path takes directories: written once for the bundle, under the temporary
+     * directory, by its fingerprint, and complete once its `.complete` file is there.
+     */
+    internal val directory: File by lazy {
+        val dir = File(System.getProperty("java.io.tmpdir"), "xtc-lsp-xdk-${fingerprint.take(16)}")
+        if (!File(dir, COMPLETE).isFile) {
+            val staging = Files.createTempDirectory(dir.parentFile.toPath(), "${dir.name}.").toFile()
+            packagedResources.forEach { name -> resource(name).use { input -> File(staging, name).outputStream().use(input::copyTo) } }
+            File(staging, COMPLETE).writeText(fingerprint)
+            // another server may have written it meanwhile, or left it incomplete
+            if (!File(dir, COMPLETE).isFile) dir.deleteRecursively()
+            if (!staging.renameTo(dir)) staging.deleteRecursively()
+        }
+        dir
+    }
+
+    /** The file that marks [directory] complete. */
+    private const val COMPLETE = ".complete"
 
     /** Bundled compiler repository and the immutable artifacts used to reopen its modules. */
     private data class Bundle(
