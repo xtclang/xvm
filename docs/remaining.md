@@ -531,9 +531,9 @@ recorded partial coverage.
   path's. Validated in the playbook container: VS Code X285, X304–X331 and X336–X338, and IntelliJ's
   24 implemented debugger cases, pass or keep their recorded partial coverage; X325 (VS Code) and
   X337 (IntelliJ) failed once each on timing, a fiber of the next call caught before it starts and
-  the task's last output after the program's exit, and passed twice each when run again. Not done:
-  the editors' Copy Option and X336 still pass `agent=<the language server's jar>`, which works but
-  is redundant.
+  the task's last output after the program's exit, and passed twice each when run again. The
+  editors' Copy Option (VS Code's command, IntelliJ's Attach Port comment) and X336 now give
+  `--debug listen:127.0.0.1:5005,suspend` without `agent=`, and `xtc/debugTask` has no `agent`.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and

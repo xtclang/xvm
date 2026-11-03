@@ -11,7 +11,7 @@ import org.xtclang.idea.run.XtcRunConfiguration
  */
 class DebugTasksTest {
     @Test
-    fun `the task runs the module in a JVM of its own, with the launcher's debug option and the agent`() {
+    fun `the task runs the module in a JVM of its own, with the launcher's debug option`() {
         val params =
             DebugTaskParams(
                 sessionId = "s",
@@ -19,7 +19,6 @@ class DebugTasksTest {
                 method = "check",
                 args = listOf("one", "two"),
                 debug = "connect:127.0.0.1:5005,suspend,token=t",
-                agent = "/x/bin/xtc-lsp-server.jar",
             )
         val command = DebugTasks.commandLine(params)
         assertThat(command.exePath).isEqualTo(XtcRunConfiguration.gradleWrapper())
@@ -31,17 +30,16 @@ class DebugTasksTest {
             "--method=check",
             "--args=one,two",
             "-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t",
-            "-PxtcDebugAgent=/x/bin/xtc-lsp-server.jar",
         )
 
-        val plain = DebugTasks.commandLine(params.copy(method = null, args = emptyList(), agent = null))
+        val plain = DebugTasks.commandLine(params.copy(method = null, args = emptyList()))
         assertThat(plain.parametersList.list)
             .containsExactly("-q", "runXtc", "--mode=ATTACHED", "--module=App", "-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t")
         assertThat(DebugTasks.commandLine(params.copy(buildMode = "gradle")).parametersList.list).contains("runXtc")
     }
 
     @Test
-    fun `a command-line launch runs xtc run as a command-line Run does, with the debug option and the agent in it`() {
+    fun `a command-line launch runs xtc run as a command-line Run does, with the debug option`() {
         val params =
             DebugTaskParams(
                 sessionId = "s",
@@ -49,7 +47,6 @@ class DebugTasksTest {
                 method = "check",
                 args = listOf("one", "two"),
                 debug = "connect:127.0.0.1:5005,suspend,token=t",
-                agent = "/x/bin/xtc-lsp-server.jar",
                 buildMode = DebugTasks.COMMAND_LINE,
             )
         val command = DebugTasks.commandLine(params)
@@ -60,13 +57,13 @@ class DebugTasksTest {
             "--method",
             "check",
             "--debug",
-            "connect:127.0.0.1:5005,suspend,token=t,agent=/x/bin/xtc-lsp-server.jar",
+            "connect:127.0.0.1:5005,suspend,token=t",
             "App",
             "one",
             "two",
         )
 
-        val plain = DebugTasks.commandLine(params.copy(method = null, args = emptyList(), agent = null))
+        val plain = DebugTasks.commandLine(params.copy(method = null, args = emptyList()))
         assertThat(plain.parametersList.list).containsExactly("run", "--deduce", "--debug", "connect:127.0.0.1:5005,suspend,token=t", "App")
 
         // Run's command line is the same, without --debug

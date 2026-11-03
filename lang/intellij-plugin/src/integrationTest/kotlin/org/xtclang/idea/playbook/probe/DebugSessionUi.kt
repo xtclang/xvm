@@ -81,7 +81,6 @@ import com.redhat.devtools.lsp4ij.dap.settings.UserDefinedDebugAdapterServerSett
 import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
 import org.eclipse.lsp4j.debug.Module
 import org.eclipse.lsp4j.debug.Source
-import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcAttachConfigurationType
@@ -185,10 +184,6 @@ object DebugSessionUi {
             ProgramRunnerUtil.executeConfiguration(settings, DefaultDebugExecutor.getDebugExecutorInstance())
         }
     }
-
-    /** The language server jar of the plugin under test, which a program run with `--debug` takes as its agent. */
-    @JvmStatic
-    fun agent(): String = PluginPaths.findServerJar("xtc-lsp-server.jar").toString()
 
     /**
      * Sets a line breakpoint on the 1-based [breakpointLine] of the module's source and starts Debug of an Ecstasy
