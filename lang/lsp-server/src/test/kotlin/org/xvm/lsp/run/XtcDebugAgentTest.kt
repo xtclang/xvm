@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Programs that the launcher runs with `--debug`, in a JVM of their own from the test classpath, where the launcher
- * finds [XtcDebugAgent] through its service file, as it does in the language server's jar: a debugger attaches over the
+ * finds javatools' `DebugAgent` through its service file, as it does in an XDK: a debugger attaches over the
  * socket before the program's first line, stops it at a breakpoint, or at its first line, and sees it exit; a detach
  * lets it run on without the breakpoints; a wrong token is refused; the agent connects to a debugger that waits for the
  * program; and with no debugger attached, `assert:debug` does not hold the program. A language server's debug session
@@ -415,23 +415,6 @@ class XtcDebugAgentTest {
             assertThat(program.exit()).isEqualTo(0)
             assertThat(program.output).contains("before", "after")
         }
-    }
-
-    @Test
-    fun `the options name a loopback address to listen at or connect to`() {
-        val options = AgentOptions.of("listen:localhost:5005,suspend,token=t")
-        assertThat(options.listen).isTrue()
-        assertThat(options.address.isLoopbackAddress).isTrue()
-        assertThat(options.port).isEqualTo(5005)
-        assertThat(options.suspend).isTrue()
-        assertThat(options.token).isEqualTo("t")
-        assertThat(AgentOptions.of("connect:127.0.0.1:6000").listen).isFalse()
-
-        assertThatThrownBy { AgentOptions.of("listen:192.0.2.1:5005") }.hasMessageContaining("is not a loopback address")
-        assertThatThrownBy { AgentOptions.of("connect:127.0.0.1:0") }.hasMessageContaining("not 0")
-        assertThatThrownBy { AgentOptions.of("attach:127.0.0.1:5005") }.hasMessage(AgentOptions.USAGE)
-        assertThatThrownBy { AgentOptions.of("listen:127.0.0.1") }.hasMessage(AgentOptions.USAGE)
-        assertThatThrownBy { AgentOptions.of("listen:127.0.0.1:5005,quiet") }.hasMessageContaining("Unknown --debug option 'quiet'")
     }
 
     /** Runs a program from its source with `--debug` and the [options] given, in a JVM of its own. */

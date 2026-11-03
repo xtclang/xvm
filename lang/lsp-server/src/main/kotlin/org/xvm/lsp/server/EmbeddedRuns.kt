@@ -36,7 +36,6 @@ import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.RunDebugClient
 import org.xvm.lsp.run.RunListener
 import org.xvm.lsp.run.RunWorkerProcess
-import org.xvm.lsp.run.XtcDebugAgent
 import java.io.Closeable
 import java.io.IOException
 import java.net.InetAddress
@@ -345,7 +344,8 @@ internal class EmbeddedRuns(
                     target.method,
                     target.args,
                     debug,
-                    XtcDebugAgent.jar()?.path,
+                    // the program's own javatools has the debugger agent
+                    null,
                     kind.buildMode,
                 ),
             )
