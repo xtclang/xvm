@@ -288,9 +288,10 @@ public class Runner extends Launcher<RunnerOptions> {
 
     /**
      * Run the program under a debugger outside it, as {@code --debug} asks, with a debugger
-     * provider: the one in the jar that the option's {@code agent=<jar>} names, or one on the
-     * class path. The debugger is installed in the program's runtime when its connector is made,
-     * before the program starts, and the jar is closed once the debugging has ended.
+     * provider: the one in the jar that the option's {@code agent=<jar>} names, or else one on the
+     * class path, such as javatools' own {@link org.xvm.runtime.debug.DebugAgent}. The debugger is
+     * installed in the program's runtime when its connector is made, before the program starts,
+     * and the jar is closed once the debugging has ended.
      *
      * @param options  the options of {@code --debug}
      * @param repo     the repository of the program's modules
@@ -322,10 +323,12 @@ public class Runner extends Launcher<RunnerOptions> {
             return checkErrors("debugger start");
         }
         try {
-            var provider = ServiceLoader.load(DebuggerProvider.class, jar == null ? classes : jar).findFirst();
+            // the class path's providers come first, javatools' own among them, so the jar's own goes ahead of them
+            var providers = ServiceLoader.load(DebuggerProvider.class, jar == null ? classes : jar).stream().toList();
+            var provider  = providers.stream().filter(found -> jar != null && found.type().getClassLoader() == jar)
+                    .findFirst().or(() -> providers.stream().findFirst()).map(ServiceLoader.Provider::get);
             if (provider.isEmpty()) {
-                log(ERROR, "--debug needs a debugger provider, such as the Ecstasy language server's agent;"
-                        + " name its jar with agent=<jar>, or put it on the class path");
+                log(ERROR, "--debug needs a debugger provider; name its jar with agent=<jar>, or put it on the class path");
                 return checkErrors("debugger start");
             }
             DebuggerProvider.Session session;

@@ -2,6 +2,7 @@ package org.xvm.lsp.run
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import org.xvm.runtime.debug.DebugProtocol
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.system.exitProcess
@@ -28,28 +29,25 @@ object FakeRunWorker {
             System.`in`.readAllBytes()
             exitProcess(0)
         }
-        send("ready") {
-            addProperty("pid", ProcessHandle.current().pid())
+        val pid = ProcessHandle.current().pid()
+        send(
             when (mode) {
-                "mismatch" -> IDENTITY.copy(xdk = "other-xdk").addTo(this)
-                "unnumbered" -> {}
-                else -> IDENTITY.addTo(this)
-            }
-        }
+                "mismatch" -> IDENTITY.copy(xdk = "other-xdk").ready(pid)
+                "unnumbered" -> DebugProtocol.Ready(pid, null, null, null)
+                else -> IDENTITY.ready(pid)
+            },
+        )
         BufferedReader(InputStreamReader(System.`in`, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
                 val command = JsonParser.parseString(line).asJsonObject
                 val id = command["id"]?.asLong
                 when (command["command"]?.asString) {
                     "run" -> {
-                        send("started") { addProperty("id", id) }
+                        send(DebugProtocol.Started(id!!))
                         when (val module = command["module"].asString) {
                             "Quick", "Hoard", "Spawn", "Leak", "Unended", "Pool" -> {
                                 output(id, "ok\n")
-                                send("exit") {
-                                    addProperty("id", id)
-                                    addProperty("code", 0)
-                                }
+                                send(DebugProtocol.Exit(id, 0L, null))
                                 usage(
                                     id,
                                     heap = if (module == "Hoard") 4L shl 30 else 1L shl 20,
@@ -68,10 +66,7 @@ object FakeRunWorker {
 
                     "stop" ->
                         if (running[id] != "Stubborn") {
-                            send("exit") {
-                                addProperty("id", id)
-                                addProperty("error", "stopped")
-                            }
+                            send(DebugProtocol.Exit(id!!, null, "stopped"))
                             usage(id, heap = 1L shl 20, threads = 10)
                         }
 
@@ -111,8 +106,12 @@ object FakeRunWorker {
     private fun send(
         event: String,
         fill: JsonObject.() -> Unit,
-    ) {
-        println(JsonObject().apply { addProperty("event", event) }.apply(fill).toString())
+    ) = send(JsonObject().apply { addProperty("event", event) }.apply(fill))
+
+    private fun send(event: DebugProtocol.Event) = send(DebugProtocol.json(event))
+
+    private fun send(json: JsonObject) {
+        println(json.toString())
         System.out.flush()
     }
 }

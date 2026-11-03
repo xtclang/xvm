@@ -3,11 +3,9 @@ import * as vscode from 'vscode';
 import { ATTACH_PORT, debugOption, XtcDebugConfigurationProvider } from '../../debug-adapter';
 
 suite('Debug attach', () => {
-    test('the copied option waits for an attach on this machine, with the server jar as the agent', () => {
-        assert.strictEqual(debugOption('/x/server/lsp-server.jar'),
-            `--debug listen:127.0.0.1:${ATTACH_PORT},suspend,agent=/x/server/lsp-server.jar`);
-        assert.strictEqual(debugOption('C:\\Users\\A B\\lsp-server.jar', 6000),
-            '--debug "listen:127.0.0.1:6000,suspend,agent=C:\\Users\\A B\\lsp-server.jar"');
+    test('the copied option waits for an attach on this machine', () => {
+        assert.strictEqual(debugOption(), `--debug listen:127.0.0.1:${ATTACH_PORT},suspend`);
+        assert.strictEqual(debugOption(6000), '--debug listen:127.0.0.1:6000,suspend');
     });
 
     test('an attach needs no module and starts a debug session in Gradle mode too', async () => {
