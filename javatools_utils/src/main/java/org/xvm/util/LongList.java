@@ -1,5 +1,7 @@
 package org.xvm.util;
 
+import java.util.Arrays;
+
 /**
  * Simple list-like data structure for collecting some longs.
  */
@@ -27,8 +29,8 @@ public class LongList {
         int    cVals = m_cVals;
 
         // check capacity
-        if (aVals == null || aVals.length >= cVals) {
-            aVals   = new long[Math.max(16, cVals * 2)];
+        if (aVals == null || cVals >= aVals.length) {
+            aVals   = Arrays.copyOf(aVals == null ? NO_LONGS : aVals, Math.max(16, cVals * 2));
             m_aVals = aVals;
         }
 
