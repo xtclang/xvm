@@ -10024,7 +10024,8 @@
     "X325": {
       "title": "a stop lists every fiber of the program, with what one that does not wait at a line does, and the stack of a fiber that waits for another service",
       "manual": [
-        "How each editor lists the threads and marks the stopped one is checked manually; VS Code checks the threads and stackTrace answers, IntelliJ the Frames view's threads and frames."
+        "How each editor lists the threads and marks the stopped one is checked manually; VS Code checks the threads and stackTrace answers, IntelliJ the Frames view's threads and frames.",
+        "run() queues its call of finished() while work() runs; the worker service takes the call in as a fiber that has not started only when it next schedules, which may be before the stop or after it, so the stop lists that fiber, last, or does not"
       ],
       "values": {
         "file": "Waits.x",
@@ -10043,7 +10044,8 @@
           ]
         ],
         "output": "done 200000",
-        "exitCode": 64
+        "exitCode": 64,
+        "queuedThread": "Worker (not started)"
       },
       "intellij": {
         "coverage": "full",
