@@ -11,8 +11,9 @@ import org.xvm.runtime.Debugger;
  * A debugger for a program that the launchers run with {@code --debug}, such as an IDE's, which
  * {@link org.xvm.tool.Runner} and {@link org.xvm.tool.TestRunner} find with
  * {@link java.util.ServiceLoader}: on their class path, or in the jar that the option's
- * {@code agent=<jar>} names. javatools has no provider of its own, so without one, {@code --debug}
- * is refused, and the console debugger stays the debugger of {@code assert:debug}.
+ * {@code agent=<jar>} names, which goes ahead of those on the class path. javatools' own,
+ * {@link org.xvm.runtime.debug.DebugAgent}, lets a language server's debug session attach; without
+ * {@code --debug}, the console debugger stays the debugger of {@code assert:debug}.
  */
 public interface DebuggerProvider {
     /**

@@ -2137,7 +2137,7 @@ export function commandLineDebugCases(): void {
 
 /**
  * X336, registered after X335 in catalog order: a debug session attaches to a program that the XDK's xec runs with
- * --debug and this extension's language server jar as its agent, outside the editor.
+ * --debug outside the editor, through the agent that the XDK's javatools has.
  */
 export function attachCases(): void {
     playbook('X336', async (workspace, data) => {
@@ -2146,11 +2146,8 @@ export function attachCases(): void {
         await noErrors(document.uri);
         const xec = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xec.bat' : 'xec');
         assert.ok(await exists(xec), `X336 runs its program with ${xec}; run ./gradlew xdk:installDist first`);
-        const extension = vscode.extensions.getExtension('xtclang.xtc-language');
-        assert.ok(extension, 'The extension under test');
-        const agent = path.join(extension.extensionPath, 'server', 'lsp-server.jar');
         const output = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-attach-'));
-        const program = spawn(xec, ['-o', output, '--debug', `listen:127.0.0.1:0,suspend,agent=${agent}`, document.uri.fsPath],
+        const program = spawn(xec, ['-o', output, '--debug', 'listen:127.0.0.1:0,suspend', document.uri.fsPath],
             { shell: process.platform === 'win32' });
         let printed = '';
         program.stdout.on('data', (chunk: Buffer) => { printed += chunk.toString('utf8'); });

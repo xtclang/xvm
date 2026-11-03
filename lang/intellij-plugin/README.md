@@ -189,7 +189,7 @@ request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The conf
 program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code.
 
 In Gradle and command-line mode, **Debug** has the module's Gradle task (`runXtc`) or `xtc run` run the program under
-the session's debugger, with the launcher's `--debug` and the language server's jar as its agent, in the project
+the session's debugger, with the launcher's `--debug` and the agent in the program's XDK, in the project
 directory; the program connects to the session, and its output goes to the Debug console. Command-line mode runs the
 `xtc` on the `PATH`, whose XDK must have this plugin's javatools, as `xtc run --deduce <module>`, for Run and Debug
 alike: it finds the module by its name in the project directory or, as `xtc init` lays a project out, in its

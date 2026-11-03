@@ -194,12 +194,13 @@ and `xtcDebugAgent` set it for `runXtc`, the other run tasks and `testXtc`; the 
 `debugAgent` properties of `xtcRun`, `xtcTest` or a task set it in the build script:
 
 ```bash
-./gradlew runXtc --module=MyApp -PxtcDebug=listen:127.0.0.1:5005,suspend -PxtcDebugAgent=<the language server's jar>
+./gradlew runXtc --module=MyApp -PxtcDebug=listen:127.0.0.1:5005,suspend
 ```
 
 The program then waits for a debugger, such as VS Code's or IntelliJ's Ecstasy Attach configuration on
-port 5005. The IDEs set these properties themselves when they debug a module in Gradle mode, with
-`connect:` to their own port. `xtcDebugAgent` names the jar the launcher loads the debugger's agent from.
+port 5005. The IDEs set `xtcDebug` themselves when they debug a module in Gradle mode, with `connect:` to
+their own port. The XDK's javatools has the debugger's agent; `xtcDebugAgent` names a jar with another
+one, which the launcher then loads instead.
 A `DIRECT` run cannot be debugged so, since the agent would run in the Gradle daemon; run it with
 `--mode=ATTACHED`. A debugged `testXtc` always runs, and its results are not cached.
 
