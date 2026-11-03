@@ -10545,6 +10545,86 @@
         ]
       }
     },
+    "X340": {
+      "title": "in Gradle mode, a run of the tests of a project's test module runs its testXtc for them, which marks each passed or failed, and Debug of one test has testXtc run it under the debugger, which stops at a breakpoint in it; Continue runs it to its end, which passes it",
+      "manual": [
+        "Needs ./gradlew xdk:installDist and publishLocal first, as X337 does: the project is made as X337 makes its own, at the folder root, and builds with the XTC Gradle plugin and XDK from mavenLocal; its test module, src/test/x/GradleTestedTest.x, is replaced with tests of a class MathTest",
+        "VS Code runs testXtc in a process of its own and reads its output, and IntelliJ in its test console; testXtc takes the tests as --test-class or --test-method and reports them with --test-report=teamcity"
+      ],
+      "values": {
+        "rootEntries": [
+          ".gitignore",
+          ".gradle",
+          "build.gradle.kts",
+          "gradle",
+          "gradle.properties",
+          "gradlew",
+          "gradlew.bat",
+          "settings.gradle.kts",
+          "src",
+          "build/reports",
+          "build/tmp",
+          "build/xtc/main",
+          "build/xtc/test",
+          "build/xtc/xdk",
+          "build/xunit"
+        ],
+        "sharedDirectories": [
+          "build/xtc",
+          "build"
+        ],
+        "catalog": "gradle/libs.versions.toml",
+        "versionPattern": "^xtc = \"([^\"]+)\"$",
+        "mavenLocal": [
+          "org/xtclang/xtc-plugin",
+          "org/xtclang/xdk"
+        ],
+        "statusGradle": "$(tools) Gradle build",
+        "project": "GradleTested",
+        "module": "GradleTestedTest",
+        "testFile": "src/test/x/GradleTestedTest.x",
+        "testSource": "module GradleTestedTest {\n    package app import GradleTested;\n\n    class MathTest {\n        @Test\n        void adds() {\n            assert 1 + 1 == 2;\n        }\n\n        @Test\n        void fails() {\n            Int n = 1;\n            assert n + n == 3 as \"one and one are not three\";\n        }\n\n        @Test\n        void works() {\n            @Inject Console console;\n            console.print(\"inside works\");\n        }\n    }\n}\n",
+        "items": [
+          "GradleTestedTest/",
+          "GradleTestedTest/MathTest",
+          "GradleTestedTest/MathTest.adds",
+          "GradleTestedTest/MathTest.fails",
+          "GradleTestedTest/MathTest.works"
+        ],
+        "passed": [
+          "GradleTestedTest/MathTest.adds",
+          "GradleTestedTest/MathTest.works"
+        ],
+        "failed": "GradleTestedTest/MathTest.fails",
+        "failure": "one and one are not three",
+        "failureLine": 13,
+        "classLine": 4,
+        "classColumn": 10,
+        "debugged": "GradleTestedTest/MathTest.works",
+        "nameLine": 17,
+        "nameColumn": 13,
+        "breakpointLine": 19,
+        "printed": "inside works",
+        "icons": [
+          "Tests of GradleTestedTest@0",
+          "Test MathTest@3",
+          "Test MathTest.adds@5",
+          "Test MathTest.fails@10",
+          "Test MathTest.works@16"
+        ],
+        "runIcon": "Test MathTest",
+        "debugIcon": "Test MathTest.works",
+        "debugRun": "Test MathTest.works",
+        "mainModule": "GradleTested",
+        "mainFile": "src/main/x/GradleTested.x"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "IntelliJ's test console goes to a test's declaration, which its locator finds by the xunit://<selector> location; a failure's message is checked there, and its stack is the console's text, not a location of its own as in VS Code."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

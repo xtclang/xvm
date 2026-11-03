@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **341 scenarios**: X1–X339 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **342 scenarios**: X1–X340 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 341 scenarios: X1–X339 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 342 scenarios: X1–X340 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3950,6 +3950,17 @@ gutter of each test, and of its module and classes, starts.
 | ID | Actions | Expected result |
 |---|---|---|
 | X339 | VS Code: write `Tested.x`, a module with two tests, `adds` and `fails`, whose assertion on line 10 fails with `one and one are not three`, and a class `Inner` with a test `works` that prints `inside works` on line 17. Open the Test Explorer, then Run All Tests. Set a breakpoint on line 17, put the cursor on the name of `works` and choose **Debug Test at Cursor**; when it stops, Continue. | The Test Explorer lists `Tested`, with `adds`, `fails` and `Inner` under it and `works` under `Inner`. Run All marks `adds` and `works` passed and `fails` failed, with the message `one and one are not three` on line 10 of `Tested.x`; the test output shows `inside works`. The debug session stops on line 17 in `works`; Continue runs it to its end, and `works` is marked passed. IntelliJ: the gutter has a test icon on the lines of `Tested`, `adds`, `fails`, `Inner` and `works`; Run of `Tested`'s icon shows the test console, with `adds` and `works` passed and `fails` failed with its message, and each test goes to its declaration; Debug of `works`' icon stops at the breakpoint, with the test console in the session's Tests tab, and Resume passes `works` alone. |
+
+### Running and debugging tests in Gradle mode (X340)
+
+As X337, this needs `./gradlew xdk:installDist` and `publishLocal` first, and makes its project at the folder root
+with `xtc init`, building with the XTC Gradle plugin and XDK from `mavenLocal`. In Gradle mode the tests run with the
+project's `testXtc`, which takes them as `--test-class` and `--test-method`, and reports them with
+`--test-report=teamcity`: VS Code runs it in a process of its own and reads its output, IntelliJ in its test console.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X340 | Make the application project `GradleTested` as X337 makes `GradleDebugged`, choose the Gradle build mode, and replace `src/test/x/GradleTestedTest.x` with a class `MathTest` with the tests `adds`, `fails`, whose assertion on line 13 fails with `one and one are not three`, and `works`, which prints `inside works` on line 19. Run the tests of `MathTest` (VS Code: the cursor on its name, **Run Test at Cursor**; IntelliJ: Run of its gutter icon). Set a breakpoint on line 19 and debug `works` (VS Code: **Debug Test at Cursor** on its name; IntelliJ: Debug of its icon); when it stops, continue. | The run runs `./gradlew -q testXtc --module=GradleTestedTest --test-class=MathTest --test-report=teamcity` and marks `adds` and `works` passed and `fails` failed with its message (VS Code: on line 13). Debug runs `testXtc` with `--test-method=MathTest.works` under the debugger, which stops on line 19; continuing runs `works` to its end, and it passes, alone. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
