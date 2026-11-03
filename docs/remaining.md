@@ -136,7 +136,10 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   Decided 2026-10-29: the IntelliJ playbook runs in a Linux container on Xvfb, where nothing else
   is in front (`lang/intellij-plugin/container/playbook.sh`, in `testing.md`); X307 passes there 3
   of 3 on 0.21.0. To do: X312 runs in IntelliJ only with LSP4IJ's fixes, so check it there with
-  the 0.30.0 branch.
+  the 0.30.0 branch. Tried on 2026-11-03 on errs with `-Plsp4ijChannel=nightly` and X312 made
+  full for the runs: the plugin does not compile against the nightly, whose formatting API takes a
+  list of ranges where `XtcFormattingService` (UP12) passes one, which the 0.30.0 bump adapts. So the
+  check waits for the bump.
 - [x] The server never deleted its `xtc-library-sources-*` temporary directories
   (`XdkLibrarySources`); 2,068 had piled up by 2026-10-28. A JVM shutdown hook now deletes the
   directory when the server exits (`4cf5450acd`; `LibraryCopiesCleanupTest` in compilerStdioTest).
@@ -154,7 +157,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   row is chosen in one IDE step each, so a closed popup reads as absent and the wait reopens it
   through the guard (`803e8a7af`; `focusRecovery` `run-10337819264986324821`, 31 cases
   `run-8746776659092611335`). Mirrored into #693 as `b7d5d1ad2`.
-- [ ] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state. It
+- [x] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
+  Closed as not reproduced (2026-11-03): in the playbook container X105 passed 3 of 3 alone
+  (`run-10494949670890475220`, `run-10319767511418774313`, `run-5892947025783048634`) and in a run of
+  X1-X105, 105 cases, all passing (`run-8208552682292234518`), on top of the 21 runs below. Reopen it
+  with the run's logs if it recurs. It
   hasn't recurred in the 277- and 284-case runs, but it was never diagnosed. Tried on 2026-10-21 with
   the 79 cases that ran before it in `run-8615971651239916856`: X105 passes on the current code, with
   the UP07 equal-report bridge off (`run-1679585523095307991`), and with that bridge off and fixture
