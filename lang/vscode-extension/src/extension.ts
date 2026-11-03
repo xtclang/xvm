@@ -124,7 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Setup LSP server
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));
     const serverExists = fs.existsSync(serverJar);
-    registerDebugOption(context, serverJar);
+    registerDebugOption(context);
 
     // Keep control in the extension host, including when the language-server process has failed.
     let controlClosed = false;
