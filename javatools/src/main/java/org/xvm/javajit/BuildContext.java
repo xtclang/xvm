@@ -117,6 +117,7 @@ import static org.xvm.javajit.JitFlavor.PrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 import static org.xvm.javajit.TypeSystem.HASH;
 
@@ -799,9 +800,11 @@ public class BuildContext {
 
             switch (flavor) {
             case Primitive, Specific, Widened: {
+                flavor = adjustFlavor(paramDesc, type);
+
                 TypeConstant regType = flavor == Primitive ? paramDesc.type : type;
                 registerInfos.put(varIndex,
-                    new SingleSlot(varIndex, slot, flavor, regType, paramDesc.cd, name));
+                        new SingleSlot(varIndex, slot, flavor, regType, paramDesc.cd, name));
                 break;
             }
 
@@ -831,9 +834,11 @@ public class BuildContext {
                 Builder.store(code, paramDesc.cd, slot);
                 code.labelBinding(ifNotDefault);
 
-                TypeConstant regType = flavor == PrimitiveWithDefault ? paramDesc.type : type;
-                registerInfos.put(varIndex, new SingleSlot(varIndex, slot, flavor.baseFlavor,
-                        regType, paramDesc.cd, name));
+                flavor = adjustFlavor(paramDesc, type);
+
+                TypeConstant regType = flavor == Primitive ? paramDesc.type : type;
+                registerInfos.put(varIndex,
+                        new SingleSlot(varIndex, slot, flavor, regType, paramDesc.cd, name));
                 break;
             }
 
@@ -950,6 +955,29 @@ public class BuildContext {
             }
         typeMatrix.declare(-1, varIndex, type);
         }
+    }
+
+    /**
+     * Adjust the parameter's base flavor to reflect differences between its JVM descriptor and
+     * resolved source type. Generic signatures can retain a wider reference type; treating
+     * such a {@link JitFlavor#Specific} parameter as {@link JitFlavor#Widened} ensures that
+     * subsequent operations emit any required casts without changing the JVM signature.
+     *
+     * @param paramDesc  the parameter descriptor from the method signature, defining the incoming
+     *                   JVM representation
+     * @param type       the source parameter type resolved for this method body, which may be
+     *                   more specific than the signature's type
+     *
+     * @return the base flavor, widened if required by the resolved source type
+     */
+    protected JitFlavor adjustFlavor(JitParamDesc paramDesc, TypeConstant type) {
+        JitFlavor flavor = paramDesc.flavor;
+        if (flavor.baseFlavor != null) {
+            flavor = flavor.baseFlavor;
+        }
+        return flavor == Specific && !paramDesc.type.isJitAssignableTo(type)
+                ? Widened
+                : flavor;
     }
 
     /**
