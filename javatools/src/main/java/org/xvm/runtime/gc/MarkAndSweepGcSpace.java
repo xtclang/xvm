@@ -322,7 +322,7 @@ public class MarkAndSweepGcSpace<V>
             anFreeSlotsNew[i] = capOld + i;
         }
 
-        this.m_nTopFree = capNew - capOld;
+        this.m_nTopFree = capNew - capOld - 1;
         this.m_anFreeSlots = anFreeSlotsNew;
         this.m_aObjects = aObjectsNew;
     }
