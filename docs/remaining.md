@@ -519,6 +519,21 @@ recorded partial coverage.
   `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
   to the language server; Gradle-mode and command-line Debug connect back, `xec` listens for an
   attach. Still to come: running and debugging tests.
+- [x] R13: the debugger agent in the XDK (2026-11-03). The agent and the program's side of the
+  debug protocol moved from the language server's Kotlin (`XtcDebugAgent`, `RunDebuggers`,
+  `RunWorkerDebug`) to javatools' `org.xvm.runtime.debug`, next to `SessionDebugger`, so that
+  `--debug` needs no `agent=`: `DebugAgent` is the provider, registered in javatools' service file,
+  and `DebugCommands` answers the worker's and the agent's debug commands alike. The protocol is
+  defined once, as Java records in `DebugProtocol` that both ends serialize with Gson; the language
+  server builds the request records and maps their answers to the debug adapter's data classes
+  (`DebugRecords.kt`), so no command, event or field name is written in both languages. Protocol 25;
+  the server passes no `agent=`, and `Runner` prefers a provider in an `agent=<jar>` over the class
+  path's. Validated in the playbook container: VS Code X285, X304–X331 and X336–X338, and IntelliJ's
+  24 implemented debugger cases, pass or keep their recorded partial coverage; X325 (VS Code) and
+  X337 (IntelliJ) failed once each on timing, a fiber of the next call caught before it starts and
+  the task's last output after the program's exit, and passed twice each when run again. Not done:
+  the editors' Copy Option and X336 still pass `agent=<the language server's jar>`, which works but
+  is redundant.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and

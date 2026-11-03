@@ -671,6 +671,12 @@ this bridge; they cannot be inferred from compiler type hints.
     VS Code refuses such a task, saying why. Limits: the `xtc` on the `PATH` runs it, so its XDK must
     have this javatools; `--deduce` looks in `src/main/x` only when the project directory has no `.x`
     files of its own (javatools' `ModuleInfo` searches up from a directory with sources, never down).
+  - *Done (2026-11-03): the agent in javatools.* The agent and the program's side of the protocol
+    are javatools' `org.xvm.runtime.debug` (`DebugAgent`, `DebugCommands`, `DebugChannel`), next to
+    `SessionDebugger`, so an XDK has the agent and `--debug` needs no `agent=`. The protocol is
+    `DebugProtocol`'s Java records, one per command and event, which both ends serialize with Gson
+    by their components' names; the language server maps their answers to the debug adapter's data
+    classes. Protocol 25.
 
 Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
 execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;
