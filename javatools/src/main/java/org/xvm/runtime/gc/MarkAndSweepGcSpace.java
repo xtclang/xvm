@@ -88,7 +88,7 @@ public class MarkAndSweepGcSpace<V>
         }
 
         int slot = slot(address);
-        return slot < m_aObjects.length && m_aObjects[slot] != null;
+        return slot >= 0 && slot < m_aObjects.length && m_aObjects[slot] != null;
     }
 
     /**
