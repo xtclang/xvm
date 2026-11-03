@@ -1,6 +1,6 @@
 /**
  * TeamCity service messages, as xunit prints a test run's progress for an editor (`xvm.xunit.report=teamcity`):
- * one per line, `##teamcity[testStarted name='adds()' nodeId='...' locationHint='xunit:adds']`, each attribute value
+ * one per line, `##teamcity[testStarted name='adds()' nodeId='...' locationHint='xunit://adds']`, each attribute value
  * quoted with `'`, and `|` escaping the quote, itself, the line ends and the square brackets.
  */
 export interface ServiceMessage {
@@ -30,10 +30,13 @@ export function parseServiceMessage(line: string): ServiceMessage | undefined {
     return { name, attributes };
 }
 
+/** The prefix of a `locationHint`, `protocol://path`, whose path is an xunit selector. */
+const XUNIT = 'xunit://';
+
 /** The xunit selector a message's `locationHint` names, such as `tests.MathTest.adds`, or undefined. */
 export function selectorOf(message: ServiceMessage): string | undefined {
     const hint = message.attributes.locationHint;
-    return hint?.startsWith('xunit:') ? hint.slice('xunit:'.length) : undefined;
+    return hint?.startsWith(XUNIT) ? hint.slice(XUNIT.length) : undefined;
 }
 
 /**
