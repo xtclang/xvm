@@ -2013,28 +2013,34 @@ class XdkAdapter
             val model =
                 analysis(uri)?.semantics?.takeIf { it.status == SemanticModel.Status.COMPLETE }
                     ?: return null
-            model.importAt(line, column)?.let { alias ->
-                val ranges = (listOf(alias.declaration) + alias.uses).distinct().sortedBy { it.start }
-                return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it.map { range -> range.toRange() }) }
+
+            fun linkedAt(at: Int): LinkedEditingRanges? {
+                model.importAt(line, at)?.let { alias ->
+                    val ranges = (listOf(alias.declaration) + alias.uses).distinct().sortedBy { it.start }
+                    return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it.map { range -> range.toRange() }) }
+                }
+                val symbol =
+                    model.symbolAt(line, at)?.takeIf {
+                        // Lambda arguments are positional and their names are local to this source.
+                        // Method parameters have callable slots and may have named callers elsewhere;
+                        // those require the complete graph rename operation, even for private methods.
+                        it.renameable && it.declarationSource == model.sourceName &&
+                            (
+                                it.kind == SemanticModel.SymbolKind.VARIABLE ||
+                                    (it.kind == SemanticModel.SymbolKind.PARAMETER && it.id !in model.parameters)
+                            )
+                    } ?: return null
+                val ranges =
+                    model.occurrences
+                        .filter { it.symbol == symbol.id && it.name == symbol.name }
+                        .map { it.range.toRange() }
+                        .distinct()
+                        .sortedWith(compareBy({ it.start.line }, { it.start.column }))
+                return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it) }
             }
-            val symbol =
-                model.symbolAt(line, column)?.takeIf {
-                    // Lambda arguments are positional and their names are local to this source.
-                    // Method parameters have callable slots and may have named callers elsewhere;
-                    // those require the complete graph rename operation, even for private methods.
-                    it.renameable && it.declarationSource == model.sourceName &&
-                        (
-                            it.kind == SemanticModel.SymbolKind.VARIABLE ||
-                                (it.kind == SemanticModel.SymbolKind.PARAMETER && it.id !in model.parameters)
-                        )
-                } ?: return null
-            val ranges =
-                model.occurrences
-                    .filter { it.symbol == symbol.id && it.name == symbol.name }
-                    .map { it.range.toRange() }
-                    .distinct()
-                    .sortedWith(compareBy({ it.start.line }, { it.start.column }))
-            return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it) }
+            // Editors ask at the caret, which is usually just after the name being typed. Ranges are half-open,
+            // so the name which ends at the position links when no name contains it.
+            return linkedAt(column) ?: column.takeIf { it > 0 }?.let { linkedAt(it - 1) }
         }
 
         override fun getInlayHints(
