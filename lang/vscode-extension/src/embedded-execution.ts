@@ -54,18 +54,27 @@ interface BuildResponse {
     outputDirectory?: string;
 }
 
-interface RunResponse {
+export interface RunResponse {
     runId?: string;
     build: BuildResponse;
 }
 
 /** Where a run's events go; the server reports by the run ID the client chose. */
-interface RunSession {
+export interface RunSession {
     output(text: string): void;
     exited(exitCode: number | undefined, error: string | undefined): void;
 }
 
 const sessions = new Map<string, RunSession>();
+
+/**
+ * Sends the output and the exit that the server reports for [runId] to [session] until disposed, as a run that is
+ * not a task's has them, such as a test run's.
+ */
+export function trackRun(runId: string, session: RunSession): vscode.Disposable {
+    sessions.set(runId, session);
+    return new vscode.Disposable(() => sessions.delete(runId));
+}
 
 /**
  * A build or run as its terminal shows it: the text written so far (its last `KEPT_TEXT` characters), and the
@@ -133,7 +142,7 @@ function severityLabel(severity: number | undefined): string {
 }
 
 /** Prints module outcomes and diagnostics as `file:line:column` lines, which the terminal links to sources. */
-function describeBuild(build: BuildResponse): string {
+export function describeBuild(build: BuildResponse): string {
     const lines: string[] = [];
     for (const module of build.modules) {
         if (module.succeeded) {

@@ -130,7 +130,7 @@ internal class DebugSessions(
             logger.info("debug session launches a run: session={} run={}", session, runId)
             return runs
                 .launch(
-                    RunParams(target.module, target.method, target.args, target.workingDirectory, runId, target.moduleName),
+                    RunParams(target.module, target.method, target.args, target.workingDirectory, runId, target.moduleName, target.tests),
                     listener(events),
                     ready,
                 ).thenApply { LaunchResult(it.runId, describe(it.build)) }
