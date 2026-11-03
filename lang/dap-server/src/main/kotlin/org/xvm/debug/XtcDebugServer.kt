@@ -160,6 +160,10 @@ class XtcDebugServer(
     @Volatile
     private var programName = "program"
 
+    /** True for a launch that runs tests, whose service messages are for the client's test view, not its console. */
+    @Volatile
+    private var testing = false
+
     /** True once the launched program has started. */
     @Volatile
     private var started = false
@@ -234,6 +238,9 @@ class XtcDebugServer(
 
         /** An exception class's name, as an exception filter's condition names it. */
         private val EXCEPTION_TYPE = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+        /** How a line of a test run's output that is a TeamCity service message, one per test event, starts. */
+        private const val SERVICE_MESSAGE = "##teamcity["
 
         /** What an exception filter's condition is. */
         const val EXCEPTION_TYPES =
@@ -595,6 +602,7 @@ class XtcDebugServer(
         debugging = args?.get("noDebug") != true
         evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
+        testing = target.tests != null
         val stopOnEntry = args?.get("stopOnEntry") == true
         if (task != null) {
             return launchWithTask(target, task, stopOnEntry)
@@ -1213,7 +1221,18 @@ class XtcDebugServer(
 
     private val events =
         object : ProgramEvents {
-            override fun output(text: String) = output(OutputEventArgumentsCategory.STDOUT, text)
+            override fun output(text: String) =
+                output(
+                    // the editors read a test run's service messages from its output, and show telemetry nowhere
+                    if (testing &&
+                        text.startsWith(SERVICE_MESSAGE)
+                    ) {
+                        OutputEventArgumentsCategory.TELEMETRY
+                    } else {
+                        OutputEventArgumentsCategory.STDOUT
+                    },
+                    text,
+                )
 
             override fun exited(
                 code: Long?,
