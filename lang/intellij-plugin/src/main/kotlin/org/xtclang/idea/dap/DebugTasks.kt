@@ -29,6 +29,9 @@ internal object DebugTasks {
     /** The `buildMode` of a command-line launch, whose task is `xtc run`. */
     const val COMMAND_LINE = "commandLine"
 
+    /** How a line of a test run's output that is xunit's TeamCity service message starts. */
+    private const val SERVICE_MESSAGE = "##teamcity["
+
     fun run(
         project: Project,
         params: DebugTaskParams,
@@ -49,9 +52,14 @@ internal object DebugTasks {
                     outputType: Key<*>,
                 ) {
                     val category =
-                        when (outputType) {
-                            ProcessOutputTypes.STDOUT -> "stdout"
-                            ProcessOutputTypes.STDERR -> "stderr"
+                        when {
+                            // a test run's service messages are for the session's Tests tab, not its console
+                            params.tests != null && event.text.startsWith(SERVICE_MESSAGE) -> "telemetry"
+
+                            outputType == ProcessOutputTypes.STDOUT -> "stdout"
+
+                            outputType == ProcessOutputTypes.STDERR -> "stderr"
+
                             else -> return
                         }
                     DebugSessions.getInstance(project).output(params.sessionId, event.text, category)
@@ -71,7 +79,21 @@ internal object DebugTasks {
      * The task's command line: for a command-line launch, `xtc run` as a command-line Run runs the module, with
      * `--debug`; otherwise the Gradle wrapper's, the module's run with the debug property.
      */
-    internal fun commandLine(params: DebugTaskParams): GeneralCommandLine =
+    internal fun commandLine(params: DebugTaskParams): GeneralCommandLine {
+        val tests = params.tests ?: return runCommandLine(params)
+        return if (params.buildMode == COMMAND_LINE) {
+            XtcRunConfiguration.xtcTestCommandLine(params.module, tests, params.debug)
+        } else {
+            GeneralCommandLine(XtcRunConfiguration.gradleWrapper()).apply {
+                addParameters("-q", "testXtc", "--mode=ATTACHED", "--module=${params.module}")
+                addParameters(XtcRunConfiguration.gradleTestOptions(tests))
+                addParameter("-PxtcDebug=${params.debug}")
+            }
+        }
+    }
+
+    /** A debugged run's command line, `xtc run`'s or the Gradle run's, as [commandLine] has it for a launch without tests. */
+    private fun runCommandLine(params: DebugTaskParams): GeneralCommandLine =
         if (params.buildMode == COMMAND_LINE) {
             XtcRunConfiguration.xtcCommandLine(params.module, params.method, params.args, params.debug)
         } else {

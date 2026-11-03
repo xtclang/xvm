@@ -1779,7 +1779,7 @@ internal fun ParityScenarios.commandLineDebugCases() {
  * ./gradlew, with the project in Gradle mode, runs [body] with it, and removes it again, with the mode as it was. Its
  * build takes the XTC Gradle plugin and XDK last published to mavenLocal.
  */
-private fun ParityWorkspace.gradleProject(
+internal fun ParityWorkspace.gradleProject(
     id: String,
     data: JsonObject,
     body: (Project, EmbeddedExecutionProbe) -> Unit,
