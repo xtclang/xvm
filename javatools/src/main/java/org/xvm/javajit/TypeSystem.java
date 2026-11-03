@@ -559,8 +559,11 @@ public class TypeSystem {
                 // the type suffix identifies the class even when it is nested inside a method
                 ClassStructure struct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
                 if (struct.isParameterized() && type.getParamsCount() == 0) {
-                    // the builder requires the formal type to compile a generic parameterized class
-                    type = struct.getFormalType();
+                    // the builder requires the formal type to compile a generic parameterized class;
+                    // retain annotations so their constructors and methods are generated
+                    type = type.isAnnotated()
+                            ? struct.getFormalType().adoptAnnotations(pool(), type)
+                            : struct.getFormalType();
                 }
                 return new Artifact(type, struct, shape, className);
             } else {
