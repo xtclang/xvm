@@ -197,6 +197,40 @@ class ModuleInfoTest {
     }
 
     /**
+     * deduce=true finds a module named from the project directory in src/main/x, also when the
+     * project directory has other source files of its own, as xtc run's working directory may.
+     */
+    @Test
+    void testDeduceTrueFindsNamedModuleInSrcMainXPastOtherSources() throws IOException {
+        var srcMainX = Files.createDirectories(tempDir.resolve("src/main/x"));
+        Files.writeString(srcMainX.resolve("Hello.x"), "module Hello {}");
+        Files.writeString(tempDir.resolve("Other.x"), "module Other {}");
+
+        var info = new ModuleInfo(tempDir.resolve("Hello").toFile(), true);
+
+        assertEquals(srcMainX.resolve("Hello.x").toFile().getCanonicalFile(), info.getSourceFile().getCanonicalFile());
+        assertEquals(tempDir.toFile().getCanonicalFile(), info.getProjectDir().getCanonicalFile());
+        assertEquals("Hello", info.getFileName());
+    }
+
+    /**
+     * deduce=true still prefers a module's source in the directory searched first, and
+     * deduce=false never looks in the project's source directories.
+     */
+    @Test
+    void testNamedModuleBesideOtherSources() throws IOException {
+        var srcMainX = Files.createDirectories(tempDir.resolve("src/main/x"));
+        Files.writeString(srcMainX.resolve("Hello.x"), "module Hello {}");
+        Files.writeString(tempDir.resolve("Other.x"), "module Other {}");
+
+        var info = new ModuleInfo(tempDir.resolve("Other").toFile(), true);
+        assertEquals(tempDir.resolve("Other.x").toFile().getCanonicalFile(), info.getSourceFile().getCanonicalFile());
+
+        var exact = new ModuleInfo(tempDir.resolve("Hello").toFile(), false);
+        assertFalse(exact.getSourceFile().exists());
+    }
+
+    /**
      * deduce=true recognizes src/main/ecstasy as source directory.
      */
     @Test
