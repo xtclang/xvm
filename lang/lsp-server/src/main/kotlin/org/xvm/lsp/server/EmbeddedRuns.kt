@@ -128,7 +128,9 @@ data class RunExitedParams(
  * `xtc/debugTask` parameters: the task that runs a debug session's ([sessionId]) module under the debugger, its
  * Gradle task or the xtc command, as the launch's [buildMode] says ([DebugTask.buildMode]): the module's [module],
  * [method] and [args], as a Gradle run or `xtc run` takes them, with the launcher's `--debug` options [debug], which a
- * Gradle task takes as the Gradle property `xtcDebug`. The program's XDK has the debugger's agent.
+ * Gradle task takes as the Gradle property `xtcDebug`. The program's XDK has the debugger's agent. With [tests], the
+ * task runs those tests of the module instead, as `testXtc` or `xtc test` take them, all of them for an empty list,
+ * with xunit's TeamCity report.
  */
 data class DebugTaskParams(
     val sessionId: String,
@@ -137,6 +139,7 @@ data class DebugTaskParams(
     val args: List<String>,
     val debug: String,
     val buildMode: String,
+    val tests: List<TestSelector>? = null,
 )
 
 /** The end of an `xtc/debugTask`: the task's exit code, when it has one. */
@@ -359,6 +362,7 @@ internal class EmbeddedRuns(
                     target.args,
                     debug,
                     kind.buildMode,
+                    target.tests,
                 ),
             )
         val run = TaskRun(kind, task, server)

@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { gradleDebugCommand, XtcDebugConfigurationProvider } from '../../debug-adapter';
+import { gradleDebugCommand, gradleTestArgs, XtcDebugConfigurationProvider } from '../../debug-adapter';
 
 suite('Gradle-mode debugging', () => {
     test('the debug task runs the module in a JVM of its own, with the debug properties', () => {
@@ -23,6 +23,16 @@ suite('Gradle-mode debugging', () => {
         });
     });
 
+    test('testXtc runs the chosen tests of the module, all of them for none, with xunit\'s TeamCity report', () => {
+        assert.deepStrictEqual(gradleTestArgs('MathyTest', [
+            { selector: 'tests', kind: 'package' },
+            { selector: 'Inner', kind: 'class' },
+            { selector: 'Inner.works', kind: 'test' },
+        ]), ['-q', 'testXtc', '--module=MathyTest', '--test-package=tests', '--test-class=Inner', '--test-method=Inner.works',
+            '--test-report=teamcity']);
+        assert.deepStrictEqual(gradleTestArgs('MathyTest', []), ['-q', 'testXtc', '--module=MathyTest', '--test-report=teamcity']);
+    });
+
     test('a Debug launch in Gradle mode starts a debug session that Gradle runs the module for', async () => {
         const settings = () => vscode.workspace.getConfiguration('xtc');
         const before = settings().inspect<string>('build.mode')?.workspaceValue;
@@ -32,6 +42,9 @@ suite('Gradle-mode debugging', () => {
             const launch = { type: 'xtc', request: 'launch', name: 'Debug App', module: 'App' };
             assert.deepStrictEqual(await provider.resolveDebugConfiguration(undefined, { ...launch }),
                 { ...launch, buildMode: 'gradle' });
+            // a Test Explorer debug run of tests too: the module's testXtc runs them
+            const tests = { ...launch, tests: [{ selector: 'Inner.works', kind: 'test' }] };
+            assert.deepStrictEqual(await provider.resolveDebugConfiguration(undefined, { ...tests }), { ...tests, buildMode: 'gradle' });
         } finally {
             await settings().update('build.mode', before, vscode.ConfigurationTarget.Workspace);
         }
