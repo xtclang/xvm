@@ -31,8 +31,6 @@ export interface DebugTaskParams {
     args: string[];
     /** The value of the Gradle property `xtcDebug`: the launcher's `--debug`, which connects to the debug session. */
     debug: string;
-    /** The value of the Gradle property `xtcDebugAgent`: the jar of the debugger's agent. */
-    agent?: string;
     /** The launch's `buildMode`: `gradle`, or `commandLine` for `xtc run`, which VS Code does not run. */
     buildMode?: string;
 }
@@ -52,7 +50,6 @@ export function gradleDebugCommand(params: DebugTaskParams, platform = process.p
             ...(params.method ? [`--method=${params.method}`] : []),
             ...(params.args.length > 0 ? [`--args=${params.args.join(',')}`] : []),
             `-PxtcDebug=${params.debug}`,
-            ...(params.agent ? [`-PxtcDebugAgent=${params.agent}`] : []),
         ],
     };
 }
@@ -201,17 +198,16 @@ export const ATTACH_PORT = 5005;
 
 /**
  * The `--debug` option of `xec` and `xtc run` for a program that an "Ecstasy: Attach" configuration debugs: it waits
- * before its first line, on [port] of this machine, and this language server's jar is its debugger agent.
+ * before its first line, on [port] of this machine. The program's XDK has the debugger's agent.
  */
-export function debugOption(serverJar: string, port = ATTACH_PORT): string {
-    const value = `listen:127.0.0.1:${port},suspend,agent=${serverJar}`;
-    return /\s/.test(value) ? `--debug "${value}"` : `--debug ${value}`;
+export function debugOption(port = ATTACH_PORT): string {
+    return `--debug listen:127.0.0.1:${port},suspend`;
 }
 
 /** The "Copy Option to Debug a Program Outside the Editor" command, which copies [debugOption]. */
-export function registerDebugOption(context: vscode.ExtensionContext, serverJar: string): void {
+export function registerDebugOption(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.commands.registerCommand('xtc.debug.copyOption', async () => {
-        const option = debugOption(serverJar);
+        const option = debugOption();
         await vscode.env.clipboard.writeText(option);
         void vscode.window.showInformationMessage(
             `Copied ${option}. Run the program with it, as in xec ${option} App.x, then start an "Ecstasy: Attach to Program" configuration on port ${ATTACH_PORT}.`);
