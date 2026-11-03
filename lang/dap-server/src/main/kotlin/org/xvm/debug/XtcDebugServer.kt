@@ -160,6 +160,10 @@ class XtcDebugServer(
     @Volatile
     private var programName = "program"
 
+    /** True for a launch that runs tests, whose service messages are for the client's test view, not its console. */
+    @Volatile
+    private var testing = false
+
     /** True once the launched program has started. */
     @Volatile
     private var started = false
@@ -234,6 +238,9 @@ class XtcDebugServer(
 
         /** An exception class's name, as an exception filter's condition names it. */
         private val EXCEPTION_TYPE = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+        /** How a line of a test run's output that is a TeamCity service message, one per test event, starts. */
+        private const val SERVICE_MESSAGE = "##teamcity["
 
         /** What an exception filter's condition is. */
         const val EXCEPTION_TYPES =
@@ -571,7 +578,8 @@ class XtcDebugServer(
      * program at its first line, and `evaluationRunsProgram`, which lets the whole program run while code from the
      * console does. With `buildMode` `gradle` or `commandLine`, the client builds and runs the module instead, with
      * its Gradle task or the xtc command, and the session attaches to the program once it connects, answering then
-     * ([DebugRuns.launchWithTask]); such a run without the debugger is the task itself, so `noDebug` is refused.
+     * ([DebugRuns.launchWithTask]); such a run without the debugger is the task itself, so `noDebug` is refused. With
+     * `tests`, an array of `{selector, kind}`, xunit runs those tests of the module instead, embedded only.
      */
     override fun launch(args: Map<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
@@ -585,17 +593,28 @@ class XtcDebugServer(
         if (task != null && args?.get("noDebug") == true) {
             return failed("A ${task.mode} run without the debugger is the module's ${task.task}; run that instead.")
         }
+        if (task != null && target.tests != null) {
+            return failed("Tests run embedded; a ${task.mode} launch does not run them.")
+        }
         if (!launched.compareAndSet(false, true)) {
             return failed("This debug session has already launched a program.")
         }
         debugging = args?.get("noDebug") != true
         evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
+        testing = target.tests != null
         val stopOnEntry = args?.get("stopOnEntry") == true
         if (task != null) {
             return launchWithTask(target, task, stopOnEntry)
         }
-        console("Building and running ${target.moduleName ?: target.module} with the embedded compiler...")
+        val name = target.moduleName ?: target.module
+        console(
+            if (target.tests == null) {
+                "Building and running $name with the embedded compiler..."
+            } else {
+                "Building $name with the embedded compiler and running its tests..."
+            },
+        )
         val ready =
             configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
                 if (debugging) {
@@ -1202,7 +1221,18 @@ class XtcDebugServer(
 
     private val events =
         object : ProgramEvents {
-            override fun output(text: String) = output(OutputEventArgumentsCategory.STDOUT, text)
+            override fun output(text: String) =
+                output(
+                    // the editors read a test run's service messages from its output, and show telemetry nowhere
+                    if (testing &&
+                        text.startsWith(SERVICE_MESSAGE)
+                    ) {
+                        OutputEventArgumentsCategory.TELEMETRY
+                    } else {
+                        OutputEventArgumentsCategory.STDOUT
+                    },
+                    text,
+                )
 
             override fun exited(
                 code: Long?,
@@ -1440,8 +1470,23 @@ class XtcDebugServer(
             method = (args["method"] as? String)?.takeIf { it.isNotBlank() },
             args = arguments,
             workingDirectory = ((args["workingDirectory"] ?: args["cwd"]) as? String)?.takeIf { it.isNotBlank() },
+            tests = tests(args["tests"]),
         )
     }
+
+    /** A launch's `tests`: each with its xunit `selector` and its `kind`; null when the launch runs no tests. */
+    private fun tests(given: Any?): List<TestSelector>? =
+        when (given) {
+            null -> null
+
+            is List<*> ->
+                given.map { test ->
+                    val fields = test as? Map<*, *> ?: throw IllegalArgumentException("A test is an object with a selector and a kind")
+                    TestSelector(fields["selector"]?.toString().orEmpty(), fields["kind"]?.toString() ?: "test")
+                }
+
+            else -> throw IllegalArgumentException("Launch tests must be an array")
+        }
 
     private fun error(message: String) = ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, message, null))
 

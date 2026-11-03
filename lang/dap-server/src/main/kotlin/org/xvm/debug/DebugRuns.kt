@@ -7,7 +7,8 @@ import kotlin.time.Duration
 /**
  * What a debug session launches: the module to build and run, as the language server's `xtc/run` takes it.
  * [module] is a module name or a source URI of the module; [moduleName] still finds the module when that URI no
- * longer names one. [args] are passed to the entry method as given.
+ * longer names one. [args] are passed to the entry method as given. With [tests], xunit runs the module's tests that
+ * they select instead, all of them for an empty list, and the entry method and its arguments are not used.
  */
 data class LaunchTarget(
     val module: String,
@@ -15,6 +16,16 @@ data class LaunchTarget(
     val method: String? = null,
     val args: List<String> = emptyList(),
     val workingDirectory: String? = null,
+    val tests: List<TestSelector>? = null,
+)
+
+/**
+ * A test of a module, or a container of tests, to run: its xunit [selector], the path of a package, class or test
+ * method in its module, and its [kind], `package`, `class` or `test`; a `module` selects every test of the module.
+ */
+data class TestSelector(
+    val selector: String,
+    val kind: String,
 )
 
 /**

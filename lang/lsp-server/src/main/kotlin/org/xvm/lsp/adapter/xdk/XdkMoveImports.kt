@@ -25,10 +25,10 @@ internal object XdkMoveImports {
         val names = texts.flatMap { Lexer(Source(it), errors).asSequence().map { token -> token.valueText }.toList() }.toSet()
         val aliases = XdkMemberActions.moduleAliases(modules, emptyMap(), names)
 
-        fun nodes(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::nodes)
         val parsed = Parser(Source(root), errors).parseSource() ?: return null
         val module =
-            nodes(parsed).filterIsInstance<TypeCompositionStatement>().singleOrNull { it.category.id == Token.Id.MODULE } ?: return null
+            parsed.descendants().filterIsInstance<TypeCompositionStatement>().singleOrNull { it.category.id == Token.Id.MODULE }
+                ?: return null
         if (errors.hasSeriousErrors()) return null
         val start = module.ensureBody().startPosition
         val position = SemanticModel.Position(Source.calculateLine(start), Source.calculateOffset(start) + 1)

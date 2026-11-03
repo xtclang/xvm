@@ -199,3 +199,6 @@ internal object XdkAst {
         return !(line == endLine && column > columnOf(endPosition))
     }
 }
+
+/** The node and every node under it, depth first, in source order. */
+internal fun AstNode.descendants(): Sequence<AstNode> = sequenceOf(this) + childNodes().asSequence().flatMap { it.descendants() }
