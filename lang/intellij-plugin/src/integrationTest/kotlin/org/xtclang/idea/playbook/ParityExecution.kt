@@ -1289,7 +1289,12 @@ internal fun ParityScenarios.runEntryCases() {
                         .parseString(debugger.threads(project, module))
                         .asJsonArray
                         .map { it.asJsonObject }
-                check(threads.map { it.string("name") } == data.strings("threads")) { "Threads: $threads" }
+                // the worker takes in the call that run() waits for, as a fiber not started yet, when it next
+                // schedules, before the stop or after it
+                val names = threads.map { it.string("name") }
+                check(names == data.strings("threads") || names == data.strings("threads") + data.string("queuedThread")) {
+                    "Threads: $threads"
+                }
                 val frames = threads[1].getAsJsonArray("frames").map { it.asJsonObject }
                 val expected = data.getAsJsonArray("waitingFrames").map { it.asJsonArray }
                 check(frames.size == expected.size) { "The waiting fiber's frames: $frames" }
