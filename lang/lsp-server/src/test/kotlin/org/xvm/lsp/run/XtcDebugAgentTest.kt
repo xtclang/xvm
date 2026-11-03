@@ -13,6 +13,7 @@ import org.mockito.Mockito.mock
 import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugSetup
+import org.xvm.debug.DebugTask
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
@@ -178,7 +179,7 @@ class XtcDebugAgentTest {
 
     @Test
     fun `a Gradle launch has the client run the program, which connects, stops at a breakpoint and exits`() {
-        GradleClient(LOOPED).use { client ->
+        TaskClient(LOOPED).use { client ->
             val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
@@ -192,6 +193,7 @@ class XtcDebugAgentTest {
                 val task = client.tasks.single()
                 assertThat(task.sessionId).isEqualTo(id)
                 assertThat(task.module).isEqualTo("Looped")
+                assertThat(task.buildMode).isEqualTo("gradle")
                 assertThat(task.debug).matches("connect:127\\.0\\.0\\.1:\\d+,suspend,token=[-0-9a-f]+")
                 val stopped = untilStop.last()["body"].asJsonObject
                 assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
@@ -210,7 +212,7 @@ class XtcDebugAgentTest {
 
     @Test
     fun `stopping a Gradle launch ends the task, and the program with it`() {
-        GradleClient(LOOPED).use { client ->
+        TaskClient(LOOPED).use { client ->
             val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
@@ -224,7 +226,7 @@ class XtcDebugAgentTest {
                 sessions.request(id, 5, "disconnect")
                 val end = client.messages.until(id) { it.event == "terminated" }
                 assertThat(end.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
-                    .contains(EmbeddedRuns.STOPPED_WITH_TASK)
+                    .contains(EmbeddedRuns.stoppedWith(DebugTask.GRADLE))
                 assertThat(client.programs.single().exit()).isNotZero()
                 assertThat(runs.tracked()).isZero()
             }
@@ -248,6 +250,78 @@ class XtcDebugAgentTest {
             assertThat(launch["success"].asBoolean).isFalse()
             assertThat(launch["message"].asString)
                 .isEqualTo("Run failed: Gradle ended with exit code 3 before the program started; its output says why.")
+            assertThat(runs.tracked()).isZero()
+        }
+    }
+
+    @Test
+    fun `a command-line launch has the client run the xtc command, whose program connects, stops at a breakpoint and exits`() {
+        TaskClient(LOOPED).use { client ->
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            DebugSessions(runs, { client }).use { sessions ->
+                val id = sessions.start().sessionId
+                val source = directory.resolve("Looped.x").toFile().canonicalPath
+                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                sessions.request(id, 2, "launch", """{"module": "Looped", "args": ["a"], "buildMode": "commandLine"}""")
+                sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
+                sessions.request(id, 4, "configurationDone")
+                val untilStop = client.messages.until(id) { it.event == "stopped" }
+                assertThat(untilStop.single { it.response == "launch" }["success"].asBoolean).isTrue()
+                val task = client.tasks.single()
+                assertThat(task.buildMode).isEqualTo("commandLine")
+                assertThat(task.module).isEqualTo("Looped")
+                assertThat(task.args).containsExactly("a")
+                assertThat(task.debug).matches("connect:127\\.0\\.0\\.1:\\d+,suspend,token=[-0-9a-f]+")
+
+                sessions.request(id, 5, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": []}""")
+                sessions.request(id, 6, "continue", """{"threadId": ${untilStop.last()["body"].asJsonObject["threadId"].asInt}}""")
+                val end = client.messages.until(id) { it.event == "terminated" }
+                assertThat(end.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isZero()
+                assertThat(
+                    (untilStop + end).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString },
+                ).contains("Running Looped with xtc under the debugger...", "Debugging Looped, which xtc runs.")
+                assertThat(client.programs.single().exit()).isEqualTo(0)
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    fun `stopping a command-line launch ends the xtc command, and one that ends first fails with its exit code`() {
+        TaskClient(LOOPED).use { client ->
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            DebugSessions(runs, { client }).use { sessions ->
+                val id = sessions.start().sessionId
+                val source = directory.resolve("Looped.x").toFile().canonicalPath
+                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                sessions.request(id, 2, "launch", """{"module": "Looped", "buildMode": "commandLine"}""")
+                sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
+                sessions.request(id, 4, "configurationDone")
+                client.messages.until(id) { it.event == "stopped" }
+
+                sessions.request(id, 5, "disconnect")
+                val end = client.messages.until(id) { it.event == "terminated" }
+                assertThat(end.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                    .contains("Stopped, with its xtc command.")
+                assertThat(client.programs.single().exit()).isNotZero()
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+
+        val messages = DebugClient()
+        val ended =
+            object : XtcLanguageClient by messages {
+                override fun debugTask(params: DebugTaskParams) = CompletableFuture.completedFuture(DebugTaskResult(3))
+            }
+        val runs = EmbeddedRuns(mock(Adapter::class.java), { ended })
+        DebugSessions(runs, { ended }).use { sessions ->
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Looped", "buildMode": "commandLine"}""")
+            sessions.request(id, 3, "configurationDone")
+            val launch = messages.until(id) { it.response == "launch" }.last()
+            assertThat(launch["message"].asString)
+                .isEqualTo("Run failed: xtc ended with exit code 3 before the program started; its output says why.")
             assertThat(runs.tracked()).isZero()
         }
     }
@@ -434,11 +508,11 @@ class XtcDebugAgentTest {
     }
 
     /**
-     * A client that runs each debug task as a program from [text]'s source, with the task's `--debug`, and answers with
-     * the program's exit; canceling a task ends its program, as an editor's Gradle run ends. [messages] has the DAP
-     * messages of the sessions.
+     * A client that runs each debug task, a Gradle task's or the xtc command's, as a program from [text]'s source, with
+     * the task's `--debug`, and answers with the program's exit; canceling a task ends its program, as an editor's
+     * Gradle run or xtc command ends. [messages] has the DAP messages of the sessions.
      */
-    private inner class GradleClient(
+    private inner class TaskClient(
         private val text: String,
         val messages: DebugClient = DebugClient(),
     ) : XtcLanguageClient by messages,

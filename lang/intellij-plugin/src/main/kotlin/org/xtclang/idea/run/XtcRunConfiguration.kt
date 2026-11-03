@@ -45,7 +45,7 @@ enum class XtcRunMode(
 
 /**
  * Run configuration for XTC applications. Runs with the embedded compiler and execution worker, the Gradle
- * `runXtc` task, or `xtc run`. With the embedded compiler it can also be debugged: Debug is LSP4IJ's DAP client, which
+ * `runXtc` task, or `xtc run`, and each can also be debugged: Debug is LSP4IJ's DAP client, which
  * [XtcDebugAdapterFactory] connects to a debug session in the language server.
  */
 class XtcRunConfiguration(
@@ -108,7 +108,8 @@ class XtcRunConfiguration(
 
     /**
      * Debug is offered with the embedded compiler, whose runs a debug session in the language server launches, and
-     * with Gradle, whose task runs the program under the session's debugger (see [org.xtclang.idea.dap.DebugTasks]).
+     * with Gradle and `xtc run`, whose task or command runs the program under the session's debugger (see
+     * [org.xtclang.idea.dap.DebugTasks]).
      */
     override fun canRun(executorId: String): Boolean = executorId == DefaultDebugExecutor.EXECUTOR_ID && effectiveRunMode() in DEBUGGABLE
 
@@ -131,11 +132,7 @@ class XtcRunConfiguration(
         }
 
     private fun createXtcCommandLine() =
-        GeneralCommandLine().apply {
-            exePath = "xtc"
-            addParameter("run")
-            moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
-            moduleArguments.split(",").filter { it.isNotBlank() }.forEach(::addParameter)
+        xtcCommandLine(moduleName, methodName.ifBlank { null }, moduleArguments.split(",").filter { it.isNotBlank() }).apply {
             workDirectory = project.basePath?.let { Path(it).toFile() }
             logger.info("Running Ecstasy: $commandLineString")
         }
@@ -166,10 +163,28 @@ class XtcRunConfiguration(
 
     internal companion object {
         /** The run modes whose runs Debug can run under the debugger. */
-        private val DEBUGGABLE = setOf(XtcRunMode.EMBEDDED, XtcRunMode.GRADLE)
+        private val DEBUGGABLE = setOf(XtcRunMode.EMBEDDED, XtcRunMode.GRADLE, XtcRunMode.COMMAND_LINE)
 
         /** The project's Gradle wrapper, which Gradle runs go through. */
         fun gradleWrapper(): String = if ("win" in System.getProperty("os.name").lowercase()) "gradlew.bat" else "./gradlew"
+
+        /**
+         * `xtc run`'s command line, which command-line runs go through, Debug's too: the [module], which `xtc run` finds by
+         * its name from the project's directory, there or, with `--deduce`, in `src/main/x`, as `xtc init` lays a project
+         * out, with its resources and its compiled form in the project's `build` directory; its [method] when given, the
+         * launcher's `--debug` options [debug] when given, and the module's [args].
+         */
+        fun xtcCommandLine(
+            module: String,
+            method: String?,
+            args: List<String>,
+            debug: String? = null,
+        ) = GeneralCommandLine("xtc", "run", "--deduce").apply {
+            method?.let { addParameters("--method", it) }
+            debug?.let { addParameters("--debug", it) }
+            module.takeIf { it.isNotBlank() }?.let(::addParameter)
+            addParameters(args)
+        }
 
         /**
          * Configurations saved before [runWith] carry `useGradle`. Gradle was the default for every new
