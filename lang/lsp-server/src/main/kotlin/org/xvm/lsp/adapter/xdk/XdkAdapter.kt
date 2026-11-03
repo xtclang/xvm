@@ -517,10 +517,9 @@ class XdkAdapter
             if (order.isEmpty()) return XdkBuild.write(emptyList(), binaries, folder)
             val compile =
                 Request(scope, scope, snapshot, inputs, graph, null, queueTrace, {}, buildCancelled = { closed || result.isCancelled })
-            val modules = mutableListOf<XdkBuildModule>()
             return try {
-                compileClosure(compile, order, { !rebuild }) { module, analysis, reused, sources ->
-                    modules +=
+                val (_, modules) =
+                    compileClosure(compile, order, { !rebuild }) { module, analysis, reused, sources ->
                         XdkBuildModule(
                             module,
                             analysis.artifact?.takeIf { analysis.succeeded },
@@ -537,7 +536,7 @@ class XdkAdapter
                             texts = sources?.inputs?.text.orEmpty(),
                             dependencies = analysis.inputs.modules.mapValues { (_, artifact) -> artifact.revision },
                         )
-                }
+                    }
                 XdkBuild.write(modules, binaries, folder)
             } catch (_: CancellationException) {
                 XdkBuild.cancelled(folder)
@@ -1500,22 +1499,19 @@ class XdkAdapter
                     request.dependencies,
                 )
             }
-            val diagnostics = mutableListOf<Diagnostic>()
-            val documents = linkedSetOf<String>()
-            val target =
+            val (target, kept) =
                 compileClosure(request, order, { it.uri != request.scope }) { _, analysis, _, _ ->
-                    diagnostics += analysis.diagnostics
-                    documents += analysis.documentUris
+                    analysis.diagnostics to analysis.documentUris
                 }
             return ModuleAnalysis(
                 documents = target.documents,
-                diagnostics = diagnostics,
+                diagnostics = kept.flatMap { (diagnostics, _) -> diagnostics },
                 dependencies = target.dependencies + order.map { it.name },
                 succeeded = target.succeeded,
                 dependencySources = target.dependencySources,
                 inputs = target.inputs,
                 artifact = target.artifact,
-                documentUris = documents,
+                documentUris = kept.flatMapTo(linkedSetOf()) { (_, documents) -> documents },
                 sourceInputs = target.sourceInputs,
                 sourceTexts = target.sourceTexts,
                 entryMethods = target.entryMethods,
@@ -1526,17 +1522,17 @@ class XdkAdapter
         /**
          * Compiles [order], a dependency-ordered closure, from one capture of its sources. A module whose
          * sources and dependency revisions exactly match an earlier compile is answered from that compile
-         * when [reusable] allows it. [each] sees every module's outcome in order, so callers keep only what
-         * they need and dependency trees are released as the loop moves on.
+         * when [reusable] allows it. [keep] takes what the caller keeps of each module's outcome, in order, so
+         * dependency trees are released as the fold moves on.
          *
-         * @return the last module's analysis
+         * @return the last module's analysis, and what [keep] took of each module
          */
-        private fun compileClosure(
+        private fun <T> compileClosure(
             request: Request,
             order: List<XdkSourceModule>,
             reusable: (XdkSourceModule) -> Boolean,
-            each: (module: XdkSourceModule, analysis: ModuleAnalysis, reused: Boolean, sources: XdkSources?) -> Unit,
-        ): ModuleAnalysis {
+            keep: (module: XdkSourceModule, analysis: ModuleAnalysis, reused: Boolean, sources: XdkSources?) -> T,
+        ): Pair<ModuleAnalysis, List<T>> {
             val captured =
                 reading(
                     request,
@@ -1561,85 +1557,109 @@ class XdkAdapter
                     }
                 }
             // A source-owned module must never fall back to an older host-supplied binary.
-            val artifacts =
-                request.dependencies.modules
-                    .filterKeys { it !in request.project.modules }
-                    .toMutableMap()
-            var last: ModuleAnalysis? = null
-            for (module in order) {
-                if (isStale(request)) throw CancellationException()
-                val closure = request.project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
-                val inputs =
-                    XdkDependencies(
-                        artifacts.filterKeys { it !in request.project.modules || it in closure }.values.toList(),
-                    )
-                val sources = captured.getValue(module).getOrNull()
-                val uri = sources?.uri(module.root) ?: module.uri
-                val missing =
-                    module.dependencies.filter { it !in artifacts && it !in XdkLibraries.moduleNames }
-                val key =
-                    sources?.let {
-                        BuildKey(it.inputs, inputs.modules.mapValues { (_, artifact) -> artifact.revision })
-                    }
-                val cached =
-                    builds[module.name]?.takeIf {
-                        key != null && it.key == key && reusable(module)
-                    }
-                val analysis =
-                    when {
-                        sources == null -> {
-                            val reason = captured.getValue(module).exceptionOrNull()?.message
-                            unavailableProjectModule(
-                                uri,
-                                inputs,
-                                Diagnostic.Codes.SOURCE_UNAVAILABLE,
-                                "Cannot read source for ${module.name}: $reason",
-                            )
-                        }
-
-                        missing.isNotEmpty() -> {
-                            unavailableProjectModule(
-                                uri,
-                                inputs,
-                                Diagnostic.Codes.DEPENDENCY_FAILED,
-                                "Dependencies unavailable: ${missing.joinToString()}",
-                                sources.documentUris,
-                                structure = sources,
-                            )
-                        }
-
-                        cached != null -> {
-                            ModuleAnalysis(
-                                documents = emptyMap(),
-                                diagnostics = cached.diagnostics,
-                                dependencies = emptySet(),
-                                succeeded = cached.artifact != null,
-                                dependencySources = emptyMap(),
-                                inputs = inputs,
-                                artifact = cached.artifact,
-                                documentUris = cached.documentUris,
-                            )
-                        }
-
-                        else -> compileOne(request, uri, sources, inputs, module.name)
-                    }
-                synchronized(lifecycle) {
+            val start = Closure<T>(request.dependencies.modules.filterKeys { it !in request.project.modules }, emptyList(), null)
+            val done =
+                order.fold(start) { closure, module ->
                     if (isStale(request)) throw CancellationException()
-                    if (key != null) {
-                        builds[module.name] =
-                            CachedBuild(
-                                key,
-                                analysis.artifact,
-                                analysis.diagnostics,
-                                analysis.documentUris,
-                            )
-                    }
+                    val sources = captured.getValue(module)
+                    val (analysis, reused) = compileInClosure(request, module, sources, closure.artifacts, reusable)
+                    Closure(
+                        analysis.artifact?.let { closure.artifacts + (module.name to it) } ?: closure.artifacts,
+                        closure.kept + keep(module, analysis, reused, sources.getOrNull()),
+                        analysis,
+                    )
                 }
-                analysis.artifact?.let { artifacts[module.name] = it }
-                each(module, analysis, cached != null, sources)
-                last = analysis
+            return checkNotNull(done.last) { "An empty closure has no module to compile" } to done.kept
+        }
+
+        /** A closure compiled so far: the artifacts its next modules compile against, what was kept, the last analysis. */
+        private data class Closure<T>(
+            val artifacts: Map<String, XdkDependency>,
+            val kept: List<T>,
+            val last: ModuleAnalysis?,
+        )
+
+        /**
+         * Compiles [module] of a closure, from its [captured] sources, against the closure's [artifacts], or answers from
+         * an earlier compile of the same inputs when [reusable] allows it, and records the outcome for later reuse.
+         *
+         * @return the module's analysis, and whether it was the earlier compile's
+         */
+        private fun compileInClosure(
+            request: Request,
+            module: XdkSourceModule,
+            captured: Result<XdkSources>,
+            artifacts: Map<String, XdkDependency>,
+            reusable: (XdkSourceModule) -> Boolean,
+        ): Pair<ModuleAnalysis, Boolean> {
+            val closure = request.project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+            val inputs =
+                XdkDependencies(
+                    artifacts.filterKeys { it !in request.project.modules || it in closure }.values.toList(),
+                )
+            val sources = captured.getOrNull()
+            val uri = sources?.uri(module.root) ?: module.uri
+            val missing =
+                module.dependencies.filter { it !in artifacts && it !in XdkLibraries.moduleNames }
+            val key =
+                sources?.let {
+                    BuildKey(it.inputs, inputs.modules.mapValues { (_, artifact) -> artifact.revision })
+                }
+            val cached =
+                builds[module.name]?.takeIf {
+                    key != null && it.key == key && reusable(module)
+                }
+            val analysis =
+                when {
+                    sources == null -> {
+                        val reason = captured.exceptionOrNull()?.message
+                        unavailableProjectModule(
+                            uri,
+                            inputs,
+                            Diagnostic.Codes.SOURCE_UNAVAILABLE,
+                            "Cannot read source for ${module.name}: $reason",
+                        )
+                    }
+
+                    missing.isNotEmpty() -> {
+                        unavailableProjectModule(
+                            uri,
+                            inputs,
+                            Diagnostic.Codes.DEPENDENCY_FAILED,
+                            "Dependencies unavailable: ${missing.joinToString()}",
+                            sources.documentUris,
+                            structure = sources,
+                        )
+                    }
+
+                    cached != null -> {
+                        ModuleAnalysis(
+                            documents = emptyMap(),
+                            diagnostics = cached.diagnostics,
+                            dependencies = emptySet(),
+                            succeeded = cached.artifact != null,
+                            dependencySources = emptyMap(),
+                            inputs = inputs,
+                            artifact = cached.artifact,
+                            documentUris = cached.documentUris,
+                        )
+                    }
+
+                    else -> compileOne(request, uri, sources, inputs, module.name)
+                }
+            synchronized(lifecycle) {
+                if (isStale(request)) throw CancellationException()
+                if (key != null) {
+                    builds[module.name] =
+                        CachedBuild(
+                            key,
+                            analysis.artifact,
+                            analysis.diagnostics,
+                            analysis.documentUris,
+                        )
+                }
             }
-            return checkNotNull(last) { "An empty closure has no module to compile" }
+            return analysis to (cached != null)
         }
 
         /**
