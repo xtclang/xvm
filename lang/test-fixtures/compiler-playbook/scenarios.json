@@ -10497,6 +10497,43 @@
         "limitations": []
       }
     },
+    "X339": {
+      "title": "the Test Explorer lists a module's xunit tests under the module and its classes; Run runs them embedded and marks each passed or failed, a failure at the line its stack names; Debug of one test stops at a breakpoint in it, and Continue runs it to its end, which passes it",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts (xtc test), whatever the folder's build mode; xunit reports each test as a TeamCity service message in the run's output, which marks it in the Test Explorer",
+        "Debug at the cursor, on the name of works(), runs that test alone under the debugger, which stops at the breakpoint in it"
+      ],
+      "values": {
+        "file": "Tested.x",
+        "module": "Tested",
+        "source": "module Tested {\n    @Test\n    void adds() {\n        assert 1 + 1 == 2;\n    }\n\n    @Test\n    void fails() {\n        Int n = 1;\n        assert n + n == 3 as \"one and one are not three\";\n    }\n\n    class Inner {\n        @Test\n        void works() {\n            @Inject Console console;\n            console.print(\"inside works\");\n        }\n    }\n}\n",
+        "items": [
+          "Tested/",
+          "Tested/adds",
+          "Tested/fails",
+          "Tested/Inner",
+          "Tested/Inner.works"
+        ],
+        "passed": [
+          "Tested/adds",
+          "Tested/Inner.works"
+        ],
+        "failed": "Tested/fails",
+        "failure": "one and one are not three",
+        "failureLine": 10,
+        "debugged": "Tested/Inner.works",
+        "nameLine": 15,
+        "nameColumn": 13,
+        "breakpointLine": 17,
+        "printed": "inside works"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "IntelliJ has no Ecstasy test tree yet: its runs of tests, with LSP4IJ's DAP run configuration and IntelliJ's own test console, are the next slice. The server side, finding the tests and running and debugging them, is covered by EmbeddedTestRunsTest."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
