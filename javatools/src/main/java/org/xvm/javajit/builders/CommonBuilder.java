@@ -108,7 +108,6 @@ public class CommonBuilder
         this.typeInfo      = thisType.ensureTypeInfo();
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
-        this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
         this.jitType       = thisType.getJitCCType();
         this.isSpecialized = jitType.isJitL2Specialized();
         this.isPrimitive   = type.isJitPrimitive();
@@ -125,7 +124,6 @@ public class CommonBuilder
     public final TypeConstant     jitType;       // PUBLIC
     public final TypeInfo         structInfo;
     public final IdentityConstant thisId;
-    public final boolean          isInterface;
     public final boolean          isSpecialized;
     public final boolean          isPrimitive;
     public final AnnotationHelper annotated;     // not null if composition contains annotations
@@ -542,7 +540,7 @@ public class CommonBuilder
 
         classBuilder.withFlags(flags | ClassFile.ACC_INTERFACE);
 
-        if (classStruct.isVirtualChild() && !isInterface) {
+        if (classStruct.isVirtualChild() && !isInterface()) {
             for (MethodConstant ctorId : typeInfo.findMethods("construct", -1, MethodKind.Constructor)) {
                 MethodInfo    origin = typeInfo.getMethodById(ctorId).getChildConstructorOrigin();
                 JitMethodDesc jmd    = getChildConstructorDesc(origin, thisType);
@@ -561,7 +559,7 @@ public class CommonBuilder
             return;
         }
 
-        assert isInterface;
+        assert isInterface();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
@@ -606,6 +604,13 @@ public class CommonBuilder
      */
     protected boolean hasRuntimeType() {
         return thisType.hasJitRuntimeType();
+    }
+
+    /**
+     * @return true iff this builder emits a Java interface for the Impl shape
+     */
+    protected boolean isInterface() {
+        return classStruct.getFormat() == Format.INTERFACE;
     }
 
     /**
@@ -659,7 +664,7 @@ public class CommonBuilder
      * should override this method augmenting the memory requirement accordingly.
      */
     protected int computeInstanceSize() {
-        if (isInterface) {
+        if (isInterface()) {
             return 0;
         }
         int size = classStruct.isInstanceChild()
@@ -758,13 +763,13 @@ public class CommonBuilder
 //            }
 //        }
 
-        if (isInterface && isSpecialized) {
+        if (isInterface() && isSpecialized) {
             // make the specialized interface to extend the canonical interface
             interfaces.add(getCCDesc(classStruct.getNormalizedType()));
         }
 
         // mixins and annotations are represented as Java interfaces
-        boolean isJitInterface = isInterface || isEmbedded(classStruct.getFormat());
+        boolean isJitInterface = isInterface() || isEmbedded(classStruct.getFormat());
         addContributionInterfaces(typeInfo, interfaces, isJitInterface);
 
         if (interfaces.isEmpty()) {
@@ -782,7 +787,7 @@ public class CommonBuilder
      */
     protected void assembleProperties(ClassBuilder classBuilder) {
         List<PropertyInfo> initProps       = null;
-        boolean            isInstanceChild = !isInterface && classStruct.isInstanceChild();
+        boolean            isInstanceChild = !isInterface() && classStruct.isInstanceChild();
 
         if (isInstanceChild) {
             classBuilder.withField(Outer, CD_nObject, ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL);
@@ -831,11 +836,8 @@ public class CommonBuilder
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
         }
 
-        Format format = classStruct.getFormat();
-        switch (format) {
-        case CLASS, CONST, SERVICE, MODULE, PACKAGE, ENUM, ENUMVALUE:
+        if (!isInterface()) {
             assembleInit(classBuilder, lazyList(initProps));
-            break;
         }
 
         for (PropertyInfo prop : typeInfo.getProperties().values()) {
@@ -851,7 +853,7 @@ public class CommonBuilder
             }
         }
 
-        if (format != Format.INTERFACE && hasRuntimeType()) {
+        if (!isInterface() && hasRuntimeType()) {
             for (var entry : typeInfo.getTypeParams().entrySet()) {
                 if (entry.getKey() instanceof String name) {
                     assembleGenericProperty(classBuilder, name);
@@ -869,7 +871,7 @@ public class CommonBuilder
         int flags = ClassFile.ACC_PUBLIC;
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
-            if (isInterface) {
+            if (isInterface()) {
                 // interface fields must be "public static final"
                 flags |= ClassFile.ACC_FINAL;
             }
@@ -1091,7 +1093,7 @@ public class CommonBuilder
 
                     // TODO: use optimized method if possible
                     code.aload(ctxSlot)
-                        .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD, isInterface);
+                        .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD, isInterface());
 
                     switch (jtd.flavor) {
                     case Specific, Widened:
@@ -1904,7 +1906,7 @@ public class CommonBuilder
             }
         }
 
-        if (!isInterface) {
+        if (!isInterface()) {
             assembleXvmType(classBuilder);
         }
 
@@ -1983,7 +1985,7 @@ public class CommonBuilder
             }
 
             if (!typeInfo.isAbstract() && method.isConstructorOnly() ||
-                    isInterface && method.isVirtualConstructor()) {
+                    isInterface() && method.isVirtualConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(
                         typeInfo, art.CD(), (JitCtorDesc) jmDesc);
@@ -2267,8 +2269,8 @@ public class CommonBuilder
             // for primitive classes e.g. Int64, the "this" is actually a Java primitive, and thus
             // the "method" is not a method at all, but a function
             if (jmd.isOptimizedStatic) {
-                code.invokestatic(CD_this, jitName + OPT, jmd.optimizedMD, isInterface);
-            } else if (isInterface) {
+                code.invokestatic(CD_this, jitName + OPT, jmd.optimizedMD, isInterface());
+            } else if (isInterface()) {
                 code.invokeinterface(CD_this, jitName + OPT, jmd.optimizedMD);
             } else {
                 code.invokevirtual(CD_this, jitName + OPT, jmd.optimizedMD);
@@ -4214,7 +4216,7 @@ public class CommonBuilder
         // Note: the "$init" is a virtual method for singletons, "$new" is virtual for virtual
         // constructors and static otherwise
 
-        if (isInterface && constructor.isVirtualConstructor()) {
+        if (isInterface() && constructor.isVirtualConstructor()) {
             flags |= ClassFile.ACC_ABSTRACT;
 
             classBuilder.withMethod(jitName, jmd.standardMD, flags, code -> {});
@@ -4429,7 +4431,7 @@ public class CommonBuilder
             }
         }
 
-        if (isInterface && method.isAbstractFunction()) {
+        if (isInterface() && method.isAbstractFunction()) {
             // static abstract functions are represented by the separate funky interface
             return;
         }
@@ -4444,7 +4446,7 @@ public class CommonBuilder
         }
 
         if (jmd.isStandardStatic) {
-            if (isInterface && method.isVirtualConstructor()) {
+            if (isInterface() && method.isVirtualConstructor()) {
                 // virtual constructors only generate the "new$" virtual method declarations
                 return;
             }
