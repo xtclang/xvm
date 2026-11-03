@@ -7,8 +7,11 @@ import com.intellij.execution.Location
 import com.intellij.execution.ProgramRunnerUtil
 import com.intellij.execution.PsiLocation
 import com.intellij.execution.RunManager
+import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.configurations.ConfigurationTypeUtil
+import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.RunProfileState
+import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.process.ProcessTerminatedListener
@@ -72,6 +75,32 @@ internal class EmbeddedTestState(
                 XtcBuildSettings.gradleNotUsed(project.basePath?.let { Path(it) }),
             )
         ProcessTerminatedListener.attach(handler)
+        val console =
+            SMTestRunnerConnectionUtil.createAndAttachConsole(
+                TEST_FRAMEWORK,
+                handler,
+                XtcTestConsoleProperties(configuration, executor),
+            )
+        return DefaultExecutionResult(console, handler)
+    }
+}
+
+/**
+ * Runs the tests of [configuration]'s module with [command], Gradle's `testXtc` or `xtc test`, with xunit's TeamCity
+ * report, in IntelliJ's test console, which reads the messages from the command's output.
+ */
+internal class TestCommandLineState(
+    private val configuration: XtcRunConfiguration,
+    environment: ExecutionEnvironment,
+    private val command: GeneralCommandLine,
+) : CommandLineState(environment) {
+    override fun startProcess(): ProcessHandler = OSProcessHandler(command).also(ProcessTerminatedListener::attach)
+
+    override fun execute(
+        executor: Executor,
+        runner: ProgramRunner<*>,
+    ): ExecutionResult {
+        val handler = startProcess()
         val console =
             SMTestRunnerConnectionUtil.createAndAttachConsole(
                 TEST_FRAMEWORK,
@@ -178,7 +207,7 @@ internal object XtcTestCatalog {
 internal object XtcTestRuns {
     /**
      * Runs [test] of [module], whose source is [uri], with [executor]: a module runs all of its tests, a package or a
-     * class those under it, and a test itself; always embedded, whatever the project's build mode.
+     * class those under it, and a test itself; with the project's build mode, embedded, Gradle's `testXtc` or `xtc test`.
      */
     fun start(
         project: Project,
@@ -193,7 +222,6 @@ internal object XtcTestRuns {
         (settings.configuration as XtcRunConfiguration).apply {
             moduleName = module
             moduleUri = uri
-            runWith = XtcRunMode.EMBEDDED
             tests = if (test.kind == ServerTest.MODULE) emptyList() else listOf(TestSelector(test.selector, test.kind))
         }
         runManager.setTemporaryConfiguration(settings)

@@ -194,6 +194,8 @@ class XtcDebugAgentTest {
                 assertThat(task.sessionId).isEqualTo(id)
                 assertThat(task.module).isEqualTo("Looped")
                 assertThat(task.buildMode).isEqualTo("gradle")
+                // a launch without tests has the task run the module
+                assertThat(task.tests).isNull()
                 assertThat(task.debug).matches("connect:127\\.0\\.0\\.1:\\d+,suspend,token=[-0-9a-f]+")
                 val stopped = untilStop.last()["body"].asJsonObject
                 assertThat(stopped["reason"].asString).isEqualTo("breakpoint")

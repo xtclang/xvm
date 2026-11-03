@@ -87,9 +87,6 @@ class XtcRunConfiguration(
         if (effectiveRunMode() == XtcRunMode.EMBEDDED && moduleName.isBlank() && moduleUri.isBlank()) {
             throw RuntimeConfigurationError("An embedded run needs the module name")
         }
-        if (tests != null && effectiveRunMode() != XtcRunMode.EMBEDDED) {
-            throw RuntimeConfigurationError("Tests run with the embedded compiler; choose it under Run with")
-        }
     }
 
     override fun getState(
@@ -109,11 +106,26 @@ class XtcRunConfiguration(
             }
 
             else -> {
-                object : CommandLineState(environment) {
-                    override fun startProcess() =
-                        OSProcessHandler(
-                            if (mode == XtcRunMode.GRADLE) createGradleCommandLine() else createXtcCommandLine(),
-                        )
+                val tests = tests
+                if (tests != null) {
+                    TestCommandLineState(
+                        this,
+                        environment,
+                        if (mode ==
+                            XtcRunMode.GRADLE
+                        ) {
+                            createGradleTestCommandLine(tests)
+                        } else {
+                            createXtcTestCommandLine(tests)
+                        },
+                    )
+                } else {
+                    object : CommandLineState(environment) {
+                        override fun startProcess() =
+                            OSProcessHandler(
+                                if (mode == XtcRunMode.GRADLE) createGradleCommandLine() else createXtcCommandLine(),
+                            )
+                    }
                 }
             }
         }
@@ -142,6 +154,24 @@ class XtcRunConfiguration(
             moduleArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
             workDirectory = project.basePath?.let { Path(it).toFile() }
             logger.info("Running Gradle: $commandLineString")
+        }
+
+    /** `testXtc` for [tests] of the module, with xunit's TeamCity report, which the test console reads. */
+    private fun createGradleTestCommandLine(tests: List<TestSelector>) =
+        GeneralCommandLine().apply {
+            exePath = gradleWrapper()
+            if (quietMode) addParameter("-q")
+            addParameter("testXtc")
+            moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
+            addParameters(gradleTestOptions(tests))
+            workDirectory = project.basePath?.let { Path(it).toFile() }
+            logger.info("Running Gradle tests: $commandLineString")
+        }
+
+    private fun createXtcTestCommandLine(tests: List<TestSelector>) =
+        xtcTestCommandLine(moduleName, tests).apply {
+            workDirectory = project.basePath?.let { Path(it).toFile() }
+            logger.info("Running Ecstasy tests: $commandLineString")
         }
 
     private fun createXtcCommandLine() =
@@ -239,6 +269,43 @@ class XtcRunConfiguration(
             module.takeIf { it.isNotBlank() }?.let(::addParameter)
             addParameters(args)
         }
+
+        /** The xunit report that IntelliJ's test console reads, as `xtc test` and `testXtc` take its name. */
+        private const val TEAMCITY = "teamcity"
+
+        /** `testXtc`'s options that run [tests], all of the module's for none, with xunit's TeamCity report. */
+        fun gradleTestOptions(tests: List<TestSelector>): List<String> =
+            tests.mapNotNull { test -> selection(test.kind, "--test-package=", "--test-class=", "--test-method=")?.plus(test.selector) } +
+                "--test-report=$TEAMCITY"
+
+        /**
+         * `xtc test`'s command line, as a command-line test run's: [module]'s [tests], all of them for none, which
+         * `xtc test` finds by its name as `xtc run` does, with xunit's TeamCity report and the `--debug` options [debug].
+         */
+        fun xtcTestCommandLine(
+            module: String,
+            tests: List<TestSelector>,
+            debug: String? = null,
+        ) = GeneralCommandLine("xtc", "test", "--deduce").apply {
+            tests.forEach { test -> selection(test.kind, "-p", "-c", "-t")?.let { addParameters(it, test.selector) } }
+            addParameters("-I", "xvm.xunit.report=$TEAMCITY")
+            debug?.let { addParameters("--debug", it) }
+            module.takeIf { it.isNotBlank() }?.let(::addParameter)
+        }
+
+        /** The option of a test's [kind]: a package's, a class's or a test method's; none for a module, all of it. */
+        private fun selection(
+            kind: String,
+            packages: String,
+            classes: String,
+            methods: String,
+        ): String? =
+            when (kind) {
+                ServerTest.PACKAGE -> packages
+                ServerTest.CLASS -> classes
+                ServerTest.TEST -> methods
+                else -> null
+            }
 
         /**
          * Configurations saved before [runWith] carry `useGradle`. Gradle was the default for every new

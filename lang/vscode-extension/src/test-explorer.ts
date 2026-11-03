@@ -3,14 +3,15 @@ import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
-import { describeBuild, type RunResponse, trackRun } from './embedded-execution';
+import { gradleTestArgs, gradleWrapper, runTestProcess } from './debug-adapter';
+import { buildMode, describeBuild, type RunResponse, trackRun } from './embedded-execution';
 import { failureLine, LineSplitter, parseServiceMessage, selectorOf, type ServiceMessage } from './test-messages';
 
 /**
  * The Test Explorer's Ecstasy tests: the language server finds each module's xunit tests (`xtc/tests`) in its latest
  * analysis, and runs or debugs those a run selects with xunit, embedded (`xtc/run` and the `xtc` debug type with
- * `tests`), whatever the folder's build mode. The run's output reports each test as a TeamCity service message,
- * which marks it passed, failed or skipped.
+ * `tests`) or, in a folder whose build mode is Gradle, with its `testXtc`. The run's output reports each test as a
+ * TeamCity service message, which marks it passed, failed or skipped.
  */
 
 /** A test or a container of tests of a module, as `xtc/tests` gives it. */
@@ -112,7 +113,9 @@ export function registerTestExplorer(context: vscode.ExtensionContext, client: (
                 const selection = selections.get(items[0])!;
                 await (debug
                     ? debugTests(selection, tests, results, testRun, token, debugged)
-                    : runTests(client(), selection, tests, results, token));
+                    : buildMode(vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(selection.uri))) === 'gradle'
+                        ? runGradleTests(selection, tests, results, token)
+                        : runTests(client(), selection, tests, results, token));
                 results.end();
             }
         } finally {
@@ -221,6 +224,20 @@ function runTests(connection: LanguageClient | undefined, selection: Selection, 
                 done();
             });
     });
+}
+
+/** Runs the module's [tests] with its folder's Gradle build, `testXtc`, whose output reports them, until it ends. */
+async function runGradleTests(selection: Selection, tests: { selector: string; kind: string }[], results: Results,
+                              token: vscode.CancellationToken): Promise<void> {
+    const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(selection.uri));
+    if (!folder) {
+        results.failAll(`No workspace folder has ${selection.uri}.`);
+        return;
+    }
+    const args = gradleTestArgs(selection.module, tests);
+    results.note(`${gradleWrapper()} ${args.join(' ')}`);
+    const exitCode = await runTestProcess(gradleWrapper(), args, folder.uri.fsPath, line => results.output(`${line}\n`), token);
+    results.note(`Tests finished with exit code ${exitCode ?? 1}`);
 }
 
 /** Debugs the module's [tests] in an `xtc` debug session of the test run, until the session ends. */
