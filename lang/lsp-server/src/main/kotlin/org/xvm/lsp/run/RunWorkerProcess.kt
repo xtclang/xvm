@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.DebugSetup
+import org.xvm.runtime.debug.DebugProtocol
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.IOException
@@ -200,12 +201,7 @@ internal class RunWorkerProcess(
                             addProperty("method", request.method)
                             add("args", JsonArray().apply { request.args.forEach(::add) })
                             request.rootDir?.let { addProperty("rootDir", it) }
-                            request.debug?.let { setup ->
-                                add("breakpoints", RunWorkerDebug.sources(setup.breakpoints))
-                                add("exceptions", RunWorkerDebug.exceptions(setup.exceptions))
-                                if (setup.stopOnEntry) addProperty("stopOnEntry", true)
-                                if (setup.functions.isNotEmpty()) add("functions", RunWorkerDebug.functions(setup.functions))
-                            }
+                            request.debug?.let { add("setup", DebugProtocol.json(it.record())) }
                         },
                     )
                 if (sent) null else "The execution worker could not be started".also { worker.end(it) }
@@ -317,49 +313,34 @@ internal class RunWorkerProcess(
                         logger.warn("execution worker output: {} text={}", worker, line)
                         continue
                     }
-                    val id = event["id"]?.asLong
-                    when (event["event"]?.asString) {
-                        "output" -> id?.let(listeners::get)?.output(event["text"].asString)
-
-                        "exit" ->
-                            if (id != null) {
-                                val code = event["code"]?.asLong
-                                val error = event["error"]?.takeUnless { it.isJsonNull }?.asString
-                                val runId = synchronized(lock) { worker.runId.takeIf { worker.run == id } }
-                                logger.info(
-                                    "run exited: {} {} {}",
-                                    runFields(id, runId),
-                                    worker,
-                                    code?.let { "code=$it" } ?: error?.let { "error=$it" } ?: "code=none",
-                                )
-                                finished(worker, id)
-                                abandon(id)
-                                listeners.remove(id)?.exited(code, error)
-                            }
-
-                        "usage" ->
-                            measured(
+                    when (val typed = runCatching { DebugProtocol.event(event) }.getOrNull()) {
+                        is DebugProtocol.Exit -> {
+                            val id = typed.id()
+                            val code = typed.code()
+                            val error = typed.error()
+                            val runId = synchronized(lock) { worker.runId.takeIf { worker.run == id } }
+                            logger.info(
+                                "run exited: {} {} {}",
+                                runFields(id, runId),
                                 worker,
-                                Usage(
-                                    event["heapUsed"].asLong,
-                                    event["heapMax"].asLong,
-                                    event["threads"].asInt,
-                                    event["poolThreads"]?.asInt ?: 0,
-                                    event["consoles"]?.asInt ?: 0,
-                                    event["runs"]?.asInt ?: 0,
-                                    id,
-                                ),
+                                code?.let { "code=$it" } ?: error?.let { "error=$it" } ?: "code=none",
                             )
+                            finished(worker, id)
+                            abandon(id)
+                            listeners.remove(id)?.exited(code, error)
+                        }
 
-                        "log" -> logger.info("execution worker log: {} text={}", worker, event["text"]?.asString)
+                        is DebugProtocol.Log -> logger.info("execution worker log: {} text={}", worker, typed.text())
 
-                        "ready" -> accept(worker, RunWorkerIdentity.of(event))
+                        is DebugProtocol.Ready -> accept(worker, RunWorkerIdentity.of(typed))
 
-                        "started" -> logger.debug("execution worker event: {} {}", worker, line)
+                        is DebugProtocol.Started -> logger.debug("execution worker event: {} {}", worker, line)
+
+                        null -> workerEvent(worker, event, line)
 
                         else ->
-                            if (!debugEvent(event, id?.let(listeners::get))) {
-                                logger.warn("execution worker sent an unknown event: {} event={}", worker, line)
+                            if (!debugEvent(typed, (typed as? DebugProtocol.RunEvent)?.id()?.let(listeners::get))) {
+                                logger.warn("execution worker sent an unexpected event: {} event={}", worker, line)
                             }
                     }
                 }
@@ -377,6 +358,34 @@ internal class RunWorkerProcess(
                     hosts.filterValues { it === worker }.keys.onEach(hosts::remove)
                 }
             endRuns(runs, worker.ended ?: "The execution worker stopped unexpectedly")
+        }
+    }
+
+    /** One of the worker's own events of a run, its output or its memory once it has ended, which [line] carries. */
+    private fun workerEvent(
+        worker: Worker,
+        event: JsonObject,
+        line: String,
+    ) {
+        val id = event["id"]?.asLong
+        when (event["event"]?.asString) {
+            "output" -> id?.let(listeners::get)?.output(event["text"].asString)
+
+            "usage" ->
+                measured(
+                    worker,
+                    Usage(
+                        event["heapUsed"].asLong,
+                        event["heapMax"].asLong,
+                        event["threads"].asInt,
+                        event["poolThreads"]?.asInt ?: 0,
+                        event["consoles"]?.asInt ?: 0,
+                        event["runs"]?.asInt ?: 0,
+                        id,
+                    ),
+                )
+
+            else -> logger.warn("execution worker sent an unknown event: {} event={}", worker, line)
         }
     }
 
