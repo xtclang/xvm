@@ -119,9 +119,8 @@ data class RunExitedParams(
 /**
  * `xtc/debugTask` parameters: the task that runs a debug session's ([sessionId]) module under the debugger, its
  * Gradle task or the xtc command, as the launch's [buildMode] says ([DebugTask.buildMode]): the module's [module],
- * [method] and [args], as a Gradle run or `xtc run` takes them, with the launcher's `--debug` options [debug], and
- * [agent] when given, the jar of the agent that the launcher loads. A Gradle task takes them as the Gradle properties
- * `xtcDebug` and `xtcDebugAgent`; `xtc run` as `--debug <debug>,agent=<agent>`.
+ * [method] and [args], as a Gradle run or `xtc run` takes them, with the launcher's `--debug` options [debug], which a
+ * Gradle task takes as the Gradle property `xtcDebug`. The program's XDK has the debugger's agent.
  */
 data class DebugTaskParams(
     val sessionId: String,
@@ -129,7 +128,6 @@ data class DebugTaskParams(
     val method: String?,
     val args: List<String>,
     val debug: String,
-    val agent: String?,
     val buildMode: String,
 )
 
@@ -344,8 +342,6 @@ internal class EmbeddedRuns(
                     target.method,
                     target.args,
                     debug,
-                    // the program's own javatools has the debugger agent
-                    null,
                     kind.buildMode,
                 ),
             )

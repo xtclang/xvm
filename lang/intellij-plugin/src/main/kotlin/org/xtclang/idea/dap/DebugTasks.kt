@@ -69,19 +69,17 @@ internal object DebugTasks {
 
     /**
      * The task's command line: for a command-line launch, `xtc run` as a command-line Run runs the module, with
-     * `--debug` and the agent; otherwise the Gradle wrapper's, the module's run with the debug properties.
+     * `--debug`; otherwise the Gradle wrapper's, the module's run with the debug property.
      */
     internal fun commandLine(params: DebugTaskParams): GeneralCommandLine =
         if (params.buildMode == COMMAND_LINE) {
-            val debug = listOfNotNull(params.debug, params.agent?.let { "agent=$it" }).joinToString(",")
-            XtcRunConfiguration.xtcCommandLine(params.module, params.method, params.args, debug)
+            XtcRunConfiguration.xtcCommandLine(params.module, params.method, params.args, params.debug)
         } else {
             GeneralCommandLine(XtcRunConfiguration.gradleWrapper()).apply {
                 addParameters("-q", "runXtc", "--mode=ATTACHED", "--module=${params.module}")
                 params.method?.let { addParameter("--method=$it") }
                 params.args.takeIf { it.isNotEmpty() }?.let { addParameter("--args=${it.joinToString(",")}") }
                 addParameter("-PxtcDebug=${params.debug}")
-                params.agent?.let { addParameter("-PxtcDebugAgent=$it") }
             }
         }
 }
