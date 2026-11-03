@@ -229,6 +229,8 @@ public class BuildContext {
 
     /**
      * Construct {@link BuildContext} for a synthetic function.
+     *
+     * Note, a synthetic body has its own calling convention, e.g. a static lambda in a constructor.
      */
     private BuildContext(BuildContext bctx, String jitName, MethodBody body, JitMethodDesc jmd) {
         this.builder       = bctx.builder;
@@ -242,8 +244,8 @@ public class BuildContext {
         this.callDepth     = 0;
         this.methodDesc    = jmd;
         this.methodJitName = jitName;
-        this.isStatic      = bctx.isStatic;
-        this.isConstructor = bctx.isConstructor;
+        this.isConstructor = methodStruct.isConstructor() || methodStruct.isValidator();
+        this.isStatic      = jmd.isStandardStatic && !isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
         this.isSpecialized = bctx.isSpecialized;
         this.typeMatrix    = new TypeMatrix(this);
