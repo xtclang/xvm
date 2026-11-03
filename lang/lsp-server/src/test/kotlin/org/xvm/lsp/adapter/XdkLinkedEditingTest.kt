@@ -83,6 +83,32 @@ class XdkLinkedEditingTest {
     }
 
     @Test
+    fun `a caret just after a local's name links it, as a caret inside the name does`() {
+        val text =
+            """
+            module Linked {
+                Int sum(Int[] numbers) {
+                    Int total = 0;
+                    for (Int number : numbers) {
+                        total += number;
+                    }
+                    return total;
+                }
+            }
+            """.trimIndent()
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
+            val name = text.lines()[2].indexOf("total")
+            val inside = requireNotNull(adapter.getLinkedEditingRanges(URI, 2, name + 2)).ranges
+            assertThat(inside).hasSize(3)
+            // where typing appends to the name
+            assertThat(requireNotNull(adapter.getLinkedEditingRanges(URI, 2, name + "total".length)).ranges).isEqualTo(inside)
+            // after the space which follows the name, the caret is at no name
+            assertThat(adapter.getLinkedEditingRanges(URI, 2, name + "total ".length)).isNull()
+        }
+    }
+
+    @Test
     fun `explicit same-spelling aliases retain their lexical ownership`() {
         val text =
             """
@@ -100,6 +126,8 @@ class XdkLinkedEditingTest {
                 assertThat(ranges).hasSize(3)
                 assertThat(ranges.map { it.start.line }).containsOnly(line)
                 assertThat(ranges.first().start.column).isEqualTo(at)
+                // just after the alias's name
+                assertThat(requireNotNull(adapter.getLinkedEditingRanges(URI, line, at + "Box".length)).ranges).isEqualTo(ranges)
             }
         }
     }
