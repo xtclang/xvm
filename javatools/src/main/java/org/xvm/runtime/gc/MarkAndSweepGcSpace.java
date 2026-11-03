@@ -284,9 +284,9 @@ public class MarkAndSweepGcSpace<V>
                     // enqueue the weak-ref
                     if (anNotify == null) {
                         anNotify = new int[8];
-                    } else if (nNotifyTop > anNotify.length) {
+                    } else if (nNotifyTop >= anNotify.length) {
                         int[] anWeaksNew = new int[anNotify.length * 2];
-                        System.arraycopy(anWeaksNew, 0, anWeaksNew, 0, anNotify.length);
+                        System.arraycopy(anNotify, 0, anWeaksNew, 0, anNotify.length);
                         anNotify = anWeaksNew;
                     }
                     anNotify[nNotifyTop] = nWeak;
