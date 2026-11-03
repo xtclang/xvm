@@ -913,18 +913,19 @@ passes with the workaround disabled. The gates are in
   (`run-8879176847449743226`, gate UP52 passed). To do: after a release with it,
   make X131's UP52 step pass without the gate.
 
-### LSP4IJ: no linked editing (UP53): our #1812, open
+### LSP4IJ: no linked editing (UP53): our #1812, merged
 
 - [ ] UP53 (2026-10-28): LSP4IJ never sends `textDocument/linkedEditingRange`, so IntelliJ users get no
   rename-on-type for locals, which XVM's server answers. IntelliJ's X133 sends the request itself,
   a protocol check rather than native coverage. Fixed by our
-  [#1812](https://github.com/redhat-developer/lsp4ij/pull/1812) (filed 2026-11-02, open, `a793b896`):
+  [#1812](https://github.com/redhat-developer/lsp4ij/pull/1812) (filed 2026-11-02, merged 2026-11-03, `625621bb`):
   when the caret stops, the ranges linked at it are asked for, and typing in one edits the others in
   the same command. At Angelo's request it is off by default, as in VS Code: a user turns it on for
   every server in `Settings | Editor | General | Smart Keys` (`50dfa73c`), and our plugin can't turn
-  it on for Ecstasy files. To do: get #1812 merged; check it natively with a plugin built from it;
-  after a release with it, make IntelliJ's X133 turn it on, type in a local's declaration and see its
-  uses follow.
+  it on for Ecstasy files. Checked natively in the playbook container while recording LSP4IJ's user
+  guide demo, which found that our server linked nothing at a caret just after a name
+  (`394bb23eb8` fixes it). To do: after a release with #1812, make IntelliJ's X133 turn it on, type
+  in a local's declaration and see its uses follow.
 
 ### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
@@ -934,7 +935,8 @@ passes with the workaround disabled. The gates are in
   [#1786](https://github.com/redhat-developer/lsp4ij/pull/1786) (merged 2026-10-28, unreleased, `0616567a`): one
   `rangesFormatting` to a server with `rangesSupport`, otherwise one `rangeFormatting` per range.
   To do: make `XtcFormattingService` send every range too; after a release with #1786, a native case that
-  formats two separate ranges.
+  formats two separate ranges. 0.30.0's `LSPFormattingParams` takes the list of ranges, so
+  `XtcFormattingService.kt:76` must change when XVM moves to it.
 
 ### LSP4IJ: no hit counts on line breakpoints (UP55): our #1787, merged
 
