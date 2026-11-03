@@ -15,14 +15,17 @@ import javax.inject.Inject;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.options.Option;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -52,6 +55,10 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
 public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension {
     private final Property<@NotNull Boolean> failOnTestFailure;
     private final Provider<@NotNull Directory> outputDir;
+    private final ListProperty<@NotNull String> testPackages;
+    private final ListProperty<@NotNull String> testClasses;
+    private final ListProperty<@NotNull String> testMethods;
+    private final Property<@NotNull String> testReport;
 
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
     @Inject
@@ -62,12 +69,77 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         final var testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
         this.outputDir = project.getLayout().getBuildDirectory().map(dir -> dir.dir("xunit"));
         this.failOnTestFailure = objects.property(Boolean.class).convention(testExtension.getFailOnTestFailure());
+        this.testPackages = objects.listProperty(String.class);
+        this.testClasses = objects.listProperty(String.class);
+        this.testMethods = objects.listProperty(String.class);
+        this.testReport = objects.property(String.class);
     }
 
     @Input
     @Override
     public Property<@NotNull Boolean> getFailOnTestFailure() {
         return failOnTestFailure;
+    }
+
+    /**
+     * The packages whose tests run, by their paths in the test module, such as {@code tests}; with the classes and
+     * methods, xunit runs the tests that any of them selects, and all of the module's without any.
+     * Example: ./gradlew testXtc --test-package=tests
+     */
+    @Option(option = "test-package", description = "Run the tests of a package, by its path in the module (repeatable)")
+    public void setTestPackageOption(final List<String> packages) {
+        testPackages.set(packages);
+    }
+
+    @Input
+    public ListProperty<@NotNull String> getTestPackages() {
+        return testPackages;
+    }
+
+    /**
+     * The classes whose tests run, by their paths in the test module, such as {@code tests.MathTest}.
+     * Example: ./gradlew testXtc --test-class=tests.MathTest
+     */
+    @Option(option = "test-class", description = "Run the tests of a class, by its path in the module (repeatable)")
+    public void setTestClassOption(final List<String> classes) {
+        testClasses.set(classes);
+    }
+
+    @Input
+    public ListProperty<@NotNull String> getTestClasses() {
+        return testClasses;
+    }
+
+    /**
+     * The test methods that run, by their paths in the test module, such as {@code tests.MathTest.adds}, or a
+     * module-level test by its name.
+     * Example: ./gradlew testXtc --test-method=tests.MathTest.adds
+     */
+    @Option(option = "test-method", description = "Run a test method, by its path in the module (repeatable)")
+    public void setTestMethodOption(final List<String> methods) {
+        testMethods.set(methods);
+    }
+
+    @Input
+    public ListProperty<@NotNull String> getTestMethods() {
+        return testMethods;
+    }
+
+    /**
+     * How xunit also reports the tests' execution, for a tool that reads it from the output, such as an IDE:
+     * {@code json}, one JSON object per event, which xunit's {@code JsonExecutionListener} describes. xunit refuses a
+     * name it does not know.
+     * Example: ./gradlew testXtc --test-report=json
+     */
+    @Option(option = "test-report", description = "Also report the tests' execution for a tool: json")
+    public void setTestReportOption(final String report) {
+        testReport.set(report);
+    }
+
+    @Input
+    @Optional
+    public Property<@NotNull String> getTestReport() {
+        return testReport;
     }
 
     @Internal

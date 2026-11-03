@@ -29,6 +29,9 @@ public final class XtcPluginConstants {
     public static final String XTC_TEST_TASK_NAME = "testXtc";
     public static final String XTC_TEST_RUNNER_CLASS_NAME = "org.xvm.tool.TestRunner";
 
+    /** The injection that has xunit also report the tests' execution for a tool, as {@code json} events. */
+    public static final String XUNIT_REPORT_INJECTION = "xvm.xunit.report";
+
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";
     public static final String XDK_CONFIG_NAME_INCOMING_ZIP = "xdkDistribution";

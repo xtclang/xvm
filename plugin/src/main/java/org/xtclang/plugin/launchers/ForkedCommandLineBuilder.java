@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.nio.file.Files.isDirectory;
+import static org.xtclang.plugin.XtcPluginConstants.XUNIT_REPORT_INJECTION;
 import static org.xtclang.plugin.internal.DefaultXtcRunModule.DEFAULT_METHOD_NAME;
 
 import org.xtclang.plugin.XtcRunModule;
@@ -93,6 +94,12 @@ public final class ForkedCommandLineBuilder {
         }
 
         args.addAll(List.of("--xunit-out", task.getOutputDirectory().get().getAsFile().getAbsolutePath()));
+        task.getTestPackages().get().forEach(name -> args.addAll(List.of("-p", name)));
+        task.getTestClasses().get().forEach(name -> args.addAll(List.of("-c", name)));
+        task.getTestMethods().get().forEach(name -> args.addAll(List.of("-t", name)));
+        if (task.getTestReport().isPresent()) {
+            args.addAll(List.of("-I", XUNIT_REPORT_INJECTION + "=" + task.getTestReport().get()));
+        }
         args.add("--no-recompile");
         args.add(moduleName);
         args.addAll(moduleArgs);
