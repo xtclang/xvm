@@ -1713,6 +1713,63 @@ internal fun ParityScenarios.gradleDebugCases() {
 }
 
 /**
+ * X338: Debug of an Ecstasy Application configuration in command-line mode runs the module with `xtc run` under the
+ * debugger, whose program connects to the debug session. `xtc run --deduce` finds the module by its name in the project
+ * directory, whose root has the other cases' sources, so the module is written there, and its compiled form goes next
+ * to it, or in `build` when the root has one; the playbook puts the XDK built from this tree on the IDE's PATH.
+ */
+internal fun ParityScenarios.commandLineDebugCases() {
+    case("X338") { data ->
+        val module = data.string("module")
+        val file = projectRoot.resolve(data.string("file"))
+        val compiled = data.strings("compiled").map(projectRoot::resolve)
+        compiled.plusElement(file).forEach { check(!Files.exists(it)) { "X338 needs a project root without $it" } }
+        Files.writeString(file, data.string("source"))
+        val project = with(driver) { singleProject() }
+        val debugger = with(driver) { utility(DebugSessionProbe::class) }
+        val line = data.int("breakpointLine")
+        // the breakpoint is set in the module's editor, as a user sets it
+        val document = open(file, data.string("file"))
+        try {
+            debugger.debugCommandLine(project, module, file.toUri().toString(), line)
+            val stopped =
+                debugger.awaitState(project, module, "xtc runs the program, which stops at the breakpoint", 120.seconds) {
+                    it["suspended"]?.asBoolean == true || it.has("exitCode")
+                }
+            check(stopped["suspended"]?.asBoolean == true) { "The session ended without stopping: $stopped" }
+            check(stopped.int("line") == line && stopped.string("file").endsWith(data.string("file"))) { "Stopped at: $stopped" }
+            val frames = stopped.getAsJsonArray("frames").map { it.asJsonObject }
+            data.getAsJsonArray("frames").map { it.asJsonArray }.forEachIndexed { index, expected ->
+                val frame = frames.getOrNull(index)
+                check(frame != null && expected[0].asString in frame.string("name") && frame.int("line") == expected[1].asInt) {
+                    "Frame $index is not ${expected[0].asString} at ${expected[1].asInt}: $frames"
+                }
+            }
+            // the command's output, the program's included, reaches the Debug console as the process prints it
+            val paused =
+                debugger.awaitState(project, module, "the program's output reaches the Debug console", 60.seconds) {
+                    data.string("before") in it.string("console")
+                }
+            check(data.string("after") !in paused.string("console")) { "Console while paused: ${paused.string("console")}" }
+
+            debugger.resume(project, module)
+            val ended = debugger.awaitState(project, module, "Resume runs the program to its exit", 120.seconds) { it.has("exitCode") }
+            check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
+            debugger.awaitState(project, module, "the rest of the program's output reaches the Debug console", 60.seconds) {
+                data.string("after") in it.string("console")
+            }
+        } finally {
+            debugger.clearBreakpoints(project)
+            // the module was not edited; reloading it after xtc run wrote beside it reads it on the EDT unlocked
+            closeEditor(document)
+            Files.deleteIfExists(file)
+            compiled.forEach(Files::deleteIfExists)
+            refresh(projectRoot)
+        }
+    }
+}
+
+/**
  * Makes a project with the plugin's project creator, as New Project does, at the project root, where Gradle mode runs
  * ./gradlew, with the project in Gradle mode, runs [body] with it, and removes it again, with the mode as it was. Its
  * build takes the XTC Gradle plugin and XDK last published to mavenLocal.
@@ -1811,6 +1868,13 @@ internal interface DebugSessionProbe {
         project: Project,
         module: String,
         uri: String,
+    )
+
+    fun debugCommandLine(
+        project: Project,
+        module: String,
+        uri: String,
+        breakpointLine: Int,
     )
 
     fun agent(): String

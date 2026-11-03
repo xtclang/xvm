@@ -659,8 +659,18 @@ this bridge; they cannot be inferred from compiler type hints.
     X337 found: compileXtc's build cache gave a project in another directory a module whose
     recorded sources were the other's, so breakpoints did not bind, and IntelliJ's LSP4IJ stopped
     the server, and the session with it, once the last Ecstasy file closed. Still to come:
-    command-line mode's Debug, and running and debugging tests. VS Code shows the program's output
-    in the task's terminal, not the Debug Console.
+    running and debugging tests. VS Code shows the program's output in the task's terminal, not
+    the Debug Console.
+  - *Done (2026-11-03): command-line mode's Debug, with X338.* IntelliJ's only, since VS Code has no
+    command-line mode. A launch's `buildMode` `commandLine` takes the Gradle-mode path, whose
+    `xtc/debugTask` now carries the `buildMode` (`DebugTask` names each task in the session's
+    messages): IntelliJ's `DebugTasks` runs `xtc run --deduce [--method <m>] --debug connect:…,
+    suspend,token=…,agent=<jar> <module> [args]` in the project directory, the same command line as
+    the configuration's Run, which now passes its method and `--deduce` too, so `xtc run` finds a
+    module laid out as `xtc init` lays it out, in `src/main/x`; and the program connects back.
+    VS Code refuses such a task, saying why. Limits: the `xtc` on the `PATH` runs it, so its XDK must
+    have this javatools; `--deduce` looks in `src/main/x` only when the project directory has no `.x`
+    files of its own (javatools' `ModuleInfo` searches up from a directory with sources, never down).
 
 Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
 execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;
