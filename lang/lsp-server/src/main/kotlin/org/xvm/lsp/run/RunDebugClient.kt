@@ -18,6 +18,8 @@ import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
+import org.xvm.runtime.SessionDebugger
+import org.xvm.runtime.debug.DebugProtocol
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -58,8 +60,8 @@ internal interface RunListener {
 /**
  * The debugger's side of the worker protocol: the requests and commands to a run's runtime debugger, and the debug
  * events and replies that come back, wherever the program runs: in an execution worker ([RunWorkerProcess]), or in a
- * program that the launcher runs with `--debug`, which a debugger attached to ([AttachedProgram]). The commands and
- * events are those [RunWorker] lists.
+ * program that the launcher runs with `--debug`, which a debugger attached to ([AttachedProgram]). The messages are
+ * javatools' [DebugProtocol] records, which the program's side answers with too.
  */
 internal abstract class RunDebugClient {
     /** Requests to a run's debugger that wait for the reply, by request number. */
@@ -68,7 +70,7 @@ internal abstract class RunDebugClient {
 
     private class Pending(
         val run: Long,
-        val reply: CompletableFuture<JsonObject>,
+        val reply: CompletableFuture<DebugProtocol.Reply>,
     )
 
     /** Sends a message for run [id] to where its program runs; false when it cannot be sent there. */
@@ -82,51 +84,41 @@ internal abstract class RunDebugClient {
         id: Long,
         breakpoints: SourceBreakpoints,
     ): CompletableFuture<List<BreakpointState>> =
-        request("setBreakpoints", id) {
-            val source = RunWorkerDebug.source(breakpoints)
-            source.keySet().forEach { add(it, source[it]) }
-        }.thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
+        request(id) { DebugProtocol.SetBreakpoints(id, it, breakpoints.record()) }.thenApply { it.map(SessionDebugger.Breakpoint::state) }
 
     /** Names a variable of a stopped run as a data breakpoint's target, a field of an object, or says why it cannot be. */
     fun dataBreakpointInfo(
         id: Long,
         reference: Int,
         name: String,
-    ): CompletableFuture<DataInfoState> =
-        request("dataBreakpointInfo", id) {
-            addProperty("reference", reference)
-            addProperty("name", name)
-        }.thenApply { DataInfoState(it["dataId"]?.asString, it["description"].asString) }
+    ): CompletableFuture<DataInfoState> = request(id) { DebugProtocol.DataBreakpointInfo(id, it, reference, name) }.thenApply { it.state() }
 
     /** Replaces the data breakpoints of a run under the debugger; answers how they were installed. */
     fun setDataBreakpoints(
         id: Long,
         breakpoints: List<DataBreakpointRequest>,
     ): CompletableFuture<List<BreakpointState>> =
-        request("setDataBreakpoints", id) { add("breakpoints", RunWorkerDebug.data(breakpoints)) }
-            .thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
+        request(id) { DebugProtocol.SetDataBreakpoints(id, it, breakpoints.map(DataBreakpointRequest::record)) }
+            .thenApply { it.map(SessionDebugger.Breakpoint::state) }
 
     /** Replaces the function breakpoints of a run under the debugger; answers how they were installed. */
     fun setFunctionBreakpoints(
         id: Long,
         breakpoints: List<FunctionBreakpointRequest>,
     ): CompletableFuture<List<BreakpointState>> =
-        request("setFunctionBreakpoints", id) { add("breakpoints", RunWorkerDebug.functions(breakpoints)) }
-            .thenApply { RunWorkerDebug.statesOf(it.getAsJsonArray("breakpoints")) }
+        request(id) { DebugProtocol.SetFunctionBreakpoints(id, it, breakpoints.map(FunctionBreakpointRequest::record)) }
+            .thenApply { it.map(SessionDebugger.Breakpoint::functionState) }
 
     /** The fibers of a stopped run; none while it runs. */
     fun threads(id: Long): CompletableFuture<List<ThreadState>> =
-        request("threads", id).thenApply { RunWorkerDebug.threadsOf(it.getAsJsonArray("threads")) }
+        request(id) { DebugProtocol.Threads(id, it) }.thenApply { it.map(SessionDebugger.ThreadInfo::state) }
 
     /** The calls that the line of a stopped frame makes, in the order of its code. */
     fun stepInTargets(
         id: Long,
         frame: Int,
     ): CompletableFuture<List<StepTargetState>> =
-        request(
-            "stepInTargets",
-            id,
-        ) { addProperty("frame", frame) }.thenApply { RunWorkerDebug.stepTargetsOf(it.getAsJsonArray("targets")) }
+        request(id) { DebugProtocol.StepInTargets(id, it, frame) }.thenApply { it.map(SessionDebugger.StepTarget::state) }
 
     /** Steps a stopped fiber into one of the calls of its line, [alone] while the program's other fibers stay stopped. */
     fun stepInto(
@@ -134,36 +126,33 @@ internal abstract class RunDebugClient {
         thread: Int,
         target: Int,
         alone: Boolean = false,
-    ): CompletableFuture<Boolean> =
-        request("stepInto", id) {
-            addProperty("thread", thread)
-            addProperty("target", target)
-            addProperty("alone", alone)
-        }.thenApply { it["stepped"].asBoolean }
+    ): CompletableFuture<Boolean> = request(id) { DebugProtocol.StepInto(id, it, thread, target, alone) }
 
     /** Restarts a stopped frame, which its caller calls again. */
     fun restartFrame(
         id: Long,
         frame: Int,
-    ): CompletableFuture<Boolean> = request("restartFrame", id) { addProperty("frame", frame) }.thenApply { it["restarted"].asBoolean }
+    ): CompletableFuture<Boolean> = request(id) { DebugProtocol.RestartFrame(id, it, frame) }
 
     /** The modules of a debugged run, its own and the libraries it uses; none before it starts. */
     fun modules(id: Long): CompletableFuture<List<ModuleState>> =
-        request("modules", id).thenApply { RunWorkerDebug.modulesOf(it.getAsJsonArray("modules")) }
+        request(id) { DebugProtocol.Modules(id, it) }.thenApply { it.map(SessionDebugger.ModuleInfo::state) }
 
     /** A stopped fiber's stack, innermost frame first. */
     fun stackTrace(
         id: Long,
         thread: Int,
     ): CompletableFuture<List<FrameState>> =
-        request("stackTrace", id) { addProperty("thread", thread) }.thenApply { RunWorkerDebug.framesOf(it.getAsJsonArray("frames")) }
+        request(id) { DebugProtocol.StackTrace(id, it, thread) }.thenApply { it.map(SessionDebugger.StackFrameInfo::state) }
 
     /** A stopped frame's scopes. */
     fun scopes(
         id: Long,
         frame: Int,
     ): CompletableFuture<List<ScopeState>> =
-        request("scopes", id) { addProperty("frame", frame) }.thenApply { RunWorkerDebug.scopesOf(it.getAsJsonArray("scopes")) }
+        request(id) {
+            DebugProtocol.Scopes(id, it, frame)
+        }.thenApply { it.map(SessionDebugger.Scope::state) }
 
     /** The variables of a scope, or the fields or elements of a variable, as the waiting fiber read them. */
     fun variables(
@@ -174,22 +163,14 @@ internal abstract class RunDebugClient {
         start: Int,
         count: Int,
     ): CompletableFuture<List<VariableState>> =
-        request("variables", id) {
-            addProperty("reference", reference)
-            addProperty("hex", hex)
-            addProperty("filter", filter.name)
-            addProperty("start", start)
-            addProperty("count", count)
-        }.thenApply { RunWorkerDebug.variablesOf(it.getAsJsonArray("variables")) }
+        request(id) { DebugProtocol.Variables(id, it, reference, hex, SessionDebugger.Filter.valueOf(filter.name), start, count) }
+            .thenApply { it.map(SessionDebugger.Variable::state) }
 
     /** Replaces a debugged run's exception stops. */
     fun setExceptionStops(
         id: Long,
         stops: ExceptionStops,
-    ) = command("exceptionStops", id) {
-        val json = RunWorkerDebug.exceptions(stops)
-        json.keySet().forEach { add(it, json[it]) }
-    }
+    ) = command(DebugProtocol.SetExceptionStops(id, stops.record()))
 
     /** Changes a variable of the stopped program to an expression's value; fails with the reason when it cannot. */
     fun setVariable(
@@ -199,12 +180,7 @@ internal abstract class RunDebugClient {
         expression: String,
         hex: Boolean,
     ): CompletableFuture<VariableState> =
-        request("setVariable", id) {
-            addProperty("reference", reference)
-            addProperty("name", name)
-            addProperty("expression", expression)
-            addProperty("hex", hex)
-        }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+        request(id) { DebugProtocol.SetVariable(id, it, reference, name, expression, hex) }.thenApply { it.state() }
 
     /** The names that complete the name typed at an offset of a text in a stopped frame; fails with the reason when it cannot. */
     fun completions(
@@ -212,12 +188,7 @@ internal abstract class RunDebugClient {
         frame: Int,
         text: String,
         offset: Int,
-    ): CompletableFuture<CompletionsState> =
-        request("completions", id) {
-            addProperty("frame", frame)
-            addProperty("text", text)
-            addProperty("offset", offset)
-        }.thenApply { RunWorkerDebug.completionsOf(it.getAsJsonObject("completions")) }
+    ): CompletableFuture<CompletionsState> = request(id) { DebugProtocol.Completions(id, it, frame, text, offset) }.thenApply { it.state() }
 
     /** Evaluates an expression in a stopped frame; fails with the reason when it cannot. */
     fun evaluate(
@@ -225,12 +196,7 @@ internal abstract class RunDebugClient {
         frame: Int,
         expression: String,
         hex: Boolean,
-    ): CompletableFuture<VariableState> =
-        request("evaluate", id) {
-            addProperty("frame", frame)
-            addProperty("expression", expression)
-            addProperty("hex", hex)
-        }.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+    ): CompletableFuture<VariableState> = request(id) { DebugProtocol.Evaluate(id, it, frame, expression, hex) }.thenApply { it.state() }
 
     /**
      * Runs code in a stopped frame, on the fiber that waits there, for at most [limit], and with [program], the whole
@@ -245,19 +211,10 @@ internal abstract class RunDebugClient {
         program: Boolean,
         hex: Boolean,
     ): CompletableFuture<VariableState> {
-        val (number, reply) =
-            send("runCode", id) {
-                addProperty("frame", frame)
-                addProperty("expression", expression)
-                addProperty("limit", limit.inWholeMilliseconds)
-                addProperty("program", program)
-                addProperty("hex", hex)
-            }
-        val answer = reply.thenApply { RunWorkerDebug.variableOf(it.getAsJsonObject("variable")) }
+        val (number, reply) = send(id) { DebugProtocol.RunCode(id, it, frame, expression, limit.inWholeMilliseconds, program, hex) }
+        val answer = reply.thenApply { it.state() }
         answer.whenComplete { _, failure ->
-            if (failure is CancellationException && pending.remove(number) != null) {
-                command("cancel", id) { addProperty("request", number) }
-            }
+            if (failure is CancellationException && pending.remove(number) != null) command(DebugProtocol.Cancel(id, number))
         }
         return answer
     }
@@ -266,9 +223,7 @@ internal abstract class RunDebugClient {
     fun exceptionInfo(
         id: Long,
         thread: Int,
-    ): CompletableFuture<ExceptionInfoState?> =
-        request("exceptionInfo", id) { addProperty("thread", thread) }
-            .thenApply { reply -> reply.getAsJsonObject("exception")?.let(RunWorkerDebug::exceptionInfoOf) }
+    ): CompletableFuture<ExceptionInfoState?> = request(id) { DebugProtocol.ExceptionInfo(id, it, thread) }.thenApply { it?.state() }
 
     /** Steps a stopped run's fiber, [alone] while the others stay stopped; false when that fiber does not wait. */
     fun step(
@@ -276,56 +231,42 @@ internal abstract class RunDebugClient {
         thread: Int,
         kind: StepKind,
         alone: Boolean = false,
-    ): CompletableFuture<Boolean> =
-        request("step", id) {
-            addProperty("thread", thread)
-            addProperty("step", kind.name.lowercase())
-            addProperty("alone", alone)
-        }.thenApply { it["stepped"].asBoolean }
+    ): CompletableFuture<Boolean> = request(id) { DebugProtocol.Step(id, it, thread, SessionDebugger.Step.valueOf(kind.name), alone) }
 
     /** Pauses a debugged run at the next line one of its fibers reaches. */
-    fun pause(id: Long) = command("pause", id)
+    fun pause(id: Long) = command(DebugProtocol.Pause(id))
 
     /** Resumes a stopped run. */
-    fun resume(id: Long) = command("continue", id)
+    fun resume(id: Long) = command(DebugProtocol.Continue(id))
 
     /** Continues one fiber of a stopped run alone, while the others stay stopped; false when that fiber does not wait. */
     fun resumeAlone(
         id: Long,
         thread: Int,
-    ): CompletableFuture<Boolean> = request("continueAlone", id) { addProperty("thread", thread) }.thenApply { it["continued"].asBoolean }
+    ): CompletableFuture<Boolean> = request(id) { DebugProtocol.ContinueAlone(id, it, thread) }
 
     /**
-     * Sends a request to a run's debugger and answers with the reply; fails when the run's program cannot be
-     * reached, ends before the reply, or answers with an error.
+     * Sends the request that [make] makes, with its number, to a run's debugger and answers with the reply's answer;
+     * fails when the run's program cannot be reached, ends before the reply, or answers with an error.
      */
-    private fun request(
-        name: String,
+    private fun <A> request(
         id: Long,
-        fill: JsonObject.() -> Unit = {},
-    ): CompletableFuture<JsonObject> = send(name, id, fill).second
+        make: (Long) -> DebugProtocol.Request<A>,
+    ): CompletableFuture<A> = send(id, make).second
 
     /** Sends a request as [request] does, and answers with its number too, by which a `cancel` names it. */
-    private fun send(
-        name: String,
+    private fun <A> send(
         id: Long,
-        fill: JsonObject.() -> Unit,
-    ): Pair<Long, CompletableFuture<JsonObject>> {
+        make: (Long) -> DebugProtocol.Request<A>,
+    ): Pair<Long, CompletableFuture<A>> {
         val number = nextRequest.getAndIncrement()
-        val reply = CompletableFuture<JsonObject>()
+        val request = make(number)
+        val reply = CompletableFuture<DebugProtocol.Reply>()
         pending[number] = Pending(id, reply)
-        val sent =
-            deliver(
-                id,
-                JsonObject().apply {
-                    addProperty("command", name)
-                    addProperty("id", id)
-                    addProperty("request", number)
-                    fill()
-                },
-            )
-        if (!sent) pending.remove(number)?.reply?.completeExceptionally(IllegalStateException("The program is not running"))
-        return number to reply
+        if (!deliver(id, DebugProtocol.json(request))) {
+            pending.remove(number)?.reply?.completeExceptionally(IllegalStateException("The program is not running"))
+        }
+        return number to reply.thenApply { DebugProtocol.answer(request, it) }
     }
 
     /** Fails the requests still waiting for a reply from a run that has ended. */
@@ -335,7 +276,12 @@ internal abstract class RunDebugClient {
         }
     }
 
-    /** Sends a command for one run, when its program can be reached. */
+    /** Sends a command to a run's debugger, when its program can be reached. */
+    protected fun command(command: DebugProtocol.Command) {
+        deliver(command.id(), DebugProtocol.json(command))
+    }
+
+    /** Sends one of the worker's own commands for one run, when its program can be reached. */
     protected fun command(
         name: String,
         id: Long,
@@ -356,21 +302,24 @@ internal abstract class RunDebugClient {
      * event is not one of them.
      */
     protected fun debugEvent(
-        event: JsonObject,
+        event: DebugProtocol.Event,
         listener: RunListener?,
     ): Boolean {
-        when (event["event"]?.asString) {
-            "breakpoints" -> listener?.breakpoints(event["path"].asString, RunWorkerDebug.statesOf(event.getAsJsonArray("breakpoints")))
+        when (event) {
+            is DebugProtocol.Breakpoints -> listener?.breakpoints(event.path(), event.breakpoints().map(SessionDebugger.Breakpoint::state))
 
-            "functionBreakpoints" -> listener?.functionBreakpoints(RunWorkerDebug.statesOf(event.getAsJsonArray("breakpoints")))
+            is DebugProtocol.FunctionBreakpoints ->
+                listener?.functionBreakpoints(
+                    event.breakpoints().map(SessionDebugger.Breakpoint::functionState),
+                )
 
-            "stopped" -> listener?.stopped(RunWorkerDebug.stopOf(event))
+            is DebugProtocol.Stopped -> listener?.stopped(event.stop().state())
 
-            "logged" -> listener?.logged(event["text"].asString)
+            is DebugProtocol.Logged -> listener?.logged(event.text())
 
-            "reply" ->
-                event["request"]?.asLong?.let(pending::remove)?.reply?.let { reply ->
-                    val error = event["error"]?.asString
+            is DebugProtocol.Reply ->
+                pending.remove(event.request())?.reply?.let { reply ->
+                    val error = event.error()
                     if (error == null) reply.complete(event) else reply.completeExceptionally(IllegalStateException(error))
                 }
 

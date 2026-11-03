@@ -15,15 +15,13 @@ import com.redhat.devtools.lsp4ij.dap.DebugAdapterManager
 import com.redhat.devtools.lsp4ij.dap.configurations.DAPRunConfigurationBase
 import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import org.jdom.Element
-import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.XtcIconProvider
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
-import org.xtclang.idea.lsp.XtcLspConnectionProvider
 import javax.swing.Icon
 
 /**
  * Attaches the debugger to an Ecstasy program that runs outside the IDE under the launcher's `--debug`, as in
- * `xec --debug listen:127.0.0.1:5005,suspend,agent=<the language server's jar> App.x`: Debug starts a debug session in
+ * `xec --debug listen:127.0.0.1:5005,suspend App.x`, whose XDK has the debugger's agent: Debug starts a debug session in
  * the language server, which attaches to the program's debugger agent at [host] and [port] on this machine, with the
  * program's [token] if it was given one, and with [stopOnEntry], stops a program that waits for the debugger at its
  * first line. Stopping the session detaches, and the program runs on. It has no Run.
@@ -82,14 +80,9 @@ class XtcAttachConfiguration(
 
         /**
          * The `--debug` option of `xec` and `xtc run` for a program that waits before its first line for an attach on
-         * [port] of this machine, with this plugin's language server jar as its agent; `<jar>` stands in for a jar
-         * that is not found.
+         * [port] of this machine.
          */
-        fun debugOption(port: Int): String {
-            val jar = runCatching { PluginPaths.findServerJar(XtcLspConnectionProvider.LSP_SERVER_JAR).toString() }.getOrDefault("<jar>")
-            val value = "listen:127.0.0.1:$port,suspend,agent=$jar"
-            return if (value.any(Char::isWhitespace)) "--debug \"$value\"" else "--debug $value"
-        }
+        fun debugOption(port: Int): String = "--debug listen:127.0.0.1:$port,suspend"
     }
 }
 
