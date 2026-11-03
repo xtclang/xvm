@@ -512,16 +512,18 @@ recorded partial coverage.
   only when the project directory has no `.x` files of its own (javatools' `ModuleInfo`); fixed
   since (2026-11-03): deduction also looks for the named module's file in the project's
   conventional source directories, past a directory with other sources.
-- [ ] R13: running and debugging tests from the editors. Done (2026-11-03): the embedded part and
-  VS Code. The language server finds each module's xunit tests (`xtc/tests`, `XdkTests`), and runs
-  them, or debugs them over a connect-back, with `xtc test` in a process of its own (`TestProcess`,
-  `xtc/run` and a DAP launch with `tests`); xunit reports each test as a TeamCity service message
-  with `-I xvm.xunit.report=teamcity`; VS Code's Test Explorer runs and debugs them (shared X339,
-  VS Code only so far). Commits `649d5c53f2` (xunit's `-c`/`-t` selected an implicitly imported
-  class of the same name, and a selection of nothing ran every test), `adc70bfce7`, `6e5dd8df3f`,
-  `f3c77b501a`; `EmbeddedTestRunsTest`, and X339 with the debugging cases in the container (33
-  passing). Open: IntelliJ's test tree, Gradle and command-line test runs, and an excluded test
-  under an included class.
+- [x] R13: running and debugging tests from the editors (2026-11-03). The language server finds each
+  module's xunit tests (`xtc/tests`, `XdkTests`), and runs them, or debugs them over a connect-back,
+  with `xtc test` in a process of its own (`TestProcess`; `xtc/run` and a DAP launch with `tests`);
+  xunit reports each test as a TeamCity service message with `-I xvm.xunit.report=teamcity`, its
+  location as `xunit://<selector>`. VS Code's Test Explorer and IntelliJ's gutter icons and test
+  console run and debug them, embedded, with Gradle's `testXtc`, which now takes `--test-class`,
+  `--test-method`, `--test-package` and `--test-report`, and in IntelliJ with `xtc test`. Commits
+  `649d5c53f2` (xunit's `-c`/`-t` selected an implicitly imported class of the same name, and a
+  selection of nothing ran every test), `adc70bfce7`, `6e5dd8df3f`, `f3c77b501a`, `1223203701`,
+  `281a59908d`, `12eb77c39d`, `5ac6ddab35`, `ceabc7d110`, `9398dc0eb2`; shared X339 and X340, which
+  pass in both editors in the container (IntelliJ partial: a failure's stack is the console's text).
+  VS Code has no command-line mode.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
   [,agent=<jar>]`, through javatools' new `DebuggerProvider`; the language server's jar is the
