@@ -109,11 +109,11 @@ class EmbeddedTestRunsTest {
                 val output = client.output.toString()
 
                 assertThat(output).contains(
-                    "##teamcity[testSuiteStarted name='Mathy' nodeId='Mathy:' parentNodeId='0' locationHint='xunit:']",
-                    "##teamcity[testStarted name='Mathy.adds()' nodeId='Mathy:void adds()' parentNodeId='Mathy:' locationHint='xunit:adds']",
-                    "##teamcity[testSuiteStarted name='Inner' nodeId='Mathy:Inner' parentNodeId='Mathy:' locationHint='xunit:Inner']",
+                    "##teamcity[testSuiteStarted name='Mathy' nodeId='Mathy:' parentNodeId='0' locationHint='xunit://']",
+                    "##teamcity[testStarted name='Mathy.adds()' nodeId='Mathy:void adds()' parentNodeId='Mathy:' locationHint='xunit://adds']",
+                    "##teamcity[testSuiteStarted name='Inner' nodeId='Mathy:Inner' parentNodeId='Mathy:' locationHint='xunit://Inner']",
                     "##teamcity[testStarted name='Inner.works()' nodeId='Mathy:Inner.void works()' parentNodeId='Mathy:Inner' " +
-                        "locationHint='xunit:Inner.works']",
+                        "locationHint='xunit://Inner.works']",
                     "inside works",
                 )
                 assertThat(
@@ -138,8 +138,8 @@ class EmbeddedTestRunsTest {
                 val exit = client.exits.poll(120, SECONDS)!!
                 val output = client.output.toString()
 
-                assertThat(output).contains("locationHint='xunit:Inner.works']", "inside works")
-                assertThat(output).doesNotContain("xunit:adds", "xunit:fails")
+                assertThat(output).contains("locationHint='xunit://Inner.works']", "inside works")
+                assertThat(output).doesNotContain("xunit://adds", "xunit://fails")
                 assertThat(exit.exitCode).isZero()
                 assertThat(runs.tracked()).isZero()
             }
