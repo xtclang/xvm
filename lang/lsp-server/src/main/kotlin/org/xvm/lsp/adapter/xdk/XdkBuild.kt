@@ -150,6 +150,13 @@ internal object XdkBuild {
         )
 }
 
+/** The tests of the source module [module], whose root is [uri]. */
+data class XdkModuleTests(
+    val module: String,
+    val uri: String,
+    val tests: XdkTest,
+)
+
 /** A source module with an entry method the runner can call, proven from its compiled artifact. */
 data class XdkRunnableTarget(
     val module: String,

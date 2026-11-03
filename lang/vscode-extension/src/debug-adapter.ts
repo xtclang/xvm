@@ -232,7 +232,8 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
         if (!resolved) {
             return undefined;
         }
-        if (resolved.request === 'attach' || buildMode(folder) === 'embedded') {
+        // the Test Explorer's runs of tests are embedded in either mode
+        if (resolved.request === 'attach' || resolved.tests || buildMode(folder) === 'embedded') {
             return resolved;
         }
         if (!resolved.noDebug) {

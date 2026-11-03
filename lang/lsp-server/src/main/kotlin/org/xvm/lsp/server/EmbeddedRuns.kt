@@ -24,6 +24,7 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
+import org.xvm.debug.TestSelector
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
 import org.xvm.lsp.adapter.Adapter
@@ -36,7 +37,9 @@ import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.RunDebugClient
 import org.xvm.lsp.run.RunListener
 import org.xvm.lsp.run.RunWorkerProcess
+import org.xvm.lsp.run.TestProcess
 import java.io.Closeable
+import java.io.File
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -69,7 +72,9 @@ data class BuildResponse(
  * `xtc/run` parameters. [module] is a module name or root URI; a client that sends a root URI also sends the
  * module's name as [moduleName], which identifies the module when the URI no longer does, as after its root file
  * was renamed or moved. The client chooses [runId] so it can attach its console before any output arrives;
- * [args] are passed to the entry method as given, never shell-parsed.
+ * [args] are passed to the entry method as given, never shell-parsed. With [tests], xunit runs the module's tests that
+ * they select instead, all of them for an empty list, as `xtc test` does, and reports them in the output as TeamCity
+ * service messages; the entry method and its arguments are not used.
  */
 data class RunParams(
     val module: String? = null,
@@ -78,6 +83,7 @@ data class RunParams(
     val workingDirectory: String? = null,
     val runId: String? = null,
     val moduleName: String? = null,
+    val tests: List<TestSelector>? = null,
 )
 
 /** `xtc/run` result: the build outcome, and the run's ID when the build succeeded and the run started. */
@@ -179,6 +185,9 @@ internal class EmbeddedRuns(
     /** The tasks that run programs under the debugger for the client, by run ID, until their program ends. */
     private val taskRuns = ConcurrentHashMap<String, TaskRun>()
 
+    /** The processes that run a module's tests, by run ID, until they end. */
+    private val testRuns = ConcurrentHashMap<String, TestProcess>()
+
     /** The sources each run under the debugger was compiled from, by run ID, while it runs. */
     private val compiled = ConcurrentHashMap<String, CompiledSources>()
 
@@ -266,9 +275,14 @@ internal class EmbeddedRuns(
                     synchronized(inputLock) { waiting.remove(runId) }
                     return@thenCompose CompletableFuture.completedFuture(RunResponse(null, build))
                 }
-                ready.thenApply { setup ->
-                    start(runId, params, result, target.name, setup, events)
-                    RunResponse(runId, build)
+                ready.thenCompose { setup ->
+                    val tests = params.tests
+                    if (tests == null) {
+                        start(runId, params, result, target.name, setup, events)
+                        CompletableFuture.completedFuture(RunResponse(runId, build))
+                    } else {
+                        startTests(runId, params, tests, result, target, setup, events).thenApply { RunResponse(runId, build) }
+                    }
                 }
             }.whenComplete { _, failure -> if (failure != null) synchronized(inputLock) { waiting.remove(runId) } }
     }
@@ -432,6 +446,119 @@ internal class EmbeddedRuns(
         }
     }
 
+    /**
+     * Runs the tests of [target] that [tests] select in a [TestProcess], as `xtc test` does. With [setup], the process
+     * runs under the debugger and connects to it, as a task's program does ([launchWithTask]), and the answer comes
+     * once it has taken the setup; it fails with the reason when the process ends first. [events] receives the output
+     * and the single exit, as a run's, and a debugged run's breakpoints and stops; ending the debugging ends the tests.
+     */
+    private fun startTests(
+        runId: String,
+        params: RunParams,
+        tests: List<TestSelector>,
+        result: XdkBuildResult,
+        target: XdkBuiltModule,
+        setup: DebugSetup?,
+        events: RunListener,
+    ): CompletableFuture<Unit> {
+        val artifact = target.artifact ?: return CompletableFuture.failedFuture(IllegalStateException("${target.name} was not written"))
+        val token = UUID.randomUUID().toString()
+        val server = setup?.let { ServerSocket(0, 1, InetAddress.getByName(LOOPBACK)) }
+        val command =
+            TestProcess.command(
+                artifact,
+                result.modulePath,
+                tests,
+                File(File(result.workingDirectory), XUNIT_OUTPUT).path,
+                server?.let { "connect:$LOOPBACK:${it.localPort},suspend,token=$token" },
+            )
+        // a run stopped while its module built never starts; one stopped from here on stops its process
+        val process =
+            synchronized(inputLock) {
+                if (waiting.remove(runId)?.stopped == true) {
+                    null
+                } else {
+                    TestProcess.start(command, File(params.workingDirectory ?: result.workingDirectory), events::output).also {
+                        testRuns[runId] =
+                            it
+                    }
+                }
+            }
+        if (process == null) {
+            runCatching { server?.close() }
+            logger.info("tests stopped before they started: run={} build={}", runId, result.id)
+            events.exited(null, STOPPED_BEFORE_START)
+            return CompletableFuture.completedFuture(Unit)
+        }
+        logger.info("tests starting: run={} build={} artifact={} tests={} debug={}", runId, result.id, artifact, tests.size, server != null)
+        if (server == null) {
+            process.ended.thenAccept { code ->
+                testRuns.remove(runId)
+                if (process.stopped) events.exited(null, STOPPED) else events.exited(code.toLong(), null)
+            }
+            return CompletableFuture.completedFuture(Unit)
+        }
+        // a process that ends before it connects ends the wait
+        process.ended.whenComplete { _, _ -> runCatching { server.close() } }
+        val over = AtomicBoolean()
+
+        // the program's end, over its connection, comes ahead of what it printed last, so it is reported once the
+        // process has ended, or TASK_END_WAIT after it if the process does not end; ending the debugging ends it
+        fun end(
+            code: Long?,
+            error: String?,
+        ) {
+            attached.remove(runId)
+            if (!over.compareAndSet(false, true)) return
+            process.ended
+                .handle { _, _ -> }
+                .completeOnTimeout(Unit, TASK_END_WAIT.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                .thenRun {
+                    testRuns.remove(runId)
+                    process.stop()
+                    events.exited(code, error)
+                }
+        }
+        val listener =
+            object : RunListener by events {
+                override fun exited(
+                    code: Long?,
+                    error: String?,
+                ) = end(code, error)
+
+                override fun detached(reason: String?) = end(null, if (process.stopped) STOPPED else reason)
+            }
+        val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
+        return CompletableFuture
+            .supplyAsync({
+                try {
+                    AttachedProgram.accept(server, token, listener)
+                } catch (failure: IOException) {
+                    throw IOException(testsNeverConnected(process, failure), failure)
+                } finally {
+                    runCatching { server.close() }
+                }
+            }, ATTACHING)
+            .thenCompose { program ->
+                attached[runId] = program
+                logger.info("tests attached: run={} module={}", runId, program.module)
+                program
+                    .debug(modules, setup)
+                    .whenComplete { _, failure -> if (failure != null && attached.remove(runId) != null) program.close() }
+            }.whenComplete { _, failure -> if (failure != null) testRuns.remove(runId)?.stop() }
+    }
+
+    /** Why the test process [process] never connected to the debugger: it was stopped, or it ended first. */
+    private fun testsNeverConnected(
+        process: TestProcess,
+        failure: IOException,
+    ): String =
+        when {
+            process.stopped -> STOPPED_BEFORE_START
+            process.ended.isDone -> "xtc test ended with exit code ${process.ended.join()} before the tests started; its output says why."
+            else -> failure.message ?: "The tests did not connect"
+        }
+
     private fun start(
         runId: String,
         params: RunParams,
@@ -564,6 +691,10 @@ internal class EmbeddedRuns(
         }
         val id =
             synchronized(inputLock) {
+                testRuns[runId]?.let { process ->
+                    process.stop()
+                    return true
+                }
                 workerIds[runId] ?: waiting[runId]?.let { typed ->
                     typed.stopped = true
                     return true
@@ -792,7 +923,8 @@ internal class EmbeddedRuns(
 
     /** Runs still tracked, here and by the execution workers, which is none once every run has ended; for tests. */
     internal fun tracked(): Int =
-        synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + attached.size + taskRuns.size + worker.tracked()
+        synchronized(inputLock) { workerIds.size + waiting.size } + compiled.size + attached.size + taskRuns.size + testRuns.size +
+            worker.tracked()
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun workerPids(): List<Long> = worker.workerPids()
@@ -803,6 +935,7 @@ internal class EmbeddedRuns(
      */
     override fun close() {
         taskRuns.values.toList().forEach(TaskRun::stop)
+        testRuns.values.toList().forEach(TestProcess::stop)
         attached.values.toList().forEach(AttachedProgram::close)
         worker.close()
     }
@@ -834,6 +967,12 @@ internal class EmbeddedRuns(
 
         /** The exit of a run stopped while its module was still building. */
         const val STOPPED_BEFORE_START = "Stopped before the program started."
+
+        /** The end of a run stopped while it ran its tests. */
+        const val STOPPED = "Stopped."
+
+        /** Where xunit writes a test run's files, under the workspace folder, beside the embedded build's. */
+        private const val XUNIT_OUTPUT = "build/xtc/embedded/xunit"
 
         /** The end of a program that [task] ran under the debugger, once the task was stopped. */
         fun stoppedWith(task: DebugTask) = "Stopped, with its ${task.task}."

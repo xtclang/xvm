@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **340 scenarios**: X1–X338 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **341 scenarios**: X1–X339 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -1515,7 +1515,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 340 scenarios: X1–X338 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 341 scenarios: X1–X339 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -3938,6 +3938,16 @@ module by its name in the project directory, whose root has the other cases' sou
 | ID | Actions | Expected result |
 |---|---|---|
 | X338 | IntelliJ: write `Commanded.x` at the project root, with a `run` that prints `before`, calls `twice(21)` on line 5, prints `after {n}` and returns `n`. Set a breakpoint on line 11, in `twice`, and Debug an Ecstasy Application configuration for `Commanded` that runs with **xtc command line**. When it stops, look at the call stack. Then Resume Program. VS Code: start a launch of `Commanded` with `"buildMode": "commandLine"`. | IntelliJ runs `xtc run --deduce --debug connect:…,suspend,token=… Commanded` in the project directory, and the program connects to the session. It prints `before` in the Debug console and stops on line 11, in `Commanded.twice`, called from line 5 of `Commanded.run`. Resume prints `after 42`, the program ends with exit code 42, and the session ends with it. VS Code refuses the launch, in a dialog: `Run failed: The xtc command could not run: Request xtc/debugTask failed with message: VS Code runs a debugged program only with Gradle, not in build mode commandLine`, and runs no task. |
+
+### Running and debugging tests in the Test Explorer (X339)
+
+The Test Explorer's tests run embedded, whatever the folder's build mode: the language server runs them with xunit
+in a process of its own, as `xtc test` does, and xunit reports each test as a TeamCity service message in the run's
+output, which marks it. IntelliJ has no Ecstasy test tree yet.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X339 | VS Code: write `Tested.x`, a module with two tests, `adds` and `fails`, whose assertion on line 10 fails with `one and one are not three`, and a class `Inner` with a test `works` that prints `inside works` on line 17. Open the Test Explorer, then Run All Tests. Set a breakpoint on line 17, put the cursor on the name of `works` and choose **Debug Test at Cursor**; when it stops, Continue. | The Test Explorer lists `Tested`, with `adds`, `fails` and `Inner` under it and `works` under `Inner`. Run All marks `adds` and `works` passed and `fails` failed, with the message `one and one are not three` on line 10 of `Tested.x`; the test output shows `inside works`. The debug session stops on line 17 in `works`; Continue runs it to its end, and `works` is marked passed. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
