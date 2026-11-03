@@ -28,6 +28,8 @@ import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import org.jdom.Element
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.lsp.RunParams
+import org.xtclang.idea.lsp.ServerTest
+import org.xtclang.idea.lsp.TestSelector
 import kotlin.io.path.Path
 
 /** What a run configuration runs with; [PROJECT] follows the project's [XtcBuildSettings]. */
@@ -64,6 +66,9 @@ class XtcRunConfiguration(
     var stopOnEntry = false // Under Debug, the program stops at its first line
     var evaluationRunsProgram = false // While Evaluate Expression runs code under Debug, the rest of the program runs too
 
+    /** The module's tests that xunit runs instead of its entry method, all of them for an empty list; null for none. */
+    var tests: List<TestSelector>? = null
+
     /** The mode this configuration runs with now: never [XtcRunMode.PROJECT]. */
     fun effectiveRunMode(): XtcRunMode =
         when (runWith) {
@@ -82,6 +87,9 @@ class XtcRunConfiguration(
         if (effectiveRunMode() == XtcRunMode.EMBEDDED && moduleName.isBlank() && moduleUri.isBlank()) {
             throw RuntimeConfigurationError("An embedded run needs the module name")
         }
+        if (tests != null && effectiveRunMode() != XtcRunMode.EMBEDDED) {
+            throw RuntimeConfigurationError("Tests run with the embedded compiler; choose it under Run with")
+        }
     }
 
     override fun getState(
@@ -92,7 +100,12 @@ class XtcRunConfiguration(
         if (executor.id == DefaultDebugExecutor.EXECUTOR_ID) return super.getState(executor, environment)
         return when (val mode = effectiveRunMode()) {
             XtcRunMode.EMBEDDED -> {
-                EmbeddedRunState(environment, embeddedRequest(), moduleName.ifBlank { moduleUri })
+                val label = moduleName.ifBlank { moduleUri }
+                if (tests == null) {
+                    EmbeddedRunState(environment, embeddedRequest(), label)
+                } else {
+                    EmbeddedTestState(this, environment, embeddedRequest(), label)
+                }
             }
 
             else -> {
@@ -116,7 +129,7 @@ class XtcRunConfiguration(
     override fun getDebugAdapterServer(): DebugAdapterServerDefinition? =
         DebugAdapterManager.getInstance().getDebugAdapterServerById(XtcDebugAdapterFactory.SERVER_ID)
 
-    internal fun embeddedRequest() = embeddedRequest(moduleName, moduleUri, methodName, moduleArguments)
+    internal fun embeddedRequest() = embeddedRequest(moduleName, moduleUri, methodName, moduleArguments, tests)
 
     private fun createGradleCommandLine() =
         GeneralCommandLine().apply {
@@ -147,6 +160,10 @@ class XtcRunConfiguration(
         quietMode = element.getAttributeValue("quietMode")?.toBoolean() ?: true
         stopOnEntry = element.getAttributeValue("stopOnEntry")?.toBoolean() ?: false
         evaluationRunsProgram = element.getAttributeValue("evaluationRunsProgram")?.toBoolean() ?: false
+        tests =
+            element.getChild(TESTS)?.getChildren(TEST)?.map { test ->
+                TestSelector(test.getAttributeValue(SELECTOR).orEmpty(), test.getAttributeValue(KIND) ?: ServerTest.TEST)
+            }
     }
 
     override fun writeExternal(element: Element) {
@@ -159,9 +176,46 @@ class XtcRunConfiguration(
         element.setAttribute("quietMode", quietMode.toString())
         element.setAttribute("stopOnEntry", stopOnEntry.toString())
         element.setAttribute("evaluationRunsProgram", evaluationRunsProgram.toString())
+        element.removeChild(TESTS)
+        tests?.let { chosen ->
+            element.addContent(
+                Element(TESTS).apply {
+                    chosen.forEach { addContent(Element(TEST).setAttribute(SELECTOR, it.selector).setAttribute(KIND, it.kind)) }
+                },
+            )
+        }
     }
 
     internal companion object {
+        /** How a configuration saves its tests: a `tests` element with a `test` for each, its selector and kind. */
+        private const val TESTS = "tests"
+        private const val TEST = "test"
+        private const val SELECTOR = "selector"
+        private const val KIND = "kind"
+
+        /**
+         * Tests as the settings editor shows them: `kind:selector`, comma-separated, such as `class:Inner,
+         * test:Inner.works`, or `module:` for all of the module's tests; empty for none, an application run.
+         */
+        fun testsText(tests: List<TestSelector>?): String =
+            when {
+                tests == null -> ""
+                tests.isEmpty() -> "${ServerTest.MODULE}:"
+                else -> tests.joinToString(", ") { "${it.kind}:${it.selector}" }
+            }
+
+        /** The tests that [text], as [testsText] writes it, names; null when it names none. */
+        fun testsOf(text: String): List<TestSelector>? =
+            text
+                .split(',')
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .map { item ->
+                    val kind = item.substringBefore(':', ServerTest.TEST).trim()
+                    TestSelector(item.substringAfter(':', item).trim(), kind)
+                }.takeIf { it.isNotEmpty() }
+                ?.let { chosen -> if (chosen.any { it.kind == ServerTest.MODULE }) emptyList() else chosen }
+
         /** The run modes whose runs Debug can run under the debugger. */
         private val DEBUGGABLE = setOf(XtcRunMode.EMBEDDED, XtcRunMode.GRADLE, XtcRunMode.COMMAND_LINE)
 
@@ -208,11 +262,13 @@ class XtcRunConfiguration(
             moduleUri: String,
             methodName: String,
             moduleArguments: String,
+            tests: List<TestSelector>? = null,
         ) = RunParams(
             module = moduleUri.ifBlank { moduleName },
             method = methodName.ifBlank { null },
             args = moduleArguments.split(",").map(String::trim).filter(String::isNotEmpty),
             moduleName = moduleName.ifBlank { null }.takeIf { moduleUri.isNotBlank() },
+            tests = tests,
         )
     }
 }
@@ -261,6 +317,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
     private var quietMode = true
     private var stopOnEntry = false
     private var evaluationRunsProgram = false
+    private var tests = ""
 
     private val editorPanel by lazy {
         panel {
@@ -285,6 +342,14 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
                 textField()
                     .bindText(::moduleArguments)
                     .comment("Comma-separated arguments passed to the module")
+            }
+            row("Tests:") {
+                textField()
+                    .bindText(::tests)
+                    .comment(
+                        "xunit tests to run instead of the module, as kind:selector, comma-separated, such as " +
+                            "class:Inner, test:Inner.works; module: runs all of them. Empty runs the module",
+                    )
             }
             row("Run with:") {
                 comboBox(XtcRunMode.entries.toList())
@@ -320,6 +385,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         config.quietMode = quietMode
         config.stopOnEntry = stopOnEntry
         config.evaluationRunsProgram = evaluationRunsProgram
+        config.tests = XtcRunConfiguration.testsOf(tests)
     }
 
     override fun resetEditorFrom(config: XtcRunConfiguration) {
@@ -331,6 +397,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         quietMode = config.quietMode
         stopOnEntry = config.stopOnEntry
         evaluationRunsProgram = config.evaluationRunsProgram
+        tests = XtcRunConfiguration.testsText(config.tests)
         editorPanel.reset() // Reset UI from backing properties
     }
 }

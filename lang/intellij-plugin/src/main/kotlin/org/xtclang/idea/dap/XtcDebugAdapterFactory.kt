@@ -3,7 +3,9 @@ package org.xtclang.idea.dap
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationOptions
 import com.intellij.execution.executors.DefaultDebugExecutor
+import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
+import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
@@ -17,7 +19,9 @@ import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
 import com.redhat.devtools.lsp4ij.settings.ServerTrace
+import org.xtclang.idea.run.DebugTestsTab
 import org.xtclang.idea.run.EmbeddedExecution
+import org.xtclang.idea.run.TestEventsProcessHandler
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunMode
@@ -71,11 +75,25 @@ class XtcDebugAdapterDescriptor(
 ) : DebugAdapterDescriptor(options, environment, serverDefinition) {
     private val project = environment.project
 
-    override fun startServer(): ProcessHandler =
-        LanguageServerDebugProcessHandler(DebugSessions.getInstance(project)) {
-            // the session builds the text the server holds, so the editor's edits must have reached it
-            EmbeddedExecution.server(project).thenCombine(EmbeddedExecution.editsSent(project)) { server, _ -> server }
+    override fun startServer(): ProcessHandler {
+        // a test run's output reports its tests, which a Tests tab of the session shows in IntelliJ's test console
+        val configuration = (environment.runProfile as? XtcRunConfiguration)?.takeIf { it.tests != null }
+        val events = configuration?.let { TestEventsProcessHandler() }
+        val handler =
+            LanguageServerDebugProcessHandler(DebugSessions.getInstance(project), output = { text -> events?.output(text) }) {
+                // the session builds the text the server holds, so the editor's edits must have reached it
+                EmbeddedExecution.server(project).thenCombine(EmbeddedExecution.editsSent(project)) { server, _ -> server }
+            }
+        if (configuration != null && events != null) {
+            handler.addProcessListener(
+                object : ProcessListener {
+                    override fun processTerminated(event: ProcessEvent) = events.ended(event.exitCode)
+                },
+            )
+            DebugTestsTab.attach(project, handler, events, configuration, environment.executor)
         }
+        return handler
+    }
 
     override fun getDapParameters(): Map<String, Any> {
         (environment.runProfile as? XtcAttachConfiguration)?.let { return it.dapParameters() }
@@ -87,6 +105,7 @@ class XtcDebugAdapterDescriptor(
             parameters["args"] = configuration.embeddedRequest().args
             if (configuration.stopOnEntry) parameters["stopOnEntry"] = true
             if (configuration.evaluationRunsProgram) parameters["evaluationRunsProgram"] = true
+            configuration.tests?.let { tests -> parameters["tests"] = tests.map { mapOf("selector" to it.selector, "kind" to it.kind) } }
             // the module's Gradle task or xtc run runs the program, under the session's debugger
             when (configuration.effectiveRunMode()) {
                 XtcRunMode.GRADLE -> parameters["buildMode"] = "gradle"
