@@ -1,8 +1,11 @@
+import { spawn } from 'node:child_process';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
 import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
+import { LineSplitter } from './test-messages';
 
 type ClientAccess = () => LanguageClient | undefined;
 
@@ -33,6 +36,59 @@ export interface DebugTaskParams {
     debug: string;
     /** The launch's `buildMode`: `gradle`, or `commandLine` for `xtc run`, which VS Code does not run. */
     buildMode?: string;
+    /** The module's tests the task runs instead, with `testXtc`, all of them for an empty list. */
+    tests?: TestSelection[];
+}
+
+/** A test, or a container of tests, as xunit's selector and its kind: `module`, `package`, `class` or `test`. */
+export interface TestSelection {
+    selector: string;
+    kind: string;
+}
+
+/** The Gradle wrapper on [platform], in the folder its build runs in. */
+export function gradleWrapper(platform = process.platform): string {
+    return platform === 'win32' ? 'gradlew.bat' : './gradlew';
+}
+
+/** `testXtc`'s options that run [tests] of [module], all of its tests for none, with xunit's TeamCity report. */
+export function gradleTestArgs(module: string, tests: readonly TestSelection[]): string[] {
+    const options: Record<string, string> = { package: 'test-package', class: 'test-class', test: 'test-method' };
+    return [
+        '-q',
+        'testXtc',
+        `--module=${module}`,
+        ...tests.flatMap(test => options[test.kind] ? [`--${options[test.kind]}=${test.selector}`] : []),
+        '--test-report=teamcity',
+    ];
+}
+
+/**
+ * Runs [command] with [args] in [directory], as a test run of Gradle does, and gives its output to [output] in lines,
+ * with whether each came from its standard error; answers with its exit code once it has ended. [token] ends it.
+ */
+export function runTestProcess(command: string, args: readonly string[], directory: string,
+                               output: (line: string, error: boolean) => void, token: vscode.CancellationToken): Promise<number | undefined> {
+    return new Promise(resolve => {
+        // the wrapper is the folder's own, and Windows runs its batch file through the shell
+        const child = spawn(command.startsWith('./') ? path.join(directory, command) : command, [...args],
+            { cwd: directory, shell: process.platform === 'win32' });
+        const streams = [{ stream: child.stdout, error: false }, { stream: child.stderr, error: true }];
+        streams.forEach(({ stream, error }) => {
+            const lines = new LineSplitter();
+            stream.setEncoding('utf8');
+            stream.on('data', (text: string) => lines.feed(text).forEach(line => output(line, error)));
+            stream.on('end', () => lines.flush().forEach(line => output(line, error)));
+        });
+        const stop = token.onCancellationRequested(() => child.kill());
+        child.on('error', failure => {
+            output(`${command} could not run: ${failure.message}`, true);
+        });
+        child.on('close', code => {
+            stop.dispose();
+            resolve(code ?? undefined);
+        });
+    });
 }
 
 /**
@@ -41,7 +97,7 @@ export interface DebugTaskParams {
  */
 export function gradleDebugCommand(params: DebugTaskParams, platform = process.platform): { command: string; args: string[] } {
     return {
-        command: platform === 'win32' ? 'gradlew.bat' : './gradlew',
+        command: gradleWrapper(platform),
         args: [
             '-q',
             'runXtc',
@@ -62,7 +118,11 @@ async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationT
     if (params.buildMode !== undefined && params.buildMode !== 'gradle') {
         throw new Error(`VS Code runs a debugged program only with Gradle, not in build mode ${params.buildMode}`);
     }
-    const folder = adapters.get(params.sessionId)?.folder;
+    const adapter = adapters.get(params.sessionId);
+    if (params.tests && adapter?.folder) {
+        return { exitCode: await runDebugTestTask(params, params.tests, adapter, adapter.folder, token) };
+    }
+    const folder = adapter?.folder;
     const { command, args } = gradleDebugCommand(params);
     const definition: XtcTaskDefinition = { type: 'xtc', moduleName: params.module, methodName: params.method, mode: 'gradle' };
     const task = new vscode.Task(definition, folder ?? vscode.TaskScope.Workspace, `Debug ${params.module}`, 'xtc',
@@ -90,6 +150,20 @@ async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationT
             token.onCancellationRequested(() => execution.terminate()),
         );
     });
+}
+
+/**
+ * Runs a Gradle-mode test launch's task, `testXtc` with the debug property, in a process of the extension's own, whose
+ * output goes to the debug session as its output: the Test Explorer reads xunit's TeamCity service messages from it,
+ * which go as telemetry, so the Debug Console shows only the rest.
+ */
+function runDebugTestTask(params: DebugTaskParams, tests: readonly TestSelection[], adapter: LanguageServerDebugAdapter,
+                          folder: vscode.WorkspaceFolder, token: vscode.CancellationToken): Promise<number | undefined> {
+    const args = [...gradleTestArgs(params.module, tests), '--mode=ATTACHED', `-PxtcDebug=${params.debug}`];
+    return runTestProcess(gradleWrapper(), args, folder.uri.fsPath, (line, error) => {
+        const category = line.startsWith('##teamcity[') ? 'telemetry' : error ? 'stderr' : 'stdout';
+        adapter.output(`${line}\n`, category);
+    }, token);
 }
 
 /** A stopped or restarted language server takes its debug sessions, and the programs they launched, with it. */
@@ -124,6 +198,11 @@ class LanguageServerDebugAdapter implements vscode.DebugAdapter {
 
     receive(message: vscode.DebugProtocolMessage): void {
         this.messages.fire(message);
+    }
+
+    /** Output of the session's program that the extension's own process runs, as a debug test task does. */
+    output(text: string, category: string): void {
+        this.event('output', { category, output: text });
     }
 
     serverStopped(reason: string): void {
@@ -232,8 +311,7 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
         if (!resolved) {
             return undefined;
         }
-        // the Test Explorer's runs of tests are embedded in either mode
-        if (resolved.request === 'attach' || resolved.tests || buildMode(folder) === 'embedded') {
+        if (resolved.request === 'attach' || buildMode(folder) === 'embedded') {
             return resolved;
         }
         if (!resolved.noDebug) {

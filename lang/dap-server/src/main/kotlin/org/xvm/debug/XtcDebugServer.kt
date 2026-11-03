@@ -579,7 +579,8 @@ class XtcDebugServer(
      * console does. With `buildMode` `gradle` or `commandLine`, the client builds and runs the module instead, with
      * its Gradle task or the xtc command, and the session attaches to the program once it connects, answering then
      * ([DebugRuns.launchWithTask]); such a run without the debugger is the task itself, so `noDebug` is refused. With
-     * `tests`, an array of `{selector, kind}`, xunit runs those tests of the module instead, embedded only.
+     * `tests`, an array of `{selector, kind}`, xunit runs those tests of the module instead, embedded or with the
+     * client's task.
      */
     override fun launch(args: Map<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
@@ -592,9 +593,6 @@ class XtcDebugServer(
         val task = DebugTask.of(args?.get("buildMode"))
         if (task != null && args?.get("noDebug") == true) {
             return failed("A ${task.mode} run without the debugger is the module's ${task.task}; run that instead.")
-        }
-        if (task != null && target.tests != null) {
-            return failed("Tests run embedded; a ${task.mode} launch does not run them.")
         }
         if (!launched.compareAndSet(false, true)) {
             return failed("This debug session has already launched a program.")
