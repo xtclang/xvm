@@ -148,18 +148,24 @@ const DiscoveryConfiguration {
 
             if (tests.is(List<String>)) {
                 for (String test : tests) {
+                    Selector[] found;
                     if (Int idx := test.lastIndexOf('.')) {
                         String testClass  = test[0..<idx];
                         String testMethod = test[idx>..<test.size];
                         if (Class clz := findClass(testModule, testClass)) {
-                            selectors.addAll(discovery.selectors.forMethod(clz, testMethod));
+                            found = discovery.selectors.forMethod(clz, testMethod);
                         } else {
                             throw new IllegalArgument($"Invalid test class specified {test}");
                         }
                     } else {
                         // method must be on the module
-                        selectors.addAll(discovery.selectors.forMethod(&testModule.class, test));
+                        found = discovery.selectors.forMethod(&testModule.class, test);
                     }
+                    // a test that is not there selects nothing, which would run every test
+                    if (found.empty) {
+                        throw new IllegalArgument($"Invalid test method specified {test}");
+                    }
+                    selectors.addAll(found);
                 }
             }
 
@@ -172,13 +178,20 @@ const DiscoveryConfiguration {
             return new Builder(selectors, this.displayNameGenerator, verbose=verbose);
         }
 
+        /**
+         * Find a class or package of the test module by its path in the module, such as
+         * `tests.MathTest`, or by a name that the type system resolves, such as one that starts
+         * with the module's name. The module's own path comes first, so that a class of the
+         * module is not taken for an implicitly imported one of the same name, such as `Inner`
+         * for `Outer.Inner`.
+         */
         private conditional Class findClass(Module testModule, String className) {
             TypeSystem typeSystem = &testModule.type.typeSystem;
             String     moduleName = testModule.simpleName;
 
-            if (Class clz := typeSystem.classForName(className)) {
+            if (Class clz := typeSystem.classForName(moduleName + "." + className, hideExceptions=True)) {
                 return True, clz;
-            } else if (Class clz := typeSystem.classForName(moduleName + "." + className)) {
+            } else if (Class clz := typeSystem.classForName(className, hideExceptions=True)) {
                 return True, clz;
             }
             return False;
