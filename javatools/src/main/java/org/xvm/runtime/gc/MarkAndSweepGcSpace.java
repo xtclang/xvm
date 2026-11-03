@@ -107,7 +107,7 @@ public class MarkAndSweepGcSpace<V>
         }
 
         int slot = slot(address);
-        if (slot > m_aObjects.length) {
+        if (slot < 0 || slot >= m_aObjects.length) {
             throw new SegFault();
         }
 
