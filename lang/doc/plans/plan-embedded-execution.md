@@ -669,8 +669,9 @@ this bridge; they cannot be inferred from compiler type hints.
     the configuration's Run, which now passes its method and `--deduce` too, so `xtc run` finds a
     module laid out as `xtc init` lays it out, in `src/main/x`; and the program connects back.
     VS Code refuses such a task, saying why. Limits: the `xtc` on the `PATH` runs it, so its XDK must
-    have this javatools; `--deduce` looks in `src/main/x` only when the project directory has no `.x`
-    files of its own (javatools' `ModuleInfo` searches up from a directory with sources, never down).
+    have this javatools; `--deduce` looked in `src/main/x` only when the project directory had no
+    `.x` files of its own (javatools' `ModuleInfo` searched up from a directory with sources, never
+    down), which `ModuleInfo` fixes since, by looking for the named module's file there too.
   - *Done (2026-11-03): the agent in javatools.* The agent and the program's side of the protocol
     are javatools' `org.xvm.runtime.debug` (`DebugAgent`, `DebugCommands`, `DebugChannel`), next to
     `SessionDebugger`, so an XDK has the agent and `--debug` needs no `agent=`. The protocol is
