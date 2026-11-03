@@ -417,6 +417,7 @@ dependencies {
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
+        bundledPlugin("intellij.testRunner.plugin")
         if (localLsp4ijPlugin.isPresent) {
             localPlugin(localLsp4ijPlugin)
         } else {
