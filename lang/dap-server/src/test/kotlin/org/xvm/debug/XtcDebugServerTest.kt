@@ -937,7 +937,7 @@ class XtcDebugServerTest {
     }
 
     @Test
-    fun `a launch's tests are the selectors xunit runs, and a launch with a build mode does not take them`() {
+    fun `a launch's tests are the selectors xunit runs, embedded or with a Gradle launch's task`() {
         server.launch(
             mutableMapOf(
                 "module" to "App",
@@ -960,15 +960,17 @@ class XtcDebugServerTest {
         ).isEqualTo("##teamcity[testStarted name='adds()' locationHint='xunit://adds']\n")
         assertThat(client.output(OutputEventArgumentsCategory.STDOUT)).isEqualTo("inside adds\n")
 
-        assertFailsWith("Tests run embedded; a Gradle launch does not run them.") {
-            XtcDebugServer(runs, Executor(Runnable::run)).launch(
-                mutableMapOf(
-                    "module" to "App",
-                    "buildMode" to "gradle",
-                    "tests" to emptyList<Any>(),
-                ),
-            )
-        }
+        // a Gradle launch's task runs them
+        val gradle = Runs()
+        XtcDebugServer(gradle, Executor(Runnable::run)).launch(
+            mutableMapOf(
+                "module" to "App",
+                "buildMode" to "gradle",
+                "tests" to listOf(mapOf("selector" to "MathTest", "kind" to "class")),
+            ),
+        )
+        assertThat(gradle.task).isEqualTo(DebugTask.GRADLE)
+        assertThat(gradle.taskTarget?.tests).containsExactly(TestSelector("MathTest", "class"))
         assertFailsWith("Launch tests must be an array") {
             XtcDebugServer(runs, Executor(Runnable::run)).launch(mutableMapOf("module" to "App", "tests" to "MathTest"))
         }
