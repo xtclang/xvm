@@ -196,7 +196,7 @@ directory; the program connects to the session, and its output goes to the Debug
 `xtc` on the `PATH`, whose XDK must have this plugin's javatools, as `xtc run --deduce <module>`, for Run and Debug
 alike: it finds the module by its name in the project directory or, as `xtc init` lays a project out, in its
 `src/main/x`, with `src/main/resources`, and writes the compiled module to the project's `build` directory when there
-is one. `xtc run` looks in `src/main/x` only when the project directory itself has no `.x` files. Breakpoints are on
+is one. Breakpoints are on
 the files as that build compiled them.
 
 ## Development
