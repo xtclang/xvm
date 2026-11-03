@@ -45,8 +45,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /** `xtc/build` parameters: a module name or root URI, or every source module when [module] is absent. */
 data class BuildParams(
@@ -351,13 +353,21 @@ internal class EmbeddedRuns(
         task.whenComplete { _, _ -> runCatching { server.close() } }
         val listener =
             object : RunListener by events {
+                /**
+                 * The program's exit comes over its own connection, ahead of what it printed last, which comes
+                 * through its task: the client delivers a task's output before it answers that the task has ended,
+                 * so the exit is reported once it has, or [TASK_END_WAIT] after the exit if the task does not end.
+                 */
                 override fun exited(
                     code: Long?,
                     error: String?,
                 ) {
                     attached.remove(runId)
                     taskRuns.remove(runId)
-                    events.exited(code, error)
+                    task
+                        .handle { _, _ -> }
+                        .completeOnTimeout(Unit, TASK_END_WAIT.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                        .thenRun { events.exited(code, error) }
                 }
 
                 override fun detached(reason: String?) {
@@ -827,6 +837,9 @@ internal class EmbeddedRuns(
 
         /** The end of a program that [task] ran under the debugger, once the task was stopped. */
         fun stoppedWith(task: DebugTask) = "Stopped, with its ${task.task}."
+
+        /** How long the exit of a program that a client's task runs waits for the task to end; see [launchWithTask]. */
+        private val TASK_END_WAIT = 10.seconds
 
         /** Where a debugger waits for a program that the client's task runs to connect. */
         private const val LOOPBACK = "127.0.0.1"
