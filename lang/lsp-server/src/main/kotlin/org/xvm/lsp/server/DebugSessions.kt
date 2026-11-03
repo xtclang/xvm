@@ -12,6 +12,7 @@ import org.xvm.debug.DataBreakpointRequest
 import org.xvm.debug.DebugMessageEndpoint
 import org.xvm.debug.DebugRuns
 import org.xvm.debug.DebugSetup
+import org.xvm.debug.DebugTask
 import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.LaunchResult
@@ -55,8 +56,8 @@ data class DebugMessageParams(
  * `xtc/debugStart`, exchanges DAP messages with it in `xtc/debugMessage` notifications, in both directions, and ends
  * it with `xtc/debugEnd`. Each session is an [XtcDebugServer] that launches through [runs], so a debug launch builds
  * and runs with the same embedded build and execution worker as Run, and no socket or second process is needed. A
- * launch in Gradle mode is the exception: the client runs the module's Gradle task (`xtc/debugTask`), and the program
- * connects to the session over a socket. A session's messages are handled in order on a thread of its own, never on
+ * launch in Gradle or command-line mode is the exception: the client runs the module's Gradle task or the xtc command
+ * (`xtc/debugTask`), and the program connects to the session over a socket. A session's messages are handled in order on a thread of its own, never on
  * the connection's reader.
  *
  * Ending a session, or closing the server, stops the program the session launched.
@@ -145,14 +146,21 @@ internal class DebugSessions(
             return runs.attach(runId, target, listener(events), ready)
         }
 
-        override fun launchWithGradle(
+        override fun launchWithTask(
             runId: String,
             target: LaunchTarget,
+            task: DebugTask,
             events: ProgramEvents,
             ready: CompletionStage<out DebugSetup>,
         ): CompletableFuture<String> {
-            logger.info("debug session runs Gradle: session={} run={} module={}", session, runId, target.moduleName ?: target.module)
-            return runs.launchWithGradle(runId, session, target, listener(events), ready)
+            logger.info(
+                "debug session runs {}: session={} run={} module={}",
+                task.tool,
+                session,
+                runId,
+                target.moduleName ?: target.module,
+            )
+            return runs.launchWithTask(runId, session, target, task, listener(events), ready)
         }
 
         override fun input(
