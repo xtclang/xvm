@@ -491,8 +491,8 @@ recorded partial coverage.
   `xtcDebug`, and the program connects to the session. The validation fixed compileXtc's build
   cache, which gave a project in another directory a module compiled in the first, and IntelliJ's
   server stop when the last Ecstasy file closes during a run or session. Limits: VS Code shows the
-  program's output in the task's terminal; LSP4IJ still stops the server for a run started within
-  5 s of closing the last file (UP66).
+  program's output in the task's terminal; LSP4IJ 0.21.0 still stops the server for a run started
+  within 5 s of closing the last file (UP66, fixed by #1835, merged, unreleased).
 - [ ] R13: Debug in command-line mode, which runs `xtc run`.
 - [ ] R13: debugging tests, which needs the editors to run tests first.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
@@ -738,16 +738,17 @@ passes with the workaround disabled. The gates are in
   reads the exit code first; with it, X304 and X307 pass twice in a row with a plugin built from `main`
   (`ef2b18c3`; `run-11462216125559745352`, `run-9056817084446612838`). Nothing to file.
 
-### LSP4IJ: a kept-alive server is still stopped (UP66): our #1835, open
+### LSP4IJ: a kept-alive server is still stopped (UP66): our #1835, merged
 
-- [ ] UP66 (2026-11-02): LSP4IJ asks `keepAlive()` only when it schedules the stop after the last
+- [x] UP66 (2026-11-02): LSP4IJ asks `keepAlive()` only when it schedules the stop after the last
   document closes, so a lease or `keepServerAlive()` that starts during those 5 s doesn't keep the
   server, and a run or debug session started then loses it. `XtcClientFeatures.keepServerAlive()`
   keeps the server while a run or session runs (`c36c8f6e68`), which covers closing files during one.
   Filed as [#1834](https://github.com/redhat-developer/lsp4ij/issues/1834); fixed by our
-  [#1835](https://github.com/redhat-developer/lsp4ij/pull/1835) (open, `6b034fc6`, all checks pass),
-  which also fixes [#1836](https://github.com/redhat-developer/lsp4ij/issues/1836), a
-  `WorkspaceDiagnosticsTest` flake (`fb689ea0`). To do: get #1835 merged; nothing of ours to remove.
+  [#1835](https://github.com/redhat-developer/lsp4ij/pull/1835), merged on 2026-11-02
+  (`33a35e96`), which also fixes [#1836](https://github.com/redhat-developer/lsp4ij/issues/1836), a
+  `WorkspaceDiagnosticsTest` flake. Both issues are closed. Nothing of ours to remove; a release
+  with #1835 keeps the server for a run started within 5 s of closing the last file.
 
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
@@ -919,8 +920,11 @@ passes with the workaround disabled. The gates are in
   a protocol check rather than native coverage. Fixed by our
   [#1812](https://github.com/redhat-developer/lsp4ij/pull/1812) (filed 2026-11-02, open, `a793b896`):
   when the caret stops, the ranges linked at it are asked for, and typing in one edits the others in
-  the same command. To do: get #1812 merged; check it natively with a plugin built from it; after a
-  release with it, make IntelliJ's X133 type in a local's declaration and see its uses follow.
+  the same command. At Angelo's request it is off by default, as in VS Code: a user turns it on for
+  every server in `Settings | Editor | General | Smart Keys` (`50dfa73c`), and our plugin can't turn
+  it on for Ecstasy files. To do: get #1812 merged; check it natively with a plugin built from it;
+  after a release with it, make IntelliJ's X133 turn it on, type in a local's declaration and see its
+  uses follow.
 
 ### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
