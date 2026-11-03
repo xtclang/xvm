@@ -1589,8 +1589,8 @@ internal fun ParityScenarios.runEntryCases() {
 }
 
 /**
- * X336: a debug session attaches to a program that the XDK's xec runs with --debug and the plugin's language server jar
- * as its agent, outside the IDE.
+ * X336: a debug session attaches to a program that the XDK's xec runs with --debug outside the IDE, through the agent
+ * that the XDK's javatools has.
  */
 internal fun ParityScenarios.attachCases() {
     case("X336") { data ->
@@ -1617,7 +1617,7 @@ internal fun ParityScenarios.attachCases() {
                 "-o",
                 output.toString(),
                 "--debug",
-                "listen:127.0.0.1:0,suspend,agent=${debugger.agent()}",
+                "listen:127.0.0.1:0,suspend",
                 Path.of(URI(uri(data.string("file")))).toString(),
             ).redirectErrorStream(true).start()
         val printed = StringBuffer()
@@ -1876,8 +1876,6 @@ internal interface DebugSessionProbe {
         uri: String,
         breakpointLine: Int,
     )
-
-    fun agent(): String
 
     fun attach(
         project: Project,

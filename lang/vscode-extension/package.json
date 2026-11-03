@@ -681,7 +681,7 @@
                     },
                     {
                         "label": "Ecstasy: Attach to Program",
-                        "description": "Attach to a program run with xec --debug listen:127.0.0.1:5005,suspend,agent=<the language server's jar>",
+                        "description": "Attach to a program run with xec --debug listen:127.0.0.1:5005,suspend",
                         "body": {
                             "type": "xtc",
                             "request": "attach",
