@@ -228,7 +228,7 @@ public class VirtualChildBuilder extends CommonBuilder {
     }
 
     /**
-     * Resolve a composition-specific child super target, or return null for ordinary super resolution.
+     * Resolve a composition-specific child super target, using ordinary super resolution otherwise.
      *
      * <p>Suppose B.C1 extends B.C0 and D extends B with same-name children D.C1 and D.C0.
      * A super call in the hard-left B.C1 body must enter D.C0 on a D.C1 receiver, but B.C0 on
@@ -236,13 +236,20 @@ public class VirtualChildBuilder extends CommonBuilder {
      * body directly. A super call in the derived D.C0 body instead enters its fixed B.C0
      * predecessor; routing it virtually again would re-enter D.C0.
      */
-    public JitCallDesc resolveChildSuperCall(BuildContext bctx) {
+    @Override
+    public JitCallDesc resolveSuperCall(BuildContext bctx) {
         int          depth      = bctx.callDepth + 1;
         MethodBody   body       = bctx.callChain[depth];
         TypeConstant targetType = resolveType(body.getIdentity().getClassIdentity());
 
         if (!(bctx.methodDesc instanceof JitDetachedBodyDesc detached)) {
-            return null;
+            // an annotation's non-detached method can super-call a child's detached body;
+            // invoke that body statically, not via invokespecial on the child's interface;
+            // field targets still need the base resolver's backing-field accessor (common path)
+            return targetType.isVirtualChildClass() &&
+                    body.getImplementation() != MethodBody.Implementation.Field
+                    ? resolveChildCall(body, targetType)
+                    : super.resolveSuperCall(bctx);
         }
 
         if (isEmbedded(targetType.getExplicitClassFormat())) {
@@ -255,7 +262,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         }
 
         if (!targetType.isVirtualChildClass()) {
-            return null;
+            return super.resolveSuperCall(bctx);
         }
 
         JitCallDesc callDesc   = resolveChildCall(body, targetType);

@@ -43,7 +43,6 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
-import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -69,8 +68,6 @@ import org.xvm.asm.op.Nop;
 
 import org.xvm.javajit.Builder.ArgLoader;
 import org.xvm.javajit.Builder.Loader;
-
-import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
@@ -119,7 +116,6 @@ import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
-import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.javajit.registers.MultiSlot.NO_EXT;
 
@@ -174,12 +170,8 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(
-            Builder      builder,
-            TypeInfo     typeInfo,
-            PropertyInfo propInfo,
-            boolean      isGetter,
-            JitMethodDesc methodDesc) {
+    public BuildContext(Builder builder, TypeInfo typeInfo, PropertyInfo propInfo, boolean isGetter,
+                        JitMethodDesc methodDesc) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
         this.className     = builder.art.className();
@@ -1724,58 +1716,7 @@ public class BuildContext {
      * Obtain the call descriptor to be used by super calls for this method.
      */
     public JitCallDesc resolveSuperCall() {
-        int        depth = callDepth + 1;
-        MethodBody body  = callChain[depth];
-
-        if (builder instanceof VirtualChildBuilder childBuilder) {
-            JitCallDesc childCall = childBuilder.resolveChildSuperCall(this);
-            if (childCall != null) {
-                return childCall;
-            }
-        }
-        if (body.getImplementation() == Implementation.Field) {
-            return builder.ensureFieldAccessor(body);
-        }
-
-        IdentityConstant owner = body.getIdentity().getNamespace();
-        ClassDesc        cd;
-        String           methodName;
-        boolean          isIface;
-
-        if (Builder.isEmbedded(owner.getComponent().getFormat())) {
-            TypeConstant superType = builder.getSuperType();
-            if (superType != null) {
-                TypeInfo   superInfo   = superType.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-                MethodInfo superMethod = superInfo.getMethodById(body.getIdentity());
-                if (superMethod != null &&
-                        superMethod.getIdentity().getNamespace().equals(owner)) {
-                    // superclass implementation belongs to the required owner - use invokespecial
-                    return JitCallDesc.special(builder.getSuperCD(),
-                            superMethod.ensureJitMethodName(typeSystem),
-                            superMethod.getJitDesc(builder, superType), false);
-                }
-            }
-
-            // we need to generate a synthetic super
-            cd         = builder.getThisCD(this);
-            isIface    = false;
-            methodName = MethodInfo.getJitIdentity(callChain, 0).ensureJitMethodName(typeSystem)
-                            + HASH + depth;
-            buildSuper(methodName, depth);
-        } else {
-            TypeConstant type = isSpecialized
-                    ? owner.getFormalType().resolveGenerics(pool(), thisType)
-                    : owner.getType();
-
-            if (type.isVirtualChildClass()) {
-                return ((VirtualChildBuilder) builder).resolveChildCall(body, type);
-            }
-
-            cd         = builder.getCCDesc(type);
-            isIface    = type.isJitCCInterface();
-            methodName = MethodInfo.getJitIdentity(callChain, depth).ensureJitMethodName(typeSystem);
-        }
-        return JitCallDesc.special(cd, methodName, body.getJitDesc(builder, thisType), isIface);
+        return builder.resolveSuperCall(this);
     }
 
     /**
