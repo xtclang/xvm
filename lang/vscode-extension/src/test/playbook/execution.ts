@@ -2212,6 +2212,111 @@ export function testExplorerCases(): void {
     });
 }
 
+/** The values of X340, whose project is made as X337's: its test module's tests and where they are. */
+interface GradleTestValues extends GradleProjectValues {
+    module: string;
+    mainModule: string;
+    mainFile: string;
+    testFile: string;
+    testSource: string;
+    items: string[];
+    passed: string[];
+    failed: string;
+    failure: string;
+    failureLine: number;
+    classLine: number;
+    classColumn: number;
+    debugged: string;
+    nameLine: number;
+    nameColumn: number;
+    breakpointLine: number;
+    printed: string;
+    statusGradle: string;
+}
+
+/**
+ * X340, registered after X339 in catalog order: in Gradle mode, the Test Explorer runs the tests of a project's test
+ * module with its testXtc, and Debug Test at Cursor has testXtc run one under the debugger.
+ */
+export function gradleTestCases(): void {
+    playbook('X340', async (workspace, raw) => {
+        const data = raw as unknown as GradleTestValues;
+        await withGradleProject('X340', data, async (folder, root) => {
+            const file = vscode.Uri.file(root(data.testFile));
+            await fs.writeFile(file.fsPath, data.testSource);
+            // the playbook's graph is explicit, so the project's modules join it as the test source set has them
+            await workspace.configure([
+                { name: data.mainModule, uri: vscode.Uri.file(root(data.mainFile)).toString() },
+                { name: data.module, uri: file.toString(), dependencies: [data.mainModule] },
+            ]);
+            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
+            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+            const editor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+            const at = (line: number, column: number) => {
+                const position = new vscode.Position(line - 1, column);
+                editor.selection = new vscode.Selection(position, position);
+            };
+            const reports: TestReport[] = [];
+            let listed: readonly string[] = [];
+            const sent: DapMessage[] = [];
+            let started: vscode.DebugSession | undefined;
+            let ended = false;
+            const watching = [
+                onDidReportTest(report => reports.push(report)),
+                onDidRefreshTests(ids => { listed = ids; }),
+                trackDebugSessions(sent),
+                vscode.debug.onDidStartDebugSession(session => { if (session.type === 'xtc') started = session; }),
+                vscode.debug.onDidTerminateDebugSession(session => { if (session.type === 'xtc') ended = true; }),
+            ];
+            const result = (id: string) => reports.filter(report => report.id === id).pop();
+            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(file, new vscode.Position(data.breakpointLine - 1, 0)));
+            try {
+                await eventually(async () => {
+                    await vscode.commands.executeCommand('testing.refreshTests');
+                    return listed;
+                }, ids => data.items.every(id => ids.includes(id)), 'The Test Explorer lists the test module\'s tests', GRADLE_WAIT_MS);
+
+                at(data.classLine, data.classColumn);
+                await vscode.commands.executeCommand('testing.runAtCursor');
+                await eventually(async () => [...data.passed, data.failed].map(result), states => states.every(state => !!state),
+                    'testXtc runs the class\'s tests', GRADLE_WAIT_MS);
+                for (const id of data.passed) assert.strictEqual(result(id)?.state, 'passed', JSON.stringify(reports));
+                const failure = result(data.failed);
+                assert.strictEqual(failure?.state, 'failed', JSON.stringify(reports));
+                assert.strictEqual(failure?.message, data.failure);
+                assert.strictEqual(failure?.line, data.failureLine);
+
+                reports.length = 0;
+                vscode.debug.addBreakpoints([breakpoint]);
+                at(data.nameLine, data.nameColumn);
+                // the command answers once its test run has ended, which waits for the session that the breakpoint stops
+                const debugging = vscode.commands.executeCommand('testing.debugAtCursor');
+                await eventually(async () => dapEvents(sent, 'stopped').length > 0 || ended, value => value,
+                    'testXtc runs the test under the debugger, which stops at the breakpoint', GRADLE_WAIT_MS);
+                assert.ok(dapEvents(sent, 'stopped').length > 0, `The session ended without stopping: ${JSON.stringify(sent)}`);
+                const frames = await eventually(
+                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
+                        .flatMap(message => message.body?.stackFrames ?? []),
+                    values => values.length > 0, 'VS Code shows the call stack');
+                assert.ok(frames[0].name.endsWith('works'), JSON.stringify(frames[0]));
+                assert.strictEqual(frames[0].line, data.breakpointLine);
+
+                await vscode.commands.executeCommand('workbench.action.debug.continue');
+                await eventually(async () => ended, value => value, 'Continue runs the test to its end', GRADLE_WAIT_MS);
+                await debugging;
+                await eventually(async () => result(data.debugged)?.state, state => state === 'passed', 'The debugged test passes');
+                assert.ok(dapOutput(sent).includes(data.printed), dapOutput(sent));
+                assert.deepStrictEqual(reports.map(report => report.id), [data.debugged], 'Debug Test at Cursor runs that test alone');
+            } finally {
+                vscode.debug.removeBreakpoints([breakpoint]);
+                if (started && !ended) await vscode.debug.stopDebugging(started);
+                watching.forEach(item => item.dispose());
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+            }
+        });
+    });
+}
+
 export function attachCases(): void {
     playbook('X336', async (workspace, data) => {
         const document = await workspace.open(data.file, data.source);
