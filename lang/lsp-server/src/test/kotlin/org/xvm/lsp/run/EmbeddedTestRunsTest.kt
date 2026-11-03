@@ -84,6 +84,39 @@ class EmbeddedTestRunsTest {
     }
 
     @Test
+    fun `a Gradle project's test module, which discovery finds beside the module it imports, has its tests listed`() {
+        source("src/main/x/GradleTested.x", "module GradleTested { void run() {} }")
+        val text =
+            """
+            module GradleTestedTest {
+                package app import GradleTested;
+
+                class MathTest {
+                    @Test
+                    void adds() {
+                        assert 1 + 1 == 2;
+                    }
+                }
+            }
+            """.trimIndent()
+        val tests = source("src/test/x/GradleTestedTest.x", text)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.discoverSourceModules()
+            val compiled = adapter.compile(tests, text)
+            assertThat(compiled.success).describedAs(compiled.diagnostics.toString()).isTrue()
+
+            val module = adapter.tests().single { it.module == "GradleTestedTest" }
+            assertThat(
+                module.tests.children
+                    .single()
+                    .children
+                    .map { it.selector },
+            ).containsExactly("MathTest.adds")
+        }
+    }
+
+    @Test
     fun `a module without tests has none to run`() {
         val app = source("App.x", "module App { void run() {} }")
         XdkAdapter().use { adapter ->
@@ -237,6 +270,7 @@ class EmbeddedTestRunsTest {
         text: String,
     ): String {
         val file = directory.resolve(path).toFile()
+        file.parentFile.mkdirs()
         file.writeText(text)
         return file.toURI().toString()
     }
