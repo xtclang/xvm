@@ -92,6 +92,8 @@ data class DebugTaskParams(
     val args: List<String>,
     val debug: String,
     val buildMode: String? = null,
+    /** The module's tests the task runs instead, as `testXtc` or `xtc test` take them, all of them for an empty list. */
+    val tests: List<TestSelector>? = null,
 )
 
 /** The end of an `xtc/debugTask`: the task's exit code, when it has one. */
