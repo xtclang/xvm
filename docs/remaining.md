@@ -505,7 +505,16 @@ recorded partial coverage.
   only when the project directory has no `.x` files of its own (javatools' `ModuleInfo`); fixed
   since (2026-11-03): deduction also looks for the named module's file in the project's
   conventional source directories, past a directory with other sources.
-- [ ] R13: debugging tests, which needs the editors to run tests first.
+- [ ] R13: running and debugging tests from the editors. Done (2026-11-03): the embedded part and
+  VS Code. The language server finds each module's xunit tests (`xtc/tests`, `XdkTests`), and runs
+  them, or debugs them over a connect-back, with `xtc test` in a process of its own (`TestProcess`,
+  `xtc/run` and a DAP launch with `tests`); xunit reports each test as a TeamCity service message
+  with `-I xvm.xunit.report=teamcity`; VS Code's Test Explorer runs and debugs them (shared X339,
+  VS Code only so far). Commits `649d5c53f2` (xunit's `-c`/`-t` selected an implicitly imported
+  class of the same name, and a selection of nothing ran every test), `adc70bfce7`, `6e5dd8df3f`,
+  `f3c77b501a`; `EmbeddedTestRunsTest`, and X339 with the debugging cases in the container (33
+  passing). Open: IntelliJ's test tree, Gradle and command-line test runs, and an excluded test
+  under an included class.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
   [,agent=<jar>]`, through javatools' new `DebuggerProvider`; the language server's jar is the
@@ -1086,6 +1095,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 
 ## 5. Pull requests and the release
 
+- [ ] A master PR for the xunit selector fix alone, errs `649d5c53f2` ("Select xunit tests by their
+  path in the module"), which only touches `lib_xunit_engine`'s `DiscoveryConfiguration.x` and
+  applies to master on its own. The user opens it by hand (decided 2026-11-03, for 2026-11-04);
+  no agent opens it.
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
