@@ -349,7 +349,7 @@ internal class EmbeddedRunState(
         runner: ProgramRunner<*>,
     ): ExecutionResult {
         val project = environment.project
-        val editsSent = EmbeddedExecution.editsSent(project)
+        val handler = EmbeddedExecution.runHandler(project, request, label)
         val console =
             TextConsoleBuilderFactory
                 .getInstance()
@@ -358,14 +358,6 @@ internal class EmbeddedRunState(
                     addFilter(DiagnosticLinks(project))
                     addFilter(BuildSettingsLink)
                 }.console
-        val handler =
-            EmbeddedRunProcessHandler(
-                EmbeddedRunSessions.getInstance(project),
-                { EmbeddedExecution.server(project).thenCombine(editsSent) { server, _ -> server } },
-                request,
-                label,
-                XtcBuildSettings.gradleNotUsed(project.basePath?.let { Path(it) }),
-            )
         ProcessTerminatedListener.attach(handler)
         console.attachToProcess(handler)
         return DefaultExecutionResult(console, handler)
