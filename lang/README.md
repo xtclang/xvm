@@ -201,7 +201,7 @@ To test the plugin during development, run a sandboxed IntelliJ IDEA instance wi
 ```
 
 This launches a separate IntelliJ IDEA with:
-- The XTC plugin installed
+- The Ecstasy plugin installed
 - A fresh sandbox environment (settings, caches, etc.)
 - Isolated from your main IDE installation
 

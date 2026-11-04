@@ -742,7 +742,7 @@ be run in CI to catch compatibility regressions early.
 
 ## 12. Testing with Third-Party Plugin Dependencies
 
-The XTC plugin depends on three bundled/third-party plugins:
+The Ecstasy plugin depends on three bundled/third-party plugins:
 
 | Plugin | Dependency Type | Impact on Testing |
 |---|---|---|
