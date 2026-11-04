@@ -38,6 +38,10 @@ internal object XdkPresentation {
             when {
                 symbol != null && signature != null -> XdkCursorQueries.signature(model, symbol.name, signature).label
 
+                // a type is named by what it is, not by the type of the expression that names it, which is a Type<...>
+                symbol?.kind == SymbolKind.TYPE && symbol.typeCategory != null && symbol.typeCategory != TypeCategory.ENUM_VALUE ->
+                    "${symbol.typeCategory.name.lowercase()} ${symbol.name}"
+
                 symbol != null -> {
                     listOfNotNull(type ?: symbol.kind.name.lowercase(), symbol.name)
                         .joinToString(" ")
