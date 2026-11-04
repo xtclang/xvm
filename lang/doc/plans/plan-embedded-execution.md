@@ -123,7 +123,7 @@ Names below describe proposed API roles, not existing public classes.
   channels, run mode and restart policy. Avoid nullable positional option lists and comma/shell parsing.
 - `RunSession`: immutable ID and worker generation, observable state, asynchronous completion,
   result/exception, ordered output and stop/close operations. Distinguish queued, building, starting,
-  running, stopping, exited, failed and cancelled. Publish exactly one terminal outcome. `Control`
+  running, stopping, exited, failed and canceled. Publish exactly one terminal outcome. `Control`
   compatibility can be retained behind the richer asynchronous facade.
 
 Use the existing [XdkDependency](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDependency.kt)

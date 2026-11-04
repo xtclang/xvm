@@ -115,7 +115,7 @@ checks pass. See the [complete receipt](errs-integration-plan.md#modern-vs-code-
 and [rebase commit map](errs-rebase-2026-10-05.tsv).
 
 **Compiler import ownership (2026-10-05):** model-file watchers could publish Gradle output before
-the exporting task succeeded, including output from a failed/cancelled task. Both editor clients
+the exporting task succeeded, including output from a failed/canceled task. Both editor clients
 now hold immutable accepted reports behind an import owner, reject overlapping imports and cancel
 owned progress on project/folder retirement. Failure/cancellation retains the previous accepted
 report for the editor session. All 106 IntelliJ unit tests, 34 VS Code extension tests and shared
@@ -376,7 +376,7 @@ See [scope, ownership and validation](errs-integration-plan.md#live-workspace-an
 
 
 The original audit below records findings to triage: each site needs a
-judgement about whether the failure is real and where it ought to go, and those judgements belong
+judgment about whether the failure is real and where it ought to go, and those judgments belong
 to whoever owns the code.
 
 Measured on `lagergren/errs`. First taken against `origin/master` at `fbdeb86c7`; re-checked
@@ -437,7 +437,7 @@ The seven:
 | `tool/ModuleInfo.java:561` | `Exception` |
 
 All 35 now name the variable `_`, the unnamed variable, rather than `ignore` or `ignored`. That
-was a sweep across the whole tree, not a judgement about any of these sites: it makes "this
+was a sweep across the whole tree, not a judgment about any of these sites: it makes "this
 exception is deliberately dropped" something the language says rather than something a convention
 implies, which is worth having before anyone works through the list. The question for each is
 unchanged - whether the deliberate choice is still right.
@@ -1413,7 +1413,7 @@ The failed full/resume receipts remain in the integration plan.
 ### No-op directory watches during incomplete queries (2026-09-30)
 
 The full VS Code run ends with 126 passes and 24 failures. Its trace shows delayed directory-created
-events cancelling incomplete completion/signature requests with ContentModified. The watcher proof
+events canceling incomplete completion/signature requests with ContentModified. The watcher proof
 used disk text for unsaved sources and rejected every failed analysis, including current analyses
 with valid captured inputs. Compare those inputs with the open overlay instead; retain conservative
 invalidation for actual changes and fallback builds that predate a dependency failure. Controlled

@@ -56,7 +56,7 @@ and [rebase commit map](errs-rebase-2026-10-05.tsv).
 
 UI5/UI6 now guards compiler build imports in both editors: cancellable project-owned progress,
 one import at a time, and acceptance only after successful task completion and model validation.
-Failed/cancelled output cannot replace the previous model through a watcher read. All 106 IntelliJ
+Failed/canceled output cannot replace the previous model through a watcher read. All 106 IntelliJ
 unit tests, 34 VS Code extension tests and X129 in both editors pass. Shared X260–X262 now also
 pass both editors, including the visible import Cancel button, overlap refusal, rejected output
 and retry. The first IntelliJ X260 attempt exposed a fixture retirement assumption, corrected in
@@ -668,7 +668,7 @@ came out of review:
 - a warning master loses entirely is reported again - see *A warning master never shows you* in
   the appendix, which is worth an issue against master on its own.
 
-**Behaviour change worth calling out:** source that compiled silently before can now emit
+**Behavior change worth calling out:** source that compiled silently before can now emit
 `VERIFY-75`. Anyone with a duplicated property annotation will see a new warning. That is the
 point - master was dropping it - but it is a visible change and not only a refactor.
 
@@ -872,7 +872,7 @@ which read like an accessor.
 | `compileModule(...)` and `Compilation` | Keep the AST, file structure and compilation pool produced before an error; `succeeded()` describes whether a module was completed. `Compilation.forFile(...)` names a partial result without positional null arguments. |
 | Explicit, non-null listeners | Reporting reaches the supplied host listener through parsing, resolution, validation, TypeInfo construction and repository failures. Diagnostic sites, collectors, branch/merge, budgets and cancellation have explicit contracts. |
 | Diagnostic identity and TypeInfo replay | Distinct source/position/message combinations survive deduplication; a later reporting consumer can receive diagnostics from cached TypeInfo. |
-| Failure and cancellation handling | Already-cancelled work does not parse. Expected aborts do not invent internal errors; an unexpected failure remains reportable after a source error. |
+| Failure and cancellation handling | Already-canceled work does not parse. Expected aborts do not invent internal errors; an unexpected failure remains reportable after a source error. |
 | Pool and bootstrap ownership | `Compilation.pool()` is the compilation pool. `ensureRuntimePool()` explicitly initializes a runtime; deprecated `getConstantPool()` delegates to it. XDK auto-configuration includes `lib` and `javatools`. |
 | `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
 | Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
@@ -1396,7 +1396,7 @@ Both bite the moment someone writes the LSP listener, and neither is a sweep.
 
 **Prove it the way the prior-art branch did**: add the `requireNonNull` calls first, then run a
 clean `./gradlew xdk:installDist`. Every remaining offender names itself in a stack trace. Do not
-rely on grep — that branch found a site (`Expression.testFitAsType`) whose behaviour silently
+rely on grep — that branch found a site (`Expression.testFitAsType`) whose behavior silently
 depended on whether its caller passed null.
 
 ### Phase 5 — Single ownership, no setters
@@ -1431,7 +1431,7 @@ instrumenting it showed the park swallows about sixty ERROR-severity diagnostics
 All twenty distinct messages sit on anonymous inner classes and unbound generics - one names
 `Future<PendingTypeParameter>`, an internal placeholder for a type parameter that has not resolved
 - which is the signature of a `TypeInfo` built on half-finished structures. They are very probably
-artefacts. Nobody could have known, because until now they were destroyed rather than suppressed.
+artifacts. Nobody could have known, because until now they were destroyed rather than suppressed.
 **Whether any is real is a type-system question and deserves an owner.**
 
 *And then deleted.* The park existed only to quieten one line - `TypeConstant.ensureTypeInfo()`,
@@ -1463,7 +1463,7 @@ writer winning).
 ### Phase 6 — Name the kinds of silence
 
 Split the single `BLACKHOLE` by intent. The prior art used `PROBE` for "speculative work whose
-failure is the answer" and kept `BLACKHOLE` for "no sink attached", behaviourally identical and
+failure is the answer" and kept `BLACKHOLE` for "no sink attached", behaviorally identical and
 deliberately so, so that nothing can branch on which it holds. The value is that
 `grep PROBE` becomes the list of the compiler's speculative paths.
 
@@ -1552,7 +1552,7 @@ fix, the kept-attempt warning. A guard nobody has seen fail is a guard nobody kn
 wrong and were corrected by instrumenting: that the park discarded nothing (it discards about
 sixty diagnostics a build), that the error budgets were chosen (no budget ever binds), that a
 cascade decorator would be too costly (7040 allocations over a whole XDK build). If a claim about
-behaviour can be counted, count it.
+behavior can be counted, count it.
 
 ## Historical parity assessment
 
@@ -1601,7 +1601,7 @@ the three resolution methods instead, which would have meant 8 implementors and 
 `IllegalStateException` from inside the reporting call at `ERROR` and above, so the throw pre-empts
 whatever the detecting code was about to throw, and the exception *type* ends up depending on who
 is listening. Against: something must still fail loudly when nobody is listening, and the
-no-listener case is exactly where nobody is watching, so the replacement behaviour has to be
+no-listener case is exactly where nobody is watching, so the replacement behavior has to be
 decided. Entangled with the next item.
 
 **`log()` returning `void` - the one thing between us and an honest host listener.** The boolean
@@ -1638,7 +1638,7 @@ the interface is now clean. That is the payoff of the phases, not more work to d
 **The 56 `System.err` sites and 34 empty catches - an audit, not a refactor.** These are places
 where a failure has nowhere to go, and the prior art found real bugs in this category: a DNS
 continuation that turned an `Error` into "host not found", a swallowed keystore delete so a
-certificate revocation reported success. Each of the ninety needs a judgement call, and the output
+certificate revocation reported success. Each of the ninety needs a judgment call, and the output
 is bug reports rather than a diff. Worth doing as its own investigation.
 
 ### Why not ScopedValue
@@ -1893,7 +1893,7 @@ It adds no field, cached list, source ownership or clone/reset rule. The view is
 not synchronize compiler mutation; LSP readers copy it when they need a stable list.
 
 The existing `children(): ChildIterator` signature, both of that interface's supertypes, and
-its one-shot `iterator() == this`, `replaceWith` and removal behaviour remain unchanged.
+its one-shot `iterator() == this`, `replaceWith` and removal behavior remain unchanged.
 This compatibility matters: enhanced-for compiler passes can replace the node selected by that
 same cursor. The dual-interface design originated in `efff0a7cf` (2018-02-02), already on
 master; the Kotlin `asSequence()` ambiguity exposed it during modernization. New LSP readers use
@@ -2591,7 +2591,7 @@ messages sit on anonymous inner classes and unbound generics, one naming
 `Future<PendingTypeParameter>`, which is the signature of a TypeInfo built on half-finished
 structures.
 
-I assumed these were all artefacts. **`VERIFY-75` above is the reason not to.** It was lost by the
+I assumed these were all artifacts. **`VERIFY-75` above is the reason not to.** It was lost by the
 same mechanism, it looked like more of the same, and it turned out to be signal - it only surfaced
 because a specific source shape was constructed to provoke it. "Probably noise" was an assumption,
 not a finding.
@@ -2629,8 +2629,8 @@ hypothesis rather than from nothing, not so they can skip the other sixty-seven.
 ### Printed failures and empty catches
 
 `docs/errs-audit.md` has the full count: 56 places that print a failure instead of reporting it,
-and 35 `catch` blocks with empty bodies. Deliberately not swept - each needs a judgement about
-whether the failure is real and where it should go, and those judgements belong to whoever owns
+and 35 `catch` blocks with empty bodies. Deliberately not swept - each needs a judgment about
+whether the failure is real and where it should go, and those judgments belong to whoever owns
 the code. The prior-art branch found real bugs in this category, not just untidiness.
 
 ### Smaller things
