@@ -338,7 +338,7 @@ Clients can also ask over JSON-RPC (`xtc/healthCheck`), which answers with `adap
 2. Find the banner above
 3. For Tree-sitter, also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
 4. For IntelliJ plugin runs from this repo using Tree-sitter, also verify the startup command line in the IDE log:
-   - `XTC LSP command configured`
+   - `Ecstasy LSP command configured`
    - `-Dxtc.lsp.semanticTokens=true`
    This confirms you are exercising the branch's semantic-token path rather than a stale fallback.
 
@@ -1052,9 +1052,9 @@ ls lang/intellij-plugin/build/idea-sandbox/*/plugins/intellij-plugin/lib/textmat
 ```
 
 **VS Code:**
-1. Check the extension is installed: Extensions panel → search "XTC"
-2. Verify `.x` files are associated: look for "XTC" in the status bar language indicator
-3. If missing: `code --install-extension lang/vscode-extension/xtc-language-*.vsix`
+1. Check the extension is installed: Extensions panel → search "Ecstasy"
+2. Verify `.x` files are associated: look for "Ecstasy" in the status bar language indicator
+3. If missing: `code --install-extension lang/vscode-extension/build/distributions/xtc-language-*.vsix`
 
 ### VS Code LSP Not Starting
 
