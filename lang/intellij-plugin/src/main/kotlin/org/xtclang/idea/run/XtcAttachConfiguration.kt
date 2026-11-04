@@ -95,7 +95,7 @@ class XtcAttachConfigurationType : ConfigurationType {
 
     override fun getConfigurationTypeDescription() = "Attach the debugger to an Ecstasy program run with --debug"
 
-    override fun getIcon(): Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
+    override fun getIcon(): Icon = XtcIconProvider.xtcIcon ?: com.intellij.icons.AllIcons.FileTypes.Any_type
 
     override fun getId() = "XtcAttachConfiguration"
 
