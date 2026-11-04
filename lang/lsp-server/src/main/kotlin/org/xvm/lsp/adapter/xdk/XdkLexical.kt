@@ -6,6 +6,7 @@ import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.Position
@@ -373,6 +374,48 @@ internal object XdkLexical {
                 }
             }
         }
+    }
+
+    /**
+     * The comments that span more than one line, as regions to collapse: a block or doc comment, and a run of end-of-line
+     * comments, each alone on its line, on consecutive lines; none when [text] cannot be lexed. A comment after code
+     * on its line is not part of a run.
+     */
+    fun commentRegions(text: String): List<FoldingRange> {
+        val spans = lex(text) ?: return emptyList()
+        val blocks =
+            spans
+                .filter { it.id == Token.Id.ENC_COMMENT && it.range.end.line > it.range.start.line }
+                .map { FoldingRange(it.range.start.line, it.range.end.line, FoldingRange.FoldingKind.COMMENT) }
+        // each run of end-of-line comments alone on their lines, as consecutive tokens on consecutive lines
+        val runs = mutableListOf<MutableList<Span>>()
+        spans.forEachIndexed { index, span ->
+            val previous = spans.getOrNull(index - 1)
+            if (span.id != Token.Id.EOL_COMMENT || (previous != null && previous.range.end.line == span.range.start.line)) {
+                return@forEachIndexed
+            }
+            val run = runs.lastOrNull()
+            if (run != null && previous === run.last() && span.range.start.line == previous.range.start.line + 1) {
+                run += span
+            } else {
+                runs += mutableListOf(span)
+            }
+        }
+        val lines =
+            runs
+                .filter { it.size > 1 }
+                .map {
+                    FoldingRange(
+                        it
+                            .first()
+                            .range.start.line,
+                        it
+                            .last()
+                            .range.start.line,
+                        FoldingRange.FoldingKind.COMMENT,
+                    )
+                }
+        return (blocks + lines).sortedBy { it.startLine }
     }
 
     private fun lex(text: String): List<Span>? {
