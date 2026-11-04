@@ -1621,10 +1621,10 @@ public class BuildContext {
             return loadThis(code);
 
         case Op.A_STRUCT: {
-            if (!isConstructor) {
-                Builder.throwTypeMismatch(code, "\"this\" is not a structure", ctxSlot(code));
+            if (isConstructor || methodStruct.isPropertyInitializer()) {
+                return loadThis(code);
             }
-            return loadThis(code);
+            Builder.throwTypeMismatch(code, "\"this\" is not a structure", ctxSlot(code));
         }
 
         case Op.A_SUPER: {

@@ -72,22 +72,22 @@ package refTests {
         assert watchConsole.output() == "->3->2->1->0";
 
         // var-based
-        TestConsole console = new TestConsole();
-        function void(Int) log = (Int value) -> console.print($"{value}->", True);
+        function void(Int) log = (Int value) -> watchConsole.print($"{value}->", True);
 
+        watchConsole.reset();
         @Watch(log) Int value;
         value = 1;
         value++;
-        assert console.output() == "1->2->";
+        assert watchConsole.output() == "1->2->";
 
         // lambda-based
-        console.reset();
-        @Watch((Int v) -> {console.print($"{v}, ", True);}) Int k;
+        watchConsole.reset();
+        @Watch((Int v) -> {watchConsole.print($"{v}, ", True);}) Int k;
         for (k = 3; k > 0; --k) {}
-        assert console.output() == "3, 2, 1, 0, ";
+        assert watchConsole.output() == "3, 2, 1, 0, ";
     }
 
-    static TestConsole watchConsole = new TestConsole();
+    TestConsole watchConsole = new TestConsole();
     function void(Int) logger = (Int value) -> watchConsole.print($"->{value}", True);
 
     void testDelegatingVar() {
