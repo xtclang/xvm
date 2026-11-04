@@ -11,9 +11,10 @@ See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundari
 - **Build and Run** - Build/Rebuild Project and Ecstasy run configurations use the language
   server's embedded compiler or Gradle, chosen under Settings | Build, Execution, Deployment |
   Ecstasy ([details](#running-your-application)); `xtc run` remains available per configuration
-- **Debug** - With the embedded compiler, Debug of an Ecstasy run configuration goes through
-  LSP4IJ's DAP client to a debug session in the language server: breakpoints, stepping, variables,
-  watches and Evaluate Expression ([details](#running-your-application))
+- **Debug** - Debug of an Ecstasy run configuration, with the embedded compiler, Gradle or `xtc run`,
+  goes through LSP4IJ's DAP client to a debug session in the language server: breakpoints, stepping,
+  variables, watches and Evaluate Expression ([details](#running-your-application)). An **Ecstasy
+  Attach** configuration debugs a program run outside the IDE ([details](#debugging-a-program-run-outside-the-ide))
 - **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
   native file type through TextMate’s syntax factory and editor highlighter.
 - **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
@@ -189,6 +190,20 @@ program's other fibers do. **Pause
 Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/remaining.md`, fixed in
 LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration's **Stop at the
 program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code.
+**Smart Step Into** (`Shift+F7`) chooses which call on the line to step into. **Run to Cursor**
+stops at the cursor's line only when the program gets there quickly: LSP4IJ 0.21.0 removes its
+temporary breakpoint once the program resumes, so a program that takes longer runs past it (UP44,
+fixed in LSP4IJ pull request [#1773](https://github.com/redhat-developer/lsp4ij/pull/1773)). The
+Frames view's thread list has every service and fiber of the program, the ones that wait at a line
+first, each with what it does, and a frame of a bundled XDK library's code opens the library's
+bundled source, read-only. Function breakpoints, breakpoints on a field's value, **Reset Frame**,
+the loaded sources and modules, and inline values for Ecstasy wait on LSP4IJ, whose 0.21.0 has none
+of them for a DAP session (UP46, UP48, UP47, UP45 and UP50; LSP4IJ pull requests
+[#1780](https://github.com/redhat-developer/lsp4ij/pull/1780),
+[#1782](https://github.com/redhat-developer/lsp4ij/pull/1782),
+[#1778](https://github.com/redhat-developer/lsp4ij/pull/1778),
+[#1774](https://github.com/redhat-developer/lsp4ij/pull/1774) and
+[#1781](https://github.com/redhat-developer/lsp4ij/pull/1781)); VS Code has them.
 
 In Gradle and command-line mode, **Debug** has the module's Gradle task (`runXtc`) or `xtc run` run the program under
 the session's debugger, with the launcher's `--debug` and the agent in the program's XDK, in the project
@@ -198,6 +213,27 @@ alike: it finds the module by its name in the project directory or, as `xtc init
 `src/main/x`, with `src/main/resources`, and writes the compiled module to the project's `build` directory when there
 is one. Breakpoints are on
 the files as that build compiled them.
+
+### Debugging a program run outside the IDE
+
+A program run with the launcher's `--debug` option, by `xec`, `xtc run` or `xtc test`, can be debugged
+from IntelliJ too, with an **Ecstasy Attach** configuration (**Run → Edit Configurations… → + →
+Ecstasy Attach**). Its **Port** comment gives the option to run the program with, `--debug
+listen:127.0.0.1:5005,suspend`, as in `xec --debug listen:127.0.0.1:5005,suspend App.x`, which waits
+for the debugger before its first line. The configuration has:
+
+- **Host** and **Port** — where the program listens, on this machine: `localhost` and 5005 by default.
+- **Token** — the token the program's `--debug` option gives, if it gives one.
+- **Stop at the program's first line** — for a program that waits for the debugger, as the option's
+  `suspend` has it.
+
+**Debug** attaches; the configuration has no Run. Breakpoints, stepping, variables and evaluation work
+as in a launched session, and stopping the session detaches, so the program runs on without the
+debugger's breakpoints. The program's XDK must have this plugin's javatools, whose debugger agent the
+program runs; its console stays its own, and one debugger at a time attaches to it. LSP4IJ 0.21.0
+cannot attach to an adapter that its own process carries, as the plugin's is, so the configuration
+launches the adapter and attaches only its client (UP64, LSP4IJ pull request
+[#1798](https://github.com/redhat-developer/lsp4ij/pull/1798)).
 
 ## Development
 
