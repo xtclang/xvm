@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-21 (color prototype removed)
+> **Last Updated**: 2026-11-04 (R1–R13 done; L63's wider refactorings)
 
 The latest [L82 acceptance record](../../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
 separates native harness corrections, the production unchanged-library-settings invalidation bug,
@@ -57,12 +57,13 @@ intermittent IntelliJ X105 acceptance issues; exact receipts and remaining bound
 
 The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
 compile/build and execution contracts for both clients, a persistent execution worker and fresh
-application containers per run. R1–R8 track that separate implementation. Since 2026-10-15 both
+application containers per run. R1–R13 tracked that separate implementation, done by 2026-11-03. Since 2026-10-15 both
 editors have an embedded build/run mode beside Gradle: Build, Rebuild, Run lenses, Run shortcuts and
 run configurations build with the server's compiler and run in its execution worker
 ([first delivery](plan-embedded-execution.md#first-delivery-2026-10-15)), covering parts of R1–R5.
 Since 2026-10-22, debug sessions in the language server (R6/R7) debug embedded runs in both
-editors.
+editors, and since R13 (2026-11-03) also Gradle-mode and command-line runs, programs run with
+`--debug` and the modules' xunit tests, which both editors also run.
 Compiler/LSP completion does not imply completion of either execution or debugging. Current compiler
 changes must retain artifact/source revisions and cancellation boundaries suitable for those future
 consumers.
@@ -690,12 +691,12 @@ Full tree-sitter support for fast, incremental parsing:
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
    - XdkAdapter generates individual/all-required inherited methods from source and read-only XDK/binary contracts at a class name, with compiler-selected generic/conditional, qualified and compound signatures, atomic imports and safe defaults; whole-graph proof permits the intended call/descendant changes and preserves other bindings; generated bodies use `TODO()`. Both actions use `refactor.rewrite`, so they appear as class intentions without requiring a diagnostic at that location
    - Unvalidated computed/named defaults, unsupported constant kinds and annotated/unrenderable type spellings remain withheld; missing implementations use fresh declaration analysis, never failed-compilation TypeInfo. The current batch validation is recorded separately from previous X122 receipts
-   - Broader semantic fixes and the remaining extraction/inline/safe-delete scope remain unimplemented (L63). Compiler doc generation is implemented: `XdkDocumentation` offers **Generate documentation comment** on written declaration headers (`XdkDocumentationTest`)
+   - Broader semantic fixes remain unimplemented (L63); wider extraction, Inline and remove and public Safe Delete followed on 2026-10-21 and 2026-10-29 ([remaining.md](../../../docs/remaining.md#beyond-the-current-scope)). Compiler doc generation is implemented: `XdkDocumentation` offers **Generate documentation comment** on written declaration headers (`XdkDocumentationTest`)
 
 9. ~~**Debugging (DAP)**~~ ✅ COMPLETE (R6/R7)
    - Debug Adapter Protocol integration
    - Breakpoints, stepping, variable inspection
-   - The debugger features beyond these are R9–R13 in the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance)
+   - The debugger features beyond these, R9–R13, done by 2026-11-03, are in the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance)
 
 ## Architecture Principle
 
