@@ -48,7 +48,6 @@ import org.xtclang.idea.lsp.TestSelector
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
-import kotlin.io.path.Path
 
 /** The test framework's name, which IntelliJ's test console shows and keys its settings by. */
 internal const val TEST_FRAMEWORK = "Ecstasy"
@@ -67,16 +66,7 @@ internal class EmbeddedTestState(
         executor: Executor,
         runner: ProgramRunner<*>,
     ): ExecutionResult {
-        val project = environment.project
-        val editsSent = EmbeddedExecution.editsSent(project)
-        val handler =
-            EmbeddedRunProcessHandler(
-                EmbeddedRunSessions.getInstance(project),
-                { EmbeddedExecution.server(project).thenCombine(editsSent) { server, _ -> server } },
-                request,
-                label,
-                XtcBuildSettings.gradleNotUsed(project.basePath?.let { Path(it) }),
-            )
+        val handler = EmbeddedExecution.runHandler(environment.project, request, label)
         ProcessTerminatedListener.attach(handler)
         val console =
             SMTestRunnerConnectionUtil.createAndAttachConsole(
