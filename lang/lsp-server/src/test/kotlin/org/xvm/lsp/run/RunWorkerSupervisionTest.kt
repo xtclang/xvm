@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.xvm.debug.ProgramEvents
+import org.xvm.lsp.Slow
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
@@ -16,6 +17,7 @@ import kotlin.time.Duration.Companion.seconds
  * start, report another identity, ignore Stop, crash or keep too much: such workers are ended or retired,
  * their runs say why, and the next run gets a working worker. Idle workers are retired.
  */
+@Slow
 class RunWorkerSupervisionTest {
     /** One run's output and its single exit. */
     private class Run : ProgramEvents {
