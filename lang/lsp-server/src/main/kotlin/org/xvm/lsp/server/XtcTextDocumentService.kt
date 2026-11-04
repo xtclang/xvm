@@ -158,6 +158,13 @@ class XtcTextDocumentService(
 ) : TextDocumentService {
     companion object {
         private val logger = LoggerFactory.getLogger(XtcTextDocumentService::class.java)
+
+        /**
+         * A test seam: the name of the file whose reference searches wait until they are canceled, from the system
+         * property `xtc.lsp.test.holdReferences`. The IntelliJ playbook's X145 sets it, so that no machine finishes
+         * a search before the case shows its progress and cancels it. Unset, as outside that case, every search runs.
+         */
+        private val heldReferences: String? = System.getProperty("xtc.lsp.test.holdReferences")
     }
 
     /** Open-buffer revision and the analysis future associated with that exact content and module scope. */
@@ -1123,12 +1130,17 @@ class XtcTextDocumentService(
             "textDocument/references",
             params.textDocument.uri,
             {
-                adapter.findReferencesAsync(
-                    params.textDocument.uri,
-                    params.position.line,
-                    params.position.character,
-                    params.context.isIncludeDeclaration,
-                )
+                if (heldReferences != null && params.textDocument.uri.endsWith("/$heldReferences")) {
+                    // ends only when the client cancels it, or the server stops
+                    CompletableFuture<List<AdapterLocation>>()
+                } else {
+                    adapter.findReferencesAsync(
+                        params.textDocument.uri,
+                        params.position.line,
+                        params.position.character,
+                        params.context.isIncludeDeclaration,
+                    )
+                }
             },
             workspace = true,
             progress = params,
