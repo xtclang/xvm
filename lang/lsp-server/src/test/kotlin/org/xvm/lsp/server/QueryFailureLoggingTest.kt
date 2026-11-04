@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import java.util.concurrent.CancellationException
@@ -62,9 +63,9 @@ class QueryFailureLoggingTest {
         logger.addAppender(appender)
         try {
             XtcLanguageServer(adapter).use { server ->
-                assertThatThrownBy { server.workspaceService.symbol(WorkspaceSymbolParams("Value")).get(5, SECONDS) }
+                assertThatThrownBy { server.workspaceService.symbol(WorkspaceSymbolParams("Value")).get(HANG_SECONDS, SECONDS) }
                     .isInstanceOf(Exception::class.java)
-                assertThat(finished.await(5, SECONDS)).isTrue()
+                assertThat(finished.await(HANG_SECONDS, SECONDS)).isTrue()
             }
             return events.filter { it.level == Level.ERROR }
         } finally {

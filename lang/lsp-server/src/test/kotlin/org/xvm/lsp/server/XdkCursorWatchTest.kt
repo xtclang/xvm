@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -56,7 +57,7 @@ class XdkCursorWatchTest {
                 },
                 { source, _, cursor, repository, errors ->
                     entered.countDown()
-                    check(release.await(20, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                     support.analyzeIncomplete(source, cursor, repository, errors)
                 },
             )
@@ -72,7 +73,7 @@ class XdkCursorWatchTest {
             )
             server.textDocumentService
                 .documentSymbol(DocumentSymbolParams(document))
-                .get(30, SECONDS)
+                .get(HANG_SECONDS, SECONDS)
             val cursor =
                 server.textDocumentService.completion(
                     CompletionParams(
@@ -80,7 +81,7 @@ class XdkCursorWatchTest {
                         Position(0, overlay.indexOf("text.si") + "text.si".length),
                     ),
                 )
-            assertThat(entered.await(20, SECONDS)).isTrue()
+            assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
             if (changed) member.writeText("class Box { Int added = 1; }")
             server.workspaceService.didChangeWatchedFiles(
                 DidChangeWatchedFilesParams(
@@ -92,16 +93,16 @@ class XdkCursorWatchTest {
             )
             release.countDown()
             if (changed) {
-                val failure = assertThrows<ExecutionException> { cursor.get(30, SECONDS) }
+                val failure = assertThrows<ExecutionException> { cursor.get(HANG_SECONDS, SECONDS) }
                 val error = failure.cause as ResponseErrorException
                 assertThat(error.responseError.code)
                     .isEqualTo(ResponseErrorCode.ContentModified.value)
             } else {
-                assertThat(cursor.get(30, SECONDS).left.map { it.label }).contains("size")
+                assertThat(cursor.get(HANG_SECONDS, SECONDS).left.map { it.label }).contains("size")
             }
         } finally {
             release.countDown()
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 }

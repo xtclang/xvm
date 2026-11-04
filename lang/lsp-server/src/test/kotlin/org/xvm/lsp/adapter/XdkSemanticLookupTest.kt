@@ -7,6 +7,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.lsp.model.Location
@@ -699,7 +700,7 @@ class XdkSemanticLookupTest {
                     assertThat(passive.typeDefinitionLocationsAt(use.line, use.column)).hasSize(1)
                     assertThat(passive.implementationLocationsAt(api.line, api.column)).isEmpty()
                     assertThat(inspected.implementationLocationsAt(api.line, api.column)).hasSize(1)
-                }.get(10, SECONDS)
+                }.get(HANG_SECONDS, SECONDS)
         }
     }
 
