@@ -35,6 +35,19 @@ class XdkLineEndCompletionTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["text.trim();", "Int length = text.size;", "report(text.trim());"])
+    fun `a cursor right after the dot of a written member completes the receiver's members`(statement: String) {
+        XdkAdapter().use { adapter ->
+            val lines = listOf("module Editing {", "    void report(String text) {}", "    void run(String text) {", "        $statement")
+            val source = (lines + listOf("    }", "}")).joinToString("\n")
+            adapter.compile(URI, source)
+            val line = lines.size - 1
+            val column = lines[line].indexOf("text.") + "text.".length
+            assertThat(adapter.getCompletions(URI, line, column).map { it.label }).contains("size", "trim")
+        }
+    }
+
     private companion object {
         const val URI = "untitled:Editing.x"
     }
