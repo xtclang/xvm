@@ -69,6 +69,27 @@ mkdir -p "$container/src.new" "$container/out"
 rm -rf "$container/src"
 mv "$container/src.new" "$container/src"
 
+# one container run at a time on this machine: the runs share the volumes, whichever worktree they start from, so
+# the lock is in the repository's common git directory, which every worktree shares; a lock whose owner has gone
+# is taken over
+lock="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)/xvm-playbook-container.lock"
+until mkdir "$lock" 2> /dev/null; do
+    owner="$(cat "$lock/pid" 2> /dev/null || true)"
+    if [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; then
+        rm -rf "$lock"
+        continue
+    fi
+    echo "waiting for another playbook container run (pid ${owner:-starting}) to finish"
+    sleep 15
+done
+echo $$ > "$lock/pid"
+trap 'rm -rf "$lock"' EXIT
+# a run that took no lock, such as one of an older checkout, shares the volumes as well
+while "$engine" ps --format '{{.Names}}' | grep -q '^xvm-playbook-'; do
+    echo "waiting for the running playbook container to finish"
+    sleep 15
+done
+
 stamp="$(date +%Y%m%d-%H%M%S)"
 status=0
 # the export has no .git, so the commit and branch, which javatools' build info and the VS Code playbook record, and
