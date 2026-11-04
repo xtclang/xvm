@@ -395,7 +395,8 @@ class EmbeddedExecutionTest {
         val adapter = XdkAdapter()
         adapter.initializeWorkspace(listOf(directory.toString()))
         adapter.replaceSourceModules(listOf(XdkSourceModule("Forever", forever)))
-        val server = XtcLanguageServer(adapter)
+        // the server's own workers, with limits that only a hang reaches
+        val server = XtcLanguageServer(adapter, workerLimits = HANG_LIMITS)
         assertThat(server.run(RunParams(module = "Forever", runId = "editor-closes")).get(HANG_SECONDS, SECONDS).runId)
             .isEqualTo("editor-closes")
         val workers = server.runWorkerPids().map { ProcessHandle.of(it).orElseThrow() }
