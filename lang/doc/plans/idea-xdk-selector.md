@@ -316,7 +316,7 @@ class XdkSdkType : SdkType("XDK") {
     override fun getPresentableName(): String = "XDK"
 
     override fun getIcon(): Icon =
-        XtcIconProvider.XTC_ICON ?: super.getIcon()
+        XtcIconProvider.xtcIcon ?: super.getIcon()
 
     // ---- Validation ----
 
