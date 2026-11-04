@@ -151,6 +151,10 @@ class XtcDebugServer(
     /** The run's ID with the language server's runs. */
     private val runId = UUID.randomUUID().toString()
 
+    /**
+     * Completes when the client has finished its configuration with `configurationDone`, which a launch or an attach
+     * waits for however long the client takes; or, exceptionally, when the session ends first ([unconfigured]).
+     */
     private val configured = CompletableFuture<Unit>()
     private val launched = AtomicBoolean()
 
@@ -301,9 +305,6 @@ class XtcDebugServer(
         const val NO_EVALUATION =
             "Nothing is evaluated while the program runs; a line typed in the console then is its input."
 
-        /** How long a launch whose build has finished waits for the client to finish its configuration. */
-        private const val CONFIGURATION_WAIT_SECONDS = 2L
-
         /** How long a disconnect waits for the program it stopped to report its exit. */
         private const val STOP_WAIT_SECONDS = 10L
     }
@@ -319,6 +320,16 @@ class XtcDebugServer(
             logger.info("close: stopping run {}", runId)
             runs.stop(runId)
         }
+        unconfigured()
+    }
+
+    /**
+     * The session ends, after it has stopped its run: a launch or attach that still waits for the client's
+     * configuration waits no longer. A launch then starts nothing, since its run was stopped, and reports so; an attach,
+     * or a launch whose client's task runs the program, fails, so that no program takes this session's debugger.
+     */
+    private fun unconfigured() {
+        configured.completeExceptionally(CancellationException("The debug session ended before its configuration was done"))
     }
 
     /**
@@ -560,7 +571,12 @@ class XtcDebugServer(
         }
     }
 
-    /** DAP: configurationDone. A launched program starts after it, or after a short wait for it. */
+    /**
+     * DAP: configurationDone. A launched or attached program starts after it, however long the client takes to send
+     * it: an adapter that advertises `supportsConfigurationDoneRequest` has the client send it once it has set its
+     * breakpoints, as VS Code and LSP4IJ's DAP client do in a debug and a run session alike, without waiting for the
+     * launch's answer. Until then the session waits, or until it ends.
+     */
     override fun configurationDone(args: ConfigurationDoneArguments?): CompletableFuture<Void> {
         logger.info("configurationDone")
         configured.complete(Unit)
@@ -611,8 +627,9 @@ class XtcDebugServer(
                 "Building $name with the embedded compiler and running its tests..."
             },
         )
+        // a session that ends first releases the launch as well, whose stopped run then reports that it never started
         val ready =
-            configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
+            configured.handle { _, _ -> }.thenApply {
                 if (debugging) {
                     installed = breakpoints.toMap()
                     installedExceptions = exceptionStops
@@ -709,9 +726,9 @@ class XtcDebugServer(
             }
     }
 
-    /** The debugger's setup, once the client has finished its configuration or the time for that has passed. */
+    /** The debugger's setup, once the client has finished its configuration; it fails if the session ends first. */
     private fun debugSetup(stopOnEntry: Boolean): CompletableFuture<DebugSetup> =
-        configured.copy().completeOnTimeout(Unit, CONFIGURATION_WAIT_SECONDS, SECONDS).thenApply {
+        configured.thenApply {
             installed = breakpoints.toMap()
             installedExceptions = exceptionStops
             installedFunctions = functionBreakpoints
@@ -1202,6 +1219,7 @@ class XtcDebugServer(
         if (!launched.get() || ended.isDone || !runs.stop(runId)) {
             end(sendTerminated = true)
         }
+        unconfigured()
         return CompletableFuture.completedFuture(null)
     }
 
@@ -1212,6 +1230,7 @@ class XtcDebugServer(
             return CompletableFuture.completedFuture(null)
         }
         runs.stop(runId)
+        unconfigured()
         return ended.copy().completeOnTimeout(Unit, STOP_WAIT_SECONDS, SECONDS).thenApply<Void?> { null }
     }
 
