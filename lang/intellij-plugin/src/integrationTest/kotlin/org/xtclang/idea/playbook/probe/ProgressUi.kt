@@ -65,4 +65,15 @@ object ProgressUi {
 
     @JvmStatic
     fun alive(pid: Long): Boolean = ProcessHandle.of(pid).map { it.isAlive }.orElse(false)
+
+    /**
+     * Has the language servers this IDE starts from now on hold each reference search in [file] until it is canceled,
+     * or none when [file] is null: the plugin passes the IDE's `xtc.lsp.test.holdReferences` to the server it starts.
+     */
+    @JvmStatic
+    fun holdReferences(file: String?) {
+        if (file == null) System.clearProperty(HOLD_REFERENCES) else System.setProperty(HOLD_REFERENCES, file)
+    }
+
+    private const val HOLD_REFERENCES = "xtc.lsp.test.holdReferences"
 }
