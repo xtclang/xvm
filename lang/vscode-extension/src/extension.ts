@@ -12,7 +12,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
-import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
 import { selectLanguageAdapter } from './adapter-selection';
 import { createBuildModeStatus, selectBuildMode } from './build-mode-selection';
 import { XtcTaskProvider } from './task-provider';
@@ -207,9 +207,6 @@ export function activate(context: vscode.ExtensionContext): void {
                         .then(choice => choice === 'Restart now' ? vscode.commands.executeCommand('xtc.restartServer')
                             : choice === 'Open Settings' ? vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.vmOptions') : undefined);
                 } catch (error) { serviceFailure(`Invalid Ecstasy runtime/log settings; running server retained: ${error}`); }
-            }
-            if (event.affectsConfiguration('xtc.trace.server')) {
-                void applyTraceConfig();
             }
             if (event.affectsConfiguration('xtc.compiler.sourceModules') || event.affectsConfiguration('xtc.compiler.libraries')) {
                 void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler configuration update failed: ${error}`));
