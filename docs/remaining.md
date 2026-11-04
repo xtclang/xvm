@@ -1104,10 +1104,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 
 ## 5. Pull requests and the release
 
-- [ ] A master PR for the xunit selector fix alone, errs `649d5c53f2` ("Select xunit tests by their
-  path in the module"), which only touches `lib_xunit_engine`'s `DiscoveryConfiguration.x` and
-  applies to master on its own. The user opens it by hand (decided 2026-11-03, for 2026-11-04);
-  no agent opens it.
+- [x] A master PR for the xunit selector fix alone, errs `649d5c53f2`: #755, "Make xtc test -c
+  and -t select the test module's own classes", opened 2026-11-04 at the user's go-ahead and
+  validated on master f7d87b4d88. Its patch is the same as errs `649d5c53f2` and #693's
+  `6b36fe5aa5`, so a rebase onto master drops both once it merges.
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
