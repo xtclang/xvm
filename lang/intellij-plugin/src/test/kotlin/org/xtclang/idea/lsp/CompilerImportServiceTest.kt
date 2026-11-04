@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.xtclang.idea.HANG_SECONDS
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
@@ -74,17 +75,17 @@ class CompilerImportServiceTest {
             CompletableFuture.runAsync {
                 service.run(Indicator()) {
                     started.countDown()
-                    check(release.await(5, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                 }
             }
         try {
-            assertThat(started.await(5, SECONDS)).isTrue()
+            assertThat(started.await(HANG_SECONDS, SECONDS)).isTrue()
             assertThatThrownBy { service.run(Indicator()) { error("Overlapping import") } }
                 .hasMessageContaining("already running")
         } finally {
             release.countDown()
         }
-        first.get(5, SECONDS)
+        first.get(HANG_SECONDS, SECONDS)
         assertThat(service.run(Indicator()) { "new owner" }).isEqualTo("new owner")
         service.dispose()
     }

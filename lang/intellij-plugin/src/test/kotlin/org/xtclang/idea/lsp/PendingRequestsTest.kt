@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageProducer
 import org.junit.jupiter.api.Test
+import org.xtclang.idea.HANG_SECONDS
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.PipedInputStream
@@ -41,7 +42,7 @@ class PendingRequestsTest {
 
             // the server's output ends, as when its process exits or is stopped
             fromServer.close()
-            listening.get(10, SECONDS)
+            listening.get(HANG_SECONDS, SECONDS)
             assertThat(hover).isCancelled()
         }
     }
