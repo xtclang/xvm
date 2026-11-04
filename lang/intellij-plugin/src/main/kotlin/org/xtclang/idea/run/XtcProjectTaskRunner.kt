@@ -11,6 +11,7 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.task.ModuleBuildTask
 import com.intellij.task.ProjectTask
@@ -36,7 +37,10 @@ class XtcProjectTaskRunner : ProjectTaskRunner() {
         project: Project,
         task: ProjectTask,
         context: ProjectTaskContext?,
-    ): Boolean = task is ModuleBuildTask && XtcBuildSettings.effective(project) == XtcBuildMode.EMBEDDED && hasEcstasySources(task.module)
+    ): Boolean =
+        task is ModuleBuildTask &&
+            XtcBuildSettings.effective(project) == XtcBuildMode.EMBEDDED &&
+            (hasEcstasySources(task.module) || hasNoSources(task.module))
 
     override fun run(
         project: Project,
@@ -50,6 +54,14 @@ class XtcProjectTaskRunner : ProjectTaskRunner() {
             .whenComplete { result, _ -> promise.setResult(result ?: TaskRunnerResults.FAILURE) }
         return promise
     }
+
+    /**
+     * A module with no source roots of its own, such as the root module of a Gradle build that IntelliJ imported,
+     * holds nothing that another builder would build: left to Gradle's runner, building it runs the Gradle build,
+     * which embedded mode is not to do. The embedded build covers every source module, so it takes this one too.
+     */
+    private fun hasNoSources(module: Module): Boolean =
+        ReadAction.computeBlocking<Boolean, RuntimeException> { ModuleRootManager.getInstance(module).sourceRoots.isEmpty() }
 
     /** While indexing, any module may hold Ecstasy sources; claiming it then keeps Build from doing nothing. */
     private fun hasEcstasySources(module: Module): Boolean =
