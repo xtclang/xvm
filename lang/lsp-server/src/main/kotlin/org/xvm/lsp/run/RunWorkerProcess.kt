@@ -61,9 +61,10 @@ internal class RunWorkerProcess(
     )
 
     /**
-     * How many programs run at once; how long a worker may take to start, to stop, or stay idle; and how much
+     * How many programs run at once; how long a worker may take to start, to stop, or stay idle; how much
      * heap in use after the JVM's collections (in bytes) and how many threads a worker may keep after a run and
-     * still serve the next.
+     * still serve the next; and how long the code that computes a lazy variable's value may run in a debugged
+     * program, [onDemand], the debugger's own `ON_DEMAND` when null.
      */
     data class Limits(
         val running: Int = 4,
@@ -72,6 +73,7 @@ internal class RunWorkerProcess(
         val idle: Duration = 10.minutes,
         val heap: Long = 512L * MB,
         val threads: Int = 200,
+        val onDemand: Duration? = null,
     )
 
     /**
@@ -202,6 +204,7 @@ internal class RunWorkerProcess(
                             add("args", JsonArray().apply { request.args.forEach(::add) })
                             request.rootDir?.let { addProperty("rootDir", it) }
                             request.debug?.let { add("setup", DebugProtocol.json(it.record())) }
+                            limits.onDemand?.let { addProperty("onDemandMillis", it.inWholeMilliseconds) }
                         },
                     )
                 if (sent) null else "The execution worker could not be started".also { worker.end(it) }
