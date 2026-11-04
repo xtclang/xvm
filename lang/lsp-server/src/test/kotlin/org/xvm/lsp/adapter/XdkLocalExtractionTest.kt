@@ -76,6 +76,19 @@ class XdkLocalExtractionTest {
     }
 
     @Test
+    fun `a const that declares toString, which the compiler gives an appendTo, does not prevent extraction`() {
+        val text =
+            "module Extract {\n    const Card(Int rank) {\n        @Override\n        String toString() {\n" +
+                "            return \"card\";\n        }\n    }\n    Int read() {\n        return 1 + 2;\n    }\n}"
+        query(text, "1 + 2") { adapter, uri, actions ->
+            val action = actions.single { it.title.endsWith("to local variable") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("return 1 + 2;", "Int extractedValue = 1 + 2;\n        return extractedValue;"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
     fun `conditional return and partial short circuit selections refuse extraction`() {
         val conditional = "module Extract {\n    conditional Int read(String input) {\n        return input.indexOf('a');\n    }\n}"
         query(conditional, "input.indexOf('a')") { _, _, actions ->
