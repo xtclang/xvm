@@ -88,7 +88,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * come from the test resources, as for {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
-    private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
+    /**
+     * How long a test waits for its program, and lets code it evaluates run: an hour, which no machine
+     * takes, so that no result hinges on how fast the machine is or how loaded it is; it only ends a
+     * test whose program hangs. Some programs count to millions on several fibers, which took more
+     * than the earlier minute while other builds shared the machine.
+     */
+    private static final Duration RUN_LIMIT = Duration.ofHours(1);
 
     /**
      * Why text that is not an expression the debugger evaluates is not evaluated, after the text.
