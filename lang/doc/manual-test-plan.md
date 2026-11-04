@@ -1247,7 +1247,8 @@ and VS Code render them automatically from the LSP server response — no plugin
 ### 18a. Embedded build and run
 
 **Requests:** `xtc/build`, `xtc/run`, `xtc/runInput`, `xtc/stopRun`, `xtc/runnableTargets`, `xtc/runLenses`,
-`xtc/debugStart`; notifications `xtc/runOutput`, `xtc/runExited`, `xtc/debugMessage` (both ways), `xtc/debugEnd`
+`xtc/tests`, `xtc/debugStart`, and to the client `xtc/debugTask`; notifications `xtc/runOutput`, `xtc/runExited`,
+`xtc/testEvent`, `xtc/debugMessage` (both ways), `xtc/debugEnd`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
 **Mode:** VS Code `xtc.build.mode`, **Ecstasy: Select Build Mode** or the status bar's build mode (shown in a folder
 with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy
@@ -1285,6 +1286,7 @@ module Hello {
 | 18a.16 | No callable entry method | Run a module without a `run` method, or one whose `run` requires two parameters, from a run configuration or task | The build succeeds, the run is refused with the reason and exit code 1, and no user code runs (automated in X293) |
 | 18a.17 | Arguments a run method does not take | Run a module whose `run` has no parameters with the argument `ignored` | A warning that the method does not take any parameters and the arguments are ignored, then the program's output; it exits with code 0 (automated in X294) |
 | 18a.18 | Debug (IntelliJ) | Set a breakpoint in `Hello.x` and Debug its Ecstasy Application configuration (Shift+F9; macOS Ctrl+D) | The program stops at the breakpoint, with its call stack in the Debug tool window, and Resume Program runs it to its exit (automated in X304) |
+| 18a.19 | Tests | Add a `@Test` method to a module; run and debug it from VS Code's Test Explorer or IntelliJ's gutter icon, with a breakpoint in it | The test is marked passed or failed, with a failure's message, and under Debug the breakpoint stops it (automated in X339; in Gradle mode, with `testXtc`, in X340) |
 
 Known limits: up to four programs at a time per server, each in its own execution worker (a fifth run
 reports that four programs are already running); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
