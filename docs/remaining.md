@@ -1,6 +1,6 @@
 # Remaining work
 
-Everything still open on `lagergren/errs`, as one list to tick off. Checked on 2026-10-26
+Everything still open on `lagergren/errs`, as one list to tick off. Checked on 2026-11-04
 against [the integration plan](errs-integration-plan.md),
 [the execution plan](../lang/doc/plans/plan-embedded-execution.md),
 [the upstream register](errs-upstream-issues.md), [the PR roadmap](../pr-roadmap.md), and the live
@@ -8,7 +8,7 @@ state of every upstream issue and pull request named here. When you tick an item
 PR or run that closes it.
 
 Closed and not repeated here: L1–L72 (L61–L67 within their bounded scope), L74–L76, L80, L81,
-L83, UI1–UI7, AST1–AST5, PLAT1–PLAT3, R1–R5. R6 and R7 are closed too; their sections below
+L83, UI1–UI7, AST1–AST5, PLAT1–PLAT3, R1–R5. R6–R13 are closed too; their sections below
 stay as records. Cases those closures refuse on purpose are documented refusals, not open tasks;
 the few worth revisiting are under [beyond the current scope](#beyond-the-current-scope).
 
@@ -502,7 +502,8 @@ recorded partial coverage.
   within 5 s of closing the last file (UP66, fixed by #1835, merged, unreleased).
 - [x] R13: Debug in command-line mode, which runs `xtc run` (2026-11-03; shared X338). IntelliJ's
   Debug of a configuration that runs with **xtc command line** has `xtc run --deduce [--method <m>]
-  --debug connect:…,suspend,token=…,agent=<jar> <module> [args]` run in the project directory, the
+  --debug connect:…,suspend,token=… <module> [args]` run in the project directory (with `agent=<jar>`
+  until the agent moved into javatools, below), the
   command line its Run has too, which now passes the method and `--deduce`, and the program connects
   back, as a Gradle-mode Debug's does: `xtc/debugTask` carries the launch's `buildMode`, and
   `DebugTask` names the task in the session's messages. VS Code, which has no command-line mode,
@@ -531,8 +532,8 @@ recorded partial coverage.
   console's text). VS Code has no command-line mode.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
-  [,agent=<jar>]`, through javatools' new `DebuggerProvider`; the language server's jar is the
-  agent, `XtcDebugAgent`, on loopback only. The worker and the agent share `RunDebuggers`, the
+  [,agent=<jar>]`, through javatools' new `DebuggerProvider`; the language server's jar was the
+  agent, `XtcDebugAgent`, on loopback only, until the agent moved into javatools (below). The worker and the agent share `RunDebuggers`, the
   worker client and `AttachedProgram` share `RunDebugClient` (protocol 23). VS Code's attach
   configuration, snippet and Copy Option to Debug a Program Outside the Editor; IntelliJ's Ecstasy
   Attach configuration (UP64). Both take stop at the first line, for a program under `suspend`.
@@ -559,6 +560,12 @@ recorded partial coverage.
   the task's last output after the program's exit, and passed twice each when run again. The
   editors' Copy Option (VS Code's command, IntelliJ's Attach Port comment) and X336 now give
   `--debug listen:127.0.0.1:5005,suspend` without `agent=`, and `xtc/debugTask` has no `agent`.
+  Fixed after the rebase's CI (2026-11-04, `fc302daaff`, #693 `c4f916bf44`): with javatools' own
+  provider registered, `DebugOptionTest`'s program without one ran instead of being refused, and
+  `Runner` chose an `agent=<jar>`'s provider by its class's loader, which a jar of only a service
+  file never matched; it now takes the providers that the jar's service file names, and without
+  `agent=` javatools' own. With it, `a145de1074` (#693 `0e95701f79`): the embedded execution
+  tests' worker lifts the lazy-value limit, which CI's runner went past.
 
 Not planned: reverse execution, disassembly, instruction breakpoints, memory access and
 `runInTerminal`; the console debugger's own terminal views, command history, repeated steps and
@@ -669,9 +676,12 @@ passes with the workaround disabled. The gates are in
   full for the run, and so do X259, X74 and X150. The UP25 gate passes. Failed: X323, as its UP44
   gate does once #1773 is in; X257 (the UP26 gate) and X324, which fail only in the full run (see
   [test harness stability](#test-harness-stability)). No IDE exception.
-- [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0` (35 commits on errs
-  `4e3b1b65e7`, tip `a67965ede2`, 2026-10-28). It pins 0.30.0 and removes, each in its own commit,
-  the bridges 0.30.0 makes unnecessary; the items below name them. It is checked against a plugin
+- [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0`: 35 commits, made on errs
+  `4e3b1b65e7` (tip `a67965ede2`, 2026-10-28) and rebased on 2026-10-29 onto that day's errs history,
+  at its record of the #742 rebase (tip `9cb776697c`); errs has been rebased since, onto master
+  `2f18c1335c`, so the branch needs rebasing again before it is merged. It pins 0.30.0 and removes,
+  each in its own commit, the bridges 0.30.0 makes unnecessary; the items below name them by their
+  2026-10-28 hashes, whose subjects the rebased commits keep. It is checked against a plugin
   built from LSP4IJ `main` `44675cb3` with #1790 and #1791 before their CodeRabbit fixes. Full
   IntelliJ run at `56c699eb5a` (`run-11663425380226624296`): 307 passed, 4 partial (X286-X288,
   X303), 1 not implemented (X302), 3 failed, and X312's timeout stopped it before X313-X331. X5 and
@@ -781,6 +791,13 @@ passes with the workaround disabled. The gates are in
 
 ### LSP4IJ: pull requests open
 
+- [ ] Our open pull requests (checked 2026-11-04), filed 2026-11-04: [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857)
+  (UP67, below); [#1854](https://github.com/redhat-developer/lsp4ij/pull/1854), which has Ctrl+hover
+  underline only the reference, not the whole file, in a plugin's file type without a language (LSP4IJ
+  issue [#1612](https://github.com/redhat-developer/lsp4ij/issues/1612)), not a UP entry, since no
+  XVM code or case refers to it; and [#1858](https://github.com/redhat-developer/lsp4ij/pull/1858),
+  0.30.0's LSP and DAP changes in LSP4IJ's docs. The other 96 are merged
+  ([the register](errs-upstream-issues.md#upstream-pull-requests-2026-10-18)). To do: get them merged.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
@@ -1065,13 +1082,16 @@ passes with the workaround disabled. The gates are in
   cause-less `JsonParseException` escape, so the request got no response; #997 now rethrows only a
   failure whose causes hold an `IOException` or an `Error` (`fee81751`, with a test that fails
   without it). Unreleased: LSP4J 1.1.0 has no date.
-- [ ] LSP4J #1010 (filed 2026-10-29): a numeric message id outside the `int` range fails
+- [x] LSP4J #1010 (filed 2026-10-29): a numeric message id outside the `int` range fails
   `nextInt()`, and the request is logged and dropped without a response. Our
-  [#1011](https://github.com/eclipse-lsp4j/lsp4j/pull/1011) (open, on `37565290`) reads such an id
+  [#1011](https://github.com/eclipse-lsp4j/lsp4j/pull/1011) (on `37565290`) reads such an id
   exactly: an `Integer` in the `int` range, a `Long` in the `long` range, and otherwise a
   `BigDecimal`, which the response gives back (`b7f7823b`, 2026-11-02, after @cdietrich's note that
-  larger ids were still dropped). Approved by @pisv and @cdietrich before its last two commits;
-  both were asked to look again. To do: get it merged.
+  larger ids were still dropped). Merged by @pisv on 2026-11-03 (`36a72950`), closing #1010;
+  unreleased.
+- [x] LSP4J #1008, #1004's follow-up, merged by @pisv on 2026-11-03 (`1431dd6c`); unreleased. Open
+  since (checked 2026-11-04): #1009 (UP41's LSP4J part, above), and #1016 and #1017, DAP 1.71.0 and
+  its 64-bit and unsigned 32-bit fields as `long`.
 - [ ] UP15: after an LSP4J release with #997, adopt it and change `XdkStdioTest`'s assertion to
   `ResponseErrorCode.InvalidParams`, keeping reader recovery.
 - [ ] UP06: after an LSP4IJ release with #1723 (0.30.0), remove the `DiagnosticReportJson` adapter;
@@ -1088,18 +1108,19 @@ passes with the workaround disabled. The gates are in
   in `40013e5306` (2026-10-29), without the double observation of `start()` or the `stop()`
   override. X272 passes on 11.0.0 without them and fails on 10.1.2 without them.
 
-### Not filed yet: fixes ready locally
+### IntelliJ Platform and VS Code: our fixes, filed 2026-10-28
 
-Each is a local commit with an upstream-style test, verified natively on 2026-10-20. Nothing is
-pushed. The drafts of the tickets, PR descriptions and the #219122 comment are in
-`~/src/upstream-drafts/`, outside the repository, one file each (written again 2026-10-28: the
-2026-10-20 session's scratchpad held only harnesses). Filing needs, besides: a YouTrack account for
-the JetBrains tickets, forks `lagergren/intellij-community` and `lagergren/vscode`, each project's
-contributor agreement, and the branches rebased. UP17's commit message quotes 14.6 s with 80,000
-highlighters in an editor, which its probe never measured: check or drop it before filing.
+Each was a local commit with an upstream-style test, verified natively on 2026-10-20, and was filed
+on 2026-10-28 from the forks `lagergren/intellij-community` and `lagergren/vscode`. The drafts of
+the tickets, PR descriptions and the #219122 comment are in `~/src/upstream-drafts/`, outside the
+repository, one file each. UP17's commit message quotes 14.6 s with 80,000 highlighters in an
+editor, which its probe never measured (the probe item below).
 
-- [ ] UP17 (IntelliJ Platform): our [#3728](https://github.com/JetBrains/intellij-community/pull/3728) (open, 2026-10-28) for the existing
-  [IJPL-259475](https://youtrack.jetbrains.com/issue/IJPL-259475), a console freeze whose stacks end in the same `maxEnd` correction. To do: get it merged.
+- [x] UP17 (IntelliJ Platform): our [#3728](https://github.com/JetBrains/intellij-community/pull/3728) (2026-10-28) for the existing
+  [IJPL-259475](https://youtrack.jetbrains.com/issue/IJPL-259475), a console freeze whose stacks end in the same `maxEnd` correction.
+  JetBrains pushed it to intellij-community `master` on 2026-11-03 as `5079f25b88`, "with more
+  conservative guard for full tree rebuild" (cdracm), and closed the pull request on 2026-11-04
+  (checked 2026-11-04). Unreleased; the gate is below.
 - [ ] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
   of 80,000 highlighters installed, so it never measured the decorated case.
 - [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881), a duplicate of the older
@@ -1129,7 +1150,7 @@ highlighters in an editor, which its probe never measured: check or drop it befo
 - [x] A master PR for the xunit selector fix alone, errs `649d5c53f2`: #755, "Make xtc test -c
   and -t select the test module's own classes", opened 2026-11-04 at the user's go-ahead and
   validated on master f7d87b4d88. Its patch is the same as errs `649d5c53f2` and #693's
-  `6b36fe5aa5`, so a rebase onto master drops both once it merges.
+  `6b36fe5aa5`. Merged 2026-11-04 (`a8d50aaffa`); the rebase onto master `2f18c1335c` dropped both.
 - [x] #756, merged 2026-11-04 (`3a6f7f6004`): xunit's JSON report on master, the xunit parts of errs `80a7abfc02` and
   `712d23d14d` as one commit, as master never had the TeamCity reporter; validated on master
   a8d50aaffa. Opened 2026-11-04 at the user's go-ahead.
@@ -1141,7 +1162,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
-  distilled per feature, without tracking documents or plans. On 2026-10-28 #693 was also regrouped
+  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-04: #693's
+  tip `c4f916bf44`, rebased with errs onto master `2f18c1335c` (see
+  [the integration plan](errs-integration-plan.md)), has errs' features through R13 and its two CI
+  fixes of that day, `a145de1074` and `fc302daaff`, as `0e95701f79` and `c4f916bf44`. On 2026-10-28 #693 was also regrouped
   into 70 commits on master `6c025c0426`, without its plans, every commit compiling, with
   [the regroup map](errs-693-regroup-2026-10-28.tsv) from each new commit to the old ones (see "#693
   regrouped and rebased onto master" in
@@ -1149,7 +1173,7 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   its last commit, the rename proof fix, is errs `a8264753db`. On 2026-10-29 #693 was rebased onto
   master `636b29d80b` (#742), dropping its copy of #742, as 70 commits (`51c0b48aed`), and took
   `vscode-languageclient` 11.0.0 without UP28's workarounds as its commit 71 (`4a5f624b67`, errs
-  `40013e5306`). Last synchronized 2026-10-28: the
+  `40013e5306`). Synchronized before that, on 2026-10-28: the
   debugger track through `a521e2ebbf`, as 22 feature commits and two of #693's own,
   `9b3b802eb2..6f5f5fde1b` before the regroup (see "The debugger track in #693" in
   [the integration plan](errs-integration-plan.md#the-debugger-track-in-693-2026-10-28)). Before
@@ -1230,8 +1254,8 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   [#716](https://github.com/xtclang/xvm/pull/716) (2026-10-23, `lagergren/fix-embedded-run-end`), with
   `1473c7e89` below, written for master: without the `SessionDebuggerTest` change and the server
   README's line, which master's README has no place for. Merged as #716 on 2026-10-28 (`22ec660f1f`).
-- [ ] Candidates for master on their own, found by a scan of this branch's fixes outside `lang/` against
-  master (2026-10-23), each reproduced on master. State on 2026-10-29: #716, #717, #718, #720, #723,
+- [x] Candidates for master on their own, found by a scan of this branch's fixes outside `lang/` against
+  master (2026-10-23), each reproduced on master; all decided by 2026-10-29. State on 2026-10-29: #716, #717, #718, #720, #723,
   #731 and #735 are merged; #719, #721 and #722 are closed, and #730 is closed with its fix in #724,
   merged on 2026-10-29 (`5ba865f16e`); `814153a42` stays on this branch.
   - `1473c7e89`: an embedded run ended when `run()` returned, and the services it left at work ran on
@@ -1265,7 +1289,7 @@ highlighters in an editor, which its probe never measured: check or drop it befo
     `org.xvm.runtime.debugger=off` (`6de116655`, with `RuntimeDebuggerTest`), drops the comment he
     asked about, keeps the console debugger once chosen, as Cam asked, and keeps `getRuntime()`, with
     the reason (a point an instrumentation agent or test can intercept) in its thread. Rebased onto
-    master and re-requested; #719 closes once #718 is merged.
+    master and re-requested; #719 was closed on 2026-10-26, and #718 merged on 2026-10-27.
   - Found by R7r (`d77fb9b51`, 2026-10-23), in `EvalCompiler`, which master's console debugger uses
     for `E`: a method's parameter is unresolvable until something has shown it, an `@Inject` variable
     is captured with its `Ref`'s type, so no method of it compiles, and a lambda that does not compile
@@ -1286,7 +1310,8 @@ highlighters in an editor, which its probe never measured: check or drop it befo
     [#720](https://github.com/xtclang/xvm/pull/720) (2026-10-24, `lagergren/fix-weak-map-arrays`),
     and on #693 since 2026-10-24 (`a5e25c725`). After review (2026-10-26, `8c457fe25`, here
     `7fe6450b8`): `toArray()` fills one array, copied only when collected keys were left out, and the
-    test clears the map's weak reference itself instead of waiting for `System.gc()`. Not yet on #693.
+    test clears the map's weak reference itself instead of waiting for `System.gc()`. #693 has it
+    from master since #720 merged (2026-10-26).
   - Found by the native `toString()` test (2026-10-23): `new Nibble(Bit[])` makes 0 for every value,
     and so does `Nibble`'s table, and with it `Nibble.of()`, `IntLiteral.toNibble()` and
     `Char.isNibble()`; `xConstrainedInteger.constructFromBits()` packs the bits into a byte's high
