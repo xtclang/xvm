@@ -80,6 +80,12 @@ unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's tas
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
 The catalog currently has 342 scenarios; a partial-coverage result is not a full pass.
 
+On a desktop the playbook's editor takes the focus, and keystrokes typed elsewhere reach it. To keep
+both editors off the desktop, run the same playbooks in a Linux container on Xvfb with
+`./gradlew containerPlaybook`, or one editor's selected cases with `containerPlaybookIntellij` or
+`containerPlaybookVsCode` and `-PplaybookCases=X307,X324`; see
+[the playbook in a Linux container](../intellij-plugin/testing.md#the-playbook-in-a-linux-container).
+
 For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
 and typed completion):
 
