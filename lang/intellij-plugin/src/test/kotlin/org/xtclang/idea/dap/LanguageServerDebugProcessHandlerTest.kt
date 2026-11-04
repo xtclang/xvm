@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
 import org.xtclang.idea.lsp.DebugSessionResponse
+import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.IOException
 import java.lang.reflect.Proxy
@@ -80,24 +81,36 @@ class LanguageServerDebugProcessHandlerTest {
     }
 
     @Test
-    fun `the program's output also goes to its receiver, as a test run's Tests tab reads it`() {
+    fun `the program's output and its tests' events go to their receivers, as a test run's Tests tab reads them`() {
         val sessions = DebugSessions()
         val server = FakeServer().apply { started.complete(Unit) }
         val output = StringBuffer()
+        val tested = ConcurrentLinkedQueue<TestEvent>()
         val handler =
-            LanguageServerDebugProcessHandler(sessions, output = { output.append(it) }) { CompletableFuture.completedFuture(server.proxy) }
+            LanguageServerDebugProcessHandler(sessions, output = { output.append(it) }, tested = { tested += it }) {
+                CompletableFuture.completedFuture(server.proxy)
+            }
         val events = Events(handler)
         handler.startNotify()
 
-        val message =
-            """{"seq":3,"type":"event","event":"output",""" +
-                """"body":{"category":"telemetry","output":"##teamcity[testStarted name='a']\n"}}"""
+        val message = """{"seq":3,"type":"event","event":"output","body":{"category":"stdout","output":"inside a\n"}}"""
         sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(message).asJsonObject))
-        val stopped = """{"seq":4,"type":"event","event":"stopped","body":{}}"""
+        val test =
+            """{"seq":4,"type":"event","event":"xtcTest",""" +
+                """"body":{"event":"started","id":"M:void a()","parent":"M:","selector":"a","container":false}}"""
+        sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(test).asJsonObject))
+        // a Gradle task's events come from its output, as the same event
+        sessions.tested("session-1", TestEvent(TestEvent.FINISHED, id = "M:void a()", status = "passed"))
+        val stopped = """{"seq":5,"type":"event","event":"stopped","body":{}}"""
         sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(stopped).asJsonObject))
-        assertThat(output.toString()).isEqualTo("##teamcity[testStarted name='a']\n")
-        // LSP4IJ still reads every message
+        assertThat(output.toString()).isEqualTo("inside a\n")
+        assertThat(tested).containsExactly(
+            TestEvent(TestEvent.STARTED, id = "M:void a()", parent = "M:", selector = "a", container = false),
+            TestEvent(TestEvent.FINISHED, id = "M:void a()", status = "passed"),
+        )
+        // LSP4IJ reads every DAP message, and not the session's own event
         assertThat(events.text(ProcessOutputTypes.STDOUT)).contains("\"event\":\"output\"", "\"event\":\"stopped\"")
+        assertThat(events.text(ProcessOutputTypes.STDOUT)).doesNotContain(DebugSessions.XTC_TEST)
         handler.destroyProcess()
     }
 

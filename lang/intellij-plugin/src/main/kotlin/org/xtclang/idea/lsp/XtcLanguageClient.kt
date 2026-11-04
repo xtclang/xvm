@@ -110,6 +110,12 @@ class XtcLanguageClient(
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).output(params)
     }
 
+    /** An event of the tests of an embedded run, for the test console registered under its run ID. */
+    @JsonNotification("xtc/testEvent")
+    fun testEvent(params: TestEventParams) {
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).tested(params)
+    }
+
     @JsonNotification("xtc/runExited")
     fun runExited(params: RunExitedParams) {
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).exited(params)
