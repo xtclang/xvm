@@ -30,6 +30,7 @@ import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
 import org.xvm.javajit.builders.PureBuilder;
 import org.xvm.javajit.builders.PureVirtualChildBuilder;
+import org.xvm.javajit.builders.RefBuilder;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import static org.xvm.javajit.Builder.CD_Class;
@@ -435,6 +436,10 @@ public class TypeSystem {
             return new PureBuilder(this, art);
         }
 
+        if (type.isJitAnnotatedRef()) {
+            return new RefBuilder(this, art);
+        }
+
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
@@ -561,9 +566,8 @@ public class TypeSystem {
                 if (struct.isParameterized() && type.getParamsCount() == 0) {
                     // the builder requires the formal type to compile a generic parameterized class;
                     // retain annotations so their constructors and methods are generated
-                    type = type.isAnnotated()
-                            ? struct.getFormalType().adoptAnnotations(pool(), type)
-                            : struct.getFormalType();
+                    type = type.adoptParameters(
+                            pool(), struct.getFormalType().getParamTypesArray());
                 }
                 return new Artifact(type, struct, shape, className);
             } else {

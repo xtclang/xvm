@@ -1308,6 +1308,8 @@ public class TerminalTypeConstant
 
             case Package -> Component.Format.PACKAGE;
 
+            case NativeClass -> Component.Format.CLASS;
+
             // get the class referred to and return its format
             case Class -> ((ClassConstant) constant).getComponent().getFormat();
 

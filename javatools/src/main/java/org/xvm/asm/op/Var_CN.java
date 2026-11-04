@@ -136,7 +136,7 @@ public class Var_CN
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regSrc = bctx.loadArgument(code, m_nArgValue);
-        RegisterInfo regDst = bctx.introduceRef(code, m_nVar, regSrc.type(),
+        RegisterInfo regDst = bctx.introduceRef(code, m_nVar, regSrc.type().removeAnnotations(),
                                     bctx.getString(m_nNameId), true);
         if (!regSrc.cd().equals(regDst.cd())) {
             // captured locals are backed by nRef, but the incoming signature can use Var

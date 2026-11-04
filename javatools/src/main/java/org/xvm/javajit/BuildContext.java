@@ -45,6 +45,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
@@ -68,6 +69,9 @@ import org.xvm.asm.op.Nop;
 
 import org.xvm.javajit.Builder.ArgLoader;
 import org.xvm.javajit.Builder.Loader;
+
+import org.xvm.javajit.builders.AnnotationHelper;
+import org.xvm.javajit.builders.RefBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
 import org.xvm.javajit.registers.MultiSlot;
@@ -108,12 +112,15 @@ import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.PrimitiveWithDefault;
-import static org.xvm.javajit.JitFlavor.XvmPrimitive;
-import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.SpecificWithDefault;
+import static org.xvm.javajit.JitFlavor.Widened;
+import static org.xvm.javajit.JitFlavor.WidenedWithDefault;
+import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 
 import static org.xvm.javajit.registers.MultiSlot.NO_EXT;
@@ -788,6 +795,12 @@ public class BuildContext {
 
             JitFlavor flavor      = paramDesc.flavor;
             boolean   withDefault = false;
+
+            if ((flavor == Specific || flavor == SpecificWithDefault) &&
+                    !paramDesc.cd.equals(builder.getCCDesc(type))) {
+                // a resolved parameter can be narrower than its erased Java signature
+                flavor = flavor == Specific ? Widened : WidenedWithDefault;
+            }
 
             switch (flavor) {
             case Primitive, Specific, Widened: {
@@ -2016,19 +2029,23 @@ public class BuildContext {
      * rather than the Ref itself. The only ops that are allowed to "see" the Ref object itself are
      * MOV_REF and MOV_VAR.
      *
-     * <p>There is one notable exception: if the referent type is annotated by "Inject", this method
+     * <p>There is one notable exception: if the reference type is annotated by "Inject", this method
      * creates a regular register and loads the corresponding injection value.
      *
-     * @param type  the referent type
+     * <p>The Ref/Var type uses a {@link NativeRebaseConstant}, retaining its parameters and runtime
+     * annotations. This runtime-only type is used as a JIC. VAR_C/VAR_CN callers remove annotations
+     * before calling this method because they bind existing references.
+     *
+     * @param type  the Ref/Var type, including any runtime annotations
      */
     public RegisterInfo introduceRef(CodeBuilder code, int regId, TypeConstant type, String name,
-                                    boolean isVar) {
-        if (type instanceof AnnotatedTypeConstant annoType) {
-            type = type.getUnderlyingType();
+                                     boolean isVar) {
+        type = AnnotationHelper.filterAnnotations(type);
 
+        if (type instanceof AnnotatedTypeConstant annoType) {
             Annotation anno = annoType.getAnnotation();
             if (anno.getAnnotationClass().equals(pool().clzInject())) {
-                TypeConstant resourceType = type.getParamType(0);
+                TypeConstant resourceType = type.getUnderlyingType().getParamType(0);
                 Constant[]   params       = anno.getParams();
                 int          paramCount   = params.length;
 
@@ -2076,13 +2093,30 @@ public class BuildContext {
             }
         }
 
+        ConstantPool     pool = pool();
+        IdentityConstant id   = type.getSingleUnderlyingClass(true);
+        assert id.equals(pool.clzRef()) || id.equals(pool.clzVar());
+
         TypeConstant referentType = type.getParamType(0);
-        int          slot         = scope.allocateLocal(regId, TypeKind.REFERENCE);
-        JitTypeDesc  jtd          = referentType.getJitDesc(builder);
-        RegisterInfo ref          = new Ref(this, regId, slot, name, isVar, referentType, jtd.flavor);
+        TypeConstant nativeType   = pool.ensureParameterizedTypeConstant(
+                id.equals(pool.clzVar()) ? pool.typeVarRB() : pool.typeRefRB(), referentType);
+        if (type.isAnnotated()) {
+            nativeType = nativeType.adoptAnnotations(pool, type);
+        }
+
+        int          slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
+        JitTypeDesc  jtd  = referentType.getJitDesc(builder);
+        RegisterInfo ref  = new Ref(this, regId, slot, name, isVar, referentType, jtd.flavor);
 
         registerInfos.put(regId, ref);
         ref.addStartLabel(code.newLabel());
+
+        if (nativeType.isAnnotated()) {
+            // annotation constructors need to run at declaration
+            RefBuilder.createRef(this, code, nativeType);
+            code.astore(slot);
+            ensureRegisterScope(code, ref);
+        }
         return ref;
     }
 
@@ -2196,18 +2230,20 @@ public class BuildContext {
     }
 
     /**
-     * Create a {@link JitFlavor#Specific} register info for the specified register id and the
-     * specified referent type.
+     * Create a register info for the specified register id and the specified referent type.
+     *
+     * <p>Similarly to {@link #introduceRef}, a newly introduced reference uses a
+     * {@link NativeRebaseConstant} for Ref/Var.
      */
-    public RegisterInfo realizeRef(CodeBuilder code, int regId, TypeConstant type, boolean isVar) {
+    public RegisterInfo realizeRef(CodeBuilder code, int regId, TypeConstant referentType, boolean isVar) {
         RegisterInfo reg = registerInfos.get(regId);
         if (reg == null) {
-            TypeConstant refType = isVar ? pool().ensureVarType(type) : pool().ensureRefType(type);
+            TypeConstant refType = pool().ensureParameterizedTypeConstant(
+                    isVar ? pool().typeVarRB() : pool().typeRefRB(), referentType);
             return introduceRegister(code, regId, refType, "");
         } else {
-            TypeConstant refType = pool().typeRef();
             assert reg.flavor() != JitFlavor.Ref;
-            assert reg.type().isA(refType) && reg.type().getParamType(0).equals(type);
+            assert reg.type().isA(pool().typeRef()) && reg.type().getParamType(0).equals(referentType);
             return reg;
         }
     }
@@ -2529,22 +2565,25 @@ public class BuildContext {
 
     /**
      * Create a Ref or Var for a property.
+     *
+     * <p>Similarly to {@link #introduceRef}, a newly introduced reference register uses a
+     * {@link NativeRebaseConstant} for Ref/Var treated as a JIC.
      */
     public void buildPropertyRef(CodeBuilder code, int targetId, int propIdIndex, int retId,
                                  boolean isVar) {
-        TypeConstant     targetType  = getArgumentType(targetId);
-        PropertyConstant propId      = getConstant(propIdIndex, PropertyConstant.class);
-        PropertyInfo     propInfo    = propId.getPropertyInfo(targetType);
-        TypeConstant     referentType = propInfo.getType().resolveAutoNarrowing(
-                pool(), false, targetType, null);
-        RegisterInfo     refReg      = realizeRef(code, retId, referentType, isVar);
+        ConstantPool     pool         = pool();
+        TypeConstant     targetType   = getArgumentType(targetId);
+        PropertyConstant propId       = getConstant(propIdIndex, PropertyConstant.class);
+        PropertyInfo     propInfo     = propId.getPropertyInfo(targetType);
+        TypeConstant     referentType = propInfo.getType().resolveAutoNarrowing(pool, false, targetType, null);
+        RegisterInfo     refReg       = realizeRef(code, retId, referentType, isVar);
 
         if (propInfo.isConstant()) {
             assert !isVar;
 
             Constant initial  = propInfo.getInitialValue();
             Constant referent = initial == null
-                    ? pool().ensureSingletonConstConstant(propInfo.getIdentity())
+                    ? pool.ensureSingletonConstConstant(propInfo.getIdentity())
                     : initial;
             buildCreateRef(code, referentType, false, () -> {
                 RegisterInfo valueReg = loadConstant(code, referent);
@@ -2556,10 +2595,13 @@ public class BuildContext {
             return;
         }
 
-        RegisterInfo     targetReg   = ensureRegister(code, targetId);
-        JitMethodDesc    getterJmd   = propInfo.getGetterJitDesc(builder, targetType);
+        RegisterInfo  targetReg = ensureRegister(code, targetId);
+        JitMethodDesc getterJmd = propInfo.getGetterJitDesc(builder, targetType);
+        TypeConstant  refType   = pool.ensureParameterizedTypeConstant(
+                isVar ? pool.typeVarRB() : pool.typeRefRB(), referentType);
+        ClassDesc     refClass  = builder.getICDesc(refType);
 
-        code.new_(CD_nRef)
+        code.new_(refClass)
             .dup();
         loadCtx(code);
         loadTypeConstant(code, referentType);
@@ -2575,7 +2617,7 @@ public class BuildContext {
             code.aconst_null();
         }
 
-        code.invokespecial(CD_nRef, INIT_NAME, md(CD_void, CD_Ctx,
+        code.invokespecial(refClass, INIT_NAME, md(CD_void, CD_Ctx,
                 CD_TypeConstant, CD_boolean, CD_MethodHandle, CD_MethodHandle))
             .astore(refReg.slot());
     }

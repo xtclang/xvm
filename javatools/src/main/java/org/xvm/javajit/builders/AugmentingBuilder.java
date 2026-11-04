@@ -79,7 +79,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
         // if there is any native Exception, we need to generate the "$createJavaException" method
         TypeConstant type        = thisType.removeAccess();
-        TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
+        TypeConstant T_EXCEPTION = pool().typeException();
         if (type.isA(T_EXCEPTION) && !type.equals(T_EXCEPTION)) {
             new ExceptionBuilder(typeSystem, art).assembleCreateException(classBuilder);
         }
