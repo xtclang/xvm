@@ -23,8 +23,10 @@
 # volumes xvm-playbook-gradle, xvm-playbook-work and xvm-playbook-m2 keep Gradle's caches, the build and
 # mavenLocal between runs.
 # The container is aarch64 Linux on an Apple machine: its fonts and timing are not macOS's. The export
-# has no .git, so the build's version information says it found none; the VS Code playbook's commit and
-# uncommitted paths are passed in.
+# has no .git: its commit and branch are passed in as XTC_COMMIT and XTC_BRANCH, for javatools' build info
+# and the VS Code playbook, with the uncommitted paths. The container may use $XTC_CONTAINER_MEMORY, 7g by
+# default, which an 8 GiB machine holds; the IntelliJ tour, whose Gradle-mode steps start a second Gradle, needs
+# more, such as 14g on a 16 GiB machine.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -77,7 +79,7 @@ dirty="$(git -C "$root" status --porcelain)"
 # --init makes PID 1 reap orphans: without it, a Gradle daemon that exits on a cancel stays a zombie, which Java
 # reports alive (X260 waits for the canceled daemon to exit)
 "$engine" run --rm --init --name "xvm-playbook-$stamp" \
-    --memory 7g --shm-size 1g --security-opt label=disable \
+    --memory "${XTC_CONTAINER_MEMORY:-7g}" --shm-size 1g --security-opt label=disable \
     -e XTC_COMMIT="$commit" -e XTC_BRANCH="$branch" -e XTC_PLAYBOOK_DIRTY="$dirty" \
     -v xvm-playbook-gradle:/gradle \
     -v xvm-playbook-work:/work \
