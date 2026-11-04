@@ -74,9 +74,9 @@ The custom XTC tasks themselves are implemented by the plugin and build logic, s
 implementation/runtime classpath fingerprint can change when the earlier main build invocation
 rebuilds jars such as:
 
-- [`plugin/build/libs/xtc-plugin-0.4.4-SNAPSHOT.jar`](../../../plugin/build/libs/xtc-plugin-0.4.4-SNAPSHOT.jar)
-- [`build-logic/common-plugins/build/libs/common-plugins.jar`](../../../build-logic/common-plugins/build/libs/common-plugins.jar)
-- [`build-logic/aggregator/build/libs/aggregator.jar`](../../../build-logic/aggregator/build/libs/aggregator.jar)
+- `plugin/build/libs/xtc-plugin-0.4.4-SNAPSHOT.jar`
+- `build-logic/common-plugins/build/libs/common-plugins.jar`
+- `build-logic/aggregator/build/libs/aggregator.jar`
 
 That explains why the **first** follow-up invocation can see `manualTests:compileXtc` as stale even
 though the XDK module compiles are already up to date.
