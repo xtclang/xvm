@@ -458,6 +458,11 @@ public class MethodDeclarationStatement
                 }
 
                 setComponent(method);
+
+                // documentation, which a tool reads from the structure, as from a class's
+                if (doc != null) {
+                    method.setDocumentation(getDocumentation());
+                }
             } else {
                 log(errs, Severity.ERROR, Compiler.METHOD_UNEXPECTED, sName, container);
                 return;
