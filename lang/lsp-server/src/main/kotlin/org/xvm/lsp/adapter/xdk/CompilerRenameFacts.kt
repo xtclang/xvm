@@ -52,6 +52,15 @@ internal sealed interface ProofIdentity {
         val owner: ProofIdentity,
     ) : ProofIdentity
 
+    /**
+     * A method the compiler adds to a written class, such as the appendTo and estimateStringLength of a const that
+     * declares toString. It has no declaration, so its class and the contracts it implements identify it.
+     */
+    data class Generated(
+        val owner: ProofIdentity,
+        val contracts: List<ProofIdentity>,
+    ) : ProofIdentity
+
     /** A mixin super register is relative to its written method and each adopting host's chain. */
     data class Super(
         val method: ProofIdentity,
@@ -307,15 +316,21 @@ internal fun captureRenameFacts(
                         info?.let { owner ->
                             owner.getMethodById(constant)?.let { owner.dispatch(it, errors) }
                         }
-                    if (
+                    val methods = route?.methods.orEmpty()
+                    val contracts = methods - constant
+                    when {
+                        // A method the compiler adds to the class has no declaration, and every attempt
+                        // adds it again, to the same class and over the same contracts.
+                        (constant.component as? MethodStructure)?.isTransient == true &&
+                            constant in methods &&
+                            contracts.isNotEmpty() -> ProofIdentity.Generated(identity(host), contracts.map(::identity))
+
                         route == null ||
-                        !route.supported ||
-                        route.methods.isEmpty() ||
-                        constant in route.methods
-                    ) {
-                        ProofIdentity.Unproven()
-                    } else {
-                        route.proof(identity(host), ::identity)
+                            !route.supported ||
+                            methods.isEmpty() ||
+                            constant in methods -> ProofIdentity.Unproven()
+
+                        else -> route.proof(identity(host), ::identity)
                     }
                 }
 
