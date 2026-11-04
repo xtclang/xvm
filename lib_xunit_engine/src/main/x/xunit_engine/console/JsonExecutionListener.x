@@ -16,6 +16,8 @@
  *   their own events;
  * - `skipped`: a test or container that did not run, with the same fields as `started` and the
  *   reason as `message`.
+ *
+ * Setting `xvm.xunit.report` to `json` selects this listener.
  */
 service JsonExecutionListener
         implements ExecutionListener {
