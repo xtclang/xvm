@@ -455,7 +455,7 @@ feature:
 4. Click **Create**
 5. Verify:
    - A Gradle project is created with XTC structure
-   - The `build.gradle.kts` contains XTC plugin configuration
+   - The `build.gradle.kts` contains XTC Gradle plugin configuration
    - Sample `.x` files are generated
 
 #### Testing Run Configurations
