@@ -3309,8 +3309,10 @@ public class Parser {
                             name = expect(Id.IDENTIFIER);
                         }
                     }
+                    // a cursor at the name's start, right after the dot, completes the member too, with
+                    // nothing of it typed
                     if (noDeRef == null && name.getId() == Id.IDENTIFIER
-                            && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
+                            && name.getStartPosition() <= f_cursor && f_cursor <= name.getEndPosition()
                             && (canRetainIncompleteAt(name.getEndPosition(), true)
                                     || atLineEnd(name.getEndPosition()))) {
                         var hole = incomplete(expr, dot, name);
@@ -3687,7 +3689,7 @@ public class Parser {
                 }
 
                 left = new NameExpression(left, nameNDR, name, null, lEndPos);
-                if (fNormal && nameNext.getStartPosition() < f_cursor && f_cursor <= nameNext.getEndPosition()
+                if (fNormal && nameNext.getStartPosition() <= f_cursor && f_cursor <= nameNext.getEndPosition()
                         && (canRetainIncompleteAt(nameNext.getEndPosition(), true)
                                 || atLineEnd(nameNext.getEndPosition()))) {
                     var hole = incomplete(left, dot, nameNext);
