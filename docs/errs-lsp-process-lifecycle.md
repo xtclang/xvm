@@ -93,7 +93,8 @@ The standalone master extraction follows these boundaries:
 
 No embedding API, AST, semantic-model, rename-proof, native playbook or dependency upgrade
 belongs in this extraction. The branch below is published in
-[PR #653](https://github.com/xtclang/xvm/pull/653), with review requested from `ggleyzer`.
+[PR #653](https://github.com/xtclang/xvm/pull/653), with review requested from `ggleyzer`, and was
+merged on 2026-09-27.
 The provider workaround and regressions are isolated in **8e976f868**; server cleanup, process
 exit and regressions are in **eefc1b8e6**. See the integration plan for the verified commit map.
 

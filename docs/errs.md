@@ -2,7 +2,8 @@
 run in a persistent execution worker JVM, beside the Gradle path: VS Code `xtc.build.mode`, IntelliJ
 Build, Execution, Deployment › Ecstasy. This is a first delivery of R2–R5 in the
 [execution plan](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15); debugging
-is not included. Commits, extraction targets and validation are in the
+is not included, and followed as R6–R13, done by 2026-11-03
+([remaining.md](remaining.md#3-embedded-run-and-debugging)). Commits, extraction targets and validation are in the
 [integration plan](errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
 
 **Build/test artifact retention (2026-10-06):** cleanup reduced this checkout from approximately
