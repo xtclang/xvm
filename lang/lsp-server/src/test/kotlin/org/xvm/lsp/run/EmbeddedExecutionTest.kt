@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
@@ -24,6 +23,8 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.debug.ProgramEvents
+import org.xvm.lsp.Heavy
+import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuild
@@ -58,6 +59,7 @@ import kotlin.time.Duration.Companion.hours
  * Embedded build to disk through the compiler queue, and runs in the execution worker JVM. The worker
  * tests start a real worker process from the test classpath, as the language server does from its jar.
  */
+@Slow
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EmbeddedExecutionTest {
     @TempDir lateinit var directory: Path
@@ -1858,7 +1860,7 @@ class EmbeddedExecutionTest {
     }
 
     @Test
-    @Tag("heavy")
+    @Heavy
     fun `repeated builds, runs, stops and debug sessions on one worker leave no run, session, thread or process behind`() {
         CompilerTestSupport.configure()
         val soak = source("Soak.x", soak(0))

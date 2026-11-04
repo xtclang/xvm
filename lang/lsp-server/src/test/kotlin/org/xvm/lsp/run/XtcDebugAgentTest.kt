@@ -18,6 +18,7 @@ import org.xvm.debug.ProgramEvents
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
+import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.server.DebugSessions
@@ -48,6 +49,7 @@ import java.util.concurrent.TimeUnit.SECONDS
  * the program with it; and a task that ends before its program connects fails the launch. The runner compiles each
  * program from its source, so its breakpoints are on its source file's lines.
  */
+@Slow
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class XtcDebugAgentTest {
     @TempDir lateinit var directory: Path

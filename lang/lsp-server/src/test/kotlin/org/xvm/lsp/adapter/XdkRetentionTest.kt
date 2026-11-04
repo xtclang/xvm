@@ -1,12 +1,12 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.lsp.Heavy
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
@@ -33,7 +33,7 @@ class XdkRetentionTest {
     }
 
     @Test
-    @Tag("heavy")
+    @Heavy
     fun `extended editing workload does not accumulate compiler graphs`() {
         verifyRetention(CYCLES)
     }
