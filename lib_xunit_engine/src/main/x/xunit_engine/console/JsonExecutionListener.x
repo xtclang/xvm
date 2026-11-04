@@ -11,9 +11,9 @@
  *   module, package, class or templated test does;
  * - `finished`: the execution of the model `id` ended, with the `status` `passed`, `failed`,
  *   `aborted` (an exception other than a failed assertion) or `skipped`, after `durationMillis`;
- *   when an exception is present, `message` and `details` describe it. A container's `status`
- *   is that of its own execution, such as its `@BeforeAll` and `@AfterAll`; its tests are in
- *   their own events;
+ *   when an exception is present, `message` is its message and `details` its full text, with
+ *   the stack trace and the cause. A container's `status` is that of its own execution, such as
+ *   its `@BeforeAll` and `@AfterAll`; its tests are in their own events;
  * - `skipped`: a test or container that did not run, with the same fields as `started` and the
  *   reason as `message`.
  *
