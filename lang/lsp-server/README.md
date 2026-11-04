@@ -191,7 +191,7 @@ search compiles unopened modules on demand and retains healthy independent modul
 The navigation index holds one detached build per configured root, reused only when captured source
 text, resources and dependency binary/source-index revisions match. Editor and workspace-diagnostic
 compilation seed the same index; changing a module rebuilds its affected dependency closure. Removed
-roots are evicted, and stale/cancelled work cannot republish an older index generation. Refactoring
+roots are evicted, and stale/canceled work cannot republish an older index generation. Refactoring
 proofs remain fresh compilations. There is no disk-persistent index or incremental compiler; warm
 queries still capture the graph inputs to detect closed-file changes without relying on watchers.
 Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
@@ -334,7 +334,7 @@ parameterized qualifiers also work; aliases retain their substituted type. Mid-t
 replace the entire final identifier, including a generic base before written type arguments.
 Empty type operands, qualifier-middle edits, trailing dots, generic-method/multi-return declarations,
 constraints and module/package composition headers now have bounded recovery. Unregistered header
-formals retain their written constraints for bound-labelled completion and hover, including
+formals retain their written constraints for bound-labeled completion and hover, including
 sibling constraints and virtual child types reached through those bounds. Unresolved/cyclic bounds
 hide outer names without producing candidates. They do not register fabricated components; see
 [shared X91–X98 and X106–X108](../doc/manual-test-plan.md#xdkadapter-playbook) and the

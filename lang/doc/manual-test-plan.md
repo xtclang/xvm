@@ -135,7 +135,7 @@ process baseline so existing old servers and another IDE's workspace are not cou
    the XTC server PID. Check `ps -axo pid,ppid,command | grep '[x]tc-lsp-server.jar'` on macOS/Linux.
 2. Restart that server several times through the panel. Each previous PID must disappear;
    the final active server must still provide completion and diagnostics.
-3. Close the project during a fresh server startup, then reopen it. Cancelled startup must
+3. Close the project during a fresh server startup, then reopen it. Canceled startup must
    not leave an extra server behind. Repeat once after the workspace finishes indexing.
 4. Quit the test IDE. Its recorded server PIDs must disappear within ten seconds. Reopening
    the IDE must not be needed to reap them. Do not terminate another workspace's server.
@@ -355,8 +355,8 @@ XdkAdapter - compile: uri=file:///X.x, 106 bytes, 1 diagnostic(s), 3 symbol(s), 
              waited 160us, compiled in 64ms [modules=24, constants=207196, invalidations=10, heap=281MB]
 ```
 
-`queue` is how many documents are waiting: compilations are serialised, because the compiler was
-not written for two at once. `waited` growing while you type is the sign that serialising has
+`queue` is how many documents are waiting: compilations are serialized, because the compiler was
+not written for two at once. `waited` growing while you type is the sign that serializing has
 started to hurt.
 
 ### 4. Create Test File
@@ -614,7 +614,7 @@ see X41 in the compiler playbook. TextMate remains the lexical coloring layer.
 **Status:** ✅ Done
 **Works with:** Compiler adapter only (`-Plsp.adapter=compiler`)
 
-These are the behaviours that only exist because the adapter runs the real compiler. Nothing here
+These are the behaviors that only exist because the adapter runs the real compiler. Nothing here
 is observable under mock or tree-sitter.
 
 **Prerequisite:** a server built with `-Plsp.adapter=compiler`; its module resources must be present.
@@ -1378,8 +1378,8 @@ compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skip
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
 including failure and skip counts. Focused selections use their own total rather than the full
-catalog. The ordinary `testVscodeExtension` smoke suite shares this display, labelled **Ecstasy
-tests**; the catalog is labelled **Ecstasy playbook**. Both appear at the left of the status bar.
+catalog. The ordinary `testVscodeExtension` smoke suite shares this display, labeled **Ecstasy
+tests**; the catalog is labeled **Ecstasy playbook**. Both appear at the left of the status bar.
 Long test names are abbreviated there and shown in full in the tooltip. Smoke runs also use fresh
 workspaces/profiles and retain logs under `build/reports/extension-tests/run-*/`.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1747,7 +1747,7 @@ class Child extends Base<String> {
 
 | # | Action | Expected result |
 |---|--------|-----------------|
-| X21 | From `Base` in the root, Find References and search workspace symbols for `Child` (Go to Symbol in Workspace). Open Child and navigate from `Base` and `echo`. | References and symbol search include the closed member. Definitions land on the correct names in Project.x. Search covers analysed module sessions, not every unopened module in the workspace. |
+| X21 | From `Base` in the root, Find References and search workspace symbols for `Child` (Go to Symbol in Workspace). Open Child and navigate from `Base` and `echo`. | References and symbol search include the closed member. Definitions land on the correct names in Project.x. Search covers analyzed module sessions, not every unopened module in the workspace. |
 | X22 | Show Type Hierarchy on `Child`; expand supertypes. Show it on `Base` and `Named`; expand subtypes. | Direct links are `Child → Base<String> → Named`, with correct file locations. Expanding Base's subtypes finds Child even if its tab is closed. Generic arguments remain visible. |
 | X23 | Keep both files open. Change Base's name to `Renamed` in the root without saving, then undo. | Child's diagnostic changes without an edit there, then clears after undo. No generic internal error is added to the root merely because the member has an error. |
 | X24 | Add `void inspect() { ite|; }` in Child and complete. Change root property to `String item = "overlay";` without saving; repeat completion in Child. | `item` changes from `Int` to `String` using the unsaved root. Undo the root change: completion returns `Int`. No temporary source files are written. |
@@ -2315,7 +2315,7 @@ module Advanced {
 | X105 | Use unresolved `Document` in a type header; apply the import quick fix for `xml.xtclang.org`. Then try unresolved `Widget` declared in a separate discovered source module. | Only imports whose complete graph compiles are offered; applying clears diagnostics. Source imports also add the discovered dependency edge. Explicit graphs do not silently gain dependencies. |
 | X106 | In Editing.x, complete `Str` inside `function Str(Int)`, `function void(Str)`, `function (Int, Str)(Int)` and `Function<<Str>, <Int>>` parameter types. Repeat with a missing function/sequence closer. | Only the written leaf token is replaced. Complete forms compile; missing delimiters remain diagnostics until repaired. No callable signature is invented for a declaration header. The same eight variants are implemented in both drivers. |
 | X107 | Complete a trailing `ecstasy.text.` type, edit `te` inside `ecstasy.text.StringBuffer`, and fill empty union/intersection/difference operands. | Insert only into an empty slot or replace only the selected qualifier token; preserve the remaining suffix and compile the accepted source. |
-| X108 | Complete type names in multiple-return lists, generic method/class headers, package compositions and written `Element`/`Other` formals, including `Chain<Element>` recursion. | Preserve exact ranges and restore compilation. Recursive constraints are explicitly labelled written syntax with no invented formal identity. The 17 shared variants include compound/nullable/immutable recursion and a cursor inside its own bound; record the selected completion cases in the acceptance report. |
+| X108 | Complete type names in multiple-return lists, generic method/class headers, package compositions and written `Element`/`Other` formals, including `Chain<Element>` recursion. | Preserve exact ranges and restore compilation. Recursive constraints are explicitly labeled written syntax with no invented formal identity. The 17 shared variants include compound/nullable/immutable recursion and a cursor inside its own bound; record the selected completion cases in the acceptance report. |
 | X109 | In the shared `X109` fixture, public parameter rename updates a closed caller and preserves another overload. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X110 | In the shared `X110` fixture, override parameter slots join differently named declarations and callers. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X111 | In the shared `X111` fixture, constructor parameter rename starts at a named argument. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
@@ -2379,14 +2379,14 @@ sync and nested/composite build aggregation are still follow-ups.
 
 **Build import cancellation and ownership (UI5/UI6):** both controls now keep the previous
 accepted model while Gradle runs. Use a project whose generated-input task is long enough to
-cancel; generated files themselves are not rolled back by cancelling an import.
+cancel; generated files themselves are not rolled back by canceling an import.
 
 1. Import a valid model and note the effective resource roots and current diagnostics.
 2. Start **Prepare generated resources**. VS Code shows a cancellable Ecstasy notification and
    the owned task terminal; IntelliJ shows a cancellable background task with the project path.
    Invoke Refresh again while it runs: the second request must refuse without starting another
    task for that folder/project. Other workspace folders retain independent ownership.
-3. Cancel through the native progress control. The operation must finish as cancelled, retain
+3. Cancel through the native progress control. The operation must finish as canceled, retain
    the previous compiler inputs, and remain available for retry. Cancellation is not a compiler
    diagnostic or an error notification. Inspect **Show Effective Compiler Paths** in VS Code or reopen the
    IntelliJ Compiler page for the last import result/time.
@@ -2394,10 +2394,10 @@ cancel; generated files themselves are not rolled back by cancelling an import.
    must not publish that model during the task or after its failure. A successful explicit retry
    may accept it. Existing explicit source/resource overrides must still be preserved.
 5. Remove the owning VS Code folder or close the IntelliJ project during preparation. Its owned
-   progress is cancelled; an old callback must not replace another operation's model. Also try
+   progress is canceled; an old callback must not replace another operation's model. Also try
    a missing wrapper and malformed/missing output, then repair and retry.
 
-Automated ownership regressions cover failed/cancelled output and stale callbacks. X129 retains
+Automated ownership regressions cover failed/canceled output and stale callbacks. X129 retains
 model/settings acceptance; X260–X262 add real Gradle tasks, visible Cancel and rejected-output/retry
 checks through both installed clients. Project/folder closure during import and a representative
 user project's generated-input task remain manual acceptance steps.
@@ -2455,7 +2455,7 @@ The focused X94–X96 run `run-MdzjLq` passes all three cases; 98 other cases ar
 X98 adds generic base-name completion while preserving written type arguments.
 X106 adds function-parameter/return and sequence leaf types. X107/X108 add trailing dots, empty type
 operands, qualifier-middle edits, and generic/multiple-return headers. Unregistered header formals
-provide bound-labelled completion/hover after compiler constraint resolution, including sibling
+provide bound-labeled completion/hover after compiler constraint resolution, including sibling
 bounds and qualified children. Cyclic/unresolved bounds still shadow outer names without fabricated
 type identities; module/package compositions have bounded
 compiler recovery. X90 adds empty/final-prefix single-dimensional
@@ -2886,7 +2886,7 @@ Final IntelliJ receipt: `run-1843149430446112481` passes **all 150 scenarios plu
 uninterrupted run, with zero IDE errors and successful shutdown (IDE 2026.2.3, Ultimate disabled,
 LSP4IJ 0.21.0). It uses the same catalog hash as the full VS Code run above. X139's open and
 closed Save All checks pass, and completed-fixture cleanup no longer causes a shutdown conflict.
-Earlier aborted runs remain recorded for diagnosis, rather than being relabelled as passes.
+Earlier aborted runs remain recorded for diagnosis, rather than being relabeled as passes.
 
 The ordinary VS Code suite passes **23/23** in `extension-tests/run-Ts46BQ`, using a fresh profile
 and workspace and restoring settings through the editor API. Its new shared status reporter shows
@@ -3613,7 +3613,7 @@ client ownership rather than repeating the XTC Gradle plugin's model-export Test
 
 | ID | Action | Expected result |
 | --- | --- | --- |
-| X260 | Prepare generated inputs; while Gradle waits after writing its report, request Refresh again and click the visible progress Cancel button; retry Refresh successfully. | Only one task starts, pending/cancelled output never replaces accepted inputs, cancellation retires progress, and retry accepts the new resource roots. Both drivers activate the actual Cancel control without moving the desktop pointer. |
+| X260 | Prepare generated inputs; while Gradle waits after writing its report, request Refresh again and click the visible progress Cancel button; retry Refresh successfully. | Only one task starts, pending/canceled output never replaces accepted inputs, cancellation retires progress, and retry accepts the new resource roots. Both drivers activate the actual Cancel control without moving the desktop pointer. |
 | X261 | Export a valid changed model, hold the task pending, then deliberately fail Gradle; retry with identical output and a successful exit. | Pending/failed output retains old paths and clean diagnostics through later configuration reads. The successful retry accepts the changed paths and produces the expected missing-resource diagnostic. |
 | X262 | Let Gradle exit successfully with malformed output, then no output; repair with a valid report. | Both invalid imports retain accepted paths, show an actionable last outcome, and allow a successful retry. Source text remains unchanged. |
 
@@ -3706,7 +3706,7 @@ IntelliJ’s **Settings → Ecstasy Compiler** page has **Source modules**, **Li
 and **Build import** pages in a bordered vertical navigation list. Build actions are stacked
 vertically at their normal width; expand **Effective paths and import details** for the full report. Confirm that switching pages
 retains an unapplied draft and that Cancel leaves saved inputs unchanged. Gradle actions require
-project trust and retain the accepted model if refused or cancelled.
+project trust and retain the accepted model if refused or canceled.
 
 VS Code groups native settings into Compiler, Language Service, Formatting, and Runtime and Logs.
 **Ecstasy: Show Language Service Status** distinguishes the saved origin, ignored folder/machine
@@ -3890,7 +3890,7 @@ last published to mavenLocal.
 | X311 | In DebugLogs.x, set a breakpoint on line 6 with the condition `even` and the hit count `2` (IntelliJ: the condition only), and a logpoint on line 8 that logs `sum={sum}` (VS Code: Add Logpoint; not in IntelliJ). Start debugging DebugLogs (IntelliJ: Debug its Ecstasy Application configuration). At each stop, look at `i`, then Continue (IntelliJ: Resume Program). | VS Code stops once, where `i` is 2, the second hit where `even` is True; the Debug Console then shows `sum=6`, and the program ends with exit code 6. IntelliJ, which sends only the condition, stops where `i` is 0 and where it is 2. A condition that is not an expression the debugger evaluates, or whose value is not a Boolean, is shown on the breakpoint, or stops the program and says why. |
 | X312 | In VS Code, start debugging DebugTypes with `"stopOnEntry": true`. In the Breakpoints view, edit the condition of All Exceptions to `IllegalArgument` (right-click, Edit Condition), uncheck Uncaught Exceptions, and Continue. | The caught `IllegalState` does not stop the program, which prints `caught`; it stops in `DebugTypes.check` at line 16, where the `IllegalArgument` is thrown, and the exception widget shows `IllegalArgument`, `uncaught one` and the stack. Continuing lets the program fail with exit code 1. IntelliJ cannot give an exception filter a condition yet (UP34). |
 | X313 | In DebugExprs.x, set a breakpoint on line 5 with the condition `i % 2 == 0 && i > 0`, and a logpoint on line 7 that logs `twice={sum * 2}` (VS Code: Add Logpoint; not in IntelliJ). Start debugging DebugExprs (IntelliJ: Debug its Ecstasy Application configuration). At the first stop, add the watches `sum + i`, `sum + i * 2`, `i * 10 > sum` and `"sum=" + sum`; at each stop, look at `i`, then Continue (IntelliJ: Resume Program). | The program stops where `i` is 2 and where it is 4. At the first, the watches show `3`, `5` (`*` before `+`) and `True`, and `"sum=" + sum` says that it would run `Stringable.toString()`, which the debugger does not run. VS Code's Debug Console then shows `twice=20`, and the program ends with exit code 10. IntelliJ does not set the logpoint yet (UP32). |
-| X314 | In DebugCalls.x, set a breakpoint on line 21 and start debugging DebugCalls (IntelliJ: Debug its Ecstasy Application configuration). When it stops in `show`, type `box.bump(n)` in the Debug Console (IntelliJ: Evaluate Expression, Alt+F8), then add the watch `box.count`. Then evaluate `spin()`, and cancel it (VS Code only: the client's cancel), and evaluate `spin()` again and wait. Continue (IntelliJ: Resume Program). | `box.bump(n)` answers `5`, the Variables view reads the variables again, and the watch shows `5`: what the call changed stays changed. The cancelled `spin()` answers `cancelled`; the other ends after two seconds with `spin() did not finish within 2 seconds, so it was ended.` The program then prints `after 5` and ends with exit code 11. |
+| X314 | In DebugCalls.x, set a breakpoint on line 21 and start debugging DebugCalls (IntelliJ: Debug its Ecstasy Application configuration). When it stops in `show`, type `box.bump(n)` in the Debug Console (IntelliJ: Evaluate Expression, Alt+F8), then add the watch `box.count`. Then evaluate `spin()`, and cancel it (VS Code only: the client's cancel), and evaluate `spin()` again and wait. Continue (IntelliJ: Resume Program). | `box.bump(n)` answers `5`, the Variables view reads the variables again, and the watch shows `5`: what the call changed stays changed. The canceled `spin()` answers `cancelled`; the other ends after two seconds with `spin() did not finish within 2 seconds, so it was ended.` The program then prints `after 5` and ends with exit code 11. |
 | X315 | In DebugWaits.x, set a breakpoint on line 18, and start debugging DebugWaits with `"evaluationRunsProgram": true` in its launch configuration (IntelliJ: check "Let the program run while Evaluate Expression runs code" in its Ecstasy Application configuration). When it stops, type `worker.finished()` in the Debug Console (IntelliJ: Evaluate Expression). Then Continue (IntelliJ: Resume Program). | `worker.finished()` answers `200000`: the worker's fiber, which the stop holds otherwise, runs on and finishes its count, and VS Code reads the threads and stacks again. The program prints `done 200000` and ends with exit code 64. Without the option, the call ends after two seconds, since the worker's fiber waits in the stop. |
 | X316 | Set a breakpoint on line 12 of DebugLazy.x, and start debugging DebugLazy (IntelliJ: Debug its Ecstasy Application configuration). When it stops, expand `point` in the Variables view, and show the values of `sum` and `toString()`: VS Code's button on each, IntelliJ's Show value link (with LSP4IJ #1768; with 0.21.0, expand each). Then Continue (IntelliJ: Resume Program). | `point` shows `x` = `3` and `y` = `4`, then `sum` and `toString()` as lazy variables, `(...)`, whose values run the program's code only when asked for: `sum` shows `7` and `toString()` shows `"(3, 4)"`, the String that Point's own `toString()` returns. The program prints `sum 7` and ends with exit code 7. |
 | X317 | Set a breakpoint on line 12 of DebugFormats.x, and start debugging DebugFormats (IntelliJ: Debug its Ecstasy Application configuration). When it stops, look at the Variables view; then right-click in it and choose Show Values as Hexadecimal (IntelliJ: with LSP4IJ #1769), and again to turn it off. Then Continue (IntelliJ: Resume Program). | `big` shows `255` and `small` `-1`; `one` and `two`, two Boxes with the same fields, show different identity codes, `#` and a number, which consts and numbers do not have. In hexadecimal, `big` shows `0xFF` and `small`, an `Int8`, `0xFF` too, its two's complement; turned off, they are decimal again. The program prints `255 -1 0 0` and ends with exit code 255. |
