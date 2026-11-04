@@ -241,42 +241,15 @@ abstract class AbstractAdapter : Adapter {
             val endLine = range?.end?.line ?: (lines.size - 1)
 
             // Trailing whitespace removal
-            for (i in startLine..minOf(endLine, lines.size - 1)) {
-                val line = lines[i]
-                val trimmed = line.trimEnd()
-                if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
-                    add(
-                        TextEdit(
-                            range =
-                                Range(
-                                    start = Position(i, trimmed.length),
-                                    end = Position(i, line.length),
-                                ),
-                            newText = "",
-                        ),
-                    )
+            if (options.trimTrailingWhitespace || range == null) {
+                for (i in startLine..minOf(endLine, lines.size - 1)) {
+                    AdapterFormatter.trailingWhitespaceEdit(i, lines[i])?.let(::add)
                 }
             }
 
             // Insert final newline if requested and missing (only for full-document format)
-            if (
-                range == null &&
-                options.insertFinalNewline &&
-                content.isNotEmpty() &&
-                !content.endsWith("\n")
-            ) {
-                val lastLine = lines.size - 1
-                val lastCol = lines[lastLine].length
-                add(
-                    TextEdit(
-                        range =
-                            Range(
-                                start = Position(lastLine, lastCol),
-                                end = Position(lastLine, lastCol),
-                            ),
-                        newText = "\n",
-                    ),
-                )
+            if (range == null && options.insertFinalNewline) {
+                AdapterFormatter.finalNewlineEdit(content, lines)?.let(::add)
             }
         }.also {
             logger.info("format -> {} edits", it.size)
