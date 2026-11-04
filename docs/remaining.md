@@ -1130,10 +1130,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   and -t select the test module's own classes", opened 2026-11-04 at the user's go-ahead and
   validated on master f7d87b4d88. Its patch is the same as errs `649d5c53f2` and #693's
   `6b36fe5aa5`, so a rebase onto master drops both once it merges.
-- [ ] #756, ready for review (since 2026-11-04): xunit's JSON report on master, the xunit parts of errs `80a7abfc02` and
+- [x] #756, merged 2026-11-04 (`3a6f7f6004`): xunit's JSON report on master, the xunit parts of errs `80a7abfc02` and
   `712d23d14d` as one commit, as master never had the TeamCity reporter; validated on master
   a8d50aaffa. Opened 2026-11-04 at the user's go-ahead.
-- [ ] #757, ready for review (since 2026-11-04): testXtc's `--test-package`, `--test-class`, `--test-method` and `--test-report`
+- [x] #757, merged 2026-11-04 (`2f18c1335c`): testXtc's `--test-package`, `--test-class`, `--test-method` and `--test-report`
   on master, errs `ceabc7d110` without the debugger's plugin changes, which master lacks, and with
   `json`; validated on master a8d50aaffa. Opened with #756. Gradle-mode test runs in the editors
   need both in a released plugin and XDK.
