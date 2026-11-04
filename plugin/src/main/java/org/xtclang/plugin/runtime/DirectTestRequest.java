@@ -12,10 +12,17 @@ public record DirectTestRequest(
         boolean jit,
         String moduleName,
         String methodName,
-        List<String> moduleArgs) {
+        List<String> moduleArgs,
+        List<String> testPackages,
+        List<String> testClasses,
+        List<String> testMethods,
+        String testReport) {
 
     public DirectTestRequest {
         modulePath = List.copyOf(modulePath);
         moduleArgs = List.copyOf(moduleArgs);
+        testPackages = List.copyOf(testPackages);
+        testClasses = List.copyOf(testClasses);
+        testMethods = List.copyOf(testMethods);
     }
 }

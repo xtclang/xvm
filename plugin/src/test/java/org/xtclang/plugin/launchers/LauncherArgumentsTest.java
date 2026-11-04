@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.xtclang.plugin.XtcPlugin;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
+import org.xtclang.plugin.tasks.XtcTestTask;
 
 class LauncherArgumentsTest {
     @ParameterizedTest
@@ -61,5 +62,28 @@ class LauncherArgumentsTest {
         assertTrue(forked.contains("-M"), forked.toString());
         assertEquals("verify", forked.get(forked.indexOf("-M") + 1));
         assertEquals(List.of("Example", "one", "two"), forked.subList(forked.size() - 3, forked.size()));
+    }
+
+    @Test
+    void testSelectionsAndTheReportReachTheTestRunnerBeforeTheModule() {
+        final var project = ProjectBuilder.builder().build();
+        project.setVersion("1.0");
+        project.getPluginManager().apply(XtcPlugin.class);
+        final var test = project.getTasks().named("testXtc", XtcTestTask.class).get();
+        final var builder = new ForkedCommandLineBuilder();
+        final var plain = List.of(builder.buildTestRunnerArgs(test, "ExampleTest", List.of()));
+        assertFalse(plain.contains("-c") || plain.contains("-t") || plain.contains("-p") || plain.contains("-I"), plain.toString());
+
+        test.setTestPackageOption(List.of("tests"));
+        test.setTestClassOption(List.of("Inner", "tests.MathTest"));
+        test.setTestMethodOption(List.of("Inner.works"));
+        test.setTestReportOption("json");
+        final var args = List.of(builder.buildTestRunnerArgs(test, "ExampleTest", List.of()));
+        final var selections = List.of("-p", "tests", "-c", "Inner", "-c", "tests.MathTest", "-t", "Inner.works");
+        final int start = args.indexOf("-p");
+        assertEquals(selections, args.subList(start, start + selections.size()), args.toString());
+        assertEquals("xvm.xunit.report=json", args.get(args.indexOf("-I") + 1));
+        assertTrue(args.indexOf("-I") < args.indexOf("--no-recompile"), args.toString());
+        assertEquals("ExampleTest", args.get(args.indexOf("--no-recompile") + 1));
     }
 }

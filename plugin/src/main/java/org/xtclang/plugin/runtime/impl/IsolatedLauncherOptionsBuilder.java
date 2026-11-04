@@ -1,10 +1,12 @@
 package org.xtclang.plugin.runtime.impl;
 
 import static java.nio.file.Files.isDirectory;
+import static org.xtclang.plugin.XtcPluginConstants.XUNIT_REPORT_INJECTION;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.LauncherOptions.TestRunnerOptions;
+import org.xvm.tool.TestRunner;
 
 import org.xtclang.plugin.runtime.DirectCompileRequest;
 import org.xtclang.plugin.runtime.DirectRunRequest;
@@ -62,6 +64,13 @@ final class IsolatedLauncherOptionsBuilder {
             .noRecompile();
 
         request.modulePath().forEach(path -> builder.addModulePath(path.getAbsolutePath()));
+        // the selections as the injections xtc test makes of -p, -c and -t, which an older launcher's builder takes
+        request.testPackages().forEach(name -> builder.addInjection(TestRunner.XUNIT_TEST_PACKAGES_ARG, name));
+        request.testClasses().forEach(name -> builder.addInjection(TestRunner.XUNIT_TEST_CLASSES_ARG, name));
+        request.testMethods().forEach(name -> builder.addInjection(TestRunner.XUNIT_TEST_METHODS_ARG, name));
+        if (request.testReport() != null) {
+            builder.addInjection(XUNIT_REPORT_INJECTION, request.testReport());
+        }
         return builder.build();
     }
 }

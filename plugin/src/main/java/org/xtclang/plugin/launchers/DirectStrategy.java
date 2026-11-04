@@ -114,7 +114,11 @@ public class DirectStrategy implements ExecutionStrategy {
             task.getJit().get(),
             runConfig.getModuleName().get(),
             task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
-            runConfig.getModuleArgs().get()
+            runConfig.getModuleArgs().get(),
+            task.getTestPackages().get(),
+            task.getTestClasses().get(),
+            task.getTestMethods().get(),
+            task.getTestReport().getOrNull()
         );
     }
 }
