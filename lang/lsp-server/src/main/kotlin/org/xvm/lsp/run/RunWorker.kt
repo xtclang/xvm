@@ -120,7 +120,10 @@ object RunWorker {
             val control =
                 try {
                     val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
-                    val debugger = command["setup"]?.let(DebugProtocol::setup)?.let { debugger(id, repositories, it, output) }
+                    val debugger =
+                        command["setup"]?.let(DebugProtocol::setup)?.let {
+                            debugger(id, repositories, it, output, command["onDemandMillis"]?.asLong)
+                        }
                     EmbeddingSupport.instance().runMethod(
                         LinkedRepository(*repositories.toTypedArray()),
                         command["module"].asString,
@@ -205,8 +208,10 @@ object RunWorker {
             repositories: List<ModuleRepository>,
             setup: DebugProtocol.Setup,
             output: OutputBatches,
+            onDemandMillis: Long?,
         ): SessionDebugger {
             val debugger = SessionDebugger(debuggers.listener(id, output::sendNow))
+            onDemandMillis?.let { debugger.setOnDemandLimit(it.milliseconds.toJavaDuration()) }
             repositories.forEach { repository ->
                 repository.moduleNames.forEach { name -> repository.loadModule(name)?.let(debugger::addModule) }
             }
