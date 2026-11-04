@@ -179,7 +179,8 @@ the frame's variables and the members of `this`; nothing of the program runs to 
 by LSP4IJ pull request [#1763](https://github.com/redhat-developer/lsp4ij/pull/1763)). **Step Over**, **Step Into** and **Step Out** move the stopped fiber line by line,
 **Resume Program** runs it on and **Stop** ends it where it is. A breakpoint's condition, an
 expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. Its pass count and
-**Evaluate and log**, and a breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (LSP4IJ pull request [#1759](https://github.com/redhat-developer/lsp4ij/pull/1759)).
+**Evaluate and log**, and a breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (LSP4IJ
+pull requests [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787) and [#1759](https://github.com/redhat-developer/lsp4ij/pull/1759)).
 An uncaught exception stops the program where it is thrown, by default, and the exception is the
 frame's first variable; exception filter conditions and the exception's stack in the hint wait on
 LSP4IJ too (LSP4IJ pull requests [#1760](https://github.com/redhat-developer/lsp4ij/pull/1760) and [#1761](https://github.com/redhat-developer/lsp4ij/pull/1761)). The
