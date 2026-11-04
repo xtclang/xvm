@@ -25,7 +25,7 @@ internal class TestProcess private constructor(
 
     val ended: CompletableFuture<Int> =
         CompletableFuture
-            .runAsync({ process.inputReader(UTF_8).useLines { lines -> lines.forEach { output("$it\n") } } }, OUTPUT)
+            .runAsync({ process.inputReader(UTF_8).useLines { lines -> lines.forEach { output("$it\n") } } }, outputReaders)
             .handle { _, _ -> }
             .thenCompose { process.onExit() }
             .thenApply { it.exitValue() }
@@ -46,7 +46,7 @@ internal class TestProcess private constructor(
         const val REPORT = "xvm.xunit.report=${TestEvent.REPORT}"
 
         /** Where the process's output is read: a thread of its own for each. */
-        private val OUTPUT = Executor { Thread.ofVirtual().name("xtc-test-output").start(it) }
+        private val outputReaders = Executor { Thread.ofVirtual().name("xtc-test-output").start(it) }
 
         /**
          * The `xtc test` command for the tests that [tests] select of the module [artifact], all of them when it is
