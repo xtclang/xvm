@@ -336,12 +336,18 @@ fun Test.serverTestSettings() {
             .map(String::toInt)
             .orElse(providers.provider { (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 8) })
             .get()
-    val includeHeavy =
+    // Which tests run, by their JUnit tags: by default every test but the slow ones, which start processes, and the
+    // heavy ones, long repetition workloads (the test sources' Slow and Heavy), and only the first case of each
+    // parameterized test (ParameterizedCases). -PlspTests=all runs every test and every case, and any other value is a
+    // JUnit tag expression for the tests to run, with every case, such as slow, heavy, "slow | heavy" or, for the
+    // default tests with every case, "!slow & !heavy". The packaged server's stdio tests run in compilerStdioTest
+    // instead, always.
+    val tests =
         providers
-            .gradleProperty("lspTestHeavy")
-            .orElse("true")
+            .gradleProperty("lspTests")
+            .orElse("default")
             .get()
-            .toBooleanStrict()
+    systemProperty("xtc.lsp.parameterizedCases", if (tests == "default") "first" else "all")
     systemProperty(
         "xtc.lsp.retentionCycles",
         providers.gradleProperty("lsp.retentionCycles").orElse("120").get(),
@@ -355,7 +361,11 @@ fun Test.serverTestSettings() {
     classpath = configurations.testRuntimeClasspath.get().filter { it.name.startsWith("logback-classic-") } + classpath
     useJUnitPlatform {
         excludeTags("compiler-stdio")
-        if (!includeHeavy) excludeTags("heavy")
+        when (tests) {
+            "default" -> excludeTags("slow", "heavy")
+            "all" -> {}
+            else -> includeTags(tests)
+        }
     }
     testLogging {
         events("failed")

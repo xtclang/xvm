@@ -78,7 +78,7 @@ on:
                 required: false
                 default: false
             lsp-heavy-tests:
-                description: 'Include the extended LSP retention workload (also enable include-lang)'
+                description: 'Run every LSP test and case: the ones that start processes, the extended retention workload and every parameterized case (also enable include-lang)'
                 type: boolean
                 required: false
                 default: false
@@ -95,9 +95,11 @@ env:
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || !(github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true') }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
-    # Keep compiler regressions and a complete retention smoke test in every applicable PR run.
-    # The longer repetition workload also runs locally by default and can run before merge via dispatch.
-    ORG_GRADLE_PROJECT_lspTestHeavy: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.lsp-heavy-tests == true || github.event.inputs.lsp-heavy-tests == 'true')) }}
+    # Keep compiler regressions and a complete retention smoke test in every applicable PR run: the LSP
+    # tests' default tier, which leaves out the tests that start processes and the longer repetition
+    # workload, and runs each parameterized test's first case only. Pushes run every test and case, and
+    # a dispatch with lsp-heavy-tests runs them before merge.
+    ORG_GRADLE_PROJECT_lspTests: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.lsp-heavy-tests == true || github.event.inputs.lsp-heavy-tests == 'true'))) && 'all' || 'default' }}
     ORG_GRADLE_PROJECT_lspTestForks: 2
 
     # Lang build inclusion - overrides gradle.properties default (true) to exclude lang

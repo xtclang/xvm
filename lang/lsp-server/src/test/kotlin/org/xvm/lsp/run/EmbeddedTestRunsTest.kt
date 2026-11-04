@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
+import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -132,6 +133,7 @@ class EmbeddedTestRunsTest {
     }
 
     @Test
+    @Slow
     fun `a run of a module's tests reports each as a test event apart from the output, and a failed test fails the run`() {
         val mathy = source("Mathy.x", MATHY)
         val client = RunClient()
@@ -175,6 +177,7 @@ class EmbeddedTestRunsTest {
     }
 
     @Test
+    @Slow
     fun `a run of one selected test runs it alone, and passes`() {
         val mathy = source("Mathy.x", MATHY)
         val client = RunClient()
@@ -195,6 +198,7 @@ class EmbeddedTestRunsTest {
     }
 
     @Test
+    @Slow
     fun `stop ends a test run that never finishes, which reports that it was stopped`() {
         val endless = source("Endless.x", ENDLESS)
         val client = RunClient()
@@ -214,6 +218,7 @@ class EmbeddedTestRunsTest {
     }
 
     @Test
+    @Slow
     fun `a debug session of a test stops at a breakpoint in it, and continue runs the test to its end`() {
         val mathy = source("Mathy.x", MATHY)
         val path = directory.resolve("Mathy.x").toString()
