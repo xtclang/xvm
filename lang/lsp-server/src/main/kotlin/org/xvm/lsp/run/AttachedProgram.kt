@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.DebugSetup
+import org.xvm.debug.ProgramEvents
 import org.xvm.runtime.debug.DebugProtocol
 import java.io.BufferedReader
 import java.io.Closeable
@@ -26,7 +27,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class AttachedProgram private constructor(
     private val socket: Socket,
     private val lines: BufferedReader,
-    private val listener: RunListener,
+    private val listener: ProgramEvents,
     val module: String,
 ) : RunDebugClient(),
     Closeable {
@@ -134,7 +135,7 @@ internal class AttachedProgram private constructor(
             host: String,
             port: Int,
             token: String?,
-            listener: RunListener,
+            listener: ProgramEvents,
         ): AttachedProgram {
             val socket = Socket()
             try {
@@ -154,7 +155,7 @@ internal class AttachedProgram private constructor(
         fun accept(
             server: ServerSocket,
             token: String?,
-            listener: RunListener,
+            listener: ProgramEvents,
         ): AttachedProgram = answer(server.accept(), "that connected to port ${server.localPort}", token, listener)
 
         /** Introduces the debugger to the program [where] at the other end of [socket], and waits for its answer. */
@@ -162,7 +163,7 @@ internal class AttachedProgram private constructor(
             socket: Socket,
             where: String,
             token: String?,
-            listener: RunListener,
+            listener: ProgramEvents,
         ): AttachedProgram {
             try {
                 socket.soTimeout = CONNECT_LIMIT.inWholeMilliseconds.toInt()

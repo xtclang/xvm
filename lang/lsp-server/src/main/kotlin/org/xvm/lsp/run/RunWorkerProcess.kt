@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.DebugSetup
+import org.xvm.debug.ProgramEvents
 import org.xvm.runtime.debug.DebugProtocol
 import java.io.BufferedReader
 import java.io.Closeable
@@ -157,7 +158,7 @@ internal class RunWorkerProcess(
 
     /** The workers started so far, which numbers each one's generation. Guarded by [lock]. */
     private var generations = 0
-    private val listeners = ConcurrentHashMap<Long, RunListener>()
+    private val listeners = ConcurrentHashMap<Long, ProgramEvents>()
     private val hosts = ConcurrentHashMap<Long, Worker>()
     private val nextId = AtomicLong(1)
 
@@ -171,7 +172,7 @@ internal class RunWorkerProcess(
     /** Starts [request] and returns its run ID; the outcome is reported to [listener]. */
     fun start(
         request: Request,
-        listener: RunListener,
+        listener: ProgramEvents,
     ): Long {
         val id = nextId.getAndIncrement()
         listeners[id] = listener
