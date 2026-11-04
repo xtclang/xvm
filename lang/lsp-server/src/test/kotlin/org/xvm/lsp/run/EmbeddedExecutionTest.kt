@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
+import org.xvm.debug.ProgramEvents
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuild
@@ -224,7 +225,7 @@ class EmbeddedExecutionTest {
                 val id =
                     workers.start(
                         RunWorkerProcess.Request(listOf(lib.path), module, "run", args, directory.toString()),
-                        object : RunListener {
+                        object : ProgramEvents {
                             override fun output(text: String) {
                                 output.append(text)
                             }
@@ -434,7 +435,7 @@ class EmbeddedExecutionTest {
         val id =
             worker.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Forever", "run", emptyList(), directory.toString()),
-                object : RunListener {
+                object : ProgramEvents {
                     override fun output(text: String) {
                         output.append(text)
                         if ("started" in output) started.complete(Unit)
@@ -463,7 +464,7 @@ class EmbeddedExecutionTest {
             (0..1).map { index ->
                 worker.start(
                     RunWorkerProcess.Request(listOf(lib.path), "Forever", "run", emptyList(), directory.toString()),
-                    object : RunListener {
+                    object : ProgramEvents {
                         override fun output(text: String) {
                             outputs[index].append(text)
                         }
@@ -493,7 +494,7 @@ class EmbeddedExecutionTest {
         val id =
             worker.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Ask", "run", emptyList(), directory.toString()),
-                object : RunListener {
+                object : ProgramEvents {
                     override fun output(text: String) {
                         output.append(text)
                         if ("Name? " in output) prompted.complete(Unit)
@@ -525,7 +526,7 @@ class EmbeddedExecutionTest {
         val id =
             worker.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Waiter", "run", emptyList(), directory.toString()),
-                object : RunListener {
+                object : ProgramEvents {
                     override fun output(text: String) {
                         output.append(text)
                         if ("waiting" in output) waiting.complete(Unit)
@@ -2439,7 +2440,7 @@ class EmbeddedExecutionTest {
         val exited = CompletableFuture<Pair<Long?, String?>>()
         workers.start(
             RunWorkerProcess.Request(modulePath, module, method, args, directory.toString()),
-            object : RunListener {
+            object : ProgramEvents {
                 override fun output(text: String) {
                     event()
                     output.append(text)
