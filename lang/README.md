@@ -2,8 +2,9 @@
 
 The compiler-backed LSP is the default server for the IntelliJ and VS Code integrations.
 It provides diagnostics, semantic highlighting, navigation, completion and compiler-checked
-refactorings, including analysis of incomplete source. Both editors can also build and run modules
-with that compiler (embedded mode), beside Gradle; see
+refactorings, including analysis of incomplete source. Both editors can also build, run, debug and
+test modules with that compiler (embedded mode), beside Gradle and, in IntelliJ, `xtc` itself, and
+debug a program run outside the editor; see
 [embedded build and run](lsp-server/README.md#embedded-build-and-run). Tree-sitter remains a
 selectable syntax-only adapter. See the [manual playbook](doc/manual-test-plan.md) for feature
 boundaries, test fixtures, native harness commands and client compatibility limits.
@@ -63,7 +64,7 @@ includeBuildAttachLang=true
 
 ## Testing the Tree-sitter Parser
 
-The tree-sitter adapter is tested against the entire XDK corpus (692 `.x` files from `lib_*` directories).
+The tree-sitter adapter is tested against the entire XDK corpus (the `.x` files of the `lib_*` directories and `manualTests`).
 This ensures the grammar can parse real-world Ecstasy code.
 
 ```bash
@@ -86,6 +87,7 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 | [dsl](./dsl/) | Language model DSL and editor support generators |
 | [tree-sitter](./tree-sitter/) | Tree-sitter grammar for incremental parsing |
 | [lsp-server](./lsp-server/) | Language Server Protocol implementation |
+| [dap-server](./dap-server/) | Debug Adapter Protocol implementation, which the language server hosts |
 | [intellij-plugin](./intellij-plugin/) | IntelliJ IDEA plugin |
 | [vscode-extension](./vscode-extension/) | VS Code extension |
 
@@ -96,10 +98,10 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 ./gradlew build
 
 # Build specific projects
-./gradlew :dsl:build
-./gradlew :lsp-server:build
-./gradlew :intellij-plugin:buildPlugin
-./gradlew :vscode-extension:build
+./gradlew :lang:dsl:build
+./gradlew :lang:lsp-server:build
+./gradlew :lang:intellij-plugin:buildPlugin
+./gradlew :lang:vscode-extension:build
 ```
 
 ## Kotlin Formatting
@@ -166,7 +168,7 @@ you cannot find or install the plugin through the normal "Install from
 Marketplace" flow. To install or auto-update from the alpha channel you
 need to add it as a **custom plugin repository** in IntelliJ:
 
-1. Open IntelliJ IDEA (2026.1 or later)
+1. Open IntelliJ IDEA (2026.2 or later)
 2. **Settings → Plugins → ⚙ (gear icon) → Manage Plugin Repositories…**
 3. Click **+** and add:
 
@@ -184,7 +186,7 @@ UI. The "Not compatible with the version of your running IDE" warning that
 appears on the public marketplace web page (https://plugins.jetbrains.com/plugin/31202-xtc-language-support)
 is a **stable-channel-filter quirk** and does not reflect actual compatibility —
 the alpha builds are verified by JetBrains' Plugin Verifier against current
-2026.1.x releases. The in-IDE install flow above bypasses that warning.
+2026.2.x releases. The in-IDE install flow above bypasses that warning.
 
 If you prefer not to add a custom repo, the same builds can be installed
 manually from a downloaded ZIP — see [Installing the ZIP Manually](#installing-the-zip-manually)
@@ -207,7 +209,7 @@ The sandbox IDE data is stored in `lang/intellij-plugin/build/idea-sandbox/`.
 
 ### Building a Distributable Plugin ZIP
 
-To create a plugin ZIP that can be installed in any IntelliJ IDEA 2026.1+ instance:
+To create a plugin ZIP that can be installed in any IntelliJ IDEA 2026.2+ instance:
 
 ```bash
 ./gradlew :lang:intellij-plugin:buildPlugin
@@ -246,10 +248,10 @@ The DSL project generates syntax highlighting files for multiple editors:
 
 ```bash
 # Generate all editor support files
-./gradlew :dsl:generateEditorSupport
+./gradlew :lang:dsl:generateEditorSupport
 
 # Update the checked-in examples
-./gradlew updateGeneratedExamples
+./gradlew :lang:updateGeneratedExamples
 ```
 
 Generated files:
@@ -315,8 +317,8 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **lsp4j** | 1.0.0 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
-| **lsp4ij** | 0.21.0 | IntelliJ LSP client plugin | Red Hat's plugin, uses lsp4j internally |
+| **lsp4j** | 1.0.0 | LSP and DAP protocol types & JSON-RPC | Eclipse's Java LSP implementation, with its debug modules |
+| **lsp4ij** | 0.21.0 | IntelliJ LSP and DAP client plugin | Red Hat's plugin, uses lsp4j internally |
 
 **How they work together:**
 - **lsp4j** provides the LSP protocol implementation (types, JSON-RPC, message handling)
@@ -328,13 +330,13 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **jtreesitter** | 0.26.0 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
-| **tree-sitter-cli** | 0.26.5 | Parser generator CLI | Must match jtreesitter major.minor |
+| **jtreesitter** | 0.26.1 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
+| **tree-sitter-cli** | 0.26.13 | Parser generator CLI | Must match jtreesitter major.minor |
 
 **Version Constraint (Java 25):**
 ```
 ⚠️  jtreesitter 0.26.x requires Java 23+ (FFM API)
-✅  IntelliJ 2026.1 ships with JBR 25, which supports FFM natively
+✅  IntelliJ 2026.2 ships with JBR 25, which supports FFM natively
 ✅  The LSP server runs OUT-OF-PROCESS using IntelliJ's JBR for classloader isolation
 ```
 
@@ -347,19 +349,19 @@ crash/memory isolation.
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| **intellij-ide** | 2026.1 | Target IDE version |
+| **intellij-ide** | 2026.2.3 | Target IDE version; the plugin's since-build is 262 |
 | **intellij-jdk** | 25 | Plugin JDK requirement |
-| **intellij-platform-gradle-plugin** | 2.17.0 | Build plugin for IntelliJ plugins |
+| **intellij-platform-gradle-plugin** | 2.19.0 | Build plugin for IntelliJ plugins |
 
 ### Compatibility Matrix
 
 | Component | Requires | Provides |
 |-----------|----------|----------|
-| IntelliJ 2026.1 | JBR 25 | Plugin runtime |
-| lsp4ij 0.19.2 | IntelliJ 2024.2+ | LSP client |
-| lsp4j 1.0.0 | Java 11+ | LSP protocol |
-| jtreesitter 0.26.0 | Java 23+ | Native parsing (runs in out-of-process LSP server) |
-| tree-sitter-cli 0.26.5 | - | Parser generation |
+| IntelliJ 2026.2 | JBR 25 | Plugin runtime |
+| lsp4ij 0.21.0 | IntelliJ 2024.2+ | LSP and DAP client |
+| lsp4j 1.0.0 | Java 11+ | LSP and DAP protocol |
+| jtreesitter 0.26.1 | Java 23+ | Native parsing (runs in out-of-process LSP server) |
+| tree-sitter-cli 0.26.13 | - | Parser generation |
 
 All versions are defined in `/gradle/libs.versions.toml`.
 
