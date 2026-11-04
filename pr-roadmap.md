@@ -217,7 +217,7 @@ The complete file-by-file lists appear below in [existing files modified](#full-
 - Fresh Java compiler tests: **541 passed, 42 skipped, zero failures/errors**. Utility tests: **118 passed, 2 skipped, zero failures/errors**.
 - Fresh Gradle plugin tests: **49 passed, 10 skipped, 1 failure**. The failure is the composite-import test's missing excluded importer resource. It passed in the complete reference, where that resource exists.
 - Default `./gradlew help` reproduced the two unresolved log-helper properties in the unchanged master IntelliJ build. The comparison therefore does not claim default-build or standalone-merge readiness.
-- Verified the exact 165-path scope, file contents against the full reference, the unchanged `lang/` tree, and `git diff --check`. [Local verification receipt and archived JUnit XML](build/reviews/compiler-foundations-reference-20261009/validation.json).
+- Verified the exact 165-path scope, file contents against the full reference, the unchanged `lang/` tree, and `git diff --check`. Local verification receipt and archived JUnit XML (`build/reviews/compiler-foundations-reference-20261009/validation.json`, a local build output).
 
 <!-- full-reference-inventory-summary:start -->
 ## Complete reference branch: file inventory
@@ -296,7 +296,7 @@ At the 2026-10-09 extraction checkpoint, all five review branches and both compa
 
 The extraction source was preserved at `errs/review-source-20261009` (`c9d16c50d`). Subsequent integration synchronization is committed and pushed as `374d9c16e` on `lagergren/errs`, including the new compiler-consumer tests and roadmap. Nothing was removed from the integration implementation merely to simplify a review branch. Remaining differences requiring a disposition are listed at the end.
 
-Local review artifacts: [branch refs and exact inventories](build/reviews/remaining-branches-20261009/branches.json), [focused validation receipts](build/reviews/remaining-branches-20261009/validation.json). These local build artifacts and absolute worktree file links are intended for the local checkout; the GitHub comparison links work remotely.
+Local review artifacts: branch refs and exact inventories (`build/reviews/remaining-branches-20261009/branches.json`, a local build output), focused validation receipts (`build/reviews/remaining-branches-20261009/validation.json`, a local build output). These local build artifacts and absolute worktree file links are intended for the local checkout; the GitHub comparison links work remotely.
 
 <a id="semantic-facts"></a>
 
@@ -304,7 +304,7 @@ Local review artifacts: [branch refs and exact inventories](build/reviews/remain
 
 Branch `errs/compiler-semantic-facts-20261009` at `4a3d998dd`; base `errs/compiler-review-base-20261009` at `3af705576`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009). [Full local patch](build/reviews/remaining-branches-20261009/semantic-facts.patch). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009). Full local patch (`build/reviews/remaining-branches-20261009/semantic-facts.patch`, a local build output). No PR has been opened.
 
 ### Proposed PR description
 
@@ -397,7 +397,7 @@ The review should establish that source identities survive nested compilation, s
 
 Branch `errs/compiler-partial-analysis-20261009` at `777a0bd4b`; base `errs/compiler-semantic-facts-20261009` at `4a3d998dd`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009). [Full local patch](build/reviews/remaining-branches-20261009/partial-analysis.patch). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009). Full local patch (`build/reviews/remaining-branches-20261009/partial-analysis.patch`, a local build output). No PR has been opened.
 
 ### Proposed PR description
 
@@ -496,7 +496,7 @@ The combined API must cover UTF-16 cursor positions, unsaved module members, bou
 
 Branch `errs/gradle-project-model-20261009` at `7a19d684c`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009). [Full local patch](build/reviews/remaining-branches-20261009/gradle-model.patch). Published as [#688](https://github.com/xtclang/xvm/pull/688).
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009). Full local patch (`build/reviews/remaining-branches-20261009/gradle-model.patch`, a local build output). Published as [#688](https://github.com/xtclang/xvm/pull/688).
 
 ### Proposed PR description
 
@@ -562,7 +562,7 @@ Review the exported model against a real multi-project/composite consumer, inclu
 
 Branch `errs/compiler-conditional-effects-20261009` at `6d550fea1`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009). [Full local patch](build/reviews/remaining-branches-20261009/conditional-effects.patch). Published as [#689](https://github.com/xtclang/xvm/pull/689).
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009). Full local patch (`build/reviews/remaining-branches-20261009/conditional-effects.patch`, a local build output). Published as [#689](https://github.com/xtclang/xvm/pull/689).
 
 ### Proposed PR description
 
@@ -623,7 +623,7 @@ The runtime fixture verifies exactly-once left-operand evaluation for both Boole
 
 Branch `errs/lsp-editors-20261009` at `c63a56010`; base `errs/lsp-review-base-20261009` at `3f8aad03e`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009). [Full local patch](build/reviews/remaining-branches-20261009/lsp-editors.patch). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009). Full local patch (`build/reviews/remaining-branches-20261009/lsp-editors.patch`, a local build output). No PR has been opened.
 
 ### Proposed PR description
 
@@ -667,7 +667,7 @@ The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode
 | Outside `lang/` | 10 | CI workflow, four common build helpers, root Gradle properties/version catalog, XDK packaging and two runtime-fixture/suite updates. |
 | **Total** | **650** | Incremental product changes; compiler/Gradle prerequisites are excluded from this comparison. |
 
-**650 files; +109,469/−5,383.** The tree is identical to the tested full reference. Backend/protocol validation: 2,257 tests passed with two disabled; 82 packaged stdio tests passed. IntelliJ native acceptance: 282 feature cases passed and two are partial, with zero IDE failures; all separate lifecycle/settings modes passed. VS Code: 279 native cases passed and five failed (two Explorer/Undo cases and three optional color-picker cases); 55 smoke tests and all separate lifecycle/settings modes passed. Root/language formatting, 1,032 parser-corpus files and both plugin packages passed. [Complete validation receipt](build/reviews/full-testable-lsp-20261009/validation-summary.json).
+**650 files; +109,469/−5,383.** The tree is identical to the tested full reference. Backend/protocol validation: 2,257 tests passed with two disabled; 82 packaged stdio tests passed. IntelliJ native acceptance: 282 feature cases passed and two are partial, with zero IDE failures; all separate lifecycle/settings modes passed. VS Code: 279 native cases passed and five failed (two Explorer/Undo cases and three optional color-picker cases); 55 smoke tests and all separate lifecycle/settings modes passed. Root/language formatting, 1,032 parser-corpus files and both plugin packages passed. Complete validation receipt (`build/reviews/full-testable-lsp-20261009/validation-summary.json`, a local build output).
 
 ### Review and acceptance focus
 
@@ -1368,7 +1368,7 @@ and work requiring separate disposition. Everything remains preserved in the sou
 - New extraction-specific tests exist in the prepared stack and are mirrored into the main
   integration checkout; their absence in the earlier snapshot is intentional.
 
-See [the reconciliation-only diff](build/reviews/remaining-branches-20261009/reconciliation-only.patch).
+See the reconciliation-only diff (`build/reviews/remaining-branches-20261009/reconciliation-only.patch`, a local build output).
 The counts below describe differences **from the prepared stack to the preserved snapshot**,
 not forward changes proposed for publication.
 
@@ -1551,7 +1551,7 @@ These are one complete host-compilation lifecycle; do not split them back into n
 
 The prepared embedding-only patch is **105 files (+5,072/−844)** against its recorded prerequisite
 base. That is a preparation measurement, not a claim about the live master diff after rebasing.
-See the [preparation report and exact inventory](build/reviews/embedding-combined-20261009/review.md).
+See the preparation report and exact inventory (`build/reviews/embedding-combined-20261009/review.md`, a local build output).
 The report's publication-time master/PR status statements are historical; this roadmap gives the
 updated submission plan.
 

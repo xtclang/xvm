@@ -40,7 +40,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 - Branch: `errs/i1-diagnostic-identity-20261008`
 - Tip: `e649179e7b0e899b16327068a931ef0016874e04`
 - Review base: `master` at `f442aced626085bba6623d8345dda9d73c3397d4`
-- Exact diff: [I1.patch](build/errs-review-2026-10-08/I1.patch)
+- Exact diff: I1.patch (`build/errs-review-2026-10-08/I1.patch`, a local build output)
 - Size: 4 files (2 added, 2 modified), +132 / −3 lines.
 
 **Purpose.** The existing diagnostic identity repeated the start position where the end position belonged and reduced message parameters to a 32-bit hash. Different spans or values could therefore suppress one another. Unnamed in-memory documents also lacked distinct source labels.
@@ -62,14 +62,14 @@ In the file tables, **A** means added and **M** means modified relative to that 
 | 1 | M | [javatools/src/main/java/org/xvm/asm/ErrorListener.java](javatools/src/main/java/org/xvm/asm/ErrorListener.java) | 5 | 2 |
 | 2 | M | [javatools/src/main/java/org/xvm/compiler/Source.java](javatools/src/main/java/org/xvm/compiler/Source.java) | 23 | 1 |
 | 3 | A | [javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java](javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java) | 66 | 0 |
-| 4 | A | [javatools/src/test/java/org/xvm/compiler/NamedSourceDiagnosticsTest.java](build/errs-review-2026-10-08/sources/I1/javatools/src/test/java/org/xvm/compiler/NamedSourceDiagnosticsTest.java) | 38 | 0 |
+| 4 | A | javatools/src/test/java/org/xvm/compiler/NamedSourceDiagnosticsTest.java (`build/errs-review-2026-10-08/sources/I1/javatools/src/test/java/org/xvm/compiler/NamedSourceDiagnosticsTest.java`, a local build output) | 38 | 0 |
 
 ## I2 — Use owning constant pools when no ambient pool is bound
 
 - Branch: `errs/i2-ambient-pools-20261008`
 - Tip: `6c6720fa4e1ce34d95153e3b851df25406cd62f2`
 - Review base: `master` at `f442aced626085bba6623d8345dda9d73c3397d4`
-- Exact diff: [I2.patch](build/errs-review-2026-10-08/I2.patch)
+- Exact diff: I2.patch (`build/errs-review-2026-10-08/I2.patch`, a local build output)
 - Size: 12 files (2 added, 10 modified), +200 / −19 lines.
 
 **Purpose.** Embedding hosts, debugger watches and tests can inspect compiler objects outside a thread-local constant-pool scope. Some existing readers dereferenced the missing pool, including MethodBody inspection and display. A deliberately bound pool must still take precedence during compiler operations.
@@ -106,7 +106,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 - Branch: `errs/i3-compiler-consumer-tests-20261008`
 - Tip: `21e8d6b2cb7eaeb8c4842df53705e44dc722af45`
 - Review base: `master` at `f442aced626085bba6623d8345dda9d73c3397d4`
-- Exact diff: [I3.patch](build/errs-review-2026-10-08/I3.patch)
+- Exact diff: I3.patch (`build/errs-review-2026-10-08/I3.patch`, a local build output)
 - Size: 7 files (2 added, 5 modified), +162 / −8 lines.
 
 **Purpose.** A compiler can build successfully while its embedding consumer fails to resolve modules or use the API. Tests that silently skip when XDK artifacts are missing cannot prove that boundary works. Compiler-only changes also need to invalidate the relevant language-tooling checks.
@@ -139,7 +139,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 - Branch: `errs/c1-listener-contract-20261008`
 - Tip: `dfe64261448836a95fc09670bb6650be746c0660`
 - Review base: `master` at `f442aced626085bba6623d8345dda9d73c3397d4`
-- Exact diff: [C1.patch](build/errs-review-2026-10-08/C1.patch)
+- Exact diff: C1.patch (`build/errs-review-2026-10-08/C1.patch`, a local build output)
 - Size: 18 files (5 added, 13 modified), +1102 / −71 lines.
 
 **Purpose.** Reporting a diagnostic previously doubled as a control-flow decision, and a bare callback did not maintain the severity/code state queried by compiler callers. Branching, merging, forwarding and error budgets need predictable behavior for custom host listeners.
@@ -184,7 +184,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 - Branch: `errs/c2-explicit-listeners-20261008`
 - Tip: `cb4483dabcebdd104ed22d4fc64f5d1c0a29399f`
 - Review base: `errs/c1-listener-contract-20261008` at `dfe64261448836a95fc09670bb6650be746c0660`
-- Exact diff: [C2.patch](build/errs-review-2026-10-08/C2.patch)
+- Exact diff: C2.patch (`build/errs-review-2026-10-08/C2.patch`, a local build output)
 - Size: 74 files (1 added, 73 modified), +837 / −512 lines.
 
 **Purpose.** Implicit discard listeners and accepted nulls made an omitted diagnostic destination indistinguishable from intentional silence. The contract needs to reach compiler boundaries and the many AST call sites that report, speculate or suppress cascading errors.
@@ -285,7 +285,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 - Branch: `errs/c3-reporting-scopes-20261008`
 - Tip: `4cfd442eb71132ac2dcd6afab80be2362f02bfb5`
 - Review base: `errs/c2-explicit-listeners-20261008` at `cb4483dabcebdd104ed22d4fc64f5d1c0a29399f`
-- Exact diff: [C3.patch](build/errs-review-2026-10-08/C3.patch)
+- Exact diff: C3.patch (`build/errs-review-2026-10-08/C3.patch`, a local build output)
 - Size: 18 files (7 added, 11 modified), +875 / −159 lines.
 
 **Purpose.** Parser lookahead and resolver callbacks temporarily redirect diagnostics. Loop and try/finally validation also retain context for lazy label-variable callbacks. Unscoped or separately managed state can leak discarded diagnostics, lose warnings, or survive exceptional exits.
@@ -327,7 +327,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 
 ## Acceptance record and remaining scope
 
-The validation summaries above reproduce the [October 8 extraction record](docs/errs-integration-plan.md#refreshed-foundation-slices) and its C-series follow-up. No compiler/build tests were rerun to generate this report. Report generation verified each local branch tip and parent against the [saved index](build/errs-review-2026-10-08/index.json), and all six exported patches against their Git diffs.
+The validation summaries above reproduce the [October 8 extraction record](docs/errs-integration-plan.md#refreshed-foundation-slices) and its C-series follow-up. No compiler/build tests were rerun to generate this report. Report generation verified each local branch tip and parent against the saved index (`build/errs-review-2026-10-08/index.json`, a local build output), and all six exported patches against their Git diffs.
 
 The combined acceptance checkout at `029c93def` joined C3 with I1, I2 and I3; its required compiler consumer passed with one test and no failures or skips. It is retained at `backup/six-slice-acceptance-20261008`. This integration result does not change the individual branch bases.
 
