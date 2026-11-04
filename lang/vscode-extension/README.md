@@ -17,7 +17,7 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 - **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Resolved annotation uses are decorators; bundled ownership adds `defaultLibrary`. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Fine string/escape/keyword/literal scopes remain with the editor grammar. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
 - **Build and run** — build and run modules with the language server's embedded compiler, or with Gradle, per folder ([details](#building-and-running)); Run lens, editor Run button, `Cmd+F9`/`Ctrl+F9` build and Run shortcuts
-- **Debugging** — breakpoints, stepping, variables, watches and Debug Console evaluation in embedded runs, through a debug session in the language server ([details](#debugging))
+- **Debugging** — breakpoints, stepping, variables, watches and Debug Console evaluation in embedded and Gradle runs, and in a program run outside the editor, through a debug session in the language server ([details](#debugging))
 - **Tasks** — embedded Build / Rebuild tasks, or Gradle Build / Test / Clean tasks for a workspace that contains a `build.gradle.kts`
 - **Project scaffolding** — `Ecstasy: Create New Project` command to bootstrap a new Ecstasy application, library, or service
 - **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
@@ -219,6 +219,19 @@ the program where an uncaught exception, on by default, or any exception is thro
 shown first among the frame's variables and in the exception widget, its stack trace included. Edit
 Condition on a filter names the exception classes it stops at, such as `IllegalArgument, OutOfBounds`,
 which also stop the classes that extend them.
+A function breakpoint, added with the Breakpoints view's **+**, names a method as the call stack
+names it, such as `twice` or `Point.move`, and stops at the first line of each of the program's
+methods of that name, with a condition and hit count as a line's has. **Break on Value Change** on a
+field of a mutable object in the Variables view stops the program at the next line once the field
+has changed, saying from what to what, such as `Counter.count changed from 0 to 2`.
+**Run to Cursor** runs the program on to the cursor's line, **Step Into Target** in the editor's
+context menu chooses which call on the line to step into, and **Restart Frame** in the Call Stack
+view makes a frame's call again, with the values its arguments hold now, and stops at its first line.
+At a stop, the Call Stack view lists every service and fiber of the program, the ones that wait at a
+line first, each with what it does; a frame of a bundled XDK library's code opens the library's
+bundled source, read-only, and **Loaded Scripts** lists the program's sources and those of the
+libraries it uses. With `debug.inlineValues` on its default, the editor shows the values of the
+stopped method's parameters and locals beside their lines.
 Pause stops a running program at its next line, and a configuration's `stopOnEntry` stops it at its
 first line. While the program is stopped, the Watch view and hovers evaluate expressions such as
 `point.x + 1` or `ints[i] > 0` in the selected frame, without running the program's code, and expand
@@ -249,6 +262,31 @@ A launch configuration in `.vscode/launch.json` selects the module, entry method
     "evaluationRunsProgram": false  // optional: let the program run while Debug Console code does
 }
 ```
+
+#### Debugging a program run outside the editor
+
+A program run with the launcher's `--debug` option, by `xec`, `xtc run` or `xtc test`, can be debugged
+from VS Code too. **Ecstasy: Copy Option to Debug a Program Outside the Editor** copies
+`--debug listen:127.0.0.1:5005,suspend`: run the program with it, as in `xec --debug
+listen:127.0.0.1:5005,suspend App.x`, and it waits for the debugger before its first line. Then start
+an attach configuration, which the **Ecstasy: Attach to Program** snippet adds:
+
+```jsonc
+{
+    "type": "xtc",
+    "request": "attach",
+    "name": "Attach to Ecstasy Program",
+    "port": 5005,               // the port the program's --debug option names
+    "host": "localhost",        // optional: this machine's name or loopback address
+    "token": "…",               // optional: the token the program's --debug option gives
+    "stopOnEntry": false        // optional: stop at the first line of a program under suspend
+}
+```
+
+Breakpoints, stepping, variables and evaluation work as in a launched session. Stopping the session
+detaches, and the program runs on without the debugger's breakpoints. The program's XDK must have this
+extension's javatools, whose debugger agent the program runs; its console stays its own, and one
+debugger at a time attaches to it.
 
 ### Tasks
 
@@ -290,6 +328,8 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecsta
 | `Ecstasy: Select Build Mode`             | Choose embedded, Gradle or automatic for the folder     |
 | `Ecstasy: Restart Language Server`       | Stop and restart the LSP server                        |
 | `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
+| `Ecstasy: Copy Option to Debug a Program Outside the Editor` | Copy the `--debug` option that an attach configuration attaches to |
+| `Show Values as Hexadecimal`             | In the Variables and Watch views' context menu: integers in hexadecimal, or decimal again |
 
 ### Snippets
 
