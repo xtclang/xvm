@@ -75,7 +75,8 @@ Then install manually:
 
 - IntelliJ IDEA 2026.2 or later (build 262+); development and acceptance tests target 2026.2.3
 - The free feature set is sufficient; no Ultimate subscription is required
-- XDK installed and `xtc` command available in PATH
+- An XDK with `xtc` on the `PATH`, for the New Project wizard and the *xtc command line* run mode;
+  embedded builds, runs and tests use the XDK bundled with the plugin
 - Gradle plugin for IntelliJ (bundled with most editions)
 
 ## Usage
@@ -789,8 +790,11 @@ intellij-plugin/
 │   │   ├── XtcIntelliJLanguage.kt        # IntelliJ Language singleton (for Code Style, etc.)
 │   │   ├── XtcTextMateBundleProvider.kt  # TextMate grammar integration
 │   │   ├── dap/
-│   │   │   ├── XtcDebugAdapterFactory.kt # Debug of Ecstasy Application configurations through LSP4IJ's DAP client
-│   │   │   └── LanguageServerDebugProcessHandler.kt # Carries a debug session over the language server connection
+│   │   │   ├── XtcDebugAdapterFactory.kt # Debug of Ecstasy Application and Attach configurations through LSP4IJ's DAP client
+│   │   │   ├── LanguageServerDebugProcessHandler.kt # Carries a debug session over the language server connection
+│   │   │   ├── DebugSessions.kt          # Routes the server's session messages to their sessions
+│   │   │   ├── DebugTasks.kt             # Runs a Gradle-mode or command-line Debug's task (xtc/debugTask)
+│   │   │   └── DapFrames.kt              # DAP's Content-Length framing for LSP4IJ's client
 │   │   ├── lsp/
 │   │   │   ├── XtcLanguageClient.kt            # Custom LSP client (forwards Code Style → server)
 │   │   │   └── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
@@ -801,6 +805,10 @@ intellij-plugin/
 │   │   │   ├── EmbeddedExecution.kt           # Embedded build/run server access, run routing, reports
 │   │   │   ├── EmbeddedRunProcessHandler.kt   # An embedded run as a process (console, Stop, Rerun)
 │   │   │   ├── RunGutterIcons.kt              # Gutter Run icons on the Run lens lines
+│   │   │   ├── TestGutterIcons.kt             # Gutter Run and Debug icons on xunit tests and their containers
+│   │   │   ├── TestRuns.kt                    # Test runs in IntelliJ's test console, embedded, Gradle or xtc test
+│   │   │   ├── XtcTestEventsConverter.kt      # Reads xunit's JSON events into the test console
+│   │   │   ├── XtcAttachConfiguration.kt      # Ecstasy Attach configuration, for a program run with --debug
 │   │   │   ├── XtcBuildConfigurable.kt        # Build, Execution, Deployment | Ecstasy page
 │   │   │   ├── XtcBuildSettings.kt            # Project build mode (automatic, embedded, Gradle)
 │   │   │   ├── XtcProjectTaskRunner.kt        # Embedded Build/Rebuild Project
