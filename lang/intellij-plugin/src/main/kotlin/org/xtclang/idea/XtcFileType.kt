@@ -18,5 +18,5 @@ object XtcFileType : LanguageFileType(XtcIntelliJLanguage) {
 
     override fun getDefaultExtension(): String = "x"
 
-    override fun getIcon(): Icon? = XtcIconProvider.XTC_ICON
+    override fun getIcon(): Icon? = XtcIconProvider.xtcIcon
 }
