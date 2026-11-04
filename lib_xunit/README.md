@@ -84,7 +84,7 @@ annotation can be used on the test class to specify the lifecycle of the test cl
 The `@TestFixture` annotation takes a single parameter, which is an enum value that specifies the 
 lifecycle of the test class instance.
 
-- `@TestFixture(EveryTest)` this is the default behaviour where a new instance of the class is 
+- `@TestFixture(EveryTest)` this is the default behavior where a new instance of the class is 
   created for every test method.
 - `@TestFixture(Singleton)` a single instance of the class is created and all test methods in 
   the class will use that instance.
