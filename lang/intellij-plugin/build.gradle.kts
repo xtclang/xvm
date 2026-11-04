@@ -969,6 +969,10 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         systemProperty("xtc.playbook.lsp4ijChannel", marketplaceLsp4ijChannel)
         systemProperty("xtc.playbook.adapter", xdkProperties.stringValue("lsp.adapter", "compiler"))
         systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
+        // the tour, TourTest, records the plugin's features for its video; only with -PintellijTour=true, and with
+        // -PintellijTourSections=<names> only those sections
+        systemProperty("xtc.tour", providers.gradleProperty("intellijTour").getOrElse("false"))
+        systemProperty("xtc.tour.sections", providers.gradleProperty("intellijTourSections").getOrElse(""))
         systemProperty("xtc.playbook.replacementGates", providers.gradleProperty("intellijPlaybookReplacementGates").getOrElse(""))
         systemProperty(
             "xtc.playbook.largeFileProbe",
