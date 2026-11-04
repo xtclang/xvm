@@ -931,7 +931,7 @@ internal object XdkRename {
 
         fun target(constant: ProofIdentity): Target? {
             if (constant is ProofIdentity.Directory) return Target.Directory(moved(constant.path))
-            if (constant is ProofIdentity.Composed) {
+            if (constant is ProofIdentity.Composed || constant is ProofIdentity.Generated) {
                 return composedTarget(constant, texts, moved, translate)
             }
             val symbol = declarations[constant] ?: return Target.External(constant)
@@ -1025,6 +1025,12 @@ internal object XdkRename {
             val owner: Target,
         ) : Target
 
+        /** Compiler-generated method identified by its translated owner and the contracts it implements. */
+        data class Generated(
+            val owner: Target,
+            val contracts: List<Target>,
+        ) : Target
+
         /** Super receiver interpreted relative to its translated method. */
         data class Super(
             val method: Target,
@@ -1113,6 +1119,15 @@ internal object XdkRename {
             is ProofIdentity.PrimaryConstructor -> {
                 composedTarget(identity.owner, texts, moved, translate)
                     ?.let(Target::PrimaryConstructor)
+            }
+
+            is ProofIdentity.Generated -> {
+                val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
+                val contracts =
+                    identity.contracts.map {
+                        composedTarget(it, texts, moved, translate) ?: return null
+                    }
+                Target.Generated(owner, contracts)
             }
 
             is ProofIdentity.Super -> composedTarget(identity.method, texts, moved, translate)?.let(Target::Super)
@@ -1229,6 +1244,7 @@ internal object XdkRename {
                 identity is ProofIdentity.Super ||
                 identity is ProofIdentity.Receiver ||
                 identity is ProofIdentity.PrimaryConstructor ||
+                identity is ProofIdentity.Generated ||
                 identity is ProofIdentity.Parameter ||
                 identity is ProofIdentity.MethodFormal
             ) {
