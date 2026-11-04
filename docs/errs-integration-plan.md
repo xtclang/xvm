@@ -252,8 +252,9 @@ milestone), #753, #754, and the three test-support PRs taken from these branches
   replays, and [#693's map](errs-693-rebase-2026-11-04.tsv) its 116 and their 114.
 - `:javatools:compileJava`, `:javatools:compileTestJava` and `spotlessCheck` pass on errs; #693's
   tree differs from errs' in #693's own content only. CI runs on both after the push.
-- Backups: `backup/errs-pre-rebase-20261104` (`8687ea0fb9`) and `backup/693-pre-rebase-20261104`
-  (`c04dcbfbfb`), until CI is green on both. Both were force-pushed with leases on those commits.
+- Both were force-pushed with leases on their old tips, errs to `4456975009` and #693 to
+  `c4f916bf44`, and CI passes on both (runs 41832045986 and 41832050573). The backups,
+  `backup/errs-pre-rebase-20261104` and `backup/693-pre-rebase-20261104`, are deleted.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
