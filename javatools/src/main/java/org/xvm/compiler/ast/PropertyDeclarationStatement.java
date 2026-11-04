@@ -308,6 +308,11 @@ public class PropertyDeclarationStatement
         prop.setSynthetic(m_fSynthetic);
         setComponent(prop);
 
+        // documentation, which a tool reads from the structure, as from a class's
+        if (doc != null) {
+            prop.setDocumentation(TypeCompositionStatement.extractDocumentation(doc));
+        }
+
         // the annotations either have to be registered on the type or on the property, so
         // register them on the property for now (they'll get sorted out later after we
         // can resolve the types to figure out what the annotation targets actually are)
