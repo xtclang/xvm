@@ -30,7 +30,7 @@ Headless unit and manifest tests live under `src/test/kotlin`; the native Starte
 lives under `src/integrationTest/kotlin`. They cover project configuration/import ownership,
 watchers, source graphs, lifecycle, edit guards, startup, diagnostics and packaged resources.
 
-The native suite uses the shared **284-scenario catalog**. It launches a disposable IntelliJ
+The native suite uses the shared **342-scenario catalog**. It launches a disposable IntelliJ
 profile with Ultimate disabled and released LSP4IJ. Startup editing, focus recovery, settings
 persistence and project lifecycle are separate tests in the same task. The large-file diagnostic
 is opt-in. See the [manual playbook](../doc/manual-test-plan.md) for fixtures and
