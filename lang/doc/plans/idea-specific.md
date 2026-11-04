@@ -33,7 +33,7 @@ The goal is to reach parity with the Java development experience in IntelliJ.
 | Feature | Where | How | Date |
 |---------|-------|-----|------|
 | Comment toggling (Ctrl+/) | IntelliJ plugin | `XtcCommenter` extension | 2026-04-03 |
-| Live templates (30+ snippets) | IntelliJ plugin + VS Code | `liveTemplates/XTC.xml` + `snippets/xtc.json` | 2026-04-03 |
+| Live templates (30+ snippets) | IntelliJ plugin + VS Code | `liveTemplates/Ecstasy.xml` + `snippets/xtc.json` | 2026-04-03 |
 | Semantic tokens | LSP server (Kotlin) | Enabled by default, auto-rendered by LSP4IJ and VS Code | 2026-04-03 |
 | Code lens (Run on modules) | LSP server (Kotlin) | `getCodeLenses()` in TreeSitterAdapter, auto-rendered by LSP4IJ | 2026-04-03 |
 | Brace matching | TextMate + LSP | `language-configuration.json` brackets + LSP highlight/indent | N/A (skip) |
@@ -308,12 +308,12 @@ brace), which is too niche to justify the code.
 | `sout` | `@Inject Console console; console.print($END$);` |
 | `todo` | `// TODO $END$` |
 
-**Implementation:** XML file in `resources/liveTemplates/XTC.xml` + registration
+**Implementation:** XML file in `resources/liveTemplates/Ecstasy.xml` + registration
 in `plugin.xml` via `<defaultLiveTemplates>`.
 
 **Effort:** Small (1-2 hours for a good set)
 **Priority:** **High** -- big productivity boost
-**Status:** **Done** (2026-04-03) — `liveTemplates/XTC.xml` with 30+ templates covering
+**Status:** **Done** (2026-04-03) — `liveTemplates/Ecstasy.xml` with 30+ templates covering
 declarations (mod, cls, iface, svc, mix, enu, con, pkg), methods (meth, run, runa, construct),
 properties (prop, roprop, lazy), control flow (if, ife, ifv, fori, forr, fore, while, switch,
 try, using, assert, assertm), common patterns (sout, print, inject, lambda, cond, doc, todo),
