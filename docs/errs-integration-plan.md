@@ -4,7 +4,10 @@ Latest full-catalog runs (2026-10-28), of all 333 cases: VS Code `run-Pc161s` at
 passed and X218 failed on UP23, in one window; IntelliJ with LSP4IJ 0.21.0
 `run-17527198196716738382` at `c2a9b296d5`, 310 passed, 15 partial as the catalog declares and 8 not
 implemented there, with X283 failing once to stray keystrokes. On 2026-10-29, with
-`vscode-languageclient` 11.0.0, VS Code passed 332 again, X218 failing. The earlier checkpoint,
+`vscode-languageclient` 11.0.0, VS Code passed 332 again, X218 failing, and with the stricter
+diagnostics waits (`b2f452c2f2`) every case passed, VS Code's 337 but X218 and IntelliJ's 329 in the
+playbook container ([remaining.md](remaining.md#test-harness-stability)). The catalog has 342 cases
+since R13's X338–X340, which pass in selected container runs in both editors. The earlier checkpoint,
 [October 7 acceptance](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07), covered all 284
 shared cases then: IntelliJ 282 passed/two partial in one uninterrupted process;
 VS Code 281 passed/three failed across the full attempt and recorded continuations. UP16/UP23
@@ -1855,20 +1858,23 @@ to the compiler-only PR:
   0.21.0. The docs are current (`3ac199f192`), and each runtime PR passes CI on its own head.
   A Windows soak is not planned (decided 2026-10-27): CI's `lang` checks run on `ubuntu-latest`
   only.
-- [ ] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
+- [x] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
   debugger's commands: breakpoint kinds (R9), values (R10), execution control (R11), program
   structure and sources (R12), and debugging beyond embedded runs (R13), listed in the
   [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  *Done (2026-11-03):* the last were R11's single-fiber execution (2026-11-02) and R13's Gradle-mode
+  and command-line Debug, attach, test runs from both editors and the debugger agent in javatools;
+  each item, with its commits and cases, is in [remaining.md](remaining.md#r9r13-debugger-features-beyond-r7).
 
-Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Parts of R9, and R10, landed
-before R8; the rest of R9–R13 follows R8, unless one is chosen to gate the release. Compiler-only
+Implementation order was R1/R2, then R3, R4/R5, R6, R7 and R8. Parts of R9, and R10, landed
+before R8; the rest of R9–R13 followed R8, through 2026-11-03. Compiler-only
 operations must continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and
 lib_runner child containers are the foundation; existing IDE shell commands and the DAP placeholder
 do not satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6), and the runtime
 debugger (R7) stops, steps and evaluates in both editors.
 
-Current native automation inventory (2026-11-03): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **340 cases**: X1–X338 except the retired
+Current native automation inventory (2026-11-04): the shared catalog,
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **342 cases**: X1–X340 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog runs are those of
 2026-10-28 named at the top of this plan; before them, the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07). The cases
@@ -9364,7 +9370,8 @@ not describe this as a clean full pass or retry the completed mutation.
 - [ ] **L82 X130 upstream repair:** report the reproduction and verify a VS Code fix. The latest
   release and inspected upstream source retain the unguarded repaint. X130 remains a failed host
   acceptance test when it reproduces; compiler Move/Undo/Redo/resource correctness is recorded
-  separately. No upstream issue or PR has been submitted.
+  separately. Reported since as UP16: our [microsoft/vscode#344760](https://github.com/microsoft/vscode/pull/344760)
+  (2026-10-28) for the existing #219122, open (checked 2026-11-04).
 
 
 Final current-server backend verification: **1,504 passed**, three existing disabled placeholders
@@ -10537,8 +10544,8 @@ no warning. The IDE/server JVM policies and dependency versions are unchanged.
 
 L64/L65's bounded implementation and shared acceptance scope is complete. Remaining acceptance work:
 - [ ] UP16: repair/report the independent VS Code Explorer Cut cleanup defect; X130 stays failed
-  whenever it reproduces.
-- [ ] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
+  whenever it reproduces. Reported 2026-10-28 as microsoft/vscode#344760, open.
+- [x] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
   Two selected passes do not establish that the intermittent host/harness behavior is fixed.
   Not recurred: X105 passes in the later uninterrupted 277- and 284-case IntelliJ runs, but this
   timeout was never reproduced or diagnosed. Later X185 intention-popup failures are tracked under UP07.
@@ -10546,7 +10553,9 @@ L64/L65's bounded implementation and shared acceptance scope is complete. Remain
   current code, with the UP07 equal-report bridge (`DiagnosticQuickFixes`) turned off
   (`run-1679585523095307991`), and with that bridge off and `discovered` opening the case's file
   before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Neither later change
-  alone or together brings it back, so the trigger is still unknown; the item stays open.
+  alone or together brings it back, so the trigger is still unknown. Closed as not reproduced on
+  2026-11-03, after more passing runs in the playbook container
+  ([remaining.md](remaining.md#test-harness-stability)); reopen it with the run's logs if it recurs.
 - [x] Obtain one uninterrupted full IntelliJ receipt after that stability work. The combined
   receipts above already cover every case, but do not establish a single clean run.
   Done later: `run-11949889098742489342` (277 cases) and `run-4144503954102473659` (284 cases)
@@ -10584,11 +10593,13 @@ remain separate from functionality implementation.
   and compiler-proven unused constant local removal; October 4 validation below.
 - [x] L63 private same-owner expression helpers with stable inputs and explicit parameter/call proof;
   X181–X184 and the current batch acceptance below record the boundary.
-- [ ] L63 remaining transformations: wider expression/statement extraction, mutable captures, broader
+- [x] L63 remaining transformations: wider expression/statement extraction, mutable captures, broader
   inline, global safe delete and missing declarations; each needs its own semantic proof.
   Bounded extraction, inline, configured-graph safe delete and missing declarations are implemented
   later; see the [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04). Mutable captures
-  are a deliberate refusal there: moved out of L63 scope and still unimplemented.
+  were a deliberate refusal there, moved out of L63 scope. Done since: wider extraction and mutable
+  captures on 2026-10-21, **Inline and remove** and Safe Delete of public members on 2026-10-29
+  (X332–X334), each under [beyond the current scope](remaining.md#beyond-the-current-scope).
 - [x] L66 resolved module/type import source links and explicit lexical alias linked editing.
 - [x] L66 damaged structure, wildcard links, conditional-source refusal, lexical lambda/same-name
   aliases and bounded formatter rules; October 5 closure and acceptance below.
@@ -13935,11 +13946,13 @@ through [the rebase table](errs-rebase-2026-10-05.tsv); they have not been silen
   evidence. The focused runs above do not close those gates.
 - [ ] Decide the breaking embedding-API release/version and test every extracted PR independently.
   The integrated branch passing does not establish that any extracted slice builds alone.
-- [ ] Continue L73/R6–R8 reusable execution/DAP as a separate runtime workstream (R1–R5 are
+- [x] Continue L73/R6–R8 reusable execution/DAP as a separate runtime workstream (R1–R5 are
   closed). L77 colors
   await a recognized Ecstasy color API; L78 notebooks stay deferred by the user's decision;
   L79 debugger inline values require the runtime/debugging context. None is silently counted as
-  complete compiler-only functionality.
+  complete compiler-only functionality. Done since: R6–R8 by 2026-10-27 and R9–R13 by 2026-11-03;
+  L73 closed on 2026-10-27 with nothing to build; L77's prototype was removed on 2026-10-21; L79's
+  inline values came on 2026-10-27, after R7. L78 stays deferred.
 
 No additional AST mutation, public compiler accessor or library split was needed by this review.
 Root/lang SpotlessCheck and `git diff --check` pass. The local-plugin build-script formatting
