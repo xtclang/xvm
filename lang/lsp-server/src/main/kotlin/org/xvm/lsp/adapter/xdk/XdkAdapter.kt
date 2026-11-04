@@ -2173,10 +2173,15 @@ class XdkAdapter
         ): List<InlineValue> = analysis(uri)?.semantics?.let { XdkPresentation.inlineValues(it, range, stopped) }.orEmpty()
 
         /**
-         * Blocks and declarations that span more than one line. An editor offers a fold per region, so
-         * a region per expression would be noise rather than help.
+         * Blocks and declarations that span more than one line, the comments that do, and runs of imports.
+         * An editor offers a fold per region, so a region per expression would be noise rather than help;
+         * and one that takes its folds from the server, as VS Code does, folds nothing else.
          */
-        override fun getFoldingRanges(uri: String): List<FoldingRange> = XdkAst.foldingRegions(analysis(uri)?.ast)
+        override fun getFoldingRanges(uri: String): List<FoldingRange> {
+            val ast = analysis(uri)?.ast
+            val text = ast?.source?.toRawString() ?: return XdkAst.foldingRegions(ast)
+            return XdkAst.foldingRegions(ast) + XdkLexical.commentRegions(text) + XdkAst.importRegions(ast)
+        }
 
         /**
          * Expanding a selection walks out through the tree, which is exactly what the parent chain of
