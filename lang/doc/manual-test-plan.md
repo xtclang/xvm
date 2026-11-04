@@ -1154,7 +1154,7 @@ This is a client-side editing feature — the LSP server handles comment *format
 
 ### 17. Live Templates (IntelliJ)
 
-**Provider:** IntelliJ plugin (`liveTemplates/XTC.xml`)
+**Provider:** IntelliJ plugin (`liveTemplates/Ecstasy.xml`)
 **Status:** ✅ Done
 **Works with:** IntelliJ only (VS Code uses `snippets/xtc.json` separately)
 
