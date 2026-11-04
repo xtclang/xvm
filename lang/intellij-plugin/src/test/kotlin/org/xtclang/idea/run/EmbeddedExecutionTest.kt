@@ -7,6 +7,7 @@ import com.intellij.openapi.util.Key
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xtclang.idea.HANG_SECONDS
 import org.xtclang.idea.lsp.BuildDiagnostic
 import org.xtclang.idea.lsp.BuildPosition
 import org.xtclang.idea.lsp.BuildRange
@@ -61,7 +62,7 @@ class EmbeddedExecutionTest {
         val server = FakeServer(sessions)
         val handler = handler(sessions, server, XtcBuildSettings.gradleNotUsed(root))
         handler.startNotify()
-        server.requests.poll(30, SECONDS)
+        server.requests.poll(HANG_SECONDS, SECONDS)
         assertThat(handler.text()).contains("with the embedded compiler...\n", "Gradle settings")
     }
 
@@ -172,11 +173,11 @@ class EmbeddedExecutionTest {
         val server = FakeServer(sessions)
         val handler = handler(sessions, server)
         handler.startNotify()
-        val request = server.requests.poll(30, SECONDS)!!
+        val request = server.requests.poll(HANG_SECONDS, SECONDS)!!
         assertThat(request.module).isEqualTo("file:///work/App.x")
         sessions.output(RunOutputParams(request.runId!!, "Hello, World!\n"))
         sessions.exited(RunExitedParams(request.runId, 7, null))
-        assertThat(handler.waitFor(30_000)).isTrue()
+        assertThat(handler.waitFor(HANG_SECONDS * 1_000)).isTrue()
         assertThat(handler.exitCode).isEqualTo(7)
         assertThat(handler.stdout()).isEqualTo("Hello, World!\n")
     }
@@ -187,7 +188,7 @@ class EmbeddedExecutionTest {
         val server = FakeServer(sessions, RunResponse(null, BuildResponse(modules = listOf(BuiltModule("App", "")))))
         val handler = handler(sessions, server)
         handler.startNotify()
-        assertThat(handler.waitFor(30_000)).isTrue()
+        assertThat(handler.waitFor(HANG_SECONDS * 1_000)).isTrue()
         assertThat(handler.exitCode).isEqualTo(1)
         assertThat(handler.text()).contains("  ✗ App", "Build failed; nothing was run.")
     }
@@ -198,13 +199,13 @@ class EmbeddedExecutionTest {
         val server = FakeServer(sessions)
         val handler = handler(sessions, server)
         handler.startNotify()
-        val runId = server.requests.poll(30, SECONDS)!!.runId!!
-        server.started.get(30, SECONDS)
+        val runId = server.requests.poll(HANG_SECONDS, SECONDS)!!.runId!!
+        server.started.get(HANG_SECONDS, SECONDS)
         handler.destroyProcess()
-        assertThat(server.stops.poll(30, SECONDS)?.runId).isEqualTo(runId)
+        assertThat(server.stops.poll(HANG_SECONDS, SECONDS)?.runId).isEqualTo(runId)
         assertThat(handler.isProcessTerminated).isFalse()
         sessions.exited(RunExitedParams(runId, null, "Stopped by the user"))
-        assertThat(handler.waitFor(30_000)).isTrue()
+        assertThat(handler.waitFor(HANG_SECONDS * 1_000)).isTrue()
         assertThat(handler.text()).contains("Stopped by the user")
     }
 
@@ -218,10 +219,10 @@ class EmbeddedExecutionTest {
         handler.startNotify()
         handler.processInput.write("rest".toByteArray(UTF_8))
         handler.processInput.close()
-        val runId = server.requests.poll(30, SECONDS)!!.runId!!
+        val runId = server.requests.poll(HANG_SECONDS, SECONDS)!!.runId!!
 
-        assertThat(server.inputs.poll(30, SECONDS)).isEqualTo(RunInputParams(runId, "Ada ✓\n", false))
-        assertThat(server.inputs.poll(30, SECONDS)).isEqualTo(RunInputParams(runId, "rest", true))
+        assertThat(server.inputs.poll(HANG_SECONDS, SECONDS)).isEqualTo(RunInputParams(runId, "Ada ✓\n", false))
+        assertThat(server.inputs.poll(HANG_SECONDS, SECONDS)).isEqualTo(RunInputParams(runId, "rest", true))
         assertThat(server.calls).containsExactly("run", "runInput", "runInput")
     }
 
@@ -240,10 +241,10 @@ class EmbeddedExecutionTest {
         val server = FakeServer(sessions)
         val handler = handler(sessions, server)
         handler.startNotify()
-        server.requests.poll(30, SECONDS)
-        server.started.get(30, SECONDS)
+        server.requests.poll(HANG_SECONDS, SECONDS)
+        server.started.get(HANG_SECONDS, SECONDS)
         sessions.endAll("The Ecstasy language server stopped")
-        assertThat(handler.waitFor(30_000)).isTrue()
+        assertThat(handler.waitFor(HANG_SECONDS * 1_000)).isTrue()
         assertThat(handler.exitCode).isEqualTo(1)
         assertThat(handler.text()).contains("The Ecstasy language server stopped")
     }
