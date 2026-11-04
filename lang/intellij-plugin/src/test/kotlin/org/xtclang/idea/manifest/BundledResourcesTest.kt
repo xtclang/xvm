@@ -29,14 +29,13 @@ class BundledResourcesTest {
     }
 
     @Test
-    @DisplayName("liveTemplates/XTC.xml resolves at the path plugin.xml references")
+    @DisplayName("liveTemplates/Ecstasy.xml resolves at the path plugin.xml references")
     fun liveTemplatesPresent() {
-        // plugin.xml has <defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>
-        // (no .xml extension — IntelliJ appends it). The file MUST live at
-        // liveTemplates/XTC.xml relative to the resource root.
-        assertThat(classLoader.getResource("liveTemplates/XTC.xml"))
+        // plugin.xml has <defaultLiveTemplates file="/liveTemplates/Ecstasy.xml"/>. The file MUST
+        // live at liveTemplates/Ecstasy.xml relative to the resource root.
+        assertThat(classLoader.getResource("liveTemplates/Ecstasy.xml"))
             .withFailMessage(
-                "liveTemplates/XTC.xml not on classpath. plugin.xml's <defaultLiveTemplates> " +
+                "liveTemplates/Ecstasy.xml not on classpath. plugin.xml's <defaultLiveTemplates> " +
                     "tag still points there — either restore the file or update the manifest.",
             ).isNotNull
     }

@@ -89,7 +89,8 @@ class PluginManifestTest {
                 "runConfigurationProducer", // auto-create run configs from .x context
                 "projectTaskRunner", // embedded Build/Rebuild via XtcProjectTaskRunner
                 "iconProvider", // file icons via XtcIconProvider
-                "defaultLiveTemplates", // /liveTemplates/XTC snippets
+                "defaultLiveTemplates", // /liveTemplates/Ecstasy.xml snippets
+                "liveTemplateContext", // the ECSTASY context those snippets apply in
                 "lang.commenter", // Ctrl+/ via XtcCommenter
                 "renameHandler", // guarded compiler rename via XtcRenameHandler
                 "refactoring.moveHandler", // compiler preflight before native filesystem mutation
