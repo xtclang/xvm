@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
@@ -35,6 +36,46 @@ class XdkFoldingTest {
                 val module = folds.single { it.startLine == 0 }
                 assertThat(module.endCharacter).isEqualTo(closingLine.lastIndexOf('}'))
             }
+        }
+    }
+
+    /**
+     * VS Code takes all of a file's folds from the server, so a region that the server leaves out does not fold at all:
+     * the doc comments, as the tree-sitter adapter folds them, and a run of imports.
+     */
+    @Test
+    fun `doc comments, block comments, runs of line comments and of imports fold`() {
+        val text =
+            """
+            module Folds {
+                import ecstasy.maps.HashMap;
+                import ecstasy.maps.ListMap;
+
+                /**
+                 * Documented, on
+                 * more than one line.
+                 */
+                void documented() {
+                }
+
+                // one
+                // two
+                void commented() {}
+
+                /* one line */
+                void single() {} // not a run
+                // of two
+            }
+            """.trimIndent()
+        XdkAdapter().use { adapter ->
+            adapter.compile(URI, text)
+            val folds = adapter.getFoldingRanges(URI).map { Triple(it.startLine, it.endLine, it.kind) }
+            assertThat(folds).contains(
+                Triple(1, 2, FoldingRange.FoldingKind.IMPORTS),
+                Triple(4, 7, FoldingRange.FoldingKind.COMMENT),
+                Triple(11, 12, FoldingRange.FoldingKind.COMMENT),
+            )
+            assertThat(folds.filter { it.third == FoldingRange.FoldingKind.COMMENT }.map { it.first }).containsExactly(4, 11)
         }
     }
 
