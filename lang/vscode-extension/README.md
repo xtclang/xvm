@@ -459,10 +459,13 @@ vscode-extension/
 │   ├── extension.ts                # Activation / deactivation entry point
 │   ├── commands.ts                 # Ecstasy: ... command registrations
 │   ├── debug-adapter.ts            # Debug sessions carried over the language client, and config provider
+│   ├── embedded-execution.ts       # Embedded build and run through the language server
 │   ├── java.ts                     # Java 25+ discovery and JVM argument construction
 │   ├── lsp-client.ts               # LSP client lifecycle and crash recovery
 │   ├── status-bar.ts               # Status bar state management
-│   └── task-provider.ts            # Build / Test / Clean / Run task provider
+│   ├── task-provider.ts            # Build / Test / Clean / Run task provider
+│   ├── test-explorer.ts            # The Test Explorer's xunit tests, run and debugged
+│   └── test-events.ts              # Reads xunit's JSON test events
 ├── syntaxes/
 │   └── xtc.tmLanguage.json         # TextMate grammar (copied from tree-sitter build)
 ├── snippets/
