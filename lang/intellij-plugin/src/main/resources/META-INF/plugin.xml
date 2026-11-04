@@ -139,6 +139,8 @@
         <!-- Commenter for Ctrl+/ (line comment) and Ctrl+Shift+/ (block comment) -->
         <lang.commenter language="Ecstasy"
                         implementationClass="org.xtclang.idea.XtcCommenter"/>
+        <!-- An explicit completion that the language server answers with nothing offers the file's words, as in plain text -->
+        <codeInsight.wordCompletionFilter language="Ecstasy" implementationClass="org.xtclang.idea.XtcWordCompletionFilter"/>
         <!-- Code | Optimize Imports (Ctrl+Alt+O) runs the language server's Organize imports. -->
         <lang.importOptimizer language="Ecstasy" implementationClass="org.xtclang.idea.lsp.XtcImportOptimizer"/>
 
