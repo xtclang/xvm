@@ -832,7 +832,7 @@ included build, which has no `gradle.properties` of its own.
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `log` | `INFO` | Log level for XTC LSP/DAP servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `log` | `INFO` | Log level for the Ecstasy language and debug servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `lsp.adapter` | `compiler` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
 | `lsp.semanticTokens` | `true` | Enable semantic token highlighting for the selected adapter |
 | `includeBuildLang` | `false` | Include `lang` as a composite build (IDE visibility, task addressability) |
@@ -999,7 +999,7 @@ better than regex-based TextMate indentation rules because it understands:
 
 ### Formatting Configuration
 
-The XTC LSP server follows the industry-standard approach used by rust-analyzer (rustfmt),
+The Ecstasy language server follows the industry-standard approach used by rust-analyzer (rustfmt),
 clangd (clang-format), Metals (Scalafmt), Biome, and Prettier: a **project-level config
 file** is the single source of truth, with editor settings as fallback.
 
@@ -1047,7 +1047,7 @@ for the `xtc-format.toml` schema and configuration precedence.
 
 ## Known Issues: IntelliJ Platform and LSP4IJ
 
-Issues in third-party dependencies that affect the XTC plugin. These are not bugs in our code
+Issues in third-party dependencies that affect the Ecstasy IntelliJ plugin. These are not bugs in our code
 but behaviors we must work around.
 
 ### LSP4IJ Issues

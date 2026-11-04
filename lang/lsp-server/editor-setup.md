@@ -1,6 +1,6 @@
-# Testing the XTC LSP Server with External Editors
+# Testing the Ecstasy Language Server with External Editors
 
-This guide explains how to build the XTC LSP server jar and connect it to
+This guide explains how to build the Ecstasy language server jar and connect it to
 text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin.
 
 ## Prerequisites
@@ -80,7 +80,7 @@ vim.filetype.add({
   },
 })
 
--- Start the XTC LSP server when opening .x files
+-- Start the Ecstasy language server when opening .x files
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'xtc',
   callback = function()
@@ -116,7 +116,7 @@ Add the following to your Emacs configuration (`~/.emacs.d/init.el` or
 ;; Associate .x files with a major mode
 (add-to-list 'auto-mode-alist '("\\.x\\'" . prog-mode))
 
-;; Register the XTC LSP server with eglot
+;; Register the Ecstasy language server with eglot
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
                '(prog-mode . ("java"
