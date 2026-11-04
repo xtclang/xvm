@@ -156,7 +156,7 @@ internal object XdkPresentation {
                     val type = symbol.type?.let(model::type) ?: return@mapNotNull null
                     InlayHint(
                         occurrence.range.end.toPosition(),
-                        ": ${type.displayName}",
+                        ": ${sourceName(type.displayName)}",
                         InlayHint.InlayHintKind.TYPE,
                         tooltip =
                             hover(
@@ -193,7 +193,7 @@ internal object XdkPresentation {
             }
         val returns =
             model.lambdas.filter { it.arrow.start in requested }.map { lambda ->
-                val types = lambda.signature.returns.mapNotNull { model.type(it)?.displayName }
+                val types = lambda.signature.returns.mapNotNull { model.type(it)?.displayName?.let(::sourceName) }
                 val label =
                     when (types.size) {
                         0 -> "void"
@@ -271,6 +271,16 @@ internal object XdkPresentation {
             .sortedWith(compareBy({ it.range.start.line }, { it.range.start.column }))
             .toList()
     }
+
+    /**
+     * A type as a hint names it: its names without the modules that qualify them in the compiler's display, as the
+     * source writes them and as the XDK's own types show, so `cardGame:Player` is `Player` and
+     * `HashMap<String, cardGame:Card>` is `HashMap<String, Card>`.
+     */
+    private fun sourceName(display: String): String = MODULE_QUALIFIER.replace(display, "")
+
+    /** A module's qualified name and its colon, before the name of a type of that module. */
+    private val MODULE_QUALIFIER = Regex("""\b[A-Za-z_][\w.]*:(?=[A-Za-z_])""")
 
     private fun Position.toSemantic(): SemanticModel.Position = SemanticModel.Position(line, column)
 
