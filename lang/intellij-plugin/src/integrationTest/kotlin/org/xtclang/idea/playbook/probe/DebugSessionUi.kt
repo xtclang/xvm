@@ -305,7 +305,7 @@ object DebugSessionUi {
             XValuePlace.TREE,
         )
         val value = CompletableFuture<String>()
-        link.get(30, TimeUnit.SECONDS).startEvaluation(
+        link.get(HANG_SECONDS, TimeUnit.SECONDS).startEvaluation(
             object : XFullValueEvaluator.XFullValueEvaluationCallback {
                 override fun evaluated(fullValue: String) {
                     value.complete(fullValue)
@@ -318,7 +318,7 @@ object DebugSessionUi {
                 override fun isObsolete() = false
             },
         )
-        return value.get(30, TimeUnit.SECONDS)
+        return value.get(HANG_SECONDS, TimeUnit.SECONDS)
     }
 
     /**
@@ -409,14 +409,14 @@ object DebugSessionUi {
                 ) {}
             }
         named(shown, names.last(), path).computeChildren(node)
-        batch.get(30, TimeUnit.SECONDS)
+        batch.get(HANG_SECONDS, TimeUnit.SECONDS)
         repeat(pages) {
             val open = next ?: return@repeat
             next = null
             batch = CompletableFuture()
             // the node's action runs on the event thread, as when the user opens it
             ApplicationManager.getApplication().invokeAndWait { open.run() }
-            batch.get(30, TimeUnit.SECONDS)
+            batch.get(HANG_SECONDS, TimeUnit.SECONDS)
         }
         return JsonObject()
             .apply {
@@ -459,7 +459,7 @@ object DebugSessionUi {
                 }
             },
         )
-        return result.get(30, TimeUnit.SECONDS)
+        return result.get(HANG_SECONDS, TimeUnit.SECONDS)
     }
 
     /**
@@ -487,7 +487,7 @@ object DebugSessionUi {
             dialog.show()
         }
         try {
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
             val editor = expressionEditor(project, dialog, deadline)
             // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has
             //  the event system on, so an edit of it fails IntelliJ's Document/PSI check; the pick is inserted only
@@ -671,7 +671,7 @@ object DebugSessionUi {
             },
             null,
         )
-        return result.get(30, TimeUnit.SECONDS).toString()
+        return result.get(HANG_SECONDS, TimeUnit.SECONDS).toString()
     }
 
     /** True while an editor hint shows, such as the one LSP4IJ shows where an exception stopped the program. */
@@ -969,7 +969,7 @@ object DebugSessionUi {
     ) {
         ApplicationManager.getApplication().invokeAndWait { call(proxy, "setCurrentStackFrame", stack, frame, top) }
         val handler = checkNotNull(call(proxy, "getDropFrameHandler")) { "No drop-frame handler" }
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
         while (call(proxy, "getCurrentStackFrame") !== frame || call(handler, "canDropFrame", frame).toString() == "UNSURE") {
             check(System.nanoTime() < deadline) {
                 "The debugger did not say whether ${SimpleColoredText().also(frame::customizePresentation)} can be reset"
@@ -1304,7 +1304,7 @@ object DebugSessionUi {
         parent: XDebuggerTreeNode,
         name: String,
     ): XDebuggerTreeNode {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
         while (true) {
             var found: XDebuggerTreeNode? = null
             ApplicationManager.getApplication().invokeAndWait {
@@ -1400,7 +1400,7 @@ object DebugSessionUi {
                 ) {}
             },
         )
-        return done.get(30, TimeUnit.SECONDS)
+        return done.get(HANG_SECONDS, TimeUnit.SECONDS)
     }
 
     /** A value's text, type, whether it expands, and the text of the link beside it, as the Variables view shows them. */
@@ -1451,7 +1451,7 @@ object DebugSessionUi {
             XValuePlace.TREE,
         )
         // a link is set right after the presentation, as computePresentation returns
-        return shown.get(30, TimeUnit.SECONDS).apply { link.get()?.let { addProperty("link", it.linkText) } }
+        return shown.get(HANG_SECONDS, TimeUnit.SECONDS).apply { link.get()?.let { addProperty("link", it.linkText) } }
     }
 
     /** Collects the text a value presentation renders, without its colors and comments; strings in quotes, as the view draws them. */
@@ -1535,6 +1535,6 @@ object DebugSessionUi {
                 }
             },
         )
-        return frames.get(30, TimeUnit.SECONDS)
+        return frames.get(HANG_SECONDS, TimeUnit.SECONDS)
     }
 }

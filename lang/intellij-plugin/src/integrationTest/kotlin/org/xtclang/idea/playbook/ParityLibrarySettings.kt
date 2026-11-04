@@ -6,10 +6,10 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.librarySettingsCases() {
     listOf("X266", "X267", "X268").forEach { id ->
@@ -90,7 +90,7 @@ internal fun ParityScenarios.librarySettingsCases() {
                         if (id == "X267") {
                             val previous = protocol.server().getCurrentProcessId()
                             protocol.server().restart()
-                            awaitUi("library settings survive server restart", 45.seconds) {
+                            awaitUi("library settings survive server restart", HANG_LIMIT) {
                                 protocol.server().getCurrentProcessId()?.let {
                                     it !=
                                         previous
