@@ -8,9 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ModuleStructure
+import org.xvm.lsp.HANG_SECONDS
 
 /** Verifies atomic results and receiver mutations by executing serialized compiler output. */
-@Timeout(30)
+@Timeout(HANG_SECONDS)
 class CompilerAtomicEmissionTest {
     @ParameterizedTest
     @ValueSource(

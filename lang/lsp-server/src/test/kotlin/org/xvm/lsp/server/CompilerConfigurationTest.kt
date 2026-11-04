@@ -25,6 +25,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -80,7 +81,7 @@ class CompilerConfigurationTest {
             session.expect(false)
             val before = session.adapter.getCachedResult(session.uri)
             session.server.initialized(InitializedParams())
-            val pending = requireNotNull(session.requests.poll(10, SECONDS))
+            val pending = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
             val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(
@@ -312,11 +313,11 @@ class CompilerConfigurationTest {
             session.open()
             session.expect(false)
             session.server.initialized(InitializedParams())
-            val old = requireNotNull(session.requests.poll(10, SECONDS))
+            val old = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
-            val latest = requireNotNull(session.requests.poll(10, SECONDS))
+            val latest = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
             latest.complete(listOf(mapOf("sourceModules" to emptyList<Any>())))
             session.expect(true)
             old.complete(listOf(CONFIG))
@@ -324,7 +325,7 @@ class CompilerConfigurationTest {
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
-            val superseded = requireNotNull(session.requests.poll(10, SECONDS))
+            val superseded = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(mapOf("xtc" to "invalid")),
             )
@@ -334,7 +335,7 @@ class CompilerConfigurationTest {
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
-            val closing = requireNotNull(session.requests.poll(10, SECONDS))
+            val closing = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
             session.close()
             closing.complete(listOf(CONFIG))
             assertThat(session.messages).hasSize(1)
@@ -409,7 +410,7 @@ class CompilerConfigurationTest {
                                     WorkspaceClientCapabilities().apply { configuration = pull }
                             }
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
         }
 
         fun open() =
@@ -423,7 +424,7 @@ class CompilerConfigurationTest {
             )
 
         fun expect(errors: Boolean) {
-            await().atMost(30, SECONDS).untilAsserted {
+            await().atMost(HANG_SECONDS, SECONDS).untilAsserted {
                 val last = published.lastOrNull { it.uri == uri }
                 assertThat(last).isNotNull()
                 assertThat(last!!.version).isEqualTo(7)
@@ -432,7 +433,7 @@ class CompilerConfigurationTest {
         }
 
         override fun close() {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 

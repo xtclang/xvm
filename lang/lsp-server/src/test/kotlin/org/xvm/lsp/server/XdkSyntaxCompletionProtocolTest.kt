@@ -17,6 +17,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -29,7 +30,7 @@ class XdkSyntaxCompletionProtocolTest {
     fun `missing declaration names use a plain empty edit at the original Unicode position`() {
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(mock(LanguageClient::class.java))
-            server.initialize(params(true)).get(30, SECONDS)
+            server.initialize(params(true)).get(HANG_SECONDS, SECONDS)
             val line = "    /* 😀 */ String "
             val text = "module Editing {\r\n$line= \"\";\r\n}"
             val service = server.textDocumentService
@@ -38,7 +39,7 @@ class XdkSyntaxCompletionProtocolTest {
             val item =
                 service
                     .completion(CompletionParams(TextDocumentIdentifier(URI), position))
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .left
                     .single()
             assertThat(item.label).isEqualTo("string")
@@ -55,14 +56,14 @@ class XdkSyntaxCompletionProtocolTest {
         listOf(false, true).forEach { snippets ->
             XtcLanguageServer(XdkAdapter()).use { server ->
                 server.connect(mock(LanguageClient::class.java))
-                server.initialize(params(snippets)).get(30, SECONDS)
+                server.initialize(params(snippets)).get(HANG_SECONDS, SECONDS)
                 val text = "module Editing {\n    void run() {\n        if\n    }\n}"
                 val service = server.textDocumentService
                 service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
                 val items =
                     service
                         .completion(CompletionParams(TextDocumentIdentifier(URI), Position(2, 10)))
-                        .get(30, SECONDS)
+                        .get(HANG_SECONDS, SECONDS)
                         .left
                 val item = items.single { it.label == "if block" }
                 assertThat(item.insertTextFormat)
@@ -87,14 +88,14 @@ class XdkSyntaxCompletionProtocolTest {
         listOf(false, true).forEach { snippets ->
             XtcLanguageServer(XdkAdapter()).use { server ->
                 server.connect(mock(LanguageClient::class.java))
-                server.initialize(params(snippets)).get(30, SECONDS)
+                server.initialize(params(snippets)).get(HANG_SECONDS, SECONDS)
                 val text = "module Editing { void take(function Int(Int) action) {} void run() { take(); } }"
                 val service = server.textDocumentService
                 service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
                 val item =
                     service
                         .completion(CompletionParams(TextDocumentIdentifier(URI), Position(0, text.lastIndexOf("take(") + 5)))
-                        .get(30, SECONDS)
+                        .get(HANG_SECONDS, SECONDS)
                         .left
                         .single { it.label == "(arg1) -> TODO()" }
                 assertThat(item.insertTextFormat).isEqualTo(if (snippets) InsertTextFormat.Snippet else InsertTextFormat.PlainText)

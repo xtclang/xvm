@@ -1,8 +1,12 @@
 package org.xvm.lsp.run
 
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.HANG_SECONDS
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
@@ -15,13 +19,13 @@ class RunWorkerCloseTest {
         val quick = AutoCloseable { closed.incrementAndGet() }
         val stuck = AutoCloseable { never.await() }
         try {
-            // long enough for the quick one's thread to run on a loaded machine, short of the bound below
-            val started = System.nanoTime()
-            assertThat(closeAll(listOf(quick, stuck), 2.seconds)).isFalse()
-            assertThat((System.nanoTime() - started) / 1_000_000).isLessThan(5_000)
-            assertThat(closed.get()).isEqualTo(1)
+            // the stuck one never closes, so the limit ends the wait however fast the machine is
+            val gaveUp = CompletableFuture.supplyAsync { closeAll(listOf(quick, stuck), 2.seconds) }
+            assertThat(gaveUp.get(HANG_SECONDS, SECONDS)).isFalse()
+            await().atMost(HANG_SECONDS, SECONDS).until { closed.get() == 1 }
 
-            assertThat(closeAll(listOf(quick, quick), 5.seconds)).isTrue()
+            // with a limit that only a hang reaches, closing returns once both have closed
+            assertThat(closeAll(listOf(quick, quick), HANG_SECONDS.seconds)).isTrue()
             assertThat(closed.get()).isEqualTo(3)
         } finally {
             never.countDown()

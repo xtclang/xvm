@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.xvm.lsp.HANG_SECONDS
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -106,20 +107,20 @@ class LspProcessLifecycleTest {
                             workspaceFolders =
                                 listOf(WorkspaceFolder(workspace.toUri().toString(), "Lifecycle"))
                         },
-                    ).get(20, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                 server.initialized(InitializedParams())
                 server.textDocumentService.didOpen(
                     DidOpenTextDocumentParams(
                         TextDocumentItem(file.toUri().toString(), "xtc", 1, source),
                     ),
                 )
-                assertThat(diagnostics.poll(20, SECONDS))
+                assertThat(diagnostics.poll(HANG_SECONDS, SECONDS))
                     .describedAs("Server must have processed the document")
                     .isNotNull()
             }
             val shutdown =
                 termination in setOf(Termination.SHUTDOWN_THEN_EOF, Termination.SHUTDOWN_AND_EXIT)
-            if (shutdown) server.shutdown().get(20, SECONDS)
+            if (shutdown) server.shutdown().get(HANG_SECONDS, SECONDS)
             when (termination) {
                 Termination.EXIT_WITHOUT_SHUTDOWN,
                 Termination.SHUTDOWN_AND_EXIT,
@@ -127,7 +128,7 @@ class LspProcessLifecycleTest {
 
                 else -> process.outputStream.close()
             }
-            assertThat(process.waitFor(10, SECONDS))
+            assertThat(process.waitFor(HANG_SECONDS, SECONDS))
                 .describedAs(
                     "$backend survived $termination; pid=${process.pid()}\n${Files.readString(stderr)}",
                 ).isTrue()
@@ -138,7 +139,7 @@ class LspProcessLifecycleTest {
             // Only after the exit assertion: never count forcibly reaping a leaked child as
             // success.
             if (process.isAlive) process.destroyForcibly()
-            check(process.waitFor(10, SECONDS)) { "Could not reap test server ${process.pid()}" }
+            check(process.waitFor(HANG_SECONDS, SECONDS)) { "Could not reap test server ${process.pid()}" }
             process.outputStream.close()
             process.inputStream.close()
             executor.shutdownNow()

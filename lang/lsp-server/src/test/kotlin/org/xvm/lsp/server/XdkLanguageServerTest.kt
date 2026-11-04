@@ -26,6 +26,7 @@ import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.mock.MockAdapter
@@ -91,7 +92,7 @@ class XdkLanguageServerTest {
                             TextDocumentIdentifier(URI),
                             Position(0, source.indexOf("value")),
                         ),
-                    ).get(10, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .left
                     .single()
             assertThat(target.uri).isEqualTo("file:///Library.x")
@@ -104,7 +105,7 @@ class XdkLanguageServerTest {
         val server = XtcLanguageServer(MockAdapter(), statuses::add)
         server.exit()
         assertThat(statuses).containsExactly(1)
-        server.shutdown().get(10, SECONDS)
+        server.shutdown().get(HANG_SECONDS, SECONDS)
         server.exit()
         assertThat(statuses).containsExactly(1, 0)
     }
@@ -179,10 +180,10 @@ class XdkLanguageServerTest {
 
         fun closeDocument() = documents.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(URI)))
 
-        fun next(): PublishDiagnosticsParams = checkNotNull(published.poll(30, SECONDS)) { "no diagnostic publication" }
+        fun next(): PublishDiagnosticsParams = checkNotNull(published.poll(HANG_SECONDS, SECONDS)) { "no diagnostic publication" }
 
         override fun close() {
-            server.shutdown().get(10, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -292,7 +293,7 @@ class XdkLanguageServerTest {
                 session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             assertThat(outline.isDone).isFalse()
             adapter.finish(0)
-            assertThat(outline.get(10, SECONDS).map { it.right.name }).contains("Waiting")
+            assertThat(outline.get(HANG_SECONDS, SECONDS).map { it.right.name }).contains("Waiting")
             assertThat(adapter.count).isEqualTo(1)
         }
     }
@@ -308,7 +309,7 @@ class XdkLanguageServerTest {
                 session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             assertThat(adapter.count).isEqualTo(2)
             adapter.finish(1)
-            assertThat(outline.get(10, SECONDS).map { it.right.name }).contains("Retired")
+            assertThat(outline.get(HANG_SECONDS, SECONDS).map { it.right.name }).contains("Retired")
         }
     }
 
@@ -321,7 +322,7 @@ class XdkLanguageServerTest {
                 session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             session.change("module New {}", 2)
             adapter.finish(0)
-            assertThatThrownBy { outline.get(10, SECONDS) }
+            assertThatThrownBy { outline.get(HANG_SECONDS, SECONDS) }
                 .hasMessageContaining("Document changed during analysis")
         }
     }
@@ -401,7 +402,7 @@ class XdkLanguageServerTest {
             val definition =
                 session.documents
                     .definition(DefinitionParams(document, cursor))
-                    .get(10, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .left
                     .single()
             assertThat(definition.uri).isEqualTo(URI)
@@ -411,7 +412,7 @@ class XdkLanguageServerTest {
                     session.documents
                         .references(
                             ReferenceParams(document, cursor, ReferenceContext(includeDeclaration)),
-                        ).get(10, SECONDS)
+                        ).get(HANG_SECONDS, SECONDS)
                 assertThat(references).allMatch { it.uri == URI }
                 val expected =
                     if (includeDeclaration) {
@@ -425,7 +426,7 @@ class XdkLanguageServerTest {
             val highlights =
                 session.documents
                     .documentHighlight(DocumentHighlightParams(document, cursor))
-                    .get(10, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
             assertThat(highlights.map { it.range })
                 .containsExactly(range(declaration), range(write), range(read))
         }

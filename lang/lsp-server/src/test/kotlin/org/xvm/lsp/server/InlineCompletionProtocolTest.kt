@@ -20,6 +20,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.TextEdit
@@ -55,7 +56,7 @@ class InlineCompletionProtocolTest {
             val item =
                 server.textDocumentService
                     .inlineCompletion(request)
-                    .get(5, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .right.items
                     .single()
             assertThat(item.insertText.left).isEqualTo("answer")
@@ -111,7 +112,7 @@ class InlineCompletionProtocolTest {
                 val documents = server.textDocumentService
                 documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module App {}")))
                 val result = documents.inlineCompletion(params())
-                entered.get(5, SECONDS)
+                entered.get(HANG_SECONDS, SECONDS)
                 if (cancel) {
                     result.cancel(false)
                 } else {
@@ -122,8 +123,8 @@ class InlineCompletionProtocolTest {
                         ),
                     )
                 }
-                assertThatThrownBy { result.get(5, SECONDS) }.isInstanceOf(Exception::class.java)
-                canceled.get(5, SECONDS)
+                assertThatThrownBy { result.get(HANG_SECONDS, SECONDS) }.isInstanceOf(Exception::class.java)
+                canceled.get(HANG_SECONDS, SECONDS)
                 assertThat(pending.isCancelled).isTrue()
             }
         }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -148,7 +149,7 @@ class XdkFileChangesTest {
         withHeldCompile("App.x") { adapter, hold ->
             val uri = root.toURI().toString()
             val analysis = adapter.compileAsync(uri, root.readText())
-            assertThat(hold.entered.await(20, SECONDS)).isTrue()
+            assertThat(hold.entered.await(HANG_SECONDS, SECONDS)).isTrue()
 
             // the watcher reports files the running analysis already read: nothing to recompile
             listOf(root.parentFile, member.parentFile, member).forEach {
@@ -158,7 +159,7 @@ class XdkFileChangesTest {
             member.writeText("class Box { Int changed = 1; }")
             assertThat(adapter.changedFileScopes(member.toURI().toString())).contains(uri)
             hold.release.countDown()
-            assertThat(analysis.get(30, SECONDS).success).isTrue()
+            assertThat(analysis.get(HANG_SECONDS, SECONDS).success).isTrue()
         }
     }
 
@@ -175,7 +176,7 @@ class XdkFileChangesTest {
             }
         withHeldCompile("Busy.x") { adapter, hold ->
             val first = adapter.compileAsync(busy.toURI().toString(), busy.readText())
-            assertThat(hold.entered.await(20, SECONDS)).isTrue()
+            assertThat(hold.entered.await(HANG_SECONDS, SECONDS)).isTrue()
             val uri = root.toURI().toString()
             val analysis = adapter.compileAsync(uri, root.readText())
 
@@ -185,8 +186,8 @@ class XdkFileChangesTest {
                 assertThat(adapter.changedFileScopes(it.toURI().toString())).describedAs(it.path).isEmpty()
             }
             hold.release.countDown()
-            first.get(30, SECONDS)
-            assertThat(analysis.get(30, SECONDS).success).isTrue()
+            first.get(HANG_SECONDS, SECONDS)
+            assertThat(analysis.get(HANG_SECONDS, SECONDS).success).isTrue()
             // it did read the change
             assertThat(adapter.changedFileScopes(member.toURI().toString())).isEmpty()
         }
@@ -209,7 +210,7 @@ class XdkFileChangesTest {
             { sources, repository, errors ->
                 if (sources.sourceFile.name == rootName && hold.entered.count > 0) {
                     hold.entered.countDown()
-                    check(hold.release.await(20, SECONDS))
+                    check(hold.release.await(HANG_SECONDS, SECONDS))
                 }
                 support.compileModule(sources, repository, errors)
             },
