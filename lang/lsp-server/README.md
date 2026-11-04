@@ -782,8 +782,11 @@ precise supported contexts and exclusions.
 # Build the project (with lang enabled)
 ./gradlew :lang:lsp-server:build -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
-# Run tests, including the extended retention workload
+# Run the default tests: all but the slow and heavy ones, each parameterized test with its first case only
 ./gradlew :lang:lsp-server:test -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+# Run every test and every case, the slow and heavy ones too
+./gradlew :lang:lsp-server:test -PlspTests=all -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
 # Create fat JAR with all dependencies
 ./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true -PincludeBuildAttachLang=true
@@ -793,15 +796,33 @@ Tests use two separate JVM workers, each reusing its own bundled XDK repository.
 remain sequential within each JVM because some tests change compiler globals. Use
 `-PlspTestForks=1` to run with one worker on memory-constrained machines.
 
-PR CI runs the compiler and Tree-sitter regressions, packaged-server stdio tests, and a 36-cycle
-retention test covering every expression/header variant. It passes `-PlspTestHeavy=false` to
-exclude only JUnit tests tagged `heavy`, currently the extended 120-cycle retention workload.
-Local runs include that workload by default; `-Plsp.retentionCycles=N` controls its length.
+The tests come in three tiers, by their JUnit tags:
+
+| Tier | Annotation | Tests | In the default run |
+|---|---|---|---|
+| default | none | everything else: the compiler and Tree-sitter regressions, protocol and server tests, and a 36-cycle retention test covering every expression/header variant | yes |
+| `slow` | `@Slow` | tests that start real processes: execution workers, `xtc` commands, a program under the debugger | no |
+| `heavy` | `@Heavy` | long repetition workloads: the extended 120-cycle retention workload and the repeated builds, runs and debug sessions on one worker | no |
+
+The default run also runs only the first case of each parameterized test: `ParameterizedCases`, a
+JUnit extension that `junit-platform.properties` registers, disables the other cases, which the
+reports count as skipped (747 of them). On an 8-core machine, the default run takes about 200 s;
+the same tests with every case about 240 s, and the slow and heavy tiers about 90 s and 130 s more.
+
+`-PlspTests` chooses them: `default` (or none) runs the default tier, `all` runs every test and
+every case, and any other value is a JUnit tag expression for the tests to run, with every case,
+such as `slow`, `heavy`, `"slow | heavy"`, or `"!slow & !heavy"` for the default tests with every
+case. The focused tasks, such as `graphQueryTest`, follow it too. A test that starts processes is
+`@Slow`, and a long workload is `@Heavy`; a test may be both. A run from the IDE runs every case.
+`-Plsp.retentionCycles=N` controls the extended retention workload's length.
+
+PR CI runs the default tier and the packaged-server stdio tests (`compilerStdioTest`, tagged
+`compiler-stdio`, which only that task runs). Master pushes run every tier.
 For a fresh run, add `--rerun-tasks --no-build-cache` and inspect the JUnit XML under
 `build/test-results/test` and `build/test-results/compilerStdioTest`.
 
-To run the extended workload before merging, dispatch **Verify Commit** on the branch with
-both **include-lang** and **lsp-heavy-tests** enabled. Master push builds include it as well.
+To run every tier before merging, dispatch **Verify Commit** on the branch with both
+**include-lang** and **lsp-heavy-tests** enabled.
 CI keeps one compiler-default server artifact throughout the job; tests select the Tree-sitter
 backend explicitly, avoiding a second full suite run caused by rebuilding the JAR with a different
 default adapter.
