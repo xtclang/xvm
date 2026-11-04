@@ -543,7 +543,7 @@ recorded partial coverage.
   a debug agent in the program's JVM, which `Runner` and `TestRunner` install through a new
   `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
   to the language server; Gradle-mode and command-line Debug connect back, `xec` listens for an
-  attach. Still to come: running and debugging tests.
+  attach. Running and debugging tests came after, in the entry above (2026-11-03).
 - [x] R13: the debugger agent in the XDK (2026-11-03). The agent and the program's side of the
   debug protocol moved from the language server's Kotlin (`XtcDebugAgent`, `RunDebuggers`,
   `RunWorkerDebug`) to javatools' `org.xvm.runtime.debug`, next to `SessionDebugger`, so that
@@ -798,6 +798,23 @@ passes with the workaround disabled. The gates are in
   (`33a35e96`), which also fixes [#1836](https://github.com/redhat-developer/lsp4ij/issues/1836), a
   `WorkspaceDiagnosticsTest` flake. Both issues are closed. Nothing of ours to remove; a release
   with #1835 keeps the server for a run started within 5 s of closing the last file.
+
+### LSP4IJ: a debug adapter's output gets a line end (UP67): filed as #1856, our #1857 open
+
+- [ ] UP67 (2026-11-04): LSP4IJ's `DAPDebugProcess.print()`, which `DAPClient.output()` uses, adds a
+  line end to output that doesn't end with one (since its first DAP commit, `3499339e`, and on `main`
+  `d1a281d6`). IntelliJ's Debug console therefore breaks a prompt, such as X285's `Name? `, which the
+  worker sends alone while the program waits for input; a line printed in pieces; and a line longer
+  than the worker's 16,384-character batch. VS Code prints output as sent. IntelliJ's X285 checks
+  only that Debug is offered and the exit code, so nothing caught it. Found reading LSP4IJ's code and
+  our output path, not seen in an IDE. Filed as
+  [#1856](https://github.com/redhat-developer/lsp4ij/issues/1856). The fix is on our fork's
+  `fix/dap-output-as-sent` (`8edb8a7e`, on `main` `d1a281d6`): `DAPClient.output()` prints through
+  a new `printOutput()` as sent, and LSP4IJ's own messages keep a line of their own, starting one
+  after a partial line; `DAPDebugProcessConsoleTextTest`, 6 tests, and the 229 DAP tests pass. Our
+  pull request [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857), opened 2026-11-04 at
+  the user's go-ahead. To do: get it merged, and after a release with it, check X285's prompt in
+  IntelliJ's Debug console. Nothing of ours to remove.
 
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
@@ -1113,10 +1130,10 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   and -t select the test module's own classes", opened 2026-11-04 at the user's go-ahead and
   validated on master f7d87b4d88. Its patch is the same as errs `649d5c53f2` and #693's
   `6b36fe5aa5`, so a rebase onto master drops both once it merges.
-- [ ] #756, draft: xunit's JSON report on master, the xunit parts of errs `80a7abfc02` and
+- [ ] #756, ready for review (since 2026-11-04): xunit's JSON report on master, the xunit parts of errs `80a7abfc02` and
   `712d23d14d` as one commit, as master never had the TeamCity reporter; validated on master
   a8d50aaffa. Opened 2026-11-04 at the user's go-ahead.
-- [ ] #757, draft: testXtc's `--test-package`, `--test-class`, `--test-method` and `--test-report`
+- [ ] #757, ready for review (since 2026-11-04): testXtc's `--test-package`, `--test-class`, `--test-method` and `--test-report`
   on master, errs `ceabc7d110` without the debugger's plugin changes, which master lacks, and with
   `json`; validated on master a8d50aaffa. Opened with #756. Gradle-mode test runs in the editors
   need both in a released plugin and XDK.
