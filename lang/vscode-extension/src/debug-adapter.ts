@@ -5,7 +5,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
 import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
-import { LineSplitter } from './test-messages';
+import { LineSplitter, parseTestEvent, REPORT, type TestEvent } from './test-events';
 
 type ClientAccess = () => LanguageClient | undefined;
 
@@ -51,7 +51,7 @@ export function gradleWrapper(platform = process.platform): string {
     return platform === 'win32' ? 'gradlew.bat' : './gradlew';
 }
 
-/** `testXtc`'s options that run [tests] of [module], all of its tests for none, with xunit's TeamCity report. */
+/** `testXtc`'s options that run [tests] of [module], all of its tests for none, with xunit's `json` report. */
 export function gradleTestArgs(module: string, tests: readonly TestSelection[]): string[] {
     const options: Record<string, string> = { package: 'test-package', class: 'test-class', test: 'test-method' };
     return [
@@ -59,7 +59,7 @@ export function gradleTestArgs(module: string, tests: readonly TestSelection[]):
         'testXtc',
         `--module=${module}`,
         ...tests.flatMap(test => options[test.kind] ? [`--${options[test.kind]}=${test.selector}`] : []),
-        '--test-report=teamcity',
+        `--test-report=${REPORT}`,
     ];
 }
 
@@ -154,15 +154,19 @@ async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationT
 
 /**
  * Runs a Gradle-mode test launch's task, `testXtc` with the debug property, in a process of the extension's own, whose
- * output goes to the debug session as its output: the Test Explorer reads xunit's TeamCity service messages from it,
- * which go as telemetry, so the Debug Console shows only the rest.
+ * output goes to the debug session as its output, apart from xunit's events, which go to it as the DAP event
+ * `xtcTest`, as the language server sends an embedded launch's.
  */
 function runDebugTestTask(params: DebugTaskParams, tests: readonly TestSelection[], adapter: LanguageServerDebugAdapter,
                           folder: vscode.WorkspaceFolder, token: vscode.CancellationToken): Promise<number | undefined> {
     const args = [...gradleTestArgs(params.module, tests), '--mode=ATTACHED', `-PxtcDebug=${params.debug}`];
     return runTestProcess(gradleWrapper(), args, folder.uri.fsPath, (line, error) => {
-        const category = line.startsWith('##teamcity[') ? 'telemetry' : error ? 'stderr' : 'stdout';
-        adapter.output(`${line}\n`, category);
+        const event = error ? undefined : parseTestEvent(line);
+        if (event) {
+            adapter.tested(event);
+        } else {
+            adapter.output(`${line}\n`, error ? 'stderr' : 'stdout');
+        }
     }, token);
 }
 
@@ -203,6 +207,11 @@ class LanguageServerDebugAdapter implements vscode.DebugAdapter {
     /** Output of the session's program that the extension's own process runs, as a debug test task does. */
     output(text: string, category: string): void {
         this.event('output', { category, output: text });
+    }
+
+    /** An event of the tests that the extension's own process runs, as the DAP event `xtcTest` the server sends. */
+    tested(event: TestEvent): void {
+        this.event('xtcTest', event);
     }
 
     serverStopped(reason: string): void {

@@ -21,6 +21,7 @@ import org.xvm.debug.ProgramEvents
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
+import org.xvm.debug.TestEvent
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.run.RunListener
@@ -301,6 +302,8 @@ internal class DebugSessions(
         fun listener(events: ProgramEvents) =
             object : RunListener {
                 override fun output(text: String) = events.output(text)
+
+                override fun tested(event: TestEvent) = events.tested(event)
 
                 override fun exited(
                     code: Long?,

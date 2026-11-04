@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
+import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
@@ -20,9 +21,11 @@ import org.xvm.lsp.server.RunExitedParams
 import org.xvm.lsp.server.RunOutputParams
 import org.xvm.lsp.server.RunParams
 import org.xvm.lsp.server.StopRunParams
+import org.xvm.lsp.server.TestEventParams
 import org.xvm.lsp.server.XtcLanguageClient
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -129,7 +132,7 @@ class EmbeddedTestRunsTest {
     }
 
     @Test
-    fun `a run of a module's tests reports each as a TeamCity service message, and a failed test fails the run`() {
+    fun `a run of a module's tests reports each as a test event apart from the output, and a failed test fails the run`() {
         val mathy = source("Mathy.x", MATHY)
         val client = RunClient()
         XdkAdapter().use { adapter ->
@@ -140,18 +143,30 @@ class EmbeddedTestRunsTest {
                 assertThat(started.get(120, SECONDS).runId).isEqualTo("all")
                 val exit = client.exits.poll(120, SECONDS)!!
                 val output = client.output.toString()
+                val events = client.events("all")
 
-                assertThat(output).contains(
-                    "##teamcity[testSuiteStarted name='Mathy' nodeId='Mathy:' parentNodeId='0' locationHint='xunit://']",
-                    "##teamcity[testStarted name='Mathy.adds()' nodeId='Mathy:void adds()' parentNodeId='Mathy:' locationHint='xunit://adds']",
-                    "##teamcity[testSuiteStarted name='Inner' nodeId='Mathy:Inner' parentNodeId='Mathy:' locationHint='xunit://Inner']",
-                    "##teamcity[testStarted name='Inner.works()' nodeId='Mathy:Inner.void works()' parentNodeId='Mathy:Inner' " +
-                        "locationHint='xunit://Inner.works']",
-                    "inside works",
+                assertThat(events.first()).isEqualTo(TestEvent(TestEvent.RUN, version = 1))
+                assertThat(events.filter { it.event == TestEvent.STARTED }.map { listOf(it.id, it.parent, it.selector, it.container) })
+                    .containsExactly(
+                        listOf("Mathy:", null, "", true),
+                        listOf("Mathy:void adds()", "Mathy:", "adds", false),
+                        listOf("Mathy:void fails()", "Mathy:", "fails", false),
+                        listOf("Mathy:Inner", "Mathy:", "Inner", true),
+                        listOf("Mathy:Inner.void works()", "Mathy:Inner", "Inner.works", false),
+                    )
+                val finished = events.filter { it.event == TestEvent.FINISHED }.associateBy { it.id }
+                assertThat(finished.keys).containsExactlyInAnyOrder(
+                    "Mathy:",
+                    "Mathy:void adds()",
+                    "Mathy:void fails()",
+                    "Mathy:Inner",
+                    "Mathy:Inner.void works()",
                 )
-                assertThat(
-                    output,
-                ).containsPattern("##teamcity\\[testFailed name='Mathy.fails\\(\\)' [^\\n]*message='one and one are not three'")
+                assertThat(finished.getValue("Mathy:void adds()").status).isEqualTo("passed")
+                assertThat(finished.getValue("Mathy:void fails()").status).isEqualTo("failed")
+                assertThat(finished.getValue("Mathy:void fails()").message).isEqualTo("one and one are not three")
+                assertThat(finished.getValue("Mathy:void fails()").details).contains("one and one are not three")
+                assertThat(output).contains("inside works").doesNotContain(TestEvent.MARKER)
                 assertThat(exit.error).isNull()
                 assertThat(exit.exitCode).isNotZero()
                 assertThat(runs.tracked()).isZero()
@@ -169,10 +184,10 @@ class EmbeddedTestRunsTest {
             EmbeddedRuns(adapter, { client }).use { runs ->
                 runs.run(RunParams(module = "Mathy", runId = "one", tests = listOf(TestSelector("Inner.works", "test")))).get(120, SECONDS)
                 val exit = client.exits.poll(120, SECONDS)!!
-                val output = client.output.toString()
+                val tests = client.events("one").filter { it.event == TestEvent.STARTED && it.container == false }
 
-                assertThat(output).contains("locationHint='xunit://Inner.works']", "inside works")
-                assertThat(output).doesNotContain("xunit://adds", "xunit://fails")
+                assertThat(tests.map { it.selector }).containsExactly("Inner.works")
+                assertThat(client.output.toString()).contains("inside works")
                 assertThat(exit.exitCode).isZero()
                 assertThat(runs.tracked()).isZero()
             }
@@ -241,7 +256,16 @@ class EmbeddedTestRunsTest {
                     (untilStop + rest).filter { it.event == "output" }.joinToString(
                         "",
                     ) { it["body"].asJsonObject["output"].asString }
-                assertThat(output).contains("inside works", "##teamcity[testFinished name='Inner.works()'")
+                assertThat(output).contains("inside works").doesNotContain(TestEvent.MARKER)
+                // the test's events come as the DAP event xtcTest, apart from the output
+                val works =
+                    (untilStop + rest)
+                        .filter { it.event == "xtcTest" }
+                        .map { it["body"].asJsonObject }
+                        .filter { it["id"]?.asString == "Mathy:Inner.void works()" }
+                assertThat(works.map { it["event"].asString }).containsExactly(TestEvent.STARTED, TestEvent.FINISHED)
+                assertThat(works.first()["selector"].asString).isEqualTo("Inner.works")
+                assertThat(works.last()["status"].asString).isEqualTo("passed")
                 assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isZero()
                 sessions.end(DebugSessionParams(id))
                 assertThat(runs.tracked()).isZero()
@@ -249,15 +273,23 @@ class EmbeddedTestRunsTest {
         }
     }
 
-    /** Records the runs' output and exits. */
+    /** Records the runs' output, test events and exits. */
     private class RunClient :
         XtcLanguageClient,
         LanguageClient by mock(LanguageClient::class.java) {
         val output = StringBuffer()
         val exits = LinkedBlockingQueue<RunExitedParams>()
+        private val tested = ConcurrentLinkedQueue<TestEventParams>()
+
+        /** The test events of the run [runId], in the order they came. */
+        fun events(runId: String): List<TestEvent> = tested.filter { it.runId == runId }.map { it.event }
 
         override fun runOutput(params: RunOutputParams) {
             output.append(params.text)
+        }
+
+        override fun testEvent(params: TestEventParams) {
+            tested.add(params)
         }
 
         override fun runExited(params: RunExitedParams) {

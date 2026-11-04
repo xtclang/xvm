@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { ConsoleLineEditor } from './console-input';
+import { isTestEvent, type TestEvent } from './test-events';
 
 /**
  * Embedded build and run: the language server's compiler builds into the workspace's embedded output
@@ -62,14 +63,16 @@ export interface RunResponse {
 /** Where a run's events go; the server reports by the run ID the client chose. */
 export interface RunSession {
     output(text: string): void;
+    /** An event of the tests a run with `tests` runs, which the server sends apart from the output. */
+    tested?(event: TestEvent): void;
     exited(exitCode: number | undefined, error: string | undefined): void;
 }
 
 const sessions = new Map<string, RunSession>();
 
 /**
- * Sends the output and the exit that the server reports for [runId] to [session] until disposed, as a run that is
- * not a task's has them, such as a test run's.
+ * Sends the output, the test events and the exit that the server reports for [runId] to [session] until disposed, as a
+ * run that is not a task's has them, such as a test run's.
  */
 export function trackRun(runId: string, session: RunSession): vscode.Disposable {
     sessions.set(runId, session);
@@ -99,11 +102,16 @@ export const onDidUpdateExecution = updates.event;
 export function attachEmbeddedExecution(client: LanguageClient): vscode.Disposable {
     const output = client.onNotification('xtc/runOutput', (params: { runId: string; text: string }) =>
         sessions.get(params.runId)?.output(params.text));
+    const tested = client.onNotification('xtc/testEvent', (params: { runId: string; event: unknown }) => {
+        if (isTestEvent(params.event)) {
+            sessions.get(params.runId)?.tested?.(params.event);
+        }
+    });
     const exited = client.onNotification(
         'xtc/runExited',
         (params: { runId: string; exitCode?: number | null; error?: string | null }) =>
             sessions.get(params.runId)?.exited(params.exitCode ?? undefined, params.error ?? undefined));
-    return vscode.Disposable.from(output, exited);
+    return vscode.Disposable.from(output, tested, exited);
 }
 
 /** A stopped or restarted language server takes its execution worker with it. */

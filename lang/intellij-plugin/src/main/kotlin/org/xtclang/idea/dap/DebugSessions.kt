@@ -1,9 +1,11 @@
 package org.xtclang.idea.dap
 
+import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import org.xtclang.idea.lsp.DebugMessageParams
+import org.xtclang.idea.lsp.TestEvent
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -62,12 +64,35 @@ class DebugSessions {
         )
     }
 
+    /**
+     * An event of a session's tests from outside the session, as from its Gradle task's output, in the session's own
+     * DAP event `xtcTest`, as the language server sends an embedded launch's.
+     */
+    fun tested(
+        sessionId: String,
+        event: TestEvent,
+    ) {
+        sessions[sessionId]?.message(
+            JsonObject().apply {
+                addProperty("type", "event")
+                addProperty("seq", 0)
+                addProperty("event", XTC_TEST)
+                add("body", gson.toJsonTree(event))
+            },
+        )
+    }
+
     /** A stopped or restarted language server takes every debug session, and the programs they launched, with it. */
     fun endAll(reason: String) {
         sessions.keys.toList().forEach { sessions.remove(it)?.ended(reason) }
     }
 
     companion object {
+        /** The DAP event of a session's tests, which the language server sends for a launch with tests. */
+        const val XTC_TEST = "xtcTest"
+
+        private val gson = Gson()
+
         fun getInstance(project: Project): DebugSessions = project.getService(DebugSessions::class.java)
     }
 }

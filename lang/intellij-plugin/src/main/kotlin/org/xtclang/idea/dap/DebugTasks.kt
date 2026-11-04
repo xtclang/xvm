@@ -11,6 +11,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import org.xtclang.idea.lsp.DebugTaskParams
 import org.xtclang.idea.lsp.DebugTaskResult
+import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.run.XtcRunConfiguration
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
@@ -29,9 +30,6 @@ internal object DebugTasks {
     /** The `buildMode` of a command-line launch, whose task is `xtc run`. */
     const val COMMAND_LINE = "commandLine"
 
-    /** How a line of a test run's output that is xunit's TeamCity service message starts. */
-    private const val SERVICE_MESSAGE = "##teamcity["
-
     fun run(
         project: Project,
         params: DebugTaskParams,
@@ -45,27 +43,23 @@ internal object DebugTasks {
                 return CompletableFuture.failedFuture(e)
             }
         val result = CompletableFuture<DebugTaskResult>()
+        val sessions = DebugSessions.getInstance(project)
+        // a test run's events are lines of its output, for the session's Tests tab rather than its console
+        val lines = params.tests?.let { TestLines(params.sessionId, sessions) }
         handler.addProcessListener(
             object : ProcessListener {
                 override fun onTextAvailable(
                     event: ProcessEvent,
                     outputType: Key<*>,
                 ) {
-                    val category =
-                        when {
-                            // a test run's service messages are for the session's Tests tab, not its console
-                            params.tests != null && event.text.startsWith(SERVICE_MESSAGE) -> "telemetry"
-
-                            outputType == ProcessOutputTypes.STDOUT -> "stdout"
-
-                            outputType == ProcessOutputTypes.STDERR -> "stderr"
-
-                            else -> return
-                        }
-                    DebugSessions.getInstance(project).output(params.sessionId, event.text, category)
+                    when (outputType) {
+                        ProcessOutputTypes.STDOUT -> lines?.feed(event.text) ?: sessions.output(params.sessionId, event.text, "stdout")
+                        ProcessOutputTypes.STDERR -> sessions.output(params.sessionId, event.text, "stderr")
+                    }
                 }
 
                 override fun processTerminated(event: ProcessEvent) {
+                    lines?.flush()
                     result.complete(DebugTaskResult(event.exitCode))
                 }
             },
@@ -73,6 +67,36 @@ internal object DebugTasks {
         result.whenComplete { _, failure -> if (failure is CancellationException) handler.destroyProcess() }
         handler.startNotify()
         return result
+    }
+
+    /**
+     * A test task's standard output for the debug session [sessionId], in whole lines: each that is one of xunit's
+     * events goes to the session as that, and the rest as its output.
+     */
+    private class TestLines(
+        private val sessionId: String,
+        private val sessions: DebugSessions,
+    ) {
+        private val partial = StringBuilder()
+
+        fun feed(text: String) {
+            val lines =
+                synchronized(partial) {
+                    partial.append(text)
+                    val end = partial.lastIndexOf("\n") + 1
+                    partial.substring(0, end).also { partial.delete(0, end) }
+                }
+            lines.lineSequence().filter { it.isNotEmpty() }.forEach(::line)
+        }
+
+        fun flush() {
+            val rest = synchronized(partial) { partial.toString().also { partial.setLength(0) } }
+            if (rest.isNotEmpty()) line(rest)
+        }
+
+        private fun line(text: String) {
+            TestEvent.parse(text)?.let { sessions.tested(sessionId, it) } ?: sessions.output(sessionId, "$text\n", "stdout")
+        }
     }
 
     /**
