@@ -9,6 +9,7 @@ import org.xtclang.idea.lsp.RunInputParams
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.RunResponse
 import org.xtclang.idea.lsp.StopRunParams
+import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
@@ -98,6 +99,11 @@ internal class EmbeddedRunProcessHandler(
 
     override fun output(text: String) {
         notifyTextAvailable(text, ProcessOutputTypes.STDOUT)
+    }
+
+    /** A test event goes to the test console as its line, among the output it came with ([XtcTestEventsConverter]). */
+    override fun tested(event: TestEvent) {
+        notifyTextAvailable(event.line(), ProcessOutputTypes.STDOUT)
     }
 
     override fun exited(

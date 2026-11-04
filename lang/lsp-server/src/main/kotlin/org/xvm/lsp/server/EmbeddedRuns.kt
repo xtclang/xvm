@@ -24,6 +24,7 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
+import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -73,8 +74,8 @@ data class BuildResponse(
  * module's name as [moduleName], which identifies the module when the URI no longer does, as after its root file
  * was renamed or moved. The client chooses [runId] so it can attach its console before any output arrives;
  * [args] are passed to the entry method as given, never shell-parsed. With [tests], xunit runs the module's tests that
- * they select instead, all of them for an empty list, as `xtc test` does, and reports them in the output as TeamCity
- * service messages; the entry method and its arguments are not used.
+ * they select instead, all of them for an empty list, as `xtc test` does, and the server reports their execution as
+ * `xtc/testEvent` notifications, which are not in the output; the entry method and its arguments are not used.
  */
 data class RunParams(
     val module: String? = null,
@@ -117,6 +118,12 @@ data class RunOutputParams(
     val text: String,
 )
 
+/** `xtc/testEvent` parameters: an [event] of the tests that the run [runId] runs, as xunit reported it ([TestEvent]). */
+data class TestEventParams(
+    val runId: String,
+    val event: TestEvent,
+)
+
 /** A run's single terminal outcome: the entry method's exit code, or the reason it failed. */
 data class RunExitedParams(
     val runId: String,
@@ -130,7 +137,7 @@ data class RunExitedParams(
  * [method] and [args], as a Gradle run or `xtc run` takes them, with the launcher's `--debug` options [debug], which a
  * Gradle task takes as the Gradle property `xtcDebug`. The program's XDK has the debugger's agent. With [tests], the
  * task runs those tests of the module instead, as `testXtc` or `xtc test` take them, all of them for an empty list,
- * with xunit's TeamCity report.
+ * with xunit's `json` report, whose events ([TestEvent]) the client reads from the task's output.
  */
 data class DebugTaskParams(
     val sessionId: String,
@@ -154,6 +161,10 @@ interface XtcLanguageClient : LanguageClient {
 
     @JsonNotification("xtc/runExited")
     fun runExited(params: RunExitedParams)
+
+    /** An event of the tests that a run with `tests` runs, ahead of the run's exit; see [RunParams]. */
+    @JsonNotification("xtc/testEvent")
+    fun testEvent(params: TestEventParams) {}
 
     /** One DAP message from a debug session to the client; see [DebugSessions]. */
     @JsonNotification("xtc/debugMessage")
@@ -236,6 +247,10 @@ internal class EmbeddedRuns(
             object : RunListener {
                 override fun output(text: String) {
                     (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
+                }
+
+                override fun tested(event: TestEvent) {
+                    (client() as? XtcLanguageClient)?.testEvent(TestEventParams(runId, event))
                 }
 
                 override fun exited(
@@ -453,8 +468,9 @@ internal class EmbeddedRuns(
     /**
      * Runs the tests of [target] that [tests] select in a [TestProcess], as `xtc test` does. With [setup], the process
      * runs under the debugger and connects to it, as a task's program does ([launchWithTask]), and the answer comes
-     * once it has taken the setup; it fails with the reason when the process ends first. [events] receives the output
-     * and the single exit, as a run's, and a debugged run's breakpoints and stops; ending the debugging ends the tests.
+     * once it has taken the setup; it fails with the reason when the process ends first. [events] receives the output,
+     * the events that xunit reports in it ([TestEvent]) apart from the rest, and the single exit, as a run's, and a
+     * debugged run's breakpoints and stops; ending the debugging ends the tests.
      */
     private fun startTests(
         runId: String,
@@ -482,10 +498,10 @@ internal class EmbeddedRuns(
                 if (waiting.remove(runId)?.stopped == true) {
                     null
                 } else {
-                    TestProcess.start(command, File(params.workingDirectory ?: result.workingDirectory), events::output).also {
-                        testRuns[runId] =
-                            it
-                    }
+                    TestProcess
+                        .start(command, File(params.workingDirectory ?: result.workingDirectory)) { line ->
+                            TestEvent.parse(line)?.let(events::tested) ?: events.output(line)
+                        }.also { testRuns[runId] = it }
                 }
             }
         if (process == null) {

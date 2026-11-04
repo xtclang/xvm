@@ -14,6 +14,8 @@ import org.xtclang.idea.lsp.BuildResponse
 import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.RunExitedParams
 import org.xtclang.idea.lsp.RunOutputParams
+import org.xtclang.idea.lsp.TestEvent
+import org.xtclang.idea.lsp.TestEventParams
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.net.URI
 import java.nio.file.Path
@@ -148,6 +150,9 @@ class EmbeddedRunSessions {
     interface Session {
         fun output(text: String)
 
+        /** An event of the tests the run runs, which the server sends apart from the output. */
+        fun tested(event: TestEvent) {}
+
         fun exited(
             exitCode: Long?,
             error: String?,
@@ -170,6 +175,10 @@ class EmbeddedRunSessions {
 
     fun output(params: RunOutputParams) {
         sessions[params.runId]?.output(params.text)
+    }
+
+    fun tested(params: TestEventParams) {
+        params.event?.let { sessions[params.runId]?.tested(it) }
     }
 
     fun exited(params: RunExitedParams) {
