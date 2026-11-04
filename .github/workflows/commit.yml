@@ -805,15 +805,27 @@ jobs:
                       "server.XdkLanguageServerTest",
                       "server.AdapterBackendTest",
                   ]
+                  import os, re
+                  # the default tier runs only a parameterized test's first case and skips the others, which
+                  # JUnit names [2] and on (the report keeps no reason); any other skip is a test that did not
+                  # run, which these suites must not have
+                  later = re.compile(r"\[(\d+)\]")
+                  tiered = os.environ.get("ORG_GRADLE_PROJECT_lspTests", "default") != "all"
+                  def counts(path):
+                      result = ElementTree.parse(path).getroot()
+                      found = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors")}
+                      skipped = [case.get("name") for case in result.iter("testcase") if case.find("skipped") is not None]
+                      cases = [name for name in skipped if tiered and (m := later.match(name)) and int(m.group(1)) > 1]
+                      found["skipped"] = len(skipped) - len(cases)
+                      found["later cases"] = len(cases)
+                      return found
                   for suite in suites:
-                      result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()
-                      counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
-                      assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), (suite, counts)
-                      print(suite, counts)
-                  stdio = ElementTree.parse("lang/lsp-server/build/test-results/compilerStdioTest/TEST-org.xvm.lsp.server.XdkStdioTest.xml").getroot()
-                  counts = {key: int(stdio.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
-                  assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), ("server.XdkStdioTest", counts)
-                  print("server.XdkStdioTest", counts)
+                      found = counts(results / f"TEST-org.xvm.lsp.{suite}.xml")
+                      assert found["tests"] > 0 and all(found[key] == 0 for key in ("failures", "errors", "skipped")), (suite, found)
+                      print(suite, found)
+                  found = counts("lang/lsp-server/build/test-results/compilerStdioTest/TEST-org.xvm.lsp.server.XdkStdioTest.xml")
+                  assert found["tests"] > 0 and all(found[key] == 0 for key in ("failures", "errors", "skipped")), ("server.XdkStdioTest", found)
+                  print("server.XdkStdioTest", found)
                   PYTEST
 
             - name: Upload LSP test results and timings
