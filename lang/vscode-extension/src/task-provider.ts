@@ -110,49 +110,54 @@ export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAc
             moduleName: definition.moduleName,
             label: definition.moduleName,
             method: definition.methodName,
-            args: definition.args ?? splitModuleArguments(definition.moduleArguments),
+            args: moduleArguments(definition),
             folder: runFolder(definition),
         });
     }
 
-    const command = mode === 'gradle'
-        ? buildGradleRunCommand(definition)
-        : buildDirectRunCommand(definition);
+    const { command, args } = mode === 'gradle'
+        ? gradleRunCommand(definition)
+        : directRunCommand(definition);
 
     const task = new vscode.Task(
         definition,
         vscode.TaskScope.Workspace,
         `Run ${definition.moduleName}`,
         'xtc',
-        new vscode.ShellExecution(command),
+        new vscode.ShellExecution(command, args),
         []
     );
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
     return task;
 }
 
-function buildGradleRunCommand(definition: XtcTaskDefinition): string {
-    const quietMode = definition.quietMode ?? true;
-    const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-    const args: string[] = [
-        ...(quietMode ? ['-q'] : []),
-        'runXtc',
-        ...(definition.moduleName ? [`--module=${definition.moduleName}`] : []),
-        ...(definition.methodName ? [`--method=${definition.methodName}`] : []),
-        ...(definition.moduleArguments ? [`--args=${definition.moduleArguments}`] : [])
-    ];
-
-    return `${gradlew} ${args.join(' ')}`;
+/** The arguments a run passes to the module's entry method: the definition's args, or else its moduleArguments. */
+function moduleArguments(definition: XtcTaskDefinition): string[] {
+    return definition.args ?? splitModuleArguments(definition.moduleArguments);
 }
 
-function buildDirectRunCommand(definition: XtcTaskDefinition): string {
-    const args: string[] = [
-        'run',
-        ...(definition.moduleName ? [definition.moduleName] : []),
-        ...splitModuleArguments(definition.moduleArguments)
-    ];
+/** The Gradle wrapper and its arguments that run the definition's module with runXtc, which takes the module's arguments comma-separated. */
+export function gradleRunCommand(definition: XtcTaskDefinition): { command: string; args: string[] } {
+    const quietMode = definition.quietMode ?? true;
+    const passed = moduleArguments(definition);
+    return {
+        command: process.platform === 'win32' ? 'gradlew.bat' : './gradlew',
+        args: [
+            ...(quietMode ? ['-q'] : []),
+            'runXtc',
+            ...(definition.moduleName ? [`--module=${definition.moduleName}`] : []),
+            ...(definition.methodName ? [`--method=${definition.methodName}`] : []),
+            ...(passed.length > 0 ? [`--args=${passed.join(',')}`] : []),
+        ],
+    };
+}
 
-    return `xtc ${args.join(' ')}`;
+/** The xtc command and its arguments that run the definition's module, with the module's arguments as they are. */
+export function directRunCommand(definition: XtcTaskDefinition): { command: string; args: string[] } {
+    return {
+        command: 'xtc',
+        args: ['run', ...(definition.moduleName ? [definition.moduleName] : []), ...moduleArguments(definition)],
+    };
 }
 
 function splitModuleArguments(moduleArguments?: string): string[] {
