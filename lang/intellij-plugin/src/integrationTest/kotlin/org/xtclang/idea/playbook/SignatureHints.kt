@@ -9,7 +9,7 @@ import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.ui
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /** A snapshot of the response produced by IntelliJ's Parameter Info action. */
 data class Signature(
@@ -52,7 +52,7 @@ fun Driver.signature(
         }
     awaitUi(
         message = "native parameter information for offset $at",
-        timeout = 45.seconds,
+        timeout = HANG_LIMIT,
         errorMessage = {
             val future = support.getValidLSPFuture()
             val help = future?.takeIf { it.isDone() && !it.isCompletedExceptionally() }?.get()
