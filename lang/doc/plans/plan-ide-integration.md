@@ -518,7 +518,7 @@ compiler adapter compiles a module
 root and its member tree together, taking unsaved source overlays ahead of disk. New unsaved member
 files and implicit packages participate without temporary files. Source membership and text are
 captured per attempt; member edits invalidate the module, and diagnostics publish with each open
-file's own version. Closing an overlay reanalyses remaining members from disk; filesystem events
+file's own version. Closing an overlay reanalyzes remaining members from disk; filesystem events
 refresh membership and clear removed-file diagnostics.
 
 Definitions and references share identities across one module compilation. Hierarchy items carry a
@@ -891,7 +891,7 @@ paths and origin. Explicit overrides survive refresh; invalid model files retain
 import. Gradle export/prepare actions run in the host, never in LSP. Both `.gradle` and `.gradle.kts`
 are handled by Gradle itself. TestKit, importer/server tests and shared X129 pass.
 Compiler import progress is cancellable in both hosts, with one active import per project/folder.
-Pending, cancelled or failed builds cannot replace the last accepted model via a file watcher;
+Pending, canceled or failed builds cannot replace the last accepted model via a file watcher;
 successful retries can. The paths view includes the last outcome/time. Project/folder closure
 cancels its owned import. Generated files are not rolled back, and failed-output retention lasts
 for the current editor session. See the UI5/UI6 import continuation and manual cancellation steps.

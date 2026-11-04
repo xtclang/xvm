@@ -172,7 +172,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [x] The opt-in IntelliJ `projectLifecycle` check failed most runs, at "closed project's pending
   reply retires" or at "Close must overlap a pending native request"; it also failed on
   `ef1491a6c`, before the R6–R7 work (`run-15132038242161374573`). Fixed in `3813e27a9`: requests
-  still waiting when a connection ends are cancelled (LSP4J left them waiting forever, also the
+  still waiting when a connection ends are canceled (LSP4J left them waiting forever, also the
   plugin's own `xtc/*` requests), and the check sends its edits before its requests. It passed five
   runs in a row afterwards, among them `run-13148533765814685610` and `run-9366023975714933137`.
 
@@ -577,7 +577,7 @@ breakpoint list, which the editors replace.
   (2026-10-27).
   *Soak (2026-10-26, `0d6e890bad`):* `EmbeddedExecutionTest`'s soak repeats rounds of four runs
   on one worker: an edited module built and run to its exit, a run stopped while it runs, a debug
-  session continued from a breakpoint after a watch and a cancelled console run, and one
+  session continued from a breakpoint after a watch and a canceled console run, and one
   terminated while console code runs. One worker serves them all and keeps no run, console,
   debugger, console code, session or compiled sources; the runtime's pool keeps its size, and
   closing ends the worker process. The suite runs five rounds, `-Plsp.soakRounds` more; 50 passed
@@ -620,7 +620,7 @@ breakpoint list, which the editors replace.
   - `FullyBoundHandle.NO_OP`, made from the first runtime when its class was loaded.
 
   `EmbeddingSupport.shutdownInterpreter()` (for tests) shuts a connector down: its timers' alarms
-  are cancelled and its executors end. The cached values are fields of each runtime's templates,
+  are canceled and its executors end. The cached values are fields of each runtime's templates,
   and `NO_OP` is made by each runtime; the embedding and debugger tests shut their interpreter down.
   `RuntimeRetentionTest` checks both without waiting for the collector. The `javatools` test JVM now
   holds one runtime at a time: its peak live heap is down from 275 to 226 MB, and from 242 to 193 MB
@@ -861,7 +861,7 @@ passes with the workaround disabled. The gates are in
   [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (merged 2026-10-28, unreleased, `2afdaf45`)
   bundles them at LSP4J's one version. UP41's LSP4J part needs it to reach IntelliJ.
 
-### IntelliJ Platform and LSP4IJ: evaluations cannot be cancelled (UP41): IJPL-260358, LSP4J part our #1009
+### IntelliJ Platform and LSP4IJ: evaluations cannot be canceled (UP41): IJPL-260358, LSP4J part our #1009
 
 - [ ] UP41 (2026-10-24, cause found 2026-10-26): an IntelliJ evaluation that runs code cannot be ended
   before its time limit; X314 checks cancel in VS Code only. LSP4IJ never sends DAP `cancel`, but the
