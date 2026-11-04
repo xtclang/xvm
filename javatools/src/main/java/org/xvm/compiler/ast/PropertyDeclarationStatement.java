@@ -120,6 +120,11 @@ public class PropertyDeclarationStatement
         return name;
     }
 
+    /** @return the written documentation text, or null when no documentation comment is present */
+    public String getDocumentation() {
+        return TypeCompositionStatement.extractDocumentation(doc);
+    }
+
     public TypeExpression getType() {
         return type;
     }
