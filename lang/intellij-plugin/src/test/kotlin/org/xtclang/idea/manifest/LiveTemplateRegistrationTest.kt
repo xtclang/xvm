@@ -4,11 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Element
+import org.xtclang.idea.XtcTemplateContextType
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Verifies that the live-template file referenced by plugin.xml's
- * `<defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>` actually exists at the expected
+ * `<defaultLiveTemplates file="/liveTemplates/Ecstasy.xml"/>` actually exists at the expected
  * path, parses, and contains at least the snippet shortcuts we expose to users in the README +
  * manual test plan.
  *
@@ -17,15 +18,15 @@ import javax.xml.parsers.DocumentBuilderFactory
  * tab-expansion silently fails. Without this test the only catch would be someone noticing during
  * interactive QA.
  */
-@DisplayName("Live template registration (liveTemplates/XTC.xml)")
+@DisplayName("Live template registration (liveTemplates/Ecstasy.xml)")
 class LiveTemplateRegistrationTest {
     private val templateSet: Element by lazy {
         // openStream() handles both loose-on-disk and packaged-in-JAR
         // classpath entries (see comment in PluginManifestTest).
         val resourceUrl =
-            javaClass.classLoader.getResource("liveTemplates/XTC.xml")
+            javaClass.classLoader.getResource("liveTemplates/Ecstasy.xml")
                 ?: error(
-                    "liveTemplates/XTC.xml not on test classpath — file path drifted from plugin.xml",
+                    "liveTemplates/Ecstasy.xml not on test classpath — file path drifted from plugin.xml",
                 )
         DocumentBuilderFactory
             .newInstance()
@@ -36,13 +37,24 @@ class LiveTemplateRegistrationTest {
     }
 
     @Test
+    @DisplayName("plugin.xml names the template file in defaultLiveTemplates' file attribute, which IntelliJ reads")
+    fun registrationNamesTheFile() {
+        // IntelliJ's DefaultLiveTemplateEP reads only its required file attribute; a path written as the element's
+        // text left it unset, and IntelliJ loaded none of the templates
+        val registrations = manifest().getElementsByTagName("defaultLiveTemplates")
+        val files = (0 until registrations.length).map { (registrations.item(it) as Element).getAttribute("file") }
+        assertThat(files).containsExactly("/liveTemplates/Ecstasy.xml")
+        assertThat(javaClass.getResource(files.single())).isNotNull
+    }
+
+    @Test
     @DisplayName("templateSet group attribute is set")
     fun groupAttributeSet() {
         assertThat(templateSet.tagName).isEqualTo("templateSet")
         val group = templateSet.getAttribute("group")
         assertThat(group)
             .withFailMessage(
-                "liveTemplates/XTC.xml has no <templateSet group='...'> — the file would " +
+                "liveTemplates/Ecstasy.xml has no <templateSet group='...'> — the file would " +
                     "load with templates dumped into an unnamed group in Settings -> Live Templates.",
             ).isNotEmpty
     }
@@ -81,39 +93,48 @@ class LiveTemplateRegistrationTest {
         val missing = required - names
         assertThat(missing)
             .withFailMessage(
-                "live template shortcuts missing from XTC.xml that are documented in the README/test plan: %s. " +
-                    "Either restore the templates in liveTemplates/XTC.xml or remove the row from the docs.",
+                "live template shortcuts missing from Ecstasy.xml that are documented in the README/test plan: %s. " +
+                    "Either restore the templates in liveTemplates/Ecstasy.xml or remove the row from the docs.",
                 missing,
             ).isEmpty()
     }
 
     @Test
-    @DisplayName("at least one template uses the OTHER context")
-    fun atLeastOneOtherContextTemplate() {
-        // Sanity-check that templates carry a <context> child with a sensible
-        // option, so they actually trigger in editor. The OTHER value is the
-        // catch-all IntelliJ uses for TextMate-backed languages like ours.
+    @DisplayName("every template applies in Ecstasy files, through the context plugin.xml registers")
+    fun everyTemplateUsesTheEcstasyContext() {
+        // The platform's OTHER ("Everywhere") context is every file, so a template enabled there is
+        // offered in other languages' files too. Each template enables the plugin's ECSTASY context,
+        // which XtcTemplateContextType implements, and so applies in Ecstasy files only.
         val templates = templateSet.getElementsByTagName("template")
-        val withOtherContext =
+        val outside =
             (0 until templates.length)
                 .map { templates.item(it) as Element }
-                .count { template ->
-                    val contexts = template.getElementsByTagName("context")
-                    (0 until contexts.length).any { ci ->
-                        val ctx = contexts.item(ci) as Element
-                        val options = ctx.getElementsByTagName("option")
-                        (0 until options.length).any { oi ->
-                            val opt = options.item(oi) as Element
-                            opt.getAttribute("name") == "OTHER" &&
-                                opt.getAttribute("value") == "true"
-                        }
+                .filterNot { template ->
+                    val options = template.getElementsByTagName("option")
+                    (0 until options.length).map { options.item(it) as Element }.any {
+                        it.getAttribute("name") == CONTEXT && it.getAttribute("value") == "true"
                     }
-                }
+                }.map { it.getAttribute("name") }
+        assertThat(outside)
+            .withFailMessage("templates in liveTemplates/Ecstasy.xml without the $CONTEXT context: %s", outside)
+            .isEmpty()
 
-        assertThat(withOtherContext)
-            .withFailMessage(
-                "no template in liveTemplates/XTC.xml declares <context><option name='OTHER' value='true'/></context>. " +
-                    "Without an applicable context the templates won't trigger in TextMate-backed editors like ours.",
-            ).isGreaterThan(0)
+        val contexts = manifest().getElementsByTagName("liveTemplateContext")
+        val registered =
+            (0 until contexts.length)
+                .map { contexts.item(it) as Element }
+                .associate { it.getAttribute("contextId") to it.getAttribute("implementation") }
+        assertThat(registered).containsEntry(CONTEXT, XtcTemplateContextType::class.java.name)
+    }
+
+    private fun manifest(): Element =
+        DocumentBuilderFactory
+            .newInstance()
+            .newDocumentBuilder()
+            .parse(checkNotNull(javaClass.classLoader.getResource("META-INF/plugin.xml")).openStream())
+            .documentElement
+
+    private companion object {
+        const val CONTEXT = "ECSTASY"
     }
 }
