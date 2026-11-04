@@ -2,7 +2,7 @@ package org.xtclang.idea.playbook
 
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.singleProject
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.dependencyCases() {
     case("X47") { data ->
@@ -119,7 +119,7 @@ internal fun ParityScenarios.dependencyCases() {
         val before = trace.notifications("window/showMessage").size
         configure(data["sourceModules"])
         with(driver) {
-            awaitUi("client receives rejection of cyclic graph", 45.seconds) {
+            awaitUi("client receives rejection of cyclic graph", HANG_LIMIT) {
                 trace.notifications("window/showMessage").drop(before).any {
                     data.pattern("pattern").containsMatchIn(it.string("message"))
                 }

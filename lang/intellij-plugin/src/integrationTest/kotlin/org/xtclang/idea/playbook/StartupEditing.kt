@@ -9,10 +9,10 @@ import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.ui
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /** Real restarts and editor changes; the probe asserts that initialization overlaps every edit. */
 fun Driver.startupEditing(
@@ -44,7 +44,7 @@ fun Driver.startupEditing(
                 workspace.errors(initial)
                 awaitUi(
                     "untouched startup notification fades without mouse or keyboard input",
-                    20.seconds,
+                    HANG_LIMIT,
                 ) {
                     ui.x { byVisibleText("Ecstasy Language Server Started") }.notPresent()
                 }
@@ -81,7 +81,7 @@ fun Driver.startupEditing(
                     workspace.published(current.file) { rows ->
                         if (expected == invalid) rows.isNotEmpty() else rows.isEmpty()
                     }
-                    awaitUi("startup $phase diagnostics reach the editor", 45.seconds) {
+                    awaitUi("startup $phase diagnostics reach the editor", HANG_LIMIT) {
                         current.editor.installedDiagnostics().let { diagnostics ->
                             if (expected == invalid) {
                                 diagnostics.any { "unknownDuringStartup" in it.description }
@@ -90,7 +90,7 @@ fun Driver.startupEditing(
                             }
                         }
                     }
-                    awaitUi("startup $phase folds match the shortened buffer", 45.seconds) {
+                    awaitUi("startup $phase folds match the shortened buffer", HANG_LIMIT) {
                         folds(current.editor).let { ranges ->
                             (1..3) in ranges && ranges.all { it.last < 5 }
                         }
@@ -112,7 +112,7 @@ fun Driver.startupEditing(
                     workspace.replace(current, short)
                     workspace.published(current.file) { it.isEmpty() }
                     workspace.clean(current)
-                    awaitUi("startup $phase old process exits", 10.seconds) {
+                    awaitUi("startup $phase old process exits", HANG_LIMIT) {
                         ProcessHandle
                             .of(transaction["previousPid"].asLong)
                             .map { !it.isAlive }
