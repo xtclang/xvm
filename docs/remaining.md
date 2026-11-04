@@ -160,15 +160,15 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [x] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
   Closed as not reproduced (2026-11-03): in the playbook container X105 passed 3 of 3 alone
   (`run-10494949670890475220`, `run-10319767511418774313`, `run-5892947025783048634`) and in a run of
-  X1-X105, 105 cases, all passing (`run-8208552682292234518`), on top of the 21 runs below. Reopen it
-  with the run's logs if it recurs. It
+  X1-X105, 105 cases, all passing (`run-8208552682292234518`), on top of the 21 runs below. It
   hasn't recurred in the 277- and 284-case runs, but it was never diagnosed. Tried on 2026-10-21 with
   the 79 cases that ran before it in `run-8615971651239916856`: X105 passes on the current code, with
   the UP07 equal-report bridge off (`run-1679585523095307991`), and with that bridge off and fixture
   files opened before the graph switch, as before `4065e8e6c` (`run-4408482987482729041`). Not
   reproduced; the trigger is still unknown. The 2026-10-02 run's logs were pruned on 2026-10-06; the
   likeliest cause, an intention request reopened at a moved caret, was fixed on 2026-10-05
-  (`84855993e6`, `549a5edd02`), and X105 has passed the 21 runs it took part in since.
+  (`84855993e6`, `549a5edd02`), and X105 has passed the 21 runs it took part in since. Reopen it
+  with the run's logs if it recurs.
 - [x] The opt-in IntelliJ `projectLifecycle` check failed most runs, at "closed project's pending
   reply retires" or at "Close must overlap a pending native request"; it also failed on
   `ef1491a6c`, before the R6–R7 work (`run-15132038242161374573`). Fixed in `3813e27a9`: requests
