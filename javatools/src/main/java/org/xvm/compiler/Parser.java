@@ -1146,6 +1146,12 @@ public class Parser {
             return new ExpressionStatement(expr);
         }
 
+        // what is being typed at the end of a line ends its statement there; the later line is the next one
+        if (containsCursorHole(expr) && !eof()
+                && Source.calculateLine(peek().getStartPosition()) > Source.calculateLine(expr.getEndPosition())) {
+            return new ExpressionStatement(expr);
+        }
+
         return null;
     }
 
@@ -3271,7 +3277,7 @@ public class Parser {
 
             case DOT: {
                 Token dot = expect(Id.DOT);
-                if (canRetainIncomplete()) {
+                if (canRetainIncomplete() || atLineEnd(f_cursor)) {
                     throw incomplete(expr, dot, List.of(), List.of());
                 }
                 switch (peek().getId()) {
@@ -3305,7 +3311,8 @@ public class Parser {
                     }
                     if (noDeRef == null && name.getId() == Id.IDENTIFIER
                             && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
-                            && canRetainIncompleteAt(name.getEndPosition(), true)) {
+                            && (canRetainIncompleteAt(name.getEndPosition(), true)
+                                    || atLineEnd(name.getEndPosition()))) {
                         var hole = incomplete(expr, dot, name);
                         if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
                             expr = new IncompleteExpression(hole.statement);
@@ -3667,6 +3674,10 @@ public class Parser {
             boolean        fQuit   = false;
             Token          dot;
             while (nameNDR == null && (dot = match(Id.DOT)) != null) {
+                if (fNormal && atLineEnd(f_cursor)) {
+                    // the name on the next line starts the next statement, not this access
+                    throw incomplete(new NameExpression(left, nameNDR, name, null, lEndPos), dot, List.of(), List.of());
+                }
                 Token nameNext = match(Id.IDENTIFIER);
                 if (nameNext == null) {
                     // it's not a ".name" construct, so the name expression ended BEFORE the dot
@@ -3677,7 +3688,8 @@ public class Parser {
 
                 left = new NameExpression(left, nameNDR, name, null, lEndPos);
                 if (fNormal && nameNext.getStartPosition() < f_cursor && f_cursor <= nameNext.getEndPosition()
-                        && canRetainIncompleteAt(nameNext.getEndPosition(), true)) {
+                        && (canRetainIncompleteAt(nameNext.getEndPosition(), true)
+                                || atLineEnd(nameNext.getEndPosition()))) {
                     var hole = incomplete(left, dot, nameNext);
                     if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
                         return new IncompleteExpression(hole.statement);
@@ -5769,6 +5781,30 @@ public class Parser {
                             default -> false;
                         }
                         || allowCall && (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)));
+    }
+
+    /**
+     * A member access being typed at the end of its line, before code on a later line that cannot
+     * continue it, ends there: the later line is the next statement, not the member's name. Without
+     * this, the access and that statement parse as one, which is an error, and the cursor has no
+     * site.
+     */
+    private boolean atLineEnd(long cursor) {
+        if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()
+                || cursor == NO_CURSOR || eof()) {
+            return false;
+        }
+        Token next = peek();
+        return prev().getEndPosition() <= cursor && cursor <= next.getStartPosition()
+                && Source.calculateLine(next.getStartPosition()) > Source.calculateLine(cursor)
+                && switch (next.getId()) {
+                    case DOT, L_PAREN, ASYNC_PAREN, L_SQUARE, COND,
+                         ADD, SUB, MUL, DIV, MOD, DIVREM, SHL, SHR, USHR,
+                         BIT_AND, BIT_OR, BIT_XOR, COND_AND, COND_OR, COND_XOR,
+                         COMP_EQ, COMP_NEQ, COMP_LT, COMP_LTEQ, COMP_GT, COMP_GTEQ,
+                         COMP_ORD, COND_ELSE, ASN, AS, IS -> false;
+                    default -> true;
+                };
     }
 
     /**
