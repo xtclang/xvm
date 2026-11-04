@@ -600,6 +600,11 @@
                 "editor.wordBasedSuggestions": "off"
             }
         },
+        "breakpoints": [
+            {
+                "language": "xtc"
+            }
+        ],
         "debuggers": [
             {
                 "type": "xtc",
