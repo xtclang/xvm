@@ -9,8 +9,5 @@ import com.intellij.codeInsight.template.TemplateContextType
  * so templates enabled there are offered in a Java or Markdown file too.
  */
 class XtcTemplateContextType : TemplateContextType("Ecstasy") {
-    // an Ecstasy file's PSI is plain text, whose own file type is plain text: the file's is Ecstasy
-    override fun isInContext(context: TemplateActionContext): Boolean =
-        context.file.originalFile.virtualFile
-            ?.fileType == XtcFileType
+    override fun isInContext(context: TemplateActionContext): Boolean = context.file.language == XtcIntelliJLanguage
 }
