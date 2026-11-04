@@ -1,5 +1,6 @@
 package org.xvm.lsp.run
 
+import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkTest
@@ -10,9 +11,9 @@ import java.util.concurrent.Executor
 import kotlin.text.Charsets.UTF_8
 
 /**
- * A run of a module's tests in a process of its own, the launcher's `xtc test`, which reports their execution as
- * TeamCity service messages in its output ([REPORT]). Its output goes to the listener line by line; [ended] completes
- * with its exit code once it has ended and all of its output has gone.
+ * A run of a module's tests in a process of its own, the launcher's `xtc test`, which reports their execution as events
+ * in its output ([REPORT], [TestEvent]). Its output goes to the listener line by line; [ended] completes with its exit
+ * code once it has ended and all of its output has gone.
  */
 internal class TestProcess private constructor(
     private val process: Process,
@@ -41,8 +42,8 @@ internal class TestProcess private constructor(
     }
 
     companion object {
-        /** The injection that has xunit report the execution as TeamCity service messages. */
-        const val REPORT = "xvm.xunit.report=teamcity"
+        /** The injection that has xunit report the execution as events, its `json` report. */
+        const val REPORT = "xvm.xunit.report=${TestEvent.REPORT}"
 
         /** Where the process's output is read: a thread of its own for each. */
         private val OUTPUT = Executor { Thread.ofVirtual().name("xtc-test-output").start(it) }

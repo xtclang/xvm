@@ -1,6 +1,5 @@
 package org.xvm.debug
 
-import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.jsonrpc.debug.DebugRemoteEndpoint
@@ -24,13 +23,13 @@ class DebugMessageEndpoint(
 
     init {
         val methods =
-            ServiceEndpoints.getSupportedMethods(IDebugProtocolClient::class.java) +
+            ServiceEndpoints.getSupportedMethods(XtcDebugClient::class.java) +
                 ServiceEndpoints.getSupportedMethods(server.javaClass)
         json = DebugMessageJsonHandler(methods)
         endpoint = DebugRemoteEndpoint({ message -> send(json.serialize(message)) }, ServiceEndpoints.toEndpoint(server))
         json.methodProvider = endpoint
         endpoint.jsonHandler = json
-        server.connect(ServiceEndpoints.toServiceObject(endpoint, IDebugProtocolClient::class.java))
+        server.connect(ServiceEndpoints.toServiceObject(endpoint, XtcDebugClient::class.java))
     }
 
     /**
