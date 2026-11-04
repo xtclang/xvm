@@ -10,14 +10,17 @@ import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.fixtures.impl.LightTempDirTestFixtureImpl
 import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
+import org.jetbrains.plugins.textmate.TextMateService
+import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
+import java.nio.file.Path
 
 /**
  * A light platform test's in-memory project, with the plugin and its dependencies loaded, for what IntelliJ does
- * in an Ecstasy file. A test registers it with `@RegisterExtension`; each test opens its own file. No language
- * server runs: these tests check the IDE's side.
+ * in an Ecstasy file. A test registers it with `@RegisterExtension`; each test opens its own file, highlighted by
+ * TextMate's Ecstasy grammar as in the IDE. No language server runs: these tests check the IDE's side.
  */
 class LightEditor :
     BeforeEachCallback,
@@ -31,6 +34,16 @@ class LightEditor :
         fixture = factory.createCodeInsightFixture(project, LightTempDirTestFixtureImpl(true))
         errors = LoggedErrorProcessor.executeWith(UltimateStartup)
         runInEdtAndWait { fixture.setUp() }
+        // the plugin's own provider finds no plugin directory here, so the editor would have no TextMate tokens
+        System.getProperty("xtc.test.textmate")?.let { bundle ->
+            TextMateBundleProvider.EP_NAME.point.registerExtension(
+                object : TextMateBundleProvider {
+                    override fun getBundles() = listOf(TextMateBundleProvider.PluginBundle("Ecstasy", Path.of(bundle)))
+                },
+                fixture.testRootDisposable,
+            )
+            TextMateService.getInstance().reloadEnabledBundles()
+        }
     }
 
     override fun afterEach(context: ExtensionContext) {
