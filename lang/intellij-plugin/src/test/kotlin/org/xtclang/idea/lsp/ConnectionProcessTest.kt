@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xtclang.idea.HANG_SECONDS
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
@@ -33,7 +34,7 @@ class ConnectionProcessTest {
             assertThat(provider.pid).isEqualTo(pid)
             val process = ProcessHandle.of(pid).orElseThrow()
             lifetime.stop()
-            process.onExit().get(10, SECONDS)
+            process.onExit().get(HANG_SECONDS, SECONDS)
             assertThat(process.isAlive).isFalse()
             assertThatThrownBy { lifetime.start() }
                 .isInstanceOf(CannotStartProcessException::class.java)
@@ -65,7 +66,7 @@ class ConnectionProcessTest {
         } finally {
             provider.child()?.let { child ->
                 if (child.isAlive) child.destroyForcibly()
-                check(child.waitFor(10, SECONDS))
+                check(child.waitFor(HANG_SECONDS, SECONDS))
             }
         }
     }
