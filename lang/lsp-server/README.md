@@ -608,8 +608,8 @@ Its arguments are `module` (a name), `moduleUri` (a source URI of the module, us
 name when given), `method`, `args` (an array passed as given, or a comma-separated string), `cwd` (the
 program's root directory), `tests` (as `xtc/run` takes them, whose events then arrive as the DAP
 event `xtcTest`), `buildMode` (below) and `noDebug`. The program starts after the client's `configurationDone`,
-or two seconds after its build when the client sends none, and the launch is answered once it has
-started. Its output arrives as DAP `output` events and its exit as `exited` and `terminated`; a failed
+however long the client takes to send it, as DAP has a client do once it has set its breakpoints, and
+the launch is answered once it has started; a session that ends first starts nothing. Its output arrives as DAP `output` events and its exit as `exited` and `terminated`; a failed
 build reports its diagnostics as output and fails the launch. The session owns the program it
 launched: `terminate` and `disconnect` stop it, also while it still builds, and so do `xtc/debugEnd`
 and the server shutting down. A line the client sends as a `repl` `evaluate` while the program runs
