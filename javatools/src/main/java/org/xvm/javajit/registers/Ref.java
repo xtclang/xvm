@@ -90,15 +90,6 @@ public class Ref
         return new Ref(bctx, regId, slot, name, isVar, narrowedType, referentFlavor, scopeDepth, this);
     }
 
-    /**
-     * @return the Ref type
-     */
-    public TypeConstant refType() {
-        ConstantPool pool = bctx.pool();
-        return pool.ensureParameterizedTypeConstant(
-                isVar ? pool.typeVar() : pool.typeRef(), referentType());
-    }
-
     @Override
     public boolean isSingle() {
         return true;

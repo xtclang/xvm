@@ -1618,6 +1618,20 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff this type is based on a native rebase of Ref or Var
+     */
+    public boolean isNativeRef() {
+        TypeConstant constThis = resolveTypedefs();
+        if (constThis.isSingleUnderlyingClass(true) &&
+                constThis.getSingleUnderlyingClass(true) instanceof NativeRebaseConstant idNative) {
+            ConstantPool     pool  = getConstantPool();
+            IdentityConstant idClz = idNative.getClassConstant();
+            return idClz.equals(pool.clzRef()) || idClz.equals(pool.clzVar());
+        }
+        return false;
+    }
+
+    /**
      * Determine compatibility for purposes of comparing equality.
      *
      * @param that             another type
@@ -1631,7 +1645,7 @@ public abstract class TypeConstant
 
         ConstantPool pool = getConstantPool();
 
-        if (this.isTypeOfType()      && that.isTypeOfType() ||
+        if (this.isTypeOfType() && that.isTypeOfType() ||
             this.isA(pool.typeRef()) && that.isA(pool.typeRef())) {
             // Type and Ref objects are always comparable
             return true;
@@ -7555,6 +7569,15 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff this type applies runtime annotations to native Ref or Var, regardless of
+     *         its access
+     */
+    public boolean isJitAnnotatedRef() {
+        TypeConstant typeJit = getJitCCType();
+        return typeJit.isAnnotated() && typeJit.isNativeRef();
+    }
+
+    /**
      * @return the JitTypeDesc for this type
      */
     public JitTypeDesc getJitDesc(Builder builder) {
@@ -7616,7 +7639,6 @@ public abstract class TypeConstant
             return getUnderlyingType().getJitCCType();
         }
 
-        // Terminal, Virtual or InnerChild
         assert isSingleUnderlyingClass(true);
         return removeAutoNarrowing();
     }
@@ -7631,7 +7653,7 @@ public abstract class TypeConstant
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
         TypeConstant type = getJitCCType();
-        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        assert type.isNativeRef() || type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
         return type;
     }
 

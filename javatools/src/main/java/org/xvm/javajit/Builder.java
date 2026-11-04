@@ -293,7 +293,7 @@ public abstract class Builder {
                     break;
                 }
 
-                case Annotation, Implements, Incorporates:
+                case Annotation, Delegates, Implements, Incorporates:
                     interfaces.add(getCCDesc(contribType));
                     break;
 

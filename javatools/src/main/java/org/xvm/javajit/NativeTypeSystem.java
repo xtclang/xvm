@@ -330,6 +330,8 @@ public class NativeTypeSystem
         // all Ref/Var L2 specializations share interfaces, implemented by nRef or generated classes
         nativeByClass.put(pool.clzRef(),       Builder.N_Ref);
         nativeByClass.put(pool.clzVar(),       Builder.N_Var);
+        nativeByClass.put(pool.typeRefRB().getSingleUnderlyingClass(true), Builder.N_nRef);
+        nativeByClass.put(pool.typeVarRB().getSingleUnderlyingClass(true), Builder.N_nRef);
 
         // various types used by native classes
         TypeConstant typeChar       = pool.typeChar();

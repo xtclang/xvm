@@ -1214,33 +1214,30 @@ public class CommonBuilder
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
         boolean hasOuter = classStruct.isInstanceChild();
 
-        classBuilder.withMethodBody(INIT_NAME,
-            hasOuter ? MD_xvmOuterVoid : MD_xvmVoid,
-            ClassFile.ACC_PUBLIC,
-            code -> {
-                Label startScope = code.newLabel();
-                Label endScope   = code.newLabel();
-                code.labelBinding(startScope);
+        classBuilder.withMethodBody(INIT_NAME, hasOuter ? MD_xvmOuterVoid : MD_xvmVoid,
+                ClassFile.ACC_PUBLIC, code -> {
+            Label startScope = code.newLabel();
+            Label endScope   = code.newLabel();
+            code.labelBinding(startScope);
 
-                if (isDebugInfo()) {
-                    code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
-                    if (hasOuter) {
-                        code.localVariable(code.parameterSlot(1), "outer", CD_nObject, startScope, endScope);
-                    }
-                }
-
-                callSuperInitializer(code);
+            if (isDebugInfo()) {
+                code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
                 if (hasOuter) {
-                    code.aload(0)
-                        .aload(code.parameterSlot(1))
-                        .putfield(art.CD(), Outer, CD_nObject);
+                    code.localVariable(code.parameterSlot(1), "outer", CD_nObject, startScope, endScope);
                 }
-                initializeFields(code, props);
-
-                code.labelBinding(endScope)
-                    .return_();
             }
-        );
+
+            callSuperInitializer(code);
+            if (hasOuter) {
+                code.aload(0)
+                    .aload(code.parameterSlot(1))
+                    .putfield(art.CD(), Outer, CD_nObject);
+            }
+            initializeFields(code, props);
+
+            code.labelBinding(endScope)
+                .return_();
+        });
     }
 
     /**
