@@ -10500,7 +10500,7 @@
     "X339": {
       "title": "the Test Explorer (IntelliJ: the gutter's test icons and its test console) lists a module's xunit tests under the module and its classes; Run runs them embedded and marks each passed or failed, a failure at the line its stack names; Debug of one test stops at a breakpoint in it, and Continue runs it to its end, which passes it",
       "manual": [
-        "The tests run embedded, with xunit in a process the language server starts (xtc test), whatever the folder's build mode; xunit reports each test as a TeamCity service message in the run's output, which marks it in the Test Explorer",
+        "The tests run embedded, with xunit in a process the language server starts (xtc test), whatever the folder's build mode; xunit reports each test as an event of its json report, which the server sends apart from the run's output and which marks it in the Test Explorer",
         "Debug at the cursor, on the name of works(), runs that test alone under the debugger, which stops at the breakpoint in it",
         "IntelliJ shows Run and Debug icons on the lines of the module, its class and each test; Run of the module's icon runs them in IntelliJ's test console, and Debug of a test's icon shows the console in a Tests tab of the debug session"
       ],
@@ -10549,7 +10549,7 @@
       "title": "in Gradle mode, a run of the tests of a project's test module runs its testXtc for them, which marks each passed or failed, and Debug of one test has testXtc run it under the debugger, which stops at a breakpoint in it; Continue runs it to its end, which passes it",
       "manual": [
         "Needs ./gradlew xdk:installDist and publishLocal first, as X337 does: the project is made as X337 makes its own, at the folder root, and builds with the XTC Gradle plugin and XDK from mavenLocal; its test module, src/test/x/GradleTestedTest.x, is replaced with tests of a class MathTest",
-        "VS Code runs testXtc in a process of its own and reads its output, and IntelliJ in its test console; testXtc takes the tests as --test-class or --test-method and reports them with --test-report=teamcity"
+        "VS Code runs testXtc in a process of its own and reads its output, and IntelliJ in its test console; testXtc takes the tests as --test-class or --test-method and reports them as events with --test-report=json"
       ],
       "values": {
         "rootEntries": [

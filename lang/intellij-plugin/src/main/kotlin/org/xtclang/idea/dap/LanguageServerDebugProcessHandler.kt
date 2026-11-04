@@ -11,6 +11,7 @@ import com.intellij.openapi.vfs.newvfs.NewVirtualFile
 import com.intellij.openapi.vfs.newvfs.RefreshQueue
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
+import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.OutputStream
 import java.nio.file.Files
@@ -34,6 +35,8 @@ internal class LanguageServerDebugProcessHandler(
     private val frameSources: (List<Path>) -> Unit = ::findFrameSources,
     /** Receives the program's output, from the session's `output` events, as a test run's Tests tab reads it. */
     private val output: (String) -> Unit = {},
+    /** Receives the events of a test run's tests, from the session's `xtcTest` events, for its Tests tab. */
+    private val tested: (TestEvent) -> Unit = {},
     private val server: () -> CompletableFuture<XtcLanguageServer>,
 ) : ProcessHandler(),
     DebugSessions.Session {
@@ -108,6 +111,11 @@ internal class LanguageServerDebugProcessHandler(
     }
 
     override fun message(message: JsonObject) {
+        // the session's own event, for the Tests tab; LSP4IJ's DAP client knows only DAP's events
+        if (message["type"]?.asString == "event" && message["event"]?.asString == DebugSessions.XTC_TEST) {
+            message["body"]?.let(TestEvent::of)?.let(tested)
+            return
+        }
         if (message["type"]?.asString == "event" && message["event"]?.asString == "output") {
             message["body"]
                 ?.asJsonObject
