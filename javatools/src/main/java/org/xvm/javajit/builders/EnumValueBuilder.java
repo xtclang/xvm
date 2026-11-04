@@ -75,12 +75,6 @@ public class EnumValueBuilder
     }
 
     @Override
-    public boolean assembleClass(ClassBuilder classBuilder) {
-        assembleEnumValueClass(this, classBuilder);
-        return super.assembleClass(classBuilder);
-    }
-
-    @Override
     protected void appendCLInit(CodeBuilder code, int ctxSlot) {
         appendEnumValueCLInit(this, code);
     }

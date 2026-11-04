@@ -720,11 +720,18 @@ public class CommonBuilder
      * @return false iff no more assembly required for this class
      */
     protected boolean assembleClass(ClassBuilder classBuilder) {
-        int     flags = ClassFile.ACC_PUBLIC;
-        boolean done  = false;
+        int     flags  = ClassFile.ACC_PUBLIC;
+        boolean done   = false;
+        Format  format = classStruct.getFormat();
 
-        switch (classStruct.getFormat()) {
-            case CLASS, CONST, SERVICE, ENUMVALUE, PACKAGE:
+        if (format == Format.INTERFACE && !isInterface()) {
+            // some Ecstasy interfaces have concrete JIT implementations;
+            // e.g. RefBuilder emits annotated Ref/Var types as Java subclasses of nRef
+            format = Format.CLASS;
+        }
+
+        switch (format) {
+            case CLASS, CONST, SERVICE, ENUMVALUE, MODULE, PACKAGE:
                 flags |= ClassFile.ACC_SUPER; // see JLS 4.1
                 classBuilder.withSuperclass(getSuperCD());
                 break;

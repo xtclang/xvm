@@ -68,15 +68,6 @@ public class RefBuilder extends CommonBuilder {
     }
 
     @Override
-    protected boolean assembleClass(ClassBuilder classBuilder) {
-        // the source format remains INTERFACE; CommonBuilder would emit an abstract interface
-        classBuilder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_SUPER)
-                    .withSuperclass(getSuperCD());
-        assembleInterfaces(classBuilder);
-        return true;
-    }
-
-    @Override
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
         // [callSuperInitializer]
         // this.$type = type;
