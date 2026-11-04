@@ -3,6 +3,7 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.HANG_SECONDS
 import java.io.PrintWriter
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
@@ -52,9 +53,9 @@ class OutputBatchesTest {
         val sent = LinkedBlockingQueue<String>()
         val output = OutputBatches(sent::add, delay = 50.milliseconds)
         output.write("hello")
-        assertThat(sent.poll(10, SECONDS)).isEqualTo("hello")
+        assertThat(sent.poll(HANG_SECONDS, SECONDS)).isEqualTo("hello")
         output.write(" again")
-        assertThat(sent.poll(10, SECONDS)).isEqualTo(" again")
+        assertThat(sent.poll(HANG_SECONDS, SECONDS)).isEqualTo(" again")
     }
 
     @Test
@@ -67,7 +68,7 @@ class OutputBatchesTest {
             start()
             join()
         }
-        assertThat(groups.poll(10, SECONDS)).isEqualTo("xtc-run-output")
+        assertThat(groups.poll(HANG_SECONDS, SECONDS)).isEqualTo("xtc-run-output")
     }
 
     @Test
@@ -100,10 +101,10 @@ class OutputBatchesTest {
                 }
             }
         // the first full batch waits for the server, and the program waits with it
-        await().atMost(Duration.ofSeconds(10)).until { program.state == Thread.State.WAITING }
+        await().atMost(Duration.ofSeconds(HANG_SECONDS)).until { program.state == Thread.State.WAITING }
         assertThat(printed.get()).isLessThan(10)
         reading.countDown()
-        program.join(Duration.ofSeconds(10))
+        program.join(Duration.ofSeconds(HANG_SECONDS))
         output.close()
         assertThat(sent.joinToString("")).isEqualTo("0123456789".repeat(1_000))
         assertThat(sent).allMatch { it.length <= 100 }

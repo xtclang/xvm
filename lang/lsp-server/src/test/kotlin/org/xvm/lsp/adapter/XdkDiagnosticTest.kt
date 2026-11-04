@@ -7,6 +7,7 @@ import org.xvm.api.EmbeddingSupport.Compilation
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Location
 import java.util.concurrent.TimeUnit.SECONDS
@@ -85,7 +86,7 @@ class XdkDiagnosticTest {
         XdkAdapter { _, _ -> throw IllegalStateException("unexpected compiler failure") }
             .use { adapter ->
                 assertThatThrownBy {
-                    adapter.compileAsync(URI, "module Current {}").get(10, SECONDS)
+                    adapter.compileAsync(URI, "module Current {}").get(HANG_SECONDS, SECONDS)
                 }.hasCauseInstanceOf(IllegalStateException::class.java)
                     .hasRootCauseMessage("unexpected compiler failure")
                 assertThat(adapter.getCachedResult(URI)).isNull()

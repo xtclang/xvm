@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -43,7 +44,7 @@ class FileEventDuringAnalysisTest {
                 { sources, repository, errors ->
                     if (entered.count > 0) {
                         entered.countDown()
-                        check(release.await(20, SECONDS))
+                        check(release.await(HANG_SECONDS, SECONDS))
                     }
                     support.compileModule(sources, repository, errors)
                 },
@@ -56,7 +57,7 @@ class FileEventDuringAnalysisTest {
                     InitializeParams().apply {
                         workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "workspace"))
                     },
-                ).get(30, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             server.initialized(InitializedParams())
             try {
                 // as the VS Code playbook does: write a file in a new folder, then open it
@@ -65,7 +66,7 @@ class FileEventDuringAnalysisTest {
                 val uri = file.toURI().toString()
                 val service = server.textDocumentService
                 service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, SOURCE)))
-                assertThat(entered.await(20, SECONDS)).isTrue()
+                assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
                 val at = SOURCE.lines()[1].indexOf("greeting") + 1
                 val hover = service.hover(HoverParams(TextDocumentIdentifier(uri), Position(1, at)))
 
@@ -82,7 +83,7 @@ class FileEventDuringAnalysisTest {
                 // a request retired here fails with "Document changed during analysis"
                 assertThat(
                     hover
-                        .get(30, SECONDS)
+                        .get(HANG_SECONDS, SECONDS)
                         .contents.right.value,
                 ).contains("greeting")
             } finally {

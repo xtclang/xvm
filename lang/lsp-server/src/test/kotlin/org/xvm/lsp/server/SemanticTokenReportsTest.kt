@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.HANG_SECONDS
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -80,7 +81,7 @@ class SemanticTokenReportsTest {
                             reports.delta(uri, first.resultId, listOf(0, index, 2, 0, 0))
                         }
                     }
-                }.forEach { it.get(60, SECONDS) }
+                }.forEach { it.get(HANG_SECONDS, SECONDS) }
         } finally {
             pool.shutdownNow()
         }

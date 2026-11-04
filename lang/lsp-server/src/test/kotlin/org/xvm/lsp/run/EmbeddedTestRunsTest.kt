@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
@@ -140,10 +141,10 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Mathy", mathy)))
-            EmbeddedRuns(adapter, { client }).use { runs ->
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
                 val started = runs.run(RunParams(module = "Mathy", moduleName = "Mathy", runId = "all", tests = emptyList()))
-                assertThat(started.get(120, SECONDS).runId).isEqualTo("all")
-                val exit = client.exits.poll(120, SECONDS)!!
+                assertThat(started.get(HANG_SECONDS, SECONDS).runId).isEqualTo("all")
+                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
                 val output = client.output.toString()
                 val events = client.events("all")
 
@@ -184,9 +185,12 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Mathy", mathy)))
-            EmbeddedRuns(adapter, { client }).use { runs ->
-                runs.run(RunParams(module = "Mathy", runId = "one", tests = listOf(TestSelector("Inner.works", "test")))).get(120, SECONDS)
-                val exit = client.exits.poll(120, SECONDS)!!
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
+                runs
+                    .run(
+                        RunParams(module = "Mathy", runId = "one", tests = listOf(TestSelector("Inner.works", "test"))),
+                    ).get(HANG_SECONDS, SECONDS)
+                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
                 val tests = client.events("one").filter { it.event == TestEvent.STARTED && it.container == false }
 
                 assertThat(tests.map { it.selector }).containsExactly("Inner.works")
@@ -205,12 +209,12 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Endless", endless)))
-            EmbeddedRuns(adapter, { client }).use { runs ->
-                runs.run(RunParams(module = "Endless", runId = "endless", tests = emptyList())).get(120, SECONDS)
-                await().atMost(Duration.ofSeconds(60)).until { "spinning" in client.output }
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
+                runs.run(RunParams(module = "Endless", runId = "endless", tests = emptyList())).get(HANG_SECONDS, SECONDS)
+                await().atMost(Duration.ofSeconds(HANG_SECONDS)).until { "spinning" in client.output }
                 assertThat(runs.stop(StopRunParams("endless"))).isTrue()
 
-                val exit = client.exits.poll(60, SECONDS)!!
+                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
                 assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED)
                 assertThat(runs.tracked()).isZero()
             }
@@ -226,7 +230,7 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Mathy", mathy)))
-            EmbeddedRuns(adapter, { client }).use { runs ->
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
                 val sessions = DebugSessions(runs, { client })
                 val id = sessions.start().sessionId
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
