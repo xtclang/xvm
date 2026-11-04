@@ -1,3 +1,5 @@
+import ecstasy.reflect.Signature;
+
 import executor.ExecutionLifecycle;
 import executor.MethodExecutionLifecycle;
 
@@ -68,6 +70,8 @@ const SimpleMethodModel
      */
     @Override
     SkipResult skipResult;
+
+    @Override String selector.get() = Model.testSelector(testClass, testMethod.as(Signature).name);
 
     /**
      * The lazily calculated string value for this model.

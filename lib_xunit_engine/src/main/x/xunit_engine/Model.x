@@ -36,6 +36,14 @@ interface Model
     @RO String displayName;
 
     /**
+     * The selector that runs this model alone, as `xtc test`'s `-p`, `-c` and `-t` options and the
+     * discovery injections take it: the path of a class or package in its module, such as
+     * `tests.MathTest`, the path of a test, such as `tests.MathTest.adds`, or the empty string for
+     * the module.
+     */
+    @RO String selector;
+
+    /**
      * The constructor to use to create an instance of the test fixture.
      */
     @RO Constructor? constructor;
@@ -126,6 +134,26 @@ interface Model
      * Create the `ExecutionLifecycle` for this model.
      */
     ExecutionLifecycle createExecutionLifecycle();
+
+    // ---- selectors ------------------------------------------------------------------------------
+
+    /**
+     * @return the selector of a class or package: its path within its module, which is empty for
+     *         the module
+     */
+    static String classSelector(Class clz) {
+        String path = clz.path;
+        assert Int colon := path.indexOf(':');
+        return path[colon >..< path.size];
+    }
+
+    /**
+     * @return the selector of the test `name` of a class or package
+     */
+    static String testSelector(Class clz, String name) {
+        String owner = classSelector(clz);
+        return owner.empty ? name : $"{owner}.{name}";
+    }
 
     // ---- Orderable ------------------------------------------------------------------------------
 

@@ -1,3 +1,5 @@
+import ecstasy.reflect.Signature;
+
 import executor.EngineExecutionContext;
 import executor.ExecutionLifecycle;
 import executor.MethodExecutionLifecycle;
@@ -82,6 +84,17 @@ const TemplateModel
      * be reported in any execution results.
      */
     SkipResult skipResult;
+
+    /**
+     * The selector of the templated test, which runs every test the template makes, or of its class
+     * for a templated class.
+     */
+    @Override String selector.get() {
+        MethodOrFunction? testMethod = this.testMethod;
+        return testMethod.is(MethodOrFunction)
+                ? Model.testSelector(testClass, testMethod.as(Signature).name)
+                : Model.classSelector(testClass);
+    }
 
     @Override
     ExecutionLifecycle createExecutionLifecycle() = throw new Unsupported();

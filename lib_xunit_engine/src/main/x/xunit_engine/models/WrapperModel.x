@@ -33,6 +33,8 @@ import xunit.extensions.ExtensionProvider;
 
     @Override String displayName.get() = delegate.displayName;
 
+    @Override String selector.get() = delegate.selector;
+
     @Override Constructor? constructor.get() = delegate.constructor;
 
     @Override ExtensionProvider[] extensionProviders.get() = delegate.extensionProviders;
