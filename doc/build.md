@@ -356,7 +356,7 @@ The current semi-manual process looks like this:
 2) To publish the plugin to Gradle Plugin Portal: ./gradlew :plugin:publishPlugins (publish the plugin to gradlePortal)
 3) To publish the XDK distro to Maven Central: (... TODO ... )
 
-You can already refer to the XDK and the XTC Plugin as external artifacts for your favourite
+You can already refer to the XDK and the XTC Plugin as external artifacts for your favorite
 XTC project, either by manually setting up a link to the XTC Org GitHub Maven Repository like this:
 
 ```
