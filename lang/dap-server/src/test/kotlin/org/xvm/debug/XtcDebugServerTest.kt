@@ -49,7 +49,6 @@ import org.eclipse.lsp4j.debug.ThreadEventArguments
 import org.eclipse.lsp4j.debug.ValueFormat
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
-import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.junit.jupiter.api.Test
 import java.io.IOException
@@ -952,12 +951,11 @@ class XtcDebugServerTest {
         assertThat(
             client.output(OutputEventArgumentsCategory.CONSOLE),
         ).contains("Building App with the embedded compiler and running its tests...")
-        // a test run's service messages are for the client's test view: telemetry, which no console shows
-        runs.events.output("##teamcity[testStarted name='adds()' locationHint='xunit://adds']\n")
+        // a test run's events go to the client as the DAP event xtcTest, its output as output
+        val started = TestEvent(TestEvent.STARTED, id = "App:void adds()", parent = "App:", selector = "adds", container = false)
+        runs.events.tested(started)
         runs.events.output("inside adds\n")
-        assertThat(
-            client.output(OutputEventArgumentsCategory.TELEMETRY),
-        ).isEqualTo("##teamcity[testStarted name='adds()' locationHint='xunit://adds']\n")
+        assertThat(client.tested).containsExactly(started)
         assertThat(client.output(OutputEventArgumentsCategory.STDOUT)).isEqualTo("inside adds\n")
 
         // a Gradle launch's task runs them
@@ -1684,8 +1682,9 @@ class XtcDebugServerTest {
     }
 
     /** Records the events the session sends its client. */
-    private class Client : IDebugProtocolClient {
+    private class Client : XtcDebugClient {
         val events = CopyOnWriteArrayList<String>()
+        val tested = CopyOnWriteArrayList<TestEvent>()
         val stops = CopyOnWriteArrayList<StoppedEventArguments>()
         val breakpoints = CopyOnWriteArrayList<BreakpointEventArguments>()
         private val outputs = CopyOnWriteArrayList<OutputEventArguments>()
@@ -1694,6 +1693,10 @@ class XtcDebugServerTest {
 
         override fun initialized() {
             events.add("initialized")
+        }
+
+        override fun xtcTest(event: TestEvent) {
+            tested.add(event)
         }
 
         override fun output(args: OutputEventArguments) {
