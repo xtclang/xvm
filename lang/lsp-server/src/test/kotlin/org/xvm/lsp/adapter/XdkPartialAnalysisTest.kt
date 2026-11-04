@@ -420,7 +420,6 @@ class XdkPartialAnalysisTest {
         for (
         (prefix, suffix) in
         listOf(
-            "module Editing { void run(String value) { value." to "size; } }",
             "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
             "module Editing { void run(String value) { value." to " } void broken( { }",
         )
@@ -437,7 +436,7 @@ class XdkPartialAnalysisTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["si|ze", "ind|exOf(\"x\")"])
+    @ValueSource(strings = ["si|ze", "ind|exOf(\"x\")", "|size", "|indexOf(\"x\")"])
     fun `mid token member cursors replace the complete existing name`(member: String) {
         val prefix = "module Editing { void run(String value) { value." + member.substringBefore('|')
         val source = prefix + member.substringAfter('|') + "; } }"
