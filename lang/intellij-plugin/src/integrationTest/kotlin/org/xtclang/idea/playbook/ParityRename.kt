@@ -6,8 +6,8 @@ import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.VirtualFile
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.util.concurrent.CancellationException
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.renameCases() {
     case("X53") { data ->
@@ -151,7 +151,7 @@ internal fun ParityWorkspace.renameTransaction(
                 utility(NativeRenameRequests::class)
                     .request(server, document.editor.editor.getVirtualFile(), at, name)
             }
-        awaitUi("native rename transaction", 60.seconds) { pending.isDone() }
+        awaitUi("native rename transaction", HANG_LIMIT) { pending.isDone() }
         requireNotNull(cast(pending, NativeRenameFuture::class).get())
     }
 }
@@ -170,7 +170,7 @@ internal fun ParityWorkspace.applyRename(
     val before = document.text
     with(driver) {
         rename(document.editor, at, name)
-        awaitUi("native rename changes ${document.file}", 45.seconds) { document.text != before }
+        awaitUi("native rename changes ${document.file}", HANG_LIMIT) { document.text != before }
     }
     settle(document)
     clean(document)

@@ -1,7 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.sdk.invokeAction
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.documentationCases() {
     case("X278") { data ->
@@ -11,7 +11,7 @@ internal fun ParityScenarios.documentationCases() {
         configure(listOf(SharedScenarios.SourceModule("Documentation", document.uri, emptyList())))
         clean(document)
         with(driver) { quickFix(document.editor, document.at(data.string("anchor")), data.string("title")) }
-        awaitUi("documentation matches the compiler signature", 30.seconds) { document.text == expected }
+        awaitUi("documentation matches the compiler signature", HANG_LIMIT) { document.text == expected }
         clean(document)
         val at = ParityWorkspace.position(document.text, document.at(data.string("anchor")))
         val actions =
@@ -30,7 +30,7 @@ internal fun ParityScenarios.documentationCases() {
                 focusEditor(document.editor)
                 invokeAction(action, now = false, component = document.editor.component)
             }
-            awaitUi("$action restores documentation", 30.seconds) { document.text == text }
+            awaitUi("$action restores documentation", HANG_LIMIT) { document.text == text }
             clean(document)
         }
     }

@@ -8,9 +8,9 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /** Two real frames share the IDE while their compiler processes and pending replies stay isolated. */
 internal fun Driver.projectLifecycle(shared: SharedScenarios) {
@@ -76,7 +76,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
         file: Path,
         type: String,
     ) {
-        awaitUi("$type hover in ${file.parent.fileName}", 45.seconds) {
+        awaitUi("$type hover in ${file.parent.fileName}", HANG_LIMIT) {
             try {
                 client.query("textDocument/hover", params(file)).toString().contains("$type value")
             } catch (failure: ClientRequestFailure) {
@@ -88,9 +88,9 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
 
     fun openSecond(): Project {
         val opened = probe.open(directory.toString())
-        awaitUi("second project opens", 60.seconds) { opened.isDone() }
+        awaitUi("second project opens", HANG_LIMIT) { opened.isDone() }
         val project = requireNotNull(opened.get())
-        awaitUi("both native project frames are visible", 30.seconds) {
+        awaitUi("both native project frames are visible", HANG_LIMIT) {
             withContext(OnDispatcher.EDT) { probe.visible(primary) && probe.visible(project) }
         }
         return project
@@ -101,7 +101,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
         pid: Long,
     ) {
         val closed = probe.close(project)
-        awaitUi("project closes and owns server retirement", 30.seconds) {
+        awaitUi("project closes and owns server retirement", HANG_LIMIT) {
             closed.isDone() && !utility(ProgressUi::class).alive(pid)
         }
         check(closed.get())
@@ -122,7 +122,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
             ) {
                 "No document synchronizer for $file"
             }.flushPendingChanges()
-        awaitUi("client sends the edited ${file.parent.fileName}/${file.fileName}", 45.seconds) { pending.isDone() }
+        awaitUi("client sends the edited ${file.parent.fileName}/${file.fileName}", HANG_LIMIT) { pending.isDone() }
         check(!pending.isCompletedExceptionally()) { "Document synchronization failed for $file" }
     }
 
@@ -156,7 +156,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
             "textDocument/references",
             params(secondFile) + mapOf("context" to mapOf("includeDeclaration" to true)),
         )
-    awaitUi("compiler is working when its project closes", 15.seconds) {
+    awaitUi("compiler is working when its project closes", HANG_LIMIT) {
         check(!secondPending.isDone()) { "Close must overlap a pending native request" }
         second
             .query("xtc/languageServiceStatus", emptyMap<String, Any>())
@@ -165,7 +165,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
             .asInt > 0
     }
     close(secondary, secondPid)
-    awaitUi("closed project's pending reply retires", 15.seconds) { secondPending.isDone() }
+    awaitUi("closed project's pending reply retires", HANG_LIMIT) { secondPending.isDone() }
     check(first.await("textDocument/references", firstPending).asJsonArray.size() == data.values["methods"].asInt + 1)
     check(first.server().getCurrentProcessId() == firstPid)
     check(probe.text(firstFile.toString()) == firstPendingText)

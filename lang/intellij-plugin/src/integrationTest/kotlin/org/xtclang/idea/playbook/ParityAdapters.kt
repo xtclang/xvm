@@ -4,7 +4,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.singleProject
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /** The language-adapter chooser behind Tools | Switch Ecstasy Language Adapter and its keyboard shortcut. */
 internal fun ParityScenarios.adapterChooserCases() {
@@ -24,8 +24,8 @@ internal fun ParityScenarios.adapterChooserCases() {
                 with(driver) {
                     focusEditor(document.editor)
                     withContext(OnDispatcher.EDT) { chooser.invoke(document.editor.editor, data.string("actionId")) }
-                    awaitUi("adapter chooser offers $label", 15.seconds) { withContext(OnDispatcher.EDT) { chooser.pick(label) } }
-                    awaitUi("adapter restart into $label", 45.seconds) {
+                    awaitUi("adapter chooser offers $label", HANG_LIMIT) { withContext(OnDispatcher.EDT) { chooser.pick(label) } }
+                    awaitUi("adapter restart into $label", HANG_LIMIT) {
                         protocol.server().getCurrentProcessId()?.let { it != previous } == true
                     }
                 }

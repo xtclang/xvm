@@ -8,7 +8,7 @@ import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
 import com.intellij.driver.sdk.ui.remote.Window
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /** Close transient UI between isolated scenarios, including after an assertion fails. */
 fun Driver.dismissPopups() {
@@ -43,7 +43,7 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
     }
     // AppIcon activation is asynchronous. Requesting component focus in that same EDT event
     // can be superseded when the window restores its previous focus owner.
-    awaitUi("native IDE window focus", 10.seconds) {
+    awaitUi("native IDE window focus", HANG_LIMIT) {
         withContext(OnDispatcher.EDT) { window.isFocused() }
     }
     withContext(OnDispatcher.EDT) {
@@ -51,7 +51,7 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
     }
     awaitUi(
         "native editor focus",
-        10.seconds,
+        HANG_LIMIT,
         errorMessage = {
             withContext(OnDispatcher.EDT) {
                 utility(NativeEditorUi::class).focusState(nativeEditor)
@@ -79,7 +79,7 @@ internal fun Driver.restorePopupFocus(editor: Editor): Boolean {
     try {
         awaitUi(
             "restored native IDE focus",
-            10.seconds,
+            HANG_LIMIT,
             errorMessage = {
                 withContext(OnDispatcher.DEFAULT) { utility(NativeEditorUi::class).focusState(editor) }
             },

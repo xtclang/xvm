@@ -16,10 +16,10 @@ import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.ui
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.platformCases() {
     listOf("X158", "X243", "X244").forEach { id ->
@@ -148,7 +148,7 @@ internal fun ParityScenarios.platformCases() {
             with(driver) {
                 focusEditor(document.editor)
                 invokeAction("ReformatCode", now = false, component = document.editor.component)
-                awaitUi("$id native formatting matches shared layout", 30.seconds) { document.text == data.string("expected") }
+                awaitUi("$id native formatting matches shared layout", HANG_LIMIT) { document.text == data.string("expected") }
             }
             clean(document)
             check(
@@ -163,7 +163,7 @@ internal fun ParityScenarios.platformCases() {
                 with(driver) {
                     focusEditor(document.editor)
                     invokeAction(action, now = false, component = document.editor.component)
-                    awaitUi("$id $action restores exact text", 15.seconds) { document.text == data.string(state) }
+                    awaitUi("$id $action restores exact text", HANG_LIMIT) { document.text == data.string(state) }
                 }
             }
         }
@@ -196,7 +196,7 @@ internal fun ParityScenarios.platformCases() {
                     withContext(OnDispatcher.EDT) {
                         utility(LanguageServicePage::class).transport(singleProject(), transport)
                     }
-                    awaitUi("transport restart into $transport", 45.seconds) {
+                    awaitUi("transport restart into $transport", HANG_LIMIT) {
                         protocol.server().getCurrentProcessId()?.let { it != previous } == true
                     }
                 }
@@ -217,7 +217,7 @@ internal fun ParityScenarios.platformCases() {
                     withContext(OnDispatcher.EDT) {
                         utility(LanguageServicePage::class).adapter(singleProject(), label)
                     }
-                    awaitUi("adapter restart into $label", 45.seconds) {
+                    awaitUi("adapter restart into $label", HANG_LIMIT) {
                         protocol.server().getCurrentProcessId()?.let { it != previous } == true
                     }
                 }
@@ -231,7 +231,7 @@ internal fun ParityScenarios.platformCases() {
                         listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
                     }
                 with(driver) {
-                    awaitUi("unsaved declaration analyzed by $label", 30.seconds) {
+                    awaitUi("unsaved declaration analyzed by $label", HANG_LIMIT) {
                         "adapterSwitchProof" in names(query("textDocument/documentSymbol", document).rows())
                     }
                 }
@@ -257,7 +257,7 @@ internal fun ParityScenarios.platformCases() {
             }
         try {
             with(driver) {
-                awaitUi("live Code Style configuration", 15.seconds) {
+                awaitUi("live Code Style configuration", HANG_LIMIT) {
                     protocol
                         .query("xtc/languageServiceStatus", emptyMap<String, Any>())
                         .asJsonObject["formatting"]
@@ -319,10 +319,10 @@ internal fun ParityScenarios.platformCases() {
             with(driver) {
                 // A bare FileDocumentManager.saveDocument bypasses Actions on Save.
                 invokeAction("SaveAll", component = document.editor.component)
-                awaitUi("native format on save", 30.seconds) {
+                awaitUi("native format on save", HANG_LIMIT) {
                     document.text.contains("    Int value = 1;")
                 }
-                awaitUi("native format on save for a closed dirty tab", 30.seconds) {
+                awaitUi("native format on save for a closed dirty tab", HANG_LIMIT) {
                     closed.text == data.string("closedFormatted") + "\n"
                 }
             }
@@ -403,7 +403,7 @@ internal fun ParityScenarios.platformCases() {
         with(driver) {
             focusEditor(document.editor)
             invokeAction("\$Undo", now = false, component = document.editor.component)
-            awaitUi("server edit Undo restores the source", 15.seconds) {
+            awaitUi("server edit Undo restores the source", HANG_LIMIT) {
                 document.text == data.string("source")
             }
         }
@@ -520,7 +520,7 @@ internal fun ParityScenarios.platformCases() {
         }
         with(driver) {
             invokeAction("\$Undo", now = false, component = document.editor.component)
-            awaitUi("initializer rename Undo restores every occurrence", 15.seconds) {
+            awaitUi("initializer rename Undo restores every occurrence", HANG_LIMIT) {
                 document.text == data.string("source")
             }
         }
@@ -561,7 +561,7 @@ internal fun ParityScenarios.platformCases() {
                         document.text.indexOf(data.string("anchor")),
                     )
                     with(driver) {
-                        awaitUi("server runtime trace $level", 15.seconds) {
+                        awaitUi("server runtime trace $level", HANG_LIMIT) {
                             trace.notifications("$/logTrace").drop(before).any {
                                 it.string("message").startsWith("textDocument/hover:") &&
                                     (it.has("verbose") == (level == "verbose")) &&
@@ -583,7 +583,7 @@ internal fun ParityScenarios.platformCases() {
             withContext(OnDispatcher.EDT) { getToolWindow("Language Servers").hide() }
             listOf(true, false, true, false).forEach { visible ->
                 invokeAction("xtc.toggleServerLog")
-                awaitUi("Ecstasy server log visibility = $visible", 15.seconds) {
+                awaitUi("Ecstasy server log visibility = $visible", HANG_LIMIT) {
                     withContext(OnDispatcher.EDT) {
                         getToolWindow("Language Servers").isVisible()
                     } == visible
@@ -832,7 +832,7 @@ internal fun ParityScenarios.platformCases() {
                 }
                 chooseXtcFileRename()
                 fillRenameDialog(variant.string("newName"))
-                awaitUi("native file rename updates references", 45.seconds) {
+                awaitUi("native file rename updates references", HANG_LIMIT) {
                     document.text == variant.string("expected")
                 }
             }
@@ -949,7 +949,7 @@ internal fun ParityScenarios.platformCases() {
                         )
                 }
                 val dialog = ui.dialog(title = "Move Ecstasy Sources")
-                awaitUi("native Move dialog", 45.seconds) { dialog.present() }
+                awaitUi("native Move dialog", HANG_LIMIT) { dialog.present() }
                 withContext(OnDispatcher.EDT) {
                     cast(dialog.button("Refactor").component, NativeButton::class).doClick()
                 }
@@ -959,7 +959,7 @@ internal fun ParityScenarios.platformCases() {
                         Files.exists(target.resolve(it)) == expected &&
                             Files.exists(directory.resolve(it)) != expected
                     }
-                awaitUi("all selected containers moved", 45.seconds) { moved(true) }
+                awaitUi("all selected containers moved", HANG_LIMIT) { moved(true) }
                 clean(document)
                 listOf("\$Undo" to false, "\$Redo" to true).forEach { (action, expected) ->
                     // A file-only Move belongs to project history, not the unchanged Consumer
@@ -971,7 +971,7 @@ internal fun ParityScenarios.platformCases() {
                         }
                     }
                     invokeGlobalBackendAction(action, project = singleProject(), now = false)
-                    awaitUi("one $action restores all container paths", 45.seconds) {
+                    awaitUi("one $action restores all container paths", HANG_LIMIT) {
                         val confirm = ui.dialog(title = if (expected) "Redo" else "Undo")
                         if (confirm.present()) {
                             withContext(OnDispatcher.EDT) {
