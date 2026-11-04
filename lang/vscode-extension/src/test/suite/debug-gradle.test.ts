@@ -23,14 +23,14 @@ suite('Gradle-mode debugging', () => {
         });
     });
 
-    test('testXtc runs the chosen tests of the module, all of them for none, with xunit\'s TeamCity report', () => {
+    test('testXtc runs the chosen tests of the module, all of them for none, with xunit\'s json report', () => {
         assert.deepStrictEqual(gradleTestArgs('MathyTest', [
             { selector: 'tests', kind: 'package' },
             { selector: 'Inner', kind: 'class' },
             { selector: 'Inner.works', kind: 'test' },
         ]), ['-q', 'testXtc', '--module=MathyTest', '--test-package=tests', '--test-class=Inner', '--test-method=Inner.works',
-            '--test-report=teamcity']);
-        assert.deepStrictEqual(gradleTestArgs('MathyTest', []), ['-q', 'testXtc', '--module=MathyTest', '--test-report=teamcity']);
+            '--test-report=json']);
+        assert.deepStrictEqual(gradleTestArgs('MathyTest', []), ['-q', 'testXtc', '--module=MathyTest', '--test-report=json']);
     });
 
     test('a Debug launch in Gradle mode starts a debug session that Gradle runs the module for', async () => {

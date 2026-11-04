@@ -3942,9 +3942,9 @@ module by its name in the project directory, whose root has the other cases' sou
 ### Running and debugging tests in the Test Explorer (X339)
 
 The Test Explorer's tests run embedded, whatever the folder's build mode: the language server runs them with xunit
-in a process of its own, as `xtc test` does, and xunit reports each test as a TeamCity service message in the run's
-output, which marks it: VS Code's Test Explorer, and IntelliJ's test console, which a Run or Debug icon in the
-gutter of each test, and of its module and classes, starts.
+in a process of its own, as `xtc test` does, and xunit reports each test as an event of its `json` report, which the
+server sends apart from the run's output and which marks it: VS Code's Test Explorer, and IntelliJ's test console,
+which a Run or Debug icon in the gutter of each test, and of its module and classes, starts.
 
 | ID | Actions | Expected result |
 |---|---|---|
@@ -3954,12 +3954,12 @@ gutter of each test, and of its module and classes, starts.
 
 As X337, this needs `./gradlew xdk:installDist` and `publishLocal` first, and makes its project at the folder root
 with `xtc init`, building with the XTC Gradle plugin and XDK from `mavenLocal`. In Gradle mode the tests run with the
-project's `testXtc`, which takes them as `--test-class` and `--test-method`, and reports them with
-`--test-report=teamcity`: VS Code runs it in a process of its own and reads its output, IntelliJ in its test console.
+project's `testXtc`, which takes them as `--test-class` and `--test-method`, and reports them as events with
+`--test-report=json`: VS Code runs it in a process of its own and reads its output, IntelliJ in its test console.
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X340 | Make the application project `GradleTested` as X337 makes `GradleDebugged`, choose the Gradle build mode, and replace `src/test/x/GradleTestedTest.x` with a class `MathTest` with the tests `adds`, `fails`, whose assertion on line 13 fails with `one and one are not three`, and `works`, which prints `inside works` on line 19. Run the tests of `MathTest` (VS Code: the cursor on its name, **Run Test at Cursor**; IntelliJ: Run of its gutter icon). Set a breakpoint on line 19 and debug `works` (VS Code: **Debug Test at Cursor** on its name; IntelliJ: Debug of its icon); when it stops, continue. | The run runs `./gradlew -q testXtc --module=GradleTestedTest --test-class=MathTest --test-report=teamcity` and marks `adds` and `works` passed and `fails` failed with its message (VS Code: on line 13). Debug runs `testXtc` with `--test-method=MathTest.works` under the debugger, which stops on line 19; continuing runs `works` to its end, and it passes, alone. |
+| X340 | Make the application project `GradleTested` as X337 makes `GradleDebugged`, choose the Gradle build mode, and replace `src/test/x/GradleTestedTest.x` with a class `MathTest` with the tests `adds`, `fails`, whose assertion on line 13 fails with `one and one are not three`, and `works`, which prints `inside works` on line 19. Run the tests of `MathTest` (VS Code: the cursor on its name, **Run Test at Cursor**; IntelliJ: Run of its gutter icon). Set a breakpoint on line 19 and debug `works` (VS Code: **Debug Test at Cursor** on its name; IntelliJ: Debug of its icon); when it stops, continue. | The run runs `./gradlew -q testXtc --module=GradleTestedTest --test-class=MathTest --test-report=json` and marks `adds` and `works` passed and `fails` failed with its message (VS Code: on line 13). Debug runs `testXtc` with `--test-method=MathTest.works` under the debugger, which stops on line 19; continuing runs `works` to its end, and it passes, alone. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

@@ -16,6 +16,7 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
+import org.xvm.debug.TestEvent
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
 import org.xvm.runtime.SessionDebugger
@@ -29,6 +30,9 @@ import kotlin.time.Duration
 /** Receives one run's events, in order, on the thread that reads them from where its program runs. */
 internal interface RunListener {
     fun output(text: String)
+
+    /** An event of a run of tests, which its output reported, and which is not in [output]. */
+    fun tested(event: TestEvent) {}
 
     fun exited(
         code: Long?,
