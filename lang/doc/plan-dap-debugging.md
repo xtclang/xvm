@@ -1054,5 +1054,10 @@ This is significantly reduced from a from-scratch implementation because:
 | `javatools/src/main/java/org/xvm/asm/op/Assert.java` | `assert:debug` hook |
 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java` | Source text, line calculation |
 | `javatools/src/main/java/org/xvm/compiler/EvalCompiler.java` | Runtime expression evaluation |
-| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt` | DAP placeholder; refuses with its reason |
-| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt` | DAP stdio launcher |
+| `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java` | The runtime debugger a host drives through calls, as the debug sessions do |
+| `javatools/src/main/java/org/xvm/runtime/debug/DebugCommands.java` | The debug half of the worker protocol where the program runs, in the execution worker or under `--debug` |
+| `javatools/src/main/java/org/xvm/runtime/debug/DebugProtocol.java` | That protocol's commands and events, as records both ends serialize |
+| `javatools/src/main/java/org/xvm/runtime/debug/DebugAgent.java` | The debugger agent of a program run with `--debug`, over a socket |
+| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt` | One DAP session, which the language server hosts; launches through the embedded build and run |
+| `lang/dap-server/src/main/kotlin/org/xvm/debug/DebugRuns.kt` | What a session launches or attaches to, and its run's events |
+| `lang/dap-server/src/main/kotlin/org/xvm/debug/DebugMessageEndpoint.kt` | The session's DAP endpoint over the language server's `xtc/debugMessage` |
