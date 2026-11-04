@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Element
 import org.xtclang.idea.PluginPaths
+import java.io.InputStream
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -84,6 +85,7 @@ class PluginManifestTest {
                 // plugins
                 "lang.syntaxHighlighterFactory", // use the TextMate grammar for our native file type
                 "editorHighlighterProvider", // use TextMate's scope-aware token storage
+                "lang.parserDefinition", // a PSI of the Ecstasy language via XtcParserDefinition
                 "newProjectWizard.generator", // wizard entry created by XtcNewProjectWizard
                 "configurationType", // run-config type created by XtcRunConfigurationType
                 "runConfigurationProducer", // auto-create run configs from .x context
@@ -112,6 +114,59 @@ class PluginManifestTest {
                 missing,
             ).isEmpty()
     }
+
+    @Test
+    @DisplayName("registers for Ecstasy what LSP4IJ registers for TEXT, which an Ecstasy file's PSI was")
+    fun lsp4ijTextFeaturesApplyToEcstasy() {
+        // LSP4IJ registers some features only for the TEXT and TextMate languages. An Ecstasy file's PSI is of the
+        // Ecstasy language since XtcParserDefinition, so each needs its own registration, with LSP4IJ's class.
+        // A file's view provider comes by its file type's language, Ecstasy, so LSP4IJ's TEXT one never applied;
+        // XtcParameterInfoHandler is the plugin's own signature help.
+        val lsp4ij =
+            javaClass.classLoader
+                .getResources("META-INF/plugin.xml")
+                .toList()
+                .map { url -> parse(url.openStream()) }
+                // the test classpath can hold LSP4IJ's jar more than once
+                .first {
+                    it
+                        .getElementsByTagName("id")
+                        .item(0)
+                        ?.textContent
+                        ?.trim() == "com.redhat.devtools.lsp4ij"
+                }
+        val text =
+            registrations(lsp4ij, "TEXT")
+                .filterNot { (tag, _) -> tag == "lang.fileViewProviderFactory" || tag == "codeInsight.parameterInfo" }
+        assertThat(text.map { it.first }).contains("lang.foldingBuilder", "lang.psiStructureViewFactory")
+        val missing = text - registrations(pluginXml, "Ecstasy")
+        assertThat(missing).withFailMessage("plugin.xml registers none of these for Ecstasy: %s", missing).isEmpty()
+    }
+
+    /** The extensions of com.intellij that [root] registers for [language], as their tag and class. */
+    private fun registrations(
+        root: Element,
+        language: String,
+    ): Set<Pair<String, String>> {
+        val elements = root.getElementsByTagName("*")
+        return (0 until elements.length)
+            .map { elements.item(it) as Element }
+            .filter {
+                it.getAttribute("language") == language &&
+                    (it.parentNode as? Element)?.getAttribute("defaultExtensionNs") == "com.intellij"
+            }.map { it.tagName to it.getAttribute("implementationClass") }
+            .toSet()
+    }
+
+    private fun parse(input: InputStream): Element =
+        input.use {
+            DocumentBuilderFactory
+                .newInstance()
+                .apply { isNamespaceAware = false }
+                .newDocumentBuilder()
+                .parse(it)
+                .documentElement
+        }
 
     @Test
     fun fileMoveUsesThePlatformExtensionPoint() {
