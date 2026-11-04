@@ -47,7 +47,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     disabledReason = "Spawns multiple Gradle builds which are slow with empty cache")
 public class XtcProjectCreatorIntegrationTest {
 
-    private static final int GRADLE_TIMEOUT_SECONDS = 120;
+    /**
+     * How long a generated project's Gradle build may take before the test fails as hung. It ends
+     * only a hang: an hour, which no build reaches however slow or loaded the machine is, so no
+     * result depends on speed.
+     */
+    private static final int GRADLE_TIMEOUT_SECONDS = 3_600;
 
     @TempDir
     Path tempDir;

@@ -42,14 +42,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * interpreter down ends, and the values its templates cache, which each runtime makes for itself.
  */
 public class RuntimeRetentionTest {
-    private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
+    /**
+     * How long the test waits for a run before it fails as hung. It ends only a hang: an hour,
+     * which no run reaches however slow or loaded the machine is, so no result depends on speed.
+     */
+    private static final Duration RUN_LIMIT = Duration.ofHours(1);
 
     @Test
     public void shuttingDownAnInterpreterCancelsItsTimersAlarmsAndEndsItsThreads() throws Exception {
         EmbeddingSupport support   = run("Alarms");
         Runtime          runtime   = field(support.ensureConnector(), "f_runtime");
         NativeContainer  container = field(support.ensureConnector(), "f_containerNative");
-        assertEquals(1, pendingAlarms(container), "the program's hour-long alarm is pending");
+        assertEquals(1, pendingAlarms(container), "the program's day-long alarm is pending");
 
         support.shutdownInterpreter();
         assertEquals(0, pendingAlarms(container));
@@ -93,7 +97,7 @@ public class RuntimeRetentionTest {
                         @Inject Console console;
                         @Inject Timer timer;
                         timer.start();
-                        timer.schedule(Duration.ofMinutes(60), () -> console.print("dropped"));
+                        timer.schedule(Duration.ofDays(1), () -> console.print("dropped"));
                         console.print("returned");
                     }
                 }
