@@ -69,14 +69,16 @@ mv "$container/src.new" "$container/src"
 
 stamp="$(date +%Y%m%d-%H%M%S)"
 status=0
-# the export has no .git, so the commit and the uncommitted paths, which the VS Code playbook records, come from here
+# the export has no .git, so the commit and branch, which javatools' build info and the VS Code playbook record, and
+# the uncommitted paths come from here
 commit="$(git -C "$root" rev-parse HEAD)"
+branch="$(git -C "$root" rev-parse --abbrev-ref HEAD)"
 dirty="$(git -C "$root" status --porcelain)"
 # --init makes PID 1 reap orphans: without it, a Gradle daemon that exits on a cancel stays a zombie, which Java
 # reports alive (X260 waits for the canceled daemon to exit)
 "$engine" run --rm --init --name "xvm-playbook-$stamp" \
     --memory 7g --shm-size 1g --security-opt label=disable \
-    -e XTC_PLAYBOOK_COMMIT="$commit" -e XTC_PLAYBOOK_DIRTY="$dirty" \
+    -e XTC_COMMIT="$commit" -e XTC_BRANCH="$branch" -e XTC_PLAYBOOK_DIRTY="$dirty" \
     -v xvm-playbook-gradle:/gradle \
     -v xvm-playbook-work:/work \
     -v xvm-playbook-m2:/home/playbook/.m2 \
