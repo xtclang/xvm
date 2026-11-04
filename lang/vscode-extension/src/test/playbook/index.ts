@@ -48,7 +48,7 @@ export async function run(): Promise<void> {
         });
     });
     const report = {
-        commit: process.env.XTC_PLAYBOOK_COMMIT, dirtyPaths: process.env.XTC_PLAYBOOK_DIRTY,
+        commit: process.env.XTC_COMMIT, dirtyPaths: process.env.XTC_PLAYBOOK_DIRTY,
         vscode: vscode.version, finished: new Date().toISOString(), failures,
         progressCancellation: process.env.XTC_PLAYBOOK_CANCEL_UI === 'true' ? 'visible-control' : 'native-token',
         sharedScenarios: { file: sharedScenarioPath, sha256: sharedScenarioHash, ids: sharedScenarioIds },
