@@ -401,6 +401,15 @@ private fun Tour.writing() {
         )
         action("CommentByLineComment")
     }
+    verify("Ctrl+Shift+/ wraps the selection in a block comment") {
+        open(source("Player.x"), 0)
+        select("card1.rank == GameConstants.SPECIAL_CARD")
+        action("CommentByBlockComment")
+        expect(Regex("""/\*\s*card1\.rank == GameConstants\.SPECIAL_CARD\s*\*/""") in fileText(source("Player.x"))) {
+            "No block comment around the selection in Player.x"
+        }
+    }
+    restore()
     shot(
         "Code that needs formatting",
         "swapCards is indented too far, and a space sits before a parenthesis: the code style's settings say how Ecstasy code is laid out.",
