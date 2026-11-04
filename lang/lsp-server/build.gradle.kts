@@ -169,6 +169,9 @@ dependencies {
     // The Debug Adapter Protocol sessions the server hosts for its clients
     implementation(project(":dap-server"))
 
+    // The language model the grammars are generated from: completion takes its keywords and built-in types
+    implementation(project(":dsl"))
+
     // LSP4J - Eclipse LSP implementation for Java
     // Bundled in fat JAR for out-of-process execution (not provided by IntelliJ)
     implementation(libs.lang.lsp4j)
