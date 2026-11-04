@@ -164,7 +164,7 @@ keeps the code it was built from, so once the file is edited a breakpoint is pla
 was built with, and one on a line changed since is marked invalid, saying why. Its Variables view
 shows the frame's locals and expands objects and arrays, a large array to its first 100 elements and
 how many more there are, since LSP4IJ does not read a variable's children a page at a time (UP42 in
-`docs/remaining.md`); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy
+`docs/remaining.md`, LSP4IJ pull request [#1770](https://github.com/redhat-developer/lsp4ij/pull/1770)); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy
 variables, `(...)`, whose values run the program's code, for at most a second; expand one to show
 its value, since LSP4IJ does not show a Show value link for them yet (UP35, LSP4IJ pull request
 [#1768](https://github.com/redhat-developer/lsp4ij/pull/1768)). A mutable object's value ends with its
@@ -184,13 +184,13 @@ expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. It
 `docs/remaining.md`, LSP4IJ pull request [#1759](https://github.com/redhat-developer/lsp4ij/pull/1759)).
 An uncaught exception stops the program where it is thrown, by default, and the exception is the
 frame's first variable; exception filter conditions and the exception's stack in the hint wait on
-LSP4IJ too (UP34, UP33). The
+LSP4IJ too (UP34, UP33; LSP4IJ pull requests [#1760](https://github.com/redhat-developer/lsp4ij/pull/1760) and [#1761](https://github.com/redhat-developer/lsp4ij/pull/1761)). The
 Watches view shows expressions such as `point.x + 1` or `ints[i] > 0` in the selected frame, without
 running the program's code, and what is not evaluated shows why; LSP4IJ's debugger hover evaluates
 the name under the mouse. **Evaluate Expression** evaluates them so too, and runs what that refuses,
 such as a call, as code on the stopped fiber, for at most two seconds, and what the code changed
 stays changed; the Variables view shows it the next time it reads the variables, since LSP4IJ does
-not handle the `invalidated` event yet (UP40). Only that code, and the services it calls, run
+not handle the `invalidated` event yet (UP40, LSP4IJ pull request [#1766](https://github.com/redhat-developer/lsp4ij/pull/1766)). Only that code, and the services it calls, run
 meanwhile; the configuration's **Let the program run while Evaluate Expression runs code** lets the
 rest of the program run too, without stopping at breakpoints, for code that waits on work the
 program's other fibers do. **Pause
