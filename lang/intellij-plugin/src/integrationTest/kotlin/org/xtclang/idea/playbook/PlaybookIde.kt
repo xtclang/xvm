@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Driver
+import com.intellij.driver.client.Remote
 import com.intellij.ide.starter.ci.CIServer
 import com.intellij.ide.starter.ci.NoCIServer
 import com.intellij.ide.starter.config.ConfigurationStorage
@@ -127,6 +128,8 @@ internal class PlaybookIde(
                 """.trimIndent(),
             )
             options.forEach { (file, text) -> Files.writeString(optionsDirectory.resolve(file), text) }
+            // the bundled plugins that neither the playbook nor the tour uses, which the IDE then does not load
+            Files.writeString(context.paths.configDir.resolve("disabled_plugins.txt"), disabledPlugins().joinToString("\n", postfix = "\n"))
             // The full playbook exceeds Starter's ten-minute default; individual waits
             // remain bounded so an unresponsive editor still fails promptly.
             val configured =
@@ -140,13 +143,21 @@ internal class PlaybookIde(
                         addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                         addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)
+                        // where the IDE's memory goes, which MemoryProbe records; glibc's malloc keeps an arena per
+                        // core for a process of many threads, which the container's memory pays for
+                        addLine("-XX:NativeMemoryTracking=summary")
+                        withEnv("MALLOC_ARENA_MAX", "2")
                         // command-line runs, X338's, run xtc from the PATH: the XDK built from this tree, whose xec
                         // X336 runs
                         withEnv("PATH", listOfNotNull(XDK_BIN.toString(), System.getenv("PATH")).joinToString(File.pathSeparator))
                     }
             repeat(phases) { phase ->
                 configured.runIdeWithDriver(runTimeout = 30.minutes).useDriverAndCloseIde {
-                    body(phase)
+                    try {
+                        body(phase)
+                    } finally {
+                        runCatching { Files.writeString(run.resolve("memory-$phase.txt"), utility(MemoryProbe::class).report()) }
+                    }
                 }
             }
         } finally {
@@ -154,6 +165,14 @@ internal class PlaybookIde(
             di = previousDi
         }
     }
+
+    /** The ids of the bundled plugins the driven IDE leaves out, from playbook/disabled-plugins.txt. */
+    private fun disabledPlugins(): List<String> =
+        checkNotNull(javaClass.getResource("/playbook/disabled-plugins.txt")) { "No playbook/disabled-plugins.txt" }
+            .readText()
+            .lines()
+            .map(String::trim)
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
 
     companion object {
         /**
@@ -169,4 +188,10 @@ internal class PlaybookIde(
         /** The bin directory of the XDK built from this tree, with xtc and xec. */
         val XDK_BIN: Path = TREE.resolve("xdk/build/install/xdk/bin")
     }
+}
+
+/** The IDE-side MemoryUi, which reports where the IDE's and its language server's memory goes. */
+@Remote("org.xtclang.idea.playbook.probe.MemoryUi", plugin = "org.xtclang.playbook.probe")
+internal interface MemoryProbe {
+    fun report(): String
 }
