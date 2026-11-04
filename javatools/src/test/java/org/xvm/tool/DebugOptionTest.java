@@ -53,9 +53,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Runs a module with {@code xec --debug}: the runner finds a debugger provider in the jar that
  * {@code agent=<jar>} names, starts it with the other options, installs its debugger before the
  * program starts, so that a breakpoint on the program's first line stops it, and tells the
- * debugging the exit code before closing it. Without a provider, with an agent jar that is not
- * there, with options the provider refuses and with {@code --jit}, the program does not run. The
- * compiled XDK modules come from the test resources.
+ * debugging the exit code before closing it. Without {@code agent=}, javatools' own provider, the
+ * class path's, debugs the program. With an agent jar that is not there, with options the provider
+ * refuses and with {@code --jit}, the program does not run. The compiled XDK modules come from the
+ * test resources.
  */
 public class DebugOptionTest {
     private static final long LIMIT_SECONDS = 60;
@@ -153,10 +154,12 @@ public class DebugOptionTest {
     }
 
     @Test
-    public void withoutAProviderTheProgramDoesNotRun() throws Exception {
+    public void withoutAnAgentJavatoolsOwnProviderDebugsTheProgram() throws Exception {
+        // the class path's provider, DebugAgent, listens; without suspend the program runs at once
         var messages = new Messages();
-        assertEquals(1, launch("listen:127.0.0.1:0", false, messages));
-        messages.assertError("--debug needs a debugger provider");
+        assertEquals(0, launch("listen:127.0.0.1:0", false, messages));
+        messages.assertNoErrors();
+        // the test's provider, which only an agent jar names, was not asked
         assertEquals(List.of(), events());
     }
 
@@ -251,6 +254,10 @@ public class DebugOptionTest {
                 errors.add(text);
             }
             return text;
+        }
+
+        synchronized void assertNoErrors() {
+            assertEquals(List.of(), errors);
         }
 
         synchronized void assertError(String text) {
