@@ -1,13 +1,23 @@
 package org.xtclang.idea.style
 
+import com.intellij.application.options.CodeStyleAbstractConfigurable
+import com.intellij.application.options.CodeStyleAbstractPanel
+import com.intellij.application.options.IndentOptionsEditor
+import com.intellij.application.options.SmartIndentOptionsEditor
+import com.intellij.application.options.TabbedLanguageCodeStylePanel
 import com.intellij.lang.Language
+import com.intellij.psi.codeStyle.CodeStyleConfigurable
+import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CodeStyleSettingsCustomizable
 import com.intellij.psi.codeStyle.CommonCodeStyleSettings
 import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider
 import org.xtclang.idea.XtcIntelliJLanguage
 
 /**
- * Provides Code Style settings for XTC under Settings > Editor > Code Style > Ecstasy.
+ * Provides Code Style settings for XTC under Settings > Editor > Code Style > Ecstasy, a page with
+ * the standard "Tabs and Indents" and "Wrapping and Braces" tabs. The platform makes that page
+ * only for a provider that overrides [createConfigurable]; without it, the settings exist but
+ * cannot be edited.
  *
  * Configures the standard "Tabs and Indents" panel with XTC's default values:
  * - 4-space indent (matching `lib_ecstasy/` conventions)
@@ -49,6 +59,22 @@ class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider()
     }
 
     override fun getCodeSample(settingsType: SettingsType): String = CODE_SAMPLE
+
+    override fun getIndentOptionsEditor(): IndentOptionsEditor = SmartIndentOptionsEditor()
+
+    override fun createConfigurable(
+        baseSettings: CodeStyleSettings,
+        modelSettings: CodeStyleSettings,
+    ): CodeStyleConfigurable =
+        object : CodeStyleAbstractConfigurable(baseSettings, modelSettings, configurableDisplayName) {
+            override fun createPanel(settings: CodeStyleSettings): CodeStyleAbstractPanel =
+                object : TabbedLanguageCodeStylePanel(XtcIntelliJLanguage, currentSettings, settings) {
+                    override fun initTabs(settings: CodeStyleSettings) {
+                        addIndentOptionsTab(settings)
+                        addWrappingAndBracesTab(settings)
+                    }
+                }
+        }
 
     companion object {
         private val CODE_SAMPLE =
