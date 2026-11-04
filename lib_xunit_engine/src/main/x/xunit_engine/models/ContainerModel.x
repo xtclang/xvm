@@ -40,6 +40,8 @@ const ContainerModel
 
     @Override Boolean isContainer = True;
 
+    @Override String selector.get() = Model.classSelector(testClass);
+
     @Override
     ExecutionLifecycle createExecutionLifecycle() = new ContainerExecutionLifecycle(this);
 
