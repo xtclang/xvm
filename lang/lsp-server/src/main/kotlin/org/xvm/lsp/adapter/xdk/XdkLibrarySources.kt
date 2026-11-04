@@ -18,8 +18,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipInputStream
 
 /**
- * Matching distribution sources. Parsed declaration ranges and text survive; compiler objects do
- * not.
+ * Matching distribution sources. Parsed declaration ranges, doc comments and text survive; compiler
+ * objects do not.
  */
 internal object XdkLibrarySources {
     const val SCHEME = "ecstasy-library"
@@ -201,6 +201,7 @@ internal object XdkLibrarySources {
                     binary.position,
                 ),
                 SemanticModel.SourceLocation(source.uri, it.range),
+                it.documentation,
             )
         }
     }
