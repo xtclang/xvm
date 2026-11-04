@@ -51,6 +51,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.hours
 
 /**
  * Embedded build to disk through the compiler queue, and runs in the execution worker JVM. The worker
@@ -61,7 +62,7 @@ class EmbeddedExecutionTest {
     @TempDir lateinit var directory: Path
 
     private lateinit var lib: File
-    private var worker = RunWorkerProcess()
+    private var worker = RunWorkerProcess(limits = WORKER_LIMITS)
 
     @BeforeAll
     fun compileProgramsOnce() {
@@ -150,7 +151,7 @@ class EmbeddedExecutionTest {
         if (left != 0) {
             println("a test left runs on the class's worker (tracked=$left), so the next test gets a fresh one")
             worker.close()
-            worker = RunWorkerProcess()
+            worker = RunWorkerProcess(limits = WORKER_LIMITS)
         }
     }
 
@@ -2457,6 +2458,12 @@ class EmbeddedExecutionTest {
     }
 
     private companion object {
+        /**
+         * The class's worker lets a lazy variable's code run for as long as it takes, so that no test depends on how
+         * fast the machine runs it; the debugger's own limit is javatools' to test, with code that never ends.
+         */
+        val WORKER_LIMITS = RunWorkerProcess.Limits(onDemand = 1.hours)
+
         /** Rounds of the soak, each with four runs: five, or `-Plsp.soakRounds` for a longer soak. */
         val SOAK_ROUNDS =
             System.getProperty("xtc.lsp.soakRounds", "5").toInt().also {
