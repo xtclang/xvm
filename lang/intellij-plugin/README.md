@@ -7,7 +7,7 @@ See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundari
 
 ## Features
 
-- **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
+- **New Project Wizard** - Create Ecstasy projects directly from IntelliJ (File → New → Project → Ecstasy)
 - **Build and Run** - Build/Rebuild Project and Ecstasy run configurations use the language
   server's embedded compiler or Gradle, chosen under Settings | Build, Execution, Deployment |
   Ecstasy ([details](#running-your-application)); `xtc run` remains available per configuration
@@ -84,7 +84,7 @@ Then install manually:
 ### Creating a New Project
 
 1. **File → New → Project**
-2. Select **XTC** from the left panel
+2. Select **Ecstasy** from the left panel
 3. Configure:
    - **Project name** - Name of your project/module
    - **Project type** - Application, Library, or Service
@@ -439,7 +439,7 @@ feature:
 2. Open a `.x` file - you should see:
    - XTC file icon (X logo) in the file tree
    - Syntax highlighting (keywords, strings, comments colored)
-   - The file type shows as "XTC Source" in the status bar
+   - The file's type is **Ecstasy**
 3. If syntax highlighting doesn't work, check:
    - **Help → Show Log in Finder** and look for TextMate bundle errors
    - Ensure the `textmate/` directory exists in the plugin's lib folder
@@ -447,7 +447,7 @@ feature:
 #### Testing the Project Creation Wizard
 
 1. **File → New → Project...**
-2. In the left panel, select **XTC**
+2. In the left panel, select **Ecstasy**
 3. Configure:
    - **Project name**: Enter a name (e.g., "MyXtcApp")
    - **Project type**: Choose Application, Library, or Service
@@ -522,7 +522,8 @@ still change that default. See [LSP Server README](../lsp-server/README.md) for 
 4. Test go-to-definition: Ctrl+Click on a symbol
 5. If LSP isn't working:
    - Check **Help → Show Log in Finder** for LSP messages
-   - Look for "XTC LSP Server started" in the log
+   - Look for `initialize: Ecstasy Language Server` in the server log
+     (`~/.xtc/logs/lsp/server-*/server.log`), or the **Ecstasy Language Server Started** notification
 
 #### Sandbox Console Output
 
@@ -833,7 +834,7 @@ intellij-plugin/
 ┌──────────────────────────────────────────────────────────────────┐
 │                    IntelliJ IDEA (JBR 25)                        │
 │  ┌──────────────────┐    ┌────────────────────┐                  │
-│  │ XTC Plugin       │    │ LSP4IJ Plugin      │                  │
+│  │ Ecstasy Plugin   │    │ LSP4IJ Plugin      │                  │
 │  │ (this plugin)    │───▶│ (Red Hat)          │                  │
 │  │                  │    │                    │                  │
 │  │ - Project wizard │    │ - XtcLanguageClient│                  │
@@ -845,7 +846,7 @@ intellij-plugin/
 └────────────────────────────────────┼─────────────────────────────┘
                                      │
                           ┌──────────▼──────────┐
-                          │ XTC LSP Server      │
+                          │ Ecstasy LSP Server  │
                           │ (separate process)  │
                           │ JBR 25              │
                           │                     │
