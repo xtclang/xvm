@@ -396,10 +396,10 @@ java -jar javatools.jar run -L xdk.xtc -L myapp.xtc myapp.xtc
 
 ## IntelliJ IDEA Integration
 
-The XTC IntelliJ plugin provides a **New Project** wizard that offers the same project types and options as `xtc init`:
+The Ecstasy IntelliJ plugin provides a **New Project** wizard that offers the same project types and options as `xtc init`:
 
 1. **File → New → Project**
-2. Select **XTC** from the generators list
+2. Select **Ecstasy** from the generators list
 3. Configure:
    - **Project name** and **Location**
    - **Project type**: Application, Library, or Service
