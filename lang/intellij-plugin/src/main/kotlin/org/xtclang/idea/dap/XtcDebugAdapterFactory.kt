@@ -76,11 +76,15 @@ class XtcDebugAdapterDescriptor(
     private val project = environment.project
 
     override fun startServer(): ProcessHandler {
-        // a test run's output reports its tests, which a Tests tab of the session shows in IntelliJ's test console
+        // a test run's tests, as its xtcTest events report them, go to a Tests tab of the session, IntelliJ's test console
         val configuration = (environment.runProfile as? XtcRunConfiguration)?.takeIf { it.tests != null }
         val events = configuration?.let { TestEventsProcessHandler() }
         val handler =
-            LanguageServerDebugProcessHandler(DebugSessions.getInstance(project), output = { text -> events?.output(text) }) {
+            LanguageServerDebugProcessHandler(
+                DebugSessions.getInstance(project),
+                output = { text -> events?.output(text) },
+                tested = { event -> events?.tested(event) },
+            ) {
                 // the session builds the text the server holds, so the editor's edits must have reached it
                 EmbeddedExecution.server(project).thenCombine(EmbeddedExecution.editsSent(project)) { server, _ -> server }
             }
