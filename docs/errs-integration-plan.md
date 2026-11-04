@@ -228,6 +228,33 @@ tip `ac19f15d8a` (run 40875614212).
   `da17e6606f`, #693 `ac19f15d8a`). That commit's message calls the cause the likeliest one; this
   confirms it.
 
+**errs and #693 rebased onto master `2f18c1335c` (2026-11-04).** Master had moved by #750 (the JIT
+milestone), #753, #754, and the three test-support PRs taken from these branches: #755 (xunit's
+`-c`/`-t` selection), #756 (xunit's JSON report) and #757 (testXtc's test options).
+
+- `TypeConstant`: #750 and errs' `d13b6ebc16` (#693's `89e0bd7f5b`) added the same
+  `args.length > 0` guard, with different comments; both branches keep #750's (errs `141cf4396e`,
+  #693 `50a7e5c69e`).
+- The plugin's debugger commit, errs' `f191b5fc13` (#693's `108e19af47`), met #757 in
+  `ForkedCommandLineBuilder`, `XtcTestTask` and `LauncherArgumentsTest`: both sides are kept, #757's
+  test options before the debug option and its test after the debug one, as errs had them (errs
+  `ff3178c3e4`, #693 `214764bd8c`).
+- Dropped, as master has them: errs' `649d5c53f2` (#755), `adc70bfce7` and `80a7abfc02` (#756 has
+  the report's final form, without TeamCity) and `ceabc7d110` (#757); #693's `6b36fe5aa5` (#755)
+  and `8bb4c6266e` (#756). The xunit parts of errs' `12eb77c39d` and #693's `cc3705d855`, which
+  added and changed the TeamCity reporter, and the plugin part of #693's `f1a394397d`, go with them;
+  their editor and server parts stay. Between those commits and the JSON events' (errs `bc7f0e7b5c`,
+  #693 `da17db7c23`), the editors ask xunit for a `teamcity` report that master's xunit refuses, so
+  the editors' test runs work again from that commit on.
+- Both trees are the expected ones exactly: master merged with the validated trees (errs
+  `8687ea0fb9`, #693 `c04dcbfbfb`, both with green CI) under the resolutions above, `17baf57db5`
+  and `a508abefd9`. [The map](errs-rebase-2026-11-04.tsv) gives errs' 1229 commits and their 1225
+  replays, and [#693's map](errs-693-rebase-2026-11-04.tsv) its 116 and their 114.
+- `:javatools:compileJava`, `:javatools:compileTestJava` and `spotlessCheck` pass on errs; #693's
+  tree differs from errs' in #693's own content only. CI runs on both after the push.
+- Backups: `backup/errs-pre-rebase-20261104` (`8687ea0fb9`) and `backup/693-pre-rebase-20261104`
+  (`c04dcbfbfb`), until CI is green on both. Both were force-pushed with leases on those commits.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
