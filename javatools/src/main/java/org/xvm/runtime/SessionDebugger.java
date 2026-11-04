@@ -3879,7 +3879,8 @@ public final class SessionDebugger implements Debugger {
     // ----- source index --------------------------------------------------------------------------
 
     private void index(Component component) {
-        if (component instanceof MethodStructure method && method.getOps() != null) {
+        // a method without code, such as an interface's or a native one, has no lines; getOps() throws for it
+        if (component instanceof MethodStructure method && method.ensureCode() != null) {
             String path = sourcePath(method);
             if (path != null) {
                 var codeLines = new TreeSet<Integer>();
