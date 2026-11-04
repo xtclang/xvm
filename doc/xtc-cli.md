@@ -299,7 +299,8 @@ xtc test [options] <module>
 | `-g, --test-group <group>` | Run tests with specific @Test group |
 | `-p, --test-package <pkg>` | Run tests in specific package |
 | `-t, --test-method <method>` | Run specific test method |
-| `--xunit-out <dir>` | Output directory for test results |
+| `-x, --xunit-out <dir>` | Output directory for test results |
+| `-I xvm.xunit.report=json` | Also print xunit's `json` report, an event per line, for a tool that reads the run's output, such as an IDE |
 | `--debug <options>` | Run the tests under a debugger outside the program, as `xtc run` does |
 
 ### Examples
@@ -308,7 +309,10 @@ xtc test [options] <module>
 xtc test myapp.xtc
 xtc test -c MyTests myapp.xtc
 xtc test --test-group integration myapp.xtc
+xtc test -t tests.MathTest.adds -I xvm.xunit.report=json myapp.xtc
 ```
+
+See the [xunit README](../lib_xunit/README.md#running-tests) for selecting tests and the report's events.
 
 ## xtc disass - Disassembly
 
