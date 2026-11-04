@@ -20,7 +20,7 @@ class XtcNewProjectWizard : GeneratorNewProjectWizard {
     override val id = "XTC"
     override val name = "Ecstasy"
     override val icon: Icon =
-        XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
+        XtcIconProvider.xtcIcon ?: com.intellij.icons.AllIcons.FileTypes.Any_type
     override val ordinal = 1000
 
     override fun isEnabled() = true
