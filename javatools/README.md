@@ -157,6 +157,11 @@ LLVM-based adaptive compiler).
 
 * Command line is `org.xvm.tool.Runner`
 * Implementation in `org.xvm.runtime` package
+* Debugging by a host such as an IDE: `org.xvm.runtime.SessionDebugger`, a debugger driven by
+  calls, and `org.xvm.runtime.debug`, its protocol (`DebugProtocol`, `DebugCommands`) and the
+  agent (`DebugAgent`), which javatools registers as its `org.xvm.api.DebuggerProvider`, so
+  `xec`, `xtc run` and `xtc test` take `--debug` without `agent=`
+  (see [the CLI reference](../doc/xtc-cli.md#debugging-from-an-editor))
 
 **Warning:** This runtime is not speedy, by any stretch; this
 is expected, because it is only intended as a proof-of-concept.
