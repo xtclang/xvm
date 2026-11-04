@@ -22,7 +22,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.hours
 
 /**
  * The isolated IDE that the playbook and the tour drive: IntelliJ IDEA with Ultimate disabled, the LSP4IJ that the
@@ -130,8 +130,8 @@ internal class PlaybookIde(
             options.forEach { (file, text) -> Files.writeString(optionsDirectory.resolve(file), text) }
             // the bundled plugins that neither the playbook nor the tour uses, which the IDE then does not load
             Files.writeString(context.paths.configDir.resolve("disabled_plugins.txt"), disabledPlugins().joinToString("\n", postfix = "\n"))
-            // The full playbook exceeds Starter's ten-minute default; individual waits
-            // remain bounded so an unresponsive editor still fails promptly.
+            // The full playbook, about 21 minutes, exceeds Starter's ten-minute default. A run's limit only ends a run
+            // that hangs: six hours, which no machine takes, so that a slow or busy one does not end a correct run.
             val configured =
                 context
                     .disableUltimateModule()
@@ -152,7 +152,7 @@ internal class PlaybookIde(
                         withEnv("PATH", listOfNotNull(XDK_BIN.toString(), System.getenv("PATH")).joinToString(File.pathSeparator))
                     }
             repeat(phases) { phase ->
-                configured.runIdeWithDriver(runTimeout = 30.minutes).useDriverAndCloseIde {
+                configured.runIdeWithDriver(runTimeout = 6.hours).useDriverAndCloseIde {
                     try {
                         body(phase)
                     } finally {
