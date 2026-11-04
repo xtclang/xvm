@@ -363,6 +363,25 @@ xtcTest {
 }
 ```
 
+**Running Chosen Tests**:
+
+`testXtc` runs all of the test module's tests unless its options choose some, by their paths in the
+module; each option can be given more than once, and xunit runs the tests that any of them selects:
+
+| Option | Effect |
+|--------|--------|
+| `--test-package=<path>` | Runs the tests of a package, such as `tests` |
+| `--test-class=<path>` | Runs the tests of a class, such as `tests.MathTest` |
+| `--test-method=<path>` | Runs one test method, such as `tests.MathTest.adds`, or a module-level test by its name |
+| `--test-report=json` | Also prints xunit's `json` report, an event per line, for a tool that reads the execution from the output, such as an IDE; xunit refuses a report it does not know |
+
+```bash
+./gradlew testXtc --test-class=tests.MathTest --test-method=tests.OtherTest.works
+./gradlew testXtc --module=MyAppTest --test-report=json
+```
+
+The editors' test runs in Gradle mode use these options.
+
 **Skipping Tests**:
 
 The plugin supports standard Gradle/Maven conventions for skipping tests during development:
