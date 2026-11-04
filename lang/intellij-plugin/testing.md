@@ -145,8 +145,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 class XtcPluginRegistrationTest : BasePlatformTestCase() {
     fun testRunConfigurationTypeRegistered() {
         val configType = ConfigurationTypeUtil.findConfigurationType("XtcRunConfiguration")
-        assertNotNull("XTC run configuration type should be registered", configType)
-        assertEquals("XTC Application", configType.displayName)
+        assertNotNull("Ecstasy run configuration type should be registered", configType)
+        assertEquals("Ecstasy Application", configType.displayName)
     }
 
     fun testTextMateBundleProviderRegistered() {
