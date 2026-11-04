@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter
 
+import org.xtclang.tooling.xtcLanguage
 import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
@@ -26,150 +27,13 @@ object LanguageConstants {
         )
 
     /**
-     * Ecstasy language keywords for code completion.
-     *
-     * Sourced from the Ecstasy language specification. See:
-     * javatools/src/main/java/org/xvm/compiler/Token.java
+     * Ecstasy's keywords for code completion, reserved and context-sensitive, from the language model that the
+     * grammars are generated from ([xtcLanguage]).
      */
-    private val KEYWORDS: List<String> =
-        listOf(
-            // Module structure
-            "module",
-            "package",
-            "import",
-            "as",
-            // Type declarations
-            "class",
-            "interface",
-            "mixin",
-            "service",
-            "const",
-            "enum",
-            // Access modifiers
-            "public",
-            "private",
-            "protected",
-            "static",
-            "abstract",
-            // Inheritance
-            "extends",
-            "implements",
-            "incorporates",
-            "delegates",
-            "into",
-            // Control flow
-            "if",
-            "else",
-            "switch",
-            "case",
-            "default",
-            "for",
-            "while",
-            "do",
-            "break",
-            "continue",
-            "return",
-            // Exception handling
-            "try",
-            "catch",
-            "finally",
-            "throw",
-            // Other
-            "using",
-            "assert",
-            "new",
-            "this",
-            "super",
-            "outer",
-            "is",
-            "val",
-            "var",
-            "construct",
-            "function",
-            "typedef",
-            // Literals
-            "true",
-            "false",
-            "null",
-        )
+    private val KEYWORDS: List<String> = (xtcLanguage.keywords + xtcLanguage.contextKeywords).distinct()
 
-    /**
-     * XTC built-in types for code completion.
-     *
-     * Sourced from the Ecstasy standard library (lib_ecstasy).
-     */
-    private val builtInTypes: List<String> =
-        listOf(
-            // Integer types
-            "Int",
-            "Int8",
-            "Int16",
-            "Int32",
-            "Int64",
-            "Int128",
-            "IntN",
-            "UInt",
-            "UInt8",
-            "UInt16",
-            "UInt32",
-            "UInt64",
-            "UInt128",
-            "UIntN",
-            // Decimal types
-            "Dec",
-            "Dec32",
-            "Dec64",
-            "Dec128",
-            "DecN",
-            // Floating point types
-            "Float",
-            "Float16",
-            "Float32",
-            "Float64",
-            "Float128",
-            "FloatN",
-            // Basic types
-            "String",
-            "Char",
-            "Boolean",
-            "Bit",
-            "Byte",
-            "Object",
-            "Enum",
-            "Exception",
-            "Const",
-            "Service",
-            "Module",
-            "Package",
-            // Collections
-            "Array",
-            "List",
-            "Set",
-            "Map",
-            "Range",
-            "Interval",
-            "Tuple",
-            // Reflection
-            "Function",
-            "Method",
-            "Property",
-            "Type",
-            "Class",
-            // Interfaces
-            "Nullable",
-            "Orderable",
-            "Hashable",
-            "Stringable",
-            "Iterator",
-            "Iterable",
-            "Collection",
-            "Sequence",
-            // Special
-            "void",
-            "Null",
-            "True",
-            "False",
-        )
+    /** Ecstasy's built-in types for code completion, from the language model ([xtcLanguage]). */
+    private val builtInTypes: List<String> = xtcLanguage.builtinTypes.distinct()
 
     /**
      * Maps XTC symbol kinds to LSP completion item kinds.

@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter.treesitter
 
+import org.xtclang.tooling.model.KeywordCategory
+import org.xtclang.tooling.xtcLanguage
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.AdapterCodeActions
 import org.xvm.lsp.adapter.AdapterFormatter
@@ -171,36 +173,15 @@ class TreeSitterAdapter : AbstractAdapter() {
                 SymbolKind.MODULE,
             )
 
-        /** Keywords that make sense inside a function/control-flow body. */
+        /**
+         * Keywords that make sense inside a function/control-flow body: those of control flow and exception handling
+         * in the language model ([xtcLanguage]), and the references and declarations a statement starts with.
+         */
         private val bodyFlowKeywords =
-            setOf(
-                "if",
-                "else",
-                "switch",
-                "case",
-                "default",
-                "for",
-                "while",
-                "do",
-                "break",
-                "continue",
-                "return",
-                "try",
-                "catch",
-                "finally",
-                "throw",
-                "using",
-                "assert",
-                "new",
-                "this",
-                "super",
-                "outer",
-                "val",
-                "var",
-                "True",
-                "False",
-                "Null",
-            )
+            xtcLanguage.categorizedKeywords
+                .filter { it.category == KeywordCategory.CONTROL || it.category == KeywordCategory.EXCEPTION }
+                .map { it.word }
+                .toSet() + setOf("new", "this", "super", "outer", "val", "var")
 
         /** Common XTC annotations for annotation completion. */
         private val commonAnnotations =

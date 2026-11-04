@@ -603,7 +603,6 @@ val xtcLanguage =
             "Collection",
             "Sequence",
             // Special
-            "Void",
             "Null",
             "True",
             "False",
