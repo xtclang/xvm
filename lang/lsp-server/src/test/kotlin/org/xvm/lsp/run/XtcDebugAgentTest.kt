@@ -14,6 +14,7 @@ import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.DebugTask
+import org.xvm.debug.ProgramEvents
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
@@ -518,7 +519,7 @@ class XtcDebugAgentTest {
     }
 
     /** A run's events, each in words, in order. */
-    private class Events : RunListener {
+    private class Events : ProgramEvents {
         private val events = LinkedBlockingQueue<String>()
 
         fun next(): String = events.poll(LIMIT, SECONDS) ?: error("No event within $LIMIT seconds")
