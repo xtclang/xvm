@@ -375,7 +375,7 @@ class SemanticModel
             val position = Position(line, column)
             return occurrences
                 .filter { position in it.range }
-                .minWithOrNull(compareBy(INNERMOST) { it.range })
+                .minWithOrNull(compareBy(innermost) { it.range })
         }
 
         fun symbolAt(
@@ -394,7 +394,7 @@ class SemanticModel
             val position = Position(line, column)
             return expressions
                 .filter { position in it.range }
-                .minWithOrNull(compareBy(INNERMOST) { it.range })
+                .minWithOrNull(compareBy(innermost) { it.range })
                 ?.type
                 ?.let(::type)
         }
@@ -488,13 +488,13 @@ class SemanticModel
                     it.symbol == symbol.id && (includeDeclaration || it.role != Role.DECLARATION)
                 }.map { it.range }
                 .distinct()
-                .sortedWith(SOURCE_ORDER)
+                .sortedWith(sourceOrder)
                 .toList()
         }
 
         internal companion object {
-            private val SOURCE_ORDER = compareBy(Range::start, Range::end)
-            private val INNERMOST = compareByDescending(Range::start).thenBy(Range::end)
+            private val sourceOrder = compareBy(Range::start, Range::end)
+            private val innermost = compareByDescending(Range::start).thenBy(Range::end)
 
             /**
              * Merge detached tables after the compiler worker has proven cross-module identity aliases.

@@ -44,7 +44,7 @@ class BundledResourcesTest {
     @Test
     @DisplayName("icons/xtc.svg is on the classpath")
     fun iconPresent() {
-        // XtcIconProvider.XTC_ICON loads icons/xtc.svg via the IntelliJ
+        // XtcIconProvider.xtcIcon loads icons/xtc.svg via the IntelliJ
         // IconLoader (which resolves against the plugin classloader).
         // Missing icon = file-type / wizard / run-config items render with
         // the generic file glyph instead of our chrome-X.

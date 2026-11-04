@@ -341,7 +341,7 @@ internal class EmbeddedRuns(
             program.debug(modules, setup).thenApply { program.module }.whenComplete { _, failure ->
                 if (failure != null && attached.remove(runId) != null) program.close()
             }
-        }, ATTACHING)
+        }, attaching)
     }
 
     /**
@@ -418,7 +418,7 @@ internal class EmbeddedRuns(
                 } finally {
                     runCatching { server.close() }
                 }
-            }, ATTACHING)
+            }, attaching)
             .thenCompose { program ->
                 attached[runId] = program
                 logger.info("run attached after {} started it: run={} module={}", kind.tool, runId, program.module)
@@ -558,7 +558,7 @@ internal class EmbeddedRuns(
                 } finally {
                     runCatching { server.close() }
                 }
-            }, ATTACHING)
+            }, attaching)
             .thenCompose { program ->
                 attached[runId] = program
                 logger.info("tests attached: run={} module={}", runId, program.module)
@@ -983,7 +983,7 @@ internal class EmbeddedRuns(
         private val logger = LoggerFactory.getLogger(EmbeddedRuns::class.java)
 
         /** Where attaching waits for the program to answer: a thread of its own for each. */
-        private val ATTACHING = Executor { Thread.ofVirtual().name("xtc-attach").start(it) }
+        private val attaching = Executor { Thread.ofVirtual().name("xtc-attach").start(it) }
 
         /** The exit of a run stopped while its module was still building. */
         const val STOPPED_BEFORE_START = "Stopped before the program started."
