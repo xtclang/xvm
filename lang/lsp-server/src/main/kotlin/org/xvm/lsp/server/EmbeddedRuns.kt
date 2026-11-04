@@ -19,6 +19,7 @@ import org.xvm.debug.FrameState
 import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.LaunchTarget
 import org.xvm.debug.ModuleState
+import org.xvm.debug.ProgramEvents
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
@@ -36,7 +37,6 @@ import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.RunDebugClient
-import org.xvm.lsp.run.RunListener
 import org.xvm.lsp.run.RunWorkerProcess
 import org.xvm.lsp.run.TestProcess
 import java.io.Closeable
@@ -244,7 +244,7 @@ internal class EmbeddedRuns(
         val runId = params.runId ?: UUID.randomUUID().toString()
         return launch(
             params.copy(runId = runId),
-            object : RunListener {
+            object : ProgramEvents {
                 override fun output(text: String) {
                     (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
                 }
@@ -271,7 +271,7 @@ internal class EmbeddedRuns(
      */
     internal fun launch(
         params: RunParams,
-        events: RunListener,
+        events: ProgramEvents,
         ready: CompletionStage<out DebugSetup?> = CompletableFuture.completedFuture(null),
     ): CompletableFuture<RunResponse> {
         val module = params.module ?: return CompletableFuture.failedFuture(IllegalArgumentException("A run requires a module"))
@@ -315,12 +315,12 @@ internal class EmbeddedRuns(
     internal fun attach(
         runId: String,
         target: AttachTarget,
-        events: RunListener,
+        events: ProgramEvents,
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> {
         val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
         val listener =
-            object : RunListener by events {
+            object : ProgramEvents by events {
                 override fun exited(
                     code: Long?,
                     error: String?,
@@ -357,7 +357,7 @@ internal class EmbeddedRuns(
         sessionId: String,
         target: LaunchTarget,
         kind: DebugTask,
-        events: RunListener,
+        events: ProgramEvents,
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> {
         val client =
@@ -385,7 +385,7 @@ internal class EmbeddedRuns(
         // a task that ends before its program connects ends the wait
         task.whenComplete { _, _ -> runCatching { server.close() } }
         val listener =
-            object : RunListener by events {
+            object : ProgramEvents by events {
                 /**
                  * The program's exit comes over its own connection, ahead of what it printed last, which comes
                  * through its task: the client delivers a task's output before it answers that the task has ended,
@@ -479,7 +479,7 @@ internal class EmbeddedRuns(
         result: XdkBuildResult,
         target: XdkBuiltModule,
         setup: DebugSetup?,
-        events: RunListener,
+        events: ProgramEvents,
     ): CompletableFuture<Unit> {
         val artifact = target.artifact ?: return CompletableFuture.failedFuture(IllegalStateException("${target.name} was not written"))
         val token = UUID.randomUUID().toString()
@@ -540,7 +540,7 @@ internal class EmbeddedRuns(
                 }
         }
         val listener =
-            object : RunListener by events {
+            object : ProgramEvents by events {
                 override fun exited(
                     code: Long?,
                     error: String?,
@@ -585,7 +585,7 @@ internal class EmbeddedRuns(
         result: XdkBuildResult,
         module: String,
         setup: DebugSetup?,
-        events: RunListener,
+        events: ProgramEvents,
     ) {
         val stoppedEarly = synchronized(inputLock) { waiting[runId]?.stopped == true && waiting.remove(runId) != null }
         if (stoppedEarly) {
@@ -631,7 +631,7 @@ internal class EmbeddedRuns(
                     placed,
                     runId,
                 ),
-                object : RunListener {
+                object : ProgramEvents {
                     override fun output(text: String) = events.output(text)
 
                     override fun breakpoints(
