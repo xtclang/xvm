@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -16,7 +17,7 @@ class XdkCompletionSignatureTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix } }")
             val diagnostics = adapter.getCachedResult(URI)
-            val items = adapter.getCompletionsAsync(URI, 0, prefix.length, ".").get(10, SECONDS)
+            val items = adapter.getCompletionsAsync(URI, 0, prefix.length, ".").get(HANG_SECONDS, SECONDS)
             assertThat(items.map { it.label })
                 .contains("echo", "choose", "label")
                 .doesNotContain("secret", "hidden")
@@ -37,9 +38,9 @@ class XdkCompletionSignatureTest {
                 val prefix = "$BOX void run(Box<String> box) { box.$name("
                 adapter.compile(URI, "$prefix } }")
                 val model =
-                    adapter.analyzeAtAsync(URI, Position(0, prefix.length)).get(10, SECONDS)!!
+                    adapter.analyzeAtAsync(URI, Position(0, prefix.length)).get(HANG_SECONDS, SECONDS)!!
                 assertThat(model.sites.single().callCandidates).describedAs(name).isNotEmpty()
-                val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
+                val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(HANG_SECONDS, SECONDS)!!
                 assertThat(help.signatures).hasSize(if (name == "echo") 1 else 2)
                 assertThat(help.signatures).allSatisfy {
                     assertThat(it.documentation).contains("overload not selected")
@@ -59,7 +60,7 @@ class XdkCompletionSignatureTest {
             "module Editing { void run(String text) { text.indexOf(text.replace(\"a,b\", \"c\"), "
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix } }")
-            val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
+            val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(HANG_SECONDS, SECONDS)!!
             assertThat(help.signatures).isNotEmpty().allSatisfy {
                 assertThat(it.label).startsWith("conditional Int indexOf(")
                 assertThat(it.activeParameter).isEqualTo(1)
@@ -72,7 +73,7 @@ class XdkCompletionSignatureTest {
         val prefix = "module Editing { void run(String text) { text.indexOf(\"x\", startAt = 2, "
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix } }")
-            val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
+            val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(HANG_SECONDS, SECONDS)!!
             assertThat(help.signatures).isNotEmpty().allSatisfy {
                 assertThat(it.label).contains("indexOf(", "startAt")
                 assertThat(it.parameters).isEmpty()

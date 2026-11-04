@@ -18,6 +18,7 @@ import org.xvm.debug.ProgramEvents
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StopState
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.xdk.XdkLibraries
@@ -78,19 +79,19 @@ class XtcDebugAgentTest {
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
             assertThat(attached.module).isEqualTo("Looped")
-            attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).get(LIMIT, SECONDS)
+            attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
 
-            val thread = attached.threads(AttachedProgram.RUN).get(LIMIT, SECONDS).first()
+            val thread = attached.threads(AttachedProgram.RUN).get(HANG_SECONDS, SECONDS).first()
             assertThat(
                 attached
                     .stackTrace(AttachedProgram.RUN, thread.id)
-                    .get(LIMIT, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .first()
                     .line,
             ).isEqualTo(LOOP_LINE)
-            attached.setBreakpoints(AttachedProgram.RUN, SourceBreakpoints(program.source, emptyList())).get(LIMIT, SECONDS)
+            attached.setBreakpoints(AttachedProgram.RUN, SourceBreakpoints(program.source, emptyList())).get(HANG_SECONDS, SECONDS)
             attached.resume(AttachedProgram.RUN)
 
             assertThat(events.next()).isEqualTo("exited 0")
@@ -104,29 +105,29 @@ class XtcDebugAgentTest {
         launch(COUNTERS, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
-            attached.debug(emptyList(), program.firstCounterAt(1000)).get(LIMIT, SECONDS)
+            attached.debug(emptyList(), program.firstCounterAt(1000)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
             val alone =
                 attached
                     .threads(AttachedProgram.RUN)
-                    .get(LIMIT, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .first()
                     .id
 
-            attached.setBreakpoints(AttachedProgram.RUN, program.firstCounterAt(1500).breakpoints.single()).get(LIMIT, SECONDS)
-            assertThat(attached.resumeAlone(AttachedProgram.RUN, alone).get(LIMIT, SECONDS)).isTrue()
+            attached.setBreakpoints(AttachedProgram.RUN, program.firstCounterAt(1500).breakpoints.single()).get(HANG_SECONDS, SECONDS)
+            assertThat(attached.resumeAlone(AttachedProgram.RUN, alone).get(HANG_SECONDS, SECONDS)).isTrue()
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
             // the fiber that ran alone is the stopped one again
             assertThat(
                 attached
                     .threads(AttachedProgram.RUN)
-                    .get(LIMIT, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .first()
                     .id,
             ).isEqualTo(alone)
-            attached.setBreakpoints(AttachedProgram.RUN, SourceBreakpoints(program.source, emptyList())).get(LIMIT, SECONDS)
-            assertThat(attached.step(AttachedProgram.RUN, alone, StepKind.OVER, alone = true).get(LIMIT, SECONDS)).isTrue()
+            attached.setBreakpoints(AttachedProgram.RUN, SourceBreakpoints(program.source, emptyList())).get(HANG_SECONDS, SECONDS)
+            assertThat(attached.step(AttachedProgram.RUN, alone, StepKind.OVER, alone = true).get(HANG_SECONDS, SECONDS)).isTrue()
             assertThat(events.next()).isEqualTo("stopped step []")
 
             attached.resume(AttachedProgram.RUN)
@@ -336,7 +337,7 @@ class XtcDebugAgentTest {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
-            attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).get(LIMIT, SECONDS)
+            attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).startsWith("breakpoints")
             assertThat(events.next()).startsWith("stopped")
 
@@ -352,13 +353,13 @@ class XtcDebugAgentTest {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
-            attached.debug(emptyList(), DebugSetup(emptyList(), stopOnEntry = true)).get(LIMIT, SECONDS)
+            attached.debug(emptyList(), DebugSetup(emptyList(), stopOnEntry = true)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("stopped entry []")
-            val thread = attached.threads(AttachedProgram.RUN).get(LIMIT, SECONDS).first()
+            val thread = attached.threads(AttachedProgram.RUN).get(HANG_SECONDS, SECONDS).first()
             assertThat(
                 attached
                     .stackTrace(AttachedProgram.RUN, thread.id)
-                    .get(LIMIT, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .first()
                     .line,
             ).isEqualTo(FIRST_LINE)
@@ -378,7 +379,14 @@ class XtcDebugAgentTest {
                 .hasMessageContaining("The token does not match")
 
             val events = Events()
-            AttachedProgram.attach("127.0.0.1", port, "secret", events).debug(emptyList(), DebugSetup(emptyList())).get(LIMIT, SECONDS)
+            AttachedProgram
+                .attach(
+                    "127.0.0.1",
+                    port,
+                    "secret",
+                    events,
+                ).debug(emptyList(), DebugSetup(emptyList()))
+                .get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("exited 0")
             assertThat(program.exit()).isEqualTo(0)
         }
@@ -388,9 +396,9 @@ class XtcDebugAgentTest {
     fun `the agent connects to a debugger that waits for the program, and a command it cannot take fails alone`() {
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             launch(LOOPED, "connect:127.0.0.1:${server.localPort},suspend").use { program ->
-                server.soTimeout = (LIMIT * 1000).toInt()
+                server.soTimeout = (HANG_SECONDS * 1000).toInt()
                 server.accept().use { socket ->
-                    socket.soTimeout = (LIMIT * 1000).toInt()
+                    socket.soTimeout = (HANG_SECONDS * 1000).toInt()
                     val out = PrintStream(socket.getOutputStream(), true, Charsets.UTF_8)
                     val lines = socket.getInputStream().bufferedReader(Charsets.UTF_8)
                     out.println("""{"command":"attach","id":7}""")
@@ -474,7 +482,7 @@ class XtcDebugAgentTest {
         /** The port the agent listens on, as it printed it. */
         fun port(): Int {
             while (true) {
-                val line = lines.poll(LIMIT, SECONDS) ?: error("The agent did not listen within $LIMIT seconds:\n$output")
+                val line = lines.poll(HANG_SECONDS, SECONDS) ?: error("The agent did not listen within $HANG_SECONDS seconds:\n$output")
                 LISTENING.find(line)?.let { return it.groupValues[1].toInt() }
             }
         }
@@ -486,7 +494,7 @@ class XtcDebugAgentTest {
             DebugSetup(listOf(SourceBreakpoints(source, listOf(BreakpointRequest(1, COUNT_LINE, "n == $count && limit == 2000000")))))
 
         fun exit(): Int {
-            check(process.waitFor(LIMIT, SECONDS)) { "The program did not end within $LIMIT seconds:\n$output" }
+            check(process.waitFor(HANG_SECONDS, SECONDS)) { "The program did not end within $HANG_SECONDS seconds:\n$output" }
             return process.exitValue()
         }
 
@@ -524,7 +532,7 @@ class XtcDebugAgentTest {
     private class Events : ProgramEvents {
         private val events = LinkedBlockingQueue<String>()
 
-        fun next(): String = events.poll(LIMIT, SECONDS) ?: error("No event within $LIMIT seconds")
+        fun next(): String = events.poll(HANG_SECONDS, SECONDS) ?: error("No event within $HANG_SECONDS seconds")
 
         override fun output(text: String) {
             events += "output $text"
@@ -556,8 +564,6 @@ class XtcDebugAgentTest {
     private fun JsonObject.name() = listOfNotNull(this["event"].asString, this["id"]?.asLong).joinToString(" ")
 
     private companion object {
-        const val LIMIT = 60L
-
         val LISTENING = Regex("Listening for the debugger at [^ ]+:(\\d+)$")
 
         /** A module whose run() adds in a loop on line 6 and prints the sum. */

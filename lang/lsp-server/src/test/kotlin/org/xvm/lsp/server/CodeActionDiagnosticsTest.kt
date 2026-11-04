@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.mock.MockAdapter
@@ -68,7 +69,7 @@ class CodeActionDiagnosticsTest {
                                     }
                             }
                     },
-                ).get(10, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module Links {}")))
             val fixed = LspDiagnostic(Range(Position(0, 7), Position(0, 12)), "first", DiagnosticSeverity.Error, "Ecstasy", "COMPILER-1")
@@ -81,12 +82,12 @@ class CodeActionDiagnosticsTest {
                             Range(Position(0, 0), Position(0, 12)),
                             CodeActionContext(listOf(fixed, other)),
                         ),
-                    ).get(10, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .map { it.right }
             assertThat(actions.single { it.title == "Fix it" }.diagnostics).containsExactly(fixed)
             assertThat(actions.single { it.title == "Unrelated refactoring" }.diagnostics).isNull()
         } finally {
-            server.shutdown().get(10, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 

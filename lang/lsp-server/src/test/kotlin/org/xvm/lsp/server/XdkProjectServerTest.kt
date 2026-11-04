@@ -28,6 +28,7 @@ import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -103,7 +104,7 @@ class XdkProjectServerTest {
                             TextDocumentIdentifier(consumer.toURI().toString()),
                             Position(0, CONSUMER.indexOf("value")),
                         ),
-                    ).get(20, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .left
                     .single()
             assertThat(target.uri).isEqualTo(library.toURI().toString())
@@ -368,7 +369,7 @@ class XdkProjectServerTest {
         XtcLanguageServer(XdkAdapter(), rescans = { rescan ->
             if (hold.get()) {
                 walking.countDown()
-                check(release.await(20, SECONDS))
+                check(release.await(HANG_SECONDS, SECONDS))
             }
             rescan()
         }).use { server ->
@@ -379,18 +380,18 @@ class XdkProjectServerTest {
                         editorInitializeParams().apply {
                             workspaceFolders = listOf(WorkspaceFolder(first.toURI().toString(), "first"))
                         },
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                 hold.set(true)
                 server.workspaceService.didChangeWorkspaceFolders(
                     DidChangeWorkspaceFoldersParams(
                         WorkspaceFoldersChangeEvent(listOf(WorkspaceFolder(second.toURI().toString(), "second")), emptyList()),
                     ),
                 )
-                assertThat(walking.await(20, SECONDS)).isTrue()
+                assertThat(walking.await(HANG_SECONDS, SECONDS)).isTrue()
                 val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("externalValue"))
                 assertThat(symbols).describedAs("The request waits while the added folder is walked").isNotDone()
                 release.countDown()
-                val found = symbols.get(30, SECONDS)
+                val found = symbols.get(HANG_SECONDS, SECONDS)
                 assertThat(if (found.isLeft) found.left.map { it.name } else found.right.map { it.name })
                     .contains("externalValue")
             } finally {
@@ -439,7 +440,7 @@ class XdkProjectServerTest {
                                     ),
                                 )
                         },
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
             } else {
                 server.initialize(editorInitializeParams()).get()
                 server.replaceCompilerSourceModules(
@@ -500,7 +501,7 @@ class XdkProjectServerTest {
             errors: Boolean,
             code: String? = null,
         ) {
-            await().atMost(30, SECONDS).untilAsserted {
+            await().atMost(HANG_SECONDS, SECONDS).untilAsserted {
                 val last =
                     published.drop(after).lastOrNull {
                         it.uri == file.toURI().toString() && it.version == version
@@ -517,7 +518,7 @@ class XdkProjectServerTest {
         }
 
         override fun close() {
-            server.shutdown().get(10, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 

@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -60,18 +61,18 @@ class XdkResolveProtocolTest {
                             TextDocumentIdentifier(uri),
                             Position(0, source.lastIndexOf("re;") + 2),
                         ),
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .left
                     .single { it.label == "read" }
             assertThat(item.documentation).isNull()
             assertThat(item.data).isNotNull()
             val insertion = item.textEdit
-            val resolved = service.resolveCompletionItem(item).get(10, SECONDS)
+            val resolved = service.resolveCompletionItem(item).get(HANG_SECONDS, SECONDS)
             assertThat(resolved.documentation.left).contains("Reads a value")
             assertThat(resolved.textEdit).isEqualTo(insertion)
             service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
             service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
-            assertThatThrownBy { service.resolveCompletionItem(item).get(10, SECONDS) }
+            assertThatThrownBy { service.resolveCompletionItem(item).get(HANG_SECONDS, SECONDS) }
                 .hasMessageContaining("expired or changed")
         }
     }
@@ -85,7 +86,7 @@ class XdkResolveProtocolTest {
             val item =
                 service
                     .completion(CompletionParams(TextDocumentIdentifier(uri), Position(0, source.indexOf("Doc") + 3)))
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .left
                     .single { it.label == "Document" }
             assertThat(item.textEdit.left.newText).isEqualTo("Document")
@@ -107,12 +108,12 @@ class XdkResolveProtocolTest {
                             Range(Position(0, 0), Position(0, source.length)),
                             CodeActionContext(emptyList()),
                         ),
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .single { it.right.title == "Remove unused import 'StringBuffer'" }
                     .right
             assertThat(action.edit).isNull()
             assertThat(action.data).isNotNull()
-            val resolved = service.resolveCodeAction(action).get(10, SECONDS)
+            val resolved = service.resolveCodeAction(action).get(HANG_SECONDS, SECONDS)
             assertThat(
                 resolved.edit.documentChanges
                     .single()
@@ -131,7 +132,7 @@ class XdkResolveProtocolTest {
                     listOf(TextDocumentContentChangeEvent("\n$source")),
                 ),
             )
-            assertThatThrownBy { service.resolveCodeAction(action).get(10, SECONDS) }
+            assertThatThrownBy { service.resolveCodeAction(action).get(HANG_SECONDS, SECONDS) }
                 .hasMessageContaining("expired or changed")
         }
     }
@@ -150,12 +151,12 @@ class XdkResolveProtocolTest {
                             Range(Position(0, 0), Position(0, source.length)),
                             CodeActionContext(emptyList()),
                         ),
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .single { it.right.title == "Remove unused import 'StringBuffer'" }
                     .right
             assertThat(action.edit).isNotNull()
             assertThat(action.data).isNull()
-            assertThatThrownBy { service.resolveCodeAction(action).get(10, SECONDS) }
+            assertThatThrownBy { service.resolveCodeAction(action).get(HANG_SECONDS, SECONDS) }
                 .hasMessageContaining("not negotiated")
         }
     }
@@ -214,7 +215,7 @@ class XdkResolveProtocolTest {
                                         }
                                 }
                         },
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .capabilities
             assertThat(capabilities.completionProvider.resolveProvider).isEqualTo(resolve)
             assertThat(capabilities.codeActionProvider.isRight).isEqualTo(resolve)

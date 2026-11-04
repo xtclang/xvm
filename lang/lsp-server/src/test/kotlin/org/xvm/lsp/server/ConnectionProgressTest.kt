@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -47,15 +48,15 @@ class ConnectionProgressTest {
                 .notifyProgress(any())
         }
 
-        fun event() = requireNotNull(events.poll(5, SECONDS)) { "Missing progress notification" }
+        fun event() = requireNotNull(events.poll(HANG_SECONDS, SECONDS)) { "Missing progress notification" }
 
         fun flush() {
-            dispatcher.submit {}.get(5, SECONDS)
+            dispatcher.submit {}.get(HANG_SECONDS, SECONDS)
         }
 
         override fun close() {
             progress.close()
-            assertThat(dispatcher.awaitTermination(5, SECONDS)).isTrue()
+            assertThat(dispatcher.awaitTermination(HANG_SECONDS, SECONDS)).isTrue()
         }
     }
 
@@ -80,7 +81,7 @@ class ConnectionProgressTest {
                         .value.left.kind,
                 ).isEqualTo(WorkDoneProgressKind.end)
                 pending.run()
-                if (close) assertThat(session.dispatcher.awaitTermination(5, SECONDS)).isTrue() else session.flush()
+                if (close) assertThat(session.dispatcher.awaitTermination(HANG_SECONDS, SECONDS)).isTrue() else session.flush()
                 assertThat(session.events).isEmpty()
                 assertThat(session.reports).isEmpty()
             }
@@ -94,7 +95,7 @@ class ConnectionProgressTest {
                 session.progress.initialized(true)
                 val work = CompletableFuture<String>()
                 session.progress.track("References", null, work)
-                val token = requireNotNull(session.created.poll(5, SECONDS)).token
+                val token = requireNotNull(session.created.poll(HANG_SECONDS, SECONDS)).token
                 session.deadline.complete(null)
                 session.flush()
                 assertThat(session.ack.isDone).isFalse()
@@ -126,9 +127,9 @@ class ConnectionProgressTest {
             session.progress.initialized(true)
             val work = CompletableFuture<String>()
             session.progress.track("References", null, work)
-            assertThat(session.created.poll(5, SECONDS)).isNotNull()
+            assertThat(session.created.poll(HANG_SECONDS, SECONDS)).isNotNull()
             session.progress.close()
-            assertThat(session.dispatcher.awaitTermination(5, SECONDS)).isTrue()
+            assertThat(session.dispatcher.awaitTermination(HANG_SECONDS, SECONDS)).isTrue()
             session.ack.complete(null)
             assertThat(session.events).isEmpty()
             assertThat(work.isCancelled).isTrue()
@@ -193,7 +194,7 @@ class ConnectionProgressTest {
             session.progress.initialized(true)
             val work = CompletableFuture<String>()
             session.progress.track("Rename", null, work)
-            val token = requireNotNull(session.created.poll(5, SECONDS)).token
+            val token = requireNotNull(session.created.poll(HANG_SECONDS, SECONDS)).token
             assertThat(session.events).isEmpty()
             session.ack.complete(null)
             assertThat(session.event().token).isEqualTo(token)
@@ -215,7 +216,7 @@ class ConnectionProgressTest {
                 session.progress.initialized(true)
                 val work = CompletableFuture<String>()
                 session.progress.track("References", null, work)
-                assertThat(session.created.poll(5, SECONDS)).isNotNull()
+                assertThat(session.created.poll(HANG_SECONDS, SECONDS)).isNotNull()
                 work.complete("done")
                 session.flush()
                 if (reject) {
@@ -263,7 +264,7 @@ class ConnectionProgressTest {
                         }
                     }
                 } + CompletableFuture.runAsync { session.progress.close() }
-            CompletableFuture.allOf(*completions.toTypedArray()).get(5, SECONDS)
+            CompletableFuture.allOf(*completions.toTypedArray()).get(HANG_SECONDS, SECONDS)
             val ended = work.map { session.event() }
             assertThat(ended).allSatisfy {
                 assertThat(it.value.left.kind).isEqualTo(WorkDoneProgressKind.end)

@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.CompilerQueueTrace
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CompletableFuture
@@ -37,7 +38,7 @@ class ExecutionTraceTest {
             val first =
                 queue.task("compile", "file:///Alpha.x", running) {
                     entered.countDown()
-                    check(release.await(10, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                 }
             val second =
                 queue.task("cursor-COMPLETION", "file:///Beta.x", next) { next.complete(Unit) }
@@ -48,7 +49,7 @@ class ExecutionTraceTest {
             Executors.newSingleThreadExecutor().use { executor ->
                 val execution = executor.submit(first.ready())
                 try {
-                    check(entered.await(10, SECONDS))
+                    check(entered.await(HANG_SECONDS, SECONDS))
                     running.cancel(false)
                     val snapshot = trace.entries.last()
                     assertThat(snapshot["queueSize"].asInt).isEqualTo(2)
@@ -69,7 +70,7 @@ class ExecutionTraceTest {
                 } finally {
                     release.countDown()
                 }
-                execution.get(10, SECONDS)
+                execution.get(HANG_SECONDS, SECONDS)
             }
             second.run()
             assertThat(queue.progressDescription()).isNull()
@@ -98,13 +99,13 @@ class ExecutionTraceTest {
                         executor.submit {
                             ExecutionTrace.api("overlap-$index") {
                                 entered.countDown()
-                                check(release.await(10, SECONDS))
+                                check(release.await(HANG_SECONDS, SECONDS))
                                 ExecutionTrace.api("nested-$index") {}
                             }
                         }
                     }
                 try {
-                    check(entered.await(10, SECONDS))
+                    check(entered.await(HANG_SECONDS, SECONDS))
                     assertThat(
                         trace.entries
                             .filter { it["event"].asString == "start" }
@@ -113,7 +114,7 @@ class ExecutionTraceTest {
                 } finally {
                     release.countDown()
                 }
-                work.forEach { it.get(10, SECONDS) }
+                work.forEach { it.get(HANG_SECONDS, SECONDS) }
             }
             assertThat(
                 trace.entries.filter {
