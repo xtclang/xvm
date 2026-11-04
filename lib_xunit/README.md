@@ -218,3 +218,21 @@ following command:
 ```shell
 xtc test --test-package a.b.c my-app.xtc 
 ```
+
+### Reporting to a Tool
+
+The injection `xvm.xunit.report` has XUnit also print a machine-readable report of the run, for a
+tool that reads the execution from the test process's output, such as an IDE or the XTC Gradle
+plugin's `testXtc --test-report=json`. Its only report is `json`; XUnit refuses a name it does not
+know:
+
+```shell
+xtc test -I xvm.xunit.report=json my-app.xtc
+```
+
+Each event is a line of its own among the lines the tests print, `##xunit ` and then a JSON object
+whose `event` says what it is: `run` first, with the `version` of the format; `started` for a test
+or container, with its `id`, its `parent`'s `id`, its `name`, the `selector` that runs it alone and
+whether it is a `container`; `finished`, with its `status` (`passed`, `failed`, `aborted` or
+`skipped`), its `durationMillis`, and a failure's `message` and `details`; and `skipped`, for one
+that did not run, with the reason. A reader passes over events and fields it does not know.
