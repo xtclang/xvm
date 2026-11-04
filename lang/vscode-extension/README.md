@@ -18,6 +18,7 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
 - **Build and run** — build and run modules with the language server's embedded compiler, or with Gradle, per folder ([details](#building-and-running)); Run lens, editor Run button, `Cmd+F9`/`Ctrl+F9` build and Run shortcuts
 - **Debugging** — breakpoints, stepping, variables, watches and Debug Console evaluation in embedded and Gradle runs, and in a program run outside the editor, through a debug session in the language server ([details](#debugging))
+- **Tests** — the Test Explorer lists each module's xunit tests, and runs or debugs them, embedded or with the folder's Gradle `testXtc` ([details](#running-tests))
 - **Tasks** — embedded Build / Rebuild tasks, or Gradle Build / Test / Clean tasks for a workspace that contains a `build.gradle.kts`
 - **Project scaffolding** — `Ecstasy: Create New Project` command to bootstrap a new Ecstasy application, library, or service
 - **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
@@ -287,6 +288,24 @@ Breakpoints, stepping, variables and evaluation work as in a launched session. S
 detaches, and the program runs on without the debugger's breakpoints. The program's XDK must have this
 extension's javatools, whose debugger agent the program runs; its console stays its own, and one
 debugger at a time attaches to it.
+
+### Running tests
+
+The **Testing** view (Test Explorer) lists each source module's xunit tests, as the language server
+finds them in its latest analysis: the module, its packages and classes, and their `@Test` methods,
+which the editor also marks in the gutter. Run or debug a test, or everything a module, package or
+class holds, from there, from the gutter, or with **Test: Run Test at Cursor** and **Test: Debug
+Test at Cursor**. The folder's [build mode](#building-and-running) decides how they run:
+
+| Mode | Run and Debug |
+|------|---------------|
+| Embedded | The language server builds the module and runs the chosen tests with xunit in a process of its own, as `xtc test` does; Debug runs them under the debugger, in a debug session as for a launch |
+| Gradle | `./gradlew testXtc --module=<module>` with `--test-package`, `--test-class` or `--test-method` for the chosen tests and `--test-report=json`; Debug adds the debugger's `xtcDebug` property, and the program connects to the session |
+
+xunit reports each test as an event of its `json` report, which marks it passed, failed, errored or
+skipped; a failure shows its message, at the failing line of the test's file when its stack names
+one, and the tests' output is in the run's output. Gradle mode needs a Gradle plugin and XDK with
+`testXtc`'s test options and the JSON report.
 
 ### Tasks
 

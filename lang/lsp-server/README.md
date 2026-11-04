@@ -522,7 +522,9 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
-| `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?}` | request | Builds as above, then starts the entry method; returns the build and the run ID, which is null when the build failed |
+| `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?, tests?}` | request | Builds as above, then starts the entry method, or with `tests` runs those tests; returns the build and the run ID, which is null when the build failed |
+| `xtc/tests` | request | Each source module's xunit tests from its latest compilation, as a tree of its packages, classes and tests, each with its `selector`, `kind` and location |
+| `xtc/testEvent` `{runId, event}` | notification | An event of the tests a run with `tests` runs, as xunit's `json` report gives it, apart from the output |
 | `xtc/stopRun` `{runId}` | request | Stops a run, or keeps one that is still building from starting; `xtc/runExited` still follows, unless the build fails. False when no such run is active |
 | `xtc/runInput` `{runId, text?, end?}` | request | Console input for the program, as typed with line ends, or `end: true` for the end of input. False when no such run is building or running |
 | `xtc/runnableTargets` | request | Source modules whose latest compilation declares a callable entry point |
@@ -532,6 +534,7 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 | `xtc/debugStart` | request | Starts a Debug Adapter Protocol (DAP) session carried by this connection, and returns its `sessionId` |
 | `xtc/debugMessage` `{sessionId, message}` | notification, both ways | One DAP message of the session: the client's requests, the server's responses and events |
 | `xtc/debugEnd` `{sessionId}` | notification | Ends the session, which stops the program it launched |
+| `xtc/debugTask` `{sessionId, module, method?, args, debug, buildMode, tests?}` | request to the client | Runs a Gradle-mode or command-line launch's module, or its `tests`, with the launcher's `--debug` options `debug`, and answers with the task's exit code once it has ended; canceling it ends the task |
 
 Builds compile the text the server holds when the build is requested, open documents included,
 saved or not; neither client saves files for a build (VS Code may, per `task.saveBeforeRun`, and
@@ -589,10 +592,22 @@ a program waiting for a line gets an empty one, as at the end of terminal input.
 user types, so `readLine`'s `suppressEcho` is not honored. A run stopped while its module still builds
 never starts, and its exit says `Stopped before the program started.`
 
+`xtc/tests` answers each source module's tests, as `{module, uri, tests}`, a tree under the module
+of its packages, classes and `@Test` methods, each with its xunit `selector`, `name`, `kind`
+(`module`, `package`, `class` or `test`) and source `location`. A run's `tests`, an array of
+`{selector, kind}` from that tree, an empty one for all of the module's tests, builds the module as
+above and then runs those tests with xunit instead of the entry method: `xtc test` from the server's
+own class path, in a process of its own, with the bundled XDK's libraries and xunit's `json` report
+(`-I xvm.xunit.report=json`). The server reads the report's events from the output once and sends
+each as an `xtc/testEvent`, xunit's event object as it is (`run`, then `started`, `finished` with its
+`status`, or `skipped`), before `xtc/runExited`; they are not in `xtc/runOutput`. Stopping the run
+ends the process.
+
 A debug session's `launch` builds and runs the module the same way, in the same execution workers.
 Its arguments are `module` (a name), `moduleUri` (a source URI of the module, used in place of the
 name when given), `method`, `args` (an array passed as given, or a comma-separated string), `cwd` (the
-program's root directory) and `noDebug`. The program starts after the client's `configurationDone`,
+program's root directory), `tests` (as `xtc/run` takes them, whose events then arrive as the DAP
+event `xtcTest`), `buildMode` (below) and `noDebug`. The program starts after the client's `configurationDone`,
 or two seconds after its build when the client sends none, and the launch is answered once it has
 started. Its output arrives as DAP `output` events and its exit as `exited` and `terminated`; a failed
 build reports its diagnostics as output and fails the launch. The session owns the program it

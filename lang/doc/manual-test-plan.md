@@ -3942,8 +3942,8 @@ module by its name in the project directory, whose root has the other cases' sou
 
 ### Running and debugging tests in the Test Explorer (X339)
 
-The Test Explorer's tests run embedded, whatever the folder's build mode: the language server runs them with xunit
-in a process of its own, as `xtc test` does, and xunit reports each test as an event of its `json` report, which the
+In the embedded build mode the language server runs the tests with xunit in a process of its own, as `xtc test`
+does (X340 runs them in Gradle mode), and xunit reports each test as an event of its `json` report, which the
 server sends apart from the run's output and which marks it: VS Code's Test Explorer, and IntelliJ's test console,
 which a Run or Debug icon in the gutter of each test, and of its module and classes, starts.
 
