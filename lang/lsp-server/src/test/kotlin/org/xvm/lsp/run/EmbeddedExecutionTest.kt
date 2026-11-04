@@ -1324,7 +1324,7 @@ class EmbeddedExecutionTest {
     }
 
     @Test
-    fun `a console line in a stopped frame runs code there, whose effect stays, and cancel or the time limit ends a run that loops`() {
+    fun `a console line in a stopped frame runs code there, whose effect stays, and cancel ends a run that loops`() {
         CompilerTestSupport.configure()
         val module = source("Runs.x", RUNS.trimIndent())
         val path = directory.resolve("Runs.x").toString()
@@ -1332,7 +1332,7 @@ class EmbeddedExecutionTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, HANG_DEBUG_LIMITS)
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
             sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
@@ -1452,16 +1452,12 @@ class EmbeddedExecutionTest {
                     .asJsonArray,
             ).isEmpty()
 
-            // a run that loops ends when it is cancelled, and at the console's time limit when it is not
+            // a run that loops ends when it is cancelled
             sessions.request(id, 8, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             sessions.request(id, 9, "cancel", """{"requestId": 8}""")
             val cancelled = client.until(id) { it.response == "evaluate" }.last()
             assertThat(cancelled["success"].asBoolean).isFalse()
             assertThat(cancelled["message"].asString).isEqualTo("cancelled")
-            sessions.request(id, 10, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
-            val ended = client.until(id) { it.response == "evaluate" && it["request_seq"].asInt == 10 }.last()
-            assertThat(ended["success"].asBoolean).isFalse()
-            assertThat(ended["message"].asString).isEqualTo("spin() did not finish within 2 seconds, so it was ended.")
 
             // the program goes on from its stop, with the console's change
             sessions.request(id, 11, "continue", """{"threadId": $thread}""")
@@ -1469,6 +1465,52 @@ class EmbeddedExecutionTest {
             assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(11)
             assertThat(rest.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
                 .contains("after 5")
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `a console line whose code never ends is ended at the console's time limit`() {
+        CompilerTestSupport.configure()
+        val module = source("Runs.x", RUNS.trimIndent())
+        val path = directory.resolve("Runs.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
+            // the session's own limit, which spin() never meets, so the limit ends it at any speed
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+            val frameId =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject["id"]
+                    .asInt
+
+            sessions.request(id, 6, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
+            val ended = client.until(id) { it.response == "evaluate" }.last()
+            assertThat(ended["success"].asBoolean).isFalse()
+            assertThat(ended["message"].asString).isEqualTo("spin() did not finish within 2 seconds, so it was ended.")
+
+            // the program goes on from its stop
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(6)
             sessions.end(DebugSessionParams(id))
         }
     }
@@ -1482,7 +1524,7 @@ class EmbeddedExecutionTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Program", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, HANG_DEBUG_LIMITS)
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
             sessions.request(id, 2, "launch", """{"module": "Program", "moduleUri": "$module", "evaluationRunsProgram": true}""")
@@ -1877,7 +1919,8 @@ class EmbeddedExecutionTest {
                 adapter.initializeWorkspace(listOf(directory.toString()))
                 adapter.replaceSourceModules(listOf(XdkSourceModule("Soak", soak)))
                 val runs = EmbeddedRuns(adapter, { client }, workers)
-                val sessions = DebugSessions(runs, { client })
+                // a cancel or a terminate, not the console's limit, ends the console's spin()
+                val sessions = DebugSessions(runs, { client }, HANG_DEBUG_LIMITS)
 
                 // what the worker kept after the run that just ended, which it reports after the run's exit
                 fun measured() {
