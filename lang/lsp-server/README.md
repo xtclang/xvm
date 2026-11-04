@@ -605,8 +605,11 @@ answered as pending and installed before its first line, and `breakpoint` events
 as installed, on the line it was put on, or not installed, with the reason. A breakpoint on a line
 without code moves to the next line with code in its method. Breakpoints set later are installed
 at once. A breakpoint or `assert:debug` stops the program with every fiber stopped:
-`threads` lists the fibers that wait, `stackTrace` their stacks, innermost frame first, with each
-frame's file and line, and `continue` resumes it. A frame of a bundled XDK library's code is in the
+`threads` lists the fibers that wait at a line first, then the program's other fibers, of its
+services in its own container and those nested in it, each named by its service with what it does
+(waiting, paused, not started, running or ending); `stackTrace` gives a fiber's stack, innermost
+frame first, with each frame's file and line, without variables for one that does not wait at a
+line, and none for one that runs; and `continue` resumes it. A frame of a bundled XDK library's code is in the
 library's bundled source, the read-only copy that navigation opens, since the source directory the
 library records is the one it was built in. `scopes` gives a stopped frame's Locals, and
 `variables` its `this` and named variables, an object's fields and an array's elements (the first
@@ -646,7 +649,23 @@ stop the program where such an exception is thrown, with the reason `exception` 
 type and text; it is the frame's first variable, `<exception>`. Each filter takes exception classes,
 separated by commas, as its condition (`filterOptions`), and then stops only at them and the classes
 that extend them. `exceptionInfo` answers the exception's type, text and stack trace, `unhandled`
-when no frame catches it and `always` otherwise. `pause` stops a running program at
+when no frame catches it and `always` otherwise. A function breakpoint names a method, alone or
+after its class's or module's name, as the call stack names it, such as `twice` or `Point.move`, and
+stops at the first line of each of the program's methods of that name with the reason `function
+breakpoint`, and a condition and hit condition as a line's; one that no method has is unverified
+with the reason. `dataBreakpointInfo` offers a field of a mutable object in `variables`, for writes,
+and a data breakpoint on it stops the program with the reason `data breakpoint` at the next line
+that a fiber of the object's service reaches once the field's value has changed, saying from what to
+what, such as `Counter.count changed from 0 to 2`. `stepInTargets` lists the calls of the line where
+a fiber waits, in the order of its code, each named by what it calls, such as `twice(Int)`, and
+`stepIn` with a `targetId` steps into that one. `restartFrame` leaves a frame and those above it
+without running more of their code, and its caller makes the call again with the values its
+arguments hold now, stopping at the call's first line with the reason `restart`; a frame's
+`canRestart` says whether it can. `modules` lists the program's modules as the runtime linked them,
+a page at a time, `isUserCode` for its own, and `loadedSources` their files, a bundled library's in
+its bundled source. With `singleThread`, `continue`, `next`, `stepIn` and `stepOut` run one fiber
+alone, with the fibers of the services it calls, while the program's other fibers stay stopped.
+`pause` stops a running program at
 the next line one of its fibers reaches, and a launch with `stopOnEntry` stops it at the first line
 of its own modules, with the reason `entry`; while it runs and no fiber is stopped, `threads` shows
 one thread, named after the module, for an editor's Pause to act on. `evaluate` in a stopped frame,
@@ -673,9 +692,11 @@ frame, a line typed in the debug console is the program's input. What
 the program printed before it stopped is sent before the stop. Terminating or disconnecting a
 stopped program ends it where it is, without running more of it. The session advertises
 `configurationDone`, `terminate`, evaluation for hovers, conditional and hit-conditional breakpoints,
-logpoints, `exceptionInfo`, `cancel`, value formatting options, `setVariable`, `completions` with `.`
-as its trigger character, and its exception filters with their options. It attaches to a program
-that the launcher runs with `--debug` (`attach`), and a launch with `buildMode` `gradle` or
+function and data breakpoints, logpoints, `exceptionInfo`, `cancel`, value formatting options,
+`setVariable`, `completions` with `.` as its trigger character, `modules`, `loadedSources`,
+`stepInTargets`, single-thread execution requests, `restartFrame`, and its exception filters with
+their options. It attaches to a program that the launcher runs with `--debug` (`attach`, with
+`host`, `port`, `token` and `stopOnEntry`), and a launch with `buildMode` `gradle` or
 `commandLine` has the client run the module's Gradle task or `xtc run` under the debugger
 (`xtc/debugTask`, whose `buildMode` says which), attaching to the program as it connects; stopping
 that launch ends the task. A
