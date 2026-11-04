@@ -36,10 +36,9 @@ interface Model
     @RO String displayName;
 
     /**
-     * The selector that runs this model alone, as `xtc test`'s `-p`, `-c` and `-t` options and the
-     * discovery injections take it: the path of a class or package in its module, such as
-     * `tests.MathTest`, the path of a test, such as `tests.MathTest.adds`, or the empty string for
-     * the module.
+     * The module-relative path used by `xtc test` to select this test or container (for example,
+     * `tests.MathTest.adds`); empty for the module itself. Template iterations share their
+     * template's selector.
      */
     @RO String selector;
 
@@ -138,8 +137,7 @@ interface Model
     // ---- selectors ------------------------------------------------------------------------------
 
     /**
-     * @return the selector of a class or package: its path within its module, which is empty for
-     *         the module
+     * @return the path of a class or package relative to its module, or empty for the module itself
      */
     static String classSelector(Class clz) {
         String path = clz.path;
@@ -148,7 +146,7 @@ interface Model
     }
 
     /**
-     * @return the selector of the test `name` of a class or package
+     * @return the module-relative path of the named test in a class or package
      */
     static String testSelector(Class clz, String name) {
         String owner = classSelector(clz);

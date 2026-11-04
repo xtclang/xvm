@@ -5,22 +5,20 @@ import executor.BaseTestRunner;
 import executor.CompositeExecutionListener;
 
 /**
- * An XUnit test runner that executes tests and prints the results to the console; with the
- * injection `xvm.xunit.report` ([ConfigReport]), also as the report it names, for a tool that reads
- * the execution from the output.
+ * An XUnit test runner that executes tests and prints results to the console. When the
+ * `xvm.xunit.report` injection ([ConfigReport]) is `json`, it also prints machine-readable events
+ * for tools such as IDEs.
  */
 service ConsoleRunner
         extends BaseTestRunner {
 
     /**
-     * The injection name of the machine-readable report to print as well, if any: one of
-     * [Reports].
+     * Injection key for the optional machine-readable report; its value must name one of [Reports].
      */
     static String ConfigReport = ConfigPrefix + ".report";
 
     /**
-     * The names of the reports: `json`, an event per line, for a tool that reads the execution from
-     * the output, such as an IDE ([JsonExecutionListener]).
+     * Supported report formats. `json` emits one event per line ([JsonExecutionListener]).
      */
     static String[] Reports = ["json"];
 
@@ -34,7 +32,7 @@ service ConsoleRunner
     }
 
     /**
-     * @return the listener that prints the report `name`
+     * @return a listener for the named report
      *
      * @throws IllegalArgument if no report has that name
      */
