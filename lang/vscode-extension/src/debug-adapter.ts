@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
+import type { SourceModule } from './source-graph-configuration';
 import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
 import { LineSplitter, parseTestEvent, REPORT, type TestEvent } from './test-events';
 
@@ -316,7 +317,7 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
         config: vscode.DebugConfiguration,
         _token?: vscode.CancellationToken
     ): Promise<vscode.DebugConfiguration | undefined> {
-        const resolved = this.fill(config);
+        const resolved = await this.fill(config);
         if (!resolved) {
             return undefined;
         }
@@ -342,8 +343,11 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
         return undefined;
     }
 
-    /** Fills a launch without a configuration from the active editor's module, which its file then identifies. */
-    private fill(config: vscode.DebugConfiguration): vscode.DebugConfiguration | undefined {
+    /**
+     * Fills a launch without a configuration from the active editor's module, which its file then identifies: the
+     * module the file declares, or else the source module whose sources hold it, such as a class's file.
+     */
+    private async fill(config: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration | undefined> {
         if (!config.type && !config.request && !config.name) {
             const editor = vscode.window.activeTextEditor;
             if (editor?.document.languageId === 'xtc') {
@@ -351,11 +355,8 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
                 config.name = 'Run Ecstasy Module';
                 config.request = 'launch';
                 config.moduleUri = editor.document.uri.toString();
-                const text = editor.document.getText();
-                const match = /^\s*module\s+(\w+)/m.exec(text);
-                if (match) {
-                    config.module = match[1];
-                }
+                const match = /^\s*module\s+(\w+)/m.exec(editor.document.getText());
+                config.module = match?.[1] ?? await this.moduleOf(editor.document.uri);
             }
         }
         if (config.request !== 'attach' && !config.module) {
@@ -364,4 +365,25 @@ export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationP
         }
         return config;
     }
+
+    /** The name of the source module whose sources hold [file], as the language server's source graph has them. */
+    private async moduleOf(file: vscode.Uri): Promise<string | undefined> {
+        const client = this.client();
+        if (!client?.isRunning()) {
+            return undefined;
+        }
+        const modules = await client.sendRequest<SourceModule[]>('xtc/compilerSourceModules').then(undefined, () => []);
+        return owningModule(file, modules)?.name;
+    }
+}
+
+/**
+ * The module of [modules] whose sources hold [file]: the module whose root file it is, or whose directory, named as
+ * its root file is without the .x, holds it, as a module's packages and classes are laid out.
+ */
+export function owningModule(file: vscode.Uri, modules: readonly SourceModule[]): SourceModule | undefined {
+    return modules.find(module => {
+        const root = vscode.Uri.parse(module.uri).fsPath;
+        return file.fsPath === root || file.fsPath.startsWith(root.replace(/\.x$/, '') + path.sep);
+    });
 }
