@@ -774,10 +774,11 @@ assignment target receives WRITE. Use X41 for the compiler-specific expectations
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
 | 12.1 | Organize imports (unsorted) | Add unsorted imports: `import b; import a;`, trigger code action | Imports sorted alphabetically |
-| 12.2 | No action (already sorted) | With sorted imports, open code actions | No "Organize Imports" offered |
+| 12.2 | No action (already sorted) | With sorted imports that the code all uses, open code actions | No "Organize Imports" offered |
 | 12.3 | No action (single import) | With 1 import, open code actions | No action offered |
 | 12.4 | Remove unused import | Add `import foo.Unused;` where `Unused` is never referenced, trigger code action | "Remove unused import 'Unused'" action offered |
 | 12.5 | Used import not flagged | Add `import foo.Bar;` and use `Bar` in code, trigger code action | No "Remove unused import" for `Bar` |
+| 12.6 | Organize removes unused imports (compiler adapter) | Add `import foo.Unused;` among unsorted imports, run "Organize imports" | The unused import, and its line, are gone and the rest are sorted, in one edit |
 
 ---
 
