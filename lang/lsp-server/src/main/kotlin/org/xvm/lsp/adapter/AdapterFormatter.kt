@@ -83,6 +83,33 @@ class AdapterFormatter {
 
         /** Sentinel: line is inside a string literal and must not be modified. */
         private const val SKIP_INDENT = -1
+
+        /** The edit that strips the trailing whitespace of [line], line [index] of a document, or null if it has none. */
+        internal fun trailingWhitespaceEdit(
+            index: Int,
+            line: String,
+        ): TextEdit? {
+            val trimmed = line.trimEnd()
+            if (trimmed.length == line.length) return null
+            return TextEdit(
+                range =
+                    Range(
+                        start = Position(index, trimmed.length),
+                        end = Position(index, line.length),
+                    ),
+                newText = "",
+            )
+        }
+
+        /** The edit that ends [content], whose lines are [lines], with a line break, or null if it is empty or has one. */
+        internal fun finalNewlineEdit(
+            content: String,
+            lines: List<String>,
+        ): TextEdit? {
+            if (content.isEmpty() || content.endsWith("\n")) return null
+            val end = Position(lines.size - 1, lines.last().length)
+            return TextEdit(range = Range(start = end, end = end), newText = "\n")
+        }
     }
 
     // ========================================================================
@@ -149,43 +176,15 @@ class AdapterFormatter {
                 }
 
                 // Trailing whitespace removal
-                val trimmed = line.trimEnd()
-                if (
-                    trimmed.length < line.length && (options.trimTrailingWhitespace || isFullDocument)
-                ) {
-                    add(
-                        TextEdit(
-                            range =
-                                Range(
-                                    start = Position(i, trimmed.length),
-                                    end = Position(i, line.length),
-                                ),
-                            newText = "",
-                        ),
-                    )
+                if (options.trimTrailingWhitespace || isFullDocument) {
+                    trailingWhitespaceEdit(i, line)?.let(::add)
                 }
             }
 
             // Insert final newline if missing. XTC default is true; user can override
             // via editor settings (insertFinalNewline = false).
-            if (
-                isFullDocument &&
-                options.insertFinalNewline &&
-                content.isNotEmpty() &&
-                !content.endsWith("\n")
-            ) {
-                val lastIdx = lines.size - 1
-                val lastCol = lines[lastIdx].length
-                add(
-                    TextEdit(
-                        range =
-                            Range(
-                                start = Position(lastIdx, lastCol),
-                                end = Position(lastIdx, lastCol),
-                            ),
-                        newText = "\n",
-                    ),
-                )
+            if (isFullDocument && options.insertFinalNewline) {
+                finalNewlineEdit(content, lines)?.let(::add)
             }
         }.also {
             logger.info("format -> {} edits", it.size)
@@ -361,61 +360,24 @@ class AdapterFormatter {
             handleCommentContinuation(tree, prevLineIndex, line, lines, prevTrimmed, prevIndent)
         if (commentEdit != null) return commentEdit
 
-        // IntelliJ may compact an auto-inserted empty block onto the previous line as "{}"
-        // before sending Enter formatting. Split that compact empty block into an indented
-        // body line plus a correctly aligned closing brace line.
-        if (prevTrimmed.endsWith("{}")) {
-            val bodyIndent =
-                when {
-                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    else -> prevIndent + config.indentSize
-                }
+        // IntelliJ may compact an auto-inserted empty block onto the previous line as "{}" before sending Enter
+        // formatting, and commonly auto-inserts the closing brace of a "{" when Enter is pressed after it, so that the
+        // current line already contains only "}" with editor-provided indentation. Either way, replace the current
+        // line's indentation with a proper skeleton: an indented blank body line plus a correctly aligned closing
+        // brace line.
+        val compactEmptyBlock = prevTrimmed.endsWith("{}")
+        if (compactEmptyBlock || (prevTrimmed.endsWith("{") && currentTrimmed.startsWith("}"))) {
             val closingIndent =
                 when {
                     isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex)
                     else -> prevIndent
                 }
+            val bodyIndent = closingIndent + config.indentSize
             val currentIndent = currentLine.takeWhile { it == ' ' }.length
             val replacement = " ".repeat(bodyIndent) + "\n" + " ".repeat(closingIndent)
             logger.info(
-                "onTypeFormatting[enter]: compact-empty-block split at line {} prev='{}' bodyIndent={} closingIndent={} currentIndent={}",
-                line,
-                summarizeLine(prevTrimmed),
-                bodyIndent,
-                closingIndent,
-                currentIndent,
-            )
-            return listOf(
-                TextEdit(
-                    range =
-                        Range(
-                            start = Position(line, 0),
-                            end = Position(line, currentIndent),
-                        ),
-                    newText = replacement,
-                ),
-            )
-        }
-
-        // IntelliJ commonly auto-inserts a matching closing brace when Enter is pressed
-        // after "{". When that happens, the current line already contains only "}" with
-        // editor-provided indentation. Replace that indentation with a proper skeleton:
-        // an indented blank body line plus a correctly aligned closing brace line.
-        if (prevTrimmed.endsWith("{") && currentTrimmed.startsWith("}")) {
-            val currentIndent = currentLine.takeWhile { it == ' ' }.length
-            val bodyIndent =
-                when {
-                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    else -> prevIndent + config.indentSize
-                }
-            val closingIndent =
-                when {
-                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex)
-                    else -> prevIndent
-                }
-            val replacement = " ".repeat(bodyIndent) + "\n" + " ".repeat(closingIndent)
-            logger.info(
-                "onTypeFormatting[enter]: auto-close skeleton at line {} prev='{}' bodyIndent={} closingIndent={} currentIndent={}",
+                "onTypeFormatting[enter]: {} at line {} prev='{}' bodyIndent={} closingIndent={} currentIndent={}",
+                if (compactEmptyBlock) "compact-empty-block split" else "auto-close skeleton",
                 line,
                 summarizeLine(prevTrimmed),
                 bodyIndent,
