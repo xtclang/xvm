@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.XtcParser
 import java.nio.file.Files
@@ -58,17 +59,17 @@ class WorkspaceIndexerTest {
         WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
             (if (Files.isRegularFile(file)) Files.readString(file) else null).also {
                 read.complete(null)
-                release.get(5, SECONDS)
+                release.get(HANG_SECONDS, SECONDS)
             }
         }.use { indexer ->
             val scan = indexer.scanWorkspace(listOf(directory.toString()))
             try {
-                read.get(5, SECONDS)
+                read.get(HANG_SECONDS, SECONDS)
                 indexer.reindexFile(uri, "module Owner { class Buffer {} }")
             } finally {
                 release.complete(null)
             }
-            scan.get(5, SECONDS)
+            scan.get(HANG_SECONDS, SECONDS)
             assertThat(index.findByName("Disk")).isEmpty()
             assertThat(index.findByName("Buffer")).hasSize(1)
             Files.delete(path)
@@ -94,7 +95,7 @@ class WorkspaceIndexerTest {
             Files.readString(file).also {
                 if (block.get()) {
                     read.complete(null)
-                    release.get(5, SECONDS)
+                    release.get(HANG_SECONDS, SECONDS)
                 }
             }
         }.use { indexer ->
@@ -106,12 +107,12 @@ class WorkspaceIndexerTest {
             block.set(true)
             val closing = CompletableFuture.runAsync { indexer.closeDocument(uri) }
             try {
-                read.get(5, SECONDS)
+                read.get(HANG_SECONDS, SECONDS)
                 indexer.reindexFile(uri, "module Owner { class Reopened {} }")
             } finally {
                 release.complete(null)
             }
-            closing.get(5, SECONDS)
+            closing.get(HANG_SECONDS, SECONDS)
             assertThat(index.findByName("Disk")).isEmpty()
             assertThat(index.findByName("Reopened")).hasSize(1)
         }
@@ -127,7 +128,7 @@ class WorkspaceIndexerTest {
         val index = WorkspaceIndex()
         WorkspaceIndexer(index, requireNotNull(parser).getLanguage()).use { indexer ->
             indexer.reindexFile(uri, "module Owner { class Buffer {} }")
-            indexer.scanWorkspace(listOf(directory.toString())).get(5, SECONDS)
+            indexer.scanWorkspace(listOf(directory.toString())).get(HANG_SECONDS, SECONDS)
             assertThat(index.findByName("Buffer")).hasSize(1)
             assertThat(index.findByName("Disk")).isEmpty()
             indexer.closeDocument(uri)
@@ -145,7 +146,7 @@ class WorkspaceIndexerTest {
         val index = WorkspaceIndex()
         WorkspaceIndexer(index, requireNotNull(parser).getLanguage()).use { indexer ->
             val scans = List(12) { indexer.scanWorkspace(listOf(directory.toString())) }
-            CompletableFuture.allOf(*scans.toTypedArray()).get(15, SECONDS)
+            CompletableFuture.allOf(*scans.toTypedArray()).get(HANG_SECONDS, SECONDS)
             assertThat(index.findByName("Value")).hasSize(1)
             indexer.close()
             indexer.reindexFile(
@@ -169,7 +170,7 @@ class WorkspaceIndexerTest {
                         }
                     }
                 }
-            CompletableFuture.allOf(*requests.toTypedArray()).get(15, SECONDS)
+            CompletableFuture.allOf(*requests.toTypedArray()).get(HANG_SECONDS, SECONDS)
         }
     }
 

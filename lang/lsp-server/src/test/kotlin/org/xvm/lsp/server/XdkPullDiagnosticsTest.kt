@@ -33,6 +33,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -95,7 +96,7 @@ class XdkPullDiagnosticsTest {
                 assertThat(
                     session.server.textDocumentService
                         .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                        .get(10, SECONDS),
+                        .get(HANG_SECONDS, SECONDS),
                 ).isNotEmpty()
             }
         }
@@ -114,7 +115,7 @@ class XdkPullDiagnosticsTest {
             val repaired = session.pull(URI, first.resultId).left
             assertThat(repaired.items).isEmpty()
             assertThat(repaired.resultId).isNotEqualTo(first.resultId)
-            await().atMost(10, SECONDS).until { session.refreshes.get() > 0 }
+            await().atMost(HANG_SECONDS, SECONDS).until { session.refreshes.get() > 0 }
             assertThat(session.published).isEmpty()
         }
     }
@@ -124,7 +125,7 @@ class XdkPullDiagnosticsTest {
         Session(pull = false).use { session ->
             assertThat(session.capabilities.diagnosticProvider).isNull()
             session.open(URI, BROKEN, 1)
-            await().atMost(10, SECONDS).until { session.published.isNotEmpty() }
+            await().atMost(HANG_SECONDS, SECONDS).until { session.published.isNotEmpty() }
             assertThat(session.published.last().diagnostics).isNotEmpty()
             assertThatThrownBy { session.pull(URI) }.hasMessageContaining("not negotiated")
             assertThat(session.refreshes.get()).isZero()
@@ -308,20 +309,20 @@ class XdkPullDiagnosticsTest {
         val adapter =
             XdkAdapter { source, errors ->
                 started.countDown()
-                check(release.await(20, SECONDS))
+                check(release.await(HANG_SECONDS, SECONDS))
                 EmbeddingSupport.instance().compileModule(source, null, errors)
             }
         try {
             Session(adapter = adapter).use { session ->
                 session.open(URI, BROKEN, 1)
-                assertThat(started.await(10, SECONDS)).isTrue()
+                assertThat(started.await(HANG_SECONDS, SECONDS)).isTrue()
                 val params = DocumentDiagnosticParams(TextDocumentIdentifier(URI))
                 val canceled = session.server.textDocumentService.diagnostic(params)
                 assertThat(canceled.cancel(false)).isTrue()
                 val stale = session.server.textDocumentService.diagnostic(params)
                 session.change(URI, VALID, 2)
                 release.countDown()
-                assertThatThrownBy { stale.get(10, SECONDS) }
+                assertThatThrownBy { stale.get(HANG_SECONDS, SECONDS) }
                     .hasMessageContaining("Document changed")
                 assertThat(session.pull(URI).left.items).isEmpty()
                 assertThat(canceled.isCancelled).isTrue()
@@ -399,7 +400,7 @@ class XdkPullDiagnosticsTest {
                                         }
                                 }
                         },
-                    ).get(10, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .capabilities
             server.initialized(InitializedParams())
         }
@@ -433,10 +434,10 @@ class XdkPullDiagnosticsTest {
                     previousResultId = previous
                     this.identifier = identifier
                 },
-            ).get(30, SECONDS)
+            ).get(HANG_SECONDS, SECONDS)
 
         fun workspace(previous: List<PreviousResultId> = emptyList()) =
-            server.workspaceService.diagnostic(WorkspaceDiagnosticParams(previous)).get(30, SECONDS)
+            server.workspaceService.diagnostic(WorkspaceDiagnosticParams(previous)).get(HANG_SECONDS, SECONDS)
 
         override fun close() = server.close()
     }

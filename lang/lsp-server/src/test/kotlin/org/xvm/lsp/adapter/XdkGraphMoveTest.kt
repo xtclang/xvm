@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
@@ -35,8 +36,8 @@ class XdkGraphMoveTest {
                 )
             adapter.replaceSourceModules(graph)
             val moves = mapOf(uri("old") to uri("moved"))
-            assertThat(adapter.renameFilesAsync(moves).get(30, SECONDS)).isNull()
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            assertThat(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS)).isNull()
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS))
             assertThat(proposal.previousSourceModules!!.map { it.uri }).containsExactlyInAnyOrderElementsOf(graph.map { it.uri })
             val after = requireNotNull(proposal.sourceModules)
             val app = after.single { it.name == "App" }
@@ -47,10 +48,10 @@ class XdkGraphMoveTest {
             assertThat(after.single { it.name == "Consumer" }.resourceRoots).isEmpty()
             assertThat(proposal.edit.renames).containsExactlyEntriesOf(moves)
             assertThat(directory.resolve("moved")).doesNotExist()
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             apply(proposal.edit)
             adapter.replaceSourceModules(after)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(Files.readString(directory.resolve("moved/assets/data.txt"))).isEqualTo("moved resource")
         }
     }
@@ -64,13 +65,13 @@ class XdkGraphMoveTest {
         session { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"))))
             val moves = mapOf(uri("old/App.x") to uri("target/App.x"))
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS))
             assertThat(proposal.edit.renames).containsEntry(uri("old/App"), uri("target/App"))
             assertThat(proposal.sourceModules!!.single().resourceFiles).containsExactly(directory.resolve("old").toFile())
             assertThat(proposal.previousSourceModules!!.single().resourceRoots).isNull()
             apply(proposal.edit)
             adapter.replaceSourceModules(proposal.sourceModules)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(directory.resolve("old/data.txt")).exists()
         }
     }
@@ -88,13 +89,13 @@ class XdkGraphMoveTest {
                 ),
             )
             val moves = mapOf(uri("old") to uri("new"), uri("assets") to uri("new-assets"))
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS))
             assertThat(proposal.sourceModules!!.single { it.name == "App" }.resourceFiles)
                 .containsExactly(directory.resolve("new-assets").toFile(), directory.resolve("missing").toFile())
             assertThat(proposal.sourceModules.single { it.name == "Disabled" }.resourceRoots).isEmpty()
             apply(proposal.edit)
             adapter.replaceSourceModules(proposal.sourceModules)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -105,8 +106,8 @@ class XdkGraphMoveTest {
         Files.createDirectories(directory.resolve("target"))
         session { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"))))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-            assertThat(adapter.renameFilesProposalAsync(mapOf(uri("old/App.x") to uri("target/App.x"))).get(30, SECONDS)).isNull()
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.renameFilesProposalAsync(mapOf(uri("old/App.x") to uri("target/App.x"))).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(directory.resolve("old/App/data.txt")).exists()
             assertThat(directory.resolve("target/App.x")).doesNotExist()
         }
@@ -126,8 +127,8 @@ class XdkGraphMoveTest {
                     XdkSourceModule("Independent", uri("Independent.x"), resourceRoots = listOf(uri("old"), uri("fallback"))),
                 ),
             )
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-            assertThat(adapter.renameFilesProposalAsync(mapOf(uri("old/App.x") to uri("target/App.x"))).get(30, SECONDS)).isNull()
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.renameFilesProposalAsync(mapOf(uri("old/App.x") to uri("target/App.x"))).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(directory.resolve("old/App/data.txt")).exists()
         }
     }
@@ -142,9 +143,9 @@ class XdkGraphMoveTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("App", uri("old/App.x"), resourceRoots = listOf(uri("assets"), uri("fallback")))),
             )
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             val moves = mapOf(uri("old") to uri("moved"), uri("incoming/data.txt") to uri("assets/data.txt"))
-            assertThat(adapter.renameFilesProposalAsync(moves).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(directory.resolve("assets/data.txt")).doesNotExist()
         }
     }
@@ -170,11 +171,11 @@ class XdkGraphMoveTest {
         write("old/assets/nested/data.txt", "nested resource")
         session { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"), resourceRoots = listOf(uri("old/assets")))))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(mapOf(uri("old") to uri("new"))).get(30, SECONDS))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(mapOf(uri("old") to uri("new"))).get(HANG_SECONDS, SECONDS))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -191,7 +192,7 @@ class XdkGraphMoveTest {
                 mapOf(uri("old/App/tools") to uri("target/tools")),
                 // VS Code participates again when applying the first proposal's companion move.
                 mapOf(uri("old/App") to uri("target/App")),
-            ).forEach { moves -> assertThat(adapter.renameFilesProposalAsync(moves).get(30, SECONDS)).isNull() }
+            ).forEach { moves -> assertThat(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS)).isNull() }
             assertThat(directory.resolve("old/App/tools/Box.x")).exists()
         }
     }
@@ -207,9 +208,11 @@ class XdkGraphMoveTest {
         session { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x")), XdkSourceModule("Other", uri("Other.x"))))
             val moves = mapOf(uri("old") to uri("new"), uri("old/App/Box.x") to uri("Other/Box.x"))
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS))
             val reversed =
-                requireNotNull(adapter.renameFilesProposalAsync(moves.entries.reversed().associate { it.toPair() }).get(30, SECONDS))
+                requireNotNull(
+                    adapter.renameFilesProposalAsync(moves.entries.reversed().associate { it.toPair() }).get(HANG_SECONDS, SECONDS),
+                )
             assertThat(
                 proposal.edit.renames.entries
                     .toList(),
@@ -223,7 +226,7 @@ class XdkGraphMoveTest {
             ).isEqualTo(uri("old"))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(Files.readString(directory.resolve("Other/Box/data.txt"))).isEqualTo("keep bytes")
             assertThat(directory.resolve("new/App/Box.x")).doesNotExist()
         }
@@ -243,12 +246,12 @@ class XdkGraphMoveTest {
                                 uri("old") to uri("new"),
                                 uri("old/App/Box.x") to uri("new/App/Box.x"),
                             ),
-                        ).get(30, SECONDS),
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             assertThat(proposal.edit.renames).containsExactlyEntriesOf(mapOf(uri("old") to uri("new")))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -261,7 +264,7 @@ class XdkGraphMoveTest {
             listOf(
                 mapOf(uri("old") to uri("taken")),
                 mapOf(uri("old") to uri("new"), uri("old/App.x") to uri("elsewhere/App.x")),
-            ).forEach { moves -> assertThat(adapter.renameFilesProposalAsync(moves).get(30, SECONDS)).isNull() }
+            ).forEach { moves -> assertThat(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS)).isNull() }
             assertThat(directory.resolve("old/App.x")).exists()
         }
     }
@@ -306,8 +309,8 @@ class XdkGraphMoveTest {
                 )
             adapter.replaceSourceModules(graph)
             val requested = mapOf(uri("old/App.x") to uri("target/Renamed.x"))
-            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(30, SECONDS))
+            assertThat(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(HANG_SECONDS, SECONDS))
             val after = requireNotNull(proposal.sourceModules)
             assertThat(proposal.edit.renames).containsEntry(uri("old/App"), uri("target/Renamed"))
             assertThat(proposal.previousSourceModules!!.single { it.name == moduleName }.resourceFiles)
@@ -320,17 +323,23 @@ class XdkGraphMoveTest {
             assertThat(after.single { it.name == "Consumer" }.dependencies).containsExactly(renamed)
             assertThat(after.single { it.name == "Consumer" }.resourceRoots).isEmpty()
             assertThat(directory.resolve("target/Renamed.x")).doesNotExist()
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             apply(proposal.edit)
             adapter.replaceSourceModules(after)
             assertThat(Files.readString(directory.resolve("target/Renamed.x"))).contains("module $renamed")
             assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $renamed", "app.Box", "app.text()")
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-            val reverse = adapter.renameFilesProposalAsync(requested.entries.associate { (from, to) -> to to from }).get(30, SECONDS)
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            val reverse =
+                adapter
+                    .renameFilesProposalAsync(
+                        requested.entries.associate { (from, to) ->
+                            to to from
+                        },
+                    ).get(HANG_SECONDS, SECONDS)
             requireNotNull(reverse)
             apply(reverse.edit)
             adapter.replaceSourceModules(requireNotNull(reverse.sourceModules))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $moduleName")
         }
     }
@@ -352,10 +361,10 @@ class XdkGraphMoveTest {
                     uri("incoming/data.txt") to uri("assets/data.txt"),
                     uri("incoming/extra.txt") to uri("assets/extra.txt"),
                 )
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(Files.readString(directory.resolve("assets/extra.txt"))).isEqualTo("previously outside every root")
         }
     }
@@ -368,10 +377,10 @@ class XdkGraphMoveTest {
         session { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x")), XdkSourceModule("Taken", uri("Taken.x"))))
             val requested = mapOf(uri("old/App.x") to uri("target/Taken.x"))
-            assertThat(adapter.renameFilesProposalAsync(requested).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesProposalAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(Files.readString(directory.resolve("old/App.x"))).isEqualTo("module App {}")
             assertThat(directory.resolve("target/Taken.x")).doesNotExist()
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -396,13 +405,13 @@ class XdkGraphMoveTest {
                 ),
             )
             val moves = mapOf(uri("old/Library.x") to uri("target/Api.x"), uri("old/Consumer.x") to uri("target/Client.x"))
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(HANG_SECONDS, SECONDS))
             val graph = requireNotNull(proposal.sourceModules)
             assertThat(graph.map { it.name }).containsExactlyInAnyOrder("Api", "Client")
             assertThat(graph.single { it.name == "Client" }.dependencies).containsExactly("Api")
             apply(proposal.edit)
             adapter.replaceSourceModules(graph)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(
                 Files.readString(directory.resolve("target/Client.x")),
             ).contains("module Client", "package lib import Api", "lib.Item")

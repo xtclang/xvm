@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkConsumerDiscovery
 import org.xvm.lsp.adapter.xdk.XdkRenameScope
@@ -65,7 +66,13 @@ class XdkConsumerDiscoveryTest {
             assertThat(adapter.compile(library.toURI().toString(), LIBRARY).diagnostics).isEmpty()
             val proposal =
                 requireNotNull(
-                    adapter.renameProposalAsync(library.toURI().toString(), 0, LIBRARY.indexOf("pick"), "choose").get(30, SECONDS),
+                    adapter
+                        .renameProposalAsync(
+                            library.toURI().toString(),
+                            0,
+                            LIBRARY.indexOf("pick"),
+                            "choose",
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             assertThat(requireNotNull(proposal.scope).boundary).isEqualTo(XdkRenameScope.Boundary.CONFIGURED_GRAPH)
             assertThat(proposal.edit.changes.keys).containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.mock.MockAdapter
@@ -52,11 +53,11 @@ class MonikerProtocolTest {
             server.connect(client)
             server.initialize(editorInitializeParams()).join()
             val params = MonikerParams(TextDocumentIdentifier(URI), Position(0, 0))
-            val expected = server.textDocumentService.moniker(params).get(5, SECONDS)
+            val expected = server.textDocumentService.moniker(params).get(HANG_SECONDS, SECONDS)
             assertThat(expected.map { it.kind }).containsExactly(MonikerKind.Import, MonikerKind.Export, MonikerKind.Local)
             assertThat(expected.map { it.unique }).containsOnly(UniquenessLevel.Scheme)
             params.partialResultToken = Either.forLeft("monikers")
-            assertThat(server.textDocumentService.moniker(params).get(5, SECONDS)).isEmpty()
+            assertThat(server.textDocumentService.moniker(params).get(HANG_SECONDS, SECONDS)).isEmpty()
             assertThat(events.single().token).isEqualTo(params.partialResultToken)
             assertThat(events.single().value.right as List<*>).containsExactlyElementsOf(expected)
         }
@@ -94,7 +95,7 @@ class MonikerProtocolTest {
                         partialResultToken = Either.forLeft("monikers")
                     }
                 val result = documents.moniker(params)
-                entered.get(5, SECONDS)
+                entered.get(HANG_SECONDS, SECONDS)
                 if (cancel) {
                     result.cancel(false)
                 } else {
@@ -105,7 +106,7 @@ class MonikerProtocolTest {
                         ),
                     )
                 }
-                assertThatThrownBy { result.get(5, SECONDS) }.isInstanceOf(Exception::class.java)
+                assertThatThrownBy { result.get(HANG_SECONDS, SECONDS) }.isInstanceOf(Exception::class.java)
                 pending.complete(listOf(SymbolMoniker("test", "stale", SymbolMoniker.Kind.EXPORT)))
                 assertThat(events).isEmpty()
             }

@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.Executors
@@ -48,7 +49,7 @@ class XdkIncompleteCallTest {
                 val prefix = "$BOX void run(Box<String> box) { box.$call"
                 adapter.compile(URI, "$prefix); } }")
                 val position = Position(0, prefix.length)
-                val model = adapter.analyzeAtAsync(URI, position).get(10, SECONDS)!!
+                val model = adapter.analyzeAtAsync(URI, position).get(HANG_SECONDS, SECONDS)!!
                 val site = model.sites.single()
                 val candidate = site.callCandidates!!.single()
                 val cursor = SemanticModel.Position(0, prefix.length)

@@ -12,6 +12,7 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
@@ -42,7 +43,7 @@ class XdkPlatformRegressionTest {
         val uri = file.toURI().toString()
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("Demo", uri)))
-            val reports = adapter.workspaceDiagnosticsAsync().get(30, SECONDS)
+            val reports = adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)
             assertThat(reports).isNotEmpty().allMatch { it.success }
             assertThat(adapter.compile(uri, source).diagnostics).isEmpty()
             val edit = requireNotNull(adapter.rename(uri, 2, source.lines()[2].indexOf("input"), "renamed"))
@@ -167,7 +168,7 @@ class XdkPlatformRegressionTest {
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, marked.replace("§", ""))
                 val items =
-                    adapter.getCompletionsAsync(URI, 0, marked.indexOf('§')).get(30, SECONDS)
+                    adapter.getCompletionsAsync(URI, 0, marked.indexOf('§')).get(HANG_SECONDS, SECONDS)
                 assertThat(items.map { it.label }).contains("trim")
             }
         }

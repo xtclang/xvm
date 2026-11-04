@@ -88,6 +88,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.lsp.HANG_SECONDS
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
@@ -1979,7 +1980,7 @@ class XdkStdioTest {
         )
 
         fun diagnosticsAt(version: Int): PublishDiagnosticsParams {
-            val deadline = System.nanoTime() + SECONDS.toNanos(30)
+            val deadline = System.nanoTime() + SECONDS.toNanos(HANG_SECONDS)
             while (true) {
                 val remaining = deadline - System.nanoTime()
                 val publication =
@@ -1995,7 +1996,7 @@ class XdkStdioTest {
             uri: String,
             version: Int?,
         ): PublishDiagnosticsParams {
-            val deadline = System.nanoTime() + SECONDS.toNanos(30)
+            val deadline = System.nanoTime() + SECONDS.toNanos(HANG_SECONDS)
             while (true) {
                 val remaining = deadline - System.nanoTime()
                 val publication =
@@ -2007,7 +2008,7 @@ class XdkStdioTest {
 
         fun <T> await(future: Future<T>): T =
             try {
-                future.get(30, SECONDS)
+                future.get(HANG_SECONDS, SECONDS)
             } catch (e: TimeoutException) {
                 throw AssertionError("LSP request timed out. ${log()}", e)
             }
@@ -2019,7 +2020,7 @@ class XdkStdioTest {
         }
 
         fun expectExit(status: Int) {
-            assertThat(process.waitFor(10, SECONDS))
+            assertThat(process.waitFor(HANG_SECONDS, SECONDS))
                 .describedAs("Server did not exit. ${log()}")
                 .isTrue()
             assertThat(process.exitValue()).describedAs(log()).isEqualTo(status)
@@ -2030,7 +2031,7 @@ class XdkStdioTest {
         override fun close() {
             try {
                 if (process.isAlive) process.destroyForcibly()
-                check(process.waitFor(10, SECONDS)) { "Could not terminate test server. ${log()}" }
+                check(process.waitFor(HANG_SECONDS, SECONDS)) { "Could not terminate test server. ${log()}" }
             } finally {
                 listening.cancel(true)
                 executor.shutdownNow()

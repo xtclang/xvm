@@ -34,6 +34,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.ParameterInfo
 import org.xvm.lsp.adapter.SignatureInfo
@@ -330,9 +331,9 @@ class CapabilityNegotiationTest {
                     server.workspaceService.executeCommand(
                         ExecuteCommandParams(command.command, command.arguments),
                     )
-                sent.get(5, SECONDS)
+                sent.get(HANG_SECONDS, SECONDS)
                 if (stalled) server.close()
-                assertThatThrownBy { applying.get(5, SECONDS) }
+                assertThatThrownBy { applying.get(HANG_SECONDS, SECONDS) }
                     .hasMessageContaining(if (stalled) "changed" else "Read-only document")
             }
         }

@@ -36,6 +36,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -62,7 +63,7 @@ class XdkRenameServerTest {
         val uri = root.toURI().toString()
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(mock(LanguageClient::class.java))
-            server.initialize(parameters()).get(20, SECONDS)
+            server.initialize(parameters()).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
             val documents = server.textDocumentService
             val document = TextDocumentIdentifier(uri)
@@ -75,7 +76,7 @@ class XdkRenameServerTest {
                         documents
                             .prepareRename(
                                 PrepareRenameParams(document, Position(0, start + offset)),
-                            ).get(30, SECONDS)
+                            ).get(HANG_SECONDS, SECONDS)
                             .second
                     assertThat(prepared.placeholder).isEqualTo(name)
                     assertThat(prepared.range).isEqualTo(Range(Position(0, start), Position(0, start + name.length)))
@@ -83,7 +84,7 @@ class XdkRenameServerTest {
             }
             val edit =
                 requireNotNull(
-                    documents.rename(RenameParams(document, Position(0, starts.first() + 5), "readPassword")).get(30, SECONDS),
+                    documents.rename(RenameParams(document, Position(0, starts.first() + 5), "readPassword")).get(HANG_SECONDS, SECONDS),
                 )
             val changes = edit.documentChanges.single().left
             assertThat(changes.textDocument.uri).isEqualTo(uri)
@@ -122,7 +123,7 @@ class XdkRenameServerTest {
                 { sources, repository, errors ->
                     if (hold.compareAndSet(true, false)) {
                         entered.countDown()
-                        check(release.await(20, SECONDS))
+                        check(release.await(HANG_SECONDS, SECONDS))
                     }
                     support.compileModule(sources, repository, errors)
                 },
@@ -140,7 +141,7 @@ class XdkRenameServerTest {
                         capabilities.workspace.fileOperations =
                             FileOperationsWorkspaceCapabilities().apply { willRename = true }
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             val uri = root.toURI().toString()
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
             server.textDocumentService.didOpen(
@@ -148,7 +149,7 @@ class XdkRenameServerTest {
             )
             server.textDocumentService
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                .get(30, SECONDS)
+                .get(HANG_SECONDS, SECONDS)
             hold.set(true)
             val params =
                 RenameFilesParams(
@@ -160,7 +161,7 @@ class XdkRenameServerTest {
                     ),
                 )
             val proof = if (proposal) server.renameFilesProposal(params).thenApply { it?.edit } else server.willRenameFiles(params)
-            assertThat(entered.await(20, SECONDS)).isTrue()
+            assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
             if (changed) member.writeText("class Box { Int extra = 1; }")
             server.workspaceService.didChangeWatchedFiles(
                 DidChangeWatchedFilesParams(
@@ -171,15 +172,15 @@ class XdkRenameServerTest {
             )
             release.countDown()
             if (changed) {
-                assertThatThrownBy { proof.get(30, SECONDS) }
+                assertThatThrownBy { proof.get(HANG_SECONDS, SECONDS) }
                     .hasCauseInstanceOf(ResponseErrorException::class.java)
             } else {
-                assertThat(proof.get(30, SECONDS)?.documentChanges).isNotEmpty()
+                assertThat(proof.get(HANG_SECONDS, SECONDS)?.documentChanges).isNotEmpty()
             }
             assertThat(root.readText()).contains("new Box()")
         } finally {
             release.countDown()
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -203,7 +204,7 @@ class XdkRenameServerTest {
             XtcLanguageServer(XdkAdapter(), rescans = { rescan ->
                 if (hold.get()) {
                     walking.countDown()
-                    check(release.await(20, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                 }
                 rescan()
             })
@@ -217,12 +218,12 @@ class XdkRenameServerTest {
                         capabilities.workspace.fileOperations =
                             FileOperationsWorkspaceCapabilities().apply { willRename = true }
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             val uri = root.toURI().toString()
             server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, root.readText())))
             server.textDocumentService
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                .get(30, SECONDS)
+                .get(HANG_SECONDS, SECONDS)
 
             // as when IntelliJ undoes a rename: a watcher event, then at once willRenameFiles
             hold.set(true)
@@ -230,8 +231,8 @@ class XdkRenameServerTest {
             server.workspaceService.didChangeWatchedFiles(
                 DidChangeWatchedFilesParams(listOf(FileEvent(other.toURI().toString(), FileChangeType.Created))),
             )
-            assertThat(walking.await(20, SECONDS)).isTrue()
-            assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name })
+            assertThat(walking.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(server.compilerSourceModules().get(HANG_SECONDS, SECONDS).map { it.name })
                 .describedAs("The event is in the graph while the workspace walk is held")
                 .contains("Other")
             val rename =
@@ -242,12 +243,12 @@ class XdkRenameServerTest {
                 )
             // the walk finds nothing the event did not already apply, so it retires nothing
             release.countDown()
-            assertThat(rename.get(30, SECONDS)?.documentChanges).isNotEmpty()
-            server.discoveryIdle().get(20, SECONDS)
-            assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name }).contains("App", "Other")
+            assertThat(rename.get(HANG_SECONDS, SECONDS)?.documentChanges).isNotEmpty()
+            server.discoveryIdle().get(HANG_SECONDS, SECONDS)
+            assertThat(server.compilerSourceModules().get(HANG_SECONDS, SECONDS).map { it.name }).contains("App", "Other")
         } finally {
             release.countDown()
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -267,17 +268,21 @@ class XdkRenameServerTest {
         val server = XtcLanguageServer(XdkAdapter())
         server.connect(mock(LanguageClient::class.java))
         try {
-            server.initialize(parameters()).get(20, SECONDS)
+            server.initialize(parameters()).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("Library", library.toURI().toString())))
-            val found = server.discoverConsumers(DiscoverConsumersParams(listOf(consumer.parentFile.toURI().toString()))).get(30, SECONDS)
+            val found =
+                server
+                    .discoverConsumers(
+                        DiscoverConsumersParams(listOf(consumer.parentFile.toURI().toString())),
+                    ).get(HANG_SECONDS, SECONDS)
             assertThat(found.modules).containsExactly(
                 SourceModuleConfiguration("Consumer", consumer.toURI().toString(), listOf("Library")),
             )
             assertThat(found.conflicts).isEmpty()
-            assertThat(server.compilerSourceModules().get(20, SECONDS).map { it.name }).containsExactly("Library")
+            assertThat(server.compilerSourceModules().get(HANG_SECONDS, SECONDS).map { it.name }).containsExactly("Library")
             listOf(emptyList(), listOf(consumer.toURI().toString()), listOf("untitled:Folder")).forEach { roots ->
                 assertThat(server.discoverConsumers(DiscoverConsumersParams(roots)))
-                    .failsWithin(20, SECONDS)
+                    .failsWithin(HANG_SECONDS, SECONDS)
                     .withThrowableOfType(ExecutionException::class.java)
                     .satisfies({
                         assertThat((it.cause as ResponseErrorException).responseError.code)
@@ -285,7 +290,7 @@ class XdkRenameServerTest {
                     })
             }
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -307,11 +312,11 @@ class XdkRenameServerTest {
                         capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
                         capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", root.toURI().toString(), resourceRoots = emptyList())))
             val params = RenameFilesParams(listOf(FileRename(root.parentFile.toURI().toString(), target.toURI().toString())))
-            assertThat(server.willRenameFiles(params).get(30, SECONDS)).isNull()
-            val proposal = requireNotNull(server.renameFilesProposal(params).get(30, SECONDS))
+            assertThat(server.willRenameFiles(params).get(HANG_SECONDS, SECONDS)).isNull()
+            val proposal = requireNotNull(server.renameFilesProposal(params).get(HANG_SECONDS, SECONDS))
             assertThat(
                 proposal.graph!!
                     .before
@@ -347,12 +352,12 @@ class XdkRenameServerTest {
             assertThat(
                 server
                     .compilerSourceModules()
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .single()
                     .uri,
             ).isEqualTo(root.toURI().toString())
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -376,7 +381,7 @@ class XdkRenameServerTest {
                         capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
                         capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(
                 listOf(
                     XdkSourceModule("App", root.toURI().toString()),
@@ -384,8 +389,8 @@ class XdkRenameServerTest {
                 ),
             )
             val params = RenameFilesParams(listOf(FileRename(member.toURI().toString(), target.toURI().toString())))
-            assertThat(server.willRenameFiles(params).get(30, SECONDS)).isNull()
-            val proposal = requireNotNull(server.renameFilesProposal(params).get(30, SECONDS))
+            assertThat(server.willRenameFiles(params).get(HANG_SECONDS, SECONDS)).isNull()
+            val proposal = requireNotNull(server.renameFilesProposal(params).get(HANG_SECONDS, SECONDS))
             assertThat(
                 proposal.graph!!
                     .before
@@ -408,14 +413,14 @@ class XdkRenameServerTest {
             assertThat(
                 server
                     .compilerSourceModules()
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .single { it.name == "App" }
                     .dependencies,
             ).isEmpty()
             assertThat(member).exists()
             assertThat(target).doesNotExist()
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -438,7 +443,7 @@ class XdkRenameServerTest {
                     parameters().apply {
                         capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(
                 listOf(
                     XdkSourceModule("Library.example.org", uri),
@@ -453,14 +458,14 @@ class XdkRenameServerTest {
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
             documents
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                .get(30, SECONDS)
+                .get(HANG_SECONDS, SECONDS)
             val params =
                 RenameParams(
                     TextDocumentIdentifier(uri),
                     Position(0, text.indexOf("Library")),
                     "Renamed",
                 )
-            val proposal = requireNotNull(server.renameProposal(params).get(30, SECONDS))
+            val proposal = requireNotNull(server.renameProposal(params).get(HANG_SECONDS, SECONDS))
             val scope = requireNotNull(proposal.scope)
             assertThat(scope.boundary).isEqualTo("CONFIGURED_GRAPH")
             assertThat(scope.modules.map { it.name })
@@ -484,11 +489,11 @@ class XdkRenameServerTest {
                     .last()
                     .right,
             ).isInstanceOf(RenameFile::class.java)
-            assertThat(documents.rename(params).get(30, SECONDS)).isNull()
+            assertThat(documents.rename(params).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(library.readText()).isEqualTo(text)
             assertThat(consumer.readText()).isEqualTo(use)
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -508,20 +513,20 @@ class XdkRenameServerTest {
         val server = XtcLanguageServer(XdkAdapter())
         server.connect(mock(LanguageClient::class.java))
         try {
-            val capabilities = server.initialize(parameters()).get(20, SECONDS).capabilities
+            val capabilities = server.initialize(parameters()).get(HANG_SECONDS, SECONDS).capabilities
             assertThat(capabilities.renameProvider.right.prepareProvider).isTrue()
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
             documents
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                .get(30, SECONDS)
+                .get(HANG_SECONDS, SECONDS)
             val params =
                 RenameParams(
                     TextDocumentIdentifier(memberUri),
                     Position(0, child.indexOf("input")),
                     "value",
                 )
-            val edit = requireNotNull(documents.rename(params).get(30, SECONDS))
+            val edit = requireNotNull(documents.rename(params).get(HANG_SECONDS, SECONDS))
             assertThat(edit.changes).isNull()
             val changes = edit.documentChanges.associate { it.left.textDocument.uri to it.left }
             assertThat(changes.keys).containsExactly(memberUri)
@@ -534,7 +539,7 @@ class XdkRenameServerTest {
                                 Position(0, text.indexOf("local")),
                                 "value",
                             ),
-                        ).get(30, SECONDS),
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             assertThat(
                 rootEdit.documentChanges
@@ -552,7 +557,7 @@ class XdkRenameServerTest {
             documents.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(memberUri, "xtc", 3, child)),
             )
-            val openEdit = requireNotNull(documents.rename(params).get(30, SECONDS))
+            val openEdit = requireNotNull(documents.rename(params).get(HANG_SECONDS, SECONDS))
             assertThat(
                 openEdit.documentChanges
                     .first { it.left.textDocument.uri == memberUri }
@@ -561,7 +566,7 @@ class XdkRenameServerTest {
                     .version,
             ).isEqualTo(3)
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -580,7 +585,7 @@ class XdkRenameServerTest {
         val server = XtcLanguageServer(XdkAdapter())
         server.connect(mock(LanguageClient::class.java))
         try {
-            server.initialize(parameters()).get(20, SECONDS)
+            server.initialize(parameters()).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(
                 listOf(
                     XdkSourceModule("Library", uri),
@@ -594,10 +599,10 @@ class XdkRenameServerTest {
             val references =
                 documents
                     .references(ReferenceParams(document, at, ReferenceContext(true)))
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
             assertThat(references.map { it.uri }).containsExactlyInAnyOrder(uri, consumerUri)
             val params = RenameParams(document, at, "choose")
-            val edit = requireNotNull(documents.rename(params).get(30, SECONDS))
+            val edit = requireNotNull(documents.rename(params).get(HANG_SECONDS, SECONDS))
             assertThat(edit.changes).isNull()
             val changes = edit.documentChanges.associate { it.left.textDocument.uri to it.left }
             assertThat(changes.keys).containsExactlyInAnyOrder(uri, consumerUri)
@@ -609,15 +614,15 @@ class XdkRenameServerTest {
             )
             documents
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(consumerUri)))
-                .get(30, SECONDS)
-            val openEdit = requireNotNull(documents.rename(params).get(30, SECONDS))
+                .get(HANG_SECONDS, SECONDS)
+            val openEdit = requireNotNull(documents.rename(params).get(HANG_SECONDS, SECONDS))
             val consumerEdit =
                 openEdit.documentChanges.single { it.left.textDocument.uri == consumerUri }.left
             assertThat(consumerEdit.textDocument.version).isEqualTo(3)
             assertThat(consumerEdit.edits).hasSize(2)
             assertThat(consumer.readText()).isEqualTo(use)
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -629,7 +634,7 @@ class XdkRenameServerTest {
             assertThat(
                 server
                     .initialize(InitializeParams())
-                    .get(20, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .capabilities
                     .renameProvider,
             ).isNull()
@@ -646,10 +651,10 @@ class XdkRenameServerTest {
                             Position(0, text.indexOf("local")),
                             "value",
                         ),
-                    ).get(30, SECONDS),
+                    ).get(HANG_SECONDS, SECONDS),
             ).isNull()
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -707,7 +712,7 @@ class XdkRenameServerTest {
         val server = XtcLanguageServer(XdkAdapter())
         server.connect(mock(LanguageClient::class.java))
         try {
-            server.initialize(parameters()).get(20, SECONDS)
+            server.initialize(parameters()).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(
                 buildList {
                     if (requiresImport) add(XdkSourceModule("Types", types.toURI().toString()))
@@ -727,7 +732,7 @@ class XdkRenameServerTest {
             val actions =
                 documents
                     .codeAction(CodeActionParams(TextDocumentIdentifier(uri), Range(at, at), CodeActionContext(emptyList())))
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
             val edit = actions.single { it.isRight && it.right.title == "Create public method 'missing' in 'Other'" }.right.edit
             assertThat(edit.changes).isNull()
             assertThat(edit.documentChanges).hasSize(if (companion) 2 else 1)
@@ -756,7 +761,7 @@ class XdkRenameServerTest {
             assertThat(target.readText()).isEqualTo(targetOriginal)
             assertThat(root.readText()).isEqualTo(rootOriginal)
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -768,7 +773,7 @@ class XdkRenameServerTest {
         val server = XtcLanguageServer(XdkAdapter())
         server.connect(mock(LanguageClient::class.java))
         try {
-            server.initialize(parameters()).get(20, SECONDS)
+            server.initialize(parameters()).get(HANG_SECONDS, SECONDS)
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("Imports", uri)))
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
@@ -780,7 +785,7 @@ class XdkRenameServerTest {
                             Range(Position(0, 0), Position(0, text.length)),
                             CodeActionContext(emptyList()),
                         ),
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
             val edit = actions.single { it.isRight && it.right.title == "Remove unused import 'StringBuffer'" }.right.edit
             assertThat(edit.changes).isNull()
             assertThat(
@@ -796,7 +801,7 @@ class XdkRenameServerTest {
                     .left.newText,
             ).isEmpty()
         } finally {
-            server.shutdown().get(20, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -827,7 +832,7 @@ class XdkRenameServerTest {
                         capabilities.workspace.workspaceEdit.resourceOperations =
                             if (enabled) listOf("rename") else emptyList()
                     }
-                server.initialize(params).get(20, SECONDS)
+                server.initialize(params).get(HANG_SECONDS, SECONDS)
                 val documents = server.textDocumentService
                 val uri = root.toURI().toString()
                 documents.didOpen(
@@ -835,7 +840,7 @@ class XdkRenameServerTest {
                 )
                 documents
                     .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                 val edit =
                     documents
                         .rename(
@@ -844,7 +849,7 @@ class XdkRenameServerTest {
                                 Position(0, root.readText().indexOf("Item")),
                                 "Renamed",
                             ),
-                        ).get(30, SECONDS)
+                        ).get(HANG_SECONDS, SECONDS)
                 if (!enabled) {
                     assertThat(edit).isNull()
                 } else {
@@ -864,7 +869,7 @@ class XdkRenameServerTest {
                 }
                 assertThat(member.isFile).isTrue()
             } finally {
-                server.shutdown().get(20, SECONDS)
+                server.shutdown().get(HANG_SECONDS, SECONDS)
             }
         }
     }
