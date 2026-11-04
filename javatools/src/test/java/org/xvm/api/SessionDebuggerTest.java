@@ -237,6 +237,30 @@ public class SessionDebuggerTest {
             """;
 
     /**
+     * A module with an interface, whose method has no code, and a const that implements it on line
+     * 9; run() calls it through the interface.
+     */
+    private static final String STRATEGY = """
+            module Strategy {
+                interface Choice {
+                    Int choose(Int n);
+                }
+
+                const Twice implements Choice {
+                    @Override
+                    Int choose(Int n) {
+                        return n * 2;
+                    }
+                }
+
+                Int run() {
+                    Choice choice = new Twice();
+                    return choice.choose(21);
+                }
+            }
+            """;
+
+    /**
      * A module whose run() makes two calls on line 4, add() and then twice() with its result, and
      * on line 5 a call of twice() that it does not make; add() is on line 11, twice() on line 15.
      */
@@ -1167,6 +1191,30 @@ public class SessionDebuggerTest {
             assertEquals(42L, control.result());
             assertTrue(output.toString().contains("after 42"), output.toString());
             assertTrue(session.threads().isEmpty());
+        }
+    }
+
+    @Test
+    public void aProgramWithAnInterfaceRunsUnderTheDebuggerAndStopsInTheMethodThatImplementsIt()
+            throws Exception {
+        Path  source  = compile("Strategy", STRATEGY);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        // indexing the module's lines passes over the interface's method, which has no code
+        session.addModule(input().loadModule("Strategy"));
+        List<Breakpoint> breakpoints = session.setBreakpoints(source.toString(), List.of(new Line(1, 9)));
+        assertEquals(List.of(new Breakpoint(1, 9, true, null)), breakpoints);
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Strategy", output, session);
+        try (control) {
+            Stop stop = stops.next();
+            assertEquals("breakpoint", stop.reason());
+            assertEquals("Twice.choose", session.stackTrace(stop.threadId()).getFirst().name());
+
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(42L, control.result());
         }
     }
 
