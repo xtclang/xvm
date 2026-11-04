@@ -62,7 +62,7 @@ class Watched {
 
         fun from(roots: List<Any>): List<String> {
             val reached = mutableListOf<Any>()
-            roots.forEach { reach(it, ROOT) }
+            roots.forEach { reach(it, root) }
             while (pending.isNotEmpty()) {
                 val value = pending.removeLast()
                 if (value in targets) reached += value
@@ -161,7 +161,7 @@ class Watched {
 
         /** The path to a reached object, from the root or the class whose static holds the first step. */
         private fun path(target: Any): String {
-            val steps = generateSequence(target) { parents[it]?.takeUnless { parent -> parent === ROOT } }.toList().asReversed()
+            val steps = generateSequence(target) { parents[it]?.takeUnless { parent -> parent === root } }.toList().asReversed()
             return buildString {
                 append(steps.first().let { if (it is Class<*>) "static ${nameOf(it)}" else nameOf(it.javaClass) })
                 steps.zipWithNext { holder, held -> append(member(holder, held)).append(": ").append(nameOf(held.javaClass)) }
@@ -179,9 +179,9 @@ class Watched {
             }
 
         private companion object {
-            val ROOT = Any()
+            val root = Any()
 
-            val FIELDS = ConcurrentHashMap<Class<*>, List<Field>>()
+            val fieldsByClass = ConcurrentHashMap<Class<*>, List<Field>>()
 
             /** Objects that hold nothing worth following. */
             fun leaf(value: Any) =
@@ -198,7 +198,7 @@ class Watched {
 
             /** The instance fields of a class and its superclasses that reflection may read. */
             fun fieldsOf(type: Class<*>): List<Field> =
-                FIELDS.computeIfAbsent(type) {
+                fieldsByClass.computeIfAbsent(type) {
                     readable(hierarchy(type).flatMap { owner -> owner.declaredFields.filterNot { Modifier.isStatic(it.modifiers) } })
                 }
 
