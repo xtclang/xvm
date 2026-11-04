@@ -5,10 +5,9 @@ text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin
 
 ## Prerequisites
 
-- **Java 25+** is required for the server, including the optional tree-sitter adapter (which uses the
-  Foreign Function & Memory API). Verify with `java -version`.
-- If you don't have Java 25, you can build with the regex-based mock adapter
-  instead (see the build step below).
+- **Java 25+** is required to build and run the server, whichever adapter it uses: the build
+  compiles for Java 25, and the optional tree-sitter adapter also uses the Foreign Function &
+  Memory API. Verify with `java -version`.
 
 > **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite build semantics](../../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
@@ -31,9 +30,9 @@ lang/lsp-server/build/libs/lsp-server-<version>-all.jar
 
 For example: `lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar`
 
-### Using the mock adapter (no Java 25 required)
+### Using the mock adapter
 
-If you don't have Java 25+, build with the mock adapter instead:
+To build with the mock adapter, which needs no native library:
 
 ```bash
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
