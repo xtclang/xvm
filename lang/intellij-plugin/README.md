@@ -15,6 +15,9 @@ See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundari
   goes through LSP4IJ's DAP client to a debug session in the language server: breakpoints, stepping,
   variables, watches and Evaluate Expression ([details](#running-your-application)). An **Ecstasy
   Attach** configuration debugs a program run outside the IDE ([details](#debugging-a-program-run-outside-the-ide))
+- **Tests** - Run and Debug icons in the gutter of each xunit test, and of the modules, packages and
+  classes that hold tests, run them in IntelliJ's test console, embedded, with Gradle's `testXtc` or
+  with `xtc test` ([details](#running-and-debugging-tests))
 - **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
   native file type through TextMate’s syntax factory and editor highlighter.
 - **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
@@ -129,6 +132,9 @@ An Ecstasy Application configuration has:
 - **Method name** — the entry method; empty means `run`.
 - **Module arguments** — comma-separated. Embedded runs pass them as a `String[]` when the method
   requires one, or when arguments are given and it accepts a parameter.
+- **Tests** — xunit tests to run instead of the module, as `kind:selector`, comma-separated, such as
+  `class:Inner, test:Inner.works`; `module:` runs all of them. Empty runs the module. The gutter's
+  test icons fill it in ([details](#running-and-debugging-tests)).
 - **Run with** — *Project default*, *Embedded compiler*, *Gradle* or *xtc command line*.
   Configurations saved with the older *Use Gradle* checkbox become *Project default* (or *xtc
   command line* when it was cleared).
@@ -211,6 +217,27 @@ alike: it finds the module by its name in the project directory or, as `xtc init
 `src/main/x`, with `src/main/resources`, and writes the compiled module to the project's `build` directory when there
 is one. Breakpoints are on
 the files as that build compiled them.
+
+### Running and debugging tests
+
+The language server lists each source module's xunit tests from its latest analysis, and the
+editor marks them with Run and Debug icons in the gutter: each `@Test` method, and each module,
+package and class that holds tests. Clicking one offers **Run** and **Debug** of that test, or of
+every test it holds, as a temporary Ecstasy Application configuration whose **Tests** name them, and
+a saved configuration can name tests too. They run as the configuration's **Run with** says:
+
+| Mode | Run and Debug |
+|------|---------------|
+| Embedded compiler | The language server builds the module and runs the tests with xunit in a process of its own, as `xtc test` does; Debug runs them under the debugger, in a debug session |
+| Gradle | `./gradlew testXtc --module=<module>` with `--test-package`, `--test-class` or `--test-method` for the chosen tests and `--test-report=json`; Debug adds the debugger's `xtcDebug` property |
+| xtc command line | `xtc test --deduce` with `-p`, `-c` or `-t` for the chosen tests and `-I xvm.xunit.report=json`; Debug adds `--debug` |
+
+xunit reports each test as an event of its `json` report, which IntelliJ's test console reads into
+its tree of the module's tests, passed, failed, errored or skipped, with the tests' output; a test's
+**Jump to Source** opens its declaration. A failure's stack is the console's text. Under Debug the
+test console is a **Tests** tab of the debug session. Gradle mode needs a Gradle plugin and XDK with
+`testXtc`'s test options and the JSON report, and command-line mode the `xtc` on the `PATH`, whose
+XDK must have this plugin's javatools.
 
 ### Debugging a program run outside the IDE
 
