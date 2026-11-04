@@ -6,11 +6,12 @@
 
 `lagergren/errs` adds an embedded build/run mode to both IDEs beside Gradle (IntelliJ's *Build and
 run using* analogue): the language server's compiler builds on its existing compile queue and a
-persistent execution worker JVM runs the module. This is new work **outside every prepared branch
-and PR**, including #693; it is not mirrored anywhere yet. The commits, extraction targets and
-validation receipt are in the
+persistent execution worker JVM runs the module. It was new work **outside every prepared branch
+and PR** when it landed; from 2026-10-16 on it was mirrored into #693, as the table below says, and
+its runtime parts went to master with #703 and the later runtime PRs. The commits, extraction
+targets and validation receipt are in the
 [integration plan](docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
-and remaining R1–R8 work are in the
+and the records of R1–R13 are in the
 [execution plan](lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15).
 
 | Commit | Content | Proposed home |
@@ -271,9 +272,9 @@ These are the five extracted review units; the Gradle exporter and Boolean corre
 
 **Next compiler PR to submit, when authorized:** compilation-owned syntax and semantic facts. The two independent branches have already been submitted as #688 and #689. Later stacked comparisons can be reviewed now; their final bases must be reconciled against the actual merged prerequisites before landing. No submission is authorized by this document itself.
 
-## Existing open PRs
+## Existing PRs
 
-GitHub state checked while preparing the comparison: all six are open and target `master`. These PRs already exist; the two comparison branches above are not PR submissions.
+GitHub state checked while preparing the comparison (2026-10-09): all six were open and targeted `master`. These PRs already exist; the two comparison branches above are not PR submissions.
 
 Later (GitHub, 2026-10-16): #686, #687 (`df291544a`, four files), #688 and #689 are merged. #685 was closed unmerged on 2026-10-12 in favor of [#693](https://github.com/xtclang/xvm/pull/693); #683 was closed unmerged on 2026-10-15. The table records the 2026-10-09 revisions.
 
@@ -1342,7 +1343,7 @@ Before release acceptance, run the packaged server and both native editor paths.
 
 ## Deferred work
 
-Runtime execution/DAP, notebooks and a public color library remain deferred from the prepared branches. A first embedded build/run delivery exists only on `lagergren/errs` ([2026-10-15](#embedded-build-and-run--2026-10-15)); DAP debugging (R6/R7) also exists on `lagergren/errs`, not in #693. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
+Runtime execution/DAP, notebooks and a public color library remain deferred from the prepared branches. The embedded build and run ([2026-10-15](#embedded-build-and-run--2026-10-15)) and the debugger (R6–R13) are on `lagergren/errs`, and in #693 since 2026-10-16 and 2026-10-28. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
 
 Unrelated runtime/JIT edits, broad modernization, documentation sweeps and historical review scripts are not implicitly included in the five prepared branches. The reconciliation inventory below preserves their visibility and identifies compiler follow-ups that still need a decision.
 
