@@ -190,6 +190,8 @@ internal class EmbeddedRuns(
     private val adapter: Adapter,
     private val client: () -> LanguageClient?,
     private val worker: RunWorkerProcess = RunWorkerProcess(),
+    /** How long attaching to a program waits for it to answer, [AttachedProgram.CONNECT_LIMIT] unless a test lifts it. */
+    private val attachLimit: Duration = AttachedProgram.CONNECT_LIMIT,
 ) : Closeable {
     private val workerIds = ConcurrentHashMap<String, Long>()
 
@@ -335,7 +337,7 @@ internal class EmbeddedRuns(
                 }
             }
         return ready.toCompletableFuture().thenComposeAsync({ setup ->
-            val program = AttachedProgram.attach(target.host, target.port, target.token, listener)
+            val program = AttachedProgram.attach(target.host, target.port, target.token, listener, attachLimit)
             attached[runId] = program
             logger.info("run attached: run={} module={} at={}:{}", runId, program.module, target.host, target.port)
             program.debug(modules, setup).thenApply { program.module }.whenComplete { _, failure ->
@@ -412,7 +414,7 @@ internal class EmbeddedRuns(
         return CompletableFuture
             .supplyAsync({
                 try {
-                    AttachedProgram.accept(server, token, listener)
+                    AttachedProgram.accept(server, token, listener, attachLimit)
                 } catch (failure: IOException) {
                     throw IOException(neverConnected(run, failure), failure)
                 } finally {
@@ -552,7 +554,7 @@ internal class EmbeddedRuns(
         return CompletableFuture
             .supplyAsync({
                 try {
-                    AttachedProgram.accept(server, token, listener)
+                    AttachedProgram.accept(server, token, listener, attachLimit)
                 } catch (failure: IOException) {
                     throw IOException(testsNeverConnected(process, failure), failure)
                 } finally {

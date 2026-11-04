@@ -38,6 +38,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Programs that the launcher runs with `--debug`, in a JVM of their own from the test classpath, where the launcher
@@ -77,7 +78,7 @@ class XtcDebugAgentTest {
     fun `a debugger attaches before the first line, stops the program at a breakpoint and sees it exit`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
-            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
+            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
             assertThat(attached.module).isEqualTo("Looped")
             attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
@@ -104,7 +105,7 @@ class XtcDebugAgentTest {
     fun `a debugger continues and steps one fiber alone, which stops again while the program's other fibers wait`() {
         launch(COUNTERS, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
-            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
+            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
             attached.debug(emptyList(), program.firstCounterAt(1000)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
@@ -141,7 +142,7 @@ class XtcDebugAgentTest {
     fun `a debug session attaches to the program, stops it at a breakpoint, and once it disconnects the program runs on`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val client = DebugClient()
-            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
@@ -184,7 +185,7 @@ class XtcDebugAgentTest {
     @Test
     fun `a Gradle launch has the client run the program, which connects, stops at a breakpoint and exits`() {
         TaskClient(LOOPED).use { client ->
-            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
@@ -219,7 +220,7 @@ class XtcDebugAgentTest {
     @Test
     fun `stopping a Gradle launch ends the task, and the program with it`() {
         TaskClient(LOOPED).use { client ->
-            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
@@ -246,7 +247,7 @@ class XtcDebugAgentTest {
             object : XtcLanguageClient by messages {
                 override fun debugTask(params: DebugTaskParams) = CompletableFuture.completedFuture(DebugTaskResult(3))
             }
-        val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+        val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
         DebugSessions(runs, { client }).use { sessions ->
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
@@ -263,7 +264,7 @@ class XtcDebugAgentTest {
     @Test
     fun `a command-line launch has the client run the xtc command, whose program connects, stops at a breakpoint and exits`() {
         TaskClient(LOOPED).use { client ->
-            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
@@ -295,7 +296,7 @@ class XtcDebugAgentTest {
     @Test
     fun `stopping a command-line launch ends the xtc command, and one that ends first fails with its exit code`() {
         TaskClient(LOOPED).use { client ->
-            val runs = EmbeddedRuns(mock(Adapter::class.java), { client })
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
@@ -319,7 +320,7 @@ class XtcDebugAgentTest {
             object : XtcLanguageClient by messages {
                 override fun debugTask(params: DebugTaskParams) = CompletableFuture.completedFuture(DebugTaskResult(3))
             }
-        val runs = EmbeddedRuns(mock(Adapter::class.java), { ended })
+        val runs = EmbeddedRuns(mock(Adapter::class.java), { ended }, attachLimit = ATTACH_LIMIT)
         DebugSessions(runs, { ended }).use { sessions ->
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
@@ -336,7 +337,7 @@ class XtcDebugAgentTest {
     fun `a detach lets the program run on without the debugger's breakpoints`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
-            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
+            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
             attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).startsWith("breakpoints")
             assertThat(events.next()).startsWith("stopped")
@@ -352,7 +353,7 @@ class XtcDebugAgentTest {
     fun `a debugger that asks for it stops a waiting program at its first line`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
-            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events)
+            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
             attached.debug(emptyList(), DebugSetup(emptyList(), stopOnEntry = true)).get(HANG_SECONDS, SECONDS)
             assertThat(events.next()).isEqualTo("stopped entry []")
             val thread = attached.threads(AttachedProgram.RUN).get(HANG_SECONDS, SECONDS).first()
@@ -374,7 +375,7 @@ class XtcDebugAgentTest {
     fun `a debugger without the program's token is refused, and the program waits for one with it`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend,token=secret").use { program ->
             val port = program.port()
-            assertThatThrownBy { AttachedProgram.attach("127.0.0.1", port, "guess", Events()) }
+            assertThatThrownBy { AttachedProgram.attach("127.0.0.1", port, "guess", Events(), ATTACH_LIMIT) }
                 .isInstanceOf(IOException::class.java)
                 .hasMessageContaining("The token does not match")
 
@@ -564,6 +565,9 @@ class XtcDebugAgentTest {
     private fun JsonObject.name() = listOfNotNull(this["event"].asString, this["id"]?.asLong).joinToString(" ")
 
     private companion object {
+        /** How long attaching waits for the program to answer: an hour, so that only a hang reaches it. */
+        val ATTACH_LIMIT = HANG_SECONDS.seconds
+
         val LISTENING = Regex("Listening for the debugger at [^ ]+:(\\d+)$")
 
         /** A module whose run() adds in a loop on line 6 and prints the sum. */
