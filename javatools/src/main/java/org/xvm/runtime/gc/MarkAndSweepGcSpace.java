@@ -88,7 +88,7 @@ public class MarkAndSweepGcSpace<V>
         }
 
         int slot = slot(address);
-        return slot < m_aObjects.length && m_aObjects[slot] != null;
+        return slot >= 0 && slot < m_aObjects.length && m_aObjects[slot] != null;
     }
 
     /**
@@ -107,7 +107,7 @@ public class MarkAndSweepGcSpace<V>
         }
 
         int slot = slot(address);
-        if (slot > m_aObjects.length) {
+        if (slot < 0 || slot >= m_aObjects.length) {
             throw new SegFault();
         }
 
@@ -171,12 +171,16 @@ public class MarkAndSweepGcSpace<V>
                     anFreeSlots[++m_nTopFree] = i;
                     m_cBytes -= f_accessor.getByteSize(o);
                     f_accessor.free(o);
-                } else if ((header & WEAK_MASK) == WEAK_MASK) {
-                    int[] anNotifyNew = handleWeakSweep(o, i, anNotify, nNotifyTop, fReachableMarker);
-                    if (anNotifyNew != null && nNotifyTop < anNotifyNew.length && anNotifyNew[nNotifyTop] != 0) {
+                } else if ((header & WEAK_MASK) == WEAK_MASK && handleWeakSweep(o, fReachableMarker)) {
+                    // enqueue the weak-ref
+                    if (anNotify == null) {
+                        anNotify = new int[8];
+                    } else if (nNotifyTop == anNotify.length) {
+                        int[] anNotifyNew = new int[anNotify.length * 2];
+                        System.arraycopy(anNotify, 0, anNotifyNew, 0, anNotify.length);
                         anNotify = anNotifyNew;
-                        ++nNotifyTop;
                     }
+                    anNotify[nNotifyTop++] = i;
                 }
             }
         }
@@ -273,28 +277,26 @@ public class MarkAndSweepGcSpace<V>
         return state;
     }
 
-    private int[] handleWeakSweep(V weak, int nWeak, int[] anNotify, int nNotifyTop, boolean fReachableMarker) {
+    /**
+     * Clear a weak-ref if its referent was not marked as reachable.
+     *
+     * @param weak             the weak-ref
+     * @param fReachableMarker the value reachable objects are marked with
+     * @return {@code true} if the weak-ref was cleared and has a notifier, so the cleared listener must be told
+     */
+    private boolean handleWeakSweep(V weak, boolean fReachableMarker) {
         // clear weak refs as necessary
         long pReferent = f_accessor.getField(weak, WEAK_REFERENT_FIELD);
         if (isLocal(pReferent)) {
             V referent = m_aObjects[slot(pReferent)];
             if (referent == null || getHeaderBit(referent, MARKER_MASK) != fReachableMarker) {
                 f_accessor.setField(weak, WEAK_REFERENT_FIELD, NULL); // clear referent
-                if (getFieldCount(weak) > WEAK_NOTIFIER_FIELD && f_accessor.getField(weak, WEAK_NOTIFIER_FIELD) != NULL) {
-                    // enqueue the weak-ref
-                    if (anNotify == null) {
-                        anNotify = new int[8];
-                    } else if (nNotifyTop > anNotify.length) {
-                        int[] anWeaksNew = new int[anNotify.length * 2];
-                        System.arraycopy(anWeaksNew, 0, anWeaksNew, 0, anNotify.length);
-                        anNotify = anWeaksNew;
-                    }
-                    anNotify[nNotifyTop] = nWeak;
-                }
+                return getFieldCount(weak) > WEAK_NOTIFIER_FIELD
+                        && f_accessor.getField(weak, WEAK_NOTIFIER_FIELD) != NULL;
             }
         }
 
-        return anNotify;
+        return false;
     }
 
     /**
@@ -320,7 +322,7 @@ public class MarkAndSweepGcSpace<V>
             anFreeSlotsNew[i] = capOld + i;
         }
 
-        this.m_nTopFree = capNew - capOld;
+        this.m_nTopFree = capNew - capOld - 1;
         this.m_anFreeSlots = anFreeSlotsNew;
         this.m_aObjects = aObjectsNew;
     }
