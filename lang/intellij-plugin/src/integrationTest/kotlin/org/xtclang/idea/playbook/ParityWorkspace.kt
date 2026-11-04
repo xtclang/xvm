@@ -17,10 +17,10 @@ import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.codeEditorForFile
 import com.intellij.driver.sdk.ui.components.common.ideFrame
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /** Per-scenario native files/buffers and the same module boundaries as the VS Code playbook. */
 class ParityWorkspace(
@@ -177,7 +177,7 @@ class ParityWorkspace(
                 service<FileEditorManager>(singleProject()).openFile(target, false, false)
             }
             val document = Document(file, target)
-            awaitUi("LSP4IJ opens $id/$file", 45.seconds) {
+            awaitUi("LSP4IJ opens $id/$file", HANG_LIMIT) {
                 clientDocument(document)?.getSynchronizer()?.getDidOpenFuture()?.let {
                     it.isDone() && !it.isCompletedExceptionally()
                 } == true
@@ -204,7 +204,7 @@ class ParityWorkspace(
         flush(document)
         // File notifications can retire the first analysis even after didOpen has been sent.
         // Retry only this read-only readiness probe; feature assertions and edits stay single-shot.
-        awaitUi("current analysis for $id/${document.file}", 45.seconds) {
+        awaitUi("current analysis for $id/${document.file}", HANG_LIMIT) {
             try {
                 query("textDocument/documentSymbol", document)
                 true
@@ -222,7 +222,7 @@ class ParityWorkspace(
                 "Document synchronizer is not ready for $id/${document.file}"
             }.flushPendingChanges()
         with(driver) {
-            awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() }
+            awaitUi("client sends current $id/${document.file}", HANG_LIMIT) { pending.isDone() }
         }
         check(!pending.isCompletedExceptionally()) { "Document synchronization failed" }
     }
@@ -290,7 +290,7 @@ class ParityWorkspace(
         with(driver) {
             awaitUi(
                 message = "current diagnostics for $id/${document.file}",
-                timeout = 45.seconds,
+                timeout = HANG_LIMIT,
                 errorMessage = { shown ->
                     "Diagnostics of $id/${document.file}: " +
                         (shown?.toString() ?: "no report for its current text; received ${receivedDiagnostics(document.editor)}")
@@ -423,7 +423,7 @@ class ParityWorkspace(
                 service<FileEditorManager>(singleProject())
                     .closeFile(document.editor.editor.getVirtualFile())
             }
-            awaitUi("client closes ${document.file}", 30.seconds) {
+            awaitUi("client closes ${document.file}", HANG_LIMIT) {
                 connection.getOpenedDocuments().none {
                     it.getFile().getPath() == Path.of(URI(document.uri)).toString()
                 }

@@ -153,7 +153,7 @@ object EditorUi {
         val task = FutureTask(action)
         SwingUtilities.invokeLater(task)
         return try {
-            task.get(10, SECONDS)
+            task.get(HANG_SECONDS, SECONDS)
         } finally {
             task.cancel(false)
         }
