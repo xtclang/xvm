@@ -1189,7 +1189,13 @@ class XdkStdioTest {
                     ),
                 )
             assertThat(selected.signatures).hasSize(1)
-            assertThat(selected.signatures.single().documentation).isNull()
+            // the selected overload's doc comment, from the XDK's source, without a candidate's note
+            assertThat(
+                selected.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("Look for the specified `that` starting at the specified index.")
+                .doesNotContain("overload not selected")
             assertThat(selected.signatures.single().activeParameter).isZero()
             session.shutdownAndExit()
         }
