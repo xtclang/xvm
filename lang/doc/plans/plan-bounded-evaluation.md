@@ -175,7 +175,7 @@ improvement, not part of this plan.
       nothing and shows a value as the Variables view does, and what that refuses runs as code, for at most 2
       seconds; `cancel` ends it by the request's `seq`, which `DebugMessageEndpoint` hands the server, also
       before its code starts; `invalidated` (`variables`) follows once code has run, for a client that takes it.
-      A call with an effect, a cancelled loop and a loop at its limit are tested with a real worker.
+      A call with an effect, a canceled loop and a loop at its limit are tested with a real worker.
    4. R7u, the editors and shared X314 (`03a422f6c`): VS Code's Debug Console and IntelliJ's Evaluate Expression,
       whose origin LSP4IJ maps to `repl`, run code; X314 checks a call's effect, the time limit and the exit in both,
       cancel and `invalidated` in VS Code, since LSP4IJ never sends `cancel` (UP41) nor handles `invalidated`
