@@ -29,6 +29,7 @@ import org.jdom.Element
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.ServerTest
+import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestSelector
 import kotlin.io.path.Path
 
@@ -156,7 +157,7 @@ class XtcRunConfiguration(
             logger.info("Running Gradle: $commandLineString")
         }
 
-    /** `testXtc` for [tests] of the module, with xunit's TeamCity report, which the test console reads. */
+    /** `testXtc` for [tests] of the module, with xunit's `json` report, whose events the test console reads. */
     private fun createGradleTestCommandLine(tests: List<TestSelector>) =
         GeneralCommandLine().apply {
             exePath = gradleWrapper()
@@ -270,17 +271,14 @@ class XtcRunConfiguration(
             addParameters(args)
         }
 
-        /** The xunit report that IntelliJ's test console reads, as `xtc test` and `testXtc` take its name. */
-        private const val TEAMCITY = "teamcity"
-
-        /** `testXtc`'s options that run [tests], all of the module's for none, with xunit's TeamCity report. */
+        /** `testXtc`'s options that run [tests], all of the module's for none, with xunit's `json` report. */
         fun gradleTestOptions(tests: List<TestSelector>): List<String> =
             tests.mapNotNull { test -> selection(test.kind, "--test-package=", "--test-class=", "--test-method=")?.plus(test.selector) } +
-                "--test-report=$TEAMCITY"
+                "--test-report=${TestEvent.REPORT}"
 
         /**
          * `xtc test`'s command line, as a command-line test run's: [module]'s [tests], all of them for none, which
-         * `xtc test` finds by its name as `xtc run` does, with xunit's TeamCity report and the `--debug` options [debug].
+         * `xtc test` finds by its name as `xtc run` does, with xunit's `json` report and the `--debug` options [debug].
          */
         fun xtcTestCommandLine(
             module: String,
@@ -288,7 +286,7 @@ class XtcRunConfiguration(
             debug: String? = null,
         ) = GeneralCommandLine("xtc", "test", "--deduce").apply {
             tests.forEach { test -> selection(test.kind, "-p", "-c", "-t")?.let { addParameters(it, test.selector) } }
-            addParameters("-I", "xvm.xunit.report=$TEAMCITY")
+            addParameters("-I", "xvm.xunit.report=${TestEvent.REPORT}")
             debug?.let { addParameters("--debug", it) }
             module.takeIf { it.isNotBlank() }?.let(::addParameter)
         }

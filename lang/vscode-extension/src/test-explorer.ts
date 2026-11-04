@@ -5,13 +5,14 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { gradleTestArgs, gradleWrapper, runTestProcess } from './debug-adapter';
 import { buildMode, describeBuild, type RunResponse, trackRun } from './embedded-execution';
-import { failureLine, LineSplitter, parseServiceMessage, selectorOf, type ServiceMessage } from './test-messages';
+import { failureLine, isTestEvent, LineSplitter, parseTestEvent, type TestEvent } from './test-events';
 
 /**
  * The Test Explorer's Ecstasy tests: the language server finds each module's xunit tests (`xtc/tests`) in its latest
  * analysis, and runs or debugs those a run selects with xunit, embedded (`xtc/run` and the `xtc` debug type with
- * `tests`) or, in a folder whose build mode is Gradle, with its `testXtc`. The run's output reports each test as a
- * TeamCity service message, which marks it passed, failed or skipped.
+ * `tests`) or, in a folder whose build mode is Gradle, with its `testXtc`. xunit reports the run's tests as events
+ * ([TestEvent]), which mark each passed, failed, errored or skipped: the server sends an embedded run's and debug
+ * session's apart from the output, and a Gradle run's are lines of its output.
  */
 
 /** A test or a container of tests of a module, as `xtc/tests` gives it. */
@@ -46,6 +47,9 @@ const NOT_FINISHED = 'The test run ended before this test did.';
 
 /** The message of a chosen test that never started, as when its module did not build. */
 const NOT_RUN = 'This test did not run; the test output says why.';
+
+/** The version of xunit's events that this extension reads. */
+const EVENTS_VERSION = 1;
 
 /** A test's result in a run, as the Test Explorer shows it, by its item's ID; for the playbook. */
 export interface TestReport {
@@ -146,9 +150,15 @@ export function registerTestExplorer(context: vscode.ExtensionContext, client: (
             createDebugAdapterTracker(session) {
                 const results = debugged.get(session.configuration.xtcTestRun);
                 return results && {
-                    onDidSendMessage(message: { type?: string; event?: string; body?: { output?: string } }) {
-                        if (message.type === 'event' && message.event === 'output' && message.body?.output) {
-                            results.output(message.body.output);
+                    onDidSendMessage(message: { type?: string; event?: string; body?: unknown }) {
+                        if (message.type !== 'event') {
+                            return;
+                        }
+                        const output = (message.body as { output?: unknown } | undefined)?.output;
+                        if (message.event === 'output' && typeof output === 'string') {
+                            results.output(output);
+                        } else if (message.event === 'xtcTest' && isTestEvent(message.body)) {
+                            results.event(message.body);
                         }
                     },
                 };
@@ -199,6 +209,7 @@ function runTests(connection: LanguageClient | undefined, selection: Selection, 
     return new Promise(resolve => {
         const routed = trackRun(runId, {
             output: text => results.output(text),
+            tested: event => results.event(event),
             exited: (exitCode, error) => {
                 if (error) results.note(error);
                 results.note(`Tests finished with exit code ${exitCode ?? 1}`);
@@ -226,7 +237,7 @@ function runTests(connection: LanguageClient | undefined, selection: Selection, 
     });
 }
 
-/** Runs the module's [tests] with its folder's Gradle build, `testXtc`, whose output reports them, until it ends. */
+/** Runs the module's [tests] with its folder's Gradle build, `testXtc`, whose output has their events, until it ends. */
 async function runGradleTests(selection: Selection, tests: { selector: string; kind: string }[], results: Results,
                               token: vscode.CancellationToken): Promise<void> {
     const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(selection.uri));
@@ -285,13 +296,15 @@ async function debugTests(selection: Selection, tests: { selector: string; kind:
     }
 }
 
-/** What a test run's output says of the tests of one module: each item's state, from its service messages. */
+/** What a test run says of the tests of one module: each item's state, from xunit's events ([TestEvent]). */
 class Results {
     private readonly lines = new LineSplitter();
     /** The items of the module, by their selectors. */
     private readonly items: ReadonlyMap<string, vscode.TestItem>;
     /** The tests the run chose. */
     private readonly tests: readonly vscode.TestItem[];
+    /** The items of the tests that started, by their events' IDs; a templated test's iterations are all its item's. */
+    private readonly started = new Map<string, vscode.TestItem>();
     private readonly running = new Set<vscode.TestItem>();
     private readonly failed = new Set<vscode.TestItem>();
     /** The tests with a result. */
@@ -306,8 +319,45 @@ class Results {
         this.tests.forEach(it => run.enqueued(it));
     }
 
+    /** Output of the run's program; its lines that are xunit's events, as a Gradle run's are, are events. */
     output(text: string): void {
         this.lines.feed(text).forEach(line => this.line(line));
+    }
+
+    /** An event of the run's tests. */
+    event(event: TestEvent): void {
+        switch (event.event) {
+            case 'run':
+                if ((event.version ?? 0) > EVENTS_VERSION) {
+                    this.note(`xunit reports its test events in version ${event.version}; this extension reads version `
+                        + `${EVENTS_VERSION}, and passes over what it does not know.`);
+                }
+                break;
+            case 'started': {
+                const it = this.item(event);
+                if (it && event.id !== undefined && event.container === false) {
+                    this.started.set(event.id, it);
+                    this.running.add(it);
+                    this.run.started(it);
+                }
+                break;
+            }
+            case 'finished': {
+                const it = event.id === undefined ? undefined : this.started.get(event.id);
+                if (it) {
+                    this.finished(it, event);
+                }
+                break;
+            }
+            case 'skipped': {
+                const it = this.item(event);
+                if (it) {
+                    (event.container ? this.tests.filter(test => under(it).includes(test)) : [it])
+                        .forEach(test => this.skipped(test, event.message));
+                }
+                break;
+            }
+        }
     }
 
     /** A line of the run's own, not the program's. */
@@ -330,49 +380,56 @@ class Results {
     }
 
     private line(line: string): void {
-        const message = parseServiceMessage(line);
-        if (message) {
-            this.report(message);
+        const event = parseTestEvent(line);
+        if (event) {
+            this.event(event);
         } else {
             this.run.appendOutput(`${line}\r\n`);
         }
     }
 
-    private report(message: ServiceMessage): void {
-        const selector = selectorOf(message);
-        const it = selector === undefined ? undefined : this.items.get(selector);
-        if (!it) {
-            return;
-        }
-        switch (message.name) {
-            case 'testStarted':
-                this.running.add(it);
-                this.run.started(it);
-                break;
-            case 'testFailed': {
-                this.failed.add(it);
-                const shown = failure(it, message);
-                this.run.failed(it, shown);
-                this.ended.add(it);
-                const line = it.uri && failureLine(message.attributes.details ?? '', path.basename(it.uri.fsPath));
-                reports.fire({ id: it.id, state: 'failed', message: message.attributes.message, line: line || undefined });
-                break;
-            }
-            case 'testIgnored':
-                this.failed.add(it);
-                this.run.skipped(it);
-                this.ended.add(it);
-                reports.fire({ id: it.id, state: 'skipped', message: message.attributes.message });
-                break;
-            case 'testFinished':
-                this.running.delete(it);
+    /** The item of the test or container that [event] names by its selector, if the module has one. */
+    private item(event: TestEvent): vscode.TestItem | undefined {
+        return event.selector === undefined ? undefined : this.items.get(event.selector);
+    }
+
+    private finished(it: vscode.TestItem, event: TestEvent): void {
+        this.running.delete(it);
+        switch (event.status) {
+            case 'passed':
+                // a templated test's item is passed only if none of its iterations failed
                 if (!this.failed.has(it)) {
-                    this.run.passed(it, Number(message.attributes.duration) || undefined);
+                    this.run.passed(it, event.durationMillis);
                     this.ended.add(it);
                     reports.fire({ id: it.id, state: 'passed' });
                 }
                 break;
+            case 'failed':
+            case 'aborted': {
+                const failed = event.status === 'failed';
+                this.failed.add(it);
+                const shown = failure(it, event);
+                if (failed) {
+                    this.run.failed(it, shown, event.durationMillis);
+                } else {
+                    this.run.errored(it, shown, event.durationMillis);
+                }
+                this.ended.add(it);
+                const line = it.uri && failureLine(event.details ?? '', path.basename(it.uri.fsPath));
+                reports.fire({ id: it.id, state: failed ? 'failed' : 'errored', message: event.message, line: line || undefined });
+                break;
+            }
+            case 'skipped':
+                this.skipped(it, event.message);
+                break;
         }
+    }
+
+    private skipped(it: vscode.TestItem, message: string | undefined): void {
+        this.failed.add(it);
+        this.run.skipped(it);
+        this.ended.add(it);
+        reports.fire({ id: it.id, state: 'skipped', message });
     }
 
     private errored(it: vscode.TestItem, message: string): void {
@@ -383,9 +440,9 @@ class Results {
 }
 
 /** A failed test's message, placed at the line of its source that the failure's stack names, or at the test. */
-function failure(it: vscode.TestItem, message: ServiceMessage): vscode.TestMessage {
-    const details = message.attributes.details ?? '';
-    const shown = new vscode.TestMessage(details ? `${message.attributes.message ?? ''}\n\n${details}` : message.attributes.message ?? '');
+function failure(it: vscode.TestItem, event: TestEvent): vscode.TestMessage {
+    const details = event.details ?? '';
+    const shown = new vscode.TestMessage(details ? `${event.message ?? ''}\n\n${details}` : event.message ?? '');
     const line = it.uri && failureLine(details, path.basename(it.uri.fsPath));
     if (it.uri && (line || it.range)) {
         shown.location = new vscode.Location(it.uri, line ? new vscode.Position(line - 1, 0) : it.range!.start);

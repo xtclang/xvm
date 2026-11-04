@@ -17,7 +17,10 @@ import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ProgramRunner
+import com.intellij.execution.testframework.TestConsoleProperties
+import com.intellij.execution.testframework.sm.SMCustomMessagesParsing
 import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil
+import com.intellij.execution.testframework.sm.runner.OutputToGeneralTestEventsConverter
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.sm.runner.SMTestLocator
 import com.intellij.icons.AllIcons
@@ -39,6 +42,7 @@ import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.ModuleTests
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.ServerTest
+import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestLocation
 import org.xtclang.idea.lsp.TestSelector
 import org.xtclang.idea.lsp.XtcLanguageServer
@@ -51,8 +55,7 @@ internal const val TEST_FRAMEWORK = "Ecstasy"
 
 /**
  * Runs the tests of [configuration]'s module that its [XtcRunConfiguration.tests] select with xunit, embedded, in
- * IntelliJ's test console: the run's output reports each test as a TeamCity service message, which the console reads
- * from the run's standard output.
+ * IntelliJ's test console, which shows the test events the server sends with the run's output.
  */
 internal class EmbeddedTestState(
     private val configuration: XtcRunConfiguration,
@@ -86,8 +89,8 @@ internal class EmbeddedTestState(
 }
 
 /**
- * Runs the tests of [configuration]'s module with [command], Gradle's `testXtc` or `xtc test`, with xunit's TeamCity
- * report, in IntelliJ's test console, which reads the messages from the command's output.
+ * Runs the tests of [configuration]'s module with [command], Gradle's `testXtc` or `xtc test`, with xunit's `json`
+ * report, in IntelliJ's test console, which reads the events from the command's output.
  */
 internal class TestCommandLineState(
     private val configuration: XtcRunConfiguration,
@@ -112,13 +115,14 @@ internal class TestCommandLineState(
 }
 
 /**
- * The test console's properties: its tree is built from the messages' `nodeId` and `parentNodeId`, and a test's
- * `xunit://` location is its declaration in the configuration's module.
+ * The test console's properties: it reads xunit's events from the output ([XtcTestEventsConverter]), builds its tree
+ * from their IDs, and finds a test's `xunit://` location, its declaration in the configuration's module.
  */
 internal class XtcTestConsoleProperties(
     configuration: XtcRunConfiguration,
     executor: Executor,
-) : SMTRunnerConsoleProperties(configuration, TEST_FRAMEWORK, executor) {
+) : SMTRunnerConsoleProperties(configuration, TEST_FRAMEWORK, executor),
+    SMCustomMessagesParsing {
     private val locator = XtcTestLocator(configuration.moduleName)
 
     init {
@@ -126,6 +130,11 @@ internal class XtcTestConsoleProperties(
     }
 
     override fun getTestLocator(): SMTestLocator = locator
+
+    override fun createTestEventsConverter(
+        testFrameworkName: String,
+        consoleProperties: TestConsoleProperties,
+    ): OutputToGeneralTestEventsConverter = XtcTestEventsConverter(testFrameworkName, consoleProperties)
 }
 
 /** Finds a test of [module] by the selector its `xunit://` location names, among the tests the server last listed. */
@@ -237,8 +246,8 @@ internal object XtcTestRuns {
 
 /**
  * The test events of a debugged test run, as a process whose output IntelliJ's test console reads: the session's
- * program output, which reports each test as a TeamCity service message. What comes before the console attaches
- * waits for it; the events end with the debug session's process.
+ * program output, and the events of its tests as their lines among it ([XtcTestEventsConverter]). What comes before the
+ * console attaches waits for it; the events end with the debug session's process.
  */
 internal class TestEventsProcessHandler : ProcessHandler() {
     private val lock = Any()
@@ -256,6 +265,9 @@ internal class TestEventsProcessHandler : ProcessHandler() {
         }
         notifyTextAvailable(text, ProcessOutputTypes.STDOUT)
     }
+
+    /** An event of the session's tests. */
+    fun tested(event: TestEvent) = output(event.line())
 
     /** The debug session's process ended with [code]. */
     fun ended(code: Int) {
