@@ -251,6 +251,7 @@ xtc run [options] <module> [args...]
 | `-I <name=value>` | Injection values |
 | `-J, --jit` | Enable JIT compiler |
 | `--no-recompile` | Disable automatic recompilation |
+| `--debug <options>` | Run under a debugger outside the program, such as an IDE's (see below) |
 
 ### Examples
 
@@ -259,7 +260,25 @@ xtc run myapp.xtc
 xtc run -L lib/ myapp.xtc
 xtc run -M main myapp.xtc
 xtc run -I config=prod myapp.xtc arg1 arg2
+xtc run --debug listen:127.0.0.1:5005,suspend myapp.xtc
 ```
+
+### Debugging from an editor
+
+`--debug listen|connect:<host>:<port>[,suspend][,token=<token>][,agent=<jar>]` runs the program,
+with `xtc run`, `xec` or `xtc test`, under a debugger outside it, such as VS Code's or IntelliJ's:
+
+| Part | Meaning |
+|------|---------|
+| `listen` | Wait for a debugger to attach, as an editor's attach configuration does, and for the next once one has left |
+| `connect` | Connect to a debugger that waits for the program, as the editors' Gradle-mode and command-line Debug do |
+| `<host>:<port>` | This machine's; `listen` on port 0 takes a free port and prints it |
+| `suspend` | Hold the program at its first line until a debugger has set it up |
+| `token` | Refuse a debugger that does not send this token |
+| `agent` | Load another debugger agent than the XDK's |
+
+The XDK's javatools has the debugger's agent, so `--debug` needs no `agent=`. A program run with
+`--jit` cannot be debugged.
 
 ## xtc test - Testing
 
@@ -280,6 +299,7 @@ xtc test [options] <module>
 | `-p, --test-package <pkg>` | Run tests in specific package |
 | `-t, --test-method <method>` | Run specific test method |
 | `--xunit-out <dir>` | Output directory for test results |
+| `--debug <options>` | Run the tests under a debugger outside the program, as `xtc run` does |
 
 ### Examples
 
