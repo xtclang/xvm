@@ -1556,10 +1556,11 @@ private class SemanticModelBuilder(
                 declarationSource = location?.sourceName,
                 modifiers = modifiers(target),
                 dependency = dependency?.key,
+                // a compiled library keeps no doc comments; its source does
                 documentation =
                     component?.documentation?.trim()?.takeIf {
                         it.isNotEmpty()
-                    },
+                    } ?: dependency?.documentation,
                 typeCategory =
                     when (component?.format) {
                         Format.CLASS -> TypeCategory.CLASS
