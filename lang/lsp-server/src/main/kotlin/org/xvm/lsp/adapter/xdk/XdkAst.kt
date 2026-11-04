@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.asm.XvmStructure
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.ImportStatement
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
@@ -157,6 +158,31 @@ internal object XdkAst {
         }
         root?.let(::walk)
         return found.values.toList()
+    }
+
+    /** Each run of imports of a parent on consecutive lines, as a region to collapse, when it has more than one. */
+    fun importRegions(root: AstNode?): List<FoldingRange> {
+        val runs = mutableListOf<List<ImportStatement>>()
+
+        fun walk(node: AstNode) {
+            if (root != null && !node.belongsTo(root)) return
+            val children = node.childList()
+            children.filterIsInstance<ImportStatement>().forEach { statement ->
+                val run = runs.lastOrNull()
+                if (run != null && run.last() === children.getOrNull(children.indexOf(statement) - 1) &&
+                    lineOf(statement.startPosition) == lineOf(run.last().endPosition) + 1
+                ) {
+                    runs[runs.lastIndex] = run + statement
+                } else {
+                    runs += listOf(statement)
+                }
+            }
+            children.forEach(::walk)
+        }
+        root?.let(::walk)
+        return runs
+            .filter { it.size > 1 }
+            .map { FoldingRange(lineOf(it.first().startPosition), lineOf(it.last().endPosition), FoldingRange.FoldingKind.IMPORTS) }
     }
 
     fun rangeOf(node: AstNode): Range = spanOf(node.startPosition, node.endPosition)
