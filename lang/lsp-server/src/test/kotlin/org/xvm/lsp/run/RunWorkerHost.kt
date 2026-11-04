@@ -1,5 +1,6 @@
 package org.xvm.lsp.run
 
+import org.xvm.debug.ProgramEvents
 import java.util.concurrent.CountDownLatch
 
 /**
@@ -15,7 +16,7 @@ object RunWorkerHost {
         val printed = CountDownLatch(1)
         workers.start(
             RunWorkerProcess.Request(listOf(modulePath), module, "run", emptyList(), rootDir),
-            object : RunListener {
+            object : ProgramEvents {
                 override fun output(text: String) = printed.countDown()
 
                 override fun exited(
