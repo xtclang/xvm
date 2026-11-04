@@ -5,8 +5,9 @@ Run in both IDEs landed on `lagergren/errs` on 2026-10-15 ([below](#first-delive
 covers parts of R1–R5, which are now done. R6, debug sessions backed by real runs, followed on
 2026-10-22, and R7, the runtime debugger, was completed on 2026-10-26, both in VS Code and
 IntelliJ. The release gate (R8) was completed on 2026-10-27, without a Windows soak, which is not
-planned. R9 and R10 are done, and so are R11's Run to Cursor, step into a call and restart of a
-frame, and R12's threads, library sources and modules. The audit in
+planned. R9–R13 are done too: R11's last part, one fiber run alone, on 2026-11-02, and R13,
+debugging beyond embedded runs, with test runs from both editors and the debugger agent in
+javatools, on 2026-11-03. The audit in
 the next section describes the code before the first delivery.
 
 ## First delivery (2026-10-15)
@@ -585,8 +586,9 @@ this bridge; they cannot be inferred from compiler type hints.
   first written: no thread events are sent, since a fiber starts for every call to a service and
   both editors ask for the threads at each stop; and a library's frames are in its bundled source
   file, not served through the `source` request, so that the editors' language features work there.
-- [ ] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
-  are refused now; debugging tests; and attaching to a program that already runs.
+- [x] **R13 — Debugging beyond embedded runs.** Debug for Gradle-mode and command-line runs, which
+  were refused then; debugging tests; and attaching to a program that already runs. Done
+  2026-11-03, in the records below.
   *Design (2026-10-27):* one debug agent, in the program's own JVM, that speaks the worker
   protocol's debug commands and events over a socket in place of the worker's stdio, so that the
   runtime's side (`SessionDebugger`) and the adapter's (`XtcDebugServer`, `DebugRuns`) stay as they
@@ -665,7 +667,8 @@ this bridge; they cannot be inferred from compiler type hints.
     command-line mode. A launch's `buildMode` `commandLine` takes the Gradle-mode path, whose
     `xtc/debugTask` now carries the `buildMode` (`DebugTask` names each task in the session's
     messages): IntelliJ's `DebugTasks` runs `xtc run --deduce [--method <m>] --debug connect:…,
-    suspend,token=…,agent=<jar> <module> [args]` in the project directory, the same command line as
+    suspend,token=…,agent=<jar> <module> [args]` (without `agent=` since the agent moved into
+    javatools, below) in the project directory, the same command line as
     the configuration's Run, which now passes its method and `--deduce` too, so `xtc run` finds a
     module laid out as `xtc init` lays it out, in `src/main/x`; and the program connects back.
     VS Code refuses such a task, saying why. Limits: the `xtc` on the `PATH` runs it, so its XDK must
@@ -677,7 +680,21 @@ this bridge; they cannot be inferred from compiler type hints.
     `SessionDebugger`, so an XDK has the agent and `--debug` needs no `agent=`. The protocol is
     `DebugProtocol`'s Java records, one per command and event, which both ends serialize with Gson
     by their components' names; the language server maps their answers to the debug adapter's data
-    classes. Protocol 25.
+    classes. Protocol 25. On 2026-11-04 (`fc302daaff`) `Runner` came to take an `agent=<jar>`'s
+    providers by the names its service file gives, and javatools' own without `agent=`.
+  - *Done (2026-11-03): running and debugging tests, with X339 and X340* (`dfd7436d1c`,
+    `b15441814a`, `63f903082d`, `17173850d5`; xunit's own events `bc7f0e7b5c`, 2026-11-04). The
+    language server finds each module's xunit tests in its analysis (`xtc/tests`), and runs a
+    choice of them, embedded, with `xtc test` in a process of its own (`TestProcess`), or debugs
+    them over a connect-back, as `xtc/run` and a launch with `tests`; Gradle mode runs `testXtc`
+    with `--test-package`, `--test-class`, `--test-method` and `--test-report=json`, and IntelliJ's
+    command-line mode `xtc test`. xunit reports each test as an event of its `json` report
+    (`-I xvm.xunit.report=json`), which the server reads once from the output and sends apart from
+    it (`xtc/testEvent`, the DAP event `xtcTest`); VS Code's Test Explorer marks the tests from
+    them, and IntelliJ's test console reads them through `XtcTestEventsConverter`. The first form
+    had xunit print TeamCity service messages, which every layer read; that reporter is gone.
+    Master has xunit's selection fix, its JSON report and testXtc's test options as #755, #756 and
+    #757 (2026-11-04).
 
 Not planned, since Ecstasy's runtime has no counterpart or the editors already provide it: reverse
 execution (`stepBack`, `reverseContinue`), disassembly, instruction breakpoints and memory access;
@@ -686,8 +703,7 @@ terminal features (its views, command history, repeated steps and breakpoint lis
 editors' views and breakpoint management replace.
 
 R1 establishes the baseline; R2 can proceed alongside compiler hardening. R3 precedes R4/R5;
-R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 follow
-R8, unless one of them is chosen to gate the release, which moves it in front of R8; parts of R9,
-and R10, landed before R8. Compiler-only tests do not establish any of these runtime gates. The
-playbook's execution and debug cases, among X280–X330, cover the editor side of R5–R8, R11 and R12; R8 also
-needs the server's soak and release evidence.
+R6 shares the established service, followed by R7. R8 closes production acceptance. R9–R13 followed
+R8, through 2026-11-03; parts of R9, and R10, landed before R8. Compiler-only tests do not
+establish any of these runtime gates. The playbook's execution, debug and test cases, among
+X280–X340, cover the editor side of R5–R13; R8 also needs the server's soak and release evidence.
