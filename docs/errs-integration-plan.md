@@ -334,7 +334,7 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   diagnostics/folds without a test-only readiness wait or IDE exceptions.
 - [x] **L57 — Semantic formals in unfinished headers.** Resolve written but unregistered class
   and method formals through real compiler facts, with constraints, shadowing and qualifier
-  substitution. Bound-labelled completion/hover and virtual-child lookup are implemented. Acceptance:
+  substitution. Bound-labeled completion/hover and virtual-child lookup are implemented. Acceptance:
   positive completion/hover/type facts where justified, negative unresolved constraints, and
   no fabricated components, mutable AST cache or retained compiler context.
 - [x] **L58 — Missing value operands and remaining callable recovery.** Extend recovery and
@@ -992,7 +992,7 @@ cases; they are not a claim of one uninterrupted green session. Reports are unde
 | `run-12379175007830760477` | START and X123 pass after the diagnostic correction; X105's source-import menu still fails without fixture edits. |
 | `run-2139618945479802957`, `run-3818964206800652880` | X105 also reproduces with its initial bundled-import menu missing. Failure capture initially contains server timing logs only; native protocol tracing needs project settings and an instantiated console. |
 | `run-15219420768851272063` | START, X14, X27 and X31 pass; zero IDE failures. The focused Gradle task and lang Spotless check succeed. |
-| `run-4150656664524065941` | START passes; X105 fails. Captured native wire traffic proves a cancelled diagnostic quick-fix request and a successful import response on the separate intention path. Zero IDE failures. |
+| `run-4150656664524065941` | START passes; X105 fails. Captured native wire traffic proves a canceled diagnostic quick-fix request and a successful import response on the separate intention path. Zero IDE failures. |
 | `run-12618281251279779358` | START, X105, X122 and X123 pass after the diagnostic result-ID correction; zero IDE failures. The focused Gradle task and lang Spotless check succeed. |
 | `run-5742519770640114134` | Final code: START and X60/X77/X78/X105/X122/X123 pass, with zero IDE failures. Rechecks the shared-server invalidation correction and the final sorted completion expectations after the full VS Code run. |
 
@@ -1015,12 +1015,12 @@ with the client correction. X14/X27/X31 pass in their focused recheck.
 The harness now captures client console and queued protocol messages to `client-trace-<ID>.log`
 on a failure, before IDE cleanup, with verbose tracing in the disposable project settings.
 
-- [x] **X105 / LSP4IJ cancelled quick-fix recovery:** correct and regress the native diagnostic-action
+- [x] **X105 / LSP4IJ canceled quick-fix recovery:** correct and regress the native diagnostic-action
   lifecycle. In `run-4150656664524065941`, request 24 asks for the diagnostic's quick fixes and is
-  cancelled after document diagnostic response 25. Request 26 then receives the correct versioned
+  canceled after document diagnostic response 25. Request 26 then receives the correct versioned
   import edit in 489 ms, but it belongs to LSP4IJ's general intention path. Inspection of the pinned
   0.21.0 classes confirms `LSPIntentionCodeActionSupport.isValidCodeAction` excludes `quickfix`,
-  while `LSPLazyCodeActions` retains its cancelled future instead of reloading it. Reopening the
+  while `LSPLazyCodeActions` retains its canceled future instead of reloading it. Reopening the
   menu cannot repair that state. Its automatic pulls omit `previousResultId`; repeated identical
   full reports replace and cancel lazy quick fixes without refreshing the unchanged annotations.
   `DiagnosticResultMessages` now carries result IDs across automatic pulls of the same editor
@@ -1284,7 +1284,7 @@ also supports unmanaged folders with a classpath configuration UI
   `srcDirs` is insufficient when the compiler consumes transformed task outputs.
 - **Unmanaged projects:** no build file is required. Discover ordinary source/layout defaults,
   allow explicit per-module source/resource paths and dependencies, and persist project/workspace
-  settings. An explicit override also remains available in a build-managed project, labelled as an
+  settings. An explicit override also remains available in a build-managed project, labeled as an
   override which can diverge from the build. Reimport must not silently overwrite that choice.
 - **Effective configuration:** show each path, its module/source-set owner and its origin
   (build model, explicit project setting or convention). Unset resource roots mean use the
@@ -1436,7 +1436,7 @@ Validation receipt, 2026-09-29:
 
 This four-step batch is complete. L64 stays open for additional declaration/callable contexts,
 keyword/snippet/import edits, arbitrary enclosing-instance enumeration, more literal forms and
-broader damaged-bound recovery. Syntax-labelled recursive names do not authorize semantic member
+broader damaged-bound recovery. Syntax-labeled recursive names do not authorize semantic member
 lookup. L62/L63/L65–L67 and the explicit earlier-checkpoint follow-ups retain their own scopes.
 
 ### Earlier checkpoint follow-ups still open
@@ -2210,7 +2210,7 @@ comments: find the entry method through the type info (`getChild` misses methods
 annotations) and make the selection shared with `JitControl`; mark the runner's new parameters
 `(optional)`; and build the argument tuple as `(args? : [])`. `7b39bffb1` on #703's branch addresses
 all three; the suggested tuple form was tried and passes `[]` when there are no arguments, so a
-parameterless `run()` was not found, and a one-line conditional keeps the behaviour. The selection
+parameterless `run()` was not found, and a one-line conditional keeps the behavior. The selection
 is called on the control's linked module copy, since the type info needs the module's
 dependencies. Mirrored as `1fdaa9b05` on this branch and `c402aae92` on #693.
 
@@ -2281,7 +2281,7 @@ grew more than 128 MB since its first run is not used again. New tests: stand-in
 each bound are retired; 25 mixed runs on one real worker leave no console or run, keep 11 pool
 threads and grow its heap by less than 1 MB; a killed server process takes its worker with it; an
 editor closing the server's input ends its runs and workers. Each new real-worker test fails when the
-behaviour it guards is broken (worker ignoring end of input, shutdown not closing runs, consoles never
+behavior it guards is broken (worker ignoring end of input, shutdown not closing runs, consoles never
 unregistered). Mirrored as `2705d5fdf` and `c0b6a1a62` on #693. The plan marks R4 done; runner tasks
 are not counted on their own.
 
@@ -2719,7 +2719,7 @@ Four more commits, runtime and editors for each, on this branch only and not for
   `:lang:dap-server:test` 17, `:lang:lsp-server:test` 2,383, `:lang:intellij-plugin:test` 151.
 
 Between them, `3813e27a9` fixes the opt-in IntelliJ project lifecycle check, which is not debugger
-work: requests still waiting when a connection ends are now cancelled, and the check sends its
+work: requests still waiting when a connection ends are now canceled, and the check sends its
 edits before its requests. It went into #693 on 2026-10-22 as `5955362da` (`5a24c43d8..5955362da`):
 the same diff, applied unchanged, with its message's validation limited to what holds there;
 on #693, `PendingRequestsTest` passes 3 tests and `PreflightedRenamesTest` 8, the integration
@@ -2851,7 +2851,7 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   that limit, on the host's cancel, and when the program resumes, steps or is stopped for good; its
   answer fails at once with the reason, and its code unwinds from every line it reaches, an
   `IllegalState` raised again at each, so a `catch` cannot keep it going. The deadline's timer is
-  cancelled once the run is answered, since it held the stopped program until the limit had
+  canceled once the run is answered, since it held the stopped program until the limit had
   passed, and the stop's frozen clock is unfrozen by whichever thread ends the stop, since a fiber
   that the program's end stops in a run never came back to do it. `SessionDebuggerTest` 35, three
   runs in a row; `:javatools:test` 677, the 42 existing skips, four runs in a row;
@@ -2862,7 +2862,7 @@ The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in fiv
   `cancel` ends it by its request's `seq`, which `DebugMessageEndpoint` hands the server, also before
   its code starts, and `invalidated` (`variables`) follows once code has run. The worker's
   `runCode` and `cancel` commands, protocol 10. `XtcDebugServerTest` 26, three new; a real-worker
-  `EmbeddedExecutionTest` case: a call's effect, a cancelled loop, a loop at its limit, then the
+  `EmbeddedExecutionTest` case: a call's effect, a canceled loop, a loop at its limit, then the
   program's exit with the change; `:lang:lsp-server:test` 2387, 2 skipped; `spotlessCheck`.
 - `03a422f6c` (R7u, `lang/vscode-extension`, `lang/intellij-plugin`, the shared catalog,
   `lang/doc/manual-test-plan.md`): the editors' READMEs say that the console, or Evaluate
@@ -3230,7 +3230,7 @@ retained below. Each run writes live `progress.jsonl` and final `results.json`.
 
 X97's diagnostic-read failure was a harness transport problem. Driver 262's `RefProducer`
 calls `toString()` when exporting highlighters; their descriptions evaluate lazy quick fixes.
-LSP4IJ's cancelled quick-fix future kept throwing even though the editor displayed diagnostics.
+LSP4IJ's canceled quick-fix future kept throwing even though the editor displayed diagnostics.
 Retrying the same object export could never repair it. The harness now installs a tiny test-only
 reader that copies severity/message/offset under an IDE read action and returns JSON values.
 It reads the actual installed annotations, without requesting diagnostics separately or forcing
@@ -4008,7 +4008,7 @@ Validation on 2026-09-28:
 - Root Spotless and both changed Kotlin modules' ktlint checks pass. These are selected editor
   receipts, not a new full 113-case playbook run.
 
-The first selected VS Code run (`run-ysmVRJ`) passed three cases but X103's query was cancelled
+The first selected VS Code run (`run-ysmVRJ`) passed three cases but X103's query was canceled
 by a late `workspace/didChangeWatchedFiles` notification from fixture creation. Queue/reply tracing
 identified that cancellation. The harness now retries only the unapplied query, then applies its
 result exactly once. It never retries an accepted edit or rename. The same source combination
@@ -6291,7 +6291,7 @@ in `PartialCallResolver` because it needs the live compiler Context; presentatio
 **Listener behavior.** Candidate mismatches use cancellable silent PROBE listeners. Each trial's
 local error state still rejects invalid proposals; it cannot erase ordinary compilation errors or
 turn an unfinished call into a successful compilation. Explicit target TypeInfo inspection retains
-the host listener. The existing request lifecycle discards cancelled/stale results.
+the host listener. The existing request lifecycle discards canceled/stale results.
 
 **Compatibility.** `CursorBinding` now has eight components, adding `argumentValues` after
 `functions`. Its previous three-, six- and seven-argument constructors remain callable and supply
@@ -6604,7 +6604,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. I4 fixes bound-generic typing/binary-AST failures. I7 fixes reproduced atomic AST result/owner errors; bounded ToIntExpression metadata probes pass without a reporting change. Historical capture counts are not an exhaustive audit. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback; `CompilerBoundaryRequirementsTest` checks bound-generic artifact serialization; `CompilerEmissionAuditTest` checks atomic/switch output and diagnostic controls. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; binary/conditional prefixes and arguments following an incomplete member expression are now covered by C10. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. L58 adds full compound-argument validation alongside the qualified/grouped/later-argument cases; literal synthesis remains a follow-up. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. C19/L34 adds single-dimensional array-size fitting and missing-bracket recovery. C20/L35 adds unqualified declaration type prefixes and structural header recovery; C21/L36 adds visible flat qualified type prefixes; C22/L37 adds written leaf names inside parameterized/compound types and bounded missing type closers. C23/L39 adds class/interface composition header recovery and visible-type queries without registering partial inheritance. C24/L41 adds registered formals, empty generic slots, parameterized qualifiers with substituted types and whole-final-token edits. C28/L53 adds trailing dots, qualifier-token edits, empty type operands, generic method/ordinary multiple-return declarations and module/package headers. L57 adds bound-labelled completion/hover and virtual-child lookup for written header formals, without fabricated semantic identities. L58 adds missing operands, lexical enclosing/imported property names, type-valued receiver functions and receiver-rewritten calls. Unfinished declaration names, arbitrary enclosing-instance enumeration and broader formal-member recovery remain outside the proven scope. C26 covers generic base-name prefixes; C27/L51 adds written function/sequence leaf types. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. L58 adds full compound-argument validation alongside the qualified/grouped/later-argument cases; literal synthesis remains a follow-up. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. C19/L34 adds single-dimensional array-size fitting and missing-bracket recovery. C20/L35 adds unqualified declaration type prefixes and structural header recovery; C21/L36 adds visible flat qualified type prefixes; C22/L37 adds written leaf names inside parameterized/compound types and bounded missing type closers. C23/L39 adds class/interface composition header recovery and visible-type queries without registering partial inheritance. C24/L41 adds registered formals, empty generic slots, parameterized qualifiers with substituted types and whole-final-token edits. C28/L53 adds trailing dots, qualifier-token edits, empty type operands, generic method/ordinary multiple-return declarations and module/package headers. L57 adds bound-labeled completion/hover and virtual-child lookup for written header formals, without fabricated semantic identities. L58 adds missing operands, lexical enclosing/imported property names, type-valued receiver functions and receiver-rewritten calls. Unfinished declaration names, arbitrary enclosing-instance enumeration and broader formal-member recovery remain outside the proven scope. C26 covers generic base-name prefixes; C27/L51 adds written function/sequence leaf types. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation, E5/L20 adds super-call facts, and L22 adds written Ref/Var annotation accessor targets. Native annotation storage and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
@@ -7162,7 +7162,7 @@ pushed this first pass; the results below describe local verification, not remot
 | Area | Behavior established in this pass | Evidence |
 |---|---|---|
 | Listener composition | `tee` retains error-code queries; branches retain the parent's abort request; derived silences suppress reports while preserving cancellation. | `ErrorListenerCancelTest` |
-| Embedding failures | Expected launcher/compiler aborts do not invent internal errors. An unexpected exception is reported even after a source error. Already-cancelled work does not parse; empty buffers report a source problem. | `EmbeddingDiagnosticsTest` |
+| Embedding failures | Expected launcher/compiler aborts do not invent internal errors. An unexpected exception is reported even after a source error. Already-canceled work does not parse; empty buffers report a source problem. | `EmbeddingDiagnosticsTest` |
 | Passive metrics | `footprint(compilation)` measures that compilation's pool without starting the interpreter. `footprint()` reports repository/heap counts with no pool selected. | `EmbeddingFootprintTest` |
 | Build inputs | The existing `javatools` Java dependency supplies the compiler. A test-only `xtc` configuration consumes `libs.xdk.ecstasy` and `libs.javatools.bridge`, including transitive modules. The fixture configures a repository over those resolved directories. | Gradle task graph and compiler-consumer suites |
 | Test selection | Compiler/library/build changes get a focused LSP consumer lane. Lang validation runs the full suite. A required XML gate rejects missing suites, zero tests, failures, errors and skips. This is separate from IDE publishing selection. | `.github/workflows/commit.yml`; XML gate exercised locally |
@@ -9023,7 +9023,7 @@ the combined validation runs after implementation.
    versioned/resource edit guards and code-action `context.only` filtering remain in force.
 2. Progress: client request tokens and post-handshake server-created tokens for long compiler
    queries, with terminal success/failure/cancellation notifications.
-3. Lifecycle: retire requests waiting for shared analysis without cancelling another request's
+3. Lifecycle: retire requests waiting for shared analysis without canceling another request's
    compilation; reject invalid transport lifecycle requests and clean up owned pending work.
 4. Refresh/trace: only negotiated implemented providers; coalesce notifications outside compiler
    locks; runtime off/messages/verbose tracing without source text.
@@ -9272,7 +9272,7 @@ Full IntelliJ `run-11435582978373867143` passes 74 checks (including START), the
 no-replay guard stops the run. The captured editor contains `2Document` instead of `Document`;
 no import action accounts for this extra character. Its origin is not established. The guard is
 retained and its diagnostic now includes bounded before/after text. X105 and the 76 unrun cases
-continue in a fresh selected run; the original receipt is not relabelled as a clean full run.
+continue in a fresh selected run; the original receipt is not relabeled as a clean full run.
 
 The resumed IntelliJ receipt `run-5480270557660243469` passes 75 checks including START and
 X105/X142, but fails X57/X126 while cleanup requires an already stopped server to be running,
@@ -10235,7 +10235,7 @@ File, type-body and statement boundaries have separate keyword sets. Six initial
 module/class declarations, void methods, if blocks, while loops and return values. Templates are
 limited to vacant slots; existing conditions/bodies/terminators are not duplicated. The Java lexer
 excludes comments and literals; expression/type/argument/member positions cannot acquire statement
-templates. Accessor/anonymous/lambda-specific template grammars remain excluded. These are labelled
+templates. Accessor/anonymous/lambda-specific template grammars remain excluded. These are labeled
 syntax templates, not compiler-proven semantic edits; users fill their placeholders before compiling.
 
 Snippet-capable clients receive tab stops; other clients receive literal source defaults. The server
@@ -10352,7 +10352,7 @@ for this checkpoint.
 - Wrapped and compound recursive bounds inspect every operand without manufacturing a formal
   identity. A cursor inside its own guarded bound retains the complete written bound and tests
   a disposable candidate substitution. Direct cycles and unknown/inaccessible operands remain
-  rejected. Written/incomplete constraints are labelled as such.
+  rejected. Written/incomplete constraints are labeled as such.
 - A checked-in copy of platform's CircularBuffer class (`b8be627`) exposed two real gaps:
   member cursors before operators/ternary conditions, and anonymous bodies invisible to initial
   partial inspection. Read-only deferred-body access and source-owned anonymous validation keep
@@ -11985,7 +11985,7 @@ Final acceptance:
   The accepted run starts one server and contains no ERROR/SEVERE, ambiguous-union,
   disposed-synchronizer or ProcessCanceledException markers.
 - The first native attempt, **`run-6617035480724888358`**, passed START and the four existing
-  cases but stopped at X209 before applying an edit. Overlapping full diagnostic pulls cancelled
+  cases but stopped at X209 before applying an edit. Overlapping full diagnostic pulls canceled
   a stale lazy action during a synchronous remote popup call. The harness now queues discovery
   through the normal UI action path; bounded retries still cannot replay an accepted edit. The
   production diagnostic bridge is unchanged. Evidence and removal obligations remain under
@@ -13123,7 +13123,7 @@ regression. Validation is complete for this selected batch:
   IDE freeze or compiler failure.
 - The fixture now records its producer PID before publishing readiness. Cancellation retirement
   requires either the task's completion marker or that exact JVM to have exited; successful and
-  failed non-cancelled tasks still require their completion marker. Corrected IntelliJ X260 plus
+  failed non-canceled tasks still require their completion marker. Corrected IntelliJ X260 plus
   START passes in `run-11734301827775631328`, with zero IDE errors. Completed X129/X261/X262
   were not replayed. No production compiler/plugin behavior changed for this correction.
 - Both drivers compile; changed TypeScript files pass ESLint. Root/lang formatting checks pass.
@@ -13283,7 +13283,7 @@ records the complete validation and preserves the original failures.
   The report records build roots, preserves source ownership and resource order, and shows
   processed-resource readiness. IntelliJ includes linked roots; VS Code includes workspace roots.
   Exact duplicate owners from overlapping roots are deduplicated; conflicting owners are rejected.
-- `0f99df075`: project/folder retirement invalidates the import owner as well as cancelling the
+- `0f99df075`: project/folder retirement invalidates the import owner as well as canceling the
   producer. Late completion and validation cannot publish; unlinking IntelliJ roots creates a
   distinct owner. Deferred server initialization reads current settings before publication.
 - `2ba5d35b7`: shared X263–X265 cover composite import, native Gradle synchronization plus
@@ -13292,7 +13292,7 @@ records the complete validation and preserves the original failures.
 
 Validation exposed two production gaps, repaired in `bd39a5aee`:
 
-- A cancelled Gradle client can finish before its daemon writes the aggregate report. Each IDE
+- A canceled Gradle client can finish before its daemon writes the aggregate report. Each IDE
   import now tags exports with its identity. Changed tagged output enters the accepted model only
   through successful completion of that same import; a delayed write cannot replace the accepted
   model or complete a different import. Both clients have explicit late-write/retry regressions.

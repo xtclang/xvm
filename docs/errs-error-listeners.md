@@ -343,7 +343,7 @@ The lexer now reports the missing terminator once and exits that token scan. Rec
 ordinary/template strings with an unlimited collector and fail on a repeated report.
 
 `ErrorListener.cancellable(errs, cancelled)` combines a host cancellation request with the
-listener's normal abort policy. Branching and merging preserve the wrapper. Already-cancelled
+listener's normal abort policy. Branching and merging preserve the wrapper. Already-canceled
 embedding work does not parse; cancellation alone does not invent a source error.
 
 Expected `LauncherException` aborts with diagnostics or cancellation do not generate an additional
@@ -376,7 +376,7 @@ remain deprecated. Diagnostic origin metadata helps trace reporting without affe
 The [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) converts
 compiler diagnostics into editor data and owns one analysis per module scope. An edit invalidates
 all of that module's views; only its current request may install the replacement. The server
-publishes diagnostics at each member's URI, including unchanged siblings reanalysed because of the
+publishes diagnostics at each member's URI, including unchanged siblings reanalyzed because of the
 edit. Open-document versions are included only when the client advertises diagnostic version
 support; version checks still guard publication internally for every client. Closed members receive unversioned diagnostics. Removed
 members are cleared; closing an overlay restores disk input and refreshes surviving open siblings.
