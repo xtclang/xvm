@@ -620,6 +620,25 @@ class XdkMissingMethodsTest {
     }
 
     @Test
+    fun `a const that declares toString, which the compiler gives an appendTo, does not prevent the repair`() {
+        query(
+            """
+            module Missing {
+                const Card(Int rank) {
+                    @Override
+                    String toString() {
+                        return "card";
+                    }
+                }
+                void run() {
+                    §missing();
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private void missing()", "String toString() {") }
+    }
+
+    @Test
     fun `existing calls and overload selection survive the addition`() {
         query(
             """
