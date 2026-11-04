@@ -375,7 +375,7 @@ recorded partial coverage.
 
 - [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
   X311). Conditions are `Boolean` expressions since R7's tier 1 (X313). IntelliJ checks the condition;
-  its hit counts and logpoints: UP32.
+  its logpoints: UP32; its hit counts: UP55.
 - [x] R9: the call stack and `exceptionInfo`'s stack trace without the embedding runner's frames
   (`TaskRegistry`, `runner.x`), seen in IntelliJ's hint with #1761; the call stack had them too, in both
   editors, under the program's (`ad8268260`, `48dabb5a5`; X304 and X307 check the whole stack).
@@ -1025,8 +1025,8 @@ passes with the workaround disabled. The gates are in
 
 - [ ] UP55 (2026-10-28): LSP4IJ's line breakpoints send a condition and a log message, never a hit
   condition; function and data breakpoints do (#1780, #1782). XVM's adapter supports hit conditions
-  since R9. The R9 item above puts IntelliJ's hit counts under UP32, but our #1759 added logpoints
-  only. Fixed by our [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787) (merged 2026-10-28,
+  since R9. The R9 item above put IntelliJ's hit counts under UP32 until 2026-11-04, but our #1759
+  added logpoints only. Fixed by our [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787) (merged 2026-10-28,
   unreleased, `0ecbcdeb`): a DAP line breakpoint has a `Hit condition`, sent as `hitCondition`. To do:
   after a release with it, a native IntelliJ hit-count case.
 
