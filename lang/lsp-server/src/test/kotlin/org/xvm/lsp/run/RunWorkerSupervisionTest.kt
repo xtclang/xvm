@@ -3,6 +3,7 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
+import org.xvm.debug.ProgramEvents
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
@@ -17,7 +18,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 class RunWorkerSupervisionTest {
     /** One run's output and its single exit. */
-    private class Run : RunListener {
+    private class Run : ProgramEvents {
         val output = StringBuffer()
         val exited = CompletableFuture<Pair<Long?, String?>>()
 
