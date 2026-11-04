@@ -57,8 +57,8 @@ package genericTests {
     }
 
     void testErasedLambdaParameter() {
-        // Int specializes Entry, while Value remains erased; the lambda knows Value is String,
-        // but must cast its Object JVM parameter before passing it to copy(String)
+        // Int specializes Entry, while Value remains erased at the class level; the lambda's
+        // captured String binding must be resolved consistently in its signature and body
         assert new Entry<Int, String>(1, "value").formatValue() == "value";
 
         class Entry<Key, Value>(Key key, Value value) {

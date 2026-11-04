@@ -718,7 +718,7 @@ public abstract class Builder {
                 MethodStructure lambda = (MethodStructure) methodId.getComponent();
                 jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
                 body    = new MethodBody(lambda);
-                sigType = body.asFunctionType(pool(), containerType);
+                sigType = body.asJitFunctionType(pool(), containerType);
 
                 // generate the method itself
                 bctx.buildMethod(jitName, body);

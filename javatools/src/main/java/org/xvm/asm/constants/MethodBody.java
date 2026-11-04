@@ -694,16 +694,6 @@ public class MethodBody {
     }
 
     /**
-     * @return the function or method type for the function or method represented by this body
-     */
-    public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
-        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
-        return isFunction()
-                ? sig.asFunctionType()
-                : sig.asMethodType(pool, typeContainer);
-    }
-
-    /**
      * @return the ConstantPool
      */
     private ConstantPool pool() {
@@ -835,7 +825,7 @@ public class MethodBody {
         }
 
         MethodStructure   method = getClassifyingMethodStructure();
-        SignatureConstant sig    = method.resolveSignature(builder.pool(), typeTarget.getJitCCType());
+        SignatureConstant sig    = method.resolveJitSignature(builder.pool(), typeTarget.getJitCCType());
 
         // TODO consider caching this
         return JitMethodDesc.of(builder, typeTarget, JitMethodDesc.flagsFor(method),
@@ -856,6 +846,16 @@ public class MethodBody {
      */
     public TypeConstant resolveDeclaringType(ConstantPool pool, TypeConstant typeTarget) {
         return getIdentity().getClassIdentity().getFormalType().resolveGenerics(pool, typeTarget);
+    }
+
+    /**
+     * @return the function or method type for the function or method represented by this body
+     */
+    public TypeConstant asJitFunctionType(ConstantPool pool, TypeConstant typeContainer) {
+        SignatureConstant sig = getMethodStructure().resolveJitSignature(pool, typeContainer);
+        return isFunction()
+                ? sig.asFunctionType()
+                : sig.asMethodType(pool, typeContainer);
     }
 
     // ----- fields --------------------------------------------------------------------------------
