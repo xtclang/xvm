@@ -84,6 +84,47 @@ public class ParserRecoveryTest {
     }
 
     @Test
+    public void memberCursorsAtTheirLinesEndRetainTheStatementsOnLaterLines() {
+        List.of("text.§", "text.si§", "this.text.§").forEach(expression -> List.of(
+                        "Int after = 1;", "if (after()) {}", "after();").forEach(next -> {
+                    String marked = "module Recovery { String text; Boolean after() = True;\n"
+                            + "    void run() {\n        " + expression + "\n        " + next + "\n    }\n}";
+                    var source = new Source(marked.replace("§", ""));
+                    marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var errors = new ErrorList();
+                    var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    var sites = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                            .map(IncompleteStatement.class::cast).toList();
+                    String label = expression + " / " + next + ": " + errors.getErrors();
+                    assertEquals(1, sites.size(), label);
+                    assertEquals(cursor, sites.getFirst().getEndPosition(), label);
+                    if (expression.endsWith("si§")) {
+                        assertEquals("si", sites.getFirst().getMemberName().orElseThrow().getValueText(), label);
+                    }
+                    assertTrue(errors.getErrors().stream().allMatch(error ->
+                            error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)), label);
+                    assertEquals(marked.replace("§", ""), source.toRawString());
+                }));
+    }
+
+    @Test
+    public void aLineEndMemberCursorBeforeALaterLinesDotContinuesTheExpression() {
+        String marked = "module Recovery { void run(String text) {\n        Int value = text.si§\n"
+                + "            .size;\n    }\n}";
+        var source = new Source(marked.replace("§", ""));
+        marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+        long cursor = source.getPosition();
+        source.reset();
+        var errors = new ErrorList();
+        var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+        // the later line continues the access, so it does not end at the cursor
+        assertTrue(nodes(tree).stream().noneMatch(IncompleteStatement.class::isInstance));
+        assertTrue(errors.getErrors().isEmpty(), errors.getErrors().toString());
+    }
+
+    @Test
     public void malformedStatementRetainsItsMethodAndFollowingDeclarations() {
         ErrorList errs = new ErrorList();
         StatementBlock tree = parse("""
