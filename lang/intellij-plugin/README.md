@@ -314,7 +314,9 @@ Select a method with `--tests '*CompilerPlaybookTest.compilerPlaybook'`, or sele
 The large-file probe is separately enabled with `-PintellijLargeFileProbe=true`.
 
 The status bar displays the current case and completed/remaining counts. The harness may restore
-desktop focus; avoid typing into its fixtures. Failed operations stop that run, and timed-out
+desktop focus; avoid typing into its fixtures, or run it in the playbook's Linux container
+(`./gradlew containerPlaybookIntellij`, see the
+[testing reference](testing.md#the-playbook-in-a-linux-container)). Failed operations stop that run, and timed-out
 mutations are not replayed. Unexpected IDE errors fail acceptance. X254/X257 retain explicit partial
 coverage for the [client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
