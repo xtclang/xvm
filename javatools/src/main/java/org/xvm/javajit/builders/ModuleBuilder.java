@@ -1,8 +1,5 @@
 package org.xvm.javajit.builders;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassFile;
-
 import java.lang.constant.ClassDesc;
 
 import org.xvm.javajit.TypeSystem;
@@ -21,14 +18,5 @@ public class ModuleBuilder
     @Override
     public ClassDesc getSuperCD() {
         return CD_nModule;
-    }
-
-    @Override
-    public boolean assembleClass(ClassBuilder classBuilder) {
-        classBuilder
-            .withFlags(ClassFile.ACC_PUBLIC)
-            .withSuperclass(CD_nModule)
-            ;
-        return true;
     }
 }

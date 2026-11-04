@@ -100,14 +100,6 @@ public interface EnumValueBuilderSupport {
     }
 
     /**
-     * Apply any modifications to the enum value class.
-     */
-    default void assembleEnumValueClass(CommonBuilder builder, ClassBuilder classBuilder) {
-        classBuilder.withSuperclass(getEnumValueSuperCD(builder))
-                    .withFlags(ClassFile.ACC_PUBLIC);
-    }
-
-    /**
      * Append code to the enum value static initializer.
      */
     default void appendEnumValueCLInit(CommonBuilder builder, CodeBuilder code) {
