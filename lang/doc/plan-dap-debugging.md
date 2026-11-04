@@ -1,6 +1,6 @@
 # Ecstasy Debug Adapter Protocol (DAP): Implementation Plan
 
-**Status (2026-10-26):** sessions are real, stop at breakpoints, conditional ones included, and at exceptions, of some classes if asked, log at logpoints, show variables and the exception, evaluate watches and hovers on expressions with operators, step and pause, in VS Code and IntelliJ (pause, hit counts, logpoints, exception classes and the exception's details in VS Code only, until LSP4IJ has them). R6 is done: a
+**Status (2026-11-04):** sessions are real, stop at breakpoints, conditional ones included, and at exceptions, of some classes if asked, log at logpoints, show variables and the exception, evaluate watches and hovers on expressions with operators, step and pause, in VS Code and IntelliJ (pause, hit counts, logpoints, exception classes and the exception's details in VS Code only, until LSP4IJ has them). R6 is done: a
 session runs inside the language server and travels over its connection, so a `launch` builds and
 runs the module with the same embedded build and execution workers as Run, reports the program's
 output and exit, and stops it on `terminate`, `disconnect` or the end of the session. R7 is
@@ -26,7 +26,11 @@ The session code is the `dap-server` library, hosted by the language server
 describe the earlier plan, in which the adapter was a process of its own that held runtime `Frame`
 objects. As built, the session holds only snapshots the worker sends, and the runtime half lives in
 the worker; the [execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance)
-has R7's steps and what R8–R13 still need.
+has R7's steps and the records of R8–R13, which followed and were done by 2026-11-03: function and
+data breakpoints, Run to Cursor, stepping into a chosen call, restarting a frame, running one fiber
+alone, every service and fiber in Threads, library frames in their bundled sources and the loaded
+modules, Gradle-mode and command-line Debug, attaching to a program run with `--debug`, and running
+and debugging tests from both editors.
 
 This document details how DAP-based debugging works end-to-end for Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the `dap-server` library, hosted by the language server, to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
