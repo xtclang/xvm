@@ -2382,7 +2382,7 @@ cancel; generated files themselves are not rolled back by cancelling an import.
    task for that folder/project. Other workspace folders retain independent ownership.
 3. Cancel through the native progress control. The operation must finish as cancelled, retain
    the previous compiler inputs, and remain available for retry. Cancellation is not a compiler
-   diagnostic or an error notification. Inspect **Show Compiler Paths** in VS Code or reopen the
+   diagnostic or an error notification. Inspect **Show Effective Compiler Paths** in VS Code or reopen the
    IntelliJ Compiler page for the last import result/time.
 4. Exercise a task that writes a valid new model and then fails. Watcher/configuration callbacks
    must not publish that model during the task or after its failure. A successful explicit retry
