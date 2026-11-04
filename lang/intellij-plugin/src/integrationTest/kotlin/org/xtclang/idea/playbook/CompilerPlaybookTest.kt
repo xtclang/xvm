@@ -2,31 +2,12 @@ package org.xtclang.idea.playbook
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.intellij.ide.starter.ci.CIServer
-import com.intellij.ide.starter.ci.NoCIServer
-import com.intellij.ide.starter.config.ConfigurationStorage
-import com.intellij.ide.starter.config.monitoringDumpsIntervalSeconds
-import com.intellij.ide.starter.di.di
-import com.intellij.ide.starter.driver.engine.runIdeWithDriver
-import com.intellij.ide.starter.models.IdeInfo
-import com.intellij.ide.starter.models.TestCase
-import com.intellij.ide.starter.path.GlobalPaths
-import com.intellij.ide.starter.plugins.PluginConfigurator
-import com.intellij.ide.starter.project.LocalProjectInfo
-import com.intellij.ide.starter.runner.Starter
-import com.intellij.platform.testFramework.teamCity.TeamCityReporter.SyntheticTestKind
-import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty
-import org.kodein.di.DI
-import org.kodein.di.bindSingleton
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
 import java.nio.file.StandardOpenOption.CREATE
-import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.time.Duration.Companion.minutes
 
 /** Opt-in acceptance tests against the packaged plugin, a real IDE and the bundled compiler. */
 class CompilerPlaybookTest {
@@ -213,17 +194,17 @@ class CompilerPlaybookTest {
             "Shared catalog and manual playbook rows differ"
         }
         shared.validate(fixtures)
-        val ideVersion = System.getProperty("xtc.playbook.ideVersion")
-        val localLsp4ij = System.getProperty("xtc.playbook.lsp4ijPlugin")?.let { LocalLsp4ijPlugin.read(Path.of(it)) }
-        // the Marketplace channel of lsp4ijVersion, such as nightly; empty for the default channel
-        val lsp4ijChannel = System.getProperty("xtc.playbook.lsp4ijChannel", "")
+        val ide = PlaybookIde("XtcCompilerPlaybook-${run.fileName}", workspace, run, reports)
+        val ideVersion = ide.ideVersion
+        val localLsp4ij = ide.localLsp4ij
+        val lsp4ijChannel = ide.lsp4ijChannel
         val replacementGates = System.getProperty("xtc.playbook.replacementGates", "").split(',').filter(String::isNotEmpty)
         require(replacementGates.all { it in GATE_CASES }) { "Unknown replacement gate: $replacementGates" }
         require(replacementGates.isEmpty() || localLsp4ij != null || lsp4ijChannel.isNotEmpty()) {
             "Replacement gates require an LSP4IJ that isn't the release: a local build or a channel's"
         }
-        val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
-        val ideFailures = CopyOnWriteArrayList<String>()
+        val lsp4ijVersion = ide.lsp4ijVersion
+        val ideFailures = ide.ideFailures
         val selection =
             System
                 .getProperty("xtc.playbook.cases", "")
@@ -249,113 +230,11 @@ class CompilerPlaybookTest {
                     APPEND,
                 )
             }
-        // macOS 27 kills a JVM whose thread dump reads the mach port of a thread that has just exited (EXC_GUARD,
-        // GUARD_TYPE_MACH_PORT, in VM_PrintThreads): the test IDE crashed in Starter's thread dump of every minute, so
-        // it takes none there
-        if (System.getProperty("os.name").startsWith("Mac")) ConfigurationStorage.monitoringDumpsIntervalSeconds(Int.MAX_VALUE)
-        val previousDi = di
-        di =
-            DI {
-                extend(previousDi)
-                bindSingleton<GlobalPaths>(overrides = true) { object : GlobalPaths(reports) {} }
-                bindSingleton<CIServer>(overrides = true) {
-                    object : CIServer by NoCIServer {
-                        override fun reportTestFailure(
-                            testName: String,
-                            message: String,
-                            details: String,
-                            linkToLogs: String?,
-                            kind: SyntheticTestKind,
-                            generifyTestName: Boolean,
-                        ) {
-                            ideFailures += "$testName: $message\n$details\n$linkToLogs"
-                        }
-                    }
-                }
-            }
         try {
-            val testCase = TestCase(IdeInfo.IdeaUltimate, LocalProjectInfo(workspace)).withVersion(ideVersion)
-            val context =
-                Starter.newContext(
-                    "XtcCompilerPlaybook-${run.fileName}",
-                    testCase.copy(
-                        ideInfo =
-                            testCase.ideInfo.copy(
-                                getInstaller = { CachedIdeInstaller(testCase.ideInfo.getInstaller(it)) },
-                            ),
-                    ),
-                )
-            Files.writeString(run.resolve("ide-paths.txt"), context.paths.toString())
-            PluginConfigurator(context).apply {
-                if (localLsp4ij == null) {
-                    installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion, lsp4ijChannel.ifEmpty { null })
-                } else {
-                    installPluginFromDir(Path.of(localLsp4ij.path))
-                }
-                installPluginFromPath(Path.of(System.getProperty("path.to.build.plugin")))
-                installPluginFromDir(DiagnosticProbePlugin.create(run))
-                disablePlugins("com.intellij.kubernetes", "com.intellij.clouds.kubernetes")
-            }
-            // Keep even a sole candidate visible until the driver inspects and accepts it.
-            // This affects only the disposable test IDE, not the packaged plugin's defaults.
-            Files.writeString(
-                Files
-                    .createDirectories(context.paths.configDir.resolve("options"))
-                    .resolve("editor.xml"),
-                """
-                <application>
-                  <component name="CodeInsightSettings">
-                    <option name="AUTOCOMPLETE_ON_CODE_COMPLETION" value="false" />
-                    <option name="AUTOCOMPLETE_ON_SMART_TYPE_COMPLETION" value="false" />
-                    <option name="AUTO_POPUP_COMPLETION_LOOKUP" value="false" />
-                  </component>
-                </application>
-                """.trimIndent(),
-            )
-            // Unsaved-overlay scenarios must not be silently saved by an application focus change.
-            Files.writeString(
-                context.paths.configDir.resolve("options/ide.general.xml"),
-                """
-                <application>
-                  <component name="GeneralSettings">
-                    <option name="autoSaveFiles" value="false" />
-                    <option name="autoSaveIfInactive" value="false" />
-                  </component>
-                </application>
-                """.trimIndent(),
-            )
-            // The full playbook exceeds Starter's ten-minute default; individual waits
-            // remain bounded so an unresponsive editor still fails promptly.
-            val configured =
-                context
-                    .disableUltimateModule()
-                    .applyVMOptionsPatch {
-                        // Prevent trial/license startup from dynamically re-enabling the paid module.
-                        addSystemProperty("request.trial", false)
-                        addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
-                        addSystemProperty("xtc.lsp.semanticTokens", true)
-                        addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
-                        addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
-                        addSystemProperty("idea.auto.reload.plugins", false)
-                        // command-line runs, X338's, run xtc from the PATH: the XDK built from this tree, whose xec
-                        // X336 runs; the scenarios are in lang/test-fixtures/compiler-playbook of that tree
-                        val xdk =
-                            scenarioPath
-                                .toAbsolutePath()
-                                .parent.parent.parent.parent
-                                .resolve("xdk/build/install/xdk/bin")
-                        withEnv("PATH", listOfNotNull(xdk.toString(), System.getenv("PATH")).joinToString(File.pathSeparator))
-                    }
-            repeat(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase ->
-                configured.runIdeWithDriver(runTimeout = 30.minutes).useDriverAndCloseIde {
-                    cases.run(this, phase)
-                }
-            }
+            ide.run(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase -> cases.run(this, phase) }
             Files.writeString(run.resolve(".completed"), "IDE closed\n")
             check(ideFailures.isEmpty()) { ideFailures.joinToString("\n\n") }
         } finally {
-            // Restore global Starter state even if serializing or writing the report fails.
-            di = previousDi
             val report =
                 mapOf(
                     "ideVersion" to ideVersion,
