@@ -9,7 +9,6 @@ import {
     MessageTransports,
     ServerOptions,
     State,
-    Trace,
     TransportKind,
     vsdiag
 } from 'vscode-languageclient/node';
@@ -148,7 +147,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'xtc' }, { scheme: 'ecstasy-library', language: 'xtc' }],
         outputChannel,
-        traceOutputChannel: outputChannel,
+        traceOutputChannel: traceChannel(outputChannel),
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
         },
@@ -255,6 +254,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         }
     };
 
+    // the client's ID names the settings it reads: xtc.trace.server, which says how much it traces
     const connection = new class extends LanguageClient {
         override async start(): Promise<void> {
             try {
@@ -285,7 +285,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
             return transports;
         }
     }(
-        'xtcLanguageServer',
+        'xtc',
         'Ecstasy Language Server',
         serverOptions,
         clientOptions
@@ -343,7 +343,6 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         if (client === startingClient) client = undefined;
         throw err;
     });
-    await applyTraceConfig();
 }
 
 // Restart requests share one operation; settings changes during startup are applied in order.
@@ -373,15 +372,44 @@ export async function stopLanguageClient(): Promise<void> {
     await safeStop();
 }
 
-function traceFromConfig(): Trace {
-    const level = vscode.workspace.getConfiguration('xtc').get<string>('trace.server', 'off');
-    if (level === 'verbose') { return Trace.Verbose; }
-    if (level === 'messages') { return Trace.Messages; }
-    return Trace.Off;
-}
+/** The trace channels, one for each log they write to. */
+const traceChannels = new WeakMap<vscode.LogOutputChannel, vscode.LogOutputChannel>();
 
-export async function applyTraceConfig(): Promise<void> {
-    if (client) {
-        await client.setTrace(traceFromConfig());
-    }
+/**
+ * The language client's trace channel, which writes to [log]: vscode-languageclient traces the messages only while
+ * its trace channel is at the Trace level, and then as that level's lines, which a log at its default Info level
+ * leaves out. So xtc.trace.server, the setting for it, traced nothing unless the log's level was set to Trace as well.
+ * This channel is at the Trace level while xtc.trace.server traces, and writes its traces as lines at [log]'s level;
+ * the setting's messages or verbose says how much the client traces, as its ID names the setting.
+ */
+export function traceChannel(log: vscode.LogOutputChannel): vscode.LogOutputChannel {
+    const known = traceChannels.get(log);
+    if (known) return known;
+    const tracing = () => vscode.workspace.getConfiguration('xtc').get<string>('trace.server', 'off') !== 'off';
+    const level = () => tracing() ? vscode.LogLevel.Trace : log.logLevel;
+    const changed = new vscode.EventEmitter<vscode.LogLevel>();
+    log.onDidChangeLogLevel(() => changed.fire(level()));
+    vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('xtc.trace.server')) changed.fire(level());
+    });
+    const channel: vscode.LogOutputChannel = {
+        name: log.name,
+        get logLevel() { return level(); },
+        onDidChangeLogLevel: changed.event,
+        trace: (message, ...args) => log.info(message, ...args),
+        debug: (message, ...args) => log.debug(message, ...args),
+        info: (message, ...args) => log.info(message, ...args),
+        warn: (message, ...args) => log.warn(message, ...args),
+        error: (error, ...args) => log.error(error, ...args),
+        append: value => log.append(value),
+        appendLine: value => log.appendLine(value),
+        replace: value => log.replace(value),
+        clear: () => log.clear(),
+        show: (column?: vscode.ViewColumn | boolean, preserveFocus?: boolean) =>
+            typeof column === 'boolean' ? log.show(column) : log.show(column, preserveFocus),
+        hide: () => log.hide(),
+        dispose: () => changed.dispose(),
+    };
+    traceChannels.set(log, channel);
+    return channel;
 }
