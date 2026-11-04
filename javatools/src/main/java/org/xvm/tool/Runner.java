@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -323,9 +324,18 @@ public class Runner extends Launcher<RunnerOptions> {
             return checkErrors("debugger start");
         }
         try {
-            // the class path's providers come first, javatools' own among them, so the jar's own goes ahead of them
+            // the class path's providers come first, javatools' own among them, so the one the jar's
+            // own service file names goes ahead of them, by its name: its class may come from a
+            // class loader above the jar's, so where it was loaded from does not tell
+            Set<String> named;
+            try {
+                named = jar == null ? Set.of() : providerNames(jar);
+            } catch (IOException e) {
+                log(ERROR, "--debug names an agent {} that cannot be read: {}", quoted(agent.get()), e.getMessage());
+                return checkErrors("debugger start");
+            }
             var providers = ServiceLoader.load(DebuggerProvider.class, jar == null ? classes : jar).stream().toList();
-            var provider  = providers.stream().filter(found -> jar != null && found.type().getClassLoader() == jar)
+            var provider  = providers.stream().filter(found -> named.contains(found.type().getName()))
                     .findFirst().or(() -> providers.stream().findFirst()).map(ServiceLoader.Provider::get);
             if (provider.isEmpty()) {
                 log(ERROR, "--debug needs a debugger provider; name its jar with agent=<jar>, or put it on the class path");
@@ -355,6 +365,25 @@ public class Runner extends Launcher<RunnerOptions> {
                 }
             }
         }
+    }
+
+    /**
+     * @return the debugger providers that the agent jar's own service file names, read as
+     *         {@code ServiceLoader} reads it: a class name on each line, after which {@code #}
+     *         starts a comment
+     */
+    private static Set<String> providerNames(URLClassLoader jar) throws IOException {
+        Set<String> names = new LinkedHashSet<>();
+        var         files = jar.findResources("META-INF/services/" + DebuggerProvider.class.getName());
+        while (files.hasMoreElements()) {
+            try (var in = files.nextElement().openStream()) {
+                new String(in.readAllBytes(), StandardCharsets.UTF_8).lines()
+                        .map(line -> line.replaceFirst("#.*", "").strip())
+                        .filter(name -> !name.isEmpty())
+                        .forEach(names::add);
+            }
+        }
+        return names;
     }
 
     /**
