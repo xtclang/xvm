@@ -11,12 +11,11 @@ import org.xvm.debug.ExceptionStops
 import org.xvm.debug.FrameState
 import org.xvm.debug.FunctionBreakpointRequest
 import org.xvm.debug.ModuleState
+import org.xvm.debug.ProgramEvents
 import org.xvm.debug.ScopeState
 import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StepTargetState
-import org.xvm.debug.StopState
-import org.xvm.debug.TestEvent
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
 import org.xvm.runtime.SessionDebugger
@@ -26,40 +25,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
-
-/** Receives one run's events, in order, on the thread that reads them from where its program runs. */
-internal interface RunListener {
-    fun output(text: String)
-
-    /** An event of a run of tests, which its output reported, and which is not in [output]. */
-    fun tested(event: TestEvent) {}
-
-    fun exited(
-        code: Long?,
-        error: String?,
-    )
-
-    /** How one file's breakpoints were installed, before a run under the debugger started. */
-    fun breakpoints(
-        path: String,
-        states: List<BreakpointState>,
-    ) {}
-
-    /** How the function breakpoints were installed, before a run under the debugger started. */
-    fun functionBreakpoints(states: List<BreakpointState>) {}
-
-    /** A run under the debugger stopped; it waits until it is resumed. */
-    fun stopped(stop: StopState) {}
-
-    /** A logpoint of a debugged run logged a message. */
-    fun logged(text: String) {}
-
-    /**
-     * The debugger has left an attached program, which runs on: as asked, or for the [reason] given, as when the
-     * connection to the program was lost. A run's last event, as an exit is.
-     */
-    fun detached(reason: String?) = exited(null, reason ?: "Detached from the program")
-}
 
 /**
  * The debugger's side of the worker protocol: the requests and commands to a run's runtime debugger, and the debug
@@ -307,7 +272,7 @@ internal abstract class RunDebugClient {
      */
     protected fun debugEvent(
         event: DebugProtocol.Event,
-        listener: RunListener?,
+        listener: ProgramEvents?,
     ): Boolean {
         when (event) {
             is DebugProtocol.Breakpoints -> listener?.breakpoints(event.path(), event.breakpoints().map(SessionDebugger.Breakpoint::state))
