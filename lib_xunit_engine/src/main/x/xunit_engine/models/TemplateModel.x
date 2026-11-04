@@ -86,8 +86,7 @@ const TemplateModel
     SkipResult skipResult;
 
     /**
-     * The selector of the templated test, which runs every test the template makes, or of its class
-     * for a templated class.
+     * The selector for the entire template, or its class if it has no test method.
      */
     @Override String selector.get() {
         MethodOrFunction? testMethod = this.testMethod;

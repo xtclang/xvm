@@ -1,29 +1,27 @@
 /**
- * An XUnit ExecutionListener that reports the execution as events, for a tool that reads them from
- * the test process's output, such as an IDE: one line per event, the [Marker] and then a JSON
- * object, among the lines that the tests print themselves. Each object's `event` says what it is:
+ * An XUnit ExecutionListener that reports the execution as events for tools such as IDEs. Each
+ * event is a line of test process output: [Marker] followed by a JSON object, interleaved with
+ * output from the tests. Each object's `event` identifies the event:
  *
  * - `run` comes first, with the `version` of the events' format, which stays the same while the
- *   format only gains events and fields; a reader passes over those it does not know;
+ *   format only gains events and fields; readers ignore unknown events and fields;
  * - `started`: the execution of a test or container started. Its `id` is the path of the model's
- *   unique id, `parent` the `id` of the nearest container that started and holds it, absent for
- *   the root, `name` its display name, `selector` the [Model.selector] that runs it alone, and
- *   `container` whether it holds tests, as a module, package, class or templated test does;
+ *   unique id, `parent` the `id` of its nearest active ancestor, absent for the root, `name` its
+ *   display name, `selector` its [Model.selector], and `container` whether it holds tests, as a
+ *   module, package, class or templated test does;
  * - `finished`: the execution of the model `id` ended, with the `status` `passed`, `failed`,
  *   `aborted` (an exception other than a failed assertion) or `skipped`, after `durationMillis`;
- *   a failure's `message` and `details`, its exception with its stack, come with it. A container's
- *   `status` is that of its own execution, such as its `@BeforeAll` and `@AfterAll`; its tests'
- *   are in their own events;
- * - `skipped`: a test or container that did not run, with what `started` says of it, and the reason
- *   as `message`.
- *
- * It is the report `json` of the injection `xvm.xunit.report` ([ConsoleRunner.ConfigReport]).
+ *   when an exception is present, `message` and `details` describe it. A container's `status`
+ *   is that of its own execution, such as its `@BeforeAll` and `@AfterAll`; its tests are in
+ *   their own events;
+ * - `skipped`: a test or container that did not run, with the same fields as `started` and the
+ *   reason as `message`.
  */
 service JsonExecutionListener
         implements ExecutionListener {
 
     /**
-     * How the line of each event starts, ahead of its JSON object.
+     * Prefix for each JSON event line.
      */
     static String Marker = "##xunit ";
 
@@ -40,8 +38,7 @@ service JsonExecutionListener
     private Boolean begun = False;
 
     /**
-     * The `id`s of the tests and containers that started and have not finished, the nearest of
-     * which is a model's `parent`.
+     * IDs of active tests and containers, used to find each model's nearest active ancestor.
      */
     private Set<String> running = new HashSet();
 
@@ -77,7 +74,7 @@ service JsonExecutionListener
     }
 
     /**
-     * Start the line of an event, after the `run` event if this is the first.
+     * Start an event, emitting the `run` header first if needed.
      */
     private StringBuffer begin(String event) {
         if (!begun) {
@@ -93,7 +90,7 @@ service JsonExecutionListener
     }
 
     /**
-     * End the line of an event, and print it.
+     * Finish and print an event line.
      */
     private void end(StringBuffer buf) {
         buf.append('}');
@@ -101,7 +98,7 @@ service JsonExecutionListener
     }
 
     /**
-     * Append what the `started` and `skipped` events say of a model.
+     * Append the common fields of a `started` or `skipped` event.
      */
     private void describe(StringBuffer buf, Model model) {
         field(buf, "id", model.uniqueId.path);
@@ -114,8 +111,8 @@ service JsonExecutionListener
     }
 
     /**
-     * @return the `id` of the nearest container that started and holds the model, which is not
-     *         always its unique id's parent: a templated test's iterations are a level below it
+     * @return the nearest active ancestor's ID; a template iteration may skip levels in the
+     *         unique-ID hierarchy
      */
     private conditional String parentOf(Model model) {
         UniqueId id = model.uniqueId;
@@ -129,7 +126,7 @@ service JsonExecutionListener
     }
 
     /**
-     * @return the name of a status in the events
+     * @return the serialized name of a result status
      */
     private static String status(Result.Status status) {
         switch (status) {
@@ -156,8 +153,7 @@ service JsonExecutionListener
     }
 
     /**
-     * Append a JSON string: the value in quotes, with a quote, a backslash and the control
-     * characters escaped.
+     * Append a JSON-escaped string value.
      */
     private static void quote(StringBuffer buf, String value) {
         buf.append('"');
