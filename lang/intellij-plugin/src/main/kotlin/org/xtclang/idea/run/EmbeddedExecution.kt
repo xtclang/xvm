@@ -14,6 +14,7 @@ import org.xtclang.idea.lsp.BuildResponse
 import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.RunExitedParams
 import org.xtclang.idea.lsp.RunOutputParams
+import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestEventParams
 import org.xtclang.idea.lsp.XtcLanguageServer
@@ -60,6 +61,25 @@ internal object EmbeddedExecution {
                     *synchronizers.map { sync -> sync.didOpenFuture.thenCompose { sync.flushPendingChanges() } }.toTypedArray(),
                 )
             }
+    }
+
+    /**
+     * An embedded run of [request] as a process: [project]'s language server runs it once it has the edits made so
+     * far, and the console says so when the project's Gradle settings do not apply.
+     */
+    fun runHandler(
+        project: Project,
+        request: RunParams,
+        label: String,
+    ): EmbeddedRunProcessHandler {
+        val editsSent = editsSent(project)
+        return EmbeddedRunProcessHandler(
+            EmbeddedRunSessions.getInstance(project),
+            { server(project).thenCombine(editsSent) { server, _ -> server } },
+            request,
+            label,
+            XtcBuildSettings.gradleNotUsed(project.basePath?.let { Path.of(it) }),
+        )
     }
 
     /** The file a diagnostic URI names, or null for a URI that is not a local file. */
