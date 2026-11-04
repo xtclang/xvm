@@ -74,7 +74,7 @@ class DebugTasksTest {
     }
 
     @Test
-    fun `a launch with tests runs testXtc, or xtc test, for them, with the TeamCity report and the debug option`() {
+    fun `a launch with tests runs testXtc, or xtc test, for them, with the json report and the debug option`() {
         val tests = listOf(TestSelector("Inner", ServerTest.CLASS), TestSelector("Inner.works", ServerTest.TEST))
         val params =
             DebugTaskParams(
@@ -92,7 +92,7 @@ class DebugTasksTest {
             "--module=MathyTest",
             "--test-class=Inner",
             "--test-method=Inner.works",
-            "--test-report=teamcity",
+            "--test-report=json",
             "-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t",
         )
         val commandLine = DebugTasks.commandLine(params.copy(buildMode = DebugTasks.COMMAND_LINE))
@@ -105,14 +105,14 @@ class DebugTasksTest {
             "-t",
             "Inner.works",
             "-I",
-            "xvm.xunit.report=teamcity",
+            "xvm.xunit.report=json",
             "--debug",
             "connect:127.0.0.1:5005,suspend,token=t",
             "MathyTest",
         )
         // all of the module's tests: no selector, and Run's command line is the same, without --debug
         assertThat(XtcRunConfiguration.xtcTestCommandLine("MathyTest", emptyList()).parametersList.list)
-            .containsExactly("test", "--deduce", "-I", "xvm.xunit.report=teamcity", "MathyTest")
-        assertThat(XtcRunConfiguration.gradleTestOptions(emptyList())).containsExactly("--test-report=teamcity")
+            .containsExactly("test", "--deduce", "-I", "xvm.xunit.report=json", "MathyTest")
+        assertThat(XtcRunConfiguration.gradleTestOptions(emptyList())).containsExactly("--test-report=json")
     }
 }

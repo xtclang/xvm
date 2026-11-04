@@ -265,6 +265,9 @@ data class StopState(
 interface ProgramEvents {
     fun output(text: String)
 
+    /** An event of a run of tests, which its output reported, and which is not in [output]. */
+    fun tested(event: TestEvent) {}
+
     /** The single exit: the entry method's exit code, or the reason it failed. */
     fun exited(
         code: Long?,

@@ -161,8 +161,8 @@ data class BuildPosition(
 
 /**
  * `xtc/run` parameters. [args] reach the entry method as given; the client chooses [runId]. With [tests], xunit runs
- * the module's tests they select instead, all of them for an empty list, and reports each as a TeamCity service
- * message in the output.
+ * the module's tests they select instead, all of them for an empty list, and the server reports their execution as
+ * `xtc/testEvent` notifications ([TestEventParams]), apart from the output.
  */
 data class RunParams(
     val module: String,
@@ -236,6 +236,12 @@ data class RunInputParams(
 data class RunOutputParams(
     val runId: String = "",
     val text: String = "",
+)
+
+/** `xtc/testEvent` parameters: an [event] of the tests that the run [runId] runs, as xunit reported it. */
+data class TestEventParams(
+    val runId: String = "",
+    val event: TestEvent? = null,
 )
 
 /** A run's single terminal outcome: the entry method's exit code, or the reason it failed. */

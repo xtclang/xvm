@@ -75,7 +75,6 @@ import org.eclipse.lsp4j.debug.VariablePresentationHint
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.debug.VariablesResponse
-import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
@@ -140,7 +139,7 @@ class XtcDebugServer(
     private val afterResponse: Executor,
 ) : IDebugProtocolServer {
     @Volatile
-    private var client: IDebugProtocolClient? = null
+    private var client: XtcDebugClient? = null
 
     /** The run's ID with the language server's runs. */
     private val runId = UUID.randomUUID().toString()
@@ -159,10 +158,6 @@ class XtcDebugServer(
     /** The launched module's name, which [RUNNING_THREAD] shows. */
     @Volatile
     private var programName = "program"
-
-    /** True for a launch that runs tests, whose service messages are for the client's test view, not its console. */
-    @Volatile
-    private var testing = false
 
     /** True once the launched program has started. */
     @Volatile
@@ -239,9 +234,6 @@ class XtcDebugServer(
         /** An exception class's name, as an exception filter's condition names it. */
         private val EXCEPTION_TYPE = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
-        /** How a line of a test run's output that is a TeamCity service message, one per test event, starts. */
-        private const val SERVICE_MESSAGE = "##teamcity["
-
         /** What an exception filter's condition is. */
         const val EXCEPTION_TYPES =
             "Exception classes, separated by commas, such as IllegalArgument, OutOfBounds; " +
@@ -310,7 +302,7 @@ class XtcDebugServer(
     }
 
     /** Connect to the DAP client (IDE). */
-    fun connect(client: IDebugProtocolClient) {
+    fun connect(client: XtcDebugClient) {
         this.client = client
     }
 
@@ -600,7 +592,6 @@ class XtcDebugServer(
         debugging = args?.get("noDebug") != true
         evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
-        testing = target.tests != null
         val stopOnEntry = args?.get("stopOnEntry") == true
         if (task != null) {
             return launchWithTask(target, task, stopOnEntry)
@@ -1219,18 +1210,11 @@ class XtcDebugServer(
 
     private val events =
         object : ProgramEvents {
-            override fun output(text: String) =
-                output(
-                    // the editors read a test run's service messages from its output, and show telemetry nowhere
-                    if (testing &&
-                        text.startsWith(SERVICE_MESSAGE)
-                    ) {
-                        OutputEventArgumentsCategory.TELEMETRY
-                    } else {
-                        OutputEventArgumentsCategory.STDOUT
-                    },
-                    text,
-                )
+            override fun output(text: String) = output(OutputEventArgumentsCategory.STDOUT, text)
+
+            override fun tested(event: TestEvent) {
+                client?.xtcTest(event)
+            }
 
             override fun exited(
                 code: Long?,
