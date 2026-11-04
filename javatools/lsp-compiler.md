@@ -1221,7 +1221,7 @@ source or document in this checkout.
 
 | File | Change | What changed and why |
 | --- | --- | --- |
-| [compiler/CompilerCancellationTest.java](src/test/java/org/xvm/compiler/CompilerCancellationTest.java) | Added | Checks that cancelled structure registration stops without throwing or fabricating a source error. |
+| [compiler/CompilerCancellationTest.java](src/test/java/org/xvm/compiler/CompilerCancellationTest.java) | Added | Checks that canceled structure registration stops without throwing or fabricating a source error. |
 | [compiler/ast/bindings/CursorBindingTest.java](src/test/java/org/xvm/compiler/ast/bindings/CursorBindingTest.java) | Added | Checks grouped cursor-fact construction, immutable snapshots and independent updates that preserve unrelated call, argument and enclosing-instance facts. |
 | [compiler/EvalCompilerTest.java](src/test/java/org/xvm/compiler/EvalCompilerTest.java) | Added | Checks that diagnostics can be queried before compilation starts. |
 | [compiler/ParserAttemptTest.java](src/test/java/org/xvm/compiler/ParserAttemptTest.java) | Added | Checks kept/discarded and nested attempts, token rewind, recovery restoration, lexer reports, callback exceptions, caller abort and module-name scanning. |
