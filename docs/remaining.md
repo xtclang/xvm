@@ -515,15 +515,20 @@ recorded partial coverage.
 - [x] R13: running and debugging tests from the editors (2026-11-03). The language server finds each
   module's xunit tests (`xtc/tests`, `XdkTests`), and runs them, or debugs them over a connect-back,
   with `xtc test` in a process of its own (`TestProcess`; `xtc/run` and a DAP launch with `tests`);
-  xunit reports each test as a TeamCity service message with `-I xvm.xunit.report=teamcity`, its
-  location as `xunit://<selector>`. VS Code's Test Explorer and IntelliJ's gutter icons and test
-  console run and debug them, embedded, with Gradle's `testXtc`, which now takes `--test-class`,
-  `--test-method`, `--test-package` and `--test-report`, and in IntelliJ with `xtc test`. Commits
+  xunit reports each test as an event of its own `json` report (`-I xvm.xunit.report=json`), which
+  the language server reads once and sends apart from the output (`xtc/testEvent`, the DAP event
+  `xtcTest`), and IntelliJ's test console reads through `XtcTestEventsConverter`; a test's location
+  is `xunit://<selector>`, its selector in xunit's model. VS Code's Test Explorer and IntelliJ's
+  gutter icons and test console run and debug them, embedded, with Gradle's `testXtc`, which now
+  takes `--test-class`, `--test-method`, `--test-package` and `--test-report`, and in IntelliJ with
+  `xtc test`. Commits
   `649d5c53f2` (xunit's `-c`/`-t` selected an implicitly imported class of the same name, and a
   selection of nothing ran every test), `adc70bfce7`, `6e5dd8df3f`, `f3c77b501a`, `1223203701`,
-  `281a59908d`, `12eb77c39d`, `5ac6ddab35`, `ceabc7d110`, `9398dc0eb2`; shared X339 and X340, which
-  pass in both editors in the container (IntelliJ partial: a failure's stack is the console's text).
-  VS Code has no command-line mode.
+  `281a59908d`, `12eb77c39d`, `5ac6ddab35`, `ceabc7d110`, `9398dc0eb2`, and (2026-11-04, so that no
+  layer speaks a vendor's format) `80a7abfc02` (a test's selector in xunit's model, an unknown report
+  refused) and `712d23d14d` (xunit's JSON events replace TeamCity's service messages); shared X339
+  and X340, which pass in both editors in the container (IntelliJ partial: a failure's stack is the
+  console's text). VS Code has no command-line mode.
 - [x] R13: attaching to a program run outside the editor (2026-10-29, `0637f0d281`; shared X336).
   `xec`, `xtc run` and `xtc test` take `--debug listen|connect:<host>:<port>[,suspend][,token=<t>]
   [,agent=<jar>]`, through javatools' new `DebuggerProvider`; the language server's jar is the
@@ -1108,6 +1113,13 @@ highlighters in an editor, which its probe never measured: check or drop it befo
   and -t select the test module's own classes", opened 2026-11-04 at the user's go-ahead and
   validated on master f7d87b4d88. Its patch is the same as errs `649d5c53f2` and #693's
   `6b36fe5aa5`, so a rebase onto master drops both once it merges.
+- [ ] #756, draft: xunit's JSON report on master, the xunit parts of errs `80a7abfc02` and
+  `712d23d14d` as one commit, as master never had the TeamCity reporter; validated on master
+  a8d50aaffa. Opened 2026-11-04 at the user's go-ahead.
+- [ ] #757, draft: testXtc's `--test-package`, `--test-class`, `--test-method` and `--test-report`
+  on master, errs `ceabc7d110` without the debugger's plugin changes, which master lacks, and with
+  `json`; validated on master a8d50aaffa. Opened with #756. Gradle-mode test runs in the editors
+  need both in a released plugin and XDK.
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
