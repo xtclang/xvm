@@ -378,6 +378,7 @@ class CapabilityNegotiationTest {
                 uri: String,
                 range: AdapterRange,
                 diagnostics: List<Diagnostic>,
+                kinds: Set<Action.CodeActionKind>,
             ) = CompletableFuture.completedFuture(
                 listOf(
                     Action(

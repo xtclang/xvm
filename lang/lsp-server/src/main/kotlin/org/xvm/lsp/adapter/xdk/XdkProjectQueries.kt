@@ -6,6 +6,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
@@ -886,6 +887,7 @@ internal class XdkProjectQueries(
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic> = emptyList(),
+        kinds: Set<CodeActionKind> = CodeActionKind.entries.toSet(),
     ): List<CodeAction> {
         fun resolved(target: SemanticModel.Range) =
             diagnostics.filter {
@@ -901,9 +903,12 @@ internal class XdkProjectQueries(
                 project.modules.values.all { module ->
                     before.models.any { it.sourceName == module.root.path }
                 }
+        val quickFixes = CodeActionKind.QUICKFIX in kinds
         val actions =
             if (!complete) {
-                autoImports(uri, source, text, range, before, ::resolved)
+                if (quickFixes) autoImports(uri, source, text, range, before, ::resolved) else emptyList()
+            } else if (CodeActionKind.SOURCE !in kinds && CodeActionKind.SOURCE_ORGANIZE_IMPORTS !in kinds) {
+                emptyList()
             } else {
                 fun proved(candidate: XdkImports.Candidate): CodeAction? {
                     checkCurrent()
@@ -926,12 +931,16 @@ internal class XdkProjectQueries(
                 // when the removals do not prove together, it only sorts.
                 val unused = removals.map { it.first }.toSet()
                 val organized =
-                    XdkImports.organize(text, imports, unused)?.let(::proved)
-                        ?: if (unused.isEmpty()) null else XdkImports.organize(text, imports, emptySet())?.let(::proved)
-                listOfNotNull(organized) + removals.map { it.second }
+                    if (CodeActionKind.SOURCE_ORGANIZE_IMPORTS !in kinds) {
+                        null
+                    } else {
+                        XdkImports.organize(text, imports, unused)?.let(::proved)
+                            ?: if (unused.isEmpty()) null else XdkImports.organize(text, imports, emptySet())?.let(::proved)
+                    }
+                listOfNotNull(organized) + if (CodeActionKind.SOURCE in kinds) removals.map { it.second } else emptyList()
             }
         val missing =
-            if (complete) {
+            if (complete || !quickFixes) {
                 emptyList()
             } else {
                 before.missingMethods
@@ -966,7 +975,7 @@ internal class XdkProjectQueries(
                     }
             }
         val declarations =
-            if (complete) {
+            if (complete || !quickFixes) {
                 emptyList()
             } else {
                 // Header and body attempts to have separate snapshot identities for the same source.
@@ -990,8 +999,11 @@ internal class XdkProjectQueries(
                         )
                     }
             }
+        val rewrites = CodeActionKind.REFACTOR_REWRITE in kinds
+        val extracts = CodeActionKind.REFACTOR_EXTRACT in kinds
+        val inlines = CodeActionKind.REFACTOR_INLINE in kinds
         val members =
-            XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
+            XdkMemberActions.actions(before.memberActions.takeIf { rewrites }.orEmpty(), source, range).mapNotNull { candidate ->
                 checkCurrent()
                 val edit = candidate.edit(text) ?: return@mapNotNull null
                 val plan = XdkRename.Plan(texts, mapOf(source to edit.all))
@@ -1016,7 +1028,7 @@ internal class XdkProjectQueries(
                 )
             }
         val extraction =
-            if (complete) {
+            if (complete && extracts) {
                 XdkLocalExtraction.candidate(text, range)?.let { candidate ->
                     checkCurrent()
                     val plan =
@@ -1037,7 +1049,7 @@ internal class XdkProjectQueries(
                 null
             }
         val inline =
-            if (complete) {
+            if (complete && inlines) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkLocalInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
@@ -1065,7 +1077,7 @@ internal class XdkProjectQueries(
                 null
             }
         val memberInline =
-            if (complete) {
+            if (complete && inlines) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkMemberInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
@@ -1083,7 +1095,7 @@ internal class XdkProjectQueries(
                 null
             }
         val memberRemoval =
-            if (complete) {
+            if (complete && inlines) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkMemberInline.everyUse(text, range, model, before)?.let { candidate ->
                         checkCurrent()
@@ -1101,7 +1113,7 @@ internal class XdkProjectQueries(
                 null
             }
         val removal =
-            if (complete) {
+            if (complete && rewrites) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkLocalRemoval.candidate(text, range, model, before.removableLocals)?.let { candidate ->
                         checkCurrent()
@@ -1119,7 +1131,7 @@ internal class XdkProjectQueries(
                 null
             }
         val safeDelete =
-            if (complete) {
+            if (complete && rewrites) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkSafeDelete.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
@@ -1146,7 +1158,7 @@ internal class XdkProjectQueries(
                 null
             }
         val method =
-            if (complete) {
+            if (complete && extracts) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkMethodExtraction.candidate(text, range, model, before.extraction)?.let { candidate ->
                         checkCurrent()
@@ -1170,7 +1182,7 @@ internal class XdkProjectQueries(
             }
         return if (isCurrent()) {
             before.models
-                .filter { it.sourceName == source && Files.isWritable(File(source).toPath()) }
+                .filter { CodeActionKind.SOURCE in kinds && it.sourceName == source && Files.isWritable(File(source).toPath()) }
                 .flatMap { XdkDocumentation.actions(uri, text, range, it) }
                 .distinct() +
                 actions + missing + declarations + members +

@@ -134,6 +134,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
+import org.xvm.lsp.adapter.CodeAction.CodeActionKind as AdapterCodeActionKind
 import org.xvm.lsp.adapter.CodeLens as AdapterCodeLens
 import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
 import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
@@ -1527,6 +1528,11 @@ class XtcTextDocumentService(
         // a quick fix names the diagnostics it resolves; answer with the client's own diagnostic objects
         val context = params.context.diagnostics.orEmpty()
         val originals = context.associateBy { Diagnostic.fromLsp(params.textDocument.uri, it) }
+        // LSP lets a server leave uncomputed the kinds that `only` leaves out; the client filters them out anyway
+        val kinds =
+            AdapterCodeActionKind.entries.filterTo(linkedSetOf()) {
+                ClientPresentation.matchesActionKind(it.toLsp(), params.context.only)
+            }
         return queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
@@ -1535,6 +1541,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     toAdapterRange(params.range),
                     originals.keys.toList(),
+                    kinds,
                 )
             },
             workspace = true,
