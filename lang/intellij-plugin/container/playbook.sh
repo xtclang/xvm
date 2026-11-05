@@ -56,18 +56,39 @@ if [ "$mode" = "vscode" ]; then
     args+=("${@:3}")
 fi
 
+# each run exports the checkout as it is when the run is asked for, into a directory of its own, which the
+# run mounts and removes when it ends, so that a run queued later from the same checkout does not replace
+# what an earlier one waits to run; an export whose run has gone is removed. The single src directory that
+# runs of an older playbook.sh share is left alone, as one of them may still wait to mount it
+for stale in "$container"/src-*; do
+    [ -e "$stale" ] || continue
+    if ! ps -p "$((10#${stale##*-}))" -o command= 2> /dev/null | grep -q 'playbook\.sh'; then
+        rm -rf "$stale"
+    fi
+done
+source="$container/src-$(date +%Y%m%d-%H%M%S)-$$"
+ticket=""
+locked=false
+cleanup() {
+    rm -rf "$source"
+    if [ -n "$ticket" ]; then rm -f "$ticket"; fi
+    if [ "$locked" = true ]; then rm -rf "$lock"; fi
+}
+trap cleanup EXIT
+mkdir -p "$source" "$container/out"
 # the checkout's files, tracked or not, without what git ignores, such as build outputs, and without
 # tracked files deleted from the working tree
-rm -rf "$container/src.new"
-mkdir -p "$container/src.new" "$container/out"
 (
     cd "$root"
     git ls-files -z --cached --others --exclude-standard \
         | while IFS= read -r -d '' file; do if [ -e "$file" ]; then printf '%s\0' "$file"; fi; done \
         | tar --null -T - -cf -
-) | tar -x -C "$container/src.new"
-rm -rf "$container/src"
-mv "$container/src.new" "$container/src"
+) | tar -x -C "$source"
+# the export has no .git, so the commit and branch, which javatools' build info and the VS Code playbook record, and
+# the uncommitted paths come from here, read with the export, so that they name the tree the run gets
+commit="$(git -C "$root" rev-parse HEAD)"
+branch="$(git -C "$root" rev-parse --abbrev-ref HEAD)"
+dirty="$(git -C "$root" status --porcelain)"
 
 # one container run at a time on this machine: the runs share the volumes, whichever worktree they start from, so
 # the lock is in the repository's common git directory, which every worktree shares; a lock whose owner has gone
@@ -80,7 +101,6 @@ queue="$common/xvm-playbook-queue"
 mkdir -p "$queue"
 ticket="$queue/$(printf '%010d-%010d' "$(date +%s)" "$$")"
 touch "$ticket"
-trap 'rm -f "$ticket"' EXIT
 first_ticket() {
     local waiting waiter
     for waiting in "$queue"/*; do
@@ -102,9 +122,10 @@ until [ "$(first_ticket)" = "$ticket" ] && mkdir "$lock" 2> /dev/null; do
     echo "waiting for an earlier playbook container run (pid ${owner:-queued}) to finish"
     sleep 15
 done
+locked=true
 echo $$ > "$lock/pid"
 rm -f "$ticket"
-trap 'rm -rf "$lock"' EXIT
+ticket=""
 # a run that took no lock, such as one of an older checkout, shares the volumes as well
 while "$engine" ps --format '{{.Names}}' | grep -q '^xvm-playbook-'; do
     echo "waiting for the running playbook container to finish"
@@ -113,11 +134,6 @@ done
 
 stamp="$(date +%Y%m%d-%H%M%S)"
 status=0
-# the export has no .git, so the commit and branch, which javatools' build info and the VS Code playbook record, and
-# the uncommitted paths come from here
-commit="$(git -C "$root" rev-parse HEAD)"
-branch="$(git -C "$root" rev-parse --abbrev-ref HEAD)"
-dirty="$(git -C "$root" status --porcelain)"
 # --init makes PID 1 reap orphans: without it, a Gradle daemon that exits on a cancel stays a zombie, which Java
 # reports alive (X260 waits for the canceled daemon to exit)
 "$engine" run --rm --init --name "xvm-playbook-$stamp" \
@@ -126,7 +142,7 @@ dirty="$(git -C "$root" status --porcelain)"
     -v xvm-playbook-gradle:/gradle \
     -v xvm-playbook-work:/work \
     -v xvm-playbook-m2:/home/playbook/.m2 \
-    -v "$container/src:/src:ro" \
+    -v "$source:/src:ro" \
     -v "$container/out:/out" \
     -v "$here/in-container.sh:/in-container.sh:ro" \
     "$image" \
