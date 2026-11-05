@@ -25,6 +25,8 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertj)
+    // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
+    testImplementation(testFixtures(libs.javatools.utils))
 }
 
 tasks.test {
