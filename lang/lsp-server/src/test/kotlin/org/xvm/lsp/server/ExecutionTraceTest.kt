@@ -12,14 +12,13 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.CompilerQueueTrace
+import org.xvm.lsp.awaited
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks trace ownership across queued, nested and asynchronous operations. Cancellation must not pretend
@@ -65,7 +64,7 @@ class ExecutionTraceTest {
             val first =
                 queue.task("compile", "file:///Alpha.x", running) {
                     entered.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                 }
             val second =
                 queue.task("cursor-COMPLETION", "file:///Beta.x", next) { next.complete(Unit) }
@@ -76,7 +75,7 @@ class ExecutionTraceTest {
             Executors.newSingleThreadExecutor().use { executor ->
                 val execution = executor.submit(first.ready())
                 try {
-                    check(entered.await(HANG_SECONDS, SECONDS))
+                    check(entered.awaited())
                     running.cancel(false)
                     val snapshot = trace.entries.last()
                     assertThat(snapshot["queueSize"].asInt).isEqualTo(2)
@@ -97,7 +96,7 @@ class ExecutionTraceTest {
                 } finally {
                     release.countDown()
                 }
-                execution.get(HANG_SECONDS, SECONDS)
+                execution.awaited()
             }
             second.run()
             assertThat(queue.progressDescription()).isNull()
@@ -126,13 +125,13 @@ class ExecutionTraceTest {
                         executor.submit {
                             ExecutionTrace.api("overlap-$index") {
                                 entered.countDown()
-                                check(release.await(HANG_SECONDS, SECONDS))
+                                check(release.awaited())
                                 ExecutionTrace.api("nested-$index") {}
                             }
                         }
                     }
                 try {
-                    check(entered.await(HANG_SECONDS, SECONDS))
+                    check(entered.awaited())
                     assertThat(
                         trace.entries
                             .filter { it["event"].asString == "start" }
@@ -141,7 +140,7 @@ class ExecutionTraceTest {
                 } finally {
                     release.countDown()
                 }
-                work.forEach { it.get(HANG_SECONDS, SECONDS) }
+                work.forEach { it.awaited() }
             }
             assertThat(
                 trace.entries.filter {

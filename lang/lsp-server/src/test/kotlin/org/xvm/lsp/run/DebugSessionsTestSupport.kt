@@ -4,14 +4,14 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.eclipse.lsp4j.services.LanguageClient
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
 import org.xvm.lsp.server.DebugMessageParams
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.RunExitedParams
 import org.xvm.lsp.server.RunOutputParams
 import org.xvm.lsp.server.XtcLanguageClient
+import org.xvm.lsp.what
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /** Records the DAP messages that debug sessions send their client. */
 internal class DebugClient :
@@ -35,7 +35,7 @@ internal class DebugClient :
     ): List<JsonObject> {
         val received = mutableListOf<JsonObject>()
         while (received.none(last)) {
-            val next = messages.poll(HANG_SECONDS, SECONDS) ?: error("no DAP message within $HANG_SECONDS s after $received")
+            val next = messages.awaited(what { "a DAP message after $received" })
             if (next.sessionId == sessionId) received += next.message
         }
         return received

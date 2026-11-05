@@ -22,13 +22,13 @@ import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LiteralExpression
 import org.xvm.compiler.ast.NameExpression
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.LIVELOCK_SECONDS
 import org.xvm.util.PackedInteger
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 /** Verifies ordinary function typing without the partial-analysis or selected-call APIs. */
-@Timeout(HANG_SECONDS)
+@Timeout(LIVELOCK_SECONDS)
 class CompilerFunctionTypingTest {
     @ParameterizedTest
     @ValueSource(strings = ["id", "&id", "pick", "&pick", "plain", "&plain"])

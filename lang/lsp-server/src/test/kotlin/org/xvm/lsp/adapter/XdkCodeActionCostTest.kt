@@ -4,13 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -126,7 +125,7 @@ class XdkCodeActionCostTest {
     /** The actions a request answers with, and the module compiles it ran. */
     private fun counted(request: () -> CompletableFuture<List<CodeAction>>): Pair<List<CodeAction>, Int> {
         val start = compiles.get()
-        val actions = request().get(HANG_SECONDS, SECONDS)
+        val actions = request().awaited()
         return actions to compiles.get() - start
     }
 

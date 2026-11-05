@@ -4,13 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -160,7 +159,7 @@ class XdkCodeActionPatternTest {
     /** The module compiles that [request] runs. */
     private fun counted(request: () -> CompletableFuture<List<CodeAction>>): Int {
         val start = compiles.get()
-        request().get(HANG_SECONDS, SECONDS)
+        request().awaited()
         return compiles.get() - start
     }
 

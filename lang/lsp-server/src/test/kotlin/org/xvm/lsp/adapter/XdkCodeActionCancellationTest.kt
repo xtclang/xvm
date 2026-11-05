@@ -4,11 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -33,15 +32,15 @@ class XdkCodeActionCancellationTest {
             // the request's base compile, then its first proof, of the first of three imports
             held = start + 2
             val request = adapter.getCodeActionsAsync(uri, Range(Position(9, 15), Position(9, 24)), emptyList())
-            assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(entered.awaited()).isTrue()
             request.cancel(false)
             release.countDown()
             // the queue runs one query at a time, so the cancelled one has ended once a later one answers
-            adapter.getSignatureHelpAsync(uri, 9, 15).get(HANG_SECONDS, SECONDS)
+            adapter.getSignatureHelpAsync(uri, 9, 15).awaited()
             assertThat(request.isCancelled).isTrue()
             assertThat(compiles.get() - start).isEqualTo(2)
             // uncancelled, the same request runs every proof
-            assertThat(adapter.getCodeActionsAsync(uri, Range(Position(9, 15), Position(9, 24)), emptyList()).get(HANG_SECONDS, SECONDS))
+            assertThat(adapter.getCodeActionsAsync(uri, Range(Position(9, 15), Position(9, 24)), emptyList()).awaited())
                 .isNotEmpty()
             assertThat(compiles.get() - start).isGreaterThan(2 + 5)
         }
@@ -63,7 +62,7 @@ class XdkCodeActionCancellationTest {
             { sources, repository, errors ->
                 if (compiles.incrementAndGet() == held) {
                     entered.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                 }
                 support.compileModule(sources, repository, errors)
             },

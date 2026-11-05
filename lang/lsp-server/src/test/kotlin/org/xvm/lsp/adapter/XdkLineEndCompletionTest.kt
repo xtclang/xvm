@@ -4,9 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.util.concurrent.TimeUnit.SECONDS
+import org.xvm.lsp.awaited
 
 /**
  * Completion and signature help where a member access, a name, a value or a call is typed at the end of a line, as
@@ -91,7 +90,7 @@ class XdkLineEndCompletionTest {
             val edits =
                 adapter
                     .getInlineCompletionsAsync(URI, Position(line, column), InlineCompletionContext(true))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
             assertThat(edits).containsExactly(TextEdit(Range(Position(line, column - 4), Position(line, column)), "current"))
         }
     }
