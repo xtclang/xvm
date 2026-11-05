@@ -70,6 +70,23 @@ class XdkModuleSessionTest {
     }
 
     @Test
+    fun `a module's sources and directories come in path order`() {
+        val root = directory.resolve("Project.x").toFile().canonicalFile
+        root.writeText("module Project {}")
+        val members =
+            listOf("Kilo", "Alpha", "Juliet", "Echo", "Bravo", "India", "Delta", "Hotel", "Charlie", "Golf").flatMap { name ->
+                val folder = File(root.parentFile, "Project/${name.lowercase()}").also { it.mkdirs() }
+                listOf(name, "Z$name").map { File(folder, "$it.x").also { file -> file.writeText("class $it {}") } }
+            }
+        val sources = XdkSources.capture(root, emptyMap()) { false }
+        val files = (listOf(root) + members).sortedBy { it.path }
+        // a Map.copyOf, as the text was, iterates in an order that each JVM randomizes, and a walk in the file system's
+        assertThat(sources.inputs.text.keys).containsExactlyElementsOf(files)
+        assertThat(sources.documentUris).containsExactlyElementsOf(files.map { it.toURI().toString() })
+        assertThat(sources.inputs.directories).containsExactlyElementsOf(sources.inputs.directories.sortedBy { it.path })
+    }
+
+    @Test
     fun `member edits invalidate the whole module and preserve source URI aliases`() {
         val (root, member) = fixture()
         val rootUri = root.toURI().toString()
