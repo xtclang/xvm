@@ -165,9 +165,11 @@ val generateBuildInfo = tasks.register<GenerateBuildInfo>("generateBuildInfo") {
         (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails>).call()
     }
 
-    gitCommit.set(versionDetailsProvider.map { it.gitHashFull ?: "unknown" })
+    // A copy of the tree without .git, such as the playbook container's, names its commit and branch in XTC_COMMIT
+    // and XTC_BRANCH: asking git there finds no repository, and its version plugin prints a stack trace for each.
+    gitCommit.set(providers.environmentVariable("XTC_COMMIT").orElse(versionDetailsProvider.map { it.gitHashFull ?: "unknown" }))
 
-    gitStatus.set(versionDetailsProvider.map { it.branchName ?: "detached-head" })
+    gitStatus.set(providers.environmentVariable("XTC_BRANCH").orElse(versionDetailsProvider.map { it.branchName ?: "detached-head" }))
 
     // Put it under build/, so Gradle owns it
     outputFile.set(layout.buildDirectory.file("generated/resources/build-info/build-info.properties"))
