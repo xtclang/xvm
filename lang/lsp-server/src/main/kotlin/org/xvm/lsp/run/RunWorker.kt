@@ -38,6 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
+import org.xvm.runtime.Runtime as XvmRuntime
 
 /**
  * Entry point of the execution worker JVM. The language server starts it on demand and exchanges one
@@ -64,6 +65,9 @@ object RunWorker {
         val runs = Runs(channel)
         System.setOut(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
         System.setErr(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
+        // the runtime's own failures, such as one that ends a service's shutdown, are not the program's: they go to the
+        // worker's log, where a stopped run, whose output is dropped, cannot hide them
+        XvmRuntime.setFailureReporter { channel.log(it.trimEnd()) }
         XdkLibraries.configure()
         channel.debug.send(RunWorkerIdentity.current().ready(ProcessHandle.current().pid()))
 
