@@ -34,6 +34,7 @@ import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
@@ -177,6 +178,44 @@ class XdkPullDiagnosticsTest {
             assertThat(session.published.last().diagnostics).isNotEmpty()
             assertThatThrownBy { session.pull(URI) }.hasMessageContaining("not negotiated")
             assertThat(session.refreshes.get()).isZero()
+        }
+    }
+
+    @Test
+    fun `a library source that the debugger opens has no diagnostics, pushed or pulled, and keeps its outline`() {
+        CompilerTestSupport.configure()
+        // the read-only copy that a stack frame in the XDK names, which the client opens as a step goes into it: on its
+        // own its file include, $/implicit.x, and its imports of the library's own names do not resolve
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/reflect/TypeSystem.x")))
+        val uri = copy.toUri().toString()
+        val text = copy.toFile().readText()
+
+        // its compile on its own still gives its outline
+        fun outline(session: Session) =
+            assertThat(
+                session.server.textDocumentService
+                    .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                    .awaited(),
+            ).isNotEmpty()
+        Session(pull = false).use { session ->
+            session.open(uri, text, 1)
+            awaitUntil("the open library source's diagnostics are published") { session.published.any { it.uri == uri } }
+            assertThat(session.published.filter { it.uri == uri }.flatMap { it.diagnostics }).isEmpty()
+            outline(session)
+        }
+        Session().use { session ->
+            session.open(uri, text, 1)
+            assertThat(session.pull(uri).left.items).isEmpty()
+            assertThat(
+                session
+                    .workspace()
+                    .items
+                    .mapNotNull { it.left }
+                    .filter { it.uri == uri }
+                    .flatMap { it.items },
+            ).isEmpty()
+            assertThat(session.published.filter { it.uri == uri }.flatMap { it.diagnostics }).isEmpty()
+            outline(session)
         }
     }
 
