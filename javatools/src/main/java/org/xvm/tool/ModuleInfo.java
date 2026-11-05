@@ -501,16 +501,46 @@ public class ModuleInfo {
     }
 
     /**
-     * @return the module source files in the project's conventional main source directory, such
-     *         as ./src/main/x: the modules that a test module of the project can import
+     * @return for a test module in its project's test source directory ({@link #isTestSource()}),
+     *         the module source files in the project's conventional main source directory, such as
+     *         ./src/main/x, which it can import, and which compile with it: "xtc build", "xtc run"
+     *         and "xtc test" all take them; for any other module, none
      */
     public List<File> getProjectModuleFiles() {
-        File mainDir = projectDir == null ? null : conventionalSourceDir(projectDir, "main");
+        File mainDir = isTestSource() ? conventionalSourceDir(projectDir, "main") : null;
         return mainDir == null
                 ? List.of()
                 : sourceFiles(mainDir).stream()
                         .filter(file -> file.isFile() && extractModuleName(file) != null)
                         .toList();
+    }
+
+    /**
+     * @return true iff one of the {@link #getProjectModuleFiles() project's modules} that this
+     *         test module compiles with is not up to date, so that the test module compiles again
+     *         with it
+     */
+    public boolean isProjectChanged() {
+        return getProjectModuleFiles().stream().anyMatch(file -> !new ModuleInfo(file, true).isUpToDate());
+    }
+
+    /**
+     * @param path  a module path
+     *
+     * @return the module path to compile or run this module with: for a test module that has
+     *         {@link #getProjectModuleFiles() project's modules}, the project's binary directory,
+     *         once it exists, ahead of the given path, where they are compiled to; otherwise the
+     *         given path
+     */
+    public List<File> withProjectBinaries(List<File> path) {
+        File dir = getBinaryDir();
+        if (getProjectModuleFiles().isEmpty() || dir == null || !dir.isDirectory() || path.contains(dir)) {
+            return path;
+        }
+        var result = new ArrayList<File>(path.size() + 1);
+        result.add(dir);
+        result.addAll(path);
+        return result;
     }
 
     /**

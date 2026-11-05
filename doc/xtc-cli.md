@@ -314,7 +314,8 @@ xtc test -t tests.MathTest.adds -I xvm.xunit.report=json myapp.xtc
 With `--deduce`, `xtc test` also finds a test module by its name in the project's `src/test/x`, where
 `xtc init` puts it, such as `xtc test --deduce myappTest` in the project's directory. Such a module
 compiles with the project's modules in `src/main/x`, which it imports, into the project's `build`
-directory, and again when one of them has changed.
+directory, and again when one of them has changed; `xtc build --deduce myappTest` and `xtc run`
+compile it the same way.
 
 See the [xunit README](../lib_xunit/README.md#running-tests) for selecting tests and the report's events.
 
