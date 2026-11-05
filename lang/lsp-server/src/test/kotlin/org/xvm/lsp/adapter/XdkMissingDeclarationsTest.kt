@@ -33,6 +33,49 @@ class XdkMissingDeclarationsTest {
         )
     }
 
+    @Test
+    fun `a missing class is a quick fix for the diagnostic the compiler reports, as an editor asks for it`() {
+        CompilerTestSupport.configure()
+        // the compiler reports the declaration's type, the statement's first error, and not the new expression
+        val text = "module App {\n    void run() {\n        Joker joker = new Joker();\n    }\n}\n"
+        val file =
+            directory
+                .resolve("App.x")
+                .toFile()
+                .canonicalFile
+                .apply { writeText(text) }
+        val uri = file.toURI().toString()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val diagnostic = adapter.compile(uri, text).diagnostics.single()
+            val at = diagnostic.location
+            val span = Range(Position(at.startLine, at.startColumn), Position(at.endLine, at.endColumn))
+            assertThat(span).isEqualTo(Range(Position(2, 8), Position(2, 13)))
+            // LSP4IJ asks for each diagnostic under the caret, over its range, for quick fixes only
+            val action =
+                adapter
+                    .getCodeActionsAsync(uri, span, listOf(diagnostic), setOf(CodeAction.CodeActionKind.QUICKFIX))
+                    .get()
+                    .single { it.title == "Create class 'Joker'" }
+            assertThat(action.diagnostics).containsExactly(diagnostic)
+            // a selection of the whole statement names the class twice, and gets one action for it
+            val statement = Range(Position(2, 8), Position(2, 34))
+            assertThat(adapter.getCodeActions(uri, statement, listOf(diagnostic)).filter { it.title == "Create class 'Joker'" })
+                .hasSize(1)
+            val changed =
+                requireNotNull(action.edit)
+                    .changes
+                    .getValue(uri)
+                    .sortedByDescending { it.range.start.line * text.length + it.range.start.column }
+                    .fold(text) { current, change ->
+                        fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
+                        current.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
+                    }
+            assertThat(changed).contains("class Joker {}")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["", "static "])
     fun `read only property repairs instance access but never invents a static constant value`(modifier: String) {
