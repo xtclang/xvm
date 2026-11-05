@@ -106,6 +106,33 @@ class XdkSyntaxCompletionProtocolTest {
     }
 
     @Test
+    fun `a method with parameters inserts its call as a snippet for clients that take snippets, and its name otherwise`() {
+        listOf(false, true).forEach { snippets ->
+            XtcLanguageServer(XdkAdapter()).use { server ->
+                server.connect(mock(LanguageClient::class.java))
+                server.initialize(params(snippets)).get(HANG_SECONDS, SECONDS)
+                val text =
+                    "module Editing {\n    class Hand { Int size() = 0; void addCard(String card) {} }\n" +
+                        "    void run(Hand hand) {\n        hand.\n    }\n}"
+                val service = server.textDocumentService
+                service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
+                val items =
+                    service
+                        .completion(CompletionParams(TextDocumentIdentifier(URI), Position(3, 13)))
+                        .get(HANG_SECONDS, SECONDS)
+                        .left
+                val add = items.single { it.label == "addCard" }
+                assertThat(add.insertTextFormat).isEqualTo(if (snippets) InsertTextFormat.Snippet else InsertTextFormat.PlainText)
+                assertThat(add.textEdit.left.newText).isEqualTo(if (snippets) "addCard(${'$'}0)" else "addCard")
+                assertThat(add.insertText).isEqualTo(add.textEdit.left.newText)
+                val size = items.single { it.label == "size" }
+                assertThat(size.insertTextFormat).isEqualTo(InsertTextFormat.PlainText)
+                assertThat(size.textEdit.left.newText).isEqualTo("size()")
+            }
+        }
+    }
+
+    @Test
     fun `clients that only adjust indentation receive relative template bodies`() {
         val initialize =
             params(false).apply {
