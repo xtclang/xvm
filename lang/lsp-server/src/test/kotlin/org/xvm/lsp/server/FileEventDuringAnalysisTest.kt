@@ -17,12 +17,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * A watcher event that arrives while the first compile of a document is running must not retire the
@@ -44,7 +43,7 @@ class FileEventDuringAnalysisTest {
                 { sources, repository, errors ->
                     if (entered.count > 0) {
                         entered.countDown()
-                        check(release.await(HANG_SECONDS, SECONDS))
+                        check(release.awaited())
                     }
                     support.compileModule(sources, repository, errors)
                 },
@@ -57,7 +56,7 @@ class FileEventDuringAnalysisTest {
                     InitializeParams().apply {
                         workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "workspace"))
                     },
-                ).get(HANG_SECONDS, SECONDS)
+                ).awaited()
             server.initialized(InitializedParams())
             try {
                 // as the VS Code playbook does: write a file in a new folder, then open it
@@ -66,7 +65,7 @@ class FileEventDuringAnalysisTest {
                 val uri = file.toURI().toString()
                 val service = server.textDocumentService
                 service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, SOURCE)))
-                assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
+                assertThat(entered.awaited()).isTrue()
                 val at = SOURCE.lines()[1].indexOf("greeting") + 1
                 val hover = service.hover(HoverParams(TextDocumentIdentifier(uri), Position(1, at)))
 
@@ -83,7 +82,7 @@ class FileEventDuringAnalysisTest {
                 // a request retired here fails with "Document changed during analysis"
                 assertThat(
                     hover
-                        .get(HANG_SECONDS, SECONDS)
+                        .awaited()
                         .contents.right.value,
                 ).contains("greeting")
             } finally {

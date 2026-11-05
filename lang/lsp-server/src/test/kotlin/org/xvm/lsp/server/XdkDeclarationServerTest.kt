@@ -10,10 +10,9 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.util.concurrent.TimeUnit.SECONDS
+import org.xvm.lsp.awaited
 
 /**
  * Checks declaration-provider negotiation and conversion of multiple targets to wire locations. Unsupported
@@ -27,7 +26,7 @@ class XdkDeclarationServerTest {
             server.connect(mock(LanguageClient::class.java))
             try {
                 val capabilities =
-                    server.initialize(InitializeParams()).get(HANG_SECONDS, SECONDS).capabilities
+                    server.initialize(InitializeParams()).awaited().capabilities
                 if (adapter is XdkAdapter) {
                     assertThat(capabilities.declarationProvider.left).isTrue()
                     val uri = "file:///Declarations.x"
@@ -45,7 +44,7 @@ class XdkDeclarationServerTest {
                                     TextDocumentIdentifier(uri),
                                     Position(0, text.lastIndexOf("read")),
                                 ),
-                            ).get(HANG_SECONDS, SECONDS)
+                            ).awaited()
                             .left
                     assertThat(targets).hasSize(2)
                     assertThat(targets.map { it.range.start.character })
@@ -60,7 +59,7 @@ class XdkDeclarationServerTest {
                     assertThat(capabilities.declarationProvider).isNull()
                 }
             } finally {
-                server.shutdown().get(HANG_SECONDS, SECONDS)
+                server.shutdown().awaited()
             }
         }
     }

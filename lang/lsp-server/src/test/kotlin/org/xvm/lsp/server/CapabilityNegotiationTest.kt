@@ -34,14 +34,13 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.ParameterInfo
 import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import org.xvm.lsp.adapter.CodeAction as Action
 import org.xvm.lsp.adapter.DocumentLink as AdapterLink
 import org.xvm.lsp.adapter.Position as AdapterPosition
@@ -331,9 +330,9 @@ class CapabilityNegotiationTest {
                     server.workspaceService.executeCommand(
                         ExecuteCommandParams(command.command, command.arguments),
                     )
-                sent.get(HANG_SECONDS, SECONDS)
+                sent.awaited()
                 if (stalled) server.close()
-                assertThatThrownBy { applying.get(HANG_SECONDS, SECONDS) }
+                assertThatThrownBy { applying.awaited() }
                     .hasMessageContaining(if (stalled) "changed" else "Read-only document")
             }
         }

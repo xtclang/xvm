@@ -8,14 +8,13 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -98,7 +97,7 @@ class XdkProjectQueryLifecycleTest {
                 val retained = session.adapter.getCachedResult(session.libraryUri)
                 session.hold.set(true)
                 val query = session.request(feature)
-                assertThat(session.entered.await(HANG_SECONDS, SECONDS))
+                assertThat(session.entered.awaited())
                     .describedAs("$feature / $change")
                     .isTrue()
                 when (change) {
@@ -162,10 +161,10 @@ class XdkProjectQueryLifecycleTest {
         Session().use { session ->
             session.hold.set(true)
             val query = session.request(feature)
-            assertThat(session.entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(session.entered.awaited()).isTrue()
             session.consumer.writeText("\n$CONSUMER")
             session.release.countDown()
-            val result = query.get(HANG_SECONDS, SECONDS)
+            val result = query.awaited()
             when (feature) {
                 Feature.REFERENCES -> {
                     assertThat(result as List<*>).isEmpty()
@@ -190,11 +189,11 @@ class XdkProjectQueryLifecycleTest {
         Session().use { session ->
             session.hold.set(true)
             val old = session.request(feature)
-            assertThat(session.entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(session.entered.awaited()).isTrue()
             val current = session.request(feature)
             assertThat(old.isCancelled).isTrue()
             session.release.countDown()
-            assertThat(current.get(HANG_SECONDS, SECONDS)).isNotNull()
+            assertThat(current.awaited()).isNotNull()
             assertThat(session.adapter.getCachedResult(session.libraryUri)?.success).isTrue()
         }
     }
@@ -209,7 +208,7 @@ class XdkProjectQueryLifecycleTest {
                     Range(Position(0, 25), Position(0, 29)),
                     emptyList(),
                 )
-            assertThat(session.entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(session.entered.awaited()).isTrue()
             val background =
                 session.adapter.getCodeActionsAsync(
                     session.libraryUri,
@@ -218,10 +217,10 @@ class XdkProjectQueryLifecycleTest {
                 )
             assertThat(quickFix.isCancelled).isFalse()
             session.release.countDown()
-            assertThat(quickFix.get(HANG_SECONDS, SECONDS)).allMatch {
+            assertThat(quickFix.awaited()).allMatch {
                 it.kind == CodeAction.CodeActionKind.REFACTOR_REWRITE
             }
-            assertThat(background.get(HANG_SECONDS, SECONDS).map { it.title }).containsExactly("Generate documentation comment")
+            assertThat(background.awaited().map { it.title }).containsExactly("Generate documentation comment")
         }
     }
 
@@ -259,7 +258,7 @@ class XdkProjectQueryLifecycleTest {
                 { sources, repository, errors ->
                     if (hold.compareAndSet(true, false)) {
                         entered.countDown()
-                        check(release.await(HANG_SECONDS, SECONDS))
+                        check(release.awaited())
                         // Even a compiler callback ignoring cancellation cannot publish an obsolete
                         // proof.
                         support.compileModule(sources, repository, ErrorList())

@@ -7,13 +7,12 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Location
 import java.nio.file.Path
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import java.net.URI as SourceUri
 
 /**
@@ -700,7 +699,7 @@ class XdkSemanticLookupTest {
                     assertThat(passive.typeDefinitionLocationsAt(use.line, use.column)).hasSize(1)
                     assertThat(passive.implementationLocationsAt(api.line, api.column)).isEmpty()
                     assertThat(inspected.implementationLocationsAt(api.line, api.column)).hasSize(1)
-                }.get(HANG_SECONDS, SECONDS)
+                }.awaited()
         }
     }
 

@@ -23,14 +23,13 @@ import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
@@ -137,7 +136,7 @@ class DocumentSynchronizationTest {
             val caps =
                 server
                     .initialize(params(incremental = true, format = true))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .capabilities
             assertThat(caps.textDocumentSync.right.change)
                 .isEqualTo(TextDocumentSyncKind.Incremental)
@@ -156,7 +155,7 @@ class DocumentSynchronizationTest {
             assertThat(
                 documents
                     .willSaveWaitUntil(save)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .newText,
             ).isEqualTo("aXYb\r\nline")
@@ -170,7 +169,7 @@ class DocumentSynchronizationTest {
                 ),
             )
             assertThat(compilation.isDone).isFalse()
-            assertThatThrownBy { documents.willSaveWaitUntil(save).get(HANG_SECONDS, SECONDS) }.hasMessageContaining("out of sync")
+            assertThatThrownBy { documents.willSaveWaitUntil(save).awaited() }.hasMessageContaining("out of sync")
             // later patches would apply to the wrong text and are ignored
             documents.didChange(
                 DidChangeTextDocumentParams(
@@ -178,7 +177,7 @@ class DocumentSynchronizationTest {
                     listOf(patch(0, 0, 0, 1, "Q")),
                 ),
             )
-            assertThatThrownBy { documents.willSaveWaitUntil(save).get(HANG_SECONDS, SECONDS) }.hasMessageContaining("out of sync")
+            assertThatThrownBy { documents.willSaveWaitUntil(save).awaited() }.hasMessageContaining("out of sync")
             // a full-text change resynchronizes, including the patches that follow it in the same batch
             documents.didChange(
                 DidChangeTextDocumentParams(
@@ -189,7 +188,7 @@ class DocumentSynchronizationTest {
             assertThat(
                 documents
                     .willSaveWaitUntil(save)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .newText,
             ).isEqualTo("QXYb\r\nline")
@@ -202,7 +201,7 @@ class DocumentSynchronizationTest {
             assertThat(
                 documents
                     .willSaveWaitUntil(save)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .newText,
             ).isEqualTo("QXYb\r\nline")
@@ -214,7 +213,7 @@ class DocumentSynchronizationTest {
         CompilerTestSupport.configure()
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(mock(LanguageClient::class.java))
-            val caps = server.initialize(params()).get(HANG_SECONDS, SECONDS).capabilities
+            val caps = server.initialize(params()).awaited().capabilities
             assertThat(caps.textDocumentSync.right.change).isEqualTo(TextDocumentSyncKind.Full)
             assertThat(caps.documentRangeFormattingProvider.right.rangesSupport).isTrue()
             val documents = server.textDocumentService
@@ -227,7 +226,7 @@ class DocumentSynchronizationTest {
                 ),
             )
             // the refused patch leaves the editor and server texts apart, so queries are refused
-            assertThatThrownBy { documents.willSaveWaitUntil(save).get(HANG_SECONDS, SECONDS) }.hasMessageContaining("out of sync")
+            assertThatThrownBy { documents.willSaveWaitUntil(save).awaited() }.hasMessageContaining("out of sync")
             // full sync's next change carries the whole text, which resynchronizes the document
             documents.didChange(
                 DidChangeTextDocumentParams(
@@ -235,7 +234,7 @@ class DocumentSynchronizationTest {
                     listOf(TextDocumentContentChangeEvent(source)),
                 ),
             )
-            assertThat(documents.willSaveWaitUntil(save).get(HANG_SECONDS, SECONDS)).isEmpty()
+            assertThat(documents.willSaveWaitUntil(save).awaited()).isEmpty()
             val edits =
                 documents
                     .rangesFormatting(
@@ -248,7 +247,7 @@ class DocumentSynchronizationTest {
                                 Range(Position(1, 0), Position(3, 0)),
                             ),
                         ),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             assertThat(edits).hasSize(2)
             assertThat(edits.map { it.range.start.line }).containsExactly(1, 2)
             assertThat(edits.map { it.newText }).containsOnly("    ")
@@ -260,7 +259,7 @@ class DocumentSynchronizationTest {
                             FormattingOptions(4, true),
                             emptyList(),
                         ),
-                    ).get(HANG_SECONDS, SECONDS),
+                    ).awaited(),
             ).isEmpty()
             assertThatThrownBy {
                 documents
@@ -270,7 +269,7 @@ class DocumentSynchronizationTest {
                             FormattingOptions(4, true),
                             listOf(Range(Position(10, 0), Position(10, 1))),
                         ),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             }.hasMessageContaining("Invalid text position")
         }
     }
@@ -285,11 +284,11 @@ class DocumentSynchronizationTest {
                             initializationOptions =
                                 mapOf("xtcDocumentSync" to mapOf("incremental" to "yes"))
                         },
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             }.hasMessageContaining("must be a boolean")
-            server.initialize(InitializeParams()).get(HANG_SECONDS, SECONDS)
+            server.initialize(InitializeParams()).awaited()
             assertThatThrownBy {
-                server.textDocumentService.willSaveWaitUntil(save).get(HANG_SECONDS, SECONDS)
+                server.textDocumentService.willSaveWaitUntil(save).awaited()
             }.hasMessageContaining("not negotiated")
         }
     }

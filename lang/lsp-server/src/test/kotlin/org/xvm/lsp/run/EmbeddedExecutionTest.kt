@@ -8,7 +8,6 @@ import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.entry
-import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -23,13 +22,14 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.debug.ProgramEvents
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Heavy
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuild
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaitUntil
+import org.xvm.lsp.awaited
 import org.xvm.lsp.server.DebugMessageParams
 import org.xvm.lsp.server.DebugSessionParams
 import org.xvm.lsp.server.DebugSessions
@@ -47,7 +47,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -65,7 +64,7 @@ class EmbeddedExecutionTest {
     @TempDir lateinit var directory: Path
 
     private lateinit var lib: File
-    private var worker = RunWorkerProcess(limits = HANG_LIMITS)
+    private var worker = RunWorkerProcess(limits = LIVELOCK_LIMITS)
 
     @BeforeAll
     fun compileProgramsOnce() {
@@ -170,7 +169,7 @@ class EmbeddedExecutionTest {
         if (left != 0) {
             println("a test left runs on the class's worker (tracked=$left), so the next test gets a fresh one")
             worker.close()
-            worker = RunWorkerProcess(limits = HANG_LIMITS)
+            worker = RunWorkerProcess(limits = LIVELOCK_LIMITS)
         }
     }
 
@@ -214,7 +213,7 @@ class EmbeddedExecutionTest {
     @Test
     fun `after a run the worker reports its heap in use and its threads, within the thread limit`() {
         assertThat(run("Exit").code).isEqualTo(42)
-        soon().until { worker.usage().isNotEmpty() }
+        awaitUntil { worker.usage().isNotEmpty() }
         val limits = RunWorkerProcess.Limits()
         assertThat(worker.usage().values).allSatisfy { usage ->
             println("execution worker after a run: $usage")
@@ -229,7 +228,7 @@ class EmbeddedExecutionTest {
     fun `repeated runs reuse one worker and leave no run, console or pool thread behind`() {
         // the heap a worker reports is what the JVM left after collections it runs when it chooses to, so no heap use
         // retires this worker; what the test checks is counted
-        RunWorkerProcess(limits = HANG_LIMITS.copy(heap = Long.MAX_VALUE)).use { workers ->
+        RunWorkerProcess(limits = LIVELOCK_LIMITS.copy(heap = Long.MAX_VALUE)).use { workers ->
             val reports = mutableListOf<RunWorkerProcess.Usage>()
             val pids = mutableSetOf<Long>()
 
@@ -257,8 +256,8 @@ class EmbeddedExecutionTest {
                         },
                     )
                 act(id, output)
-                val (code, error) = exited.get(HANG_SECONDS, SECONDS)
-                soon().until { workers.usage().values.any { it.run == id } }
+                val (code, error) = exited.awaited()
+                awaitUntil { workers.usage().values.any { it.run == id } }
                 reports += workers.usage().values.single { it.run == id }
                 pids += workers.workerPids()
                 return Outcome(output.toString(), code, error)
@@ -271,13 +270,13 @@ class EmbeddedExecutionTest {
                 assertThat(once("Thrower").error).contains("boom")
                 val asked =
                     once("Ask") { id, output ->
-                        soon().until { "Name? " in output }
+                        awaitUntil { "Name? " in output }
                         workers.input(id, "Ada\n")
                         workers.endInput(id)
                     }
                 assertThat(asked.output).contains("Hello, Ada!")
                 once("Waiter") { id, output ->
-                    soon().until { "waiting" in output }
+                    awaitUntil { "waiting" in output }
                     workers.stop(id)
                 }
             }
@@ -295,7 +294,7 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `each run starts with fresh program state, though one worker serves both`() {
-        RunWorkerProcess(limits = HANG_LIMITS).use { workers ->
+        RunWorkerProcess(limits = LIVELOCK_LIMITS).use { workers ->
             val pids = mutableSetOf<Long>()
             repeat(2) { round ->
                 // the counter keeps its count within a run; a run in the container of the run before it would go on
@@ -334,14 +333,14 @@ class EmbeddedExecutionTest {
                             .first { it.startsWith("worker-pid=") }
                             .removePrefix("worker-pid=")
                             .toLong()
-                    }.get(HANG_SECONDS, SECONDS)
+                    }.awaited()
             val worker = ProcessHandle.of(pid).orElseThrow()
             try {
                 // killed, as when the IDE or the operating system ends the server: nothing tells the worker
                 host.destroyForcibly()
-                val exited = runCatching { worker.onExit().get(HANG_SECONDS, SECONDS) }.isSuccess
+                val exited = runCatching { worker.onExit().awaited() }.isSuccess
                 assertThat(exited)
-                    .describedAs { "The worker still runs $HANG_SECONDS s after its server died:\n${linuxState(pid)}\n${threadDump(pid)}" }
+                    .describedAs { "The worker still runs after its server died:\n${linuxState(pid)}\n${threadDump(pid)}" }
                     .isTrue()
             } finally {
                 worker.destroyForcibly()
@@ -412,14 +411,14 @@ class EmbeddedExecutionTest {
         adapter.initializeWorkspace(listOf(directory.toString()))
         adapter.replaceSourceModules(listOf(XdkSourceModule("Forever", forever)))
         // the server's own workers, with limits that only a hang reaches
-        val server = XtcLanguageServer(adapter, workerLimits = HANG_LIMITS)
-        assertThat(server.run(RunParams(module = "Forever", runId = "editor-closes")).get(HANG_SECONDS, SECONDS).runId)
+        val server = XtcLanguageServer(adapter, workerLimits = LIVELOCK_LIMITS)
+        assertThat(server.run(RunParams(module = "Forever", runId = "editor-closes")).awaited().runId)
             .isEqualTo("editor-closes")
         val workers = server.runWorkerPids().map { ProcessHandle.of(it).orElseThrow() }
         assertThat(workers).isNotEmpty()
         // the editor closes its end: the server reads the end of its input, shuts down and ends its workers
         launchStdio(server, ByteArrayInputStream(byteArrayOf()), ByteArrayOutputStream())
-        workers.forEach { assertThat(it.onExit().get(HANG_SECONDS, SECONDS).isAlive).isFalse() }
+        workers.forEach { assertThat(it.onExit().awaited().isAlive).isFalse() }
     }
 
     @Test
@@ -468,9 +467,9 @@ class EmbeddedExecutionTest {
                     }
                 },
             )
-        started.get(HANG_SECONDS, SECONDS)
+        started.awaited()
         worker.stop(id)
-        exited.get(HANG_SECONDS, SECONDS)
+        exited.awaited()
 
         assertThat(run("Exit").code).isEqualTo(42)
     }
@@ -497,10 +496,10 @@ class EmbeddedExecutionTest {
                     }
                 },
             )
-        started.get(HANG_SECONDS, SECONDS)
+        started.awaited()
         // the stop terminates the program's container, whose next service it then cannot make, or call
         worker.stop(id)
-        assertThat(exited.get(HANG_SECONDS, SECONDS)).describedAs("the stopped run's error").isNull()
+        assertThat(exited.awaited()).describedAs("the stopped run's error").isNull()
 
         assertThat(run("Exit").code).isEqualTo(42)
     }
@@ -527,10 +526,10 @@ class EmbeddedExecutionTest {
                     },
                 )
             }
-        soon().until { outputs.all { "started" in it } }
+        awaitUntil { outputs.all { "started" in it } }
         assertThat(worker.workerPids()).hasSizeGreaterThanOrEqualTo(2)
         ids.forEach(worker::stop)
-        exits.forEach { it.get(HANG_SECONDS, SECONDS) }
+        exits.forEach { it.awaited() }
 
         assertThat(run("Exit").code).isEqualTo(42)
     }
@@ -557,10 +556,10 @@ class EmbeddedExecutionTest {
                     }
                 },
             )
-        prompted.get(HANG_SECONDS, SECONDS)
+        prompted.awaited()
         worker.input(id, "Ada Lovelace ✓\n")
         worker.endInput(id)
-        val (code, error) = exited.get(HANG_SECONDS, SECONDS)
+        val (code, error) = exited.awaited()
 
         assertThat(error).isNull()
         assertThat(code).isEqualTo(0)
@@ -589,9 +588,9 @@ class EmbeddedExecutionTest {
                     }
                 },
             )
-        waiting.get(HANG_SECONDS, SECONDS)
+        waiting.awaited()
         worker.stop(id)
-        exited.get(HANG_SECONDS, SECONDS)
+        exited.awaited()
 
         assertThat(run("Exit").code).isEqualTo(42)
     }
@@ -620,8 +619,8 @@ class EmbeddedExecutionTest {
                 val started = runs.run(RunParams(module = "Ask", runId = "typed-early"))
                 // typed right away: until the build finishes and the program starts, the server holds it
                 assertThat(runs.input(RunInputParams("typed-early", "Grace\n", end = true))).isTrue()
-                assertThat(started.get(HANG_SECONDS, SECONDS).runId).isEqualTo("typed-early")
-                val exit = exited.get(HANG_SECONDS, SECONDS)
+                assertThat(started.awaited().runId).isEqualTo("typed-early")
+                val exit = exited.awaited()
 
                 assertThat(exit.error).isNull()
                 assertThat(output.toString()).contains("Hello, Grace!").contains("next=[]")
@@ -645,8 +644,8 @@ class EmbeddedExecutionTest {
                 val started = runs.run(RunParams(module = "Late", runId = "stopped-early"))
                 assertThat(runs.stop(StopRunParams("stopped-early"))).isTrue()
 
-                assertThat(started.get(HANG_SECONDS, SECONDS).runId).isEqualTo("stopped-early")
-                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
+                assertThat(started.awaited().runId).isEqualTo("stopped-early")
+                val exit = client.exits.awaited()!!
                 assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED_BEFORE_START)
                 assertThat(client.output.toString()).doesNotContain("started")
                 assertThat(runs.tracked()).isZero()
@@ -1379,7 +1378,7 @@ class EmbeddedExecutionTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, HANG_DEBUG_LIMITS)
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, LIVELOCK_DEBUG_LIMITS)
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
             sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
@@ -1571,7 +1570,7 @@ class EmbeddedExecutionTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Program", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, HANG_DEBUG_LIMITS)
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, LIVELOCK_DEBUG_LIMITS)
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc", "supportsInvalidatedEvent": true}""")
             sessions.request(id, 2, "launch", """{"module": "Program", "moduleUri": "$module", "evaluationRunsProgram": true}""")
@@ -1920,7 +1919,7 @@ class EmbeddedExecutionTest {
             // the program ended where it stopped, without running on to its end
             val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
             assertThat(output).contains("before").doesNotContain("after")
-            soon().until { runs.tracked() == 0 }
+            awaitUntil { runs.tracked() == 0 }
             sessions.end(DebugSessionParams(id))
         }
         assertThat(run("Exit").code).isEqualTo(42)
@@ -1943,7 +1942,7 @@ class EmbeddedExecutionTest {
             // the compiler builds in order too, so the launch's build has finished once this later one has
             sessions.request(id, 3, "threads")
             client.until(id) { it.response == "threads" }
-            assertThat(adapter.buildAsync("Runs", rebuild = false).get(HANG_SECONDS, SECONDS).succeeded).isTrue()
+            assertThat(adapter.buildAsync("Runs", rebuild = false).awaited().succeeded).isTrue()
 
             // the client sets its breakpoint only now, after the build, and the program has waited for it
             sessions.request(id, 4, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
@@ -1991,18 +1990,18 @@ class EmbeddedExecutionTest {
         val debugged = mutableListOf<String>()
         // the heap a worker reports is what the JVM left after collections it runs when it chooses to, so no heap use
         // retires this worker; what the soak checks is counted
-        val counted = HANG_LIMITS.copy(heap = Long.MAX_VALUE)
+        val counted = LIVELOCK_LIMITS.copy(heap = Long.MAX_VALUE)
         RunWorkerProcess(limits = counted).use { workers ->
             XdkAdapter().use { adapter ->
                 adapter.initializeWorkspace(listOf(directory.toString()))
                 adapter.replaceSourceModules(listOf(XdkSourceModule("Soak", soak)))
                 val runs = EmbeddedRuns(adapter, { client }, workers)
                 // a cancel or a terminate, not the console's limit, ends the console's spin()
-                val sessions = DebugSessions(runs, { client }, HANG_DEBUG_LIMITS)
+                val sessions = DebugSessions(runs, { client }, LIVELOCK_DEBUG_LIMITS)
 
                 // what the worker kept after the run that just ended, which it reports after the run's exit
                 fun measured() {
-                    soon().until {
+                    awaitUntil {
                         workers
                             .usage()
                             .values
@@ -2041,16 +2040,16 @@ class EmbeddedExecutionTest {
                 for (round in 1..SOAK_ROUNDS) {
                     // an edit, which the build compiles as the editor's unsaved text, and a run of it to its exit
                     adapter.compile(soak, soak(round))
-                    assertThat(runs.run(RunParams(module = "Soak", runId = "exits-$round")).get(HANG_SECONDS, SECONDS).runId).isNotNull()
-                    assertThat(client.exit("exits-$round").get(HANG_SECONDS, SECONDS).exitCode).isEqualTo(42)
+                    assertThat(runs.run(RunParams(module = "Soak", runId = "exits-$round")).awaited().runId).isNotNull()
+                    assertThat(client.exit("exits-$round").awaited().exitCode).isEqualTo(42)
                     assertThat(client.output("exits-$round")).contains("round $round\n", "after 42")
                     measured()
 
                     // a run stopped while it runs
-                    runs.run(RunParams(module = "Soak", args = listOf("spin"), runId = "stops-$round")).get(HANG_SECONDS, SECONDS)
-                    soon().until { "round $round\n" in client.output("stops-$round") }
+                    runs.run(RunParams(module = "Soak", args = listOf("spin"), runId = "stops-$round")).awaited()
+                    awaitUntil { "round $round\n" in client.output("stops-$round") }
                     assertThat(runs.stop(StopRunParams("stops-$round"))).isTrue()
-                    client.exit("stops-$round").get(HANG_SECONDS, SECONDS)
+                    client.exit("stops-$round").awaited()
                     assertThat(client.output("stops-$round")).doesNotContain("after")
                     measured()
 
@@ -2101,11 +2100,11 @@ class EmbeddedExecutionTest {
                 assertThat(sessions.tracked()).isZero()
                 // each session's message thread ends with its session
                 val threads = debugged.map { "xtc-debug-$it" }
-                soon().until { Thread.getAllStackTraces().keys.none { it.name in threads } }
+                awaitUntil { Thread.getAllStackTraces().keys.none { it.name in threads } }
             }
         }
         // closing the workers ends the worker process
-        soon().until { pids.none { pid -> ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false) } }
+        awaitUntil { pids.none { pid -> ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false) } }
     }
 
     @Test
@@ -2126,16 +2125,16 @@ class EmbeddedExecutionTest {
         loggers.forEach { it.addAppender(appender) }
         val pid =
             try {
-                RunWorkerProcess(limits = HANG_LIMITS).use { workers ->
+                RunWorkerProcess(limits = LIVELOCK_LIMITS).use { workers ->
                     XdkAdapter().use { adapter ->
                         adapter.initializeWorkspace(listOf(directory.toString()))
                         adapter.replaceSourceModules(listOf(XdkSourceModule("Logged", logged)))
                         val runs = EmbeddedRuns(adapter, { client }, workers)
                         assertThat(
-                            runs.run(RunParams(module = "Logged", runId = "correlated")).get(HANG_SECONDS, SECONDS).runId,
+                            runs.run(RunParams(module = "Logged", runId = "correlated")).awaited().runId,
                         ).isEqualTo("correlated")
-                        assertThat(client.exit("correlated").get(HANG_SECONDS, SECONDS).exitCode).isEqualTo(7)
-                        soon().until { lines.any { it.startsWith("execution worker after a run:") } }
+                        assertThat(client.exit("correlated").awaited().exitCode).isEqualTo(7)
+                        awaitUntil { lines.any { it.startsWith("execution worker after a run:") } }
                         workers.workerPids().single()
                     }
                 }
@@ -2179,7 +2178,7 @@ class EmbeddedExecutionTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app, setOf("Library"))),
             )
-            val build = adapter.buildAsync("App", rebuild = false).get(HANG_SECONDS, SECONDS)
+            val build = adapter.buildAsync("App", rebuild = false).awaited()
 
             assertThat(build.succeeded).describedAs(build.diagnostics.toString()).isTrue()
             assertThat(build.modules.map { it.name }).containsExactly("Library", "App")
@@ -2208,7 +2207,7 @@ class EmbeddedExecutionTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("Broken", broken), XdkSourceModule("Consumer", consumer, setOf("Broken"))),
             )
-            val build = adapter.buildAsync("Consumer", rebuild = false).get(HANG_SECONDS, SECONDS)
+            val build = adapter.buildAsync("Consumer", rebuild = false).awaited()
 
             assertThat(build.succeeded).isFalse()
             assertThat(build.modules.first { it.name == "Broken" }.succeeded).isFalse()
@@ -2228,7 +2227,7 @@ class EmbeddedExecutionTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", app)))
             adapter.compile(app, "module App { Int run() = 7; }")
-            val build = adapter.buildAsync("App", rebuild = false).get(HANG_SECONDS, SECONDS)
+            val build = adapter.buildAsync("App", rebuild = false).awaited()
 
             assertThat(build.succeeded).describedAs(build.diagnostics.toString()).isTrue()
             assertThat(run("App", modulePath = build.modulePath).code).isEqualTo(7)
@@ -2249,7 +2248,7 @@ class EmbeddedExecutionTest {
             fun reused(rebuild: Boolean = false) =
                 adapter
                     .buildAsync("App", rebuild)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .also {
                         assertThat(it.succeeded).describedAs(it.diagnostics.toString()).isTrue()
                     }.modules
@@ -2275,7 +2274,7 @@ class EmbeddedExecutionTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("Library", library), XdkSourceModule("App", app, setOf("Library"))),
             )
-            val build = adapter.buildAsync("App", rebuild = false).get(HANG_SECONDS, SECONDS)
+            val build = adapter.buildAsync("App", rebuild = false).awaited()
             val revisions = build.modules.associate { it.name to it.revision }
             val manifest =
                 JsonParser
@@ -2301,11 +2300,11 @@ class EmbeddedExecutionTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", app)))
             val artifact = directory.resolve("build/xtc/embedded/lib/App.xtc").toFile()
-            assertThat(adapter.buildAsync("App", rebuild = false).get(HANG_SECONDS, SECONDS).succeeded).isTrue()
+            assertThat(adapter.buildAsync("App", rebuild = false).awaited().succeeded).isTrue()
             assertThat(artifact).isFile()
 
             adapter.compile(app, "module App { Int run() = \"text\"; }")
-            assertThat(adapter.buildAsync("App", rebuild = false).get(HANG_SECONDS, SECONDS).succeeded).isFalse()
+            assertThat(adapter.buildAsync("App", rebuild = false).awaited().succeeded).isFalse()
             assertThat(artifact).doesNotExist()
         }
     }
@@ -2320,17 +2319,17 @@ class EmbeddedExecutionTest {
             adapter.replaceSourceModules(listOf(XdkSourceModule("Greeting", app)))
             // on the class's worker, which is already started; closing these runs would close it
             val runs = EmbeddedRuns(adapter, { client }, worker)
-            assertThat(runs.run(RunParams(module = "Greeting", method = "greet", runId = "listed")).get(HANG_SECONDS, SECONDS).runId)
+            assertThat(runs.run(RunParams(module = "Greeting", method = "greet", runId = "listed")).awaited().runId)
                 .isEqualTo("listed")
-            assertThat(client.exits.poll(HANG_SECONDS, SECONDS)?.error).isNull()
+            assertThat(client.exits.awaited()?.error).isNull()
             assertThat(client.output.toString()).contains("old greeting")
 
             // a target listed for greet, which the module no longer declares
             adapter.compile(app, "module Greeting { void run() {} }")
             client.output.setLength(0)
-            val stale = runs.run(RunParams(module = "Greeting", method = "greet", runId = "stale")).get(HANG_SECONDS, SECONDS)
+            val stale = runs.run(RunParams(module = "Greeting", method = "greet", runId = "stale")).awaited()
             assertThat(stale.build.succeeded).isTrue()
-            assertThat(client.exits.poll(HANG_SECONDS, SECONDS)?.error).contains("greet")
+            assertThat(client.exits.awaited()?.error).contains("greet")
             assertThat(client.output.toString()).doesNotContain("old greeting")
         }
     }
@@ -2345,15 +2344,15 @@ class EmbeddedExecutionTest {
             adapter.replaceSourceModules(listOf(XdkSourceModule("Before", file)))
             // on the class's worker, which is already started; closing these runs would close it
             val runs = EmbeddedRuns(adapter, { client }, worker)
-            assertThat(runs.run(RunParams(module = "Before", runId = "before")).get(HANG_SECONDS, SECONDS).runId).isEqualTo("before")
-            assertThat(client.exits.poll(HANG_SECONDS, SECONDS)?.error).isNull()
+            assertThat(runs.run(RunParams(module = "Before", runId = "before")).awaited().runId).isEqualTo("before")
+            assertThat(client.exits.awaited()?.error).isNull()
 
             // a target listed for Before, which the source now calls After
             adapter.compile(file, """module After { void run() { @Inject Console console; console.print("after the rename"); } }""")
             adapter.replaceSourceModules(listOf(XdkSourceModule("After", file)))
             client.output.setLength(0)
             // refused before a build; the earlier artifact is still in the build output, but nothing runs it
-            assertThatThrownBy { runs.run(RunParams(module = "Before", runId = "stale")).get(HANG_SECONDS, SECONDS) }
+            assertThatThrownBy { runs.run(RunParams(module = "Before", runId = "stale")).awaited() }
                 .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
                 .hasRootCauseMessage("Unknown source module: Before")
             // no run is held, so none can exit later
@@ -2374,26 +2373,26 @@ class EmbeddedExecutionTest {
             adapter.initializeWorkspace(listOf(workspace.toString()))
             // on the class's worker, which is already started; closing these runs would close it
             val runs = EmbeddedRuns(adapter, { client }, worker)
-            assertThat(runs.run(RunParams(module = old, moduleName = "App", runId = "before")).get(HANG_SECONDS, SECONDS).runId)
+            assertThat(runs.run(RunParams(module = old, moduleName = "App", runId = "before")).awaited().runId)
                 .isEqualTo("before")
-            assertThat(client.exits.poll(HANG_SECONDS, SECONDS)?.error).isNull()
+            assertThat(client.exits.awaited()?.error).isNull()
 
             // renamed on disk, as by a terminal; the watcher reports both paths
             val moved = Files.move(workspace.resolve("App.x"), workspace.resolve("Main.x"))
             assertThat(adapter.applyFileEvents(listOf(old, moved.toUri().toString()))).isNotNull()
-            assertThatThrownBy { runs.run(RunParams(module = old, runId = "file only")).get(HANG_SECONDS, SECONDS) }
+            assertThatThrownBy { runs.run(RunParams(module = old, runId = "file only")).awaited() }
                 .hasRootCauseMessage("Unknown source module: $old")
 
             client.output.setLength(0)
-            assertThat(runs.run(RunParams(module = old, moduleName = "App", runId = "moved")).get(HANG_SECONDS, SECONDS).runId)
+            assertThat(runs.run(RunParams(module = old, moduleName = "App", runId = "moved")).awaited().runId)
                 .isEqualTo("moved")
-            assertThat(client.exits.poll(HANG_SECONDS, SECONDS)?.error).isNull()
+            assertThat(client.exits.awaited()?.error).isNull()
             assertThat(client.output.toString()).contains("app runs")
             // and by the new file, which the Run lens now names
             client.output.setLength(0)
-            assertThat(runs.run(RunParams(module = moved.toUri().toString(), runId = "lens")).get(HANG_SECONDS, SECONDS).runId)
+            assertThat(runs.run(RunParams(module = moved.toUri().toString(), runId = "lens")).awaited().runId)
                 .isEqualTo("lens")
-            assertThat(client.exits.poll(HANG_SECONDS, SECONDS)?.error).isNull()
+            assertThat(client.exits.awaited()?.error).isNull()
             assertThat(client.output.toString()).contains("app runs")
         }
     }
@@ -2418,9 +2417,9 @@ class EmbeddedExecutionTest {
             assertThat(adapter.compile(utility, utilityText).success).isTrue()
 
             assertThat(adapter.runnableTargets().map { it.module }).containsExactly("App")
-            assertThat(adapter.getCodeLensesAsync(app, false).get(HANG_SECONDS, SECONDS).mapNotNull { it.command?.command })
+            assertThat(adapter.getCodeLensesAsync(app, false).awaited().mapNotNull { it.command?.command })
                 .contains("xtc.runModule")
-            assertThat(adapter.getCodeLensesAsync(library, false).get(HANG_SECONDS, SECONDS).mapNotNull { it.command?.command })
+            assertThat(adapter.getCodeLensesAsync(library, false).awaited().mapNotNull { it.command?.command })
                 .doesNotContain("xtc.runModule")
         }
     }
@@ -2436,7 +2435,7 @@ class EmbeddedExecutionTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(app, text).success).isTrue()
             assertThat(adapter.compile(library, libraryText).success).isTrue()
-            val lens = adapter.getCodeLensesAsync(app, false).get(HANG_SECONDS, SECONDS).single { it.command?.command == "xtc.runModule" }
+            val lens = adapter.getCodeLensesAsync(app, false).awaited().single { it.command?.command == "xtc.runModule" }
             assertThat(adapter.runLensLines(app)).containsExactly("App" to lens.range.start.line)
             assertThat(lens.range.start.line).isEqualTo(2)
             assertThat(adapter.runLensLines(library)).isEmpty()
@@ -2489,24 +2488,18 @@ class EmbeddedExecutionTest {
 
             // the module declares no run method; its annotation does, and the module declaring the annotation is no program
             assertThat(adapter.runnableTargets().map { it.module }).containsExactly("Annotated")
-            assertThat(adapter.getCodeLensesAsync(annotated, false).get(HANG_SECONDS, SECONDS).mapNotNull { it.command?.command })
+            assertThat(adapter.getCodeLensesAsync(annotated, false).awaited().mapNotNull { it.command?.command })
                 .contains("xtc.runModule")
             // on the class's worker, which is already started; closing these runs would close it
             EmbeddedRuns(adapter, { client }, worker).let { runs ->
                 assertThat(
-                    runs.run(RunParams(module = "Annotated", runId = "contributed")).get(HANG_SECONDS, SECONDS).runId,
+                    runs.run(RunParams(module = "Annotated", runId = "contributed")).awaited().runId,
                 ).isEqualTo("contributed")
-                assertThat(exited.get(HANG_SECONDS, SECONDS).error).isNull()
+                assertThat(exited.awaited().error).isNull()
                 assertThat(output.toString()).contains("run from an annotation")
             }
         }
     }
-
-    /**
-     * Waits for a condition, checking it at once and then often: each wait here is short, and there are many. Only a
-     * hang reaches its limit.
-     */
-    private fun soon() = await().pollDelay(Duration.ZERO).pollInterval(Duration.ofMillis(10)).atMost(Duration.ofSeconds(HANG_SECONDS))
 
     /** Records the run output and exits the server sends its client. */
     private class RunClient :
@@ -2581,7 +2574,7 @@ class EmbeddedExecutionTest {
                 }
             },
         )
-        val (code, error) = exited.get(HANG_SECONDS, SECONDS)
+        val (code, error) = exited.awaited()
         return Outcome(output.toString(), code, error)
     }
 

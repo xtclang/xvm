@@ -12,7 +12,7 @@ object RunWorkerHost {
     @JvmStatic
     fun main(args: Array<String>) {
         val (modulePath, module, rootDir) = args
-        val workers = RunWorkerProcess(limits = HANG_LIMITS)
+        val workers = RunWorkerProcess(limits = LIVELOCK_LIMITS)
         val printed = CountDownLatch(1)
         workers.start(
             RunWorkerProcess.Request(listOf(modulePath), module, "run", emptyList(), rootDir),

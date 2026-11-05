@@ -4,12 +4,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises conventional and explicit resource roots, including absent directories and same-timestamp edits.
@@ -34,7 +33,7 @@ class XdkResourceInputsTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("Assets", source.toURI().toString())),
             )
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
             assertThat(adapter.compile(source.toURI().toString(), source.readText()).diagnostics)
                 .isEmpty()
         }
@@ -81,7 +80,7 @@ class XdkResourceInputsTest {
                 )
             adapter.replaceSourceModules(graph)
 
-            fun pull() = adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)
+            fun pull() = adapter.workspaceDiagnosticsAsync().awaited()
             assertThat(pull()).allMatch { it.success }
             assertThat(compiled).containsExactly("Assets", "Consumer", "Independent")
             compiled.clear()
@@ -146,7 +145,7 @@ class XdkResourceInputsTest {
             assertThat(
                 adapter
                     .workspaceDiagnosticsAsync()
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .success,
             ).isFalse()
@@ -155,7 +154,7 @@ class XdkResourceInputsTest {
             assertThat(
                 adapter
                     .workspaceDiagnosticsAsync()
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .success,
             ).isTrue()

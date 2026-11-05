@@ -6,14 +6,13 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks reuse and retirement of module analyses when source graphs, build inputs or binaries change.
@@ -164,12 +163,12 @@ class XdkConfigurationReplacementTest {
         val added = source("Added", "module Added {}")
         XdkAdapter { source, errors ->
             entered.countDown()
-            check(release.await(HANG_SECONDS, SECONDS))
+            check(release.awaited())
             support.compileModule(source, null, errors)
         }.use { adapter ->
             val pending = adapter.compileAsync("untitled:Pending.x", "module Pending {}")
             try {
-                check(entered.await(HANG_SECONDS, SECONDS))
+                check(entered.awaited())
                 assertThat(adapter.replaceSourceModules(listOf(added))).containsExactly("untitled:Pending.x")
                 assertThat(pending.isCancelled).isTrue()
                 release.countDown()

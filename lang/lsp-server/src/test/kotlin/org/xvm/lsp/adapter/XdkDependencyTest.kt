@@ -9,17 +9,16 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
 import org.xvm.tool.ModuleInfo
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -222,7 +221,7 @@ class XdkDependencyTest {
             { text, repository, errors ->
                 if (!held.getAndSet(true)) {
                     entered.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                 }
                 support.compileModule(text, repository, errors)
             },
@@ -236,13 +235,13 @@ class XdkDependencyTest {
             adapter.replaceDependencies(listOf(first))
             val old = adapter.compileAsync(CONSUMER, source)
             try {
-                check(entered.await(HANG_SECONDS, SECONDS))
+                check(entered.awaited())
                 assertThat(adapter.replaceDependencies(listOf(moved)))
                     .containsExactly(adapter.analysisScope(CONSUMER))
                 assertThat(old.isCancelled).isTrue()
                 val latest = adapter.compileAsync(CONSUMER, source)
                 release.countDown()
-                assertThat(latest.get(HANG_SECONDS, SECONDS).success).isTrue()
+                assertThat(latest.awaited().success).isTrue()
                 assertThat(
                     adapter.findDefinition(CONSUMER, 0, source.indexOf("pick"))!!.startLine,
                 ).isEqualTo(1)
@@ -271,7 +270,7 @@ class XdkDependencyTest {
             { text, _, cursor, repository, errors ->
                 if (!held.getAndSet(true)) {
                     entered.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                 }
                 val heard = ErrorList()
                 support
@@ -293,7 +292,7 @@ class XdkDependencyTest {
             adapter.compile(CONSUMER, source)
             val old = adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".")
             try {
-                check(entered.await(HANG_SECONDS, SECONDS))
+                check(entered.awaited())
                 assertThat(adapter.replaceDependencies(listOf(next)))
                     .containsExactly(adapter.analysisScope(CONSUMER))
                 assertThat(old.isCompletedExceptionally).isTrue()
@@ -302,7 +301,7 @@ class XdkDependencyTest {
                 release.countDown()
                 adapter.compile(CONSUMER, source)
                 val candidates =
-                    adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".").get(HANG_SECONDS, SECONDS)
+                    adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".").awaited()
                 assertThat(candidates.map { it.label })
                     .contains("label")
                     .doesNotContain("number")

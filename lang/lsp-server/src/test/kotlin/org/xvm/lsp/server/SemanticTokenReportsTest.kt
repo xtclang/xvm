@@ -4,9 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks full/range/delta token responses and bounded history. Reconstructed deltas must match exact token
@@ -81,7 +80,7 @@ class SemanticTokenReportsTest {
                             reports.delta(uri, first.resultId, listOf(0, index, 2, 0, 0))
                         }
                     }
-                }.forEach { it.get(HANG_SECONDS, SECONDS) }
+                }.forEach { it.awaited() }
         } finally {
             pool.shutdownNow()
         }
