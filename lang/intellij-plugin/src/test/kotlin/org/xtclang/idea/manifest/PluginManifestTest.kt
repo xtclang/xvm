@@ -95,6 +95,7 @@ class PluginManifestTest {
                 "liveTemplateContext", // the ECSTASY context those snippets apply in
                 "lang.commenter", // Ctrl+/ via XtcCommenter
                 "braceMatcher", // typed brackets stay unpaired, as in plain text, via XtcBraceMatcher
+                "completion.contributor", // LSP4IJ's held edits sent before it asks for completions (UP73)
                 "codeInsight.wordCompletionFilter", // the file's words when the server completes nothing
                 "lang.importOptimizer", // Optimize Imports via XtcImportOptimizer
                 "renameHandler", // guarded compiler rename via XtcRenameHandler
