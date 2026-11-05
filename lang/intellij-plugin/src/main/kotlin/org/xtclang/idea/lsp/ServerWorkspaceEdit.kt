@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import java.net.URI
 
@@ -19,6 +20,7 @@ internal class ServerWorkspaceEdit
         private val server: Any,
         private val label: String,
         private val targets: List<Target>,
+        private val global: Boolean,
     ) {
         /** Text replacement expressed in offsets of the validated document snapshot. */
         internal data class Replacement(
@@ -59,7 +61,7 @@ internal class ServerWorkspaceEdit
             WriteCommandAction
                 .writeCommandAction(features.project)
                 .withName(label)
-                .withGlobalUndo()
+                .let { if (global) it.withGlobalUndo() else it }
                 .compute<ApplyWorkspaceEditResponse, RuntimeException> {
                     if (
                         features.project.isDisposed ||
@@ -148,7 +150,23 @@ internal class ServerWorkspaceEdit
                     server,
                     params.label ?: "Ecstasy workspace edit",
                     targets,
+                    globalUndo(edit),
                 )
+            }
+
+            /**
+             * Whether the edit is undone for the whole project, as IntelliJ's refactorings are, which Undo asks about
+             * first: when it changes more than one document, or carries a resource operation, which makes, renames or
+             * deletes a file. A text edit of one document, a quick fix's usual edit, is undone in its editor as a
+             * typed change is, without the question.
+             */
+            internal fun globalUndo(edit: WorkspaceEdit): Boolean {
+                val changes = edit.documentChanges
+                return if (changes != null) {
+                    changes.any { it.isRight } || changes.map { it.left.textDocument.uri }.distinct().size > 1
+                } else {
+                    edit.changes.orEmpty().size > 1
+                }
             }
 
             internal fun replacements(
