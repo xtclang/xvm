@@ -58,6 +58,21 @@ class XdkImportCompletionTest {
     }
 
     @Test
+    fun `an import of a type reuses the package that already imports its module`() {
+        source("Library", "module Library { class Widget {} class Gadget {} }")
+        val marked =
+            "module App {\n    package lib import Library;\n    lib.Gadget gadget = new lib.Gadget();\n" +
+                "    void run() {\n        Wid§\n        Int after = 1;\n    }\n}"
+        withCompletions(marked) { adapter, uri, original, items ->
+            val item = items.single { it.label == "Widget" }
+            assertThat(item.additionalTextEdits.map { it.newText.trim() }).containsExactly("import lib.Widget;")
+            val changed = apply(original, listOf(requireNotNull(item.textEdit)) + item.additionalTextEdits)
+            val finished = changed.replace("        Widget\n", "        Widget widget = new Widget();\n")
+            assertThat(adapter.compile(uri, finished).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
     fun `a name typed as a statement of its own imports a bundled type`() {
         withCompletions("module App {\n    void run() {\n        Doc§\n        Int after = 1;\n    }\n}") { _, _, original, items ->
             val item = items.single { it.label == "Document" && it.additionalTextEdits.isNotEmpty() }
