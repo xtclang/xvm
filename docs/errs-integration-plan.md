@@ -13656,9 +13656,11 @@ at most a 512 KiB tail (at most eight files); launcher stderr/failure informatio
 Archives contain a manifest explaining the offline scope and truncation. Source files, symlinks and
 other sessions' shared trace files are excluded. Pruned server files leave an exportable launcher
 record. Failed attempts replace the previous launch record, so old healthy logs are not mislabeled
-as a current failed launch. VS Code learns the server log paths when initialization succeeds;
-before that its offline archive contains launcher information only. IntelliJ can also identify the
-process directory from the exact PID/start timestamp. Neither export needs another Java process.
+as a current failed launch. Both hosts learn the server log paths from the server's status when
+initialization succeeds; before that the offline archive contains launcher information only. Neither
+names the process directory from the PID and start time itself: on Linux a JVM reads the boot time
+once, so after a clock step the IDE's JVM computes another start for the server's process than the
+server does. Neither export needs another Java process.
 
 VS Code launch/configuration failures now offer Open Settings, Show Logs and Export Logs. IntelliJ
 keeps LSP4IJ's existing startup notification/Show Logs action rather than adding a duplicate balloon;
