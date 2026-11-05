@@ -38,6 +38,7 @@ class CodeActionDiagnosticsTest {
             uri: String,
             range: AdapterRange,
             diagnostics: List<Diagnostic>,
+            kinds: Set<CodeAction.CodeActionKind>,
         ): CompletableFuture<List<CodeAction>> =
             CompletableFuture.completedFuture(
                 listOf(
