@@ -11,6 +11,7 @@ import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceUnchangedDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.xvm.lsp.adapter.xdk.XdkTest
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
@@ -29,23 +30,35 @@ internal class DiagnosticReports {
      */
     private val unreported = ConcurrentHashMap.newKeySet<String>()
 
-    /** Diagnostic items and their result ID, retained for unchanged pull-diagnostic responses. */
+    /**
+     * Diagnostic items and their result ID, retained for unchanged pull-diagnostic responses, with the tests of the
+     * module whose root the document is, if a workspace report has said so: a change to either is a new report.
+     */
     private data class Entry(
         val id: String,
         val diagnostics: List<Diagnostic>,
+        val tests: XdkTest? = null,
     )
 
+    /** Records [diagnostics] as the document [uri]'s, with the tests its entry has. */
     fun record(
         uri: String,
         diagnostics: List<Diagnostic>,
+    ) = record(uri, diagnostics, entries[identity(uri)]?.tests)
+
+    private fun record(
+        uri: String,
+        diagnostics: List<Diagnostic>,
+        tests: XdkTest?,
     ) {
         val key = identity(uri)
         val items =
             diagnostics.map {
                 it.copy(location = it.location.copy(uri = identity(it.location.uri)))
             }
-        if (entries[key]?.diagnostics != items) {
-            entries[key] = Entry(UUID.randomUUID().toString(), items)
+        val previous = entries[key]
+        if (previous?.diagnostics != items || previous.tests != tests) {
+            entries[key] = Entry(UUID.randomUUID().toString(), items, tests)
             unreported += key
         }
     }
@@ -53,9 +66,18 @@ internal class DiagnosticReports {
     /** The documents whose current items no report has given the client yet, as their canonical URIs. */
     fun unreported(): List<String> = unreported.sorted()
 
-    fun record(results: List<CompilationResult>): Set<String> {
+    /**
+     * Records the documents' diagnostics of [results], and the tests of the modules whose roots they are, by those
+     * roots' URIs, as [testsByRoot] has them.
+     */
+    fun record(
+        results: List<CompilationResult>,
+        testsByRoot: Map<String, XdkTest?> = emptyMap(),
+    ): Set<String> {
         val uris = results.flatMap { it.documentUris }.toSet()
+        val roots = testsByRoot.mapKeys { identity(it.key) }
         uris.forEach { uri ->
+            val key = identity(uri)
             record(
                 uri,
                 results
@@ -65,6 +87,7 @@ internal class DiagnosticReports {
                                 (uri == result.uri && it.location.uri !in result.documentUris)
                         }
                     }.distinct(),
+                if (key in roots) roots[key] else entries[key]?.tests,
             )
         }
         return uris

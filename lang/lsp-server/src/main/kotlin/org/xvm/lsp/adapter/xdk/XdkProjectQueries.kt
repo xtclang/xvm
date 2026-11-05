@@ -195,6 +195,8 @@ internal class XdkProjectQueries(
                                         source.documentUris,
                                     ),
                                     artifact?.takeIf { it.module == module.name },
+                                    // the module's tests, which the editors list without opening its files
+                                    XdkTests.of(compilation.sourceTrees(), declarations),
                                 )
                             }
                     builds[module.uri] = build
