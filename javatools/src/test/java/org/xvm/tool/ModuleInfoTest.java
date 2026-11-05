@@ -8,6 +8,7 @@ import org.xvm.asm.ErrorListener;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -211,6 +212,43 @@ class ModuleInfoTest {
         assertEquals(srcMainX.resolve("Hello.x").toFile().getCanonicalFile(), info.getSourceFile().getCanonicalFile());
         assertEquals(tempDir.toFile().getCanonicalFile(), info.getProjectDir().getCanonicalFile());
         assertEquals("Hello", info.getFileName());
+    }
+
+    /**
+     * deduce=true finds a test module named from the project directory in src/test/x, where "xtc
+     * init" puts it, and knows it for the project's test module, with the project's module in
+     * src/main/x for the module it imports; the project's module is no test module.
+     */
+    @Test
+    void testDeduceTrueFindsNamedTestModuleInSrcTestX() throws IOException {
+        var srcMainX = Files.createDirectories(tempDir.resolve("src/main/x"));
+        var srcTestX = Files.createDirectories(tempDir.resolve("src/test/x"));
+        Files.writeString(srcMainX.resolve("app.x"), "module app {}");
+        Files.createDirectories(srcMainX.resolve("app"));
+        Files.writeString(srcMainX.resolve("app/Part.x"), "class Part {}");
+        Files.writeString(srcTestX.resolve("appTest.x"), "module appTest { package app import app; }");
+        Files.writeString(srcTestX.resolve("otherTest.x"), "module otherTest {}");
+
+        var test = new ModuleInfo(tempDir.resolve("appTest").toFile(), true);
+        assertEquals(srcTestX.resolve("appTest.x").toFile().getCanonicalFile(), test.getSourceFile().getCanonicalFile());
+        assertEquals(tempDir.toFile().getCanonicalFile(), test.getProjectDir().getCanonicalFile());
+        assertTrue(test.isTestSource());
+        assertEquals(List.of(srcMainX.resolve("app.x").toFile().getCanonicalFile()),
+                test.getProjectModuleFiles().stream().map(ModuleInfoTest::canonical).toList());
+
+        // the same module given by its file, as an editor may give it
+        assertTrue(new ModuleInfo(srcTestX.resolve("appTest.x").toFile(), true).isTestSource());
+
+        assertFalse(new ModuleInfo(tempDir.resolve("app").toFile(), true).isTestSource());
+        assertFalse(new ModuleInfo(srcTestX.resolve("appTest.x").toFile(), false).isTestSource());
+    }
+
+    private static File canonical(File file) {
+        try {
+            return file.getCanonicalFile();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
