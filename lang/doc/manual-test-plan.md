@@ -629,7 +629,7 @@ is observable under mock or tree-sitter.
 | 7a.6 | Superseded edit | Type continuously for several seconds without pausing | Log shows `superseded before it started, skipped` or `superseded after ..., abandoned`. No diagnostics are published for text that has already been replaced - a squiggle under an identifier you have finished typing is the failure this prevents |
 | 7a.7 | Memory over a session | Leave the server up, edit for a while, watch `heap=` in the `footprint` on each line | Normal allocation/GC produces a sawtooth. Record sustained growth across repeated collections or after closing files; a single increasing sequence is not proof of retained compiler state. |
 | 7a.8 | A diagnostic no other adapter can find | See the duplicate-annotation file below | One `WARNING VERIFY-75`, the annotation is ignored |
-| 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file | Diagnostics stop at a hundred serious errors rather than filling the panel with consequences of the first one |
+| 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file, or the playbook's 600 declarations of unresolvable types | Each error is reported once, and the report stops at the compiler's budget of 512 serious errors (`ErrorListener.DEFAULT_MAX_ERRORS`) rather than growing with the file; none is an internal compiler failure (EMB-5) |
 | 7a.10 | References follow meaning, not spelling | Two classes each with a property `x`; Shift+F12 on one | Only that class's `x`. A text search cannot do this, and neither can a grammar |
 
 Execution trace files are `~/.xtc/logs/lsp/server-<pid>-<process-start>/lsp-trace-<pid>-<process-start>.jsonl`; native IntelliJ runs
