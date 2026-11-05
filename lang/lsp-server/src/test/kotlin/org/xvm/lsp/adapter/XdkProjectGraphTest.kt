@@ -100,4 +100,35 @@ class XdkProjectGraphTest {
         assertThat(project.affected("untitled:Standalone.x"))
             .containsExactly("untitled:Standalone.x")
     }
+
+    @Test
+    fun `the build order is the graph's whatever the order of the modules it is made from`() {
+        fun module(
+            name: String,
+            vararg dependencies: String,
+        ) = XdkSourceModule(
+            name,
+            directory.resolve("$name.x").toUri().toString(),
+            dependencies.toSet(),
+        )
+
+        fun <T> permutations(items: List<T>): List<List<T>> =
+            if (items.size <= 1) {
+                listOf(items)
+            } else {
+                items.flatMap { item -> permutations(items - item).map { listOf(item) + it } }
+            }
+
+        val modules =
+            listOf(module("Base"), module("Left", "Base"), module("Right", "Base"), module("Leaf", "Right", "Left"), module("Unrelated"))
+        // each module after its dependencies, visiting the modules, and each one's dependencies, by name
+        val expected = listOf("Base", "Left", "Right", "Leaf", "Unrelated")
+        permutations(modules).forEach { order ->
+            val project = XdkProject(order)
+            assertThat(project.buildOrder().map { it.name }).describedAs("from %s", order.map { it.name }).isEqualTo(expected)
+            assertThat(project.modules.keys).describedAs("from %s", order.map { it.name }).containsExactlyElementsOf(expected)
+            // a project made from another's modules, as the adapter makes the one it installs
+            assertThat(XdkProject(project.modules.values.toList()).buildOrder()).isEqualTo(project.buildOrder())
+        }
+    }
 }

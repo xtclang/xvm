@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import java.io.File
+import java.util.Collections
 import java.util.List.copyOf as immutableList
 import java.util.Map.copyOf as immutableMap
 import java.util.Set.copyOf as immutableSet
@@ -43,19 +44,22 @@ class XdkSourceModule(
 }
 
 /**
- * Immutable graph. Ordering and reverse edges are established before installing a configuration.
+ * Immutable graph. Ordering and reverse edges are established before installing a configuration. The order is the
+ * graph's alone, not that of the list it is made from, which is often another project's modules.
  */
 internal class XdkProject(
     modules: List<XdkSourceModule>,
 ) {
-    val modules: Map<String, XdkSourceModule> = immutableMap(modules.associateBy { it.name })
+    /** The modules by name, in [buildOrder]. */
+    val modules: Map<String, XdkSourceModule>
 
     private val configuration =
         modules.map { Configuration(it.name, it.uri, it.dependencies, it.resourceRoots) }.toSet()
     private val ordered: List<XdkSourceModule>
 
     init {
-        require(this.modules.size == modules.size) { "Duplicate source module name" }
+        val named = immutableMap(modules.associateBy { it.name })
+        require(named.size == modules.size) { "Duplicate source module name" }
         require(modules.map { it.root }.distinct().size == modules.size) {
             "Duplicate source module root"
         }
@@ -76,14 +80,17 @@ internal class XdkProject(
             }
             module.dependencies
                 .sorted()
-                .mapNotNull(this.modules::get)
+                .mapNotNull(named::get)
                 .forEach(::visit)
             visiting.remove(module.name)
             visited += module.name
             result += module
         }
-        modules.forEach(::visit)
-        ordered = result.toList()
+        // the modules in name order, as each one's dependencies above: the values of an immutable map, such as
+        // Map.copyOf's, come in an order that each JVM randomizes
+        modules.sortedBy { it.name }.forEach(::visit)
+        ordered = immutableList(result)
+        this.modules = Collections.unmodifiableMap(ordered.associateByTo(LinkedHashMap()) { it.name })
     }
 
     /** Canonical source-module inputs used to compare project configurations. */
@@ -129,7 +136,10 @@ internal class XdkProject(
         ((configuration - other.configuration) + (other.configuration - configuration))
             .mapTo(linkedSetOf()) { it.name }
 
-    /** Complete configured source graph, including modules that have never been opened. */
+    /**
+     * Complete configured source graph, including modules that have never been opened: each module after its
+     * dependencies, in the depth-first order that visits the modules, and each one's dependencies, by name.
+     */
     fun buildOrder(): List<XdkSourceModule> = ordered
 
     fun buildOrder(scope: String): List<XdkSourceModule> {
