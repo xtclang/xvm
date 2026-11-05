@@ -80,8 +80,9 @@
         <!-- Build, Execution, Deployment | Ecstasy: build and run with the embedded compiler or Gradle -->
         <projectConfigurable id="xtc.build" parentId="build" displayName="Ecstasy"
                              instance="org.xtclang.idea.run.XtcBuildConfigurable"/>
-        <!-- Build and Rebuild Project in embedded mode; ahead of the IDE's own builder for Ecstasy modules -->
-        <projectTaskRunner implementation="org.xtclang.idea.run.XtcProjectTaskRunner" order="first"/>
+        <!-- Build and Rebuild Project in embedded mode; ahead of the IDE's own builder for Ecstasy modules, and of
+             Gradle's, which is first as well and takes every module of a Gradle project that IntelliJ imported -->
+        <projectTaskRunner implementation="org.xtclang.idea.run.XtcProjectTaskRunner" order="first, before gradle"/>
         <!-- Notification group for LSP status messages -->
         <notificationGroup id="Ecstasy Language Server"
                            displayType="BALLOON"
