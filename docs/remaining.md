@@ -845,6 +845,29 @@ passes with the workaround disabled. The gates are in
   issue is in `errs-upstream-issues.md`'s UP71 row. To do: file it at the user's go-ahead, and after
   a release that sends typed lines, remove `DebugConsoleInput`.
 
+### LSP4IJ: a closed file's errors never reached IntelliJ (UP69, UP70): bridged
+
+- [ ] UP69 (2026-11-05): LSP4IJ 0.21.0 never asks for `workspace/diagnostic` and pulls the diagnostics
+  of open documents only, so with our server, which IntelliJ pulls, a closed file's errors never
+  reached IntelliJ: the IntelliJ tour found `SaveEights.x` unmarked after `cardMatches`' signature
+  change broke its caller. `ClosedDocumentDiagnostics` asks for the workspace report after each
+  refresh and publishes the closed documents' reports through LSP4IJ's push path, which marks a file
+  with errors red (X341). LSP4IJ `main` (`d1a281d6`) has its own workspace pull, unreleased. To do:
+  remove the bridge after a release with it.
+- [ ] UP70 (2026-11-05): LSP4IJ's problem mark goes stale as a document opens or closes, also on
+  `main`. As a closed document opens, LSP4IJ drops its diagnostics without telling
+  `WolfTheProblemSolver`, so a file that an edit elsewhere fixed, opened before the next publication,
+  stayed red; the bridge reports the file again. Filed as
+  [#1861](https://github.com/redhat-developer/lsp4ij/issues/1861). As a file closes, LSP4IJ clears
+  its mark in a background task that nothing orders with the report of the errors then published
+  for its closed document, so the clear could come last and leave the file unmarked; the client
+  reports the file again after each clear when LSP4IJ holds errors for it. To do: get #1861 fixed,
+  and file the closing file upstream.
+- [ ] IntelliJ's Problems view still lists a closed file's errors only after **Build**: its Project
+  Errors tab is fed by the Build view's problems (`BuildViewProblemsService`), not by IntelliJ's
+  problem files, which LSP4IJ reports to. To do, if wanted: report the workspace report's errors to
+  IntelliJ's `ProblemsCollector` as well, which a Build's errors would then duplicate.
+
 ### LSP4IJ: a killed server comes back as several (UP72): fixed upstream; the gap left is #1863
 
 - [ ] UP72 (2026-11-05): after a server's process dies, LSP4IJ 0.21.0 keeps `serverError` until a
