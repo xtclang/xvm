@@ -874,6 +874,8 @@ class XdkAdapter
             val kind: ProjectQueryKind,
             val range: Range? = null,
             val requestId: UUID? = null,
+            /** The code action kinds asked for: a request for other kinds is another query, not this one's replacement. */
+            val kinds: Set<CodeAction.CodeActionKind>? = null,
         )
 
         /**
@@ -2420,18 +2422,22 @@ class XdkAdapter
             diagnostics: List<Diagnostic>,
         ): List<CodeAction> = getCodeActionsAsync(uri, range, diagnostics).join()
 
+        /** Each kind's proofs run only when it is asked for: a request for one kind proves no other. */
         override fun getCodeActionsAsync(
             uri: String,
             range: Range,
             diagnostics: List<Diagnostic>,
+            kinds: Set<CodeAction.CodeActionKind>,
         ): CompletableFuture<List<CodeAction>> =
-            if (hasProject(uri)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range), emptyList()) {
-                    it.codeActions(uri, range, diagnostics)
+            if (kinds.isEmpty()) {
+                CompletableFuture.completedFuture(emptyList())
+            } else if (hasProject(uri)) {
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range, kinds = kinds), emptyList()) {
+                    it.codeActions(uri, range, diagnostics, kinds)
                 }
             } else {
                 CompletableFuture.completedFuture(
-                    if (isLibraryDocument(uri)) {
+                    if (isLibraryDocument(uri) || CodeAction.CodeActionKind.SOURCE !in kinds) {
                         emptyList()
                     } else {
                         analysis(uri)
