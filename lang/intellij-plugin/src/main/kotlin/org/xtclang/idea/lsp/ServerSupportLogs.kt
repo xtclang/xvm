@@ -28,6 +28,7 @@ internal class ServerSupportLogs : SerializablePersistentStateComponent<ServerSu
         @field:OptionTag @JvmField val launcher: String = "No Ecstasy server launch recorded.",
         @field:OptionTag @JvmField val directory: String = "",
         @field:OptionTag @JvmField val traceDirectory: String = "",
+        @field:OptionTag @JvmField val pid: Long = 0,
     )
 
     fun begin(description: String): String =
@@ -42,18 +43,26 @@ internal class ServerSupportLogs : SerializablePersistentStateComponent<ServerSu
         updateState { if (it.id == id) it.copy(launcher = (it.launcher + text).takeLast(LAUNCH_LIMIT)) else it }
     }
 
+    /** Records the launch's server process, whose status [remember] takes. */
     fun process(
         id: String,
         pid: Long,
     ) {
-        val started = ProcessHandle.of(pid).flatMap { it.info().startInstant() }.orElse(null) ?: return
-        val root =
-            System.getProperty("xtc.logs.directory")
-                ?: System.getenv("XTC_LSP_LOG_DIR")
-                ?: "${System.getProperty("user.home")}/.xtc/logs/lsp"
-        val directory = Path.of(root).resolve("server-$pid-${started.toEpochMilli()}").toString()
-        val traces = System.getProperty("xtc.trace.directory") ?: System.getenv("XTC_LSP_TRACE_DIR") ?: directory
-        updateState { if (it.id == id) it.copy(directory = directory, traceDirectory = traces) else it }
+        updateState { if (it.id == id) it.copy(pid = pid) else it }
+    }
+
+    /**
+     * Records the log locations of an `xtc/languageServiceStatus` answer, when the recorded launch's process gave it,
+     * so that a retired server's late answer cannot replace them. Only the server names its session: the name holds
+     * its process's start time, which on Linux another JVM, the IDE's, can compute differently, after a step of the
+     * system clock.
+     */
+    fun remember(status: Map<String, Any?>) {
+        val pid = (status["pid"] as? Number)?.toLong() ?: return
+        val logs = status["logs"] as? Map<*, *> ?: return
+        val directory = logs["directory"] as? String ?: return
+        val traces = logs["traceDirectory"] as? String ?: directory
+        updateState { if (it.pid == pid) it.copy(directory = directory, traceDirectory = traces) else it }
     }
 
     fun export(destination: Path) = archive(state, destination)
