@@ -21,7 +21,7 @@ internal class ServerWorkspaceEdit
         private val targets: List<Target>,
     ) {
         /** Text replacement expressed in offsets of the validated document snapshot. */
-        private data class Replacement(
+        internal data class Replacement(
             val start: Int,
             val end: Int,
             val text: String,
@@ -151,7 +151,7 @@ internal class ServerWorkspaceEdit
                 )
             }
 
-            private fun replacements(
+            internal fun replacements(
                 document: Document,
                 edits: List<TextEdit>,
             ): List<Replacement> {
