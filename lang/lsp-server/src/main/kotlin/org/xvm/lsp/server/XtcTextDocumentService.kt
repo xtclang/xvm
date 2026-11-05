@@ -119,6 +119,7 @@ import org.xvm.lsp.adapter.InlineCompletionContext
 import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRenameProposal
+import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
@@ -128,6 +129,7 @@ import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.lsp.util.snapshot
+import java.io.File
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -174,6 +176,11 @@ class XtcTextDocumentService(
         val version: Int,
         val scope: String,
         val analysis: CompletableFuture<CompilationResult>,
+        /**
+         * What the document's queries answer for: a new one with each change of its text or its module's, and kept by
+         * a new analysis that changes no text, as a member's didOpen with its text on disk starts.
+         */
+        val basis: Any = Any(),
     )
 
     // Completion callbacks and notifications must agree on which document may publish.
@@ -243,7 +250,7 @@ class XtcTextDocumentService(
             uri.orEmpty(),
             request = {
                 server.supplyAsync(method, logParams, logResult) {
-                    fun current() = !closed && (uri == null || openDocuments[uri] === document)
+                    fun current() = !closed && (uri == null || !changed(document, openDocuments[uri]))
                     if (adapter.concurrentQueries) {
                         // queryAsync rechecks currency before publishing, so the lock guards only this check
                         synchronized(lifecycle) { if (!current()) throw contentModified() }
@@ -343,10 +350,14 @@ class XtcTextDocumentService(
                 )
             }
 
+        // a query stays current while its document's basis does, also when another member's didOpen replaces the analysis
         fun stale(): Boolean =
             closed ||
-                openDocuments[uri] !== document ||
-                (documents != null && documents != openDocuments)
+                changed(document, openDocuments[uri]) ||
+                (
+                    documents != null &&
+                        (documents.keys != openDocuments.keys || documents.any { (it, then) -> changed(then, openDocuments[it]) })
+                )
         val started = System.nanoTime()
         logger.info("{}: {}", method, uri)
         // A JSON-RPC cancellation can complete this future under the transport's request lock.
@@ -374,14 +385,13 @@ class XtcTextDocumentService(
             if (sourceOnly) {
                 CompletableFuture.completedFuture(null)
             } else if (documents != null) {
-                CompletableFuture.allOf(
-                    *documents.values
-                        .map { it.analysis }
-                        .distinct()
-                        .toTypedArray(),
-                )
+                CompletableFuture.allOf(*documents.map { (it, document) -> settled(it, document.analysis) }.toTypedArray())
             } else {
-                document?.analysis ?: CompletableFuture.completedFuture(null)
+                // a document that is not open is answered from its text on disk, as its module analyzes it, until its
+                // didOpen, after which the editor's text wins: a restarted client asks before it opens its files again
+                document?.let { settled(uri, it.analysis) }
+                    ?: (adapter as? XdkAdapter)?.closedAnalysisAsync(uri)
+                    ?: CompletableFuture.completedFuture(null)
             }
         ready
             .handle { _, _ -> ExecutionTrace.event(trace, "analysis-ready") }
@@ -453,6 +463,28 @@ class XtcTextDocumentService(
         return server.observeQuery(method, progress, publication, uri)
     }
 
+    /**
+     * Whether a document, [now], no longer answers for what a query started with, [then]: it was opened, closed or
+     * edited, or its module's text changed.
+     */
+    private fun changed(
+        then: Document?,
+        now: Document?,
+    ): Boolean = then?.basis !== now?.basis
+
+    /**
+     * Completes once [uri]'s current analysis has: [analysis], or the one that replaced it, as an analysis of its module
+     * replaces the analysis of every open member, also of one whose text stays as it was. Off the thread that ended
+     * [analysis]: the compiler retires it while a didOpen holds the lock, before the didOpen installs its replacement.
+     */
+    private fun settled(
+        uri: String,
+        analysis: CompletableFuture<*>,
+    ): CompletableFuture<*> =
+        analysis
+            .handleAsync { _, _ -> synchronized(lifecycle) { openDocuments[uri]?.analysis?.takeIf { it !== analysis } } }
+            .thenCompose { replacement -> replacement?.let { settled(uri, it) } ?: CompletableFuture.completedFuture(null) }
+
     private fun outOfSyncFailure(uri: String) =
         ResponseErrorException(
             ResponseError(
@@ -493,9 +525,17 @@ class XtcTextDocumentService(
                 params.textDocument.uri,
                 params.textDocument.text,
                 params.textDocument.version,
+                // as a client opens its files again after a restart: the module's analyses already read this text
+                edited = !onDisk(params.textDocument.uri, params.textDocument.text),
             )
         }
     }
+
+    /** Whether [text] is what the file of [uri] holds on disk, which the analyses of its module read while it was closed. */
+    private fun onDisk(
+        uri: String,
+        text: String,
+    ): Boolean = XdkSources.file(uri)?.takeIf(File::isFile)?.let { runCatching { it.readText() == text }.getOrNull() } == true
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         synchronized(lifecycle) {
@@ -572,27 +612,35 @@ class XtcTextDocumentService(
             source = Diagnostic.SOURCE,
         )
 
-    /** Refresh the changed module, then open source consumers in dependency order. */
+    /**
+     * Refresh the changed module, then open source consumers in dependency order. Unless the module's text [edited], the
+     * queries of documents whose text stays as it was wait for the new analyses instead of failing as stale.
+     */
     private fun analyze(
         uri: String,
         content: String,
         version: Int,
+        edited: Boolean = true,
     ) {
         diagnosticRevision++
         clearResolveReports()
         val compiler = adapter as? XdkAdapter
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
-        analyzeOne(uri, content, version)
+        analyzeOne(uri, content, version, edited = edited)
         refreshScopes(
             (
                 changedGraph +
                     (compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri))
             ) -
                 adapter.analysisScope(uri),
+            edited,
         )
     }
 
-    private fun refreshScopes(scopes: Set<String>) {
+    private fun refreshScopes(
+        scopes: Set<String>,
+        edited: Boolean = true,
+    ) {
         if (scopes.isEmpty()) return
         val ownership = analysisScopes()
         scopes
@@ -603,7 +651,7 @@ class XtcTextDocumentService(
                 }
             }.distinctBy { ownership[it.key] }
             .forEach { (uri, document) ->
-                analyzeOne(uri, document.content, document.version, ownership)
+                analyzeOne(uri, document.content, document.version, ownership, edited)
             }
     }
 
@@ -614,12 +662,16 @@ class XtcTextDocumentService(
             openDocuments.keys.associateWith(adapter::analysisScope)
         }
 
-    /** A member edit replaces the analysis future for every open document in that module. */
+    /**
+     * A member edit replaces the analysis future for every open document in that module, and the pending queries of
+     * them are stale. Unless the module's text [edited]: then only the queries of a document whose text changed are.
+     */
     private fun analyzeOne(
         uri: String,
         content: String,
         version: Int,
         ownership: Map<String, String>? = null,
+        edited: Boolean = true,
     ) {
         val analysis = adapter.compileAsync(uri, content)
         val scope = adapter.analysisScope(uri)
@@ -631,11 +683,11 @@ class XtcTextDocumentService(
         val current =
             affected
                 .mapValues { (_, document) ->
-                    Document(document.content, document.version, scope, analysis)
+                    Document(document.content, document.version, scope, analysis, if (edited) Any() else document.basis)
                 }.toMutableMap()
         current[uri] = Document(content, version, scope, analysis)
         openDocuments.putAll(current)
-        invalidateQueries(current.keys)
+        invalidateQueries(current.filter { (it, document) -> changed(affected[it], document) }.keys)
         affected.values
             .map { it.analysis }
             .distinct()
