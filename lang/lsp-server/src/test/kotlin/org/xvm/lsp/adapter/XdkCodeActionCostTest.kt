@@ -65,9 +65,9 @@ class XdkCodeActionCostTest {
             println("module compiles: first request $proving, the same again $reproving, organize imports then $organizing")
             assertThat(again).isEqualTo(first)
             assertThat(organized).isEqualTo(first.filter { it.kind == CodeActionKind.SOURCE_ORGANIZE_IMPORTS })
-            // again, only the two extractions the range allows are proved; the compile and the imports are shared
+            // again, nothing is proved: the compile, the imports and the two extractions the range allows are shared
             assertThat(proving).isEqualTo(1 + 3 + 1 + 2)
-            assertThat(reproving).isEqualTo(2)
+            assertThat(reproving).isZero()
             assertThat(organizing).isZero()
             // an edit is another revision, which proves its own
             assertThat(adapter.compile(uri, SOURCE.replace("input + 2", "input + 3")).diagnostics).isEmpty()
