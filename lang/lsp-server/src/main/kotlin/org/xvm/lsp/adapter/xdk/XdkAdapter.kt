@@ -2856,6 +2856,9 @@ class XdkAdapter
         private val navigationIndex = XdkNavigationIndex()
         private val actionCache = XdkCodeActionCache()
 
+        /** The latest revision's compile for code actions, if one was compiled; tests compare its modules' outcomes. */
+        internal fun codeActionBase(): XdkCodeActionCache.Base? = actionCache.base()
+
         /**
          * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
          * the queue where nothing can see it, and how many documents are waiting is the number that
