@@ -33,12 +33,11 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -62,17 +61,17 @@ class XdkFeatureResolveProtocolTest {
         session(true) { server, uri ->
             val documents = server.textDocumentService
             val id = TextDocumentIdentifier(uri)
-            val lens = documents.codeLens(CodeLensParams(id)).get(HANG_SECONDS, SECONDS).single { it.range.start.line == 0 }
-            val link = documents.documentLink(DocumentLinkParams(id)).get(HANG_SECONDS, SECONDS).single()
+            val lens = documents.codeLens(CodeLensParams(id)).awaited().single { it.range.start.line == 0 }
+            val link = documents.documentLink(DocumentLinkParams(id)).awaited().single()
             val hint =
                 documents
                     .inlayHint(InlayHintParams(id, Range(Position(0, 0), Position(6, 0))))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .first { it.data != null }
             val symbol =
                 server.workspaceService
                     .symbol(WorkspaceSymbolParams("Resolve"))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .right
                     .first()
             assertThat(lens.command).isNull()
@@ -84,23 +83,23 @@ class XdkFeatureResolveProtocolTest {
             assertThat(
                 documents
                     .resolveCodeLens(lens)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .command.arguments,
             ).containsExactly(uri, "Resolve")
             assertThat(lens.range).isEqualTo(range)
-            assertThat(documents.documentLinkResolve(link).get(HANG_SECONDS, SECONDS).target)
+            assertThat(documents.documentLinkResolve(link).awaited().target)
                 .isEqualTo("https://xtclang.org/")
             assertThat(
                 documents
                     .resolveInlayHint(hint)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .tooltip.right.value,
             ).isNotBlank()
             assertThat(hint.label).isEqualTo(label)
             assertThat(
                 server.workspaceService
                     .resolveWorkspaceSymbol(symbol)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .location
                     .isLeft,
             ).isTrue()
@@ -111,10 +110,10 @@ class XdkFeatureResolveProtocolTest {
                 ),
             )
             listOf<() -> Any>(
-                { documents.resolveCodeLens(lens).get(HANG_SECONDS, SECONDS) },
-                { documents.documentLinkResolve(link).get(HANG_SECONDS, SECONDS) },
-                { documents.resolveInlayHint(hint).get(HANG_SECONDS, SECONDS) },
-                { server.workspaceService.resolveWorkspaceSymbol(symbol).get(HANG_SECONDS, SECONDS) },
+                { documents.resolveCodeLens(lens).awaited() },
+                { documents.documentLinkResolve(link).awaited() },
+                { documents.resolveInlayHint(hint).awaited() },
+                { server.workspaceService.resolveWorkspaceSymbol(symbol).awaited() },
             ).forEach { call ->
                 assertThatThrownBy { call() }.hasMessageContaining("expired or changed")
             }
@@ -126,28 +125,28 @@ class XdkFeatureResolveProtocolTest {
         session(false) { server, uri ->
             val documents = server.textDocumentService
             val id = TextDocumentIdentifier(uri)
-            val lens = documents.codeLens(CodeLensParams(id)).get(HANG_SECONDS, SECONDS).single { it.range.start.line == 0 }
+            val lens = documents.codeLens(CodeLensParams(id)).awaited().single { it.range.start.line == 0 }
             assertThat(lens.command.arguments).containsExactly(uri, "Resolve")
             assertThat(lens.data).isNull()
             assertThat(
                 documents
                     .documentLink(DocumentLinkParams(id))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .target,
             ).isNotBlank()
             assertThat(
                 documents
                     .inlayHint(InlayHintParams(id, Range(Position(0, 0), Position(6, 0))))
-                    .get(HANG_SECONDS, SECONDS),
+                    .awaited(),
             ).anyMatch { it.tooltip != null }
             assertThat(
                 server.workspaceService
                     .symbol(WorkspaceSymbolParams("Resolve"))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .left,
             ).allMatch { it.location.range != null }
-            assertThatThrownBy { documents.resolveCodeLens(lens).get(HANG_SECONDS, SECONDS) }
+            assertThatThrownBy { documents.resolveCodeLens(lens).awaited() }
                 .hasMessageContaining("not negotiated")
         }
     }
@@ -165,7 +164,7 @@ class XdkFeatureResolveProtocolTest {
         session(false, client, true) { server, uri ->
             val params = CodeLensParams(TextDocumentIdentifier(uri))
 
-            fun lenses() = server.textDocumentService.codeLens(params).get(HANG_SECONDS, SECONDS)
+            fun lenses() = server.textDocumentService.codeLens(params).awaited()
             val enabled = lenses()
             assertThat(enabled.map { it.command.command }).contains("xtc.runModule", "xtc.showReferences")
             val reference = enabled.single { it.range.start.line == 2 }
@@ -200,13 +199,13 @@ class XdkFeatureResolveProtocolTest {
             val reference =
                 documents
                     .codeLens(CodeLensParams(TextDocumentIdentifier(uri)))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single { it.range.start.line == 2 }
             assertThat(reference.command).isNull()
             assertThat(
                 documents
                     .resolveCodeLens(reference)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .command.title,
             ).isEqualTo("1 reference")
             documents.didChange(
@@ -219,7 +218,7 @@ class XdkFeatureResolveProtocolTest {
                 documents
                     .resolveCodeLens(
                         reference,
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             }.hasMessageContaining("expired or changed")
         }
     }
@@ -282,7 +281,7 @@ class XdkFeatureResolveProtocolTest {
                                     }
                             }
                     },
-                ).get(HANG_SECONDS, SECONDS)
+                ).awaited()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
             )

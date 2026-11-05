@@ -20,14 +20,13 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
-import java.util.concurrent.TimeUnit.SECONDS
 import org.xvm.lsp.adapter.InlineCompletionContext as AdapterContext
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
@@ -56,7 +55,7 @@ class InlineCompletionProtocolTest {
             val item =
                 server.textDocumentService
                     .inlineCompletion(request)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .right.items
                     .single()
             assertThat(item.insertText.left).isEqualTo("answer")
@@ -112,7 +111,7 @@ class InlineCompletionProtocolTest {
                 val documents = server.textDocumentService
                 documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module App {}")))
                 val result = documents.inlineCompletion(params())
-                entered.get(HANG_SECONDS, SECONDS)
+                entered.awaited()
                 if (cancel) {
                     result.cancel(false)
                 } else {
@@ -123,8 +122,8 @@ class InlineCompletionProtocolTest {
                         ),
                     )
                 }
-                assertThatThrownBy { result.get(HANG_SECONDS, SECONDS) }.isInstanceOf(Exception::class.java)
-                canceled.get(HANG_SECONDS, SECONDS)
+                assertThatThrownBy { result.awaited() }.isInstanceOf(Exception::class.java)
+                canceled.awaited()
                 assertThat(pending.isCancelled).isTrue()
             }
         }

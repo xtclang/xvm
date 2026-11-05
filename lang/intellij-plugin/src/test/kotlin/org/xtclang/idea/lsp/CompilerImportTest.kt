@@ -3,10 +3,9 @@ package org.xtclang.idea.lsp
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.HANG_SECONDS
+import org.xtclang.idea.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -124,7 +123,7 @@ class CompilerImportTest {
             CompilerImport(disk::get) {
                 if (validating.get()) {
                     captured.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                 }
             }
         owner.current()
@@ -132,12 +131,12 @@ class CompilerImportTest {
         validating.set(true)
         val finished = CompletableFuture.supplyAsync { owner.finish(operation, CompilerImport.Outcome.SUCCEEDED) }
         try {
-            assertThat(captured.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(captured.awaited()).isTrue()
             owner.retire()
         } finally {
             release.countDown()
         }
-        assertThat(finished.get(HANG_SECONDS, SECONDS).outcome).isEqualTo(CompilerImport.Outcome.CANCELLED)
+        assertThat(finished.awaited().outcome).isEqualTo(CompilerImport.Outcome.CANCELLED)
         assertThat(owner.retained()).isNull()
     }
 
@@ -151,7 +150,7 @@ class CompilerImportTest {
                 val text = disk.get()
                 if (blocked.compareAndSet(true, false)) {
                     captured.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                 }
                 text
             }) {}
@@ -160,14 +159,14 @@ class CompilerImportTest {
         blocked.set(true)
         val watcher = CompletableFuture.supplyAsync(owner::current)
         try {
-            assertThat(captured.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(captured.awaited()).isTrue()
             val operation = owner.begin(false)
             disk.set("fresh import")
             owner.finish(operation, CompilerImport.Outcome.SUCCEEDED)
         } finally {
             release.countDown()
         }
-        assertThat(watcher.get(HANG_SECONDS, SECONDS)).isEqualTo("fresh import")
+        assertThat(watcher.awaited()).isEqualTo("fresh import")
         assertThat(owner.current()).isEqualTo("fresh import")
     }
 }

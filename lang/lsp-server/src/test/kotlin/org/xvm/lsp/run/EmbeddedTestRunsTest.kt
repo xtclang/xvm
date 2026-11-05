@@ -1,7 +1,6 @@
 package org.xvm.lsp.run
 
 import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.BeforeEach
@@ -10,12 +9,13 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkTest
+import org.xvm.lsp.awaitUntil
+import org.xvm.lsp.awaited
 import org.xvm.lsp.server.DebugSessionParams
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns
@@ -26,10 +26,8 @@ import org.xvm.lsp.server.StopRunParams
 import org.xvm.lsp.server.TestEventParams
 import org.xvm.lsp.server.XtcLanguageClient
 import java.nio.file.Path
-import java.time.Duration
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /** A module's tests, as the editors find them, and their runs with xunit, with and without the debugger. */
 class EmbeddedTestRunsTest {
@@ -141,10 +139,10 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Mathy", mathy)))
-            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
                 val started = runs.run(RunParams(module = "Mathy", moduleName = "Mathy", runId = "all", tests = emptyList()))
-                assertThat(started.get(HANG_SECONDS, SECONDS).runId).isEqualTo("all")
-                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
+                assertThat(started.awaited().runId).isEqualTo("all")
+                val exit = client.exits.awaited()!!
                 val output = client.output.toString()
                 val events = client.events("all")
 
@@ -185,12 +183,12 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Mathy", mathy)))
-            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
                 runs
                     .run(
                         RunParams(module = "Mathy", runId = "one", tests = listOf(TestSelector("Inner.works", "test"))),
-                    ).get(HANG_SECONDS, SECONDS)
-                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
+                    ).awaited()
+                val exit = client.exits.awaited()!!
                 val tests = client.events("one").filter { it.event == TestEvent.STARTED && it.container == false }
 
                 assertThat(tests.map { it.selector }).containsExactly("Inner.works")
@@ -209,12 +207,12 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Endless", endless)))
-            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
-                runs.run(RunParams(module = "Endless", runId = "endless", tests = emptyList())).get(HANG_SECONDS, SECONDS)
-                await().atMost(Duration.ofSeconds(HANG_SECONDS)).until { "spinning" in client.output }
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
+                runs.run(RunParams(module = "Endless", runId = "endless", tests = emptyList())).awaited()
+                awaitUntil { "spinning" in client.output }
                 assertThat(runs.stop(StopRunParams("endless"))).isTrue()
 
-                val exit = client.exits.poll(HANG_SECONDS, SECONDS)!!
+                val exit = client.exits.awaited()!!
                 assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED)
                 assertThat(runs.tracked()).isZero()
             }
@@ -230,7 +228,7 @@ class EmbeddedTestRunsTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Mathy", mathy)))
-            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = HANG_LIMITS)).use { runs ->
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
                 val sessions = DebugSessions(runs, { client })
                 val id = sessions.start().sessionId
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")

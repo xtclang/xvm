@@ -3,13 +3,12 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaitUntil
+import org.xvm.lsp.awaited
 import java.io.PrintWriter
-import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
@@ -53,9 +52,9 @@ class OutputBatchesTest {
         val sent = LinkedBlockingQueue<String>()
         val output = OutputBatches(sent::add, delay = 50.milliseconds)
         output.write("hello")
-        assertThat(sent.poll(HANG_SECONDS, SECONDS)).isEqualTo("hello")
+        assertThat(sent.awaited()).isEqualTo("hello")
         output.write(" again")
-        assertThat(sent.poll(HANG_SECONDS, SECONDS)).isEqualTo(" again")
+        assertThat(sent.awaited()).isEqualTo(" again")
     }
 
     @Test
@@ -68,7 +67,7 @@ class OutputBatchesTest {
             start()
             join()
         }
-        assertThat(groups.poll(HANG_SECONDS, SECONDS)).isEqualTo("xtc-run-output")
+        assertThat(groups.awaited()).isEqualTo("xtc-run-output")
     }
 
     @Test
@@ -101,10 +100,10 @@ class OutputBatchesTest {
                 }
             }
         // the first full batch waits for the server, and the program waits with it
-        await().atMost(Duration.ofSeconds(HANG_SECONDS)).until { program.state == Thread.State.WAITING }
+        awaitUntil { program.state == Thread.State.WAITING }
         assertThat(printed.get()).isLessThan(10)
         reading.countDown()
-        program.join(Duration.ofSeconds(HANG_SECONDS))
+        program.awaited()
         output.close()
         assertThat(sent.joinToString("")).isEqualTo("0123456789".repeat(1_000))
         assertThat(sent).allMatch { it.length <= 100 }

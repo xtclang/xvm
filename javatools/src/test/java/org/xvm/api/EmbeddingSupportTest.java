@@ -54,6 +54,7 @@ import org.xvm.compiler.EvalCompiler;
 import org.xvm.runtime.Debugger;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,7 +63,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.util.Severity.ERROR;
@@ -77,12 +77,6 @@ import static org.xvm.util.Severity.WARNING;
  * javatools/build.gradle.kts).
  */
 public class EmbeddingSupportTest {
-    /**
-     * How long the test waits for a run before it fails as hung. It ends only a hang: an hour,
-     * which no run reaches however slow or loaded the machine is, so no result depends on speed.
-     */
-    private static final Duration RUN_LIMIT = Duration.ofHours(1);
-
     @TempDir
     static Path dirOut;
 
@@ -311,12 +305,12 @@ public class EmbeddingSupportTest {
                     waiting.countDown();
                 }
             });
-            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            Await.run(() -> waiting.await());
             assertTrue(output.toString().contains("waiting"),
                     () -> "Waiting ended before it suspended: " + output);
 
             // a close() that waited for the pending one-day timer would not return in time
-            assertTimeoutPreemptively(RUN_LIMIT, control::close);
+            Await.run(control::close);
         }
         assertTrue(output.toString().contains("Service terminated"), output.toString());
         assertFalse(output.toString().contains("caught termination"), output.toString());
@@ -344,7 +338,7 @@ public class EmbeddingSupportTest {
         assertNotNull(control, () -> "Lingers did not start: " + errs.getErrors());
 
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertFalse(control.running());
         }
         assertTrue(output.toString().contains("returned"), output.toString());
@@ -379,20 +373,20 @@ public class EmbeddingSupportTest {
         Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
         assertNotNull(control, () -> "Leaves did not start: " + errs.getErrors());
 
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        Await.run(() -> {
             while (!output.toString().contains("started")) {
                 Thread.sleep(10);
             }
         });
         // not in a try-with-resources: closing again after a close that timed out would wait without a limit
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
 
         var connector = (InterpreterConnector) support.ensureConnector();
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        Await.run("the closed run's spinner to stop", () -> {
             while (!connector.isRuntimeIdle()) {
                 Thread.sleep(10);
             }
-        }, "The closed run's spinner still runs");
+        });
     }
 
     @Test
@@ -432,7 +426,7 @@ public class EmbeddingSupportTest {
         Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
         assertNotNull(control, () -> "Pending did not start: " + errs.getErrors());
 
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        Await.run(() -> {
             while (!output.toString().contains("started") && control.running()) {
                 Thread.sleep(10);
             }
@@ -441,7 +435,7 @@ public class EmbeddingSupportTest {
 
         // the run never ends on its own; closing it ends every service in its container. Not in a
         // try-with-resources: closing again after a close that timed out would wait without a limit
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFalse(control.running());
     }
 
@@ -908,7 +902,7 @@ public class EmbeddingSupportTest {
             ErrorList      errs    = new ErrorList(25);
             Control        control = support.run(module, signallingConsole("waiting", waiting), null, null, errs);
             assertNotNull(control, () -> "Closing did not start: " + errs.getErrors());
-            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            Await.run(() -> waiting.await());
 
             // both close at once, and each must find the run ended when its close returns
             Phaser        together = new Phaser(2);
@@ -922,7 +916,7 @@ public class EmbeddingSupportTest {
                 }));
             }
             for (Thread closer : closers) {
-                assertTimeoutPreemptively(RUN_LIMIT, () -> closer.join());
+                Await.run(() -> closer.join());
             }
             assertEquals(List.of(false, false), running);
         }
@@ -948,12 +942,12 @@ public class EmbeddingSupportTest {
                     EntryPoint.RUN, signallingConsole("waiting", waiting), _ -> line.join(),
                     rootDir.toFile(), errs);
             assertNotNull(control, () -> "Ending did not start: " + errs.getErrors());
-            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            Await.run(() -> waiting.await());
 
             // the end of input lets the program end while the close asks the runner to stop it,
             // as a Stop does for a program waiting for input
             line.complete(null);
-            assertTimeoutPreemptively(RUN_LIMIT, control::close);
+            Await.run(control::close);
             assertFalse(control.running());
             assertNotNull(control.whenStopped());
             Long result = control.result();
@@ -976,7 +970,7 @@ public class EmbeddingSupportTest {
         Instant started = control.whenStarted();
         assertNotNull(started);
 
-        assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        Await.run(control::join);
 
         Instant stopped = control.whenStopped();
         assertNotNull(stopped);
@@ -1068,7 +1062,7 @@ public class EmbeddingSupportTest {
                 rootDir.toFile(), errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
         return output.toString();
     }
@@ -1082,7 +1076,7 @@ public class EmbeddingSupportTest {
                 new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
         return errs;
     }

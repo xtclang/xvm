@@ -2,7 +2,6 @@ package org.xvm.lsp.server
 
 import com.google.gson.JsonPrimitive
 import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
@@ -30,13 +29,13 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaitAsserted
+import org.xvm.lsp.awaited
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks whole-module analysis through document versions and filesystem notifications. Member diagnostics and
@@ -111,7 +110,7 @@ class XdkModuleServerTest {
                                         }
                                 }
                         },
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                     .capabilities
                     .workspace
                     .fileOperations
@@ -151,7 +150,7 @@ class XdkModuleServerTest {
             val capabilities =
                 session.server
                     .initialize(InitializeParams())
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .capabilities
             assertThat(capabilities.typeHierarchyProvider.left).isTrue()
             session.open(root, root.readText(), 1)
@@ -162,27 +161,27 @@ class XdkModuleServerTest {
                             TextDocumentIdentifier(root.toURI().toString()),
                             Position(0, root.readText().indexOf("Base")),
                         ),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                     .single()
             hierarchy.data = JsonPrimitive(hierarchy.data as String)
             val child =
                 session.documents
                     .typeHierarchySubtypes(TypeHierarchySubtypesParams(hierarchy))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
             assertThat(child.uri).isEqualTo(member.toURI().toString())
             child.data = JsonPrimitive(child.data as String)
             val base =
                 session.documents
                     .typeHierarchySupertypes(TypeHierarchySupertypesParams(child))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
             assertThat(base.uri).isEqualTo(root.toURI().toString())
             session.change(root, root.readText(), 2)
             assertThat(
                 session.documents
                     .typeHierarchySubtypes(TypeHierarchySubtypesParams(hierarchy))
-                    .get(HANG_SECONDS, SECONDS),
+                    .awaited(),
             ).isEmpty()
         }
     }
@@ -253,7 +252,7 @@ class XdkModuleServerTest {
             version: Int?,
             errors: Boolean,
         ) {
-            await().atMost(HANG_SECONDS, SECONDS).untilAsserted {
+            awaitAsserted {
                 val matches =
                     published.drop(after).filter {
                         it.uri == file.toURI().toString() && it.version == version
@@ -269,7 +268,7 @@ class XdkModuleServerTest {
         }
 
         override fun close() {
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 }

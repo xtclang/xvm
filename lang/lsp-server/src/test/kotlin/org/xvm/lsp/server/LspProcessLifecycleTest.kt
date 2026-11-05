@@ -19,13 +19,12 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /** Runs the production launcher in child JVMs; fallback cleanup must not hide a failure to exit. */
 @Tag("compiler-stdio")
@@ -107,20 +106,20 @@ class LspProcessLifecycleTest {
                             workspaceFolders =
                                 listOf(WorkspaceFolder(workspace.toUri().toString(), "Lifecycle"))
                         },
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                 server.initialized(InitializedParams())
                 server.textDocumentService.didOpen(
                     DidOpenTextDocumentParams(
                         TextDocumentItem(file.toUri().toString(), "xtc", 1, source),
                     ),
                 )
-                assertThat(diagnostics.poll(HANG_SECONDS, SECONDS))
+                assertThat(diagnostics.awaited())
                     .describedAs("Server must have processed the document")
                     .isNotNull()
             }
             val shutdown =
                 termination in setOf(Termination.SHUTDOWN_THEN_EOF, Termination.SHUTDOWN_AND_EXIT)
-            if (shutdown) server.shutdown().get(HANG_SECONDS, SECONDS)
+            if (shutdown) server.shutdown().awaited()
             when (termination) {
                 Termination.EXIT_WITHOUT_SHUTDOWN,
                 Termination.SHUTDOWN_AND_EXIT,
@@ -128,7 +127,7 @@ class LspProcessLifecycleTest {
 
                 else -> process.outputStream.close()
             }
-            assertThat(process.waitFor(HANG_SECONDS, SECONDS))
+            assertThat(process.awaited())
                 .describedAs(
                     "$backend survived $termination; pid=${process.pid()}\n${Files.readString(stderr)}",
                 ).isTrue()
@@ -139,7 +138,7 @@ class LspProcessLifecycleTest {
             // Only after the exit assertion: never count forcibly reaping a leaked child as
             // success.
             if (process.isAlive) process.destroyForcibly()
-            check(process.waitFor(HANG_SECONDS, SECONDS)) { "Could not reap test server ${process.pid()}" }
+            check(process.awaited()) { "Could not reap test server ${process.pid()}" }
             process.outputStream.close()
             process.inputStream.close()
             executor.shutdownNow()
