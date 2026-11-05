@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -25,13 +24,13 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaitAsserted
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises compiler configuration replacement and presentation-only updates through the server. Preserves
@@ -81,7 +80,7 @@ class CompilerConfigurationTest {
             session.expect(false)
             val before = session.adapter.getCachedResult(session.uri)
             session.server.initialized(InitializedParams())
-            val pending = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
+            val pending = requireNotNull(session.requests.awaited())
             val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(
@@ -313,11 +312,11 @@ class CompilerConfigurationTest {
             session.open()
             session.expect(false)
             session.server.initialized(InitializedParams())
-            val old = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
+            val old = requireNotNull(session.requests.awaited())
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
-            val latest = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
+            val latest = requireNotNull(session.requests.awaited())
             latest.complete(listOf(mapOf("sourceModules" to emptyList<Any>())))
             session.expect(true)
             old.complete(listOf(CONFIG))
@@ -325,7 +324,7 @@ class CompilerConfigurationTest {
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
-            val superseded = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
+            val superseded = requireNotNull(session.requests.awaited())
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(mapOf("xtc" to "invalid")),
             )
@@ -335,7 +334,7 @@ class CompilerConfigurationTest {
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
-            val closing = requireNotNull(session.requests.poll(HANG_SECONDS, SECONDS))
+            val closing = requireNotNull(session.requests.awaited())
             session.close()
             closing.complete(listOf(CONFIG))
             assertThat(session.messages).hasSize(1)
@@ -410,7 +409,7 @@ class CompilerConfigurationTest {
                                     WorkspaceClientCapabilities().apply { configuration = pull }
                             }
                     },
-                ).get(HANG_SECONDS, SECONDS)
+                ).awaited()
         }
 
         fun open() =
@@ -424,7 +423,7 @@ class CompilerConfigurationTest {
             )
 
         fun expect(errors: Boolean) {
-            await().atMost(HANG_SECONDS, SECONDS).untilAsserted {
+            awaitAsserted {
                 val last = published.lastOrNull { it.uri == uri }
                 assertThat(last).isNotNull()
                 assertThat(last!!.version).isEqualTo(7)
@@ -433,7 +432,7 @@ class CompilerConfigurationTest {
         }
 
         override fun close() {
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 

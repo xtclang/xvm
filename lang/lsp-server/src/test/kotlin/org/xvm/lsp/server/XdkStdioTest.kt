@@ -88,7 +88,8 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
+import org.xvm.lsp.what
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
@@ -98,9 +99,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.NANOSECONDS
 import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.TimeoutException
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
@@ -1986,12 +1985,8 @@ class XdkStdioTest {
         )
 
         fun diagnosticsAt(version: Int): PublishDiagnosticsParams {
-            val deadline = System.nanoTime() + SECONDS.toNanos(HANG_SECONDS)
             while (true) {
-                val remaining = deadline - System.nanoTime()
-                val publication =
-                    if (remaining > 0) published.poll(remaining, NANOSECONDS) else null
-                checkNotNull(publication) { "No diagnostics for version $version. ${log()}" }
+                val publication = published.awaited(what { "diagnostics for version $version. ${log()}" })
                 assertThat(publication.uri).isEqualTo(URI)
                 assertThat(publication.version).isLessThanOrEqualTo(version)
                 if (publication.version == version) return publication
@@ -2002,22 +1997,13 @@ class XdkStdioTest {
             uri: String,
             version: Int?,
         ): PublishDiagnosticsParams {
-            val deadline = System.nanoTime() + SECONDS.toNanos(HANG_SECONDS)
             while (true) {
-                val remaining = deadline - System.nanoTime()
-                val publication =
-                    if (remaining > 0) published.poll(remaining, NANOSECONDS) else null
-                checkNotNull(publication) { "No diagnostics for $uri version $version. ${log()}" }
+                val publication = published.awaited(what { "diagnostics for $uri version $version. ${log()}" })
                 if (publication.uri == uri && publication.version == version) return publication
             }
         }
 
-        fun <T> await(future: Future<T>): T =
-            try {
-                future.get(HANG_SECONDS, SECONDS)
-            } catch (e: TimeoutException) {
-                throw AssertionError("LSP request timed out. ${log()}", e)
-            }
+        fun <T> await(future: Future<T>): T = future.awaited(what { "an LSP request. ${log()}" })
 
         fun shutdownAndExit() {
             await(server.shutdown())
@@ -2026,7 +2012,7 @@ class XdkStdioTest {
         }
 
         fun expectExit(status: Int) {
-            assertThat(process.waitFor(HANG_SECONDS, SECONDS))
+            assertThat(process.awaited())
                 .describedAs("Server did not exit. ${log()}")
                 .isTrue()
             assertThat(process.exitValue()).describedAs(log()).isEqualTo(status)
@@ -2037,7 +2023,7 @@ class XdkStdioTest {
         override fun close() {
             try {
                 if (process.isAlive) process.destroyForcibly()
-                check(process.waitFor(HANG_SECONDS, SECONDS)) { "Could not terminate test server. ${log()}" }
+                check(process.awaited()) { "Could not terminate test server. ${log()}" }
             } finally {
                 listening.cancel(true)
                 executor.shutdownNow()

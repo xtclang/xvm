@@ -4,11 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises signature and argument queries for function-valued parameters, properties and narrowed locals.
@@ -23,7 +22,7 @@ class XdkIncompleteFunctionTest {
             adapter.compile(URI, "$prefix); } }")
             val cached = adapter.getCachedResult(URI)
             val position = Position(0, prefix.length)
-            val model = adapter.analyzeAtAsync(URI, position).get(HANG_SECONDS, SECONDS)!!
+            val model = adapter.analyzeAtAsync(URI, position).awaited()!!
             val site = model.sites.single()
             val candidate = site.functions.single()
             val cursor = SemanticModel.Position(position.line, position.column)
