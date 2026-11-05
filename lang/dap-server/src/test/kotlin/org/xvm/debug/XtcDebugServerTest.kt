@@ -1064,6 +1064,18 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a program that the session stops ends as stopped, not as finished with an exit code`() {
+        server.configurationDone(ConfigurationDoneArguments())
+        server.launch(mutableMapOf("module" to "App")).awaited()
+
+        server.terminate(TerminateArguments()).awaited()
+        runs.events.exited(143, null)
+        assertThat(client.output(OutputEventArgumentsCategory.STDERR)).isEmpty()
+        assertThat(client.output(OutputEventArgumentsCategory.CONSOLE)).endsWith("\nProcess stopped\n").doesNotContain("exit code")
+        assertThat(client.events).containsSubsequence("exited 143", "terminated")
+    }
+
+    @Test
     fun `disconnect stops the program and answers once it has exited`() {
         server.configurationDone(ConfigurationDoneArguments())
         server.launch(mutableMapOf("module" to "App")).awaited()
