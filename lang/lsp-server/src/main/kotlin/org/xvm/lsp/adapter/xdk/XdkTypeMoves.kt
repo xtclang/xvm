@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constant
+import org.xvm.asm.ErrorListener.ErrorInfo
 import java.io.File
 
 /** Plan qualification changes from resolved type identities, never from matching source text. */
@@ -13,6 +14,8 @@ internal object XdkTypeMoves {
         val destinations: List<Destination>,
         val imports: Map<String, List<XdkRename.Edit>>,
         val dependencies: Map<String, Set<String>>,
+        /** The files whose references from the moved type's own module a qualifier now leads; an import could serve. */
+        val qualified: Set<String> = emptySet(),
     ) {
         /** Even an unused moved declaration must acquire the intended compiler owner. */
         fun provesDestinations(facts: CompilerRenameFacts): Boolean =
@@ -32,12 +35,29 @@ internal object XdkTypeMoves {
         val path: List<String>,
     )
 
+    /**
+     * The files whose qualified references the compiler rejects: files with a qualified reference and an error in
+     * their proposed code, which compiled before the move. There a qualifier's first name is something else, a
+     * property or a local of that name, and the package it should name is out of reach. The compiler reports only a
+     * class's first error, and where it gave up rather than at the reference, so the file is the unit.
+     */
+    fun shadowed(
+        proposal: Proposal,
+        plan: XdkRename.Plan,
+        errors: List<ErrorInfo>,
+    ): Set<String> = proposal.qualified.filterTo(linkedSetOf()) { source -> errors.any { it.source?.fileName == plan.sourceAfter(source) } }
+
+    /**
+     * Plan the move. In a file in [importing], a reference from the moved type's own module keeps the type's name, and
+     * the file imports the type, instead of the qualifier that would lead the name from the module.
+     */
     fun plan(
         facts: CompilerRenameFacts,
         operations: Map<File, File>,
         texts: Map<String, String>,
         directories: Set<File>,
         project: XdkProject,
+        importing: Set<String> = emptySet(),
     ): Proposal? {
         val moves =
             operations.map { (source, destination) ->
@@ -101,7 +121,7 @@ internal object XdkTypeMoves {
                         .root.path
                 XdkMoveImports.plan(texts.getValue(root), texts.filterKeys { movedOwner(it) == module }.values, required) ?: return null
             }
-        val qualifications =
+        val rewrites =
             facts.typeNames
                 .mapNotNull { name ->
                     val file = name.location.sourceName ?: return@mapNotNull null
@@ -127,8 +147,13 @@ internal object XdkTypeMoves {
                     val desired = movedTarget?.let { it.path + name.path.drop(it.owner.path.size) } ?: name.path
                     val localModule = movedOwner(file) ?: return null
                     val targetModule = movedTarget?.module ?: name.module
+                    val own = movedTarget != null && localModule == targetModule
+                    val imported = movedTarget?.takeIf { own && file in importing }
                     val qualified =
-                        if (localModule == targetModule) {
+                        if (imported != null) {
+                            // The file imports the moved type, so its name alone names it.
+                            desired.drop(imported.path.size - 1)
+                        } else if (localModule == targetModule) {
                             desired
                         } else if (changesModule(name) && targetModule != "ecstasy.xtclang.org") {
                             listOf(imports.getValue(localModule).aliases.getValue(targetModule)) + desired
@@ -148,9 +173,29 @@ internal object XdkTypeMoves {
                     if (suffix == 0) return null
                     val prefix = spelling.prefix(written.size - suffix, qualified.dropLast(suffix))
                     if (start + prefix.end > terminal) return null
-                    file to prefix.copy(start = start, end = start + prefix.end)
-                }.groupBy({ it.first }, { it.second })
+                    Rewrite(file, prefix.copy(start = start, end = start + prefix.end), own && imported == null)
+                }
+        val qualifications =
+            rewrites
+                .groupBy({ it.file }, { it.edit })
                 .mapValues { (_, value) -> value.distinct().sortedBy { it.start } }
+        // A moved type is imported once in each importing file that names it from the type's own module.
+        val typeImports =
+            facts.typeNames
+                .filter { !it.imported && it.location.sourceName in importing }
+                .mapNotNull { name ->
+                    val file = name.location.sourceName ?: return null
+                    val move = target(name) ?: return@mapNotNull null
+                    if (movedOwner(file) != move.module) return@mapNotNull null
+                    file to XdkAutoImports.Target(move.path.last(), move.module, move.path.joinToString("."))
+                }.distinct()
+                .groupBy({ it.first }, { it.second })
+                .mapValues { (file, targets) ->
+                    val module = movedOwner(file) ?: return null
+                    val edits = targets.map { XdkAutoImports.edit(texts.getValue(file), module, it, emptyMap()) ?: return null }
+                    val at = edits.map { it.start }.distinct().singleOrNull() ?: return null
+                    listOf(XdkRename.Edit(at, at, edits.joinToString("") { it.text }))
+                }
         val importEdits =
             imports
                 .map { (module, planned) ->
@@ -158,8 +203,12 @@ internal object XdkTypeMoves {
                         .getValue(module)
                         .root.path to listOf(planned.edit)
                 }.toMap()
+        val allImports =
+            (importEdits.entries + typeImports.entries)
+                .groupBy({ it.key }, { it.value })
+                .mapValues { (_, changes) -> changes.flatten() }
         val edits =
-            (qualifications.entries + moves.flatMap { it.rename.edits.entries } + importEdits.entries)
+            (qualifications.entries + moves.flatMap { it.rename.edits.entries } + allImports.entries)
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, changes) -> changes.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
         if (edits.values.any { !XdkRename.disjoint(it) }) return null
@@ -169,7 +218,15 @@ internal object XdkTypeMoves {
             moves.zip(operations.values).map { (move, destination) ->
                 Destination(destination.path, move.module, move.path.dropLast(1) + destination.nameWithoutExtension)
             }
-        return Proposal(edits, resources.mapValues { it.value.first() }, qualifications, destinations, importEdits, dependencies)
+        return Proposal(
+            edits,
+            resources.mapValues { it.value.first() },
+            qualifications,
+            destinations,
+            allImports,
+            dependencies,
+            rewrites.filter { it.own }.mapTo(linkedSetOf()) { it.file },
+        )
     }
 
     /**
@@ -200,6 +257,13 @@ internal object XdkTypeMoves {
         }
         return resolved.second + implicit.map { it.name }
     }
+
+    /** A reference's qualification edit; [own] when it leads the moved type's name from the type's own module. */
+    private data class Rewrite(
+        val file: String,
+        val edit: XdkRename.Edit,
+        val own: Boolean,
+    )
 
     /** Original type identity paired with the proposed owner path, file moves and rename plan. */
     private data class Move(
