@@ -79,7 +79,14 @@ internal object XdkSafeDelete {
             val chains = if (member is MethodDeclarationStatement) facts.methods.chains else facts.properties.chains
             if (chains.any { identity in it.members && (it.members.size > 1 || !it.supported) }) return null
         }
-        if (XdkRefactoringSyntax.tree(member).any { (node, _) -> node is AnnotationExpression }) return null
+        // An annotated member, or one whose signature is, is refused; an annotation in a method's body, as that of an
+        // injected local, is the body's own and goes with it.
+        if (member.childNodes().filterNot { it is StatementBlock }.any { child ->
+                XdkRefactoringSyntax.tree(child).any { (node, _) -> node is AnnotationExpression }
+            }
+        ) {
+            return null
+        }
         val edit = removal(text, member) ?: return null
         val members = SemanticModel.Range(at(member.startPosition), at(member.endPosition))
 
