@@ -14,12 +14,11 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import org.xtclang.idea.HANG_SECONDS
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.XtcIntelliJLanguage
+import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.holdingEdits
-import java.util.concurrent.TimeUnit
 
 /** Parameter info pops up as a call's `(` is typed in an Ecstasy file, with the language server's signature. */
 class XtcParameterInfoTest {
@@ -49,10 +48,9 @@ class XtcParameterInfoTest {
             tester.typeWithPauses("deck.deal(")
             runInEdtAndWait { PsiDocumentManager.getInstance(editor.fixture.project).commitAllDocuments() }
             // the popup that "(" schedules asks the server, whose answer comes on its own thread
-            val hung = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
-            while (!runInEdtAndGet { ParameterInfoControllerBase.existsForEditor(editor.fixture.editor) } && System.nanoTime() < hung) {
-                runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
-                Thread.sleep(10)
+            awaitUntil("the parameter info popup") {
+                runInEdtAndGet { ParameterInfoControllerBase.existsForEditor(editor.fixture.editor) } ||
+                    false.also { runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() } }
             }
         }
         assertThat(editor.server.requests).contains("textDocument/signatureHelp")
@@ -67,10 +65,8 @@ class XtcParameterInfoTest {
             performEditorAction(IdeActions.ACTION_EDITOR_SHOW_PARAMETER_INFO)
         }
         // the request goes from a pooled thread
-        val hung = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
-        while (server.signatureLines.isEmpty() && System.nanoTime() < hung) {
-            runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
-            Thread.sleep(10)
+        awaitUntil("the signature request") {
+            server.signatureLines.isNotEmpty() || false.also { runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() } }
         }
         assertThat(server.signatureLines.firstOrNull()).isEqualTo("        deck.deal(")
     }
