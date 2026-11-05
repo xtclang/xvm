@@ -8,6 +8,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleRepository
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.util.snapshot
 import org.xvm.runtime.SessionDebugger
 import org.xvm.runtime.debug.DebugChannel
 import org.xvm.runtime.debug.DebugCommands
@@ -237,7 +238,7 @@ object RunWorker {
         /** Ends each run's input and closes the runs, waiting at most [limit] for them to end. */
         fun stopAll(limit: Duration) {
             inputs.values.forEach(ConsoleInput::end)
-            closeAll(active.values.toList(), limit)
+            closeAll(active.values.snapshot(), limit)
         }
 
         private fun ErrorList.failure(): String? =

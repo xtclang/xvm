@@ -6,6 +6,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.TestEvent
+import org.xtclang.idea.snapshot
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -84,7 +85,7 @@ class DebugSessions {
 
     /** A stopped or restarted language server takes every debug session, and the programs they launched, with it. */
     fun endAll(reason: String) {
-        sessions.keys.toList().forEach { sessions.remove(it)?.ended(reason) }
+        sessions.keys.snapshot().forEach { sessions.remove(it)?.ended(reason) }
     }
 
     companion object {

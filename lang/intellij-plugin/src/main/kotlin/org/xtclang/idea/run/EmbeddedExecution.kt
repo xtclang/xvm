@@ -18,6 +18,7 @@ import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestEventParams
 import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xtclang.idea.snapshot
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -207,7 +208,7 @@ class EmbeddedRunSessions {
 
     /** A stopped or restarted language server takes its execution worker, and every run, with it. */
     fun endAll(reason: String) {
-        sessions.keys.toList().forEach { sessions.remove(it)?.exited(null, reason) }
+        sessions.keys.snapshot().forEach { sessions.remove(it)?.exited(null, reason) }
     }
 
     companion object {

@@ -126,6 +126,7 @@ import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.snapshot
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -297,7 +298,7 @@ class XtcTextDocumentService(
      * lock, so a query never finds a retired analysis that is about to be replaced.
      */
     private fun reanalyzeRetired() {
-        for (uri in openDocuments.keys.toList()) {
+        for (uri in openDocuments.keys.snapshot()) {
             val document = openDocuments[uri] ?: continue
             if (uri !in outOfSync && document.analysis.isCancelled) {
                 logger.info("analysis of {} was retired without a replacement; analyzing it again", uri)

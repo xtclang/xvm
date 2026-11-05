@@ -3,6 +3,7 @@ package org.xtclang.idea.lsp
 import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageProducer
+import org.xtclang.idea.snapshot
 import java.io.Closeable
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
@@ -53,7 +54,7 @@ internal class PendingRequests {
     /** Cancels the requests still waiting, and any sent after the connection ended. */
     fun end() {
         ended = true
-        waiting.toList().forEach { it.completeExceptionally(CancellationException(ENDED)) }
+        waiting.snapshot().forEach { it.completeExceptionally(CancellationException(ENDED)) }
     }
 
     private fun track(future: CompletableFuture<*>): CompletableFuture<*> {

@@ -21,6 +21,7 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
+import org.xvm.lsp.util.snapshot
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.Path
@@ -109,7 +110,7 @@ internal class DebugSessions(
     }
 
     override fun close() {
-        sessions.values.toList().forEach(Session::close)
+        sessions.values.snapshot().forEach(Session::close)
         sessions.clear()
     }
 
