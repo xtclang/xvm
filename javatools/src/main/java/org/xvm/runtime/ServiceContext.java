@@ -1596,7 +1596,12 @@ public class ServiceContext {
         return request.f_future;
     }
 
-    protected void callUnhandledExceptionHandler(ExceptionHandle hException) {
+    /**
+     * Report an exception that nothing caught to this service's handler of unhandled exceptions:
+     * the one the program registered ({@code registerUnhandledExceptionNotification}), or else one
+     * that logs it.
+     */
+    public void callUnhandledExceptionHandler(ExceptionHandle hException) {
         FunctionHandle hFunction = m_hExceptionHandler;
         if (hFunction == null) {
             hFunction = new NativeFunctionHandle((frame, ahArg, iReturn) -> {
