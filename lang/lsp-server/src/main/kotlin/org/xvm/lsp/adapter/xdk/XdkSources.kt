@@ -11,9 +11,9 @@ import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
+import java.util.Collections
 import java.util.concurrent.CancellationException
 import java.util.Map.copyOf as immutableMap
-import java.util.Set.copyOf as immutableSet
 
 /** One module's immutable text and membership, with editor overlays taking precedence over disk. */
 internal class XdkSources
@@ -26,11 +26,20 @@ internal class XdkSources
         private val configuredResourceRoots: List<File>?,
         resourceMoves: XdkResourceMoves? = null,
     ) : ModuleInfo(root, moduleName(root, text.getValue(root))) {
-        private val text = immutableMap(text)
+        // in path order, as the module's documents are listed and published: a Map.copyOf's order changes with each JVM,
+        // and a directory walk's with each file system
+        private val text: Map<File, String> =
+            Collections.unmodifiableMap(text.entries.sortedBy { it.key.path }.associateTo(LinkedHashMap()) { it.toPair() })
         private val resourceDirectory = resourceMoves?.directory(resources) ?: resources.directory()
 
         /** Cache identity contains only immutable input values, never a parsed ModuleInfo tree. */
-        val inputs = Inputs(this.text, immutableSet(directories), immutableMap(aliases), resources)
+        val inputs =
+            Inputs(
+                this.text,
+                Collections.unmodifiableSet(directories.sortedBy { it.path }.toCollection(LinkedHashSet())),
+                immutableMap(aliases),
+                resources,
+            )
 
         /** Captured source text, directories, aliases and resources that identify one compilation input set. */
         data class Inputs(
@@ -61,9 +70,9 @@ internal class XdkSources
                 }
             }.mapValues { (_, files) -> files.values.sortedBy { it.file().name } }
 
-        val sourceUris: Map<String, String> = text.keys.associate { it.path to uri(it) }
+        val sourceUris: Map<String, String> = this.text.keys.associate { it.path to uri(it) }
 
-        val documentUris: Set<String> = text.keys.mapTo(linkedSetOf(), ::uri)
+        val documentUris: Set<String> = this.text.keys.mapTo(linkedSetOf(), ::uri)
 
         fun uri(file: File): String = aliases[file] ?: file.toURI().toString()
 
