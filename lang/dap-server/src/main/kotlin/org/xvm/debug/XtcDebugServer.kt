@@ -162,6 +162,9 @@ class XtcDebugServer(
     private val ended = CompletableFuture<Unit>()
     private val terminated = AtomicBoolean()
 
+    /** Whether the session asked its program to stop, whose end then says it was stopped, not how the program exited. */
+    private val stopping = AtomicBoolean()
+
     /** False for a launch without debugging. */
     @Volatile
     private var debugging = true
@@ -324,6 +327,7 @@ class XtcDebugServer(
     fun close() {
         if (launched.get() && !ended.isDone) {
             logger.info("close: stopping run {}", runId)
+            stopping.set(true)
             runs.stop(runId)
         }
         unconfigured()
@@ -1224,6 +1228,7 @@ class XtcDebugServer(
     /** DAP: terminate. Stops the program, whose exit then ends the session; with no program, it ends at once. */
     override fun terminate(args: TerminateArguments?): CompletableFuture<Void> {
         logger.info("terminate: restart={}", args?.restart)
+        stopping.set(true)
         if (!launched.get() || ended.isDone || !runs.stop(runId)) {
             end(sendTerminated = true)
         }
@@ -1237,6 +1242,7 @@ class XtcDebugServer(
         if (!launched.get() || ended.isDone) {
             return CompletableFuture.completedFuture(null)
         }
+        stopping.set(true)
         runs.stop(runId)
         unconfigured()
         return ended.copy().completeOnTimeout(Unit, STOP_WAIT_SECONDS, SECONDS).thenApply<Void?> { null }
@@ -1258,7 +1264,8 @@ class XtcDebugServer(
                     output(OutputEventArgumentsCategory.STDERR, "\n$error\n")
                 }
                 val exitCode = code?.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong())?.toInt() ?: 1
-                console("\nProcess finished with exit code $exitCode")
+                // a program that the session stopped did not finish: the worker reports its exit code as 143
+                console(if (stopping.get()) "\nProcess stopped" else "\nProcess finished with exit code $exitCode")
                 client?.exited(ExitedEventArguments().apply { this.exitCode = exitCode })
                 end(sendTerminated = true)
             }
