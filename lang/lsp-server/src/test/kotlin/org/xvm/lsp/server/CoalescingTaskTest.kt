@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.HANG_SECONDS
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
@@ -16,14 +17,14 @@ class CoalescingTaskTest {
         CoalescingTask("test") {
             if (runs.incrementAndGet() == 1) {
                 started.countDown()
-                check(release.await(10, SECONDS))
+                check(release.await(HANG_SECONDS, SECONDS))
             }
         }.use { task ->
             task.request()
-            assertThat(started.await(10, SECONDS)).isTrue()
+            assertThat(started.await(HANG_SECONDS, SECONDS)).isTrue()
             repeat(50) { task.request() }
             release.countDown()
-            task.idle().get(10, SECONDS)
+            task.idle().get(HANG_SECONDS, SECONDS)
             assertThat(runs.get()).isEqualTo(2)
         }
     }
@@ -35,9 +36,9 @@ class CoalescingTaskTest {
             if (runs.incrementAndGet() == 1) error("first walk fails")
         }.use { task ->
             task.request()
-            task.idle().get(10, SECONDS)
+            task.idle().get(HANG_SECONDS, SECONDS)
             task.request()
-            task.idle().get(10, SECONDS)
+            task.idle().get(HANG_SECONDS, SECONDS)
             assertThat(runs.get()).isEqualTo(2)
         }
     }
@@ -48,7 +49,7 @@ class CoalescingTaskTest {
         val task = CoalescingTask("test") { runs.incrementAndGet() }
         task.close()
         task.request()
-        task.idle().get(10, SECONDS)
+        task.idle().get(HANG_SECONDS, SECONDS)
         assertThat(runs.get()).isZero()
     }
 }

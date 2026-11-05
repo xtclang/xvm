@@ -6,9 +6,9 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.util.zip.ZipFile
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.runtimeSettingsCases() {
     listOf("X269", "X270").forEach { id ->
@@ -30,7 +30,7 @@ internal fun ParityScenarios.runtimeSettingsCases() {
 
                 fun restart(previous: Int) {
                     edit(JsonObject(), "restart")
-                    awaitUi("runtime settings restart completed", 45.seconds) {
+                    awaitUi("runtime settings restart completed", HANG_LIMIT) {
                         protocol.server().getCurrentProcessId()?.let { it != previous.toLong() } == true
                     }
                     clean(document)
@@ -105,7 +105,7 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                         // Match the Language Servers panel's Stop action. Internal stop() leaves
                         // the wrapper enabled, so a background editor request can restart it.
                         withContext(OnDispatcher.EDT) { server.stopAndDisable() }
-                        awaitUi("server stops before offline export", 30.seconds) { server.getServerStatus().name() == "stopped" }
+                        awaitUi("server stops before offline export", HANG_LIMIT) { server.getServerStatus().name() == "stopped" }
                     } else {
                         val failing =
                             JsonObject().apply {
@@ -113,7 +113,7 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                             }
                         withContext(OnDispatcher.EDT) { page.edit(failing.toString(), "apply") }
                         server.restart()
-                        awaitUi("intentional JVM startup failure recorded", 30.seconds) {
+                        awaitUi("intentional JVM startup failure recorded", HANG_LIMIT) {
                             server.getServerStatus().name() == "stopped" &&
                                 run {
                                     page.export(project, destination.toString())

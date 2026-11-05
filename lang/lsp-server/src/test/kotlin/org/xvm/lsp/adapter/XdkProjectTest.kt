@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.io.File
@@ -64,7 +65,7 @@ class XdkProjectTest {
         XdkAdapter(
             { source, repository, errors ->
                 entered.countDown()
-                check(release.await(10, SECONDS))
+                check(release.await(HANG_SECONDS, SECONDS))
                 support.compileModule(source, repository, errors)
             },
             { sources, repository, errors ->
@@ -78,14 +79,14 @@ class XdkProjectTest {
             configure(adapter, library, consumer)
             val blocker = adapter.compileAsync("untitled:Hold.x", "module Hold {}")
             try {
-                check(entered.await(10, SECONDS))
+                check(entered.await(HANG_SECONDS, SECONDS))
                 val requests =
                     (1..30).map {
                         adapter.compileAsync(consumer.toURI().toString(), CONSUMER + " // $it")
                     }
                 release.countDown()
-                assertThat(blocker.get(30, SECONDS).success).isTrue()
-                assertThat(requests.last().get(30, SECONDS).success).isTrue()
+                assertThat(blocker.get(HANG_SECONDS, SECONDS).success).isTrue()
+                assertThat(requests.last().get(HANG_SECONDS, SECONDS).success).isTrue()
                 assertThat(requests.dropLast(1)).allMatch { it.isCancelled }
                 assertThat(calls.get()).isEqualTo(2)
             } finally {
@@ -109,7 +110,7 @@ class XdkProjectTest {
             { sources, repository, errors ->
                 if (!held.getAndSet(true)) {
                     entered.countDown()
-                    check(release.await(10, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                 }
                 support.compileModule(sources, repository, errors)
             },
@@ -120,10 +121,10 @@ class XdkProjectTest {
             configure(adapter, library, consumer)
             val first = adapter.compileAsync(consumer.toURI().toString(), CONSUMER)
             try {
-                check(entered.await(10, SECONDS))
+                check(entered.await(HANG_SECONDS, SECONDS))
                 member.writeText("class Extra { MissingType broken; }")
                 release.countDown()
-                assertThat(first.get(30, SECONDS).success).isTrue()
+                assertThat(first.get(HANG_SECONDS, SECONDS).success).isTrue()
                 assertThat(adapter.compile(consumer.toURI().toString(), CONSUMER).diagnostics)
                     .anyMatch { it.code == "COMPILER-38" }
             } finally {
@@ -144,7 +145,7 @@ class XdkProjectTest {
             { sources, repository, errors ->
                 if (!held.getAndSet(true)) {
                     entered.countDown()
-                    check(release.await(10, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                     support.compileModule(sources, repository, ErrorList())
                 } else {
                     support.compileModule(sources, repository, errors)
@@ -157,13 +158,13 @@ class XdkProjectTest {
             configure(adapter, library, consumer)
             val old = adapter.compileAsync(consumer.toURI().toString(), CONSUMER)
             try {
-                check(entered.await(10, SECONDS))
+                check(entered.await(HANG_SECONDS, SECONDS))
                 adapter.compileAsync(library.toURI().toString(), INCOMPATIBLE)
                 val latest = adapter.compileAsync(consumer.toURI().toString(), CONSUMER)
                 assertThat(old.isCancelled).isTrue()
                 assertThat(adapter.getCachedResult(consumer.toURI().toString())).isNull()
                 release.countDown()
-                assertThat(latest.get(30, SECONDS).success).isFalse()
+                assertThat(latest.get(HANG_SECONDS, SECONDS).success).isFalse()
                 assertThat(adapter.getCachedResult(consumer.toURI().toString())?.success)
                     .isFalse()
             } finally {
@@ -190,7 +191,7 @@ class XdkProjectTest {
             { text, sources, cursor, repository, errors ->
                 if (!held.getAndSet(true)) {
                     entered.countDown()
-                    check(release.await(10, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                 }
                 support.analyzeIncomplete(
                     sources,
@@ -206,7 +207,7 @@ class XdkProjectTest {
             val cursor = source.indexOf("box.") + 4
             val old = adapter.getCompletionsAsync(consumer.toURI().toString(), 0, cursor, ".")
             try {
-                check(entered.await(10, SECONDS))
+                check(entered.await(HANG_SECONDS, SECONDS))
                 adapter.compileAsync(
                     library.toURI().toString(),
                     "module Library { class Box { String label = \"new\"; } }",
@@ -219,7 +220,7 @@ class XdkProjectTest {
                 val candidates =
                     adapter
                         .getCompletionsAsync(consumer.toURI().toString(), 0, cursor, ".")
-                        .get(20, SECONDS)
+                        .get(HANG_SECONDS, SECONDS)
                 assertThat(candidates.map { it.label })
                     .contains("label")
                     .doesNotContain("number")

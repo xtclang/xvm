@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import java.util.concurrent.CompletableFuture
@@ -40,7 +41,7 @@ class IndexingProgressTest {
                     InitializeParams().apply {
                         workspaceFolders = listOf(WorkspaceFolder("file:///code/platform/", "platform"))
                     },
-                ).get(5, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             listOf(
                 Triple("textDocument/references", "file:///code/platform/src/Consumer.x", "src/Consumer.x"),
                 Triple("workspace/diagnostic", "", "Workspace: configured source graph"),
@@ -48,12 +49,12 @@ class IndexingProgressTest {
                 val work = CompletableFuture<Unit>()
                 val params = ReferenceParams().apply { workDoneToken = Either.forLeft(method) }
                 server.observeQuery(method, params, work, uri)
-                val begin = events.poll(5, SECONDS).value.left as WorkDoneProgressBegin
+                val begin = events.poll(HANG_SECONDS, SECONDS).value.left as WorkDoneProgressBegin
                 assertThat(begin.message).startsWith(expected).doesNotContain("Waiting for analysis or running compiler query")
                 work.complete(Unit)
                 assertThat(
                     events
-                        .poll(5, SECONDS)
+                        .poll(HANG_SECONDS, SECONDS)
                         .value.left.kind,
                 ).isEqualTo(WorkDoneProgressKind.end)
             }
@@ -88,10 +89,10 @@ class IndexingProgressTest {
                                 listOf(WorkspaceFolder("file:///workspace/", "workspace"))
                             workDoneToken = token
                         },
-                    ).get(5, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                 assertThat(
                     events
-                        .poll(5, SECONDS)
+                        .poll(HANG_SECONDS, SECONDS)
                         .value.left.kind,
                 ).isEqualTo(WorkDoneProgressKind.begin)
                 assertThat(scan.isDone).isFalse()
@@ -103,7 +104,7 @@ class IndexingProgressTest {
                 }
                 assertThat(
                     events
-                        .poll(5, SECONDS)
+                        .poll(HANG_SECONDS, SECONDS)
                         .value.left.kind,
                 ).isEqualTo(WorkDoneProgressKind.end)
                 assertThat(scan.isCancelled).isEqualTo(cancel)

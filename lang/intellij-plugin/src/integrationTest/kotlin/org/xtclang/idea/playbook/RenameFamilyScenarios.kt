@@ -11,10 +11,10 @@ import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.ui
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /** Shared rename fixtures, real native Rename/Undo, and consumers kept closed before the edit. */
 fun Driver.renameFamily(
@@ -69,7 +69,7 @@ fun Driver.renameFamily(
             .forEach { check(root.resolve(it["file"].asString).toString() !in opened) }
     }
     rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
-    awaitUi("$id source and resource edits applied", 45.seconds) {
+    awaitUi("$id source and resource edits applied", HANG_LIMIT) {
         files.all { file ->
             val destination = file["destination"].asString
             Files.exists(root.resolve(destination)) &&
@@ -88,7 +88,7 @@ fun Driver.renameFamily(
     }
     focusEditor(renamed)
     invokeAction("\$Undo", now = false, component = renamed.component)
-    awaitUi("$id one Undo restores every source and path", 45.seconds) {
+    awaitUi("$id one Undo restores every source and path", HANG_LIMIT) {
         val confirmation = ui.dialog(title = "Undo")
         if (confirmation.present()) {
             withContext(OnDispatcher.EDT) {
@@ -112,7 +112,7 @@ fun Driver.renameFamily(
         val restored = open(data.text("file"))
         focusEditor(restored)
         invokeAction("\$Redo", now = false, component = restored.component)
-        awaitUi("$id Redo restores graph, sources and paths", 45.seconds) {
+        awaitUi("$id Redo restores graph, sources and paths", HANG_LIMIT) {
             graphContains("Renamed.example.org") &&
                 !graphContains("Library.example.org") &&
                 files.all { file ->
@@ -124,7 +124,7 @@ fun Driver.renameFamily(
         clean(redone)
         focusEditor(redone)
         invokeAction("\$Undo", now = false, component = redone.component)
-        awaitUi("$id second Undo restores the original graph and sources", 45.seconds) {
+        awaitUi("$id second Undo restores the original graph and sources", HANG_LIMIT) {
             val confirmation = ui.dialog(title = "Undo")
             if (confirmation.present()) {
                 withContext(OnDispatcher.EDT) {

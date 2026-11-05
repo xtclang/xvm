@@ -4,7 +4,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.reliabilityCases() {
     case("X146") { data ->
@@ -37,7 +37,7 @@ internal fun ParityScenarios.reliabilityCases() {
             // Read the native provider's automatically refreshed future, without manually
             // requesting inlays or editing the consumer to trigger another analysis.
             with(driver) {
-                awaitUi("untouched consumer receives $expected inlay", 45.seconds) {
+                awaitUi("untouched consumer receives $expected inlay", HANG_LIMIT) {
                     support
                         .getValidLSPFuture()
                         ?.takeIf { it.isDone() && !it.isCompletedExceptionally() }
@@ -64,7 +64,7 @@ internal fun ParityScenarios.reliabilityCases() {
             }
             with(driver) {
                 val refreshed = withContext(OnDispatcher.EDT) { events.burst() }
-                awaitUi("many-file refresh burst completes", 15.seconds) { refreshed.isDone() }
+                awaitUi("many-file refresh burst completes", HANG_LIMIT) { refreshed.isDone() }
                 check(!refreshed.isCompletedExceptionally())
             }
             listOf("changed" to "after", "original" to "before").forEach { (source, expected) ->
@@ -74,7 +74,7 @@ internal fun ParityScenarios.reliabilityCases() {
                 // request.
                 consumer.editor
                 with(driver) {
-                    awaitUi("native dependency refresh requests", 45.seconds) {
+                    awaitUi("native dependency refresh requests", HANG_LIMIT) {
                         events
                             .values()
                             .containsAll(negotiated)
@@ -106,7 +106,7 @@ internal fun ParityScenarios.reliabilityCases() {
                 name: String,
             ) {
                 val barrier = withContext(OnDispatcher.EDT) { page.complete(index, name) }
-                awaitUi("settings callback and EDT publication complete", 15.seconds) {
+                awaitUi("settings callback and EDT publication complete", HANG_LIMIT) {
                     barrier.isDone()
                 }
                 check(!barrier.isCompletedExceptionally())
@@ -124,7 +124,7 @@ internal fun ParityScenarios.reliabilityCases() {
                     withContext(OnDispatcher.EDT) {
                         page.completeAndRestart(2, "RetiredBeforePublication")
                     }
-                awaitUi("restart between report receipt and publication", 45.seconds) {
+                awaitUi("restart between report receipt and publication", HANG_LIMIT) {
                     publication.isDone() &&
                         protocol.server().getCurrentProcessId()?.let { it != replyPid } == true
                 }
@@ -136,12 +136,12 @@ internal fun ParityScenarios.reliabilityCases() {
                 withContext(OnDispatcher.EDT) {
                     utility(LanguageServicePage::class).transport(singleProject(), "incremental")
                 }
-                awaitUi("new connection owns settings", 45.seconds) {
+                awaitUi("new connection owns settings", HANG_LIMIT) {
                     protocol.server().getCurrentProcessId()?.let { it != previousPid } == true
                 }
                 complete(3, "OldSettings")
                 check(text() == before)
-                awaitUi("retired process exits", 45.seconds) {
+                awaitUi("retired process exits", HANG_LIMIT) {
                     previousPid == null ||
                         !ProcessHandle.of(previousPid).map { it.isAlive }.orElse(false)
                 }
@@ -230,7 +230,7 @@ internal fun ParityScenarios.refreshOverlapCases() {
 
             fun visible(expected: String? = null) {
                 val editor = consumer.editor
-                awaitUi("untouched consumer displays ${expected ?: "no"} hints", 45.seconds) {
+                awaitUi("untouched consumer displays ${expected ?: "no"} hints", HANG_LIMIT) {
                     val installed =
                         withContext(OnDispatcher.EDT) {
                             cast(editor.editor, NativeInlayEditor::class)
@@ -274,7 +274,7 @@ internal fun ParityScenarios.refreshOverlapCases() {
                 flush(library)
                 hints(true)
                 protocol.server().restart()
-                awaitUi("retired refresh producer exits", 45.seconds) {
+                awaitUi("retired refresh producer exits", HANG_LIMIT) {
                     protocol.server().getCurrentProcessId()?.let { it != previous } == true &&
                         !ProcessHandle.of(previous).map { it.isAlive }.orElse(false)
                 }

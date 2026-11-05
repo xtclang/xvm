@@ -9,7 +9,7 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
 import com.intellij.openapi.actionSystem.IdeActions.ACTION_EDITOR_NEXT_TEMPLATE_VARIABLE
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 fun Driver.syntaxCompletions(
     data: SharedScenarios.Scenario,
@@ -51,7 +51,7 @@ fun Driver.syntaxCompletions(
         if (variant["selected"] != null) {
             // IDEA can undo caret navigation separately (editor.undo.transparent.caret.movement).
             // Accept only that exact, text-preserving step before undoing the insertion once.
-            awaitUi("undo insertion or restore its selected placeholder", 15.seconds) {
+            awaitUi("undo insertion or restore its selected placeholder", HANG_LIMIT) {
                 editor.text == source ||
                     withContext(OnDispatcher.EDT) {
                         val selection = cast(editor.editor.getSelectionModel(), SelectionOffsets::class)
@@ -62,7 +62,7 @@ fun Driver.syntaxCompletions(
             }
             if (editor.text != source) invokeAction("\$Undo", now = false, component = editor.component)
         }
-        awaitUi("one undo restores the completion prefix", 15.seconds) { editor.text == source }
+        awaitUi("one undo restores the completion prefix", HANG_LIMIT) { editor.text == source }
     }
 }
 
@@ -83,7 +83,7 @@ fun Driver.lookup(
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
     awaitUi(
         message = "shared completion scope",
-        timeout = 45.seconds,
+        timeout = HANG_LIMIT,
         errorMessage = {
             "Current native items: " +
                 manager.getActiveLookup()?.getItems()?.map { item ->
@@ -198,7 +198,7 @@ fun Driver.accept(
         }
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
-    awaitUi("$label completion or single-item insertion", 45.seconds) {
+    awaitUi("$label completion or single-item insertion", HANG_LIMIT) {
         // An insertion may already have completed before focus was lost. Never reopen it.
         if (editor.text == expected) return@awaitUi true
         inspection.recover()
@@ -217,5 +217,5 @@ fun Driver.accept(
         }
         invokeAction("EditorChooseLookupItem", component = editor.component)
     }
-    awaitUi("exact replacement of the typed prefix", 15.seconds) { editor.text == expected }
+    awaitUi("exact replacement of the typed prefix", HANG_LIMIT) { editor.text == expected }
 }

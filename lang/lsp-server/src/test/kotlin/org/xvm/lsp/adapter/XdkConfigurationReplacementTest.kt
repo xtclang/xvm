@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -163,12 +164,12 @@ class XdkConfigurationReplacementTest {
         val added = source("Added", "module Added {}")
         XdkAdapter { source, errors ->
             entered.countDown()
-            check(release.await(10, SECONDS))
+            check(release.await(HANG_SECONDS, SECONDS))
             support.compileModule(source, null, errors)
         }.use { adapter ->
             val pending = adapter.compileAsync("untitled:Pending.x", "module Pending {}")
             try {
-                check(entered.await(10, SECONDS))
+                check(entered.await(HANG_SECONDS, SECONDS))
                 assertThat(adapter.replaceSourceModules(listOf(added))).containsExactly("untitled:Pending.x")
                 assertThat(pending.isCancelled).isTrue()
                 release.countDown()

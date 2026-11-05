@@ -7,8 +7,8 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * X339: the module's tests have icons in the gutter, the module's and its class's too; Run of the module's icon runs
@@ -33,13 +33,13 @@ internal fun ParityScenarios.testRunCases() {
         fun icons() = with(driver) { withContext(OnDispatcher.EDT) { tests.icons(editor) } }
 
         tests.reset(project)
-        awaitUi("Test icons in the gutter", 45.seconds) { icons().containsAll(data.strings("icons")) }
+        awaitUi("Test icons in the gutter", HANG_LIMIT) { icons().containsAll(data.strings("icons")) }
 
         with(driver) { withContext(OnDispatcher.EDT) { tests.start(editor, data.string("runAll"), false) } }
         val ran =
             awaitUi(
                 "Run marks every test",
-                120.seconds,
+                HANG_LIMIT,
                 errorMessage = { it.toString() },
                 getter = ::results,
                 checker = { all -> (data.strings("passed") + data.string("failed")).all { all.has(location(it)) } },
@@ -61,7 +61,7 @@ internal fun ParityScenarios.testRunCases() {
             val stopped =
                 awaitUi(
                     "the debugged test stops at the breakpoint",
-                    120.seconds,
+                    HANG_LIMIT,
                     errorMessage = { it.toString() },
                     getter = { JsonParser.parseString(tests.debugState(name)).asJsonObject },
                     checker = { it["suspended"]?.asBoolean == true },
@@ -73,7 +73,7 @@ internal fun ParityScenarios.testRunCases() {
             val debugged =
                 awaitUi(
                     "Resume runs the test to its end, which passes it",
-                    120.seconds,
+                    HANG_LIMIT,
                     errorMessage = { it.toString() },
                     getter = ::results,
                     checker = { it.has(location(data.string("debugged"))) },
@@ -115,13 +115,13 @@ internal fun ParityScenarios.gradleTestCases() {
             fun icons() = with(driver) { withContext(OnDispatcher.EDT) { tests.icons(editor) } }
 
             tests.reset(project)
-            awaitUi("Test icons in the gutter", 180.seconds) { icons().containsAll(data.strings("icons")) }
+            awaitUi("Test icons in the gutter", HANG_LIMIT) { icons().containsAll(data.strings("icons")) }
 
             with(driver) { withContext(OnDispatcher.EDT) { tests.start(editor, data.string("runIcon"), false) } }
             val ran =
                 awaitUi(
                     "testXtc runs the class's tests",
-                    300.seconds,
+                    HANG_LIMIT,
                     errorMessage = { it.toString() },
                     getter = ::results,
                     checker = { all -> (data.strings("passed") + data.string("failed")).all { all.has(location(it)) } },
@@ -140,7 +140,7 @@ internal fun ParityScenarios.gradleTestCases() {
                 val stopped =
                     awaitUi(
                         "testXtc runs the test under the debugger, which stops at the breakpoint",
-                        300.seconds,
+                        HANG_LIMIT,
                         errorMessage = { it.toString() },
                         getter = { JsonParser.parseString(tests.debugState(name)).asJsonObject },
                         checker = { it["suspended"]?.asBoolean == true },
@@ -152,7 +152,7 @@ internal fun ParityScenarios.gradleTestCases() {
                 val debugged =
                     awaitUi(
                         "Resume runs the test to its end, which passes it",
-                        180.seconds,
+                        HANG_LIMIT,
                         errorMessage = { it.toString() },
                         getter = ::results,
                         checker = { it.has(location(data.string("debugged"))) },

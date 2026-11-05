@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkLexical
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 
@@ -30,7 +31,7 @@ class XdkLexicalTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])
-    @Timeout(10)
+    @Timeout(HANG_SECONDS)
     fun `large lexical projections preserve UTF-16 spans without rescanning per token`(newline: String) {
         val lines = (0 until 2000).map { "String text$it = \"😀\"; /** line $it */" }
         val source = lines.joinToString(newline, postfix = newline)

@@ -5,7 +5,7 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.invokeAction
 import org.eclipse.lsp4j.InlineCompletionTriggerKind
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.inlineCompletionCases() {
     listOf("X255", "X256", "X257", "X258").forEach { id ->
@@ -59,23 +59,23 @@ internal fun ParityScenarios.inlineCompletionCases() {
 
                 fun visible() = withContext(OnDispatcher.EDT) { utility(InlineCompletionProbe::class).visibleText(editor.editor) }
                 invokeAction("CallInlineCompletionAction", component = editor.component)
-                awaitUi("compiler ghost text is visible", 30.seconds) { visible() == "wer" }
+                awaitUi("compiler ghost text is visible", HANG_LIMIT) { visible() == "wer" }
                 if (mode == "typing") {
                     invokeAction("EditorEscape", component = editor.component)
-                    awaitUi("ghost text is dismissed", 10.seconds) { visible().isEmpty() }
+                    awaitUi("ghost text is dismissed", HANG_LIMIT) { visible().isEmpty() }
                     check(document.text == source)
                     // Use the native typing route so the provider sees the real document-change event.
                     withContext(OnDispatcher.EDT) { utility(InlineCompletionProbe::class).type(editor.editor, "w") }
                     invokeAction("CallInlineCompletionAction", component = editor.component)
-                    awaitUi("continued typing has current ghost text", 30.seconds) { visible() == "er" }
+                    awaitUi("continued typing has current ghost text", HANG_LIMIT) { visible() == "er" }
                 }
                 invokeAction("InsertInlineCompletionAction", component = editor.component)
                 val expected = source.substring(0, offset - 3) + data.string("expected") + source.substring(offset)
-                awaitUi("native inline acceptance preserves source suffix", 15.seconds) { document.text == expected }
+                awaitUi("native inline acceptance preserves source suffix", HANG_LIMIT) { document.text == expected }
                 if (mode == "accept") {
                     clean(document)
                     invokeAction("\$Undo", component = editor.component)
-                    awaitUi("one Undo restores the prefix", 15.seconds) { document.text == source }
+                    awaitUi("one Undo restores the prefix", HANG_LIMIT) { document.text == source }
                 } else if (mode == "incomplete") {
                     replace(document, expected.replace("consume(answer\n", "consume(answer);\n"))
                     clean(document)

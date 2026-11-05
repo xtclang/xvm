@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.lsp.HANG_SECONDS
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -71,7 +72,7 @@ class LibraryCopiesCleanupTest {
                         capabilities = ClientCapabilities()
                         workspaceFolders = listOf(WorkspaceFolder(workspace.toUri().toString(), "Copies"))
                     },
-                ).get(20, SECONDS)
+                ).get(HANG_SECONDS, SECONDS)
             server.initialized(InitializedParams())
             server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
 
@@ -79,7 +80,7 @@ class LibraryCopiesCleanupTest {
             val target =
                 server.textDocumentService
                     .definition(DefinitionParams(TextDocumentIdentifier(uri), Position(0, source.indexOf("String"))))
-                    .get(60, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .left
                     .single()
             val copy = Path.of(URI(target.uri))
@@ -87,17 +88,17 @@ class LibraryCopiesCleanupTest {
             assertThat(copy.startsWith(temporary.toRealPath())).describedAs("$copy is in $temporary").isTrue()
 
             if (shutdown) {
-                server.shutdown().get(20, SECONDS)
+                server.shutdown().get(HANG_SECONDS, SECONDS)
                 server.exit()
             } else {
                 process.outputStream.close()
             }
-            assertThat(process.waitFor(10, SECONDS)).describedAs("The server exits\n${Files.readString(stderr)}").isTrue()
+            assertThat(process.waitFor(HANG_SECONDS, SECONDS)).describedAs("The server exits\n${Files.readString(stderr)}").isTrue()
             assertThat(Files.list(temporary).use { entries -> entries.map { it.fileName.toString() }.toList() })
                 .noneMatch { it.startsWith("xtc-library-sources-") }
         } finally {
             if (process.isAlive) process.destroyForcibly()
-            check(process.waitFor(10, SECONDS)) { "Could not reap test server ${process.pid()}" }
+            check(process.waitFor(HANG_SECONDS, SECONDS)) { "Could not reap test server ${process.pid()}" }
             process.outputStream.close()
             process.inputStream.close()
             executor.shutdownNow()

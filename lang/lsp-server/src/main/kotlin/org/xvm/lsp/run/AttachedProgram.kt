@@ -16,6 +16,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -123,50 +124,56 @@ internal class AttachedProgram private constructor(
 
         private val logger = LoggerFactory.getLogger(AttachedProgram::class.java)
 
-        /** How long attaching waits for the program to answer. */
-        private val CONNECT_LIMIT = 10.seconds
+        /** How long attaching waits for the program to answer, unless a test lifts it. */
+        internal val CONNECT_LIMIT = 10.seconds
 
         /**
          * Attaches to the program whose agent listens at [host] and [port], with its [token] if it has one; fails with
-         * the reason if nothing listens there, or the program refuses the debugger or speaks another protocol. Blocks
-         * until the program has answered.
+         * the reason if nothing listens there within [limit], or the program refuses the debugger or speaks another
+         * protocol. Blocks until the program has answered.
          */
         fun attach(
             host: String,
             port: Int,
             token: String?,
             listener: ProgramEvents,
+            limit: Duration = CONNECT_LIMIT,
         ): AttachedProgram {
             val socket = Socket()
             try {
-                socket.connect(InetSocketAddress(host, port), CONNECT_LIMIT.inWholeMilliseconds.toInt())
+                socket.connect(InetSocketAddress(host, port), limit.inWholeMilliseconds.toInt())
             } catch (failure: IOException) {
                 runCatching { socket.close() }
                 throw failure
             }
-            return answer(socket, "at $host:$port", token, listener)
+            return answer(socket, "at $host:$port", token, listener, limit)
         }
 
         /**
          * Takes the connection of a program that the launcher runs with `--debug connect:` and [server]'s port, with
          * the [token] the program was given; fails as [attach] does, or when [server] is closed first. Blocks until a
-         * program has connected and answered.
+         * program has connected and answered, within [limit] once it has connected.
          */
         fun accept(
             server: ServerSocket,
             token: String?,
             listener: ProgramEvents,
-        ): AttachedProgram = answer(server.accept(), "that connected to port ${server.localPort}", token, listener)
+            limit: Duration = CONNECT_LIMIT,
+        ): AttachedProgram = answer(server.accept(), "that connected to port ${server.localPort}", token, listener, limit)
 
-        /** Introduces the debugger to the program [where] at the other end of [socket], and waits for its answer. */
+        /**
+         * Introduces the debugger to the program [where] at the other end of [socket], and waits for its answer for at
+         * most [limit].
+         */
         private fun answer(
             socket: Socket,
             where: String,
             token: String?,
             listener: ProgramEvents,
+            limit: Duration,
         ): AttachedProgram {
             try {
-                socket.soTimeout = CONNECT_LIMIT.inWholeMilliseconds.toInt()
+                socket.soTimeout = limit.inWholeMilliseconds.toInt()
                 val out = PrintStream(socket.getOutputStream(), true, Charsets.UTF_8)
                 out.println(DebugProtocol.json(DebugProtocol.Attach(RUN, token)))
                 val lines = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))

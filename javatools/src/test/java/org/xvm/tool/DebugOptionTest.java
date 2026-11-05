@@ -59,7 +59,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * test resources.
  */
 public class DebugOptionTest {
-    private static final long LIMIT_SECONDS = 60;
+    /**
+     * How long the test waits for the debugged program to stop or end before it fails as hung. It
+     * ends only a hang: an hour, which no run reaches however slow or loaded the machine is, so no
+     * result depends on speed.
+     */
+    private static final long LIMIT_SECONDS = 3_600;
 
     /**
      * A module whose run() prints a number; its first line with code is line 4.

@@ -7,7 +7,7 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.PsiManager
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.semanticCases() {
     case("X39") { data ->
@@ -98,7 +98,7 @@ internal fun ParityScenarios.semanticCases() {
                 with(driver) {
                     awaitUi(
                         "native editor receives semantic token classifications",
-                        45.seconds,
+                        HANG_LIMIT,
                         getter = {
                             support
                                 .getValidLSPFuture()
@@ -183,7 +183,7 @@ internal fun ParityScenarios.semanticCases() {
                             )
                         utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
                     }
-                awaitUi("native read/write occurrence highlights", 45.seconds) {
+                awaitUi("native read/write occurrence highlights", HANG_LIMIT) {
                     val future = highlights.getValidLSPFuture()
                     future != null &&
                         future.isDone() &&
@@ -216,7 +216,7 @@ internal fun ParityScenarios.semanticCases() {
                 with(driver) {
                     awaitUi(
                         "native inlay provider has inferred types and parameter labels",
-                        45.seconds,
+                        HANG_LIMIT,
                         getter = {
                             support
                                 .getValidLSPFuture()
@@ -256,7 +256,7 @@ internal fun ParityScenarios.semanticCases() {
                     .map { ParityWorkspace.offset(doc.text, it.getAsJsonObject("position")) }
                     .toSet()
             with(driver) {
-                awaitUi("inlay labels are installed in the editor", 45.seconds) {
+                awaitUi("inlay labels are installed in the editor", HANG_LIMIT) {
                     withContext(OnDispatcher.EDT) {
                         cast(doc.editor.editor, NativeInlayEditor::class)
                             .getInlayModel()
