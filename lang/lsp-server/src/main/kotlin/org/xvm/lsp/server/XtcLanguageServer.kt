@@ -1401,6 +1401,8 @@ class XtcLanguageServer internal constructor(
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
                 // what the server is still answering, but this request, which an idle server has none of
                 "openRequests" to openRequests.values.filter { it != "xtc/languageServiceStatus" }.sorted(),
+                // the documents whose current diagnostics the client has still to pull, which a pushing server has none of
+                "unreportedDiagnostics" to if (usesPullDiagnostics) textDocumentService.unreportedDiagnostics() else emptyList(),
                 "heap" to
                     ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
                         mapOf(

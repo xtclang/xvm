@@ -910,6 +910,9 @@ class XtcTextDocumentService(
             )
         }
 
+    /** The documents whose current diagnostics no report has given the client yet, as their canonical URIs. */
+    internal fun unreportedDiagnostics(): List<String> = diagnosticReports.unreported()
+
     internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
         pullDiagnostics(
             "workspace/diagnostic",
