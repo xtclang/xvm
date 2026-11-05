@@ -26,14 +26,14 @@ class XdkCodeActionCostTest {
     fun `a request for organize imports runs only the import proofs`() {
         session { adapter, uri ->
             val range = Range(Position(9, 15), Position(9, 24))
-            val (all, everything) = counted { adapter.getCodeActionsAsync(uri, range, emptyList()) }
+            // the first request of the revision, which shares nothing yet
             val (organized, organizing) =
                 counted { adapter.getCodeActionsAsync(uri, range, emptyList(), setOf(CodeActionKind.SOURCE_ORGANIZE_IMPORTS)) }
-            println("module compiles: every kind $everything, source.organizeImports $organizing")
+            val (all, _) = counted { adapter.getCodeActionsAsync(uri, range, emptyList()) }
+            println("module compiles: source.organizeImports $organizing")
             assertThat(organized).isEqualTo(all.filter { it.kind == CodeActionKind.SOURCE_ORGANIZE_IMPORTS }).hasSize(1)
             // the base compile, one proof for each of the three imports, and one for the edit that organizes them
             assertThat(organizing).isEqualTo(1 + 3 + 1)
-            assertThat(everything).isGreaterThan(organizing)
             assertThat(all.map { it.kind }).contains(CodeActionKind.REFACTOR_EXTRACT)
         }
     }
@@ -42,14 +42,38 @@ class XdkCodeActionCostTest {
     fun `a request for refactorings proves no import`() {
         session { adapter, uri ->
             val range = Range(Position(9, 15), Position(9, 24))
-            val (all, _) = counted { adapter.getCodeActionsAsync(uri, range, emptyList()) }
+            // the first request of the revision, which shares nothing yet
             val (extracted, extracting) =
                 counted { adapter.getCodeActionsAsync(uri, range, emptyList(), setOf(CodeActionKind.REFACTOR_EXTRACT)) }
+            val (all, _) = counted { adapter.getCodeActionsAsync(uri, range, emptyList()) }
             println("module compiles: refactor.extract $extracting")
             assertThat(extracted).isEqualTo(all.filter { it.kind == CodeActionKind.REFACTOR_EXTRACT }).isNotEmpty()
             // the base compile and one proof for each extraction the selection allows, a local and a method
             assertThat(extracting).isEqualTo(1 + extracted.size)
             assertThat(counted { adapter.getCodeActionsAsync(uri, range, emptyList(), emptySet()) }).isEqualTo(emptyList<CodeAction>() to 0)
+        }
+    }
+
+    @Test
+    fun `the requests of one revision share its compile and its import proofs`() {
+        session { adapter, uri ->
+            val range = Range(Position(9, 15), Position(9, 24))
+            val (first, proving) = counted { adapter.getCodeActionsAsync(uri, range, emptyList()) }
+            val (again, reproving) = counted { adapter.getCodeActionsAsync(uri, range, emptyList()) }
+            val (organized, organizing) =
+                counted { adapter.getCodeActionsAsync(uri, range, emptyList(), setOf(CodeActionKind.SOURCE_ORGANIZE_IMPORTS)) }
+            println("module compiles: first request $proving, the same again $reproving, organize imports then $organizing")
+            assertThat(again).isEqualTo(first)
+            assertThat(organized).isEqualTo(first.filter { it.kind == CodeActionKind.SOURCE_ORGANIZE_IMPORTS })
+            // again, only the two extractions the range allows are proved; the compile and the imports are shared
+            assertThat(proving).isEqualTo(1 + 3 + 1 + 2)
+            assertThat(reproving).isEqualTo(2)
+            assertThat(organizing).isZero()
+            // an edit is another revision, which proves its own
+            assertThat(adapter.compile(uri, SOURCE.replace("input + 2", "input + 3")).diagnostics).isEmpty()
+            assertThat(
+                counted { adapter.getCodeActionsAsync(uri, range, emptyList(), setOf(CodeActionKind.SOURCE_ORGANIZE_IMPORTS)) }.second,
+            ).isEqualTo(1 + 3 + 1)
         }
     }
 
