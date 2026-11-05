@@ -477,7 +477,7 @@ class EmbeddedExecutionTest {
     @Test
     fun `a stopped program's end is no error, though its stop makes what it runs fail`() {
         val output = StringBuffer()
-        val exited = CompletableFuture<String?>()
+        val exited = CompletableFuture<Pair<Long?, String?>>()
         val started = CompletableFuture<Unit>()
         val id =
             worker.start(
@@ -492,14 +492,18 @@ class EmbeddedExecutionTest {
                         code: Long?,
                         error: String?,
                     ) {
-                        exited.complete(error)
+                        exited.complete(code to error)
                     }
                 },
             )
         started.awaited()
         // the stop terminates the program's container, whose next service it then cannot make, or call
         worker.stop(id)
-        assertThat(exited.awaited()).describedAs("the stopped run's error").isNull()
+        val (code, error) = exited.awaited()
+        assertThat(error).describedAs("the stopped run's error").isNull()
+        assertThat(code).describedAs("the stopped run's exit code").isEqualTo(RunWorker.STOPPED)
+        // nor does the runtime's report of the failure that the stop causes show as the program's output
+        assertThat(output.toString()).doesNotContain("Container is terminating").doesNotContain("Unhandled")
 
         assertThat(run("Exit").code).isEqualTo(42)
     }
@@ -1915,7 +1919,8 @@ class EmbeddedExecutionTest {
 
             sessions.request(id, 5, "terminate")
             val rest = client.until(id) { it.event == "terminated" }
-            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(1)
+            // a stopped program's exit code, as a process that a stop terminates reports it
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asLong).isEqualTo(RunWorker.STOPPED)
             // the program ended where it stopped, without running on to its end
             val output = (untilStop + rest).filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
             assertThat(output).contains("before").doesNotContain("after")
@@ -2078,7 +2083,8 @@ class EmbeddedExecutionTest {
                         sessions.request(id, 6, "evaluate", """{"expression": "spin()", "frameId": $frame, "context": "repl"}""")
                         sessions.request(id, 7, "terminate")
                         val rest = client.until(id) { it.event == "terminated" }
-                        assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(1)
+                        assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asLong)
+                            .isEqualTo(RunWorker.STOPPED)
                         val answer =
                             rest.singleOrNull { it.response == "evaluate" } ?: client.until(id) { it.response == "evaluate" }.last()
                         assertThat(answer["success"].asBoolean).isFalse()
