@@ -71,6 +71,7 @@ import org.xvm.runtime.SessionDebugger.Variable;
 import org.xvm.runtime.SessionDebugger.Watchable;
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -78,7 +79,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -94,14 +94,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * come from the test resources, as for {@link EmbeddingSupportTest}.
  */
 public class SessionDebuggerTest {
-    /**
-     * How long a test waits for its program, and lets code it evaluates run: an hour, which no machine
-     * takes, so that no result hinges on how fast the machine is or how loaded it is; it only ends a
-     * test whose program hangs. Some programs count to millions on several fibers, which took more
-     * than the earlier minute while other builds shared the machine.
-     */
-    private static final Duration RUN_LIMIT = Duration.ofHours(1);
-
     /**
      * Why text that is not an expression the debugger evaluates is not evaluated, after the text.
      */
@@ -884,8 +876,8 @@ public class SessionDebuggerTest {
     /**
      * Print the runtime's containers, their services and the fibers of those with their frames,
      * once a thread has been in a run's close for a minute, so that a run that does not end shows
-     * where it is stuck. It only prints, once for each stalled close: RUN_LIMIT still bounds the
-     * close, and decides the test's result.
+     * where it is stuck. It only prints, once for each stalled close: the close's wait still decides
+     * the test's result, as the watchdog finds it hung.
      */
     private static void watchCloses() {
         Map<Thread, Long> closingSince = new HashMap<>();
@@ -975,7 +967,7 @@ public class SessionDebuggerTest {
             assertFalse(session.stepInto(out.threadId(), targets.getFirst().id()));
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(6L, control.result());
         }
     }
@@ -1018,7 +1010,7 @@ public class SessionDebuggerTest {
                 assertEquals("Counter.add:17", where(session, changed));
                 session.resume();
             }
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(5L, control.result());
             assertTrue(output.toString().contains("count=5"), output.toString());
             assertEquals(null, stops.poll());
@@ -1064,7 +1056,7 @@ public class SessionDebuggerTest {
             assertEquals("Restarts.inner:16", where(session, top));
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
             assertEquals(2, output.toString().split("outer 20", -1).length - 1, output.toString());
             assertEquals(null, stops.poll());
@@ -1088,7 +1080,7 @@ public class SessionDebuggerTest {
         Control      control = run("Waits", output, session);
         try (control) {
             Stop             stop    = stops.next();
-            List<ThreadInfo> threads = assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            List<ThreadInfo> threads = Await.call(() -> {
                 while (true) {
                     List<ThreadInfo> all = session.threads();
                     if (all.stream().anyMatch(thread -> thread.name().equals("Waits (waiting)"))) {
@@ -1112,7 +1104,7 @@ public class SessionDebuggerTest {
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(3_000_000L, control.result());
             assertTrue(session.threads().isEmpty());
         }
@@ -1147,7 +1139,7 @@ public class SessionDebuggerTest {
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(5_000_000L, control.result());
         }
     }
@@ -1177,7 +1169,7 @@ public class SessionDebuggerTest {
             assertEquals(count, evaluate(session, top(session, other), "n").value());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(5_000_000L, control.result());
         }
     }
@@ -1211,7 +1203,7 @@ public class SessionDebuggerTest {
             assertEquals(count, evaluate(session, top(session, other), "n").value());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(5_000_000L, control.result());
         }
     }
@@ -1242,7 +1234,7 @@ public class SessionDebuggerTest {
             assertEquals(count, evaluate(session, top(session, other), "n").value());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(5_000_000L, control.result());
         }
     }
@@ -1277,7 +1269,7 @@ public class SessionDebuggerTest {
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
     }
 
@@ -1311,7 +1303,7 @@ public class SessionDebuggerTest {
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
     }
 
@@ -1344,7 +1336,7 @@ public class SessionDebuggerTest {
             assertEquals(stop.threadId(), session.threads().getFirst().id());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
             assertTrue(output.toString().contains("after 42"), output.toString());
             assertTrue(session.threads().isEmpty());
@@ -1370,7 +1362,7 @@ public class SessionDebuggerTest {
             assertEquals("Twice.choose", session.stackTrace(stop.threadId()).getFirst().name());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
         }
     }
@@ -1423,7 +1415,7 @@ public class SessionDebuggerTest {
 
             session.setMethodBreakpoints(List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(6L, control.result());
             assertEquals(null, stops.poll());
         }
@@ -1470,7 +1462,7 @@ public class SessionDebuggerTest {
             synchronized (session) {
                 session.variables(point.variablesReference()).whenComplete((_, _) -> held.complete(Thread.holdsLock(session)));
             }
-            assertFalse(held.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            assertFalse(Await.get(held));
 
             Variable ints = report.get("ints");
             assertEquals("Int[3]", ints.value());
@@ -1484,7 +1476,7 @@ public class SessionDebuggerTest {
             assertNotEquals(0, run.get("point").variablesReference());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             // references last until the program resumes
             assertTrue(read(session, point.variablesReference()).isEmpty());
             assertTrue(session.scopes(frames.get(0).id()).isEmpty());
@@ -1528,7 +1520,7 @@ public class SessionDebuggerTest {
                     "counter.count");
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.", session,
                     report, "sum");
         }
@@ -1605,7 +1597,7 @@ public class SessionDebuggerTest {
             assertFails("s + s would run String.toString(), which the debugger does not run here.", session, frame, "s + s");
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(7L, control.result());
             assertTrue(output.toString().contains("(x=3, y=4) <n>"), output.toString());
         }
@@ -1636,7 +1628,7 @@ public class SessionDebuggerTest {
             assertEquals("21", evaluate(session, frame, "this.size").value());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
         }
     }
@@ -1664,11 +1656,11 @@ public class SessionDebuggerTest {
 
         Control control = run("Reads", new StringWriter(), session);
         try (control) {
-            Map<String, Variable> vars = byName(read.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            Map<String, Variable> vars = byName(Await.get(read));
             assertEquals("21", vars.get("n").value());
             assertEquals("42", vars.get("result").value());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
         }
     }
@@ -1716,7 +1708,7 @@ public class SessionDebuggerTest {
             assertTrue(output.toString().contains("3 6"), output.toString());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(6L, control.result());
         }
     }
@@ -1746,7 +1738,7 @@ public class SessionDebuggerTest {
 
             // the step ended there: resuming runs the program to its end
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(6L, control.result());
         }
     }
@@ -1779,7 +1771,7 @@ public class SessionDebuggerTest {
 
             // it stops the program once, not again as it leaves run()
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(null, control.result());
             assertEquals(null, stops.poll());
         }
@@ -1807,7 +1799,7 @@ public class SessionDebuggerTest {
             assertTrue(output.toString().contains("caught"), output.toString());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(null, stops.poll());
         }
     }
@@ -1832,7 +1824,7 @@ public class SessionDebuggerTest {
                 assertEquals(i, evaluate(session, session.stackTrace(stop.threadId()).getFirst().id(), "i").value());
                 session.resume();
             }
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(10L, control.result());
             assertEquals(null, stops.poll());
         }
@@ -1847,7 +1839,7 @@ public class SessionDebuggerTest {
             Stop stop = counted.next();
             assertEquals("2", evaluate(again, again.stackTrace(stop.threadId()).getFirst().id(), "i").value());
             again.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, second::join);
+            Await.run(second::join);
             assertEquals(null, counted.poll());
         }
     }
@@ -1864,7 +1856,7 @@ public class SessionDebuggerTest {
         try (Control control = run("Resets", new StringWriter(), session)) {
             stops.next();
             session.reset();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(10L, control.result());
             assertEquals(null, stops.poll());
             assertFalse(session.isStopped());
@@ -1886,7 +1878,7 @@ public class SessionDebuggerTest {
                 assertEquals(i, evaluate(session, session.stackTrace(stop.threadId()).getFirst().id(), "i").value());
                 session.resume();
             }
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(10L, control.result());
             assertEquals(null, stops.poll());
             assertEquals(List.of("i=0, twice=0, odd=False", "i=1, twice=2, odd=True", "i=2, twice=4, odd=False",
@@ -1906,7 +1898,7 @@ public class SessionDebuggerTest {
         StringWriter output  = new StringWriter();
         Control      control = run("Logs", output, session);
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(10L, control.result());
             assertEquals(null, stops.poll());
 
@@ -1931,7 +1923,7 @@ public class SessionDebuggerTest {
             assertEquals("breakpoint", stop.reason());
             assertEquals("The condition cannot be evaluated: sum is Int, not a Boolean.", stop.description());
             session.terminate();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
     }
 
@@ -1989,7 +1981,7 @@ public class SessionDebuggerTest {
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(20L, control.result());
             assertNull(stops.poll());
         }
@@ -2044,7 +2036,7 @@ public class SessionDebuggerTest {
             assertTrue(uncaught.uncaught());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(null, session.exceptionInfo(stop.threadId()));
         }
     }
@@ -2064,7 +2056,7 @@ public class SessionDebuggerTest {
             assertEquals("ThrowsTyped.check:16", where(session, stop));
             assertTrue(output.toString().contains("caught"), output.toString());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(null, stops.poll());
         }
 
@@ -2078,7 +2070,7 @@ public class SessionDebuggerTest {
             Stop stop = based.next();
             assertEquals("ThrowsBase.check:16", where(again, stop));
             again.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(null, based.poll());
         }
     }
@@ -2093,7 +2085,7 @@ public class SessionDebuggerTest {
         try (control) {
             // once it has printed a tick, every line it reaches is in the loop or in the code the
             // loop calls
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            Await.run(() -> {
                 while (ticks(output) == 0) {
                     Thread.sleep(10);
                 }
@@ -2112,7 +2104,7 @@ public class SessionDebuggerTest {
             session.pause();
             int ticks = ticks(output);
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            Await.run(() -> {
                 while (ticks(output) <= ticks) {
                     Thread.sleep(10);
                 }
@@ -2143,7 +2135,7 @@ public class SessionDebuggerTest {
             assertFalse(output.toString().contains("before"), output.toString());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
         }
     }
@@ -2168,7 +2160,7 @@ public class SessionDebuggerTest {
             assertEquals("assert:debug", stop.description());
             assertEquals(4, session.stackTrace(stop.threadId()).getFirst().line());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertTrue(output.toString().contains("resumed"), output.toString());
         }
     }
@@ -2191,7 +2183,7 @@ public class SessionDebuggerTest {
         session.resume();
         // the spinner never ends on its own; closing the run ends it. Not in a try-with-resources:
         // closing again after a close that timed out would wait without a limit
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFalse(control.running());
     }
 
@@ -2228,7 +2220,7 @@ public class SessionDebuggerTest {
 
         session.resume();
         // as above, the run is closed outside a try-with-resources
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFalse(control.running());
     }
 
@@ -2269,7 +2261,7 @@ public class SessionDebuggerTest {
             assertEquals("2", evaluate(session, session.stackTrace(out.threadId()).getFirst().id(), "first").value());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(7L, control.result());
         }
     }
@@ -2315,7 +2307,7 @@ public class SessionDebuggerTest {
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(6L, control.result());
         }
     }
@@ -2343,10 +2335,10 @@ public class SessionDebuggerTest {
                 value = session.evaluate(frame, "n");
                 session.resume();
             }
-            assertTrue(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).isEmpty());
+            assertTrue(Await.get(vars).isEmpty());
             assertFails("The program resumed before the expression was evaluated.", value);
 
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
         }
     }
@@ -2395,7 +2387,7 @@ public class SessionDebuggerTest {
             assertEquals("Runs.show:37", where(session, stop));
             assertFalse(output.toString().contains("box 5"), output.toString());
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertTrue(output.toString().contains("box 5"), output.toString());
             assertEquals(10L, control.result());
             assertEquals(null, stops.poll());
@@ -2410,7 +2402,7 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("Values"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 34)));
         // ordinary getters may take a loaded machine longer than ON_DEMAND; spin, below, checks it
-        session.setOnDemandLimit(RUN_LIMIT);
+        session.setOnDemandLimit(Await.LIVELOCK);
 
         StringWriter output  = new StringWriter();
         Control      control = run("Values", output, session);
@@ -2444,14 +2436,14 @@ public class SessionDebuggerTest {
             session.setOnDemandLimit(SessionDebugger.ON_DEMAND);
             assertFails("spin did not finish within 1 second, so it was ended.",
                     session.variables(box.get("spin").variablesReference()));
-            session.setOnDemandLimit(RUN_LIMIT);
+            session.setOnDemandLimit(Await.LIVELOCK);
             assertEquals("\"Box\"", read(session, box.get(SessionDebugger.TO_STRING).variablesReference()).getFirst().value());
 
             // the program is stopped where it was, and goes on with what the getters changed
             assertTrue(session.isStopped());
             session.resume();
             assertEquals(List.of(), read(session, sum.variablesReference()));
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertTrue(output.toString().contains("7 6"), output.toString());
             assertEquals(6L, control.result());
             assertEquals(null, stops.poll());
@@ -2472,7 +2464,7 @@ public class SessionDebuggerTest {
             int  frame = session.stackTrace(stop.threadId()).getFirst().id();
             int  scope = session.scopes(frame).getFirst().variablesReference();
             var  plain = byName(read(session, scope));
-            var  hex   = byName(session.variables(scope, true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            var  hex   = byName(Await.get(session.variables(scope, true)));
 
             // in decimal by default, and in hexadecimal when asked: a negative value of a type of fixed size in its
             // two's complement
@@ -2483,13 +2475,12 @@ public class SessionDebuggerTest {
             assertEquals("Int8", hex.get("small").type());
 
             // an evaluation, a run, a field and a lazy variable's value too
-            assertEquals("0x100", session.evaluate(frame, "big + 1", true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
-            assertEquals("0x1FE", session.run(frame, "big * 2", RUN_LIMIT, false, true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("0x100", Await.get(session.evaluate(frame, "big + 1", true)).value());
+            assertEquals("0x1FE", Await.get(session.run(frame, "big * 2", Await.LIVELOCK, false, true)).value());
             assertEquals("510", runCode(session, frame, "big * 2").value());
-            var one = byName(session.variables(plain.get("one").variablesReference(), true).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            var one = byName(Await.get(session.variables(plain.get("one").variablesReference(), true)));
             assertEquals("0x8", one.get("count").value());
-            assertEquals("0x10", session.variables(one.get("twice").variablesReference(), true)
-                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).getFirst().value());
+            assertEquals("0x10", Await.get(session.variables(one.get("twice").variablesReference(), true)).getFirst().value());
 
             // a mutable object or array has an identity code that tells it from another with the same fields, the
             // same at each read; a const has none
@@ -2504,7 +2495,7 @@ public class SessionDebuggerTest {
             assertFalse(plain.get("big").value().contains("#"), plain.get("big").value());
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(0L, control.result());
         }
     }
@@ -2552,7 +2543,7 @@ public class SessionDebuggerTest {
             assertEquals(List.of(), page(session, scope, Filter.NAMED, 100, 0));
 
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(62001L, control.result());
         }
     }
@@ -2593,13 +2584,13 @@ public class SessionDebuggerTest {
             assertFails("[5] is not an element of the array, whose size is 3.", session.setVariable(list, "[5]", "9", false));
             assertFails("x is a field of an immutable Sets:Point, which cannot be changed.",
                     session.setVariable(locals.get("point").variablesReference(), "x", "5", false));
-            var refused = assertThrows(ExecutionException.class, () -> session.setVariable(locals.get("fixed").variablesReference(),
-                    "[0]", "5", false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+            var refused = assertThrows(ExecutionException.class, () -> Await.get(session.setVariable(locals.get("fixed").variablesReference(),
+                    "[0]", "5", false)));
             assertTrue(refused.getCause().getMessage().startsWith("[0] cannot be changed: "), refused.getCause().getMessage());
 
             // the program goes on with the new values
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertTrue(output.toString().contains("41 5 bye 7 [0, 9, 2] 1 [1, 2, 3]"), output.toString());
             assertEquals(57L, control.result());
         }
@@ -2657,7 +2648,7 @@ public class SessionDebuggerTest {
 
             // nothing of the program ran, and once it resumes, its frames are not stopped ones
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertTrue(output.toString().contains("3 1 1 hi"), output.toString());
             assertEquals(3L, control.result());
             assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
@@ -2681,22 +2672,22 @@ public class SessionDebuggerTest {
 
             // neither the breakpoint in bump() nor the exception stops stop the run's code
             assertEquals("1", runCode(session, show, "box.bump(1)").value());
-            assertFails("box.fail() threw IllegalState: no.", session.run(show, "box.fail()", RUN_LIMIT));
+            assertFails("box.fail() threw IllegalState: no.", session.run(show, "box.fail()", Await.LIVELOCK));
             assertEquals(null, stops.poll());
 
             var failure = assertThrows(ExecutionException.class,
-                    () -> session.run(show, "nope + 1", RUN_LIMIT).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+                    () -> Await.get(session.run(show, "nope + 1", Await.LIVELOCK)));
             Throwable cause  = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
             String    reason = cause.getMessage();
             assertTrue(reason.startsWith("nope + 1 does not compile: "), reason);
             assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.",
-                    session.run(show + 1000, "n", RUN_LIMIT));
+                    session.run(show + 1000, "n", Await.LIVELOCK));
 
             // the run's exception was its own: the program goes on from where it stopped
             session.setBreakpoints(source.toString(), List.of());
             session.setExceptionStops(false, false);
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(6L, control.result());
         }
     }
@@ -2719,13 +2710,13 @@ public class SessionDebuggerTest {
 
             // the run throws another exception, which is its answer and stops nothing
             assertEquals("1", runCode(session, check, "n + 1").value());
-            assertFails("check(1) threw IllegalArgument: uncaught one.", session.run(check, "check(1)", RUN_LIMIT));
+            assertFails("check(1) threw IllegalArgument: uncaught one.", session.run(check, "check(1)", Await.LIVELOCK));
             assertEquals(null, stops.poll());
 
             // the program's own exception goes on as it did: run() catches it and prints "caught"
             session.setExceptionStops(false, false);
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertTrue(output.toString().contains("caught"), output.toString());
             assertEquals(null, control.result());
         }
@@ -2744,7 +2735,7 @@ public class SessionDebuggerTest {
         Control control = run("Waits", new StringWriter(), session, _ -> {
             reading.release();
             try {
-                return lines.poll(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+                return Await.poll(lines);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return null;
@@ -2759,10 +2750,10 @@ public class SessionDebuggerTest {
 
             // the run waits for a line of input; a read of its fiber's frames and another run,
             // asked for meanwhile, wait for it, one at a time
-            CompletableFuture<Variable> line = session.run(caller, "console.readLine()", RUN_LIMIT);
-            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(line));
+            CompletableFuture<Variable> line = session.run(caller, "console.readLine()", Await.LIVELOCK);
+            assertTrue(Await.tryAcquire(reading), () -> "not read: " + answer(line));
             CompletableFuture<List<Variable>> vars   = session.variables(locals);
-            CompletableFuture<Variable>       second = session.run(caller, "console.readLine()", RUN_LIMIT);
+            CompletableFuture<Variable>       second = session.run(caller, "console.readLine()", Await.LIVELOCK);
             // the run cannot answer before its line is typed, and neither can a read or a run that
             // waits for it; each answer comes on a thread of its own, so the order in which they
             // come is not the order in which they were made
@@ -2772,20 +2763,20 @@ public class SessionDebuggerTest {
             // the read is made once the run ends, and the other run starts after it: the read
             // answers while that run waits for a line of its own, and the run takes the next line
             lines.add("typed");
-            assertEquals("typed", line.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
-            assertEquals("21", byName(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS)).get("n").value());
-            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(second));
+            assertEquals("typed", Await.get(line).value());
+            assertEquals("21", byName(Await.get(vars)).get("n").value());
+            assertTrue(Await.tryAcquire(reading), () -> "not read: " + answer(second));
             lines.add("next");
-            assertEquals("next", second.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("next", Await.get(second).value());
 
             // a run that the program's resume finds in progress ends at once; its code, which waits
             // for input, unwinds once it has its line, and the program then goes on
-            CompletableFuture<Variable> resumed = session.run(caller, "console.readLine()", RUN_LIMIT);
-            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(resumed));
+            CompletableFuture<Variable> resumed = session.run(caller, "console.readLine()", Await.LIVELOCK);
+            assertTrue(Await.tryAcquire(reading), () -> "not read: " + answer(resumed));
             session.resume();
             assertFails("The program resumed before the expression was evaluated.", resumed);
             lines.add("later");
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(42L, control.result());
         }
     }
@@ -2819,7 +2810,7 @@ public class SessionDebuggerTest {
             assertTrue(session.isStopped());
             assertEquals("Ends.run:5", where(session, stop));
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(3L, control.result());
         }
     }
@@ -2844,17 +2835,17 @@ public class SessionDebuggerTest {
             int  frame = session.stackTrace(stop.threadId()).getFirst().id();
 
             // a cancelled run's code unwinds, so the next run starts
-            CompletableFuture<Variable> cancelled = session.run(frame, "forever(n + console.readLine().size)", RUN_LIMIT);
-            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(cancelled));
+            CompletableFuture<Variable> cancelled = session.run(frame, "forever(n + console.readLine().size)", Await.LIVELOCK);
+            assertTrue(Await.tryAcquire(reading), () -> "not read: " + answer(cancelled));
             assertTrue(cancelled.cancel(true));
             assertEquals("4", runCode(session, frame, "n + 1").value());
 
             // the program's resume ends a run in progress, and the program goes on
-            CompletableFuture<Variable> resumed = session.run(frame, "forever(n + console.readLine().size)", RUN_LIMIT);
-            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(resumed));
+            CompletableFuture<Variable> resumed = session.run(frame, "forever(n + console.readLine().size)", Await.LIVELOCK);
+            assertTrue(Await.tryAcquire(reading), () -> "not read: " + answer(resumed));
             session.resume();
             assertFails("The program resumed before the expression was evaluated.", resumed);
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(3L, control.result());
         }
     }
@@ -2876,10 +2867,10 @@ public class SessionDebuggerTest {
         Stop stop  = stops.next();
         int  frame = session.stackTrace(stop.threadId()).getFirst().id();
 
-        CompletableFuture<Variable> running = session.run(frame, "forever(n + console.readLine().size)", RUN_LIMIT);
-        assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(running));
+        CompletableFuture<Variable> running = session.run(frame, "forever(n + console.readLine().size)", Await.LIVELOCK);
+        assertTrue(Await.tryAcquire(reading), () -> "not read: " + answer(running));
         // not in a try-with-resources: closing again after a close that timed out would wait without a limit
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFails("The program was stopped before the expression ran to its end.", running);
         assertFalse(control.running());
 
@@ -2905,9 +2896,9 @@ public class SessionDebuggerTest {
                 }
                 """);
         Control after = run("Afterwards", new StringWriter(), null);
-        assertTimeoutPreemptively(RUN_LIMIT, after::join);
+        Await.run(after::join);
         // the close is what waits on that clock, so it too has a limit, outside a try-with-resources
-        assertTimeoutPreemptively(RUN_LIMIT, after::close);
+        Await.run(after::close);
     }
 
     @Test
@@ -2931,7 +2922,7 @@ public class SessionDebuggerTest {
         // once the program resumes, the call is answered and the run's code unwinds; the spinner
         // never ends, so closing the run ends it, outside a try-with-resources as above
         session.resume();
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFalse(control.running());
     }
 
@@ -2961,14 +2952,14 @@ public class SessionDebuggerTest {
             // of input, which comes once the worker has left its wait, so it adds before it waits
             // again; once the run ends, it waits again, further on, with frames of its own, and
             // its old ones no longer read anything
-            CompletableFuture<Variable> busy = session.run(main, "busy() + console.readLine().size", RUN_LIMIT, true);
-            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+            CompletableFuture<Variable> busy = session.run(main, "busy() + console.readLine().size", Await.LIVELOCK, true);
+            Await.run(() -> {
                 while (session.threads().stream().anyMatch(t -> t.id() == worker && !t.name().endsWith(")"))) {
                     Thread.sleep(10);
                 }
             });
             lines.add("");
-            assertEquals("199990000", busy.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals("199990000", Await.get(busy).value());
             waitingAtLines(session, 2);
             int  again = session.stackTrace(worker).getFirst().id();
             long done  = Long.parseLong(evaluate(session, again, "done").value());
@@ -2983,13 +2974,12 @@ public class SessionDebuggerTest {
             int self = byName(read(session, session.scopes(again).getFirst().variablesReference())).get("this")
                     .variablesReference();
             assertEquals("False", set(session, self, "going", "False").value());
-            assertEquals(String.valueOf(done), session.run(main, "worker.finished()", RUN_LIMIT, true)
-                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            assertEquals(String.valueOf(done), Await.get(session.run(main, "worker.finished()", Await.LIVELOCK, true)).value());
             assertTrue(session.isStopped());
 
             // the program goes on from its stop, which the worker's breakpoint never added to
             session.resume();
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertEquals(done, control.result());
             assertTrue(output.toString().contains("done " + done), output.toString());
             assertNull(stops.poll());
@@ -3007,7 +2997,7 @@ public class SessionDebuggerTest {
         StringWriter output  = new StringWriter();
         Control      control = run("Closes", output, session);
         stops.next();
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFalse(control.running());
         assertFalse(session.isStopped());
         // the program ended where it stopped, without running on to its end
@@ -3025,7 +3015,7 @@ public class SessionDebuggerTest {
                 """);
         Control after = run("After", new StringWriter(), null);
         try (after) {
-            assertTimeoutPreemptively(RUN_LIMIT, after::join);
+            Await.run(after::join);
             assertEquals(3L, after.result());
         }
     }
@@ -3055,7 +3045,7 @@ public class SessionDebuggerTest {
         }
 
         Stop next() throws InterruptedException {
-            Stop stop = queue.poll(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+            Stop stop = Await.poll(queue);
             assertNotNull(stop, "the program did not stop");
             return stop;
         }
@@ -3079,16 +3069,16 @@ public class SessionDebuggerTest {
     }
 
     private static List<Variable> read(SessionDebugger session, int reference) throws Exception {
-        return session.variables(reference).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return Await.get(session.variables(reference));
     }
 
     private static List<Variable> page(SessionDebugger session, int reference, Filter filter, int start, int count)
             throws Exception {
-        return session.variables(reference, false, filter, start, count).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return Await.get(session.variables(reference, false, filter, start, count));
     }
 
     private static Variable set(SessionDebugger session, int reference, String name, String expression) throws Exception {
-        return session.setVariable(reference, name, expression, false).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return Await.get(session.setVariable(reference, name, expression, false));
     }
 
     /**
@@ -3108,30 +3098,30 @@ public class SessionDebuggerTest {
     private static int counting(SessionDebugger session, BlockingQueue<String> lines, int except)
             throws InterruptedException {
         lines.add("");
-        long deadline = System.nanoTime() + RUN_LIMIT.toNanos();
-        while (System.nanoTime() < deadline) {
-            for (ThreadInfo thread : session.threads()) {
-                List<StackFrameInfo> stack = thread.id() == except ? List.of() : session.stackTrace(thread.id());
-                if (!stack.isEmpty() && stack.getFirst().name().endsWith("Counter.count")
-                        && !session.scopes(stack.getFirst().id()).isEmpty()) {
-                    return thread.id();
+        return Await.call("another counter to wait at a line", () -> {
+            while (true) {
+                for (ThreadInfo thread : session.threads()) {
+                    List<StackFrameInfo> stack = thread.id() == except ? List.of() : session.stackTrace(thread.id());
+                    if (!stack.isEmpty() && stack.getFirst().name().endsWith("Counter.count")
+                            && !session.scopes(stack.getFirst().id()).isEmpty()) {
+                        return thread.id();
+                    }
                 }
+                Thread.sleep(10);
             }
-            Thread.sleep(10);
-        }
-        throw new AssertionError("no other counter waited at a line");
+        });
     }
 
     private static Completions complete(SessionDebugger session, int frame, String text, int offset) throws Exception {
-        return session.completions(frame, text, offset).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return Await.get(session.completions(frame, text, offset));
     }
 
     private static Variable evaluate(SessionDebugger session, int frame, String path) throws Exception {
-        return session.evaluate(frame, path).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return Await.get(session.evaluate(frame, path));
     }
 
     private static Variable runCode(SessionDebugger session, int frame, String expression) throws Exception {
-        return session.run(frame, expression, RUN_LIMIT).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+        return Await.get(session.run(frame, expression, Await.LIVELOCK));
     }
 
     /**
@@ -3153,7 +3143,7 @@ public class SessionDebuggerTest {
      */
     private static void assertFails(String reason, CompletableFuture<?> evaluation) {
         var failure = assertThrows(ExecutionException.class,
-                () -> evaluation.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS));
+                () -> Await.get(evaluation));
         Throwable cause = failure.getCause() instanceof CompletionException wrapped ? wrapped.getCause() : failure.getCause();
         assertEquals(reason, cause.getMessage());
     }
@@ -3180,7 +3170,7 @@ public class SessionDebuggerTest {
     private static ConsoleInput typed(BlockingQueue<String> lines) {
         return _ -> {
             try {
-                return lines.poll(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+                return Await.poll(lines);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return null;
@@ -3216,7 +3206,7 @@ public class SessionDebuggerTest {
      * @return the IDs of the fibers that wait at a line, the stopped one first
      */
     private static List<Integer> waitingAtLines(SessionDebugger session, int count) {
-        return assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        return Await.call(() -> {
             while (true) {
                 List<Integer> ids = session.threads().stream()
                         .filter(thread -> !thread.name().endsWith(")"))
