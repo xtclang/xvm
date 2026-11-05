@@ -22,10 +22,13 @@ class XtcBracesTest {
     }
 
     @Test
-    fun `Enter in an opened block before more of the line takes the rest of the line into the block`() {
+    fun `Enter in an opened block before more of the line takes the rest of the line into the block, indented`() {
         editor.open("Braces.x", "module M {\n    Int run() {\n        <caret>return 1;\n    }\n}\n") {
             type("if (True) {\n")
-            assertThat(editor.document.text).containsPattern("""if \(True\) \{\n[ \t]*return 1;\n[ \t]*}\n    }\n}\n$""")
+            // indented here, not by the language server's on-type formatting, which LSP4IJ waits for only so long
+            assertThat(editor.document.text)
+                .isEqualTo("module M {\n    Int run() {\n        if (True) {\n            return 1;\n        }\n    }\n}\n")
+            assertThat(editor.caretModel.offset).isEqualTo(editor.document.text.indexOf("return 1;"))
         }
     }
 
@@ -33,7 +36,10 @@ class XtcBracesTest {
     fun `a typed condition with a call keeps its parentheses where they are typed`() {
         editor.open("Braces.x", "module M {\n    Int run(Int[] hand) {\n        <caret>return 1;\n    }\n}\n") {
             type("if (hand.empty()) {\n")
-            assertThat(editor.document.text).containsPattern("""if \(hand\.empty\(\)\) \{\n[ \t]*return 1;\n[ \t]*}\n    }\n}\n$""")
+            assertThat(editor.document.text)
+                .isEqualTo(
+                    "module M {\n    Int run(Int[] hand) {\n        if (hand.empty()) {\n            return 1;\n        }\n    }\n}\n",
+                )
         }
     }
 
