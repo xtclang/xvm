@@ -118,7 +118,8 @@ internal class XdkWorkspaceNavigation(
         return model.symbols
             .filter {
                 it.headerStart != null && it.declarationSource == model.sourceName &&
-                    it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY)
+                    it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY) &&
+                    !isFinalizer(it)
             }.mapNotNull { symbol ->
                 val range = symbol.declaration ?: return@mapNotNull null
                 val locations =
@@ -155,6 +156,13 @@ internal class XdkWorkspaceNavigation(
             }.distinctBy { it.range }
             .sortedWith(compareBy({ it.range.start.line }, { it.range.start.column }))
     }
+
+    /**
+     * Whether [symbol] is a constructor's `finally` block, which the compiler makes a method of that name: part of the
+     * constructor, which nothing refers to on its own, and a keyword that no declared method can be named.
+     */
+    private fun isFinalizer(symbol: SemanticModel.Symbol): Boolean =
+        symbol.kind == SemanticModel.SymbolKind.METHOD && symbol.name == "finally"
 
     fun monikers(
         uri: String,
