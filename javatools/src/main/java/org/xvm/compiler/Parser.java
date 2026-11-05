@@ -1389,7 +1389,7 @@ public class Parser {
     private void retainEmptyCursor(List<Statement> statements) {
         if (f_cursor != NO_CURSOR && (prev().getId() == Id.L_CURLY
                 || prev().getId() == Id.R_CURLY || prev().getId() == Id.SEMICOLON)
-                && canRetainIncomplete()) {
+                && endsAt(f_cursor)) {
             log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
             statements.add(new IncompleteStatement(
                     new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
@@ -3277,7 +3277,7 @@ public class Parser {
 
             case DOT: {
                 Token dot = expect(Id.DOT);
-                if (canRetainIncomplete() || atLineEnd(f_cursor)) {
+                if (endsAt(f_cursor)) {
                     throw incomplete(expr, dot, List.of(), List.of());
                 }
                 switch (peek().getId()) {
@@ -3313,8 +3313,7 @@ public class Parser {
                     // nothing of it typed
                     if (noDeRef == null && name.getId() == Id.IDENTIFIER
                             && name.getStartPosition() <= f_cursor && f_cursor <= name.getEndPosition()
-                            && (canRetainIncompleteAt(name.getEndPosition(), true)
-                                    || atLineEnd(name.getEndPosition()))) {
+                            && endsAt(name.getEndPosition(), true)) {
                         var hole = incomplete(expr, dot, name);
                         if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
                             expr = new IncompleteExpression(hole.statement);
@@ -3550,7 +3549,7 @@ public class Parser {
      * @return an expression
      */
     Expression parsePrimaryExpression(boolean fExtended) {
-        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+        if (f_cursor != NO_CURSOR && endsAt(f_cursor)) {
             log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
             return new IncompleteExpression(new IncompleteStatement(
                     new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
@@ -3690,8 +3689,7 @@ public class Parser {
 
                 left = new NameExpression(left, nameNDR, name, null, lEndPos);
                 if (fNormal && nameNext.getStartPosition() <= f_cursor && f_cursor <= nameNext.getEndPosition()
-                        && (canRetainIncompleteAt(nameNext.getEndPosition(), true)
-                                || atLineEnd(nameNext.getEndPosition()))) {
+                        && endsAt(nameNext.getEndPosition(), true)) {
                     var hole = incomplete(left, dot, nameNext);
                     if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
                         return new IncompleteExpression(hole.statement);
@@ -3717,7 +3715,7 @@ public class Parser {
             }
 
             if (left == null && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
-                    && canRetainIncompleteAt(name.getEndPosition())) {
+                    && endsAt(name.getEndPosition())) {
                 log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
                 throw new IncompleteSyntax(new IncompleteStatement(name, f_cursor, INCOMPLETE_EXPRESSION));
             }
@@ -5786,10 +5784,28 @@ public class Parser {
     }
 
     /**
-     * A member access being typed at the end of its line, before code on a later line that cannot
-     * continue it, ends there: the later line is the next statement, not the member's name. Without
-     * this, the access and that statement parse as one, which is an error, and the cursor has no
-     * site.
+     * Whether the operation being typed at the cursor ends there: the next token ends it, or the
+     * cursor ends a line that the next token cannot continue.
+     *
+     * @param cursor  the position after the operation's last written token, or the cursor itself
+     *
+     * @return whether partial analysis retains the operation as the cursor's site
+     */
+    private boolean endsAt(long cursor) {
+        return endsAt(cursor, false);
+    }
+
+    /** A selected member name can also end before a call whose arguments must still be parsed. */
+    private boolean endsAt(long cursor, boolean allowCall) {
+        return canRetainIncompleteAt(cursor, allowCall) || atLineEnd(cursor);
+    }
+
+    /**
+     * What is being typed at the end of its line, before code on a later line that cannot continue
+     * it, ends there: the later line is the next statement, not the rest of a name, a member access
+     * or a value. Without this, what is typed and that statement parse as one, which is an error,
+     * and the cursor has no site. A cursor after a comment at the line's end is in the comment, not
+     * at the end of the code.
      */
     private boolean atLineEnd(long cursor) {
         if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()
@@ -5799,6 +5815,7 @@ public class Parser {
         Token next = peek();
         return prev().getEndPosition() <= cursor && cursor <= next.getStartPosition()
                 && Source.calculateLine(next.getStartPosition()) > Source.calculateLine(cursor)
+                && m_source.toString(prev().getEndPosition(), cursor).isBlank()
                 && switch (next.getId()) {
                     case DOT, L_PAREN, ASYNC_PAREN, L_SQUARE, COND,
                          ADD, SUB, MUL, DIV, MOD, DIVREM, SHL, SHR, USHR,
