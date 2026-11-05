@@ -3,8 +3,6 @@ package org.xvm.lsp.server
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -54,7 +52,7 @@ class ExecutionTraceTest {
 
     @Test
     fun `queue lists preserve order and cancellation does not pretend running work stopped`() {
-        Recording().use { trace ->
+        TraceRecording().use { trace ->
             val queue = CompilerQueueTrace()
             val running = CompletableFuture<Unit>()
             val next = CompletableFuture<Unit>()
@@ -116,7 +114,7 @@ class ExecutionTraceTest {
 
     @Test
     fun `API trace exposes overlap without counting nesting as parallel threads`() {
-        Recording().use { trace ->
+        TraceRecording().use { trace ->
             val entered = CountDownLatch(2)
             val release = CountDownLatch(1)
             Executors.newVirtualThreadPerTaskExecutor().use { executor ->
@@ -169,7 +167,7 @@ class ExecutionTraceTest {
 
     @Test
     fun `protocol trace ends at the reply and separates bidirectional IDs`() {
-        Recording().use { trace ->
+        TraceRecording().use { trace ->
             ProtocolTrace().use { protocol ->
                 val received = protocol.wrap(MessageConsumer {}, received = true)
                 val sent = protocol.wrap(MessageConsumer {}, received = false)
@@ -219,27 +217,6 @@ class ExecutionTraceTest {
                 )
             }
             assertThat(trace.entries.last()["outcome"].asString).isEqualTo("transport-closed")
-        }
-    }
-
-    /** Attaches a temporary trace appender and detaches it on close to isolate captured JSON events. */
-    private class Recording : AutoCloseable {
-        val entries = CopyOnWriteArrayList<JsonObject>()
-        private val logger = LoggerFactory.getLogger("org.xvm.lsp.trace") as Logger
-        private val appender =
-            object : AppenderBase<ILoggingEvent>() {
-                override fun append(event: ILoggingEvent) {
-                    entries += JsonParser.parseString(event.formattedMessage).asJsonObject
-                }
-            }.apply { start() }
-
-        init {
-            logger.addAppender(appender)
-        }
-
-        override fun close() {
-            logger.detachAppender(appender)
-            appender.stop()
         }
     }
 }

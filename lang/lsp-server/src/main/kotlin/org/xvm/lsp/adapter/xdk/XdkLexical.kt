@@ -26,6 +26,10 @@ internal object XdkLexical {
     private val statementStarts = setOf(null, Token.Id.SEMICOLON, Token.Id.L_CURLY, Token.Id.R_CURLY, Token.Id.COLON)
 
     private val closers = setOf(Token.Id.R_CURLY, Token.Id.R_PAREN, Token.Id.R_SQUARE)
+
+    /** Whether each text may use resources, as [mayUseResources] found, for the texts that modules' captures read. */
+    private val resourceUses = XdkTextMemo<Boolean>()
+
     private val continuations =
         setOf(
             Token.Id.ASN,
@@ -58,20 +62,23 @@ internal object XdkLexical {
     )
 
     /**
-     * Over-approximate path expressions without interpreting paths or suppressing compiler errors.
+     * Over-approximate path expressions without interpreting paths or suppressing compiler errors. Each capture of a
+     * module asks for each of its files, and an unchanged file's text is lexed once.
      */
     fun mayUseResources(text: String): Boolean =
-        lex(text)?.any {
-            it.id in
-                setOf(
-                    Token.Id.DIV,
-                    Token.Id.DIR_CUR,
-                    Token.Id.DIR_PARENT,
-                    Token.Id.BIN_FILE,
-                    Token.Id.STR_FILE,
-                    Token.Id.TEMPLATE,
-                )
-        } ?: true
+        resourceUses.of(text) {
+            lex(text)?.any {
+                it.id in
+                    setOf(
+                        Token.Id.DIV,
+                        Token.Id.DIR_CUR,
+                        Token.Id.DIR_PARENT,
+                        Token.Id.BIN_FILE,
+                        Token.Id.STR_FILE,
+                        Token.Id.TEMPLATE,
+                    )
+            } ?: true
+        }
 
     /**
      * Brace, parenthesis and bracket depths used while scanning a token sequence. [statementSwitches] marks, for each open brace, whether it is
