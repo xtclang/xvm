@@ -136,6 +136,25 @@ class XdkDiagnosticTest {
         }
     }
 
+    @Test
+    fun `a module's errors are each reported once, up to the compiler's budget`() {
+        CompilerTestSupport.configure()
+
+        fun broken(declarations: Int) = "module Current {\n" + (0 until declarations).joinToString("\n") { "Missing$it value$it;" } + "\n}"
+        XdkAdapter().use { adapter ->
+            // each unresolvable name is one error, on its own line: none twice, and none left out
+            val each = adapter.compile(URI, broken(150)).diagnostics
+            assertThat(each.map { it.code }).containsOnly("COMPILER-38")
+            assertThat(each.map { it.location.startLine }).containsExactlyElementsOf(1..150)
+
+            // more of them than the budget, ErrorListener's DEFAULT_MAX_ERRORS that the analysis's ErrorList has,
+            // stop at the budget
+            val over = adapter.compile(URI, broken(ErrorListener.DEFAULT_MAX_ERRORS + 88)).diagnostics
+            assertThat(over).hasSize(ErrorListener.DEFAULT_MAX_ERRORS)
+            assertThat(over.map { it.location.startLine }).doesNotHaveDuplicates()
+        }
+    }
+
     private fun reportAtEnd(
         source: Source,
         errs: ErrorListener,
