@@ -18,6 +18,7 @@ import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.NamedTypeExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
+import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.VariableDeclarationStatement;
@@ -128,6 +129,52 @@ public class ParserRecoveryTest {
         // the later line continues the access, so it does not end at the cursor
         assertTrue(nodes(tree).stream().noneMatch(IncompleteStatement.class::isInstance));
         assertTrue(errors.getErrors().isEmpty(), errors.getErrors().toString());
+    }
+
+    @Test
+    public void namesAndValuesAtTheirLinesEndRetainTheStatementsOnLaterLines() {
+        List.of("Sco§", "String value = te§", "String value = §", "return te§", "§").forEach(expression -> List.of(
+                        "Int after = 1;", "if (after()) {}", "after();").forEach(next -> {
+                    String marked = "module Recovery { String text; Boolean after() = True;\n"
+                            + "    String run() {\n        " + expression + "\n        " + next + "\n    }\n}";
+                    var source = new Source(marked.replace("§", ""));
+                    marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var errors = new ErrorList();
+                    var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    var sites = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                            .map(IncompleteStatement.class::cast).toList();
+                    String label = expression + " / " + next + ": " + errors.getErrors();
+                    assertEquals(1, sites.size(), label);
+                    assertTrue(sites.getFirst().isNameCompletion(), label);
+                    assertEquals(cursor, sites.getFirst().getEndPosition(), label);
+                    String typed = expression.substring(0, expression.indexOf('§'));
+                    assertEquals(typed.substring(typed.lastIndexOf(' ') + 1), sites.getFirst().getCompletionPrefix(), label);
+                    // the next line's statement is retained as a statement of its own
+                    assertTrue(nodes(tree).stream().anyMatch(node -> node instanceof Statement
+                            && Source.calculateLine(node.getStartPosition()) == 3), label);
+                    assertTrue(errors.getErrors().stream().allMatch(error ->
+                            error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)), label);
+                    assertEquals(marked.replace("§", ""), source.toRawString());
+                }));
+    }
+
+    @Test
+    public void aLineEndCursorBeforeALaterLinesContinuationOrInACommentIsNoSite() {
+        List.of("Int value = te§\n            .size;", "after(); // note§\n        Int later = 1;",
+                "Int value = // note§\n            text.size;").forEach(code -> {
+            String marked = "module Recovery { String text; Boolean after() = True;\n"
+                    + "    void run() {\n        " + code + "\n    }\n}";
+            var source = new Source(marked.replace("§", ""));
+            marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            var errors = new ErrorList();
+            var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+            assertTrue(nodes(tree).stream().noneMatch(IncompleteStatement.class::isInstance), code);
+            assertTrue(errors.getErrors().isEmpty(), code + ": " + errors.getErrors());
+        });
     }
 
     @Test
