@@ -176,8 +176,7 @@ public abstract class Container
                 service.execute(true);
             } catch (Throwable e) {
                 // must not happen
-                System.err.println("Unexpected service scheduling failure: " + service.f_sName);
-                e.printStackTrace(System.err);
+                Runtime.reportFailure("Unexpected service scheduling failure: " + service.f_sName, e);
             } finally {
                 f_pendingWorkCount.decrementAndGet();
             }
