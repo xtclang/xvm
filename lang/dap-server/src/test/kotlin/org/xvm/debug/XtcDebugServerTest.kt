@@ -148,6 +148,30 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a session that ends before its configuration stops its launch first, which then waits no longer`() {
+        server.launch(mutableMapOf("module" to "App"))
+        val stoppedFirst = CompletableFuture<Boolean>()
+        runs.onReady = { stoppedFirst.complete(runs.stopped.isNotEmpty()) }
+        // no configurationDone: the launch waits for it until the session ends
+        assertThat(runs.ready.toCompletableFuture()).isNotDone()
+
+        server.terminate(TerminateArguments())
+        assertThat(runs.ready.toCompletableFuture().get(HANG_SECONDS, SECONDS)).isNotNull()
+        // the run was stopped before the wait ended, so it reports that it never started
+        assertThat(stoppedFirst.get(HANG_SECONDS, SECONDS)).isTrue()
+    }
+
+    @Test
+    fun `an attach whose session ends before its configuration gives no program the debugger`() {
+        val attached = server.attach(mutableMapOf("port" to 5005.0))
+        assertThat(runs.ready.toCompletableFuture()).isNotDone()
+
+        server.terminate(TerminateArguments())
+        assertThat(runs.ready.toCompletableFuture()).isCompletedExceptionally()
+        assertThatThrownBy { attached.get(HANG_SECONDS, SECONDS) }.hasMessageContaining("Attach failed")
+    }
+
+    @Test
     fun `breakpoints set before the start are pending, installed with the program, and reported as installed`() {
         server.launch(mutableMapOf("module" to "App"))
         val pending = server.setBreakpoints(breakpoints("/work/App.x", 3, 7)).get(HANG_SECONDS, SECONDS).breakpoints
