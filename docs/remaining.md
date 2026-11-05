@@ -833,6 +833,18 @@ passes with the workaround disabled. The gates are in
   the user's go-ahead. To do: get it merged, and after a release with it, check X285's prompt in
   IntelliJ's Debug console. Nothing of ours to remove.
 
+### LSP4IJ: a line typed in the Debug console goes nowhere (UP71): not filed
+
+- [ ] UP71 (2026-11-05): LSP4IJ's `DAPConsoleView` attaches to the adapter's process for output
+  only (`ConsoleViewRunningState(..., true, false)`, on 0.21.0 and `main` `1988ab6c`), so a line
+  typed in a debug session's Console goes nowhere: a program that reads its input cannot be debugged
+  in IntelliJ, and the console evaluates nothing. The IntelliJ tour found it with the card game, which
+  waits for Enter at every turn. Worked around by `DebugConsoleInput`, which gives the console a
+  running state with input; `LanguageServerDebugProcessHandler` then sends each typed line as an
+  `evaluate` with the context `repl`, as VS Code does (`DebugConsoleInputTest`). The draft of the
+  issue is in `errs-upstream-issues.md`'s UP71 row. To do: file it at the user's go-ahead, and after
+  a release that sends typed lines, remove `DebugConsoleInput`.
+
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
 - [ ] UP65 (2026-10-29): LSP4IJ's `DAPStackFrame` finds a frame's file with
