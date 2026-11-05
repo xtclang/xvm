@@ -73,9 +73,24 @@ const refreshes = new vscode.EventEmitter<readonly string[]>();
 /** Fires with the ID of every item, the modules' and the ones under them, when the tests have been listed again. */
 export const onDidRefreshTests = refreshes.event;
 
+const starts = new vscode.EventEmitter<string>();
+
+/** Fires with a test's ID when a run starts it. */
+export const onDidStartTest = starts.event;
+
+/** The test controller's items, which [testLocation] looks a test up in. */
+let listed: vscode.TestItemCollection | undefined;
+
+/** Where the test or container [id] is, as the Test Explorer goes to it: its file and its declaration's range. */
+export function testLocation(id: string): vscode.Location | undefined {
+    const found = listed && topLevel(listed).flatMap(under).find(it => it.id === id);
+    return found?.uri && found.range ? new vscode.Location(found.uri, found.range) : undefined;
+}
+
 /** Registers the Ecstasy test controller, with its Run and Debug profiles, for the language server [client]. */
 export function registerTestExplorer(context: vscode.ExtensionContext, client: () => LanguageClient | undefined): void {
     const controller = vscode.tests.createTestController('xtc', 'Ecstasy');
+    listed = controller.items;
     const selections = new WeakMap<vscode.TestItem, Selection>();
     // the results of the test runs that debug sessions run, by the marker their launch carries
     const debugged = new Map<string, Results>();
@@ -355,6 +370,7 @@ class Results {
                     this.started.set(event.id, it);
                     this.running.add(it);
                     this.run.started(it);
+                    starts.fire(it.id);
                 }
                 break;
             }

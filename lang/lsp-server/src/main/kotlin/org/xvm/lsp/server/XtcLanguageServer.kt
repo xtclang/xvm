@@ -1413,6 +1413,8 @@ class XtcLanguageServer internal constructor(
                     },
                 "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+                // the runs it still tracks, builds, programs and test runs, which is none once each, and its program, ended
+                "embeddedRuns" to embeddedRuns.tracked(),
                 // what the server is still answering, but this request, which an idle server has none of
                 "openRequests" to openRequests.values.filter { it != "xtc/languageServiceStatus" }.sorted(),
                 // the documents whose current diagnostics the client has still to pull, which a pushing server has none of
