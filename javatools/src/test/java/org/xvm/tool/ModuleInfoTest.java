@@ -239,8 +239,19 @@ class ModuleInfoTest {
         // the same module given by its file, as an editor may give it
         assertTrue(new ModuleInfo(srcTestX.resolve("appTest.x").toFile(), true).isTestSource());
 
-        assertFalse(new ModuleInfo(tempDir.resolve("app").toFile(), true).isTestSource());
+        var app = new ModuleInfo(tempDir.resolve("app").toFile(), true);
+        assertFalse(app.isTestSource());
+        assertTrue(app.getProjectModuleFiles().isEmpty());
         assertFalse(new ModuleInfo(srcTestX.resolve("appTest.x").toFile(), false).isTestSource());
+
+        // nothing is compiled yet: the project's module is out of date, and there is no binary
+        // directory to put on the module path
+        assertTrue(test.isProjectChanged());
+        var path = List.of(tempDir.resolve("libs").toFile());
+        assertEquals(path, test.withProjectBinaries(path));
+        Files.createDirectories(tempDir.resolve("build"));
+        assertEquals(List.of(test.getBinaryDir(), path.getFirst()), test.withProjectBinaries(path));
+        assertEquals(path, app.withProjectBinaries(path));
     }
 
     private static File canonical(File file) {
