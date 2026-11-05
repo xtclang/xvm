@@ -925,6 +925,16 @@ val clean =
         delete(layout.projectDirectory.dir("../.intellijPlatform/sandbox/intellij-plugin"))
     }
 
+// Light tests load the plugin from the test classpath, where XtcTextMateBundleProvider finds no plugin directory
+// with the grammar; LightEditor registers the bundle from this one instead, so that they see TextMate's tokens.
+val testTextMateDirectory: Provider<Directory> = layout.buildDirectory.dir("test-textmate")
+val testTextMateBundle =
+    tasks.register<Sync>("testTextMateBundle") {
+        description = "Copy the TextMate grammar for the light platform tests"
+        from(textMateGrammar)
+        into(testTextMateDirectory)
+    }
+
 // The IntelliJ Platform Gradle Plugin sets -Djava.system.class.loader=com.intellij.util.lang.PathClassLoader
 // on the test JVM so that IntelliJ's plugin classloading works during tests. This causes a harmless JVM warning:
 //   [warning][cds] Archived non-system classes are disabled because the java.system.class.loader property is specified
@@ -935,6 +945,9 @@ val test =
     tasks.named<Test>("test") {
         useJUnitPlatform()
         jvmArgs("-Xlog:cds=off")
+        inputs.files(testTextMateBundle).withPropertyName("textMateBundle")
+        val bundle = testTextMateDirectory
+        jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dxtc.test.textmate=${bundle.get().asFile.absolutePath}") })
         testLogging {
             events("failed")
         }
