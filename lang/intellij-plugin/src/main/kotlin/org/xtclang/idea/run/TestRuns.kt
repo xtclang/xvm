@@ -11,6 +11,7 @@ import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.RunProfileState
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessOutputTypes
@@ -18,15 +19,18 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.testframework.TestConsoleProperties
+import com.intellij.execution.testframework.actions.AbstractRerunFailedTestsAction
 import com.intellij.execution.testframework.sm.SMCustomMessagesParsing
 import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil
 import com.intellij.execution.testframework.sm.runner.OutputToGeneralTestEventsConverter
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.sm.runner.SMTestLocator
+import com.intellij.execution.ui.ConsoleView
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComponentContainer
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiDocumentManager
@@ -125,6 +129,42 @@ internal class XtcTestConsoleProperties(
         testFrameworkName: String,
         consoleProperties: TestConsoleProperties,
     ): OutputToGeneralTestEventsConverter = XtcTestEventsConverter(testFrameworkName, consoleProperties)
+
+    // under Debug, the rerun would be LSP4IJ's DAP launch, which takes the configuration itself and no rerun's profile
+    override fun createRerunFailedTestsAction(consoleView: ConsoleView): AbstractRerunFailedTestsAction? =
+        if (executor.id == DefaultDebugExecutor.EXECUTOR_ID) null else XtcRerunFailedTestsAction(consoleView).also { it.init(this) }
+}
+
+/**
+ * The test console's Rerun Failed Tests: runs its configuration again, as it ran, with only the tests that failed,
+ * each by the selector that its `xunit://` location names.
+ */
+internal class XtcRerunFailedTestsAction(
+    console: ComponentContainer,
+) : AbstractRerunFailedTestsAction(console) {
+    override fun getRunProfile(environment: ExecutionEnvironment): MyRunProfile? {
+        val configuration = myConsoleProperties.configuration as? XtcRunConfiguration ?: return null
+        val failed = failedTests(getFailedTests(configuration.project).map { it.locationUrl })
+        if (failed.isEmpty()) return null
+        return object : MyRunProfile(configuration) {
+            override fun getState(
+                executor: Executor,
+                environment: ExecutionEnvironment,
+            ): RunProfileState? = (configuration.clone() as XtcRunConfiguration).apply { tests = failed }.getState(executor, environment)
+        }
+    }
+
+    companion object {
+        /** The tests that the failed tests' [locations] name, each once, as test selectors; none for another protocol's. */
+        fun failedTests(locations: List<String?>): List<TestSelector> =
+            locations
+                .mapNotNull { location ->
+                    location?.takeIf { it.startsWith(LOCATION) }?.removePrefix(LOCATION)?.takeIf { it.isNotEmpty() }
+                }.distinct()
+                .map { TestSelector(it, ServerTest.TEST) }
+
+        private const val LOCATION = "${XtcTestLocator.PROTOCOL}://"
+    }
 }
 
 /** Finds a test of [module] by the selector its `xunit://` location names, among the tests the server last listed. */
