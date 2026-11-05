@@ -57,7 +57,9 @@
         </rollingPolicy>
         <encoder><pattern>%msg%n</pattern></encoder>
     </appender>
-    <logger name="org.xvm.lsp.trace" level="${xtc.trace.level:-${XTC_LSP_TRACE_LEVEL:-INFO}}">
+    <!-- Only there: stderr, which an editor shows as the server's errors, and server.log, whose size is capped, would
+         have every event too -->
+    <logger name="org.xvm.lsp.trace" level="${xtc.trace.level:-${XTC_LSP_TRACE_LEVEL:-INFO}}" additivity="false">
         <appender-ref ref="EXECUTION_TRACE"/>
     </logger>
 
