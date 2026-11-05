@@ -250,6 +250,11 @@ public class TypeCompositionStatement
         return name;
     }
 
+    /** @return the written documentation text, or null when no documentation comment is present */
+    public String getDocumentation() {
+        return extractDocumentation(doc);
+    }
+
     public String getName() {
         if (category.getId() == Token.Id.MODULE) {
             StringBuilder sb = new StringBuilder();
