@@ -103,19 +103,24 @@ internal class XdkSources
         )
 
         companion object {
+            /** Module names by their root's text, which each capture of an unchanged root reuses. */
+            private val moduleNames = XdkTextMemo<String>()
+
             private fun moduleName(
                 root: File,
                 text: String,
             ): String =
-                ExecutionTrace.api("Parser.parseModuleName(snapshot)", root.path) {
-                    try {
-                        Parser(
-                            Source(text, root.path),
-                            ErrorListener.silent(ErrorListener.Silence.DISCARD),
-                        ).parseModuleNameIgnoreEverythingElse()
-                    } catch (_: CompilerException) {
-                        null
-                    } ?: root.nameWithoutExtension
+                moduleNames.of(text, root.nameWithoutExtension) {
+                    ExecutionTrace.api("Parser.parseModuleName(snapshot)", root.path) {
+                        try {
+                            Parser(
+                                Source(text, root.path),
+                                ErrorListener.silent(ErrorListener.Silence.DISCARD),
+                            ).parseModuleNameIgnoreEverythingElse()
+                        } catch (_: CompilerException) {
+                            null
+                        } ?: root.nameWithoutExtension
+                    }
                 }
 
             /** Replay captured source text; resources use the captured paths without filesystem writes. */
