@@ -7,10 +7,9 @@ import org.xvm.api.EmbeddingSupport.Compilation
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Location
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Verifies diagnostic source ownership and UTF-16 positions for local, foreign and unpositioned reports.
@@ -86,7 +85,7 @@ class XdkDiagnosticTest {
         XdkAdapter { _, _ -> throw IllegalStateException("unexpected compiler failure") }
             .use { adapter ->
                 assertThatThrownBy {
-                    adapter.compileAsync(URI, "module Current {}").get(HANG_SECONDS, SECONDS)
+                    adapter.compileAsync(URI, "module Current {}").awaited()
                 }.hasCauseInstanceOf(IllegalStateException::class.java)
                     .hasRootCauseMessage("unexpected compiler failure")
                 assertThat(adapter.getCachedResult(URI)).isNull()

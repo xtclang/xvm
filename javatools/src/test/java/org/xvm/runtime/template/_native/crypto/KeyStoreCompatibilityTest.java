@@ -5,13 +5,12 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
-import java.time.Duration;
-
 import javax.crypto.SecretKey;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.io.TempDir;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -28,13 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * when openssl is on the PATH.
  */
 public class KeyStoreCompatibilityTest {
-
-    /**
-     * How long a test waits for keytool or openssl to exit before it fails as hung, or finds the
-     * tool missing. It ends only a hang: an hour, which no tool takes however slow or loaded the
-     * machine is, so neither a result nor whether a test runs depends on speed.
-     */
-    private static final Duration HANG_LIMIT = Duration.ofHours(1);
 
     private static final char[] PASSWORD = "compat-test".toCharArray();
     private static final String PASSWORD_STR = "compat-test";
@@ -99,7 +91,7 @@ public class KeyStoreCompatibilityTest {
         ).redirectErrorStream(true).start();
 
         var output = new String(process.getInputStream().readAllBytes());
-        assertTrue(process.waitFor(HANG_LIMIT));
+        assertTrue(Await.waitFor(process));
         assertEquals(0, process.exitValue(), "keytool -list failed: " + output);
         assertTrue(output.contains("compat.example.com"), "keytool should see our CN");
         assertTrue(output.contains("RSA"), "keytool should see RSA key type");
@@ -143,7 +135,7 @@ public class KeyStoreCompatibilityTest {
         ).redirectErrorStream(true).start();
 
         var output = new String(process.getInputStream().readAllBytes());
-        assertTrue(process.waitFor(HANG_LIMIT));
+        assertTrue(Await.waitFor(process));
         assertEquals(0, process.exitValue(), "keytool can't read Java's AES key: " + output);
     }
 
@@ -169,7 +161,7 @@ public class KeyStoreCompatibilityTest {
         ).redirectErrorStream(true).start();
 
         var output = new String(process.getInputStream().readAllBytes());
-        assertTrue(process.waitFor(HANG_LIMIT));
+        assertTrue(Await.waitFor(process));
         assertEquals(0, process.exitValue(), "openssl can't read Java's PKCS12: " + output);
     }
 
@@ -292,7 +284,7 @@ public class KeyStoreCompatibilityTest {
             var process = new ProcessBuilder("keytool", "-help")
                     .redirectErrorStream(true).start();
             process.getInputStream().readAllBytes();
-            return process.waitFor(HANG_LIMIT) && process.exitValue() == 0;
+            return Await.waitFor(process) && process.exitValue() == 0;
         } catch (Exception e) {
             return false;
         }
@@ -303,7 +295,7 @@ public class KeyStoreCompatibilityTest {
             var process = new ProcessBuilder("openssl", "version")
                     .redirectErrorStream(true).start();
             process.getInputStream().readAllBytes();
-            return process.waitFor(HANG_LIMIT) && process.exitValue() == 0;
+            return Await.waitFor(process) && process.exitValue() == 0;
         } catch (Exception e) {
             return false;
         }

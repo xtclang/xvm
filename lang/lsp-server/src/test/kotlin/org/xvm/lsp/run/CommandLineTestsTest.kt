@@ -3,14 +3,13 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.awaited
 import org.xvm.tool.Launcher
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * `xtc test` as IntelliJ's command-line test runs give it, from the project's directory with the test module's
@@ -90,7 +89,7 @@ class CommandLineTestsTest {
             ) + args.drop(1)
         val process = ProcessBuilder(command).directory(project.toFile()).redirectErrorStream(true).start()
         val output = process.inputStream.bufferedReader().use { it.readText() }
-        check(process.waitFor(HANG_SECONDS, SECONDS)) { "xtc ${args.joinToString(" ")} did not end" }
+        check(process.awaited()) { "xtc ${args.joinToString(" ")} did not end" }
         return process.exitValue() to output
     }
 }

@@ -35,10 +35,9 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaitAsserted
 
 @DisplayName("XtcLanguageServer")
 class XtcLanguageServerTest {
@@ -92,7 +91,7 @@ class XtcLanguageServerTest {
             server.textDocumentService.didOpen(params)
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
-            verify(mockClient, timeout(HANG_SECONDS * 1_000)).publishDiagnostics(captor.capture())
+            awaitAsserted { verify(mockClient).publishDiagnostics(captor.capture()) }
 
             val published = captor.value
             assertThat(published.uri).isEqualTo(uri)
@@ -119,7 +118,7 @@ class XtcLanguageServerTest {
             server.textDocumentService.didOpen(params)
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
-            verify(mockClient, timeout(HANG_SECONDS * 1_000)).publishDiagnostics(captor.capture())
+            awaitAsserted { verify(mockClient).publishDiagnostics(captor.capture()) }
 
             assertThat(captor.value.diagnostics).isEmpty()
         }

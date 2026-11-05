@@ -2,9 +2,8 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 /** Workspace rescans run off the JSON-RPC thread: a burst of file events costs one or two walks, never one each. */
@@ -17,14 +16,14 @@ class CoalescingTaskTest {
         CoalescingTask("test") {
             if (runs.incrementAndGet() == 1) {
                 started.countDown()
-                check(release.await(HANG_SECONDS, SECONDS))
+                check(release.awaited())
             }
         }.use { task ->
             task.request()
-            assertThat(started.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(started.awaited()).isTrue()
             repeat(50) { task.request() }
             release.countDown()
-            task.idle().get(HANG_SECONDS, SECONDS)
+            task.idle().awaited()
             assertThat(runs.get()).isEqualTo(2)
         }
     }
@@ -36,9 +35,9 @@ class CoalescingTaskTest {
             if (runs.incrementAndGet() == 1) error("first walk fails")
         }.use { task ->
             task.request()
-            task.idle().get(HANG_SECONDS, SECONDS)
+            task.idle().awaited()
             task.request()
-            task.idle().get(HANG_SECONDS, SECONDS)
+            task.idle().awaited()
             assertThat(runs.get()).isEqualTo(2)
         }
     }
@@ -49,7 +48,7 @@ class CoalescingTaskTest {
         val task = CoalescingTask("test") { runs.incrementAndGet() }
         task.close()
         task.request()
-        task.idle().get(HANG_SECONDS, SECONDS)
+        task.idle().awaited()
         assertThat(runs.get()).isZero()
     }
 }

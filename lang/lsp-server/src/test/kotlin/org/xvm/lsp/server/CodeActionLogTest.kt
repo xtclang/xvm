@@ -29,12 +29,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * The server's log has one line per code action request as it ends, with the module compiles it ran, and one per project
@@ -53,7 +52,7 @@ class CodeActionLogTest {
             logged {
                 XtcLanguageServer(XdkAdapter()).use { server ->
                     server.connect(mock(LanguageClient::class.java))
-                    server.initialize(parameters(workspace.toURI().toString())).get(HANG_SECONDS, SECONDS)
+                    server.initialize(parameters(workspace.toURI().toString())).awaited()
                     server.initialized(InitializedParams())
                     val service = server.textDocumentService
                     service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, SOURCE)))
@@ -67,13 +66,13 @@ class CodeActionLogTest {
                                     selection,
                                     CodeActionContext(emptyList()).apply { triggerKind = CodeActionTriggerKind.Invoked },
                                 ),
-                            ).get(HANG_SECONDS, SECONDS)
+                            ).awaited()
                     }
                     // a workspace's symbols, which the open file's compile has, so a query that compiles nothing logs
                     // nothing, then a rename of run, which compiles the project as it is and as renamed
-                    val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("run")).get(HANG_SECONDS, SECONDS)
+                    val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("run")).awaited()
                     assertThat(symbols.left.map { it.name }).containsExactly("run")
-                    service.rename(RenameParams(TextDocumentIdentifier(uri), Position(7, 9), "go")).get(HANG_SECONDS, SECONDS)
+                    service.rename(RenameParams(TextDocumentIdentifier(uri), Position(7, 9), "go")).awaited()
                 }
             }
         // the revision's compile, App, then three import proofs, the cleanup's and two extractions; then all of them cached

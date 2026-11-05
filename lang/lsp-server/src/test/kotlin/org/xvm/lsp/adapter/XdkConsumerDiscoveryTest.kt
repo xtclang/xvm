@@ -3,14 +3,13 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkConsumerDiscovery
 import org.xvm.lsp.adapter.xdk.XdkRenameScope
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.io.File
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Consumer discovery finds the modules under chosen folders that import the graph, directly or through each
@@ -72,7 +71,7 @@ class XdkConsumerDiscoveryTest {
                             0,
                             LIBRARY.indexOf("pick"),
                             "choose",
-                        ).get(HANG_SECONDS, SECONDS),
+                        ).awaited(),
                 )
             assertThat(requireNotNull(proposal.scope).boundary).isEqualTo(XdkRenameScope.Boundary.CONFIGURED_GRAPH)
             assertThat(proposal.edit.changes.keys).containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())

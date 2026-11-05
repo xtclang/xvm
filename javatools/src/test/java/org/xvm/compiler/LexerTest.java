@@ -1,7 +1,6 @@
 package org.xvm.compiler;
 
 import java.io.File;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -9,20 +8,14 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
  * TODO
  */
 public class LexerTest {
-    /**
-     * How long lexing a source may take before the test fails as hung. It ends only a hang: an
-     * hour, which no machine takes however slow or loaded it is, so no result depends on speed.
-     */
-    private static final Duration HANG_LIMIT = Duration.ofHours(1);
-
     public static void main(String[] args)
             throws Exception {
         if (args.length < 1 || args[0].isEmpty()) {
@@ -92,11 +85,11 @@ public class LexerTest {
         for (String text : List.of("String s = \"abc", "String s = $\"abc", "String s = \\|abc")) {
             ErrorList errs  = new ErrorList(5);
             Lexer     lexer = new Lexer(new Source(text), errs);
-            assertTimeoutPreemptively(HANG_LIMIT, () -> {
+            Await.run("lexing " + text, () -> {
                 while (lexer.hasNext()) {
                     lexer.next();
                 }
-            }, text);
+            });
             assertEquals(List.of(Lexer.STRING_NO_TERM), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(),
                     text);
         }
@@ -112,11 +105,11 @@ public class LexerTest {
         endings.forEach((text, code) -> {
             ErrorList errs  = new ErrorList(5);
             Lexer     lexer = new Lexer(new Source(text), errs);
-            assertTimeoutPreemptively(HANG_LIMIT, () -> {
+            Await.run("lexing " + text, () -> {
                 while (lexer.hasNext()) {
                     lexer.next();
                 }
-            }, text);
+            });
             assertEquals(List.of(code), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(), text);
         });
     }

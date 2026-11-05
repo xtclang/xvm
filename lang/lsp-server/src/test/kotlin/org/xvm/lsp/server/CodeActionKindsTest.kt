@@ -19,15 +19,14 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.SECONDS
 import org.xvm.lsp.adapter.Range as AdapterRange
 
 /** A code action request's `context.only` reaches the adapter as the kinds to compute, so it computes no other. */
@@ -116,7 +115,7 @@ class CodeActionKindsTest {
                         triggerKind = trigger
                     },
                 ),
-            ).get(HANG_SECONDS, SECONDS)
+            ).awaited()
             .map { it.right.title }
 
     private fun session(
@@ -145,12 +144,12 @@ class CodeActionKindsTest {
                                     }
                             }
                     },
-                ).get(HANG_SECONDS, SECONDS)
+                ).awaited()
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module Kinds {}")))
             body(backend, documents)
         } finally {
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 

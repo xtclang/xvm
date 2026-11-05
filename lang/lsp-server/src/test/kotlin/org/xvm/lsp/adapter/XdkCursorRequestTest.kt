@@ -10,15 +10,14 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.PartialSemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import org.xvm.tool.ModuleInfo
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Controls partial analysis to force request supersession and cancellation. Cursor work may not publish after
@@ -42,7 +41,7 @@ class XdkCursorRequestTest {
             threads.add(Thread.currentThread().name)
             if (threads.size == 1) {
                 started.countDown()
-                check(release.await(HANG_SECONDS, SECONDS)) { "test did not release cursor analysis" }
+                check(release.awaited()) { "test did not release cursor analysis" }
             }
             // Deliberately finish with an independent listener: even an uninterruptible compiler
             // stage must not deliver old facts after edit, close, cancellation or shutdown.
@@ -69,7 +68,7 @@ class XdkCursorRequestTest {
                 ::analyze,
             )
 
-        fun awaitStart() = check(started.await(HANG_SECONDS, SECONDS)) { "cursor analysis did not start" }
+        fun awaitStart() = check(started.awaited()) { "cursor analysis did not start" }
     }
 
     @Test
@@ -83,8 +82,8 @@ class XdkCursorRequestTest {
                 val edit = adapter.compileAsync(URI, text("Int"))
                 assertThat(old.isCancelled).isTrue()
                 compiler.release.countDown()
-                edit.get(HANG_SECONDS, SECONDS)
-                val latest = adapter.analyzeAtAsync(URI, position("Int")).get(HANG_SECONDS, SECONDS)!!
+                edit.awaited()
+                val latest = adapter.analyzeAtAsync(URI, position("Int")).awaited()!!
                 assertThat(receiverType(latest)).contains("Int")
                 assertThat(compiler.threads).containsOnly("xtc-compile")
             } finally {
@@ -108,7 +107,7 @@ class XdkCursorRequestTest {
                 assertThat(superseded).allMatch { it.isCancelled }
                 assertThat(latest.cancel(false)).isTrue()
                 compiler.release.countDown()
-                adapter.compileAsync("untitled:Barrier.x", text("String")).get(HANG_SECONDS, SECONDS)
+                adapter.compileAsync("untitled:Barrier.x", text("String")).awaited()
                 assertThat(compiler.threads).hasSize(1)
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             } finally {
@@ -128,8 +127,8 @@ class XdkCursorRequestTest {
                 val signature = adapter.getSignatureHelpAsync(URI, 0, prefix("String").length)
                 assertThat(completion.isDone).isFalse()
                 compiler.release.countDown()
-                assertThat(completion.get(HANG_SECONDS, SECONDS).map { it.label }).contains("size")
-                assertThat(signature.get(HANG_SECONDS, SECONDS)).isNull()
+                assertThat(completion.awaited().map { it.label }).contains("size")
+                assertThat(signature.awaited()).isNull()
                 assertThat(compiler.threads).hasSize(2)
             } finally {
                 compiler.release.countDown()
@@ -167,7 +166,7 @@ class XdkCursorRequestTest {
                 compiler.awaitStart()
                 assertThat(running.cancel(false)).isTrue()
                 compiler.release.countDown()
-                adapter.compileAsync("untitled:Barrier.x", text("String")).get(HANG_SECONDS, SECONDS)
+                adapter.compileAsync("untitled:Barrier.x", text("String")).awaited()
                 assertThat(running.isCancelled).isTrue()
                 assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                     .contains(
@@ -193,14 +192,14 @@ class XdkCursorRequestTest {
                 compiler.awaitStart()
                 adapter.closeDocument(URI)
                 assertThat(old.isCancelled).isTrue()
-                assertThat(adapter.analyzeAtAsync(URI, position("String")).get(HANG_SECONDS, SECONDS))
+                assertThat(adapter.analyzeAtAsync(URI, position("String")).awaited())
                     .isNull()
                 val reopened = adapter.compileAsync(URI, text("Int"))
                 compiler.release.countDown()
-                reopened.get(HANG_SECONDS, SECONDS)
+                reopened.awaited()
                 assertThat(
                     receiverType(
-                        adapter.analyzeAtAsync(URI, position("Int")).get(HANG_SECONDS, SECONDS)!!,
+                        adapter.analyzeAtAsync(URI, position("Int")).awaited()!!,
                     ),
                 ).contains("Int")
             } finally {
@@ -251,11 +250,11 @@ class XdkCursorRequestTest {
             adapter.compile(uri, member.readText())
             val cached = adapter.getCachedResult(uri)
             val snapshot =
-                adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(HANG_SECONDS, SECONDS)!!
+                adapter.analyzeAtAsync(uri, Position(0, prefix.length)).awaited()!!
             assertThat(receiverType(snapshot)).contains("String")
             assertThat(snapshot.semantics.sourceName).isEqualTo(member.path)
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
-            assertThat(adapter.analyzeAtAsync(uri, Position(100, 0)).get(HANG_SECONDS, SECONDS)).isNull()
+            assertThat(adapter.analyzeAtAsync(uri, Position(100, 0)).awaited()).isNull()
             assertThat(root.readText()).contains("Int value")
         }
     }
@@ -284,9 +283,9 @@ class XdkCursorRequestTest {
                 val edited = adapter.compileAsync(rootUri, diskRoot)
                 assertThat(old.isCancelled).isTrue()
                 compiler.release.countDown()
-                edited.get(HANG_SECONDS, SECONDS)
+                edited.awaited()
                 val latest =
-                    adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(HANG_SECONDS, SECONDS)!!
+                    adapter.analyzeAtAsync(uri, Position(0, prefix.length)).awaited()!!
                 assertThat(receiverType(latest)).contains("Int")
                 assertThat(compiler.threads).hasSize(2).containsOnly("xtc-compile")
             } finally {
@@ -302,7 +301,7 @@ class XdkCursorRequestTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, text)
             val snapshot =
-                adapter.analyzeAtAsync(URI, Position(1, prefix.length)).get(HANG_SECONDS, SECONDS)!!
+                adapter.analyzeAtAsync(URI, Position(1, prefix.length)).awaited()!!
             assertThat(receiverType(snapshot)).contains("String")
             assertThat(
                 snapshot.sites
@@ -315,7 +314,7 @@ class XdkCursorRequestTest {
                     .range.end.column,
             ).isEqualTo(prefix.length)
             listOf(Position(-1, 0), Position(0, -1), Position(1, prefix.length + 100)).forEach {
-                assertThat(adapter.analyzeAtAsync(URI, it).get(HANG_SECONDS, SECONDS)).isNull()
+                assertThat(adapter.analyzeAtAsync(URI, it).awaited()).isNull()
             }
         }
     }

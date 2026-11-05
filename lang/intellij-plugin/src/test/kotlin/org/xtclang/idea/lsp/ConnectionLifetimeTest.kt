@@ -4,10 +4,9 @@ import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.HANG_SECONDS
+import org.xtclang.idea.awaited
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 class ConnectionLifetimeTest {
@@ -32,7 +31,7 @@ class ConnectionLifetimeTest {
         val lifetime =
             ConnectionLifetime({ started.incrementAndGet() }, { stopped.incrementAndGet() })
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            (1..20).map { executor.submit { lifetime.start() } }.forEach { it.get(HANG_SECONDS, SECONDS) }
+            (1..20).map { executor.submit { lifetime.start() } }.forEach { it.awaited() }
         }
         lifetime.stop()
         lifetime.stop()
@@ -52,27 +51,27 @@ class ConnectionLifetimeTest {
             ConnectionLifetime(
                 {
                     entered.countDown()
-                    check(finish.await(HANG_SECONDS, SECONDS))
+                    check(finish.awaited())
                     children.incrementAndGet()
                 },
                 { children.decrementAndGet() },
             )
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             val start = executor.submit { lifetime.start() }
-            check(entered.await(HANG_SECONDS, SECONDS))
+            check(entered.awaited())
             val stop =
                 executor.submit {
                     stopping.countDown()
                     lifetime.stop()
                 }
             try {
-                check(stopping.await(HANG_SECONDS, SECONDS))
+                check(stopping.awaited())
                 assertThat(children.get()).isZero()
             } finally {
                 finish.countDown()
             }
-            start.get(HANG_SECONDS, SECONDS)
-            stop.get(HANG_SECONDS, SECONDS)
+            start.awaited()
+            stop.awaited()
         }
         assertThat(children.get()).isZero()
     }

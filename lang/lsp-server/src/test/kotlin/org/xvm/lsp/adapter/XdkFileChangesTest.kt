@@ -6,15 +6,14 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
+import org.xvm.lsp.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks whether late filesystem notifications still describe the inputs already compiled. Identical events
@@ -149,7 +148,7 @@ class XdkFileChangesTest {
         withHeldCompile("App.x") { adapter, hold ->
             val uri = root.toURI().toString()
             val analysis = adapter.compileAsync(uri, root.readText())
-            assertThat(hold.entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(hold.entered.awaited()).isTrue()
 
             // the watcher reports files the running analysis already read: nothing to recompile
             listOf(root.parentFile, member.parentFile, member).forEach {
@@ -159,7 +158,7 @@ class XdkFileChangesTest {
             member.writeText("class Box { Int changed = 1; }")
             assertThat(adapter.changedFileScopes(member.toURI().toString())).contains(uri)
             hold.release.countDown()
-            assertThat(analysis.get(HANG_SECONDS, SECONDS).success).isTrue()
+            assertThat(analysis.awaited().success).isTrue()
         }
     }
 
@@ -176,7 +175,7 @@ class XdkFileChangesTest {
             }
         withHeldCompile("Busy.x") { adapter, hold ->
             val first = adapter.compileAsync(busy.toURI().toString(), busy.readText())
-            assertThat(hold.entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(hold.entered.awaited()).isTrue()
             val uri = root.toURI().toString()
             val analysis = adapter.compileAsync(uri, root.readText())
 
@@ -186,8 +185,8 @@ class XdkFileChangesTest {
                 assertThat(adapter.changedFileScopes(it.toURI().toString())).describedAs(it.path).isEmpty()
             }
             hold.release.countDown()
-            first.get(HANG_SECONDS, SECONDS)
-            assertThat(analysis.get(HANG_SECONDS, SECONDS).success).isTrue()
+            first.awaited()
+            assertThat(analysis.awaited().success).isTrue()
             // it did read the change
             assertThat(adapter.changedFileScopes(member.toURI().toString())).isEmpty()
         }
@@ -210,7 +209,7 @@ class XdkFileChangesTest {
             { sources, repository, errors ->
                 if (sources.sourceFile.name == rootName && hold.entered.count > 0) {
                     hold.entered.countDown()
-                    check(hold.release.await(HANG_SECONDS, SECONDS))
+                    check(hold.release.awaited())
                 }
                 support.compileModule(sources, repository, errors)
             },
