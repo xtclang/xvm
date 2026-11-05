@@ -836,6 +836,35 @@ public class SessionDebuggerTest {
             }
             """;
 
+    /**
+     * A module whose run() deals a card of each suit and rank on line 11, Spades last and Queen
+     * second, counting them, and then calls pick(), whose local Box on line 18 is named like the
+     * enumeration Suit; pick() returns the box's size, 4, on line 19, and run() returns 20.
+     */
+    private static final String CARDS = """
+            module Cards {
+                enum Suit {Clubs, Diamonds, Hearts, Spades}
+                enum Rank {Jack, Queen, King, Ace}
+
+                class Box(Int size);
+
+                Int run() {
+                    Int count = 0;
+                    for (Suit suit : Suit.values) {
+                        for (Rank rank : Rank.values) {
+                            count += 1;
+                        }
+                    }
+                    return count + pick(Suit.Spades);
+                }
+
+                Int pick(Suit suit) {
+                    Box Suit = new Box(4);
+                    return Suit.size;
+                }
+            }
+            """;
+
     @BeforeAll
     static void configure() throws URISyntaxException {
         support       = new EmbeddingSupport().configure(xdk(), null);
@@ -1903,6 +1932,66 @@ public class SessionDebuggerTest {
             assertEquals("The condition cannot be evaluated: sum is Int, not a Boolean.", stop.description());
             session.terminate();
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        }
+    }
+
+    @Test
+    public void anEnumValueWrittenByItsEnumerationsNameIsComparedWithAValueOfThatEnumeration() throws Exception {
+        Path  source  = compile("Cards", CARDS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Cards"));
+        // by the enumeration's name alone, and by a path that ends in it
+        session.setBreakpoints(source.toString(),
+                List.of(new Line(1, 11, "rank == Rank.Queen && suit == Cards.Suit.Spades", null, null)));
+
+        try (Control control = run("Cards", new StringWriter(), session)) {
+            // the condition holds first for the Queen of Spades, the 14th card, and stopped at none before
+            Stop stop  = stops.next();
+            int  frame = top(session, stop.threadId());
+            assertEquals("breakpoint", stop.reason());
+            assertEquals("13", evaluate(session, frame, "count").value());
+            assertEquals("Queen", evaluate(session, frame, "rank").value());
+            assertEquals("Spades", evaluate(session, frame, "suit").value());
+
+            // != and chained comparisons take it too, also on the left, and so does any enumeration
+            assertEquals("True", evaluate(session, frame, "rank != Rank.Ace").value());
+            assertEquals("True", evaluate(session, frame, "Rank.Queen == rank == Rank.Queen").value());
+            assertEquals("True", evaluate(session, frame, "(count > 0) == Boolean.True").value());
+
+            // the name of another enumeration, or of no value of it, says which; so does a value that
+            // is not of an enumeration, and the enum value read where nothing compares it
+            assertFails("suit == Rank.Queen: suit is a value of Suit, not of Rank.", session, frame, "suit == Rank.Queen");
+            assertFails("rank == Rank.Queeen: Rank has no value \"Queeen\"; its values are Jack, Queen, King, Ace.", session,
+                    frame, "rank == Rank.Queeen");
+            assertFails("count == Rank.Queen: Rank.Queen is compared only with a value of its enumeration, and count is Int.",
+                    session, frame, "count == Rank.Queen");
+            assertFails("There is no variable \"Rank\" in this frame, and an enum value written by its enumeration's name,"
+                    + " such as Rank.Queen, is read only where == or != compares it with a value of that enumeration.",
+                    session, frame, "Rank.Queen");
+
+            // a condition with a value the enumeration does not have stops at the next hit and says why
+            session.setBreakpoints(source.toString(), List.of(new Line(2, 11, "rank == Rank.Queeen", null, null)));
+            session.resume();
+            Stop typo = stops.next();
+            assertEquals("The condition cannot be evaluated: rank == Rank.Queeen: Rank has no value \"Queeen\"; its values"
+                    + " are Jack, Queen, King, Ace.", typo.description());
+            assertEquals("14", evaluate(session, top(session, typo.threadId()), "count").value());
+
+            // a variable named like the enumeration is what its name reads
+            session.setBreakpoints(source.toString(), List.of(new Line(3, 19)));
+            session.resume();
+            Stop pick   = stops.next();
+            int  picked = top(session, pick.threadId());
+            assertEquals("Cards.pick:19", where(session, pick));
+            assertEquals("4", evaluate(session, picked, "Suit.size").value());
+            assertFails("Suit.Spades: Cards:Box has no field \"Spades\".", session, picked, "suit == Suit.Spades");
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            assertEquals(20L, control.result());
+            assertNull(stops.poll());
         }
     }
 
