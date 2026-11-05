@@ -28,7 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * the session as `xtc/debugMessage` notifications; the session's messages come back as this process's output,
  * framed as an adapter on stdio writes them, which LSP4IJ's console does not show. The session starts with the
  * process, and messages written before it exists wait for it. Ending the process ends the session, which stops the program it launched, and the
- * process's exit code is the program's, from the session's `exited` event.
+ * process's exit code is the program's, from the session's `exited` event. A line typed in the session's console,
+ * which IntelliJ writes to the same input, is what it is in a debug console: see [DebugConsoleLines].
  */
 internal class LanguageServerDebugProcessHandler(
     private val sessions: DebugSessions,
@@ -44,6 +45,7 @@ internal class LanguageServerDebugProcessHandler(
     private val waiting = mutableListOf<JsonObject>()
     private var connection: Connection? = null
     private val finished = AtomicBoolean()
+    private val console = DebugConsoleLines()
 
     @Volatile
     private var exitCode = 0
@@ -55,7 +57,7 @@ internal class LanguageServerDebugProcessHandler(
 
     private val input =
         object : OutputStream() {
-            private val decoder = DapFrames.Decoder(::send)
+            private val decoder = DapFrames.Decoder(::send) { line -> send(console.request(line)) }
 
             override fun write(byte: Int) = write(byteArrayOf(byte.toByte()), 0, 1)
 
@@ -100,6 +102,11 @@ internal class LanguageServerDebugProcessHandler(
     /** A message the client wrote, sent to the session or kept until it exists. */
     private fun send(json: String) {
         val message = JsonParser.parseString(json).asJsonObject
+        console.sent(message)
+        send(message)
+    }
+
+    private fun send(message: JsonObject) {
         synchronized(lock) {
             val started = connection
             if (started == null) {
@@ -111,6 +118,12 @@ internal class LanguageServerDebugProcessHandler(
     }
 
     override fun message(message: JsonObject) {
+        // a typed line's answer is console output, and the client sees neither the line nor the answer
+        console.received(message)?.let(::deliver)
+    }
+
+    /** A message of the session, or the console output for a typed line, for the client and the Tests tab. */
+    private fun deliver(message: JsonObject) {
         // the session's own event, for the Tests tab; LSP4IJ's DAP client knows only DAP's events
         if (message["type"]?.asString == "event" && message["event"]?.asString == DebugSessions.XTC_TEST) {
             message["body"]?.let(TestEvent::of)?.let(tested)
