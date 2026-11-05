@@ -971,6 +971,7 @@ class XdkAdapter
                                                 discoverImports = !discovery.get().explicit,
                                                 diagnosticCache = diagnosticCache,
                                                 navigationIndex = navigationIndex,
+                                                actionCache = actionCache,
                                                 discoveryFolders = discovery.get().folders,
                                             ),
                                         )
@@ -1435,6 +1436,7 @@ class XdkAdapter
                     libraryQueries.clear()
                     diagnosticCache.clear()
                     navigationIndex.clear()
+                    actionCache.clear()
                     overlays.clear()
                     scopes.clear()
                     completed.clear()
@@ -2825,6 +2827,7 @@ class XdkAdapter
         private val libraryQueries = ConcurrentHashMap<CompletableFuture<*>, CompilerQueueTrace.Work>()
         private val diagnosticCache = XdkDiagnosticIndex()
         private val navigationIndex = XdkNavigationIndex()
+        private val actionCache = XdkCodeActionCache()
 
         /**
          * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
