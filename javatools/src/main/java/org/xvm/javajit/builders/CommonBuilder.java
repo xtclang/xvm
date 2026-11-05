@@ -4650,14 +4650,14 @@ public class CommonBuilder
         }
         MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
 
-        classBuilder.withMethod(jitName, md, flags,
-            methodBuilder -> {
-                if (!isAbstract) {
-                    BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter, jmd);
-                    methodBuilder.withCode(code -> generateCode(md, bctx, code));
-                }
-            }
-        );
+        if (isAbstract) {
+            classBuilder.withMethod(jitName, md, flags, _ -> {});
+        } else {
+            BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter, jmd);
+            MethodInfo method = typeInfo.getMethodById(
+                    isGetter ? prop.getGetterId() : prop.getSetterId());
+            doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
+        }
     }
 
     /**

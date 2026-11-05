@@ -7,6 +7,7 @@ package propertyInitTests {
         testSimple();
         testPropertySuper();
         testBoundPropertySuper();
+        testComplexProperty();
         testConstructor();
         testMethodProperty();
         testMethodStaticProperties();
@@ -77,6 +78,42 @@ package propertyInitTests {
         assert test.value == 10;
         test.value = 7;
         assert test.value == 24;
+    }
+
+    void testComplexProperty() {
+        class Complex {
+            String value {
+                private Char hold = '!';
+
+                String get() = appendHold(super());
+                void set(String value) = super(removeHead(value));
+
+                private String removeHead(String value) {
+                    hold = value[0];
+                    return value.substring(1);
+                }
+                private String appendHold(String value) = value + hold;
+            } = "hello";
+
+            Int number {
+                Int get() = increment(super());
+                void set(Int v) = super(double(v));
+
+                Int increment(Int v) = v + 1;
+                Int double(Int v) = v * 2;
+            } = 10;
+        }
+
+        Complex test = new Complex();
+        assert test.value == "hello!";
+        test.value = "abc";
+        assert test.value == "bca";
+        assert test.value == "bca";
+
+        assert test.number == 11;
+        test.number = 7;
+        assert test.number == 15;
+        assert test.number == 15;
     }
 
     void testConstructor() {
