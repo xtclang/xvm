@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.CompilerException
@@ -10,11 +12,14 @@ import org.xvm.compiler.ast.CompositionNode
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
 
 /** Parsed headers only: no compiler pools or ASTs survive discovery. */
 internal object XdkWorkspaceDiscovery {
+    private val logger: Logger = LoggerFactory.getLogger(XdkWorkspaceDiscovery::class.java)
+
     private val excluded =
         setOf(".git", ".gradle", ".idea", ".vscode-test", "build", "out", "node_modules")
 
@@ -99,10 +104,11 @@ internal object XdkWorkspaceDiscovery {
                     }.toSet() + buffers.keys.filter { includes(folders, it) }
             return Catalog(
                 withoutLeftBuffers(
-                    sources.associateWith { file ->
-                        checkCurrent(cancelled)
-                        header(file, buffers[file] ?: file.readText(), files[file], cancelled)
-                    },
+                    sources
+                        .mapNotNull { file ->
+                            checkCurrent(cancelled)
+                            read(file, buffers, files[file], cancelled)?.let { file to it }
+                        }.toMap(),
                     buffers,
                 ),
             )
@@ -134,7 +140,7 @@ internal object XdkWorkspaceDiscovery {
                     }
                 found.forEach { file ->
                     checkCurrent(cancelled)
-                    sources[file] = header(file, buffers[file] ?: file.readText(), files[file], cancelled)
+                    read(file, buffers, files[file], cancelled)?.let { sources[file] = it }
                 }
             }
             val current = withoutLeftBuffers(sources, buffers)
@@ -179,8 +185,15 @@ internal object XdkWorkspaceDiscovery {
                 it.isFile &&
                     it.extension == "x" &&
                     !Files.isSymbolicLink(it.toPath())
-            }.map(File::getCanonicalFile)
-            .toList()
+            }.mapNotNull { file ->
+                // a walk skips what goes from under it; the canonical path of what it found is the other per-file step
+                try {
+                    file.canonicalFile
+                } catch (failure: IOException) {
+                    logger.warn("Source discovery cannot resolve {}, which it leaves out: {}", file.toURI(), failure.toString())
+                    null
+                }
+            }.toList()
 
     /** Whether a walk of [folders] enters every directory above [path], and so would find what is there. */
     private fun reachable(
@@ -212,6 +225,28 @@ internal object XdkWorkspaceDiscovery {
         cancelled: () -> Boolean,
     ): List<XdkSourceModule> = Catalog().rescan(folders, overlays, cancelled).modules(previous)
 
+    /**
+     * [file]'s header, from its open buffer or its text on disk; null when the file cannot be read, as one deleted
+     * after the walk found it. One file's failure costs only that file: the others of the same events or walk are
+     * read still, where a failure that escaped would drop them all.
+     */
+    private fun read(
+        file: File,
+        buffers: Map<File, String>,
+        previous: Header?,
+        cancelled: () -> Boolean,
+    ): Header? {
+        val text =
+            buffers[file] ?: try {
+                file.readText()
+            } catch (failure: IOException) {
+                logger.warn("Source discovery cannot read {}, which it leaves out: {}", file.toURI(), failure.toString())
+                return null
+            }
+        return header(file, text, previous, cancelled)
+    }
+
+    /** [file]'s header; one that fails to parse is incomplete, and so keeps the module's name and imports it had. */
     private fun header(
         file: File,
         text: String,
@@ -220,11 +255,34 @@ internal object XdkWorkspaceDiscovery {
     ): Header {
         checkCurrent(cancelled)
         if (previous?.text == text) return previous
+        return try {
+            parsedHeader(file, text, cancelled)
+        } catch (failure: CancellationException) {
+            throw failure
+        } catch (failure: RuntimeException) {
+            // a superseded read stops by aborting its tokenization; the caller reads it again
+            if (cancelled()) throw failure
+            logger.warn("Source discovery cannot read the header of {}, which keeps what it had: {}", file.toURI(), failure.toString())
+            Header(text, null, emptySet(), incomplete = true)
+        }
+    }
+
+    private fun parsedHeader(
+        file: File,
+        text: String,
+        cancelled: () -> Boolean,
+    ): Header {
         val heard = ErrorList()
         val errors = ErrorListener.cancellable(heard, cancelled)
+        // a source without a token, as a file that an editor has just created is, stops the parser as it starts, as
+        // the snapshot's own read of a root's name knows: it names no module
         val name =
-            ExecutionTrace.api("Parser.parseModuleName", file.toURI().toString()) {
-                Parser(Source(text, file.path), errors).parseModuleNameIgnoreEverythingElse()
+            try {
+                ExecutionTrace.api("Parser.parseModuleName", file.toURI().toString()) {
+                    Parser(Source(text, file.path), errors).parseModuleNameIgnoreEverythingElse()
+                }
+            } catch (_: CompilerException) {
+                null
             }
         val tree =
             try {

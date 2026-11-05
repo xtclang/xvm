@@ -149,6 +149,42 @@ class XdkWorkspaceDiscoveryTest {
     }
 
     @Test
+    fun `an empty source, as an editor creates a file, is read as a member, by a file event and by a walk`() {
+        source("App.x", "module App {}")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val empty = source("App/Joker.x", "")
+            // its event, as VS Code's Explorer sends on creating the file, and a walk that finds it
+            assertThat(adapter.applyFileEvents(listOf(empty))).describedAs("installed").isNotNull()
+            adapter.refreshDiscoveredSources()
+            assertThat(adapter.sourceModuleInputs().map { it.name }).containsExactly("App")
+            assertThat(XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }.map { it.name })
+                .containsExactly("App")
+        }
+    }
+
+    @Test
+    fun `a source that cannot be read costs only itself, in a file event's batch and in a walk`() {
+        source("App.x", "module App {}")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val unreadable = source("App/Locked.x", "class Locked {}")
+            val tool = source("Tool.x", "module Tool {}")
+            val locked = directory.resolve("App/Locked.x").toFile()
+            assertThat(locked.setReadable(false)).isTrue()
+            try {
+                // one batch, as a watcher reports several files at once: the readable sibling is found
+                assertThat(adapter.applyFileEvents(listOf(unreadable, tool))).describedAs("installed").isNotNull()
+                assertThat(adapter.sourceModuleInputs().map { it.name }).containsExactlyInAnyOrder("App", "Tool")
+                adapter.refreshDiscoveredSources()
+                assertThat(adapter.sourceModuleInputs().map { it.name }).containsExactlyInAnyOrder("App", "Tool")
+            } finally {
+                locked.setReadable(true)
+            }
+        }
+    }
+
+    @Test
     fun `a root whose header does not parse keeps its name and imports when it is renamed`() {
         source("Base.x", "module Base {}")
         val app = source("App.x", "module App { package lib import Base; }")
