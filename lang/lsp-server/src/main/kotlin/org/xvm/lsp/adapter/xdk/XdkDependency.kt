@@ -1,9 +1,12 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ConstantPool
 import org.xvm.asm.FileStructure
+import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.IdentityConstant
+import org.xvm.asm.constants.MethodConstant
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.util.ExecutionTrace
@@ -65,6 +68,52 @@ class XdkDependency
                     }
                 }.toByteArray()
                 .let { HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it)) }
+
+        /**
+         * What a module that depends on this one compiles against: the artifact without its methods' code and source
+         * text, its build time and its source directory, with whether each method has code, and where each declaration
+         * is. A module that depends on this one compiles against another artifact with the same as it did against this
+         * one, and its facts name this one's declarations at the same places.
+         */
+        internal val api: String by lazy {
+            ExecutionTrace.api("FileStructure.api", module) {
+                val file = FileStructure(ByteArrayInputStream(artifact))
+                ConstantPool.withPool(file.constantPool).use {
+                    val pool = file.constantPool
+                    // read before the write below renumbers the constants
+                    val located =
+                        declarations.entries.map { (index, location) ->
+                            "${pool.getConstant(index)} ${location.sourceName} ${location.range}"
+                        }
+                    val methods =
+                        pool.constants
+                            .filterIsInstance<MethodConstant>()
+                            .mapNotNull { it.component as? MethodStructure }
+                            .distinct()
+                    val implemented = methods.map { "${it.identityConstant} ${it.isAbstract} ${it.hasCode()} ${it.isNative}" }
+                    methods.forEach { method ->
+                        // marking a method abstract drops its code; it is then marked as it was
+                        val abstract = method.isAbstract
+                        method.setAbstract(true)
+                        method.setAbstract(abstract)
+                        method.configureSource(null, 0)
+                    }
+                    file.moduleIds().forEach { id ->
+                        file.getModule(id).apply {
+                            timestamp = null
+                            sourceDir = null
+                        }
+                    }
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    digest.update(ByteArrayOutputStream().also(file::writeTo).toByteArray())
+                    (located.sorted() + implemented.sorted()).forEach {
+                        digest.update(it.toByteArray(Charsets.UTF_8))
+                        digest.update(0)
+                    }
+                    HexFormat.of().formatHex(digest.digest())
+                }
+            }
+        }
 
         /** Constant-table symbol identity qualified by its module and immutable artifact revision. */
         data class SymbolKey(
