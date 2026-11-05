@@ -1991,7 +1991,8 @@ class XdkAdapter
             ch: String,
             options: FormattingOptions,
         ): List<TextEdit> =
-            currentText(uri)
+            // the text as last sent, not as last analyzed: the request does not wait for the analysis of a change
+            (synchronized(lifecycle) { overlays[uri] } ?: currentText(uri))
                 ?.let { text ->
                     val config = FormattingConfig.resolve(options, editorFormattingConfig)
                     val typing = options.copy(trimTrailingWhitespace = false)
