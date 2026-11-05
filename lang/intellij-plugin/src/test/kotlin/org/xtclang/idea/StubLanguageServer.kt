@@ -60,6 +60,9 @@ class StubLanguageServer(
     /** Each open document's text, as the client has sent it. */
     val texts = ConcurrentHashMap<String, String>()
 
+    /** The caret's line, as the client has sent it, of each completion the client has asked for. */
+    val completionLines = CopyOnWriteArrayList<String>()
+
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> =
         CompletableFuture.completedFuture(
             InitializeResult(
@@ -83,6 +86,7 @@ class StubLanguageServer(
         requests += "textDocument/completion"
         val caret = params.position
         val line = texts[params.textDocument.uri]?.lines()?.getOrNull(caret.line).orEmpty()
+        completionLines += line
         // as the real server does: the items that start with the word before the caret, each replacing that word
         val word = line.take(caret.character).takeLastWhile { it.isLetterOrDigit() || it == '_' }
         val start = Position(caret.line, caret.character - word.length)
