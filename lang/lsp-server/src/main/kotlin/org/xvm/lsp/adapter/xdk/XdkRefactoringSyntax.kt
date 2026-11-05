@@ -32,14 +32,19 @@ internal object XdkRefactoringSyntax {
         parent: AstNode? = null,
     ): Sequence<Pair<AstNode, AstNode?>> = sequenceOf(node to parent) + node.childNodes().asSequence().flatMap { tree(it, node) }
 
-    /** Nonempty, ordered selection in the original document's UTF-16 coordinates. */
+    /** Nonempty, ordered selection of code in the original document's UTF-16 coordinates, without whitespace at its ends. */
     fun selectionOffsets(
         text: String,
         selection: Range,
     ): Pair<Int, Int>? {
-        val start = XdkRename.offset(text, SemanticModel.Position(selection.start.line, selection.start.column)) ?: return null
-        val end = XdkRename.offset(text, SemanticModel.Position(selection.end.line, selection.end.column)) ?: return null
-        return (start to end).takeIf { start < end }
+        val from = XdkRename.offset(text, SemanticModel.Position(selection.start.line, selection.start.column)) ?: return null
+        val to = XdkRename.offset(text, SemanticModel.Position(selection.end.line, selection.end.column)) ?: return null
+        if (from >= to) return null
+        // The whitespace at a selection's ends is not code: whole lines, from one line's start to the next one's, as
+        // an editor selects them, select the statements on them.
+        val start = (from until to).firstOrNull { !text[it].isWhitespace() } ?: return null
+        val end = (to downTo start + 1).first { !text[it - 1].isWhitespace() }
+        return start to end
     }
 
     /** Return indentation only when no sibling, label or comment precedes this position. */
