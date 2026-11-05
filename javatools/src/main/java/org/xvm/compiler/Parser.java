@@ -5636,7 +5636,7 @@ public class Parser {
                     new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
             return label == null ? hole : new LabeledExpression(label, hole);
         }
-        if (partial && label != null && canRetainIncomplete()) {
+        if (partial && label != null && endsAt(f_cursor)) {
             throw new IncompleteArgument(label);
         }
         Expression expr;
@@ -5697,7 +5697,7 @@ public class Parser {
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
         boolean          incomplete = containsCursorHole(callee);
-        if (canRetainIncomplete() && !peek(Id.COMMA)) {
+        if (endsAt(f_cursor) && !peek(Id.COMMA)) {
             match(close);
             throw incomplete(callee, open, args, separators);
         }
@@ -5718,7 +5718,7 @@ public class Parser {
                 // its token rather than validating it as a value or retaining a second site.
                 // Compound/member expressions and slots before later arguments keep their sites.
                 if (value instanceof IncompleteExpression partial && partial.getSite().isNameCompletion()
-                        && canRetainIncomplete() && !peek(Id.COMMA)) {
+                        && endsAt(f_cursor) && !peek(Id.COMMA)) {
                     match(close);
                     throw new IncompleteSyntax(IncompleteStatement.forArgumentPrefix(callee, open,
                             args, separators, f_cursor,
@@ -5733,7 +5733,7 @@ public class Parser {
                 if (comma != null) {
                     separators.add(comma);
                 }
-                if (canRetainIncomplete()) {
+                if (endsAt(f_cursor)) {
                     match(close);
                     throw incomplete(callee, open, args, separators);
                 }
@@ -5802,10 +5802,10 @@ public class Parser {
 
     /**
      * What is being typed at the end of its line, before code on a later line that cannot continue
-     * it, ends there: the later line is the next statement, not the rest of a name, a member access
-     * or a value. Without this, what is typed and that statement parse as one, which is an error,
-     * and the cursor has no site. A cursor after a comment at the line's end is in the comment, not
-     * at the end of the code.
+     * it, ends there: the later line is the next statement, not the rest of a name, a member access,
+     * a value or a call's arguments. Without this, what is typed and that statement parse as one,
+     * which is an error, and the cursor has no site. A cursor after a comment at the line's end is
+     * in the comment, not at the end of the code.
      */
     private boolean atLineEnd(long cursor) {
         if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()

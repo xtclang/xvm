@@ -4,6 +4,7 @@ import java.time.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
@@ -154,6 +155,36 @@ public class ParserRecoveryTest {
                     // the next line's statement is retained as a statement of its own
                     assertTrue(nodes(tree).stream().anyMatch(node -> node instanceof Statement
                             && Source.calculateLine(node.getStartPosition()) == 3), label);
+                    assertTrue(errors.getErrors().stream().allMatch(error ->
+                            error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)), label);
+                    assertEquals(marked.replace("§", ""), source.toRawString());
+                }));
+    }
+
+    @Test
+    public void callArgumentsAtTheirLinesEndRetainTheStatementsOnLaterLines() {
+        // each call and the number of its written arguments, a typed prefix or named slot not among them
+        Map.of("after(§", 0, "work(1, §", 1, "work(fir§", 0, "work(1, text.si§", 2, "work(first = §", 0,
+                "work(text.size()§", 1).forEach((call, count) -> List.of(
+                        "Int later = 1;", "if (after()) {}", "after();").forEach(next -> {
+                    String marked = "module Recovery { String text; Boolean after() = True;\n"
+                            + "    Int work(Int first, Int second) = first;\n"
+                            + "    void run() {\n        " + call + "\n        " + next + "\n    }\n}";
+                    var source = new Source(marked.replace("§", ""));
+                    marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var errors = new ErrorList();
+                    var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    String label = call + " / " + next + ": " + errors.getErrors();
+                    var calls = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                            .map(IncompleteStatement.class::cast).filter(IncompleteStatement::isCall).toList();
+                    assertEquals(1, calls.size(), label);
+                    assertEquals(cursor, calls.getFirst().getEndPosition(), label);
+                    assertEquals(count, calls.getFirst().getArguments().size(), label);
+                    // the next line's statement is retained as a statement of its own
+                    assertTrue(nodes(tree).stream().anyMatch(node -> node instanceof Statement
+                            && Source.calculateLine(node.getStartPosition()) == 4), label);
                     assertTrue(errors.getErrors().stream().allMatch(error ->
                             error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)), label);
                     assertEquals(marked.replace("§", ""), source.toRawString());
