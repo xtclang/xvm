@@ -115,6 +115,41 @@ class DiagnosticPresentationTest {
     }
 
     @Test
+    fun `a document's changed items are unreported until a report gives them`() {
+        val reports = DiagnosticReports()
+        val root = "file:///Root.x"
+        val consumer = "file:///Consumer.x"
+        val error = Diagnostic.error(Location(root, 1, 2, 1, 6), "failure")
+        reports.record(root, listOf(error))
+        reports.record(consumer, emptyList())
+
+        // the canonical URIs it answers end with the documents' names
+        fun unreported() = reports.unreported().map { it.substringAfterLast('/') }
+        assertThat(unreported()).containsExactly("Consumer.x", "Root.x")
+
+        // a document's report gives its own items and those of the related documents it carries
+        reports.document(root, null, setOf(root, consumer), relatedInformation = false)
+        assertThat(unreported()).isEmpty()
+
+        // the same items again are no change; other items are, until a workspace report gives them
+        reports.record(root, listOf(error))
+        assertThat(unreported()).isEmpty()
+        reports.record(consumer, listOf(error.copy(location = error.location.copy(uri = consumer))))
+        assertThat(unreported()).containsExactly("Consumer.x")
+        reports.workspace(setOf(root, consumer), emptyMap(), emptyMap(), relatedInformation = false)
+        assertThat(unreported()).isEmpty()
+
+        // a document the workspace no longer has is reported cleared, and is no longer known
+        reports.record(consumer, emptyList())
+        reports.workspace(setOf(root), emptyMap(), emptyMap(), relatedInformation = false)
+        assertThat(unreported()).isEmpty()
+        reports.record(root, emptyList())
+        assertThat(unreported()).containsExactly("Root.x")
+        reports.clear()
+        assertThat(unreported()).isEmpty()
+    }
+
+    @Test
     fun `tags reach only response paths whose client declares them`() {
         val presentation =
             ClientPresentation.read(

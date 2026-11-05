@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal class ProtocolTrace(
     private val clientTrace: ClientTrace? = null,
+    /** Where the client's requests are kept while the server answers them, by their IDs, with their methods. */
+    private val open: MutableMap<Any, String>? = null,
 ) : AutoCloseable {
     private val incoming = ConcurrentHashMap<Either<String, Number>, ExecutionTrace.Span>()
     private val outgoing = ConcurrentHashMap<Either<String, Number>, ExecutionTrace.Span>()
@@ -32,6 +34,7 @@ internal class ProtocolTrace(
                 is RequestMessage -> {
                     val span = ExecutionTrace.span("lsp-request", message.method)
                     requests[message.rawId] = span
+                    if (received) open?.put(message.rawId, message.method)
                     ExecutionTrace.event(
                         span,
                         "start",
@@ -44,6 +47,7 @@ internal class ProtocolTrace(
                         ExecutionTrace.within(span) { next.consume(message) }
                     } catch (failure: Throwable) {
                         requests.remove(message.rawId, span)
+                        if (received) open?.remove(message.rawId)
                         ExecutionTrace.event(
                             span,
                             "end",
@@ -55,6 +59,7 @@ internal class ProtocolTrace(
 
                 is ResponseMessage -> {
                     val span = replies.remove(message.rawId)
+                    if (!received) open?.remove(message.rawId)
                     val writeStarted = System.nanoTime()
                     if (!received) span?.let { ExecutionTrace.event(it, "reply-ready") }
                     try {
