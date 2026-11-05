@@ -26,6 +26,16 @@ class XtcCompletionTest {
         }
     }
 
+    @Test
+    fun `a prefix whose edit LSP4IJ still holds is the server's when the server is asked to complete it`() {
+        val server = editor.server
+        editor.open("Completion.x", SOURCE) { file ->
+            holdingEdits(file) { type("Score") }
+            assertThat(completeBasic().map { it.lookupString }).containsExactlyInAnyOrder("ScoreCard", "Scoreboard")
+            assertThat(server.completionLines).containsExactly("        Score")
+        }
+    }
+
     companion object {
         private const val SOURCE =
             "module M {\n    class Tally {}\n    void run(Tally[] Tallies) {\n        <caret>\n    }\n}\n"
