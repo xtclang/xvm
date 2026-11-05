@@ -108,8 +108,12 @@ class XtcLspConnectionProvider(
          * TODO LSP4IJ: UP68 — LSP4IJ asks for quick fixes per diagnostic under the caret, with only quickfix, and its
          * intention list, an Automatic request with no only, drops every quick fix; the server need not prove them
          * for that list.
+         * TODO LSP4IJ: UP74 — LSP4IJ waits on the EDT for the answers to its Automatic requests, when the lightbulb or
+         * Alt+Enter sorts its intentions by their text; the server waits for a full answer only a short budget, and
+         * then answers from what it has proved already.
          */
-        internal val LSP4IJ_CODE_ACTIONS = mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true))
+        internal val LSP4IJ_CODE_ACTIONS =
+            mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true, "automaticFromCache" to true))
 
         /**
          * Resolve the LSP server JAR from a plugin directory. Returns the path to

@@ -69,6 +69,7 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 
 /**
@@ -2527,6 +2528,76 @@ class XdkAdapter
                     },
                 )
             }
+
+        /** The proving of each code action request that an answer within its budget left unproved, while it runs. */
+        private val proving = ConcurrentHashMap<ProjectQueryKey, CompletableFuture<List<CodeAction>>>()
+
+        /**
+         * The full answer, if the compiler worker proves it within [budget]; otherwise, then, the answer from the code
+         * action cache, on no compiler thread: the actions that the revision's cached compile and proofs prove, none
+         * before its first compile. The proving runs on, and keeps its answer for the next such request, which the
+         * revision's answer to the same request then answers at once.
+         */
+        override fun getCodeActionsWithinAsync(
+            uri: String,
+            range: Range,
+            diagnostics: List<Diagnostic>,
+            kinds: Set<CodeAction.CodeActionKind>,
+            budget: Duration,
+        ): CompletableFuture<List<CodeAction>> {
+            if (kinds.isEmpty() || !hasProject(uri)) return getCodeActionsAsync(uri, range, diagnostics, kinds)
+            val (cached, complete) =
+                cachedCodeActions(uri, range, diagnostics, kinds)
+                    ?: return CompletableFuture.completedFuture(emptyList())
+            if (complete) return CompletableFuture.completedFuture(cached)
+            val key = ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range, kinds = kinds)
+            val proof =
+                proving[key]?.takeUnless { it.isDone }
+                    ?: getCodeActionsAsync(uri, range, diagnostics, kinds).also { proof ->
+                        proving[key] = proof
+                        proof.whenComplete { _, _ -> proving.remove(key, proof) }
+                    }
+            // a copy, so that the budget ends only this request's wait
+            return proof
+                .thenApply<List<CodeAction>?> { it }
+                .completeOnTimeout(null, budget.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                .handleAsync { actions, _ -> actions ?: cachedCodeActions(uri, range, diagnostics, kinds)?.first.orEmpty() }
+        }
+
+        /**
+         * The answer from the code action cache, and whether it is the full one: the revision's answer to the same request,
+         * or else the actions that its cached compile and proofs prove. Null when the adapter is closed or discovery failed.
+         */
+        private fun cachedCodeActions(
+            uri: String,
+            range: Range,
+            diagnostics: List<Diagnostic>,
+            kinds: Set<CodeAction.CodeActionKind>,
+        ): Pair<List<CodeAction>, Boolean>? {
+            val (graph, buffers, artifacts) =
+                synchronized(lifecycle) {
+                    if (closed || discovery.get().problem != null) return null
+                    Triple(project, overlays.toMap(), dependencies)
+                }
+            return try {
+                XdkProjectQueries(
+                    graph,
+                    buffers,
+                    artifacts,
+                    compiler::compileTree,
+                    { false },
+                    discoverImports = !discovery.get().explicit,
+                    actionCache = actionCache,
+                    fromCache = true,
+                ).cachedCodeActions(uri, range, diagnostics, kinds)
+            } catch (_: IOException) {
+                emptyList<CodeAction>() to false
+            }
+        }
+
+        /** Completes once the code action requests that answers within a budget left unproved are proved, or cannot be. */
+        internal fun provingCodeActions(): CompletableFuture<*> =
+            CompletableFuture.allOf(*proving.values.map { proof -> proof.exceptionally { emptyList() } }.toTypedArray())
 
         override fun rename(
             uri: String,
