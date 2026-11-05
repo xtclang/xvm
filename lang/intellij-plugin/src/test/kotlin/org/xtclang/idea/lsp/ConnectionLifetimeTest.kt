@@ -4,6 +4,7 @@ import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.xtclang.idea.HANG_SECONDS
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
@@ -31,7 +32,7 @@ class ConnectionLifetimeTest {
         val lifetime =
             ConnectionLifetime({ started.incrementAndGet() }, { stopped.incrementAndGet() })
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-            (1..20).map { executor.submit { lifetime.start() } }.forEach { it.get(10, SECONDS) }
+            (1..20).map { executor.submit { lifetime.start() } }.forEach { it.get(HANG_SECONDS, SECONDS) }
         }
         lifetime.stop()
         lifetime.stop()
@@ -51,27 +52,27 @@ class ConnectionLifetimeTest {
             ConnectionLifetime(
                 {
                     entered.countDown()
-                    check(finish.await(10, SECONDS))
+                    check(finish.await(HANG_SECONDS, SECONDS))
                     children.incrementAndGet()
                 },
                 { children.decrementAndGet() },
             )
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             val start = executor.submit { lifetime.start() }
-            check(entered.await(10, SECONDS))
+            check(entered.await(HANG_SECONDS, SECONDS))
             val stop =
                 executor.submit {
                     stopping.countDown()
                     lifetime.stop()
                 }
             try {
-                check(stopping.await(10, SECONDS))
+                check(stopping.await(HANG_SECONDS, SECONDS))
                 assertThat(children.get()).isZero()
             } finally {
                 finish.countDown()
             }
-            start.get(10, SECONDS)
-            stop.get(10, SECONDS)
+            start.get(HANG_SECONDS, SECONDS)
+            stop.get(HANG_SECONDS, SECONDS)
         }
         assertThat(children.get()).isZero()
     }

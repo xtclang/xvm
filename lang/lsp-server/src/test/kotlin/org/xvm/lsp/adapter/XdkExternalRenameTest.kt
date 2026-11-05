@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkProject
@@ -38,7 +39,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(30, SECONDS),
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             val scope = requireNotNull(proposal.scope)
             assertThat(scope.boundary).isEqualTo(XdkRenameScope.Boundary.CONFIGURED_GRAPH)
@@ -71,7 +72,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(30, SECONDS),
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             val overlay =
                 CONSUMER.replace("box.pick(input = 1)", "box.pick(input = 1) + box.pick(input = 2)")
@@ -84,7 +85,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(30, SECONDS),
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             assertThat(requireNotNull(after.scope).revision)
                 .isNotEqualTo(requireNotNull(before.scope).revision)
@@ -151,7 +152,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(30, SECONDS),
+                        ).get(HANG_SECONDS, SECONDS),
                 )
             assertThat(requireNotNull(proposal.scope).boundary)
                 .isEqualTo(XdkRenameScope.Boundary.DISCOVERED_GRAPH)

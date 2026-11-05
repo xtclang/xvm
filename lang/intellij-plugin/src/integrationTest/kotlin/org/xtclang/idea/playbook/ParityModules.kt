@@ -1,8 +1,8 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.sdk.invokeAction
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.moduleCases() {
     case("X14") { data ->
@@ -18,7 +18,7 @@ internal fun ParityScenarios.moduleCases() {
         with(driver) { accept(document.editor, at, data.string("label"), expected) }
         clean(document)
         save(document)
-        awaitUi("saved completion preserves emoji and CRLF", 10.seconds) {
+        awaitUi("saved completion preserves emoji and CRLF", HANG_LIMIT) {
             Files.readString(directory.resolve(document.file)) == expected.replace("\n", "\r\n")
         }
     }
@@ -71,7 +71,7 @@ internal fun ParityScenarios.moduleCases() {
         val file = data.string("file")
         virtual(file, data.string("text"), data.int("version")) {
             with(driver) {
-                awaitUi("virtual member participates in current type hierarchy", 45.seconds) {
+                awaitUi("virtual member participates in current type hierarchy", HANG_LIMIT) {
                     edges(hierarchy(root, root.at(data.string("anchor"))), "subtypes").any {
                         it.string("name") == data.string("name")
                     }
@@ -193,7 +193,7 @@ internal fun ParityScenarios.moduleCases() {
         val oldProcess = server.getCurrentProcessId()
         server.restart()
         with(driver) {
-            awaitUi("new language server process", 60.seconds) {
+            awaitUi("new language server process", HANG_LIMIT) {
                 server.getCurrentProcessId()?.let { it != oldProcess } == true
             }
         }

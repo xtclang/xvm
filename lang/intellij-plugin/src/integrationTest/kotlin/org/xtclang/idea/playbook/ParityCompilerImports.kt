@@ -5,9 +5,9 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /** Shared real Gradle producer; assertions go through installed settings, progress and diagnostics. */
 internal fun ParityScenarios.compilerImportCases() {
@@ -138,7 +138,7 @@ internal fun ParityScenarios.compilerImportCases() {
                         } else {
                             click(if (prepare) "Prepare generated resources" else "Refresh Gradle model")
                         }
-                        awaitUi("$id real Gradle producer reached its publication gate", 45.seconds) {
+                        awaitUi("$id real Gradle producer reached its publication gate", HANG_LIMIT) {
                             control.resolve("$operation.started").takeIf(Files::exists)?.let(Files::readString) ==
                                 if (prepare) "prepareXtcLspModel" else "exportXtcLspModel"
                         }
@@ -147,19 +147,19 @@ internal fun ParityScenarios.compilerImportCases() {
                         clean(document)
                         if (step["duplicate"].asBoolean) {
                             click("Refresh Gradle model")
-                            awaitUi("Duplicate import is refused in the settings page", 10.seconds) { text().contains("already running") }
+                            awaitUi("Duplicate import is refused in the settings page", HANG_LIMIT) { text().contains("already running") }
                         }
                         if (step["cancel"].asBoolean) {
                             with(driver) {
                                 withContext(OnDispatcher.EDT) { utility(ProgressUi::class).show(singleProject()) }
-                                awaitUi("$id visible import Cancel button", 15.seconds) {
+                                awaitUi("$id visible import Cancel button", HANG_LIMIT) {
                                     withContext(OnDispatcher.EDT) { utility(ProgressUi::class).cancel(singleProject(), title) }
                                 }
                             }
                         } else {
                             Files.writeString(control.resolve("$operation.release"), "release\n")
                         }
-                        awaitUi("$id import completion status", 30.seconds) {
+                        awaitUi("$id import completion status", HANG_LIMIT) {
                             val description = page.description()
                             description.contains("Last import:") && description.contains(step.string("expected"), ignoreCase = true) &&
                                 with(
@@ -169,7 +169,7 @@ internal fun ParityScenarios.compilerImportCases() {
                         Files.writeString(control.resolve("$operation.release"), "cleanup\n")
                         val producer = Files.readString(control.resolve("$operation.pid")).toLong()
                         check(producer > 0)
-                        awaitUi("$id Gradle fixture action retired or its cancelled JVM exited", 15.seconds) {
+                        awaitUi("$id Gradle fixture action retired or its cancelled JVM exited", HANG_LIMIT) {
                             Files.exists(control.resolve("$operation.finished")) ||
                                 (
                                     step["cancel"].asBoolean &&
@@ -182,7 +182,7 @@ internal fun ParityScenarios.compilerImportCases() {
                         }
                         refresh()
                         with(driver) { withContext(OnDispatcher.EDT) { page.resetPage() } }
-                        awaitUi("$id settings page displays the last outcome", 10.seconds) {
+                        awaitUi("$id settings page displays the last outcome", HANG_LIMIT) {
                             text().contains("Last import:") && text().contains(step.string("expected"), ignoreCase = true)
                         }
                         if (step["accepted"].asBoolean) {
@@ -267,21 +267,21 @@ internal fun ParityScenarios.compilerImportCases() {
         val firstPid = first.server().getCurrentProcessId()
         val probe = with(driver) { utility(ProjectLifecycle::class) }
         val opening = probe.open(root.toString())
-        awaitUi("Second native project opens", 60.seconds) { opening.isDone() }
+        awaitUi("Second native project opens", HANG_LIMIT) { opening.isDone() }
         val secondary = requireNotNull(opening.get())
         try {
             with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).useBuildModel(secondary) } }
             val page = with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerImportPage::class).open(secondary) } }
             check(page.accepted() != "null")
             with(driver) { withContext(OnDispatcher.EDT) { page.click("Refresh Gradle model") } }
-            awaitUi("Secondary project import is pending", 45.seconds) { Files.exists(control.resolve("$operation.started")) }
+            awaitUi("Secondary project import is pending", HANG_LIMIT) { Files.exists(control.resolve("$operation.started")) }
             with(driver) { withContext(OnDispatcher.EDT) { page.closePage() } }
             val closing = probe.close(secondary)
-            awaitUi("Project closes while its compiler import is pending", 30.seconds) { closing.isDone() }
+            awaitUi("Project closes while its compiler import is pending", HANG_LIMIT) { closing.isDone() }
             check(closing.get())
             Files.writeString(control.resolve("$operation.release"), "late completion\n")
             val producer = Files.readString(control.resolve("$operation.pid")).toLong()
-            awaitUi("Closed project producer retires", 30.seconds) {
+            awaitUi("Closed project producer retires", HANG_LIMIT) {
                 Files.exists(control.resolve("$operation.finished")) || !ProcessHandle.of(producer).map { it.isAlive }.orElse(false)
             }
             check(first.server().getCurrentProcessId() == firstPid)

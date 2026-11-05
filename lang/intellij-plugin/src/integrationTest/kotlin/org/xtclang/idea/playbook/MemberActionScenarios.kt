@@ -4,8 +4,8 @@ import com.intellij.driver.client.Driver
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /** Shared generation data, native intention selection and the editor's own Undo/Redo. */
 fun Driver.memberActions(
@@ -42,7 +42,7 @@ fun Driver.memberActions(
                 ).asJsonArray
         if (title.isEmpty()) {
             val actions =
-                awaitUiNotNull("member refusal response", 45.seconds) {
+                awaitUiNotNull("member refusal response", HANG_LIMIT) {
                     try {
                         actions()
                     } catch (failure: ClientRequestFailure) {
@@ -66,14 +66,14 @@ fun Driver.memberActions(
             // Let the native intention own its request. A separate protocol probe can supersede
             // that request and leave the native client holding its canceled result.
             quickFix(editor, at, title)
-            awaitUi("generated member matches shared source", 45.seconds) {
+            awaitUi("generated member matches shared source", HANG_LIMIT) {
                 editor.text == expected
             }
             diagnostics(editor, false)
             listOf("\$Undo" to original, "\$Redo" to expected, "\$Undo" to original).forEach { (action, text) ->
                 focusEditor(editor)
                 invokeAction(action, now = false, component = editor.component)
-                awaitUi("$action restores the shared member source", 45.seconds) {
+                awaitUi("$action restores the shared member source", HANG_LIMIT) {
                     editor.text == text
                 }
                 diagnostics(editor, broken && text == original)

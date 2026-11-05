@@ -13,6 +13,7 @@ import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
@@ -30,12 +31,12 @@ fun Driver.rename(
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             utility(NativeEditorUi::class).renameAvailable(editor.editor)
         }
-    awaitUi("installed Rename handler is available", 45.seconds) { available() }
+    awaitUi("installed Rename handler is available", HANG_LIMIT) { available() }
     invokeAction("RenameElement", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Rename")
     awaitUi(
         "native rename dialog",
-        45.seconds,
+        HANG_LIMIT,
         errorMessage = {
             withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
                 utility(NativeEditorUi::class).renameState(editor.editor)
@@ -54,23 +55,23 @@ fun Driver.rename(
 /** Submit the installed Rename dialog without synthesizing text edits in the driver. */
 fun Driver.fillRenameDialog(replacement: String) {
     val dialog = ui.dialog(title = "Rename")
-    awaitUi("native rename dialog opens", 45.seconds) { dialog.present() }
+    awaitUi("native rename dialog opens", HANG_LIMIT) { dialog.present() }
     val input =
         dialog.x(JEditorUiComponent::class.java) {
             byType("com.intellij.openapi.editor.impl.EditorComponentImpl")
         }
     input.text = replacement
     val button = cast(dialog.button("Refactor").component, NativeButton::class)
-    awaitUi("rename accepts the new name", 10.seconds) { button.isEnabled() }
+    awaitUi("rename accepts the new name", HANG_LIMIT) { button.isEnabled() }
     withContext(OnDispatcher.EDT) { button.doClick() }
-    awaitUi("rename dialog closes", 45.seconds) { dialog.notPresent() }
+    awaitUi("rename dialog closes", HANG_LIMIT) { dialog.notPresent() }
 }
 
 /** Select the reference-preserving XTC scope when another plugin also offers plain file rename. */
 fun Driver.chooseXtcFileRename() {
     val chooser = ui.dialog(title = "Select Refactoring")
     val rename = ui.dialog(title = "Rename")
-    awaitUi("native file rename scope or name dialog", 45.seconds) {
+    awaitUi("native file rename scope or name dialog", HANG_LIMIT) {
         chooser.present() || rename.present()
     }
     if (chooser.present()) {
@@ -109,7 +110,7 @@ fun Driver.choosePopup(
     reopen()
     awaitUi(
         "native popup contains $expected",
-        45.seconds,
+        HANG_LIMIT,
         errorMessage = { "Expected $expected; rendered rows: ${rows() ?: "no list"}" },
     ) {
         inspection.recover()
@@ -125,7 +126,7 @@ fun Driver.choosePopup(
         }
         expected.all { name -> rows.any { it.contains(name) } } && withContext(OnDispatcher.EDT) { choices.chooseListRow(selected) }
     }
-    awaitUi("chosen popup closes", 15.seconds) { rows() == null }
+    awaitUi("chosen popup closes", HANG_LIMIT) { rows() == null }
 }
 
 /** LSP4IJ renders multiple navigation targets through IntelliJ's Show Usages table. */
@@ -142,7 +143,7 @@ fun Driver.chooseTargets(
     awaitUi(
         message = "native navigation chooser contains exactly $expected",
         errorMessage = { "Expected $expected; rendered rows: ${rows() ?: "no table"}" },
-        timeout = 45.seconds,
+        timeout = HANG_LIMIT,
     ) {
         inspection.recover()
         val rows = rows() ?: return@awaitUi false
@@ -150,7 +151,7 @@ fun Driver.chooseTargets(
             expected.all { name -> rows.any { it.contains(name) } } &&
             withContext(OnDispatcher.EDT) { choices.chooseTableRowContaining(selected, expected.size) }
     }
-    awaitUi("selected declaration closes the chooser", 15.seconds) { rows() == null }
+    awaitUi("selected declaration closes the chooser", HANG_LIMIT) { rows() == null }
 }
 
 fun Driver.quickFix(
@@ -187,7 +188,7 @@ fun Driver.partialGraphHierarchy(
         ui.x {
             byType("com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyBrowser")
         }
-    awaitUi("native type hierarchy includes $child", 45.seconds) {
+    awaitUi("native type hierarchy includes $child", HANG_LIMIT) {
         if (!browser.present()) return@awaitUi false
         // The native browser expands its root. Observe it without expandAll's nested ten-second
         // loading deadline cutting short this asynchronous hierarchy request.
@@ -199,7 +200,7 @@ fun Driver.partialGraphHierarchy(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("FindUsages", component = editor.component)
-    awaitUi("incomplete graph withholds references while retaining local navigation", 45.seconds) {
+    awaitUi("incomplete graph withholds references while retaining local navigation", HANG_LIMIT) {
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
             if (view == null || view == previous || view.isSearchInProgress()) {
@@ -256,7 +257,7 @@ fun Driver.rejectRename(
     }
     invokeAction("RenameElement", now = false, component = editor.component)
     // The guarded XTC handler preserves the server reason and adds its native action prefix.
-    awaitUi("library rename displays its rejection", 45.seconds) {
+    awaitUi("library rename displays its rejection", HANG_LIMIT) {
         ui.x { byVisibleText("Rename failed: $reason") }.present()
     }
     check(ui.dialog(title = "Rename").notPresent())
@@ -280,9 +281,9 @@ fun Driver.rejectFormatting(editor: JEditorUiComponent) {
     }
     invokeAction("ReformatCode", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Clear Read-Only Status")
-    awaitUi("reformat is blocked by read-only source", 45.seconds) { dialog.present() }
+    awaitUi("reformat is blocked by read-only source", HANG_LIMIT) { dialog.present() }
     withContext(OnDispatcher.EDT) {
         cast(dialog.button("Cancel").component, NativeButton::class).doClick()
     }
-    awaitUi("read-only prompt closes", 15.seconds) { dialog.notPresent() }
+    awaitUi("read-only prompt closes", HANG_LIMIT) { dialog.notPresent() }
 }

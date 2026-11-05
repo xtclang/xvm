@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xtclang.idea.HANG_SECONDS
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -52,11 +53,11 @@ class ServerControlEndpointTest {
             assertThat(status.body()).contains("/project", "intellij").doesNotContain(token)
             assertThat(calls.get()).isZero()
             val restart = client.sendAsync(request("/restart", "POST"), BodyHandlers.ofString())
-            assertThat(entered.await(5, SECONDS)).isTrue()
+            assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
             assertThat(restart).isNotDone()
             assertThat(client.send(request("/restart", "POST"), BodyHandlers.ofString()).statusCode()).isEqualTo(409)
             pending.complete(null)
-            assertThat(restart.get(5, SECONDS).statusCode()).isEqualTo(200)
+            assertThat(restart.get(HANG_SECONDS, SECONDS).statusCode()).isEqualTo(200)
             assertThat(calls.get()).isEqualTo(1)
         }
         assertThat(Files.list(directory).use { it.count() }).isZero()

@@ -2,17 +2,20 @@ package org.xtclang.idea.playbook
 
 import com.intellij.driver.sdk.WaitForException
 import com.intellij.openapi.diagnostic.fileLogger
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 private val logger = fileLogger()
 
-/** Observe readiness promptly without shortening the existing failure deadlines. */
+/**
+ * Observe readiness promptly without shortening the existing failure deadlines. [timeout] ends only a hang: it is
+ * [HANG_LIMIT] unless a caller has a reason for another, so that no case's result depends on the machine's speed.
+ */
 internal fun awaitUi(
     message: String? = null,
-    timeout: Duration = 5.seconds,
+    timeout: Duration = HANG_LIMIT,
     errorMessage: (() -> String)? = null,
     condition: () -> Boolean,
 ) {
@@ -27,7 +30,7 @@ internal fun awaitUi(
 
 internal fun <T> awaitUi(
     message: String? = null,
-    timeout: Duration = 5.seconds,
+    timeout: Duration = HANG_LIMIT,
     errorMessage: ((T) -> String)? = null,
     getter: () -> T,
     checker: (T) -> Boolean,
@@ -57,6 +60,6 @@ internal fun <T> awaitUi(
 
 internal fun <T> awaitUiNotNull(
     message: String? = null,
-    timeout: Duration = 5.seconds,
+    timeout: Duration = HANG_LIMIT,
     getter: () -> T?,
 ): T = awaitUi(message, timeout, getter = getter, checker = { it != null })!!

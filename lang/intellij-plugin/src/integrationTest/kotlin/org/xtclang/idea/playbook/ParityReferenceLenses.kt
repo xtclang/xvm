@@ -4,7 +4,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.singleProject
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.referenceLensCases() {
     case("X279") { data ->
@@ -38,7 +38,7 @@ internal fun ParityScenarios.referenceLensCases() {
         try {
             setting(true)
             clean(document)
-            awaitUi("native reference Code Vision includes the closed consumer", 45.seconds) { data.string("initialTitle") in titles() }
+            awaitUi("native reference Code Vision includes the closed consumer", HANG_LIMIT) { data.string("initialTitle") in titles() }
             click()
             with(driver) {
                 chooseTargets(
@@ -52,13 +52,13 @@ internal fun ParityScenarios.referenceLensCases() {
             replace(consumer, data.string("changedConsumer"))
             clean(consumer)
             open(data.string("file"))
-            awaitUi("native reference Code Vision refreshes after a consumer edit", 45.seconds) { data.string("changedTitle") in titles() }
+            awaitUi("native reference Code Vision refreshes after a consumer edit", HANG_LIMIT) { data.string("changedTitle") in titles() }
             setting(false)
-            awaitUi("reference counts disappear while Run stays visible", 30.seconds) {
+            awaitUi("reference counts disappear while Run stays visible", HANG_LIMIT) {
                 titles().let { values -> values.any { "Run" in it } && values.none { "reference" in it } }
             }
             setting(true)
-            awaitUi("reference counts return without restarting", 30.seconds) { data.string("changedTitle") in titles() }
+            awaitUi("reference counts return without restarting", HANG_LIMIT) { data.string("changedTitle") in titles() }
             check(document.text == data.string("source"))
         } finally {
             with(driver) { withContext(OnDispatcher.EDT) { page.restore(project, before) } }

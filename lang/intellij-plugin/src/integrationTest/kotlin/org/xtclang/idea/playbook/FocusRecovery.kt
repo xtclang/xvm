@@ -4,7 +4,7 @@ import com.intellij.driver.client.Driver
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /** Exercise actual focus switches, native popup reopening, and the document-stamp replay guard. */
 fun Driver.focusRecovery(
@@ -84,7 +84,7 @@ fun Driver.focusRecovery(
             PopupInspection(this, editor) { error("A completed rename must never be replayed") }
         rename(editor, document.at("word"), "text")
         val renamed = accepted.replace("word", "text")
-        awaitUi("rename applied exactly once", 45.seconds) { editor.text == renamed }
+        awaitUi("rename applied exactly once", HANG_LIMIT) { editor.text == renamed }
         interruptFocus(editor) {
             val failure = runCatching { renameInspection.recover() }.exceptionOrNull()
             check(
@@ -107,11 +107,11 @@ fun Driver.focusRecovery(
         choosePopup(editor, listOf(title), title) {
             invokeAction("ShowIntentionActions", now = false, component = editor.component)
             if (opened++ == 0) {
-                awaitUi("first intention menu opens", 45.seconds) { withContext(OnDispatcher.EDT) { choices.listRows() } != null }
+                awaitUi("first intention menu opens", HANG_LIMIT) { withContext(OnDispatcher.EDT) { choices.listRows() } != null }
                 dismissPopups()
             }
         }
-        awaitUi("the documentation comment is generated", 30.seconds) { "@param number TODO" in editor.text }
+        awaitUi("the documentation comment is generated", HANG_LIMIT) { "@param number TODO" in editor.text }
         check(opened >= 2 && editor.text.split("TODO: add description.").size == 2) {
             "Expected one comment after reopening the closed menu ($opened openings): ${editor.text}"
         }
@@ -126,7 +126,7 @@ private fun Driver.interruptFocus(
     val nativeEditor = editor.editor
     val other = withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).interruptFocus() }
     try {
-        awaitUi("unowned test window interrupts IDE focus", 10.seconds) {
+        awaitUi("unowned test window interrupts IDE focus", HANG_LIMIT) {
             withContext(OnDispatcher.EDT) {
                 other.isFocused() && !utility(NativeEditorUi::class).hasFocus(nativeEditor)
             }

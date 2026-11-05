@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import java.util.concurrent.CompletableFuture
@@ -44,7 +45,7 @@ class DocumentLockTest {
             column: Int,
         ): String? {
             entered.countDown()
-            check(release.await(30, SECONDS)) { "hover was never released" }
+            check(release.await(HANG_SECONDS, SECONDS)) { "hover was never released" }
             return "Int value"
         }
     }
@@ -88,7 +89,7 @@ class DocumentLockTest {
 
         override fun close() {
             backend.release.countDown()
-            server.shutdown().get(10, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -96,11 +97,11 @@ class DocumentLockTest {
     fun `a waiting query does not block didChange and its stale result is rejected`() {
         Session(Backend(concurrentQueries = true)).use { session ->
             val hover = session.hover()
-            assertThat(session.backend.entered.await(10, SECONDS)).isTrue()
+            assertThat(session.backend.entered.await(HANG_SECONDS, SECONDS)).isTrue()
             // returns while the hover is still blocked inside the adapter
-            session.change().returned.get(5, SECONDS)
+            session.change().returned.get(HANG_SECONDS, SECONDS)
             session.backend.release.countDown()
-            assertThatThrownBy { hover.get(10, SECONDS) }
+            assertThatThrownBy { hover.get(HANG_SECONDS, SECONDS) }
                 .isInstanceOf(ExecutionException::class.java)
                 .cause()
                 .isInstanceOfSatisfying(ResponseErrorException::class.java) {
@@ -113,9 +114,9 @@ class DocumentLockTest {
     fun `a current result is still published without the lock`() {
         Session(Backend(concurrentQueries = true)).use { session ->
             val hover = session.hover()
-            assertThat(session.backend.entered.await(10, SECONDS)).isTrue()
+            assertThat(session.backend.entered.await(HANG_SECONDS, SECONDS)).isTrue()
             session.backend.release.countDown()
-            assertThat(hover.get(10, SECONDS)).isNotNull()
+            assertThat(hover.get(HANG_SECONDS, SECONDS)).isNotNull()
         }
     }
 
@@ -126,20 +127,20 @@ class DocumentLockTest {
             val hover = session.hover()
             // the server completes a hover under the document lock, so this runs before any later update is applied
             val answered = hover.handle { _, _ -> sequence.incrementAndGet() }
-            assertThat(session.backend.entered.await(10, SECONDS)).isTrue()
+            assertThat(session.backend.entered.await(HANG_SECONDS, SECONDS)).isTrue()
             val change = session.change()
             // the update waits for the query, so the backend never sees them interleaved
-            await().atMost(10, SECONDS).until { change.thread.state == Thread.State.BLOCKED }
+            await().atMost(HANG_SECONDS, SECONDS).until { change.thread.state == Thread.State.BLOCKED }
             assertThat(change.returned).isNotDone()
             val applied = change.returned.thenApply { sequence.incrementAndGet() }
             session.backend.release.countDown()
-            applied.get(10, SECONDS)
+            applied.get(HANG_SECONDS, SECONDS)
             // once released, the hover's publication and the update compete for the lock: a hover published
             // first answers for the version it was sent against, one published after the update is stale
-            val outcome = runCatching { hover.get(10, SECONDS) }
+            val outcome = runCatching { hover.get(HANG_SECONDS, SECONDS) }
             if (outcome.isSuccess) {
                 assertThat(outcome.getOrNull()).isNotNull()
-                assertThat(answered.get(10, SECONDS)).describedAs("A hover answered after the update").isLessThan(applied.get())
+                assertThat(answered.get(HANG_SECONDS, SECONDS)).describedAs("A hover answered after the update").isLessThan(applied.get())
             } else {
                 assertThat(outcome.exceptionOrNull())
                     .isInstanceOf(ExecutionException::class.java)

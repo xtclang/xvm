@@ -10,10 +10,10 @@ import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Read the installed client's verbose console. In particular, do not confuse an absent VFS
@@ -98,7 +98,7 @@ class ClientTrace(
             val pull = protocol.capabilities().asJsonObject.has("diagnosticProvider")
             awaitUi(
                 message = "diagnostic report for $uri",
-                timeout = 45.seconds,
+                timeout = HANG_LIMIT,
                 getter = {
                     if (pull) {
                         // Closed/nonexistent files have no native editor diagnostic cache. Use
@@ -148,7 +148,7 @@ class ClientTrace(
                     )
                     "Missing current client version; trace capture: $path"
                 },
-                timeout = 15.seconds,
+                timeout = HANG_LIMIT,
                 // the version LSP4IJ's synchronizer last sent, not the console's trace of it: library sources that
                 // the server serves as workspace/textDocumentContent (UP25) can fill the console's buffer before
                 // a version is read

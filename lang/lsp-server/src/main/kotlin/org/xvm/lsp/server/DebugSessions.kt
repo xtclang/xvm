@@ -57,11 +57,13 @@ data class DebugMessageParams(
  * (`xtc/debugTask`), and the program connects to the session over a socket. A session's messages are handled in order on a thread of its own, never on
  * the connection's reader.
  *
- * Ending a session, or closing the server, stops the program the session launched.
+ * Ending a session, or closing the server, stops the program the session launched. Each session has [limits], the
+ * debug server's own unless a test lifts them.
  */
 internal class DebugSessions(
     private val runs: EmbeddedRuns,
     private val client: () -> LanguageClient?,
+    private val limits: XtcDebugServer.Limits = XtcDebugServer.Limits(),
 ) : Closeable {
     private val sessions = ConcurrentHashMap<String, Session>()
 
@@ -70,7 +72,7 @@ internal class DebugSessions(
     ) {
         val messages: ExecutorService =
             Executors.newSingleThreadExecutor { task -> Thread(task, "xtc-debug-$id").apply { isDaemon = true } }
-        val server = XtcDebugServer(Launches(id), messages)
+        val server = XtcDebugServer(Launches(id), messages, limits)
         val endpoint =
             DebugMessageEndpoint(server) { message ->
                 (client() as? XtcLanguageClient)?.debugMessage(DebugMessageParams(id, JsonParser.parseString(message).asJsonObject))

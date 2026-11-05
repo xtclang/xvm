@@ -5,10 +5,11 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import org.xtclang.idea.playbook.probe.HANG_SECONDS
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.progressCases() {
     case("X145") { data ->
@@ -51,7 +52,7 @@ internal fun ParityScenarios.progressCases() {
                         mapOf("context" to mapOf("includeDeclaration" to true)),
                 )
             with(driver) {
-                awaitUi("real compiler reference progress", 20.seconds) {
+                awaitUi("real compiler reference progress", HANG_LIMIT) {
                     check(!pending.isDone()) { "Workload completed before progress was exercised" }
                     visible()
                 }
@@ -62,7 +63,7 @@ internal fun ParityScenarios.progressCases() {
         try {
             val canceled = start(large)
             with(driver) {
-                awaitUi("visible progress Cancel control", 20.seconds) {
+                awaitUi("visible progress Cancel control", HANG_LIMIT) {
                     check(!canceled.isDone()) { "Workload completed before Cancel was exercised" }
                     // False means the button is not visible yet; a successful click ends polling.
                     withContext(OnDispatcher.EDT) {
@@ -80,7 +81,7 @@ internal fun ParityScenarios.progressCases() {
             ) {
                 "Cancel must terminate the pending request: ${outcome.exceptionOrNull() ?: "completed before cancellation"}"
             }
-            with(driver) { awaitUi("canceled progress disappears", 15.seconds) { !visible() } }
+            with(driver) { awaitUi("canceled progress disappears", HANG_LIMIT) { !visible() } }
             check(!query("textDocument/hover", document, large.indexOf("value")).isJsonNull)
             clean(document)
             val wrapper = protocol.server()
@@ -98,14 +99,14 @@ internal fun ParityScenarios.progressCases() {
                     .redirectErrorStream(true)
                     .start()
             try {
-                check(restart.waitFor(70, SECONDS)) { "CLI restart timed out" }
+                check(restart.waitFor(HANG_SECONDS, SECONDS)) { "CLI restart timed out" }
                 val output = restart.inputStream.bufferedReader().readText()
                 check(restart.exitValue() == 0) { output }
             } finally {
                 if (restart.isAlive) restart.destroyForcibly()
             }
             with(driver) {
-                awaitUi("old process exits and pending request retires", 30.seconds) {
+                awaitUi("old process exits and pending request retires", HANG_LIMIT) {
                     pending.isDone() && !utility(ProgressUi::class).alive(previous)
                 }
             }
@@ -113,7 +114,7 @@ internal fun ParityScenarios.progressCases() {
             check(document.text == large + "// unsaved restart\n")
             replace(document, data.string("source"))
             clean(document)
-            with(driver) { awaitUi("retired progress disappears", 15.seconds) { !visible() } }
+            with(driver) { awaitUi("retired progress disappears", HANG_LIMIT) { !visible() } }
         } finally {
             with(driver) {
                 withContext(OnDispatcher.EDT) { utility(ProgressUi::class).hide(singleProject()) }

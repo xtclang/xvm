@@ -11,10 +11,10 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.ui
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.typeMoveCases() {
     listOf(
@@ -92,7 +92,7 @@ internal fun ParityScenarios.typeMoveCases() {
                     )
                 }
                 val dialog = ui.dialog(title = "Move Ecstasy Sources")
-                awaitUi("source Move dialog", 45.seconds) { dialog.present() }
+                awaitUi("source Move dialog", HANG_LIMIT) { dialog.present() }
                 if (data.has("newName")) {
                     val field = cast(dialog.x { byAccessibleName("New name") }.component, MoveNameField::class)
                     withContext(OnDispatcher.EDT) { field.setText(data.string("newName")) }
@@ -100,7 +100,7 @@ internal fun ParityScenarios.typeMoveCases() {
                 withContext(OnDispatcher.EDT) { cast(dialog.button("Refactor").component, NativeButton::class).doClick() }
 
                 fun verify(moved: Boolean) {
-                    awaitUi("source Move ${if (moved) "applied" else "undone"}", 45.seconds) {
+                    awaitUi("source Move ${if (moved) "applied" else "undone"}", HANG_LIMIT) {
                         files.all { file ->
                             val path = directory.resolve(file.string(if (moved) "destination" else "file"))
                             val expected = file.string(if (moved) "expected" else "source")
@@ -173,7 +173,7 @@ internal fun ParityScenarios.typeMoveCases() {
                         }
                     }
                     invokeGlobalBackendAction(action, project = singleProject(), now = false)
-                    awaitUi("$action restores the source path", 45.seconds) {
+                    awaitUi("$action restores the source path", HANG_LIMIT) {
                         val confirm = ui.dialog(title = if (moved) "Redo" else "Undo")
                         if (confirm.present()) {
                             withContext(OnDispatcher.EDT) {

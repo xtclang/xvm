@@ -30,6 +30,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.io.File
 import java.nio.file.Files
@@ -110,7 +111,7 @@ class XdkModuleServerTest {
                                         }
                                 }
                         },
-                    ).get(10, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .capabilities
                     .workspace
                     .fileOperations
@@ -150,7 +151,7 @@ class XdkModuleServerTest {
             val capabilities =
                 session.server
                     .initialize(InitializeParams())
-                    .get(10, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .capabilities
             assertThat(capabilities.typeHierarchyProvider.left).isTrue()
             session.open(root, root.readText(), 1)
@@ -161,27 +162,27 @@ class XdkModuleServerTest {
                             TextDocumentIdentifier(root.toURI().toString()),
                             Position(0, root.readText().indexOf("Base")),
                         ),
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .single()
             hierarchy.data = JsonPrimitive(hierarchy.data as String)
             val child =
                 session.documents
                     .typeHierarchySubtypes(TypeHierarchySubtypesParams(hierarchy))
-                    .get(10, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .single()
             assertThat(child.uri).isEqualTo(member.toURI().toString())
             child.data = JsonPrimitive(child.data as String)
             val base =
                 session.documents
                     .typeHierarchySupertypes(TypeHierarchySupertypesParams(child))
-                    .get(10, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .single()
             assertThat(base.uri).isEqualTo(root.toURI().toString())
             session.change(root, root.readText(), 2)
             assertThat(
                 session.documents
                     .typeHierarchySubtypes(TypeHierarchySubtypesParams(hierarchy))
-                    .get(30, SECONDS),
+                    .get(HANG_SECONDS, SECONDS),
             ).isEmpty()
         }
     }
@@ -252,7 +253,7 @@ class XdkModuleServerTest {
             version: Int?,
             errors: Boolean,
         ) {
-            await().atMost(30, SECONDS).untilAsserted {
+            await().atMost(HANG_SECONDS, SECONDS).untilAsserted {
                 val matches =
                     published.drop(after).filter {
                         it.uri == file.toURI().toString() && it.version == version
@@ -268,7 +269,7 @@ class XdkModuleServerTest {
         }
 
         override fun close() {
-            server.shutdown().get(10, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 }

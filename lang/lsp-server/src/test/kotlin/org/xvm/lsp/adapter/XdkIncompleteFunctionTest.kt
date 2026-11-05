@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.Executors
@@ -22,7 +23,7 @@ class XdkIncompleteFunctionTest {
             adapter.compile(URI, "$prefix); } }")
             val cached = adapter.getCachedResult(URI)
             val position = Position(0, prefix.length)
-            val model = adapter.analyzeAtAsync(URI, position).get(10, SECONDS)!!
+            val model = adapter.analyzeAtAsync(URI, position).get(HANG_SECONDS, SECONDS)!!
             val site = model.sites.single()
             val candidate = site.functions.single()
             val cursor = SemanticModel.Position(position.line, position.column)

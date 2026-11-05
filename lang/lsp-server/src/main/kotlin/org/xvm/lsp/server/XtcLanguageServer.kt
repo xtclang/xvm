@@ -77,6 +77,7 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.run.RunWorkerProcess
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.lsp.util.ProgressLabels
@@ -113,16 +114,26 @@ import kotlin.time.measureTimedValue
  * @see org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
  */
 @Suppress("LoggingSimilarMessage")
-class XtcLanguageServer(
+class XtcLanguageServer internal constructor(
     private val adapter: Adapter,
     private val onExit: (Int) -> Unit = {},
     /** Shown to the user once the handshake completes, e.g. that the requested adapter could not start. */
     private val startupWarning: String? = null,
     /** Runs each background workspace walk; tests use it to hold one open. */
     private val rescans: (rescan: () -> Unit) -> Unit = { it() },
+    /** The limits of the execution workers that run the server's programs; a test lifts them. */
+    workerLimits: RunWorkerProcess.Limits,
 ) : LanguageServer,
     LanguageClientAware,
     AutoCloseable {
+    /** A server whose execution workers have their own limits. */
+    constructor(
+        adapter: Adapter,
+        onExit: (Int) -> Unit = {},
+        startupWarning: String? = null,
+        rescans: (rescan: () -> Unit) -> Unit = { it() },
+    ) : this(adapter, onExit, startupWarning, rescans, RunWorkerProcess.Limits())
+
     private val connectedClient = AtomicReference<LanguageClient?>()
     private val client: LanguageClient?
         get() = connectedClient.get()
@@ -131,7 +142,7 @@ class XtcLanguageServer(
     internal val readOnlyDocuments = ReadOnlyDocuments(adapter)
     internal val clientTrace = ClientTrace { client }
     internal val partialResults = PartialResults(client = { client })
-    private val embeddedRuns = EmbeddedRuns(adapter, { client })
+    private val embeddedRuns = EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits))
     private val debugSessions = DebugSessions(embeddedRuns, { client })
 
     /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
