@@ -1,5 +1,8 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.project.ProjectManager
 import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.jsonrpc.Endpoint
@@ -7,8 +10,14 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
-/** Connection-local, lexically scoped proof for the synchronous VFS portion of a guarded edit. */
-internal class PreflightedRenames {
+/**
+ * Connection-local, lexically scoped proof for the synchronous VFS portion of a guarded edit; and a rename that an Undo
+ * or a Redo makes, which [undoing] says runs, needs no server edit either, as the Undo restores the files' contents
+ * itself: the server's edit for it would change them again, under the Undo.
+ */
+internal class PreflightedRenames(
+    private val undoing: () -> Boolean = ::undoOrRedoInProgress,
+) {
     private val applying = ScopedValue.newInstance<Move>()
 
     /** Source and destination identifying a move already validated by the refactoring transaction. */
@@ -50,10 +59,27 @@ internal class PreflightedRenames {
     private fun handled(parameter: Any?): Boolean {
         val files = (parameter as? RenameFilesParams)?.files ?: return false
         if (files.isEmpty()) return false
+        if (undoing()) return true
         return files.all { file ->
             val move = localMove(file) ?: return@all false
             move.from == move.to || (applying.isBound && move == applying.get())
         }
+    }
+
+    private companion object {
+        /** Whether IntelliJ undoes or redoes a command now, the project's or a global one, as its file renames come. */
+        fun undoOrRedoInProgress(): Boolean =
+            ApplicationManager.getApplication() != null &&
+                (
+                    UndoManager.getGlobalInstance().isUndoOrRedoInProgress ||
+                        ProjectManager.getInstance().openProjects.any {
+                            !it.isDisposed &&
+                                UndoManager
+                                    .getInstance(
+                                        it,
+                                    ).isUndoOrRedoInProgress
+                        }
+                )
     }
 
     private fun localMove(file: FileRename): Move? =
