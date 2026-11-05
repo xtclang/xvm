@@ -13,6 +13,7 @@ import org.xvm.compiler.Lexer
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
+import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
@@ -70,21 +71,21 @@ internal object XdkAutoImports {
         return Target(identity.name, identity.moduleConstant.name, identity.pathString)
     }
 
+    /** Whether [text] parses with no serious error, as it must for an import edit in it. */
+    fun parses(text: String): Boolean = parse(text) != null
+
+    /**
+     * The import of [target] in [text], a file of the module [owner]. A module that [packages], the owner's package
+     * imports as the compiler linked them, already names is imported through that package; any other gets one.
+     */
     fun edit(
         text: String,
         owner: String,
         target: Target,
+        packages: Map<String, String>,
     ): XdkRename.Edit? {
+        val root = parse(text) ?: return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(auto-imports)") {
-                    Parser(Source(text), errors).parseSource()
-                }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
         val tokens =
             ExecutionTrace.api("Lexer.lex(auto-imports)") {
                 Lexer(Source(text), errors).asSequence().toList()
@@ -125,6 +126,11 @@ internal object XdkAutoImports {
                 declaration = ""
             }
 
+            in packages -> {
+                prefix = "${packages.getValue(target.module)}."
+                declaration = ""
+            }
+
             else -> {
                 val names = tokens.mapTo(hashSetOf()) { it.valueText }
                 val base = target.module.substringBefore('.').replaceFirstChar { it.lowercase() }
@@ -142,5 +148,18 @@ internal object XdkAutoImports {
             insertion,
             if (insertion == 0) imports else "$newline$imports",
         )
+    }
+
+    private fun parse(text: String): StatementBlock? {
+        val errors = ErrorList()
+        val root =
+            try {
+                ExecutionTrace.api("Parser.parseSource(auto-imports)") {
+                    Parser(Source(text), errors).parseSource()
+                }
+            } catch (_: CompilerException) {
+                return null
+            }
+        return root.takeUnless { errors.hasSeriousErrors() }
     }
 }
