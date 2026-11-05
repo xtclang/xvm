@@ -491,6 +491,29 @@ public class ModuleInfo {
     }
 
     /**
+     * @return true iff the locations were deduced and the module's source is in its project's
+     *         conventional test source directory, such as ./src/test/x, where "xtc init" puts the
+     *         test module that imports the project's module
+     */
+    public boolean isTestSource() {
+        return deduce && sourceDir != null && projectDir != null
+                && sourceDir.equals(conventionalSourceDir(projectDir, "test"));
+    }
+
+    /**
+     * @return the module source files in the project's conventional main source directory, such
+     *         as ./src/main/x: the modules that a test module of the project can import
+     */
+    public List<File> getProjectModuleFiles() {
+        File mainDir = projectDir == null ? null : conventionalSourceDir(projectDir, "main");
+        return mainDir == null
+                ? List.of()
+                : sourceFiles(mainDir).stream()
+                        .filter(file -> file.isFile() && extractModuleName(file) != null)
+                        .toList();
+    }
+
+    /**
      * @return true iff the source code appears to be organized using the multiple-file,
      *         hierarchical, name-spaced tree
      */
@@ -1805,7 +1828,9 @@ public class ModuleInfo {
     /**
      * Given a project directory, find the conventional source directory, as
      * {@link #sourceDirFromPrjDir(File)} does, that has the source file of the specified name,
-     * also past directories with other source files.
+     * also past directories with other source files; or else the project's conventional test
+     * source directory, such as ./src/test/x, when it has the file, as it has a test module that
+     * "xtc init" makes.
      *
      * @param prjDir    the project directory
      * @param fileName  the name of the source file, without its ".x" extension
@@ -1814,6 +1839,17 @@ public class ModuleInfo {
      */
     public static File sourceDirFromPrjDir(File prjDir, String fileName) {
         assert prjDir != null && fileName != null;
+        File found = mainSourceDirWith(prjDir, fileName);
+        if (found == null) {
+            File testDir = conventionalSourceDir(prjDir, "test");
+            if (testDir != null && new File(testDir, fileName + ".x").isFile()) {
+                found = testDir;
+            }
+        }
+        return found;
+    }
+
+    private static File mainSourceDirWith(File prjDir, String fileName) {
         File curDir = prjDir;
         for (int level = 0; level <= 2; level++) {
             if (new File(curDir, fileName + ".x").isFile()) {
@@ -1826,6 +1862,28 @@ public class ModuleInfo {
             curDir = subDir;
         }
         return new File(curDir, fileName + ".x").isFile() ? curDir : null;
+    }
+
+    /**
+     * Find the project's conventional source directory of a source set, such as ./src/main/x or
+     * ./src/test/x: one of "src" or "source", then the set's name, then one of "x", "xtc" or
+     * "ecstasy".
+     *
+     * @param prjDir  the project directory
+     * @param set     the name of the source set, such as "main" or "test"
+     *
+     * @return the directory, or null if the project has none
+     */
+    private static File conventionalSourceDir(File prjDir, String set) {
+        for (String src : List.of("src", "source")) {
+            for (String lang : List.of("x", "xtc", "ecstasy")) {
+                File dir = new File(new File(new File(prjDir, src), set), lang);
+                if (dir.isDirectory()) {
+                    return dir;
+                }
+            }
+        }
+        return null;
     }
 
     /**
