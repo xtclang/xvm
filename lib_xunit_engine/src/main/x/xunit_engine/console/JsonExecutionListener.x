@@ -11,9 +11,10 @@
  *   module, package, class or templated test does;
  * - `finished`: the execution of the model `id` ended, with the `status` `passed`, `failed`,
  *   `aborted` (an exception other than a failed assertion) or `skipped`, after `durationMillis`;
- *   when an exception is present, `message` is its message and `details` its full text, with
- *   the stack trace and the cause. A container's `status` is that of its own execution, such as
- *   its `@BeforeAll` and `@AfterAll`; its tests are in their own events;
+ *   when an exception is present, `message` is the first exception's message and `details` its
+ *   full text, with the stack trace and the cause, followed by that of each later exception, such
+ *   as one from an `@AfterEach` after the test threw. A container's `status` is that of its own
+ *   execution, such as its `@BeforeAll` and `@AfterAll`; its tests are in their own events;
  * - `skipped`: a test or container that did not run, with the same fields as `started` and the
  *   reason as `message`.
  *
@@ -61,7 +62,7 @@ service JsonExecutionListener
         Exception? ex = result.exception;
         if (ex.is(Exception)) {
             field(buf, "message", ex.message);
-            field(buf, "details", ex.toString());
+            field(buf, "details", details(ex, result.suppressed));
         }
         buf.append(",\"durationMillis\":").append(result.duration.milliseconds.toString());
         end(buf);
@@ -144,6 +145,22 @@ service JsonExecutionListener
         case Skipped:
             return "skipped";
         }
+    }
+
+    /**
+     * @return the full text of an exception, followed by that of each later one, which it
+     *         suppressed
+     */
+    private static String details(Exception ex, Exception[]? suppressed) {
+        if (suppressed.is(Exception[])) {
+            StringBuffer buf = new StringBuffer();
+            buf.append(ex.toString());
+            for (Exception e : suppressed) {
+                buf.append("\nSuppressed: ").append(e.toString());
+            }
+            return buf.toString();
+        }
+        return ex.toString();
     }
 
     /**
