@@ -426,6 +426,8 @@ dependencies {
             plugin(if (marketplaceLsp4ijChannel.isEmpty()) notation else "$notation@$marketplaceLsp4ijChannel")
         }
         pluginVerifier()
+        // Light platform tests open .x files in an in-memory project, with the plugin and its dependencies loaded.
+        testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
     }
 
