@@ -1608,6 +1608,11 @@ class XtcTextDocumentService(
             }
         // what the adapter compiled for the answer, which the request's line in the log reports
         val compiles = AtomicReference<CodeActionCompiles?>()
+        // TODO LSP4IJ: UP74 — the lightbulb, the intention list and Alt+Enter wait on the EDT for the answer to an
+        // Automatic request, so it waits for its full answer only a short budget, not for the edit's analysis, and then
+        // answers from what is proved; the rest is proved meanwhile, for the next request. A server may answer with fewer
+        // actions than it could.
+        val budgeted = params.context.triggerKind == CodeActionTriggerKind.Automatic && server.presentation.automaticFromCache
         return queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
@@ -1615,11 +1620,17 @@ class XtcTextDocumentService(
                 val uri = params.textDocument.uri
                 val range = toAdapterRange(params.range)
                 val diagnostics = originals.keys.toList()
-                // only the compiler's adapter compiles for its actions
-                (adapter as? XdkAdapter)?.getCodeActionsAsync(uri, range, diagnostics, kinds) { compiles.set(it) }
-                    ?: adapter.getCodeActionsAsync(uri, range, diagnostics, kinds)
+                if (budgeted) {
+                    adapter.getCodeActionsWithinAsync(uri, range, diagnostics, kinds, server.presentation.automaticWait)
+                } else {
+                    // only the compiler's adapter compiles for its actions
+                    (adapter as? XdkAdapter)?.getCodeActionsAsync(uri, range, diagnostics, kinds) { compiles.set(it) }
+                        ?: adapter.getCodeActionsAsync(uri, range, diagnostics, kinds)
+                }
             },
-            workspace = true,
+            // nor for the folders a client added to be discovered
+            workspace = !budgeted,
+            sourceOnly = budgeted,
             progress = params,
         ) { actions ->
             if (!server.presentation.codeActions) return@queryAsync emptyList()
