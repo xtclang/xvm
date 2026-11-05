@@ -14,6 +14,7 @@ import com.intellij.util.concurrency.SequentialTaskExecutor
 import com.redhat.devtools.lsp4ij.LSPFileSupport
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
@@ -138,6 +139,21 @@ class XtcLanguageClient(
             .messageBus
             .connect(this)
             .subscribe(VirtualFileManager.VFS_CHANGES, DirectoryDocumentMoves(wrapper) { isDisposed })
+    }
+
+    /** Once the server has started, record where it logs, which only it can name, for an export after it stops. */
+    override fun handleServerStatusChanged(serverStatus: ServerStatus) {
+        super.handleServerStatusChanged(serverStatus)
+        if (serverStatus == ServerStatus.started && !project.isDisposed) {
+            (languageServer as? XtcLanguageServer)?.languageServiceStatus()?.whenComplete { status, failure ->
+                if (project.isDisposed) return@whenComplete
+                if (failure == null) {
+                    project.getService(ServerSupportLogs::class.java).remember(status)
+                } else if (!isDisposed) {
+                    logger.warn("Could not record the Ecstasy server's log session", failure)
+                }
+            }
+        }
     }
 
     override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> =
