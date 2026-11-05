@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler
@@ -71,6 +72,10 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                     rewriteEmptyBlock(document, currentLine - 2, currentLine - 1, currentLine)
                 }
 
+                isLineMovedIntoBlock(document, currentLine) -> {
+                    Triple(currentLine - 1, currentLine, currentLine + 1)
+                }
+
                 else -> {
                     null
                 }
@@ -84,7 +89,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
         val bodyIndent = declarationIndent + indentUnit(file)
 
-        replaceLineWithIndent(document, bodyLine, bodyIndent)
+        replaceLineWithIndent(document, bodyLine, bodyIndent, suffix = lineText(document, bodyLine).trimStart())
         replaceLineWithIndent(document, closingLine, declarationIndent, suffix = "}")
 
         val bodyCaretOffset = document.getLineStartOffset(bodyLine) + bodyIndent.length
@@ -93,7 +98,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         PsiDocumentManager.getInstance(file.project).commitDocument(document)
 
         logger.info(
-            "postProcessEnter: repaired empty-block split " +
+            "postProcessEnter: repaired block split " +
                 "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
                 "declarationIndent='${visualizeIndent(declarationIndent)}' bodyIndent='${visualizeIndent(bodyIndent)}'",
         )
@@ -149,6 +154,28 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         val bodyText = lineText(document, currentLine - 1)
         val closingText = lineText(document, currentLine)
         return declarationText.endsWith("{") && bodyText.isBlank() && closingText.trim() == "}"
+    }
+
+    /**
+     * Enter after a `{` that more of its line followed, as in `if (x) {return 1;`: the rest of the line moved into the
+     * block that the `}` on the next line closes, but kept the indentation of the `{`'s line. The language server's
+     * on-type formatting indents it only when IntelliJ has its answer in time, which a compile in progress delays.
+     */
+    private fun isLineMovedIntoBlock(
+        document: Document,
+        currentLine: Int,
+    ): Boolean {
+        if (currentLine <= 0 || currentLine + 1 >= document.lineCount) {
+            return false
+        }
+        val previousText = lineText(document, currentLine - 1).trimEnd()
+        val currentText = lineText(document, currentLine).trim()
+        val nextText = lineText(document, currentLine + 1)
+        if (!previousText.endsWith("{") || currentText.isEmpty() || currentText.startsWith("}") || nextText.trim() != "}") {
+            return false
+        }
+        val declarationIndent = lineIndent(document, declarationStart(currentLine - 1) { lineText(document, it) })
+        return lineIndent(document, currentLine).length <= declarationIndent.length
     }
 
     private fun lineText(
@@ -228,6 +255,10 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                             )
                         }
 
+                        isLineMovedIntoBlock(document, currentLine) -> {
+                            Triple(currentLine - 1, currentLine, currentLine + 1)
+                        }
+
                         else -> {
                             null
                         }
@@ -246,7 +277,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
                 val bodyIndent = declarationIndent + indentUnit(file)
 
-                replaceLineWithIndent(document, bodyLine, bodyIndent)
+                replaceLineWithIndent(document, bodyLine, bodyIndent, suffix = lineText(document, bodyLine).trimStart())
                 replaceLineWithIndent(document, closingLine, declarationIndent, suffix = "}")
 
                 val bodyCaretOffset = document.getLineStartOffset(bodyLine) + bodyIndent.length
@@ -255,7 +286,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 PsiDocumentManager.getInstance(project).commitDocument(document)
 
                 logger.warn(
-                    "deferredRepair: repaired empty-block split " +
+                    "deferredRepair: repaired block split " +
                         "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
                         "declarationIndent='${visualizeIndent(declarationIndent)}' " +
                         "bodyIndent='${visualizeIndent(bodyIndent)}'",
