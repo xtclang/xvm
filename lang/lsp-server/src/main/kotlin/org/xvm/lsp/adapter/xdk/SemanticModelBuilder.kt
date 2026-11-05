@@ -136,9 +136,14 @@ internal fun EmbeddingSupport.Compilation.renameFacts(
                     } else {
                         CompilerMissingInputs()
                     },
+                packageImports = packageImports(),
             )
         }
     }
+
+/** The module-level package imports as the compiler linked them, with the implicit ecstasy one. */
+private fun EmbeddingSupport.Compilation.packageImports(): Map<String, String> =
+    parsed()?.let { compilerModuleAliases(it.descendants().toList()) }.orEmpty()
 
 /** Successful emission and detached semantic facts from a single extraction. */
 internal class CompiledSemantics(
@@ -219,6 +224,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 if (includeMembers) builder.removableLocals(this) else emptySet(),
                 if (includeMembers) builder.extractionFacts(this) else null,
                 constantProperties = if (includeMembers) builder.constantProperties(this) else emptySet(),
+                packageImports = packageImports(),
             )
         }
     }

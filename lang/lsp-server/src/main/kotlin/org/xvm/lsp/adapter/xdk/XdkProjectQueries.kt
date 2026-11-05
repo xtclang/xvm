@@ -1180,6 +1180,7 @@ internal class XdkProjectQueries(
         val owner =
             project.modules.values.singleOrNull { it.uri == project.scope(uri) }
                 ?: return emptyList()
+        val packages = before.within(setOf(owner.uri)).packageImports
         val actions =
             names
                 .flatMap { XdkAutoImports.targets(it, before) }
@@ -1189,7 +1190,7 @@ internal class XdkProjectQueries(
                     checkCurrent()
                     val graph = importGraph(owner, target) ?: return@mapNotNull null
                     val edit =
-                        XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
+                        XdkAutoImports.edit(text, owner.name, target, packages) ?: return@mapNotNull null
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
                     val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) {
@@ -1224,7 +1225,14 @@ internal class XdkProjectQueries(
         val written = text.substring(start, end)
         if (!written.startsWith(prefix.text) || !XdkRename.identifier(written)) return emptyList()
         val owner = project.modules.values.singleOrNull { it.uri == project.scope(uri) } ?: return emptyList()
-        val before = compile(texts, Proof.REPAIR) ?: return emptyList()
+        // A name typed as a statement of its own, before the rest of the statement, leaves code that no completion of
+        // it makes compile. The proof is then the code without the name: it compiles, and it compiles with the same
+        // bindings once the import is added. Nothing in scope at the name declares the target's name, or the cursor
+        // would complete it, so there the name is the import's.
+        val vacated = texts + (source to text.removeRange(start, end))
+        val base = if (XdkAutoImports.parses(vacated.getValue(source))) compile(vacated) else null
+        val before = base ?: compile(texts, Proof.REPAIR) ?: return emptyList()
+        val packages = before.within(setOf(owner.uri)).packageImports
         val items =
             XdkAutoImports
                 .matchingTargets(prefix.text, before)
@@ -1233,13 +1241,18 @@ internal class XdkProjectQueries(
                 .mapNotNull { target ->
                     checkCurrent()
                     val graph = importGraph(owner, target) ?: return@mapNotNull null
-                    val imported = XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
-                    // LSP requires additional edits to be disjoint from the replacement edit.
-                    if (imported.start in start..end) return@mapNotNull null
+                    val imported =
+                        XdkAutoImports.edit((if (base == null) texts else vacated).getValue(source), owner.name, target, packages)
+                            ?: return@mapNotNull null
+                    // LSP requires additional edits to be disjoint from the replacement edit; an import made in the code
+                    // without the name is at the same offset in the code with it only when it comes before the name.
+                    val disjoint = imported.start < start || (base == null && imported.start > end)
+                    if (!disjoint) return@mapNotNull null
                     val replacement = XdkRename.Edit(start, end, target.name)
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(replacement, imported)))
-                    val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
-                    if (!XdkRename.preservesKnownBindings(before, after, plan)) return@mapNotNull null
+                    val proof = if (base == null) plan else XdkRename.Plan(vacated, mapOf(source to listOf(imported)))
+                    val after = compile(proof.proposed, graph = graph) ?: return@mapNotNull null
+                    if (!XdkRename.preservesKnownBindings(before, after, proof)) return@mapNotNull null
                     val edits = plan.textEdits(source)
                     CompletionItem(
                         target.name,
