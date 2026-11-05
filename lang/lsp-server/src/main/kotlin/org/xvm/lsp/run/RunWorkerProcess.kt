@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import org.slf4j.LoggerFactory
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.ProgramEvents
+import org.xvm.lsp.util.snapshot
 import org.xvm.runtime.debug.DebugProtocol
 import java.io.BufferedReader
 import java.io.Closeable
@@ -273,7 +274,7 @@ internal class RunWorkerProcess(
             }
         stopping.forEach { if (!it.process.waitFor(5, TimeUnit.SECONDS)) it.process.destroyForcibly() }
         timers.shutdownNow()
-        endRuns(listeners.keys.toList(), "The execution worker was shut down")
+        endRuns(listeners.keys.snapshot(), "The execution worker was shut down")
     }
 
     /** Starts a worker JVM, or returns null when it cannot be started. Called under [lock]. */
