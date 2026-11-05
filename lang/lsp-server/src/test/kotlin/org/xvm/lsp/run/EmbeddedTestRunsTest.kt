@@ -213,6 +213,32 @@ class EmbeddedTestRunsTest {
 
     @Test
     @Slow
+    fun `a test whose AfterEach fails after it threw reports what it threw, and the failure after it as suppressed`() {
+        val cleaned = source("Cleaned.x", CLEANED)
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Cleaned", cleaned)))
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
+                runs.run(RunParams(module = "Cleaned", moduleName = "Cleaned", runId = "cleaned", tests = emptyList())).awaited()
+                client.exits.awaited()!!
+                val breaks = client.events("cleaned").single { it.event == TestEvent.FINISHED && it.id == "Cleaned:void breaks()" }
+
+                assertThat(breaks.status).isEqualTo("aborted")
+                assertThat(breaks.message).isEqualTo("not yet")
+                assertThat(breaks.details)
+                    .contains("Unsupported: not yet")
+                    .contains("(Cleaned.x:6)")
+                    .contains("Suppressed: IllegalState: not cleaned up")
+                    .contains("(Cleaned.x:12)")
+                assertThat(client.output.toString()).contains("Suppressed: IllegalState: not cleaned up")
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    @Slow
     fun `a run of one selected test runs it alone, and passes`() {
         val mathy = source("Mathy.x", MATHY)
         val client = RunClient()
@@ -412,6 +438,25 @@ class EmbeddedTestRunsTest {
                 void waits() {
                     @Inject Console console;
                     console.print("waits ran");
+                }
+            }
+            """.trimIndent() + "\n"
+
+        /** A test that throws on line 6, after which its `@AfterEach` fails an assertion on line 12. */
+        val CLEANED =
+            """
+            module Cleaned {
+                package xunit import xunit.xtclang.org;
+
+                @Test
+                void breaks() {
+                    throw new Unsupported("not yet");
+                }
+
+                @xunit.annotations.AfterEach
+                void cleanUp() {
+                    Int n = 1;
+                    assert n + n == 3 as "not cleaned up";
                 }
             }
             """.trimIndent() + "\n"
