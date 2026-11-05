@@ -4,6 +4,8 @@
 
 plugins {
     alias(libs.plugins.xdk.build.java)
+    // the waits of every module's tests, and the watchdog that finds their hangs (org.xvm.testing)
+    `java-test-fixtures`
 }
 
 dependencies {
