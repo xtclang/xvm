@@ -1230,21 +1230,29 @@ class CompilerPlaybook(
         }
         scenario("7a.9") { data ->
             val editor = open(data.text("file"))
+            val declarations = data.values["declarationCount"].asInt
             editor.text =
                 data.text("moduleStart") +
-                (0 until data.values["declarationCount"].asInt).joinToString("\n") {
+                (0 until declarations).joinToString("\n") {
                     SharedScenarios.text(data.text("declaration"), it.toString(), it.toString())
                 } +
                 data.text("moduleEnd")
             editor.awaitError()
-            awaitUi("bounded source diagnostics without an internal compiler failure", HANG_LIMIT) {
-                currentDiagnostics(editor)?.let { items ->
-                    items.isNotEmpty() &&
-                        items.count { it.severity == "Error" } <=
-                        data.values["maximumErrors"].asInt &&
-                        items.none { it.code == data.text("diagnosticCode") }
-                } == true
+            // each declaration's unresolvable name is an error, more of them than the compiler's budget of serious
+            // errors, maximumErrors: the report for the text as it is now stops at the budget, so one past it, or an
+            // internal compiler failure, fails the case at once
+            val items =
+                awaitUi(
+                    "the report for the broken source",
+                    HANG_LIMIT,
+                    getter = { currentDiagnostics(editor) },
+                    checker = { report -> report != null && report.any { it.severity == "Error" } },
+                )!!
+            val errors = items.count { it.severity == "Error" }
+            check(errors <= data.values["maximumErrors"].asInt && errors < declarations) {
+                "$errors errors for $declarations declarations; the budget is ${data.values["maximumErrors"].asInt}"
             }
+            check(items.none { it.code == data.text("diagnosticCode") }) { "An internal compiler failure: $items" }
             problems(editor)
             editor.text = data.text("moduleStart") + data.text("moduleEnd")
             editor.awaitDiagnostics(emptyList())
