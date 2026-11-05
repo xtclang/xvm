@@ -9,8 +9,8 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
 /**
- * Completion where a member access, a name or a value is typed at the end of a line, as it is in the middle of a
- * method: the next line's statement is not part of what is typed, whatever it starts with.
+ * Completion and signature help where a member access, a name, a value or a call is typed at the end of a line, as
+ * it is in the middle of a method: the next line's statement is not part of what is typed, whatever it starts with.
  */
 class XdkLineEndCompletionTest {
     @ParameterizedTest
@@ -46,6 +46,40 @@ class XdkLineEndCompletionTest {
                 assertThat(adapter.getCompletions(URI, line, column).map { it.label })
                     .describedAs(typed)
                     .contains("current", "currentRound", "scoreboard", "report", "Scoreboard")
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Int after = 1;", "if (current.size > 0) {}", "report(current);"])
+    fun `a call opened at the end of a line shows its signature at the argument being typed`(next: String) {
+        XdkAdapter().use { adapter ->
+            mapOf(
+                "deal(" to 0,
+                "deal(cur" to 0,
+                "deal(current, " to 1,
+                "deal(current, curr" to 1,
+                "deal(current, count = " to 1,
+                "String next = current.substring(" to 0,
+            ).forEach { (typed, active) ->
+                val (line, column) = compileInScope(adapter, typed, next)
+                val help = adapter.getSignatureHelp(URI, line, column)
+                assertThat(help).describedAs(typed).isNotNull()
+                assertThat(help!!.activeParameter).describedAs(typed).isEqualTo(active)
+                if (typed.startsWith("deal")) {
+                    assertThat(help.signatures.map { it.label }).containsExactly("void deal(String name, Int count)")
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Int after = 1;", "report(current);"])
+    fun `a call opened at the end of a line completes the values that fit the argument`(next: String) {
+        XdkAdapter().use { adapter ->
+            mapOf("deal(" to "current", "deal(cur" to "current", "deal(current, " to "currentRound").forEach { (typed, value) ->
+                val (line, column) = compileInScope(adapter, typed, next)
+                assertThat(adapter.getCompletions(URI, line, column).map { it.label }).describedAs(typed).contains(value)
             }
         }
     }
@@ -121,6 +155,7 @@ class XdkLineEndCompletionTest {
                 "    class Scoreboard {}",
                 "    Scoreboard scoreboard = new Scoreboard();",
                 "    void report(String text) {}",
+                "    void deal(String name, Int count) {}",
                 "    void run(String current) {",
                 "        $local",
                 "        $typed",
