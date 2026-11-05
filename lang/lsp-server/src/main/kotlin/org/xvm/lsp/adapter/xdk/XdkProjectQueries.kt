@@ -771,20 +771,47 @@ internal class XdkProjectQueries(
                             }
                         }
                 }
-        val qualifications = typeMove.qualifications
-        val edits =
-            (renamed.entries + rootRenames.flatMap { it.edits.entries } + typeMove.edits.entries)
-                .groupBy({ it.key }, { it.value })
-                .mapValues { (_, edits) -> edits.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
-        if (edits.values.any { !XdkRename.disjoint(it) }) {
-            return null
+
+        fun planned(move: XdkTypeMoves.Proposal): XdkRename.Plan? {
+            val edits =
+                (renamed.entries + rootRenames.flatMap { it.edits.entries } + move.edits.entries)
+                    .groupBy({ it.key }, { it.value })
+                    .mapValues { (_, edits) -> edits.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
+            if (edits.values.any { !XdkRename.disjoint(it) }) return null
+            return XdkRename.Plan(texts, edits, paths, qualifications = move.qualifications, imports = move.imports)
         }
-        val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications, imports = typeMove.imports)
-        val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys, movedInputs.entries)
-        val after =
-            compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves, resourceSnapshots = resourceSnapshots)
-                ?: return null
-        if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan, graph) ||
+
+        fun compiled(
+            plan: XdkRename.Plan,
+            failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
+        ): CompilerRenameFacts? {
+            val resourceMoves =
+                XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, plan.edits.keys, movedInputs.entries)
+            return compile(
+                plan.proposed,
+                moves = paths,
+                graph = graph,
+                resourceMoves = resourceMoves,
+                resourceSnapshots = resourceSnapshots,
+                failed = failed,
+            )
+        }
+
+        // A qualifier's first name can be a property or a local where a reference stands, which hides the package it
+        // should name, and the compiler rejects the reference. Such a file imports the moved type instead of
+        // qualifying it, and the whole move is proven again, until it compiles or no further file needs the import.
+        fun proven(importing: Set<String>): Triple<XdkTypeMoves.Proposal, XdkRename.Plan, CompilerRenameFacts>? {
+            val move =
+                if (importing.isEmpty()) typeMove else XdkTypeMoves.plan(before, typeOperations, texts, directories, project, importing)
+            val plan = move?.let(::planned) ?: return null
+            val errors = mutableListOf<ErrorListener.ErrorInfo>()
+            compiled(plan, errors::addAll)?.let { return Triple(move, plan, it) }
+            val shadowed = importing + XdkTypeMoves.shadowed(move, plan, errors)
+            return if (shadowed.size > importing.size) proven(shadowed) else null
+        }
+        val (move, plan, after) = proven(emptySet()) ?: return null
+        val edits = plan.edits
+        if (!move.provesDestinations(after) || !preservesBindings(before, after, plan, graph) ||
             !isCurrent() || !movedInputs.isCurrent(cancelled) ||
             resourceSnapshots != captureResources()
         ) {
@@ -1389,6 +1416,7 @@ internal class XdkProjectQueries(
         graph: XdkProject = project,
         resourceMoves: XdkResourceMoves? = null,
         resourceSnapshots: Map<XdkSourceModule, XdkResources> = emptyMap(),
+        failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
     ): CompilerRenameFacts? {
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
@@ -1512,6 +1540,7 @@ internal class XdkProjectQueries(
                                 }
                             return@mapNotNull module.uri to repaired
                         }
+                        failed(heard.errors)
                         return null
                     }
                     val facts =
@@ -1523,6 +1552,7 @@ internal class XdkProjectQueries(
                     if (heard.hasSeriousErrors() || errors.isAbortDesired) {
                         checkCurrent()
                         if (proof != Proof.COMPLETE) return@mapNotNull null
+                        failed(heard.errors)
                         return null
                     }
                     artifacts[module.name] = compilation.toDependency()

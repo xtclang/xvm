@@ -345,7 +345,18 @@ internal object XdkRename {
                 site to (composedTarget(name.target, texts, moved, translate) ?: return null)
             }
         val expected = imported(before, plan.original, plan::sourceAfter, plan::map) ?: return false
-        val actual = imported(after, plan.proposed, { it }) { _, offset -> offset } ?: return false
+        // The imports the plan adds are new; the names they serve are compared with every other binding.
+        val added =
+            plan.imports.flatMap { (source, edits) ->
+                edits.map { edit ->
+                    val end = plan.map(source, edit.start) ?: return false
+                    Site(plan.sourceAfter(source), end - edit.text.length, end)
+                }
+            }
+        val actual =
+            imported(after, plan.proposed, { it }) { _, offset -> offset }
+                ?.filterKeys { site -> added.none { it.source == site.source && site.start >= it.start && site.end <= it.end } }
+                ?: return false
         return expected == actual
     }
 
