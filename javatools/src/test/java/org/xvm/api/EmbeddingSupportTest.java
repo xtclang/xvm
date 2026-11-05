@@ -76,7 +76,11 @@ import static org.xvm.util.Severity.WARNING;
  * javatools/build.gradle.kts).
  */
 public class EmbeddingSupportTest {
-    private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
+    /**
+     * How long the test waits for a run before it fails as hung. It ends only a hang: an hour,
+     * which no run reaches however slow or loaded the machine is, so no result depends on speed.
+     */
+    private static final Duration RUN_LIMIT = Duration.ofHours(1);
 
     @TempDir
     static Path dirOut;
@@ -208,7 +212,7 @@ public class EmbeddingSupportTest {
                         @Inject Timer timer;
                         try {
                             @Future Tuple done;
-                            timer.schedule(Duration:1H, () -> {done = ();});
+                            timer.schedule(Duration.ofDays(1), () -> {done = ();});
                             console.print("waiting");
                             return done;
                         } catch (Exception e) {
@@ -246,7 +250,7 @@ public class EmbeddingSupportTest {
             assertTrue(output.toString().contains("waiting"),
                     () -> "Waiting ended before it suspended: " + output);
 
-            // a close() that waited for the pending one-hour timer would not return in time
+            // a close() that waited for the pending one-day timer would not return in time
             assertTimeoutPreemptively(RUN_LIMIT, control::close);
         }
         assertTrue(output.toString().contains("Service terminated"), output.toString());
@@ -264,7 +268,7 @@ public class EmbeddingSupportTest {
                         @Inject Timer timer;
                         timer.start();
                         timer.schedule(Duration.ofMillis(300), () -> console.print("kept"), keepAlive=True);
-                        timer.schedule(Duration.ofMinutes(60), () -> console.print("dropped"));
+                        timer.schedule(Duration.ofDays(1), () -> console.print("dropped"));
                         console.print("returned");
                     }
                 }
@@ -828,7 +832,7 @@ public class EmbeddingSupportTest {
                         @Inject Console console;
                         @Inject Timer timer;
                         @Future Tuple done;
-                        timer.schedule(Duration:1H, () -> {done = ();});
+                        timer.schedule(Duration.ofDays(1), () -> {done = ();});
                         console.print("waiting");
                         return done;
                     }

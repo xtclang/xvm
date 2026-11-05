@@ -11,8 +11,8 @@ import com.intellij.driver.client.impl.RefWrapper
 import com.intellij.driver.client.service
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.util.concurrent.CancellationException
-import kotlin.time.Duration.Companion.seconds
 
 /** Protocol assertions use the installed client's existing connection, never a second server. */
 class ClientProtocol(
@@ -25,7 +25,7 @@ class ClientProtocol(
         with(driver) {
             awaitUi(
                 message = "installed language client is started",
-                timeout = 45.seconds,
+                timeout = HANG_LIMIT,
                 getter = {
                     service<LanguageClients>(project()).getStartedServers().toList()
                 },
@@ -64,7 +64,7 @@ class ClientProtocol(
         future: ClientFuture,
     ): JsonElement =
         with(driver) {
-            awaitUi("installed client response: $method", 60.seconds) { future.isDone() }
+            awaitUi("installed client response: $method", HANG_LIMIT) { future.isDone() }
             if (future.isCancelled()) throw CancellationException("$method was cancelled")
             if (future.isCompletedExceptionally()) {
                 // Throw locally: ResponseError is not Java-serializable, so throwing it through

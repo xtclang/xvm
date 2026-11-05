@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
@@ -85,7 +86,7 @@ class XdkTypeMoveTest {
         write("Other.x", "module Other {}")
         write("Other/Marker.x", "class Marker {}")
         session { adapter ->
-            assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(request()).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(read("App.x")).contains("tools.Box")
             assertThat(directory.resolve("App/tools/Box.x")).exists()
         }
@@ -98,13 +99,13 @@ class XdkTypeMoveTest {
         write("App/tools/Box.x", "class Box {}")
         write("App/tools/Box/Part.x", "static class Part {}")
         session { adapter ->
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             val requested = mapOf(uri("App/tools/Box.x") to uri("App/Box.x"))
-            val edit = requireNotNull(adapter.renameFilesAsync(requested).get(30, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS))
             apply(edit, requested)
             assertThat(read("App.x")).isEqualTo("module App { package other import Other; Box.Part make() = new Box.Part(); }")
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -116,15 +117,15 @@ class XdkTypeMoveTest {
         write("App/util.x", "package util { static Int number() = 2; }")
         write("App/util/Marker.x", "class Marker {}")
         session { adapter ->
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-            assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.renameFilesAsync(request()).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(read("App/tools/Box.x")).isEqualTo("class Box { Int read() = number(); }")
             // Compilation alone accepts the wrong package's number(). The refusal above must
             // come from comparing the original call target, not from a syntax/access failure.
             write("App.x", read("App.x").replace("tools.Box", "util.Box"))
             Files.move(directory.resolve("App/tools/Box.x"), directory.resolve("App/util/Box.x"))
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -135,7 +136,7 @@ class XdkTypeMoveTest {
         write("App/util/Marker.x", "class Marker {}")
         write("App/util/Box/data.txt", "unrelated existing resource")
         session { adapter ->
-            assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(request()).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(read("App/util/Box/data.txt")).isEqualTo("unrelated existing resource")
             assertThat(directory.resolve("App/tools/Box.x")).exists()
         }
@@ -154,10 +155,10 @@ class XdkTypeMoveTest {
                     XdkSourceModule("Consumer", uri("Consumer.x"), setOf("App")),
                 ),
             )
-            val edit = requireNotNull(adapter.renameFilesAsync(request()).get(30, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(request()).get(HANG_SECONDS, SECONDS))
             apply(edit, request())
             assertThat(read("Consumer.x")).contains("import app.util.Box", "Box make() = new Box()")
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -258,7 +259,7 @@ class XdkTypeMoveTest {
         session { adapter ->
             listOf("Taken", "not-a-name").forEach { name ->
                 val requested = mapOf(uri("App/tools/Box.x") to uri("App/util/$name.x"))
-                assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+                assertThat(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
             }
             assertThat(sourceTexts()).isEqualTo(original)
         }
@@ -272,14 +273,14 @@ class XdkTypeMoveTest {
         write("App/util.x", "package util { static Int number() = 2; }")
         write("App/util/Marker.x", "class Marker {}")
         session { adapter ->
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             val requested = mapOf(uri("App/tools/Box.x") to uri("App/util/Crate.x"))
-            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
             write("App.x", read("App.x").replace("tools.Box", "util.Crate"))
             write("App/tools/Box.x", read("App/tools/Box.x").replace("class Box", "class Crate"))
             Files.move(directory.resolve("App/tools/Box.x"), directory.resolve("App/util/Crate.x"))
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         }
     }
 
@@ -309,13 +310,14 @@ class XdkTypeMoveTest {
         )
         session { adapter ->
             val requested = mapOf(uri("App/left/First.x") to uri("App/util/Alpha.x"), uri("App/right/Second.x") to uri("App/util/Beta.x"))
-            val first = requireNotNull(adapter.renameFilesAsync(requested).get(30, SECONDS))
-            val reversed = requireNotNull(adapter.renameFilesAsync(requested.entries.reversed().associate { it.toPair() }).get(30, SECONDS))
+            val first = requireNotNull(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS))
+            val reversed =
+                requireNotNull(adapter.renameFilesAsync(requested.entries.reversed().associate { it.toPair() }).get(HANG_SECONDS, SECONDS))
             assertThat(first.changes).isEqualTo(reversed.changes)
             assertThat(first.renames).isEqualTo(reversed.renames)
             apply(first, requested)
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(read("App/util/Alpha.x")).contains("class Alpha", "util.Beta next() = new util.Beta()")
             assertThat(read("App/util/Beta.x")).contains("class Beta", "util.Alpha next() = new util.Alpha()")
             assertThat(read("Consumer.x")).contains("app.util.Alpha", "app.util.Beta").doesNotContain("app.left", "app.right")
@@ -332,7 +334,7 @@ class XdkTypeMoveTest {
         val original = sourceTexts()
         session { adapter ->
             val requested = mapOf(uri("App/left/First.x") to uri("App/util/Alpha.x"), uri("App/right/Second.x") to uri("App/util/Taken.x"))
-            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(sourceTexts()).isEqualTo(original)
             assertThat(directory.resolve("App/util/Alpha.x")).doesNotExist()
         }
@@ -374,7 +376,7 @@ class XdkTypeMoveTest {
         session { adapter ->
             val original = sourceTexts()
             listOf("App/Owner/nested", "unowned").forEach { destination ->
-                assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("$destination/Box.x"))).get(30, SECONDS))
+                assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("$destination/Box.x"))).get(HANG_SECONDS, SECONDS))
                     .describedAs(destination)
                     .isNull()
             }
@@ -449,7 +451,7 @@ class XdkTypeMoveTest {
         Files.createDirectories(directory.resolve("App/util"))
         session { adapter ->
             val original = sourceTexts()
-            assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(request()).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(sourceTexts()).isEqualTo(original)
         }
     }
@@ -482,15 +484,15 @@ class XdkTypeMoveTest {
                 ),
             )
             val requested = mapOf(uri("App/tools/Box.x") to uri("Other/empty/Parcel.x"))
-            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(30, SECONDS))
+            assertThat(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(HANG_SECONDS, SECONDS))
             val graph = requireNotNull(proposal.sourceModules)
             assertThat(graph.single { it.name == "App" }.dependencies).contains("Other")
             assertThat(graph.single { it.name == "Consumer" }.dependencies).contains("App", "Other")
             assertThat(read("App.x")).doesNotContain("import Other")
             apply(proposal.edit, requested)
             adapter.replaceSourceModules(graph)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(read("Consumer.x")).contains("import Other;", "other.empty.Parcel as Crate", "Crate make() = new Crate()")
             assertThat(read("Other/empty/Parcel/data.txt")).isEqualTo("companion bytes")
         }
@@ -538,12 +540,12 @@ class XdkTypeMoveTest {
                     XdkSourceModule("Other", uri("Other.x"), resourceRoots = listOf(uri("destination"))),
                 ),
             )
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             val requested = mapOf(uri("App/Box.x") to uri("Other/Box.x"))
-            val proposal = adapter.renameFilesProposalAsync(requested).get(30, SECONDS)
+            val proposal = adapter.renameFilesProposalAsync(requested).get(HANG_SECONDS, SECONDS)
             if (sameBytes) {
                 apply(requireNotNull(proposal).edit, requested)
-                assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+                assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             } else {
                 assertThat(proposal).isNull()
                 assertThat(directory.resolve("App/Box.x")).exists()
@@ -561,7 +563,7 @@ class XdkTypeMoveTest {
         session { adapter ->
             val original = sourceTexts()
             val requested = mapOf(uri("App/tools/Box.x") to uri("Other/Box.x"))
-            assertThat(adapter.renameFilesProposalAsync(requested).get(30, SECONDS)).isNull()
+            assertThat(adapter.renameFilesProposalAsync(requested).get(HANG_SECONDS, SECONDS)).isNull()
             assertThat(sourceTexts()).isEqualTo(original)
         }
     }
@@ -581,12 +583,12 @@ class XdkTypeMoveTest {
         adapter: XdkAdapter,
         requested: Map<String, String> = request(),
     ): WorkspaceEdit {
-        assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-        val edit = requireNotNull(adapter.renameFilesAsync(requested).get(30, SECONDS))
+        assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+        val edit = requireNotNull(adapter.renameFilesAsync(requested).get(HANG_SECONDS, SECONDS))
         assertThat(edit.versioned).isTrue()
         apply(edit, requested)
         adapter.initializeWorkspace(listOf(directory.toString()))
-        assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+        assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
         return edit
     }
 

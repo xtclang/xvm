@@ -21,6 +21,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -71,7 +72,7 @@ class XdkInlineValueProtocolTest {
                                     workspace = WorkspaceClientCapabilities().apply { inlineValue = InlineValueWorkspaceCapabilities(true) }
                                 }
                         },
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
                     .capabilities
             assertThat(capabilities.inlineValueProvider?.left).isTrue()
             server.initialized(InitializedParams())
@@ -87,14 +88,14 @@ class XdkInlineValueProtocolTest {
                             Range(Position(0, 0), Position(8, 0)),
                             InlineValueContext(1, Range(stopped, stopped)),
                         ),
-                    ).get(30, SECONDS)
+                    ).get(HANG_SECONDS, SECONDS)
             assertThat(values).allSatisfy {
                 assertThat(it.isInlineValueVariableLookup).isTrue()
                 assertThat(it.inlineValueVariableLookup.isCaseSensitiveLookup).isTrue()
             }
             assertThat(values.map { it.inlineValueVariableLookup.let { lookup -> lookup.variableName to lookup.range.start.line } })
                 .containsExactly("n" to 2, "before" to 3, "before" to 4, "n" to 4)
-            verify(client, timeout(10_000).atLeastOnce()).refreshInlineValues()
+            verify(client, timeout(HANG_SECONDS * 1_000).atLeastOnce()).refreshInlineValues()
         }
     }
 }

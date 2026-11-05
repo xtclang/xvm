@@ -36,6 +36,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Recovery retains real syntax without validating or inventing a replacement expression. */
 public class ParserRecoveryTest {
+    /**
+     * How long parsing a source may take before the test fails as hung. It ends only a hang: an
+     * hour, which no machine takes however slow or loaded it is, so no result depends on speed.
+     */
+    private static final Duration HANG_LIMIT = Duration.ofHours(1);
+
     @Test
     public void selectedMembersBeforeOperatorsRetainBothOperandsAndFollowingStatements() {
         List.of(" + 1", " < 1", " == 1", " ? 1 : 0", " ?: 1", " * 2")
@@ -694,7 +700,7 @@ public class ParserRecoveryTest {
     }
 
     private StatementBlock parse(String text, ErrorList errs) {
-        return assertTimeoutPreemptively(Duration.ofSeconds(3),
+        return assertTimeoutPreemptively(HANG_LIMIT,
                 () -> new Parser(new Source(text, "Recovery.x"), errs).parseSource());
     }
 

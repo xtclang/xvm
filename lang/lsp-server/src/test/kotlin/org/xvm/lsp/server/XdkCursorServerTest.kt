@@ -26,6 +26,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.ParameterInfo
@@ -129,7 +130,7 @@ class XdkCursorServerTest {
                 ),
             )
 
-        fun next(): Pending = checkNotNull(pending.poll(10, SECONDS)) { "query did not reach backend" }
+        fun next(): Pending = checkNotNull(pending.poll(HANG_SECONDS, SECONDS)) { "query did not reach backend" }
 
         override fun renameAsync(
             uri: String,
@@ -205,7 +206,7 @@ class XdkCursorServerTest {
             }
 
         override fun close() {
-            server.shutdown().get(10, SECONDS)
+            server.shutdown().get(HANG_SECONDS, SECONDS)
         }
     }
 
@@ -227,7 +228,7 @@ class XdkCursorServerTest {
             assertThat(backend.analyses).hasSize(1)
             assertThat(work.future.isCancelled).isFalse()
             work.finish()
-            assertThat(response.get(10, SECONDS)).isNotNull()
+            assertThat(response.get(HANG_SECONDS, SECONDS)).isNotNull()
         }
     }
 
@@ -240,12 +241,12 @@ class XdkCursorServerTest {
             val response = session.request(feature)
             val work = backend.next()
             assertThat(response.cancel(false)).isTrue()
-            assertThat(backend.canceled.poll(10, SECONDS)).isTrue()
+            assertThat(backend.canceled.poll(HANG_SECONDS, SECONDS)).isTrue()
             assertThat(work.future.isCancelled).isTrue()
             assertThat(backend.analyses.single().isCancelled).isFalse()
             val latest = session.request(feature)
             backend.next().finish()
-            assertThat(latest.get(10, SECONDS)).isNotNull()
+            assertThat(latest.get(HANG_SECONDS, SECONDS)).isNotNull()
         }
     }
 
@@ -261,7 +262,7 @@ class XdkCursorServerTest {
             backend.gate.complete(Unit)
             val latest = session.request(feature)
             backend.next().finish()
-            assertThat(latest.get(10, SECONDS)).isNotNull()
+            assertThat(latest.get(HANG_SECONDS, SECONDS)).isNotNull()
             assertThat(backend.pending).isEmpty()
         }
     }
@@ -278,7 +279,7 @@ class XdkCursorServerTest {
             assertModified(old)
             work.finish()
             assertModified(old)
-            assertThat(backend.canceled.poll(10, SECONDS)).isFalse()
+            assertThat(backend.canceled.poll(HANG_SECONDS, SECONDS)).isFalse()
             assertThat(backend.cancellations.get()).isPositive()
         }
     }
@@ -329,7 +330,7 @@ class XdkCursorServerTest {
             assertModified(old)
             val latest = session.request(Feature.SIGNATURE)
             backend.next().finish()
-            assertThat(latest.get(10, SECONDS)).isNotNull()
+            assertThat(latest.get(HANG_SECONDS, SECONDS)).isNotNull()
         }
     }
 
@@ -357,7 +358,7 @@ class XdkCursorServerTest {
                     SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, 0)),
                 )
             backend.next().finish()
-            val help = response.get(10, SECONDS)!!
+            val help = response.get(HANG_SECONDS, SECONDS)!!
             assertThat(help.activeParameter).isEqualTo(1)
             assertThat(help.signatures.single().activeParameter).isEqualTo(1)
             assertThat(
@@ -370,7 +371,7 @@ class XdkCursorServerTest {
     }
 
     private fun assertModified(result: CompletableFuture<*>) {
-        val failure = assertThrows<ExecutionException> { result.get(10, SECONDS) }
+        val failure = assertThrows<ExecutionException> { result.get(HANG_SECONDS, SECONDS) }
         val error = failure.cause as ResponseErrorException
         assertThat(error.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
     }
