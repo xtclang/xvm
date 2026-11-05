@@ -130,6 +130,39 @@ class XdkLineEndCompletionTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["Int after = 1;", "if (hand.size() > 0) {}", "hand.addCard(\"8\");"])
+    fun `a method chosen at the end of a line inserts its call, and its name before a written call`(next: String) {
+        XdkAdapter().use { adapter ->
+            val lines =
+                listOf(
+                    "module Editing {",
+                    "    class Hand { String label = \"\"; Int size() = 0; void addCard(String card) {} }",
+                    "    void run(Hand hand) {",
+                )
+
+            // the cursor ends what is typed, or stands at its |
+            fun item(
+                typed: String,
+                label: String,
+            ): CompletionItem {
+                val written = typed.replace("|", "")
+                adapter.compile(URI, (lines + listOf("        $written", "        $next", "    }", "}")).joinToString("\n"))
+                val column = 8 + (typed.indexOf('|').takeIf { it >= 0 } ?: typed.length)
+                return adapter.getCompletions(URI, lines.size, column).single { it.label == label }
+            }
+            val size = item("Int left = hand.si", "size")
+            assertThat(size.textEdit).isEqualTo(TextEdit(Range(Position(3, 24), Position(3, 26)), "size()"))
+            assertThat(size.snippet).isNull()
+            val add = item("hand.add", "addCard")
+            assertThat(add.textEdit).isEqualTo(TextEdit(Range(Position(3, 13), Position(3, 16)), "addCard"))
+            assertThat(add.snippet).isEqualTo("addCard(\$0)")
+            // a property is no call, and a written call has its parentheses
+            assertThat(item("String name = hand.la", "label").textEdit?.newText).isEqualTo("label")
+            assertThat(item("Int left = hand.si|();", "size").let { it.textEdit?.newText to it.snippet }).isEqualTo("size" to null)
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["text.trim();", "Int length = text.size;", "report(text.trim());"])
     fun `a cursor right after the dot of a written member completes the receiver's members`(statement: String) {
         XdkAdapter().use { adapter ->
