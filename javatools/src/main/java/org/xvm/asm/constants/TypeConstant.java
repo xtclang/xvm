@@ -1632,6 +1632,14 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return a native rebase for this (referent) type
+     */
+    public TypeConstant asNativeRef(ConstantPool pool, boolean fVar) {
+        return pool.ensureParameterizedTypeConstant(
+                fVar ? pool.typeVarRB() : pool.typeRefRB(), this);
+    }
+
+    /**
      * Determine compatibility for purposes of comparing equality.
      *
      * @param that             another type

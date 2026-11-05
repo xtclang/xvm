@@ -12,7 +12,6 @@ import java.util.List;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -68,7 +67,7 @@ public class AnnotationHelper {
                     ? builder.pool().typeConstRB() : builder.pool().typeObject();
         }
         this.baseType              = baseType.ensureAccess(Access.PRIVATE);
-        this.constructionSiteCount = getConstructionSiteCount(thisType, annotations);
+        this.constructionSiteCount = isConstructionSite ? thisType.getAnnotations().length : 0;
     }
 
     private final CommonBuilder builder;
@@ -329,22 +328,34 @@ public class AnnotationHelper {
      */
     public static JitCallDesc getInstantiatorCall(BuildContext bctx, TypeConstant targetType,
                                                   String baseName, JitCtorDesc baseDesc) {
-        Builder       builder     = bctx.builder;
-        JitCtorDesc   newDesc     = baseDesc;
-        StringBuilder newName     = new StringBuilder(baseName);
-        Annotation[]  annotations = targetType.ensureTypeInfo().getMixinAnnotations();
-        int           count       = getConstructionSiteCount(targetType, annotations);
+        Annotation[]     annos = targetType.getAnnotations();
+        List<MethodInfo> ctors = new ArrayList<>(annos.length);
 
-        for (int i = 0; i < count; i++) {
-            Annotation annotation  = annotations[i];
-            MethodInfo constructor = findAnnotationConstructor(bctx, annotation, targetType);
-
-            newDesc = newDesc.appendParams(constructor.getJitDesc(
-                    builder, targetType.ensureAccess(Access.STRUCT)));
-            newName.append(annotationConstructorName(builder, i, constructor));
+        for (Annotation anno : annos) {
+            ctors.add(findAnnotationConstructor(bctx, anno, targetType));
         }
-        return JitCallDesc.static_(
-                builder.getICDesc(targetType), newName.toString(), newDesc, false);
+        return getInstantiatorCall(bctx.builder, targetType, baseName, baseDesc, ctors);
+    }
+
+    /**
+     * Resolve an instantiator call using the selected construction site annotation constructors.
+     *
+     * @param constructors  the selected construction site constructors, in invocation order
+     *
+     * @return the instantiator call with annotation suffixes and parameters appended
+     */
+    public static JitCallDesc getInstantiatorCall(Builder builder, TypeConstant targetType,
+                                                  String baseName, JitCtorDesc baseDesc,
+                                                  List<MethodInfo> constructors) {
+        JitCtorDesc   instorDesc = baseDesc;
+        StringBuilder instorName = new StringBuilder(baseName);
+        for (int i = 0; i < constructors.size(); i++) {
+            MethodInfo constructor = constructors.get(i);
+
+            instorDesc = instorDesc.appendParams(constructor.getJitDesc(builder, targetType));
+            instorName.append(annotationConstructorName(builder, i, constructor));
+        }
+        return JitCallDesc.static_(builder.getICDesc(targetType), instorName.toString(), instorDesc, false);
     }
 
     /**
@@ -360,15 +371,10 @@ public class AnnotationHelper {
      */
     public static void loadAnnotationConstructorArgs(BuildContext bctx, CodeBuilder code,
                                                      TypeConstant targetType) {
-        Builder      builder     = bctx.builder;
-        Annotation[] annotations = targetType.ensureTypeInfo().getMixinAnnotations();
-        int          count       = getConstructionSiteCount(targetType, annotations);
-        for (int annotationIndex = 0; annotationIndex < count; annotationIndex++) {
-            Annotation    annotation = annotations[annotationIndex];
-            MethodInfo    ctor       = findAnnotationConstructor(bctx, annotation, targetType);
-            JitMethodDesc jmd        = ctor.getJitDesc(
-                    builder, targetType.ensureAccess(Access.STRUCT));
-            Constant[]    args       = annotation.getParams();
+        for (Annotation annotation : targetType.getAnnotations()) {
+            MethodInfo    ctor = findAnnotationConstructor(bctx, annotation, targetType);
+            JitMethodDesc jmd  = ctor.getJitDesc(bctx.builder, targetType);
+            Constant[]    args = annotation.getParams();
 
             bctx.loadCallArguments(code, jmd, i -> {
                 Constant value = i < args.length ? args[i] : null;
@@ -379,20 +385,9 @@ public class AnnotationHelper {
 
                 return value instanceof RegisterConstant register
                         ? bctx.loadArgument(code, register.getRegisterIndex())
-                        : builder.loadConstant(bctx, code, value);
+                        : bctx.loadConstant(code, value);
             }, targetType);
         }
-    }
-
-    /**
-     * @return the number of leading construction site annotations in the complete invocation list
-     */
-    private static int getConstructionSiteCount(TypeConstant type, Annotation[] annotations) {
-        // TypeInfo layers construction site annotations before the base's declaration annotations
-        return type.isAnnotated()
-                ? annotations.length - type.removeAnnotations()
-                        .ensureTypeInfo().getMixinAnnotations().length
-                : 0;
     }
 
     /**
@@ -528,8 +523,8 @@ public class AnnotationHelper {
      *
      * @throws IllegalStateException if no matching constructor is found
      */
-    private static MethodInfo findAnnotationConstructor(Annotation annotation, TypeConstant[] argTypes,
-                                                        TypeConstant targetType) {
+    public static MethodInfo findAnnotationConstructor(Annotation annotation, TypeConstant[] argTypes,
+                                                       TypeConstant targetType) {
         TypeInfo       info = getAnnotationInfo(annotation, targetType);
         MethodConstant id   = info.findConstructor(argTypes);
 
@@ -571,14 +566,33 @@ public class AnnotationHelper {
             return type;
         }
 
-        ConstantPool  pool       = type.getConstantPool();
-        ClassConstant id         = annotated.getAnnotationClass();
-        TypeConstant  underlying = filterAnnotations(annotated.getUnderlyingType());
+        TypeConstant underlying = filterAnnotations(annotated.getUnderlyingType());
 
-        return switch (id.getImplicitImportName()) {
+        return isCompilerOnlyAnnotation(annotated.getAnnotationClass())
+                ? underlying
+                : annotated.replaceUnderlying(type.getConstantPool(), _ -> underlying);
+    }
+
+    /**
+     * @return true iff at least one annotation is not compiler-only
+     */
+    public static boolean hasRuntimeAnnotations(Annotation[] annotations) {
+        for (Annotation annotation : annotations) {
+            if (!isCompilerOnlyAnnotation((ClassConstant) annotation.getAnnotationClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true iff the annotation is a well-known compiler-only annotation
+     */
+    public static boolean isCompilerOnlyAnnotation(ClassConstant annoId) {
+        return switch (annoId.getImplicitImportName()) {
             case "Abstract", "Concurrent", "Override", "RO", "Synchronized", "Transient",
-                 "Unassigned", "Volatile" -> underlying;
-            case null, default -> annotated.replaceUnderlying(pool, ignored -> underlying);
+                 "Unassigned", "Volatile" -> true;
+            case null, default -> false;
         };
     }
 

@@ -1,5 +1,7 @@
 package refTests {
 
+    static TestConsole watchConsole = new TestConsole();
+
     void run() {
         testEquality();
         testEquality2();
@@ -13,6 +15,7 @@ package refTests {
         test.testStandard();
         test.testPrimitive();
         test.testConstant();
+        test.testAnnotated();
 
         new UnassignedProp().test();
     }
@@ -87,7 +90,6 @@ package refTests {
         assert watchConsole.output() == "3, 2, 1, 0, ";
     }
 
-    TestConsole watchConsole = new TestConsole();
     function void(Int) logger = (Int value) -> watchConsole.print($"->{value}", True);
 
     void testDelegatingVar() {
@@ -146,6 +148,8 @@ package refTests {
         String r.get() = "RO";
         String v = "orig";
         Int n = 1;
+        @Watch(v -> watchConsole.print($"-{v}", True)) String msg;
+        @Watch(v -> watchConsole.print($"={v}", True)) Int value;
 
         void testStandard() {
             Ref<String> ref = &r;
@@ -177,6 +181,18 @@ package refTests {
             assert cRef.assigned;
             assert Boolean value := cRef.peek();
             assert value;
+        }
+
+        void testAnnotated() {
+            watchConsole.reset();
+            msg = "hello";
+            assert msg == "hello";
+            assert watchConsole.output() == "-hello";
+
+            watchConsole.reset();
+            value = 42;
+            assert value == 42;
+            assert watchConsole.output() == "=42";
         }
     }
 }

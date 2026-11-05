@@ -11,6 +11,7 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.List;
 
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -61,7 +62,7 @@ public class RefBuilder extends CommonBuilder {
         // the native bodies behind Ref/Var interface declarations live on nRef
         MethodBody   body  = bctx.callChain[bctx.callDepth + 1];
         TypeConstant owner = body.getIdentity().getClassIdentity().getType();
-        return owner.isA(pool().typeRef())
+        return body.getImplementation() == Implementation.Native && owner.isA(pool().typeRef())
                 ? JitCallDesc.special(CD_nRef, body.getIdentity().ensureJitMethodName(typeSystem),
                         body.getJitDesc(this, owner), false)
                 : super.resolveSuperCall(bctx);
@@ -131,7 +132,7 @@ public class RefBuilder extends CommonBuilder {
     }
 
     /**
-     * Leave a newly initialized annotated reference on the Java operand stack, with its referent
+     * Create an annotated reference and leave it on the Java operand stack, with its referent
      * still unassigned.
      */
     public static void createRef(BuildContext bctx, CodeBuilder code, TypeConstant refType) {
@@ -144,11 +145,11 @@ public class RefBuilder extends CommonBuilder {
     }
 
     /**
-     * @return the reference factory descriptor before annotation parameters are appended
+     * @return the reference instantiator descriptor before annotation parameters are appended
      */
-    private static JitCtorDesc getInstantiatorDesc(Builder builder, TypeConstant refType) {
-        JitParamDesc retPd = new JitParamDesc(refType, Specific,
-                                builder.getICDesc(refType), 0, -1, false);
+    public static JitCtorDesc getInstantiatorDesc(Builder builder, TypeConstant refType) {
+        JitParamDesc retPd =
+                new JitParamDesc(refType, Specific, builder.getICDesc(refType), 0, -1, false);
         return new JitCtorDesc(refType, null, false, true, false,
                 new JitParamDesc[] {retPd}, JitParamDesc.NONE, null, null);
     }

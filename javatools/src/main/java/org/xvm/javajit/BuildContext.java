@@ -2098,8 +2098,7 @@ public class BuildContext {
         assert id.equals(pool.clzRef()) || id.equals(pool.clzVar());
 
         TypeConstant referentType = type.getParamType(0);
-        TypeConstant nativeType   = pool.ensureParameterizedTypeConstant(
-                id.equals(pool.clzVar()) ? pool.typeVarRB() : pool.typeRefRB(), referentType);
+        TypeConstant nativeType   = referentType.asNativeRef(pool, isVar);
         if (type.isAnnotated()) {
             nativeType = nativeType.adoptAnnotations(pool, type);
         }
@@ -2238,9 +2237,7 @@ public class BuildContext {
     public RegisterInfo realizeRef(CodeBuilder code, int regId, TypeConstant referentType, boolean isVar) {
         RegisterInfo reg = registerInfos.get(regId);
         if (reg == null) {
-            TypeConstant refType = pool().ensureParameterizedTypeConstant(
-                    isVar ? pool().typeVarRB() : pool().typeRefRB(), referentType);
-            return introduceRegister(code, regId, refType, "");
+            return introduceRegister(code, regId, referentType.asNativeRef(pool(), isVar), "");
         } else {
             assert reg.flavor() != JitFlavor.Ref;
             assert reg.type().isA(pool().typeRef()) && reg.type().getParamType(0).equals(referentType);
@@ -2597,8 +2594,7 @@ public class BuildContext {
 
         RegisterInfo  targetReg = ensureRegister(code, targetId);
         JitMethodDesc getterJmd = propInfo.getGetterJitDesc(builder, targetType);
-        TypeConstant  refType   = pool.ensureParameterizedTypeConstant(
-                isVar ? pool.typeVarRB() : pool.typeRefRB(), referentType);
+        TypeConstant  refType   = referentType.asNativeRef(pool(), isVar);
         ClassDesc     refClass  = builder.getICDesc(refType);
 
         code.new_(refClass)
@@ -2666,7 +2662,7 @@ public class BuildContext {
                 ? JitTypeDesc.getFieldClass(propInfo.getType(), first.cd) : first.cd;
 
         TypeConstant ownerType = propInfo.getFieldOwnerType(builder, targetReg.type());
-        String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
+        String       fieldName = propInfo.ensureJitName(typeSystem);
 
         for (int i = 0; i < returns.length; i++) {
             JitParamDesc ret = returns[i];
@@ -2939,7 +2935,7 @@ public class BuildContext {
         }
 
         TypeConstant typeOwner = propInfo.getFieldOwnerType(builder, targetReg.type());
-        String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
+        String       fieldName = propInfo.ensureJitName(typeSystem);
 
         for (int i = 0; i < params.length; i++) {
             JitParamDesc param = params[i];

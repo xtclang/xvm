@@ -700,130 +700,9 @@ public abstract class Builder {
             return loadPropertyValue(code, regThis, propId, bctx.ctxSlot(code));
         }
 
-        case MethodConstant methodId: {
-            if (bctx == null) {
-                throw new IllegalStateException("Context is missing");
-            }
-
-            // 1) ensure the method exists
-            TypeConstant containerType = bctx.thisType;
-            ClassDesc    containerCD   = ClassDesc.of(bctx.className);
-            boolean      isDeferred    = methodId.isLambda();
-            JitCallDesc  call          = null;
-            String       jitName;
-            MethodBody   body;
-            TypeConstant sigType; // function or method type
-
-            if (methodId.isLambda()) {
-                MethodStructure lambda = (MethodStructure) methodId.getComponent();
-                jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
-                body    = new MethodBody(lambda);
-                sigType = body.asJitFunctionType(pool(), containerType);
-
-                // generate the method itself
-                bctx.buildMethod(jitName, body);
-            } else {
-                IdentityConstant containerId   = methodId.getClassIdentity();
-                TypeInfo         containerInfo = bctx.typeInfo;
-                boolean          alias         = !containerId.equals(containerInfo.getIdentity());
-                if (alias) {
-                    // an alias can refer to a method on another type, e.g. FPConvertible.toDec
-                    containerType = containerId.getType();
-                    containerCD   = getCCDesc(containerType);
-                    containerInfo = bctx.getTypeInfo(containerType);
-                }
-
-                MethodInfo method = containerInfo.getMethodById(methodId);
-                assert method != null;
-
-                call    = resolvePrivateDetachedCall(method, containerType);
-                jitName = method.ensureJitMethodName(typeSystem);
-                body    = method.getHead();
-                sigType = body.getIdentity().getType();
-
-                if (!alias && body.getIdentity().getNestedDepth() > 2) {
-                    // private detached calls are never nested
-                    assert call == null;
-
-                    // methods nested inside properties or methods are not visible otherwise and
-                    // need to be built on-the-spot
-                    bctx.buildMethod(jitName, body);
-                    isDeferred = true;
-                }
-            }
-
-            // 2) create the MethodHandle(s)
-            boolean isFunction = body.getMethodStructure().isFunction();
-            if (!isDeferred && containerType.isVirtualChildClass()) {
-                // functions live on their declaring implementation; ordinary bound methods
-                // dispatch through the callable contract, not the body host
-                containerCD = isFunction
-                        ? getImplDesc(body.resolveDeclaringType(pool(), containerType))
-                        : getCCDesc(containerType);
-            }
-
-            JitMethodDesc jmd         = call == null ? body.getJitDesc(this, containerType) : call.jmd();
-            boolean       isInterface = isDeferred || isFunction
-                    ? containerType.isJitImplInterface()
-                    : containerType.isJitCCInterface();
-
-            if (isDeferred && !isFunction && bctx.methodDesc instanceof JitDetachedBodyDesc detached) {
-                // a nested method is static on the body owner, with its enclosing receiver type
-                call = new JitCallDesc(containerCD, DetachedBody + jitName, jmd,
-                        JitCallDesc.Kind.Static, false, detached.receiverCD);
-            }
-
-            if (call == null) {
-                call = new JitCallDesc(containerCD, jitName, jmd,
-                        isFunction ? JitCallDesc.Kind.Static : JitCallDesc.Kind.Virtual,
-                        isInterface, null);
-            }
-
-            DirectMethodHandleDesc stdMD = call.toMethodHandle(false);
-            DirectMethodHandleDesc optMD = call.jmd().isOptimized ? call.toMethodHandle(true) : null;
-
-            if (isFunction) {
-                // 3) instantiate a function object
-                //      new FunctionN(ctx, stdHandle, optHandle, immutable);
-                assert sigType.isFunction();
-
-                ClassDesc cd = CD_nFunction;
-                code.new_(cd)
-                    .dup();
-                loadCtx(bctx, code);
-                bctx.loadTypeConstant(code, sigType);
-                code.ldc(stdMD);
-                if (optMD == null) {
-                    code.aconst_null();
-                } else {
-                    code.ldc(optMD);
-                }
-                code.iconst_1() // immutable = true
-                    .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
-                        CD_MethodHandle, CD_MethodHandle, CD_boolean));
-                return new SingleSlot(sigType, Specific, cd, "");
-            } else {
-                // 3) instantiate an nMethod object
-                //      new nMethod(ctx, type, stdHandle, optHandle);
-
-                assert sigType.isMethod();
-
-                ClassDesc cd = CD_nMethod;
-                code.new_(cd)
-                    .dup();
-                loadCtx(bctx, code);
-                bctx.loadTypeConstant(code, sigType);
-                code.ldc(stdMD);
-                if (optMD == null) {
-                    code.aconst_null();
-                } else {
-                    code.ldc(optMD);
-                }
-                code.invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
-                        CD_MethodHandle, CD_MethodHandle));
-                return new SingleSlot(sigType, Specific, cd, "");
-            }
-        }
+        case MethodConstant methodId:
+            return loadMethod(bctx, code, methodId, null,
+                    bctx == null ? code.parameterSlot(0) : bctx.ctxSlot(code));
 
         case UInt8ArrayConstant bytesConstant:
             return loadUInt8Array(bctx, code, bytesConstant);
@@ -882,6 +761,163 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Load a function or method constant, optionally binding its receiver.
+     *
+     * @param bctx            the method context, or null if deferred bodies are already assembled
+     * @param methodId        the function, method or lambda to load
+     * @param receiverLoader  loads the receiver once for an instance method; null leaves it unbound;
+     *                        ignored for static functions
+     * @param ctxSlot         the local slot containing the current context
+     *
+     * @return register information describing the nFunction or unbound nMethod on the stack
+     */
+    public RegisterInfo loadMethod(BuildContext bctx, CodeBuilder code, MethodConstant methodId,
+                                   Loader receiverLoader, int ctxSlot) {
+        // 1) ensure the method exists
+        TypeConstant containerType = bctx == null ? getThisType() : bctx.thisType;
+        ClassDesc    containerCD   = art.CD();
+        boolean      isDeferred    = methodId.isLambda();
+        JitCallDesc  call          = null;
+        String       jitName;
+        MethodBody   body;
+        TypeConstant sigType; // function or method type
+
+        if (methodId.isLambda()) {
+            MethodStructure lambda = (MethodStructure) methodId.getComponent();
+            jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
+            body    = new MethodBody(lambda);
+            sigType = body.asJitFunctionType(pool(), containerType);
+
+            // generate the method itself
+            if (bctx != null) {
+                bctx.buildMethod(jitName, body);
+            }
+        } else {
+            IdentityConstant containerId   = methodId.getClassIdentity();
+            TypeInfo         containerInfo = bctx == null
+                    ? containerType.ensureTypeInfo()
+                    : bctx.typeInfo;
+
+            boolean alias = !containerId.equals(containerInfo.getIdentity());
+            if (alias) {
+                // an alias can refer to a method on another type, e.g. FPConvertible.toDec
+                containerType = containerId.getType();
+                containerCD   = getCCDesc(containerType);
+                containerInfo = bctx == null
+                        ? containerType.ensureTypeInfo() : bctx.getTypeInfo(containerType);
+            }
+
+            MethodInfo method = containerInfo.getMethodById(methodId);
+            assert method != null;
+
+            call    = resolvePrivateDetachedCall(method, containerType);
+            jitName = method.ensureJitMethodName(typeSystem);
+            body    = method.getHead();
+            sigType = body.getIdentity().getType();
+
+            if (!alias && body.getIdentity().getNestedDepth() > 2) {
+                // private detached calls are never nested
+                assert call == null;
+
+                // methods nested inside properties or methods are not visible otherwise and
+                // need to be built on-the-spot
+                if (bctx != null) {
+                    bctx.buildMethod(jitName, body);
+                }
+                isDeferred = true;
+            }
+        }
+
+        // 2) create the MethodHandle(s)
+        boolean isFunction = body.getMethodStructure().isFunction();
+        if (!isDeferred && containerType.isVirtualChildClass()) {
+            // functions live on their declaring implementation; ordinary bound methods
+            // dispatch through the callable contract, not the body host
+            containerCD = isFunction
+                    ? getImplDesc(body.resolveDeclaringType(pool(), containerType))
+                    : getCCDesc(containerType);
+        }
+
+        JitMethodDesc jmd = call == null ? body.getJitDesc(this, containerType) : call.jmd();
+        boolean isInterface = isDeferred || isFunction
+                ? containerType.isJitImplInterface()
+                : containerType.isJitCCInterface();
+
+        if (isDeferred && !isFunction && bctx != null &&
+                bctx.methodDesc instanceof JitDetachedBodyDesc detached) {
+            // a nested method is static on the body owner, with its enclosing receiver type
+            call = new JitCallDesc(containerCD, DetachedBody + jitName, jmd,
+                    JitCallDesc.Kind.Static, false, detached.receiverCD);
+        }
+
+        if (call == null) {
+            call = new JitCallDesc(containerCD, jitName, jmd,
+                    isFunction ? JitCallDesc.Kind.Static : JitCallDesc.Kind.Virtual,
+                    isInterface, null);
+        }
+
+        DirectMethodHandleDesc stdMD   = call.toMethodHandle(false);
+        DirectMethodHandleDesc optMD   = call.jmd().isOptimized ? call.toMethodHandle(true) : null;
+        boolean                isBound = !isFunction && receiverLoader != null;
+
+        int receiverSlot = -1;
+        if (isBound) {
+            RegisterInfo receiver = receiverLoader.load();
+            if (receiver.flavor().isOptimized) {
+                if (receiver.flavor().isNullablePrimitive()) {
+                    boxNullable(code, receiver.type());
+                } else {
+                    box(code, receiver);
+                }
+            }
+            receiverSlot = code.allocateLocal(TypeKind.REFERENCE);
+            code.checkcast(CD_nObject).astore(receiverSlot);
+            sigType = pool().bindMethodTarget(body.asJitFunctionType(pool(), containerType));
+        }
+
+        // 3) instantiate a function object or an unbound nMethod object
+        //      new nFunction(ctx, type, stdHandle, optHandle, immutable);
+        //      new nMethod(ctx, type, stdHandle, optHandle);
+        ClassDesc cd = isFunction || isBound ? CD_nFunction : CD_nMethod;
+        assert cd.equals(CD_nFunction) ? sigType.isFunction() : sigType.isMethod();
+
+        code.new_(cd)
+            .dup()
+            .aload(ctxSlot);
+        loadTypeConstant(bctx, code, sigType);
+        code.ldc(stdMD);
+
+        if (isBound) {
+            code.aload(receiverSlot)
+                .invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
+        }
+
+        if (optMD == null) {
+            code.aconst_null();
+        } else {
+            code.ldc(optMD);
+            if (isBound) {
+                code.aload(receiverSlot)
+                    .invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
+            }
+        }
+
+        if (isFunction || isBound) {
+            if (isBound) {
+                code.aload(receiverSlot).invokevirtual(CD_nObject, "$isImmut", md(CD_boolean));
+            } else {
+                code.iconst_1(); // immutable = true
+            }
+            code.invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+                    CD_MethodHandle, CD_MethodHandle, CD_boolean));
+        } else {
+            code.invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+                    CD_MethodHandle, CD_MethodHandle));
+        }
+        return new SingleSlot(sigType, Specific, cd, "");
     }
 
     /**

@@ -36,6 +36,8 @@ import org.xvm.util.Severity;
 import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
 import static org.xvm.javajit.JitMethodDesc.JMD_VIRTUAL;
 
+import static org.xvm.javajit.builders.AnnotationHelper.hasRuntimeAnnotations;
+
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
  * virtual levels) about a single property as it appears in a particular type.
@@ -1385,6 +1387,13 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
+     * @return true iff the JIT stores this property's value in a separate Ref object
+     */
+    public boolean isJitInflated() {
+        return isRefAnnotated() && hasRuntimeAnnotations(getRefAnnotations());
+    }
+
+    /**
      * @return the type of the field owner for this property to be used by the JIT compiler to
      *         generate the direct field access
      */
@@ -1409,11 +1418,19 @@ public class PropertyInfo
      *         containing the backing field
      */
     public TypeConstant getCallableOwnerType(Builder builder, TypeConstant targetType) {
+        ConstantPool     pool    = builder.pool();
         IdentityConstant idOwner = getJitOwnerIdentity();
+
+        if (targetType.isNativeRef() &&
+                (idOwner.equals(pool.clzRef()) || idOwner.equals(pool.clzVar()))) {
+            // native Ref/Var accessors are hosted by nRef, rather than the public interfaces
+            return targetType.removeAccess().removeAnnotations();
+        }
+
         return switch (idOwner.getComponent().getFormat()) {
             case METHOD, PROPERTY
                     -> targetType;
-            default -> idOwner.getFormalType().resolveGenerics(builder.pool(), targetType);
+            default -> idOwner.getFormalType().resolveGenerics(pool, targetType);
         };
     }
 
@@ -1430,6 +1447,13 @@ public class PropertyInfo
         }
         assert id != null;
         return id.getNamespace();
+    }
+
+    /**
+     * Ensure a unique name for this property at the specified TypeSystem.
+     */
+    public String ensureJitName(TypeSystem ts) {
+        return getIdentity().ensureJitPropertyName(ts);
     }
 
     /**
