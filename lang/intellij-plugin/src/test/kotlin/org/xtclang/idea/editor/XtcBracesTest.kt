@@ -30,6 +30,14 @@ class XtcBracesTest {
     }
 
     @Test
+    fun `a typed condition with a call keeps its parentheses where they are typed`() {
+        editor.open("Braces.x", "module M {\n    Int run(Int[] hand) {\n        <caret>return 1;\n    }\n}\n") {
+            type("if (hand.empty()) {\n")
+            assertThat(editor.document.text).containsPattern("""if \(hand\.empty\(\)\) \{\n[ \t]*return 1;\n[ \t]*}\n    }\n}\n$""")
+        }
+    }
+
+    @Test
     fun `braces in strings and comments are not the code's`() {
         val source = "module M {\n    String s = \"{\"; // {\n    void run() {<caret>}\n}\n"
         editor.open("Braces.x", source.replace("{<caret>}", "{<caret>")) {
