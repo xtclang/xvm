@@ -49,6 +49,7 @@ import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.snapshot
 import org.xvm.tool.ModuleInfo
 import java.io.File
 import java.io.IOException
@@ -934,7 +935,7 @@ class XdkAdapter
 
         /** Every graph query owns a complete configured snapshot, so any source change retires it. */
         private fun retireProjectQueries(): List<QueryWork> =
-            projectQueries.values.toList().also { retired ->
+            projectQueries.values.snapshot().also { retired ->
                 projectQueries.clear()
                 navigationIndex.retire(project.modules.values.mapTo(hashSetOf()) { it.uri })
                 retired.forEach { compiles.remove(it.task) }
