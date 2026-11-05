@@ -9,7 +9,8 @@ import java.nio.file.Path
 
 /**
  * Checks atomic completion/import edits against actual dependency visibility. Whole-token replacement must
- * compile without inventing dependencies, conflating same-named types or hiding unrelated errors.
+ * compile, or for a name typed as a statement of its own the code without the name must, without inventing
+ * dependencies, conflating same-named types or hiding unrelated errors.
  */
 class XdkImportCompletionTest {
     @TempDir lateinit var directory: Path
@@ -43,6 +44,45 @@ class XdkImportCompletionTest {
     }
 
     @Test
+    fun `a name typed as a statement of its own imports a type of another module`() {
+        source("Library", "module Library { class Widget {} }")
+        withCompletions("module App {\n    void run() {\n        Wid§\n        Int after = 1;\n    }\n}") { adapter, uri, original, items ->
+            val item = items.single { it.label == "Widget" }
+            assertThat(item.detail).isEqualTo("Widget — import from Library")
+            assertThat(item.textEdit).isEqualTo(TextEdit(Range(Position(2, 8), Position(2, 11)), "Widget"))
+            val changed = apply(original, listOf(requireNotNull(item.textEdit)) + item.additionalTextEdits)
+            assertThat(changed).contains("import library.Widget;", "        Widget\n        Int after = 1;")
+            val finished = changed.replace("        Widget\n", "        Widget widget = new Widget();\n")
+            assertThat(adapter.compile(uri, finished).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `an import of a type reuses the package that already imports its module`() {
+        source("Library", "module Library { class Widget {} class Gadget {} }")
+        val marked =
+            "module App {\n    package lib import Library;\n    lib.Gadget gadget = new lib.Gadget();\n" +
+                "    void run() {\n        Wid§\n        Int after = 1;\n    }\n}"
+        withCompletions(marked) { adapter, uri, original, items ->
+            val item = items.single { it.label == "Widget" }
+            assertThat(item.additionalTextEdits.map { it.newText.trim() }).containsExactly("import lib.Widget;")
+            val changed = apply(original, listOf(requireNotNull(item.textEdit)) + item.additionalTextEdits)
+            val finished = changed.replace("        Widget\n", "        Widget widget = new Widget();\n")
+            assertThat(adapter.compile(uri, finished).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `a name typed as a statement of its own imports a bundled type`() {
+        withCompletions("module App {\n    void run() {\n        Doc§\n        Int after = 1;\n    }\n}") { _, _, original, items ->
+            val item = items.single { it.label == "Document" && it.additionalTextEdits.isNotEmpty() }
+            assertThat(item.detail).contains("xml.xtclang.org")
+            assertThat(apply(original, listOf(requireNotNull(item.textEdit)) + item.additionalTextEdits))
+                .contains("import xml.Document;", "        Document\n        Int after = 1;")
+        }
+    }
+
+    @Test
     fun `explicit graph does not gain an undeclared dependency through completion`() {
         val library = source("Library", "module Library { class Widget {} }")
         val text = "module App { Wid value; }"
@@ -59,6 +99,7 @@ class XdkImportCompletionTest {
         listOf(
             "module App { Doc§ value; Missing broken; }",
             "module App { void run(String text) { text.Doc§; } }",
+            "module App {\n    void run() {\n        Doc§\n        Missing broken;\n    }\n}",
         ).forEach { marked ->
             withCompletions(marked) { _, _, _, items ->
                 assertThat(items.filter { it.additionalTextEdits.isNotEmpty() }).isEmpty()

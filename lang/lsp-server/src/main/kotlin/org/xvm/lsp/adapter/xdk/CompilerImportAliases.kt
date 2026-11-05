@@ -87,5 +87,7 @@ internal fun compilerModuleAliases(nodes: List<AstNode>): Map<String, String> =
         .mapNotNull { node ->
             val structure = node.component as? PackageStructure ?: return@mapNotNull null
             if (!structure.isModuleImport || structure.parent.format != Format.MODULE) return@mapNotNull null
-            structure.importedModule.identityConstant.name to structure.identityConstant.pathString
+            // A compilation that failed before linking its imported modules has none to reuse.
+            val imported = structure.importedModule ?: return@mapNotNull null
+            imported.identityConstant.name to structure.identityConstant.pathString
         }.toMap() + implicitModuleAliases
