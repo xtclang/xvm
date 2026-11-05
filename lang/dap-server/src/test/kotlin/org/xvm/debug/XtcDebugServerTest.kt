@@ -727,6 +727,50 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a stop at a breakpoint whose condition cannot be evaluated says why on the console first, once`() {
+        val messages = CopyOnWriteArrayList<JsonObject>()
+        val endpoint = DebugMessageEndpoint(server) { messages.add(JsonParser.parseString(it).asJsonObject) }
+        endpoint.receive(request(1, "initialize", """{"adapterID": "xtc"}"""))
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).get(HANG_SECONDS, SECONDS)
+        val plain = server.setBreakpoints(breakpoints("/work/Cards.x", 12)).get(HANG_SECONDS, SECONDS)
+        val condition = "rank == Rank.Queeen"
+        val conditional = breakpoints("/work/Hand.x", 9, 21).apply { breakpoints.last().condition = condition }
+        val id =
+            server
+                .setBreakpoints(conditional)
+                .get(HANG_SECONDS, SECONDS)
+                .breakpoints
+                .last()
+                .id
+        val why = "rank == Rank.Queeen: Rank has no value \"Queeen\""
+        // the messages from here on, after the launch's own console output
+        val start = messages.size
+
+        fun events(name: String) =
+            messages.withIndex().drop(start).filter { (_, it) -> it["type"]?.asString == "event" && it["event"]?.asString == name }
+
+        fun body(event: IndexedValue<JsonObject>) = event.value["body"].asJsonObject
+
+        // a stop at a breakpoint whose condition holds, or that has none, says nothing on the console
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(plain.breakpoints.single().id)))
+        assertThat(events("stopped")).hasSize(1)
+        assertThat(events("output")).isEmpty()
+
+        runs.events.stopped(StopState("breakpoint", XtcDebugServer.UNEVALUATED_CONDITION + why, 12, listOf(id)))
+        val outputs = events("output")
+        val stops = events("stopped")
+        assertThat(outputs.map { body(it)["category"].asString to body(it)["output"].asString }).containsExactly(
+            OutputEventArgumentsCategory.CONSOLE to
+                "The condition `$condition` of the breakpoint at /work/Hand.x:21 cannot be evaluated: $why\n",
+        )
+        // the line goes out in the stream before the stop it tells of, which keeps its description
+        assertThat(stops).hasSize(2)
+        assertThat(outputs.single().index).isGreaterThan(stops.first().index).isLessThan(stops.last().index)
+        assertThat(body(stops.last())["description"].asString).isEqualTo(XtcDebugServer.UNEVALUATED_CONDITION + why)
+    }
+
+    @Test
     fun `an exception filter's condition names the exception classes it stops at, and one that is not names leaves it off`() {
         server.configurationDone(null)
         server.launch(mutableMapOf("module" to "App")).get(HANG_SECONDS, SECONDS)
