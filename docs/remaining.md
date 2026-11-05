@@ -845,6 +845,23 @@ passes with the workaround disabled. The gates are in
   issue is in `errs-upstream-issues.md`'s UP71 row. To do: file it at the user's go-ahead, and after
   a release that sends typed lines, remove `DebugConsoleInput`.
 
+### LSP4IJ: a killed server comes back as several (UP72): fixed upstream; the gap left is #1863
+
+- [ ] UP72 (2026-11-05): after a server's process dies, LSP4IJ 0.21.0 keeps `serverError` until a
+  restart attempt initializes, so each `start()` meanwhile stops the attempt in progress and starts
+  another (up to 20, then it disables the server), and a stopped attempt still initializes and
+  installs itself over the current one. The IntelliJ tour's run 6 (`run-tour-6451871955669100195`)
+  killed the server: 8 processes started in 0.33 s, two served the project at once, the document's
+  edits going to one and LSP4IJ's requests to the other, and one was never stopped. Every start was
+  LSP4IJ's own `start()`, none the plugin's restarts. Fixed on `main`, unreleased:
+  [#1673](https://github.com/redhat-developer/lsp4ij/issues/1673) and our `6bc4bc0` with
+  angelozerr, merged 2026-11-03. Left on `main` (`1988ab6c`): the stages after `initServer` don't
+  check that the attempt is still the current one, filed as
+  [#1863](https://github.com/redhat-developer/lsp4ij/issues/1863), whose fix is under way upstream;
+  our local draft of a patch is in `errs-upstream-issues.md`'s UP72 row, for reference. No plugin
+  workaround (2026-11-05). To do: after a release with the fixes, the tour's "the server's process
+  dies" check should see one restart.
+
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
 - [ ] UP65 (2026-10-29): LSP4IJ's `DAPStackFrame` finds a frame's file with
