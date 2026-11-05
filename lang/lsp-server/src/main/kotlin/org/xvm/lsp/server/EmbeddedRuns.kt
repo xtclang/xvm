@@ -39,6 +39,7 @@ import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.RunDebugClient
 import org.xvm.lsp.run.RunWorkerProcess
 import org.xvm.lsp.run.TestProcess
+import org.xvm.lsp.util.snapshot
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
@@ -956,9 +957,9 @@ internal class EmbeddedRuns(
      * to run on.
      */
     override fun close() {
-        taskRuns.values.toList().forEach(TaskRun::stop)
-        testRuns.values.toList().forEach(TestProcess::stop)
-        attached.values.toList().forEach(AttachedProgram::close)
+        taskRuns.values.snapshot().forEach(TaskRun::stop)
+        testRuns.values.snapshot().forEach(TestProcess::stop)
+        attached.values.snapshot().forEach(AttachedProgram::close)
         worker.close()
     }
 
