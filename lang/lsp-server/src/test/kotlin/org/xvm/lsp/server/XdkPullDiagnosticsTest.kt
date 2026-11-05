@@ -264,6 +264,53 @@ class XdkPullDiagnosticsTest {
         }
     }
 
+    @Test
+    fun `a closed test module's tests are listed from the workspace pull's compile, and follow its file`() {
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    Int one() = 1;\n}\n") }
+        val tests = directory.resolve("LibTest.x").toFile().apply { writeText(libTest("adds")) }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Lib", lib.toURI().toString()),
+                    XdkSourceModule("LibTest", tests.toURI().toString(), setOf("Lib")),
+                ),
+            )
+
+            fun listed() =
+                session.server
+                    .tests()
+                    .awaited()
+                    .single()
+                    .tests.children
+                    .map { it.selector to it.location?.startLine }
+
+            val first =
+                TraceRecording().use { trace ->
+                    // no editor has had its file open: the listing compiles the graph, as a workspace pull would, once
+                    assertThat(listed()).containsExactly("adds" to 4)
+                    val pulled = session.workspace().items.map { it.left }
+                    assertThat(trace.count("EmbeddingSupport.compileModule(tree)")).isEqualTo(2)
+                    pulled
+                }
+            assertThat(session.adapter.getCachedResult(tests.toURI().toString())).isNull()
+
+            // a test added to the closed file, which no watcher reports, is in the next listing, and the next pull
+            // reports the file anew, with the same diagnostics, which is what a client lists its tests again on
+            tests.writeText(libTest("adds", "subtracts"))
+            assertThat(listed()).containsExactly("adds" to 4, "subtracts" to 9)
+            val again = session.workspace(first.map { PreviousResultId(it.uri, it.resultId) }).items
+            val changed = again.single { it.isLeft && it.left.uri.endsWith("LibTest.x") }.left
+            assertThat(changed.items).isEmpty()
+            assertThat(changed.resultId).isNotEqualTo(first.single { it.uri.endsWith("LibTest.x") }.resultId)
+            assertThat(again.single { it.isRight }.right.uri).endsWith("Lib.x")
+        }
+    }
+
+    /** A test module of Lib's with a test, each [names]d, that calls it. */
+    private fun libTest(vararg names: String) =
+        "module LibTest {\n    package lib import Lib;\n" +
+            names.joinToString("") { "\n    @Test\n    void $it() {\n        assert lib.one() == 1;\n    }\n" } + "}\n"
+
     /** The trace's [event]s of [operation]: the compiler's lexes and parses, and the compiler queue's jobs. */
     private fun TraceRecording.count(
         operation: String,

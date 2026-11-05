@@ -561,9 +561,32 @@ class XdkAdapter
                 entryMethods(module.uri).map { XdkRunnableTarget(module.name, module.uri, it) }
             }
 
-        /** The tests of each source module, from its latest compilation; a module without tests is left out. */
+        /**
+         * The tests of each source module, from its latest compilation: its own while an editor has one of its files
+         * open, which follows the editor's text, or else the workspace pull's, as last made, which follows its files;
+         * a module without tests is left out.
+         */
         fun tests(): List<XdkModuleTests> =
-            project.buildOrder().mapNotNull { source -> module(source.uri)?.tests?.let { XdkModuleTests(source.name, source.uri, it) } }
+            testsByModule().mapNotNull { (source, tests) -> tests?.let { XdkModuleTests(source.name, source.uri, it) } }
+
+        /**
+         * The tests of each source module, as [tests] lists them, once the workspace pull's compile is that of the
+         * modules' sources as they are now: the one a pull makes, which this makes too if no pull has since they
+         * changed, and which compiles no module whose inputs are those of its last.
+         */
+        fun testsAsync(): CompletableFuture<List<XdkModuleTests>> = workspaceDiagnosticsAsync().thenApply { tests() }
+
+        /** The tests of each source module's root document, as [tests] has them, or null for a module with none. */
+        fun testsByRoot(): Map<String, XdkTest?> = testsByModule().associate { (source, tests) -> source.uri to tests }
+
+        private fun testsByModule(): List<Pair<XdkSourceModule, XdkTest?>> {
+            val detached = diagnosticCache.snapshot().builds
+            val (modules, open) = synchronized(lifecycle) { project.buildOrder() to overlays.keys.map(::analysisScope).toSet() }
+            return modules.map { source ->
+                val own = module(source.uri)?.tests
+                source to if (analysisScope(source.uri) in open) own ?: detached[source.uri]?.tests else detached[source.uri]?.tests ?: own
+            }
+        }
 
         /** The modules [uri]'s Run lenses run, each with the zero-based line its lens is on. */
         internal fun runLensLines(uri: String): List<Pair<String, Int>> =
