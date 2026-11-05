@@ -24,6 +24,11 @@ service ConsoleExecutionListener
      */
     static Result InitialResult = new Result(Successful, count=0);
 
+    /**
+     * A singleton `Result` representing a model that was skipped without running.
+     */
+    static Result SkippedResult = new Result(Skipped, skipped=1);
+
     @Override
     void onStarted(Model model) {
         console.print($"Started:   {model.displayName}");
@@ -43,21 +48,13 @@ service ConsoleExecutionListener
             }
         }
         results.remove(id);
-
-        if (id.type == Iteration) {
-            assert id := id.parent();
-        }
-
-        if (UniqueId parentId := id.parent(), Result parentResult := results.get(parentId)) {
-            Result r = parentResult.merge(result);
-            results.put(parentId, r);
-        }
+        addToParent(id, result);
 
         if (result.status == Skipped) {
             if (ex.is(Exception)) {
-                onSkipped(model, ex.message);
+                printSkipped(model, ex.message);
             } else {
-                onSkipped(model, "");
+                printSkipped(model, "");
             }
         } else {
             if (model.isContainer) {
@@ -81,8 +78,10 @@ service ConsoleExecutionListener
     }
 
     @Override
-    void onSkipped(Model model, String reason)
-            = console.print($"Skipped:   {model.displayName} due to \"{reason}\"");
+    void onSkipped(Model model, String reason) {
+        addToParent(model.uniqueId, SkippedResult);
+        printSkipped(model, reason);
+    }
 
     @Override
     void onPublished(Model model, ReportEntry entry) {
@@ -91,4 +90,28 @@ service ConsoleExecutionListener
             console.print($"    {tagEntry.key}: {tagEntry.value}");
         }
     }
+
+    /**
+     * Add a model's result to its parent's, or, for an iteration, to the parent of the test it
+     * iterates.
+     *
+     * @param id      the model's `UniqueId`
+     * @param result  the model's `Result`
+     */
+    private void addToParent(UniqueId id, Result result) {
+        if (id.type == Iteration) {
+            assert id := id.parent();
+        }
+
+        if (UniqueId parentId := id.parent(), Result parentResult := results.get(parentId)) {
+            Result r = parentResult.merge(result);
+            results.put(parentId, r);
+        }
+    }
+
+    /**
+     * Print that a model was skipped.
+     */
+    private void printSkipped(Model model, String reason)
+            = console.print($"Skipped:   {model.displayName} due to \"{reason}\"");
 }
