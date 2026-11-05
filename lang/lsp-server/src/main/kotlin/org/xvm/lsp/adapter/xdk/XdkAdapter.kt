@@ -2762,7 +2762,7 @@ class XdkAdapter
             val text = compilation?.overlays?.get(uri)
             return analyzeAtAsync(CursorKey(uri, CursorKind.COMPLETION), Position(line, column))
                 .composeCancellable { partial ->
-                    val ordinary = partial?.let(XdkCursorQueries::completions).orEmpty()
+                    val ordinary = partial?.let { XdkCursorQueries.completions(it, text) }.orEmpty()
                     val site = partial?.sites?.singleOrNull()
                     val prefix = site?.memberPrefix
                     if (compilation == null || isStale(compilation)) {
