@@ -3,8 +3,10 @@ package org.xvm.lsp.util
 import ch.qos.logback.core.PropertyDefinerBase
 import com.google.gson.GsonBuilder
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
@@ -47,12 +49,64 @@ internal data class LogRetention(
 }
 
 /**
+ * A server's hold on its session directory: an OS lock on the session's [NAME], which the system releases when
+ * the process ends, however it ends. Pruning takes a session whose lock nobody holds for a closed one, whatever the
+ * PID and start time in its name say: the start time of a PID is computed by each JVM, which on Linux reads the
+ * boot time once, so after a step of the clock two JVMs disagree about it, and a PID can be reused. The lock is
+ * advisory on Linux and macOS, which is enough: every server takes and tests it the same way.
+ */
+internal object SessionLock {
+    const val NAME = "server.lock"
+
+    /**
+     * Locks the directory's [NAME] for the rest of this process, creating both; null when it cannot. A lock file
+     * that cannot be locked, on a file system without locks, is removed, so that pruning judges the session by its
+     * name as it does one written before servers took the lock.
+     */
+    fun hold(directory: Path): FileLock? =
+        try {
+            Files.createDirectories(directory)
+            val channel = FileChannel.open(directory.resolve(NAME), CREATE, WRITE, NOFOLLOW_LINKS)
+            try {
+                channel.tryLock().also { if (it == null) channel.close() }
+            } catch (failure: IOException) {
+                channel.close()
+                Files.deleteIfExists(directory.resolve(NAME))
+                throw failure
+            }
+        } catch (_: IOException) {
+            null
+        }
+
+    /**
+     * Whether a process holds the session's lock, or null when the session has no lock file, as one written before
+     * servers took it, or its lock cannot be tested. A process must not ask about a session it holds: on Linux and
+     * macOS, closing any channel to the file releases the process's locks on it.
+     */
+    fun held(directory: Path): Boolean? {
+        val lock = directory.resolve(NAME)
+        if (!Files.isRegularFile(lock, NOFOLLOW_LINKS)) return null
+        return try {
+            FileChannel.open(lock, WRITE, NOFOLLOW_LINKS).use { channel ->
+                try {
+                    channel.tryLock()?.use { false } ?: true
+                } catch (_: OverlappingFileLockException) {
+                    true
+                }
+            }
+        } catch (_: IOException) {
+            null
+        }
+    }
+}
+
+/**
  * Locates, prunes and exports this server's logs and execution traces. Each process gets its own
  * session directory; concurrent servers share only the root and the lock used for pruning.
  *
- * Cleanup removes closed sessions only when every entry is a recognized regular log file. Unknown
- * files, symlinks and live processes keep a directory intact. Export reads bounded tails from the
- * current session and configured trace directory, so a support bundle cannot grow with the log files.
+ * Cleanup removes closed sessions only when every entry is a recognized regular log file or the session's
+ * [SessionLock]. Unknown files, symlinks and live servers keep a directory intact. Export reads bounded tails
+ * from the current session and configured trace directory, so a support bundle cannot grow with the log files.
  */
 internal object ServerLogs {
     val process = TraceProcessId().propertyValue
@@ -63,6 +117,9 @@ internal object ServerLogs {
             ) ?: System.getenv("XTC_LSP_LOG_DIR") ?: "${System.getProperty("user.home")}/.xtc/logs/lsp",
         )
     val directory: Path = root.resolve("server-$process")
+
+    // this process's lock on its session, held while it runs; the reference keeps its channel open
+    private val session: FileLock? = SessionLock.hold(directory)
     val traceDirectory: Path =
         Path.of(System.getProperty("xtc.trace.directory") ?: System.getenv("XTC_LSP_TRACE_DIR") ?: directory.toString())
     val retention = LogRetention.read()
@@ -82,7 +139,9 @@ internal object ServerLogs {
 
     /**
      * Removes expired or excess closed sessions and returns the number deleted. A held retention lock
-     * makes this call a no-op; active processes, including a PID with an unknown start time, are kept.
+     * makes this call a no-op. A session whose [SessionLock] a process holds is kept, and so is this
+     * process's own; a session without a lock file is judged by [active], from its name's PID and start
+     * time: a live PID with that start time, or an unknown one, keeps it.
      */
     fun prune(
         root: Path = this.root,
@@ -113,13 +172,19 @@ internal object ServerLogs {
                 .list(root)
                 .use { paths -> paths.filter { Files.isDirectory(it, NOFOLLOW_LINKS) }.toList() }
                 .mapNotNull { path -> sessionName.matchEntire(path.fileName.toString())?.let { path to it } }
-                .filter { (_, name) ->
+                .filter { (path, name) ->
                     val pid = name.groupValues[1].toLongOrNull()
                     val started = name.groupValues[2].toLongOrNull()
-                    pid != null && pid > 0 && started != null && !active(pid, started)
+                    // this process's own session is live, and testing its lock would release it
+                    pid != null && pid > 0 && started != null && path != directory &&
+                        !(SessionLock.held(path) ?: active(pid, started))
                 }.map { (path, _) -> path to Files.list(path).use { files -> files.toList() } }
-                .filter { (_, files) -> files.all { Files.isRegularFile(it, NOFOLLOW_LINKS) && logName.matches(it.fileName.toString()) } }
-                .map { (path, files) ->
+                .filter { (_, files) ->
+                    files.all {
+                        Files.isRegularFile(it, NOFOLLOW_LINKS) &&
+                            it.fileName.toString().let { name -> logName.matches(name) || name == SessionLock.NAME }
+                    }
+                }.map { (path, files) ->
                     Triple(
                         path,
                         files,
