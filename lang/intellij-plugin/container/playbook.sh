@@ -72,17 +72,38 @@ mv "$container/src.new" "$container/src"
 # one container run at a time on this machine: the runs share the volumes, whichever worktree they start from, so
 # the lock is in the repository's common git directory, which every worktree shares; a lock whose owner has gone
 # is taken over
-lock="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)/xvm-playbook-container.lock"
-until mkdir "$lock" 2> /dev/null; do
+common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)"
+lock="$common/xvm-playbook-container.lock"
+# runs take the lock in the order they asked for it: each waiter holds a ticket, named by the time it asked, and
+# takes the lock only when its ticket is the first of a waiting run's; a ticket whose run has gone is dropped
+queue="$common/xvm-playbook-queue"
+mkdir -p "$queue"
+ticket="$queue/$(printf '%010d-%010d' "$(date +%s)" "$$")"
+touch "$ticket"
+trap 'rm -f "$ticket"' EXIT
+first_ticket() {
+    local waiting waiter
+    for waiting in "$queue"/*; do
+        [ -e "$waiting" ] || continue
+        waiter=$((10#${waiting##*-}))
+        if ps -p "$waiter" -o command= 2> /dev/null | grep -q 'playbook\.sh'; then
+            echo "$waiting"
+            return
+        fi
+        rm -f "$waiting"
+    done
+}
+until [ "$(first_ticket)" = "$ticket" ] && mkdir "$lock" 2> /dev/null; do
     owner="$(cat "$lock/pid" 2> /dev/null || true)"
     if [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; then
         rm -rf "$lock"
         continue
     fi
-    echo "waiting for another playbook container run (pid ${owner:-starting}) to finish"
+    echo "waiting for an earlier playbook container run (pid ${owner:-queued}) to finish"
     sleep 15
 done
 echo $$ > "$lock/pid"
+rm -f "$ticket"
 trap 'rm -rf "$lock"' EXIT
 # a run that took no lock, such as one of an older checkout, shares the volumes as well
 while "$engine" ps --format '{{.Names}}' | grep -q '^xvm-playbook-'; do
