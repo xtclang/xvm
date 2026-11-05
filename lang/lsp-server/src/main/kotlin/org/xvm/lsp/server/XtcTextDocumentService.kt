@@ -113,6 +113,7 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
+import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.InlineCompletionContext
@@ -135,6 +136,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind as AdapterCodeActionKind
@@ -1604,16 +1606,18 @@ class XtcTextDocumentService(
             AdapterCodeActionKind.entries.filterTo(linkedSetOf()) {
                 ClientPresentation.matchesActionKind(it.toLsp(), params.context.only) && !(hidden && it == AdapterCodeActionKind.QUICKFIX)
             }
+        // what the adapter compiled for the answer, which the request's line in the log reports
+        val compiles = AtomicReference<CodeActionCompiles?>()
         return queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
             {
-                adapter.getCodeActionsAsync(
-                    params.textDocument.uri,
-                    toAdapterRange(params.range),
-                    originals.keys.toList(),
-                    kinds,
-                )
+                val uri = params.textDocument.uri
+                val range = toAdapterRange(params.range)
+                val diagnostics = originals.keys.toList()
+                // only the compiler's adapter compiles for its actions
+                (adapter as? XdkAdapter)?.getCodeActionsAsync(uri, range, diagnostics, kinds) { compiles.set(it) }
+                    ?: adapter.getCodeActionsAsync(uri, range, diagnostics, kinds)
             },
             workspace = true,
             progress = params,
@@ -1669,7 +1673,39 @@ class XtcTextDocumentService(
                     },
                 )
             }
-        }
+        }.also { answer -> answer.whenComplete { actions, failure -> logCodeActions(params, actions?.size, failure, compiles.get()) } }
+    }
+
+    /**
+     * One line per code action request as it ends, as `embedded build:` has one per build: what it asked for, how it
+     * ended, how many actions it answered, and the module compiles that its revision's compile and its proofs ran.
+     */
+    private fun logCodeActions(
+        params: CodeActionParams,
+        actions: Int?,
+        failure: Throwable?,
+        compiles: CodeActionCompiles?,
+    ) {
+        val cause = failure?.let { generateSequence(it) { thrown -> (thrown as? CompletionException)?.cause }.last() }
+        val range = params.range
+        logger.info(
+            "code actions: uri={} range={} trigger={} only={} outcome={} actions={} compiles={} cached-base={}",
+            params.textDocument.uri.substringAfterLast('/'),
+            "${range.start.line}:${range.start.character}-${range.end.line}:${range.end.character}",
+            params.context.triggerKind
+                ?.name
+                ?.lowercase() ?: "none",
+            params.context.only.orEmpty(),
+            when {
+                cause == null -> "answered"
+                cause is CancellationException -> "cancelled"
+                cause is ResponseErrorException && cause.responseError.code == ResponseErrorCode.ContentModified.value -> "content-modified"
+                else -> "failed"
+            },
+            actions ?: 0,
+            compiles?.let { "base ${it.base} + proofs ${it.proofs}" } ?: "none",
+            compiles?.cachedBase ?: "none",
+        )
     }
 
     internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
