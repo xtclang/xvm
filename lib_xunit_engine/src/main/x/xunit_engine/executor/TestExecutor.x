@@ -1,5 +1,6 @@
 import extensions.ExtensionRegistry;
 
+import xunit.PreconditionFailed;
 import xunit.SkipResult;
 
 import xunit.extensions.Extension;
@@ -56,7 +57,7 @@ const TestExecutor {
                  Extension[]            extensions     = []) {
         @Inject Clock          clock;
         ExtensionRegistry      registry   = new ExtensionRegistry(model, parentRegistry);
-        ExceptionCollector     collector  = new ExceptionCollector();
+        ExceptionCollector     collector  = new ExceptionCollector(unexpected);
         SkipResult             skipResult = NotSkipped;
         Boolean                started    = False;
         Time                   start      = clock.now;
@@ -185,6 +186,17 @@ const TestExecutor {
         context.onCompleted(result);
         return result;
     }
+
+    /**
+     * Whether an exception aborts the execution as an error, rather than failing it: a plain
+     * `assert` throws an `IllegalState`, which `Assertion` extends, so either is a failed
+     * assertion; a `PreconditionFailed` skips the test; anything else is an error.
+     *
+     * @param e  the `Exception` the test fixture threw
+     *
+     * @return `True` iff the exception is neither a failed assertion nor a failed precondition
+     */
+    static Boolean unexpected(Exception e) = !e.is(IllegalState) && !e.is(PreconditionFailed);
 
     private void updateResourceProvider(EngineExecutionContext context, ExtensionRegistry registry) {
         ResourceLookupCallback[] callbacks = registry.get(ResourceLookupCallback, True);
