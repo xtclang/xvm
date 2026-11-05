@@ -13,7 +13,17 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 
 /** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
 internal object XdkCursorQueries {
-    fun completions(model: PartialSemanticModel): List<CompletionItem> {
+    /**
+     * The items at the cursor of [model]. Given the [text] it analyzed, a method's item inserts a call, as IntelliJ's
+     * and JDT LS's do: `name()` for a method that takes no argument, and otherwise `name($0)`, a snippet whose caret
+     * between the parentheses brings up the signature, which a client without snippets gets as the name alone. A
+     * method whose name a `(` already follows, as in a written call, inserts its name; so does every item without
+     * [text], as inline completion asks for them.
+     */
+    fun completions(
+        model: PartialSemanticModel,
+        text: String? = null,
+    ): List<CompletionItem> {
         val site = model.sites.singleOrNull() ?: return model.syntaxCompletions
         val prefix =
             site.memberPrefix
@@ -34,10 +44,13 @@ internal object XdkCursorQueries {
             )
         val members =
             if (site.kind == PartialSemanticModel.Kind.CALL) site.argumentValues else site.members
+        val calls = text != null && !followedByCall(text, prefix.range.end)
         val ordinary =
             members
                 .filter { it.name.startsWith(prefix.text) }
                 .map { member ->
+                    val parameters = member.signature?.parameters?.takeIf { calls && member.kind == SemanticModel.SymbolKind.METHOD }
+                    val insert = if (parameters?.isEmpty() == true) "${member.name}()" else member.name
                     CompletionItem(
                         label = member.name,
                         kind =
@@ -59,9 +72,10 @@ internal object XdkCursorQueries {
                                 signature(model.semantics, member.name, it).label
                             }
                                 ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
-                        insertText = member.name,
-                        textEdit = TextEdit(range, member.name),
+                        insertText = insert,
+                        textEdit = TextEdit(range, insert),
                         documentation = model.semantics.symbol(member.symbol)?.documentation,
+                        snippet = parameters?.takeIf { it.isNotEmpty() }?.let { "${member.name}(\$0)" },
                     )
                 }.distinctBy { it.label to it.detail }
         val formals =
@@ -117,6 +131,18 @@ internal object XdkCursorQueries {
         ).map { item -> item.copy(sortText = completionOrder(item)) }
             .sortedBy { it.sortText }
     }
+
+    /** Whether a `(` follows [end] in [text] on its line, past blanks, as after the name of a written call. */
+    private fun followedByCall(
+        text: String,
+        end: Position,
+    ): Boolean =
+        text
+            .lineSequence()
+            .elementAtOrNull(end.line)
+            ?.drop(end.column)
+            ?.trimStart(' ', '\t')
+            ?.startsWith("(") == true
 
     /** Stable client/server ordering; never imply that an incomplete overload was selected. */
     private fun completionOrder(item: CompletionItem): String {
