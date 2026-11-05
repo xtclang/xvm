@@ -87,7 +87,7 @@ public class VirtualChildBuilder extends CommonBuilder {
             // storage not supplied by the Java superclass
             PropertyInfo inheritedProp = javaSuperType == null
                     ? null
-                    : javaSuperType.ensureAccess(Access.STRUCT).ensureTypeInfo().findProperty(propId);
+                    : javaSuperType.ensureTypeInfo().findProperty(propId);
             return inheritedProp == null || !propId.equals(inheritedProp.getFieldIdentity());
         }
         return super.shouldGenerate(id);

@@ -32,6 +32,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
@@ -830,7 +831,7 @@ public class CommonBuilder
 
             if (prop.isConstant()) {
                 constProperties = lazyAdd(constProperties, prop);
-            } else if (prop.isInitialized() ||
+            } else if (prop.isJitInflated() || prop.isInitialized() ||
                       !prop.isImplicitlyAssigned() && prop.getType().getDefaultValue() != null) {
                 initProps = lazyAdd(initProps, prop);
             }
@@ -873,9 +874,9 @@ public class CommonBuilder
      * Assemble the field(s) for the specified Ecstasy property.
      */
     protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
-        String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        String jitName = prop.ensureJitName(typeSystem);
+        int    flags   = ClassFile.ACC_PUBLIC;
 
-        int flags = ClassFile.ACC_PUBLIC;
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
             if (isInterface()) {
@@ -887,6 +888,11 @@ public class CommonBuilder
         if (isContainerScoped(prop)) {
             // the generated class can be shared by containers, so store the computation means
             classBuilder.withField(jitName, CD_MethodHandle, flags);
+            return;
+        }
+
+        if (prop.isJitInflated()) {
+            assembleInflatedField(classBuilder, prop, jitName, flags);
             return;
         }
 
@@ -919,6 +925,37 @@ public class CommonBuilder
 
         default:
             throw new IllegalStateException("Unsupported property flavor: " + jtd.flavor);
+        }
+    }
+
+    /**
+     * Declare an inflated field and assemble its annotation lambdas.
+     */
+    protected void assembleInflatedField(ClassBuilder classBuilder, PropertyInfo prop,
+                                         String name, int flags) {
+        classBuilder.withField(name, CD_nRef, flags);
+
+        // make sure that all lambdas the annotations refer to get assembled
+        TypeConstant refType = AnnotationHelper.filterAnnotations(prop.getBaseRefType());
+        for (Annotation annotation : refType.getAnnotations()) {
+            for (Constant arg : annotation.getParams()) {
+                MethodConstant methodId;
+                if (arg instanceof MethodConstant id) {
+                    methodId = id;
+                } else if (arg instanceof MethodBindingConstant binding) {
+                    methodId = binding.getMethodConstant();
+                } else {
+                    continue;
+                }
+
+                if (methodId.isLambda() && extraMethods.add(methodId)) {
+                    MethodBody body = new MethodBody((MethodStructure) methodId.getComponent());
+
+                    assembleMethod(classBuilder, new MethodInfo(body, 0),
+                            methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA),
+                            body.getJitDesc(this, thisType));
+                }
+            }
         }
     }
 
@@ -1026,7 +1063,7 @@ public class CommonBuilder
                 if (prop.isInjected()) {
                     // compose the MethodHandle in <clinit>; the injected value is computed later
                     // through Ctx.getStatic() and cached by the container
-                    String    jitName   = prop.getIdentity().ensureJitPropertyName(ts);
+                    String    jitName   = prop.ensureJitName(ts);
                     Injection injection = computeInjection(code, prop);
                     loadTypeConstant(code, injection.resourceType()); // resourceType
                     code.ldc(injection.resourceName());               // resourceName
@@ -1038,7 +1075,7 @@ public class CommonBuilder
                     continue;
                 }
 
-                String jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                String jitName = prop.ensureJitName(ts);
                 if (isContainerScoped(prop)) {
                     // store the initializer as a container-independent computation; its result can
                     // be a service and therefore cannot be shared across containers using this class
@@ -1254,10 +1291,14 @@ public class CommonBuilder
         ClassDesc CD_this = art.CD();
 
         for (PropertyInfo prop : props) {
+            if (prop.isJitInflated()) {
+                initializeInflatedField(code, prop, code.parameterSlot(0));
+                continue;
+            }
             TypeConstant   type        = prop.getType();
             TypeConstant   baseType    = type.removeNullable();
             ClassDesc      cdProp      = type.getJitCCDesc(typeSystem);
-            String         jitName     = prop.getIdentity().ensureJitPropertyName(typeSystem);
+            String         jitName     = prop.ensureJitName(typeSystem);
             MethodConstant initializer = prop.getInitializer();
             Label          doneLbl     = null;
             RegisterInfo   valueReg;
@@ -1400,6 +1441,79 @@ public class CommonBuilder
     }
 
     /**
+     * Initialize an inflated field with a new Ref object, constructing all annotations and
+     * leaving its referent unassigned.
+     */
+    protected void initializeInflatedField(CodeBuilder code, PropertyInfo prop, int ctxSlot) {
+        TypeConstant     refType      = getPropertyRefType(prop);
+        Annotation[]     annotations  = refType.getAnnotations();
+        List<MethodInfo> constructors = new ArrayList<>(annotations.length);
+
+        for (Annotation annotation : annotations) {
+            Constant[]     args  = annotation.getParams();
+            int            count = args.length;
+            TypeConstant[] types = new TypeConstant[count];
+
+            for (int i = 0; i < count; i++) {
+                if (args[i] instanceof MethodBindingConstant binding) {
+                    MethodConstant methodId = binding.getMethodConstant();
+                    MethodBody     body     = methodId.isLambda()
+                            ? new MethodBody((MethodStructure) methodId.getComponent())
+                            : typeInfo.getMethodById(methodId).getHead();
+
+                    TypeConstant type = body.asJitFunctionType(pool(), thisType);
+                    types[i] = type.isMethod() ? pool().bindMethodTarget(type) : type;
+                } else {
+                    types[i] = args[i].getType();
+                }
+            }
+            constructors.add(AnnotationHelper.findAnnotationConstructor(annotation, types, refType));
+        }
+
+        JitCallDesc call = AnnotationHelper.getInstantiatorCall(this, refType, NEW,
+                RefBuilder.getInstantiatorDesc(this, refType), constructors);
+
+        code.aload(0)
+            .aload(ctxSlot);
+        loadTypeConstant(code, refType);
+
+        Loader receiverLoader = () -> {
+            code.aload(0);
+            return new SingleSlot(thisType, JitFlavor.Specific, art.CD(), "this");
+        };
+
+        int argIndex = 0;
+        for (int i = 0; i < constructors.size(); i++) {
+            MethodStructure constructor = constructors.get(i).getHead().getMethodStructure();
+            Constant[]      args        = annotations[i].getParams();
+
+            for (int j = 0; j < constructor.getParamCount(); j++) {
+                Constant arg = j < args.length
+                        ? args[j]
+                        : constructor.getParam(j).getDefaultValue();
+
+                RegisterInfo value =
+                    arg instanceof MethodConstant methodId
+                        ? loadMethod(null, code, methodId, receiverLoader, ctxSlot) :
+                    arg instanceof MethodBindingConstant binding
+                        ? loadMethod(null, code, binding.getMethodConstant(), receiverLoader, ctxSlot)
+                        : loadConstant(code, arg);
+                convertCallArgument(code, call.jmd(), argIndex++, value, ctxSlot);
+            }
+        }
+        call.invoke(code, call.jmd().isOptimized);
+        code.putfield(art.CD(), prop.ensureJitName(typeSystem), CD_nRef);
+    }
+
+    private TypeConstant getPropertyRefType(PropertyInfo prop) {
+        ConstantPool pool       = pool();
+        TypeConstant nativeType = prop.getType().asNativeRef(pool, prop.isVar());
+
+        nativeType = pool.ensureAnnotatedTypeConstant(nativeType, prop.getRefAnnotations());
+        return AnnotationHelper.filterAnnotations(nativeType);
+    }
+
+    /**
      * Find the instance property's initializer in the applicable declaration.
      */
     protected MethodInfo getPropertyInitializer(MethodConstant initializer) {
@@ -1440,6 +1554,11 @@ public class CommonBuilder
     protected void assembleProperty(ClassBuilder classBuilder, PropertyInfo prop) {
         if (isContainerScoped(prop)) {
             // reads go directly through Ctx.getStatic(); no property getter is required
+            return;
+        }
+
+        if (prop.isJitInflated()) {
+            assembleInflatedAccessors(classBuilder, prop);
             return;
         }
 
@@ -1485,6 +1604,122 @@ public class CommonBuilder
         }
     }
 
+    /**
+     * Assemble accessors that read and write the value held by the inflated property's Ref object.
+     *
+     * <p>For a String property {@code value}, the generated accessors are equivalent to:
+     * <pre>{@code
+     *      String value$get(Ctx ctx) {
+     *          return (String) this.value.get(ctx);
+     *      }
+     *      void value$set(Ctx ctx, String value) {
+     *          this.$checkImmut(ctx);
+     *          this.value.set(ctx, value);
+     *      }
+     * }</pre>
+     *
+     * <p>For an Int property, the optimized bodies are equivalent to:
+     * <pre>{@code
+     *      long value$get$p(Ctx ctx) {
+     *          return ((Int64) this.value.get(ctx)).$value;
+     *      }
+     *      void value$set$p(Ctx ctx, long value) {
+     *          this.$checkImmut(ctx);
+     *          this.value.set(ctx, Int64.$box(value));
+     *      }
+     * }</pre>
+     *
+     * Standard wrappers for optimized accessors are also generated. Nullable flags and additional
+     * primitive return slots are passed through {@code ctx}. Setters on const classes throw a
+     * read-only exception.
+     */
+    protected void assembleInflatedAccessors(ClassBuilder classBuilder, PropertyInfo prop) {
+        if (prop.isConstant()) {
+            throw new UnsupportedOperationException(
+                    "Annotated static property: " + prop.getIdentity());
+        }
+
+        String        fieldName  = prop.ensureJitName(typeSystem);
+        String        getterName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc getterDesc = prop.getGetterJitDesc(this, thisType);
+
+        classBuilder.withMethodBody(getterName + (getterDesc.isOptimized ? OPT : ""),
+                getterDesc.isOptimized ? getterDesc.optimizedMD : getterDesc.standardMD,
+                ClassFile.ACC_PUBLIC, code -> {
+            int ctxSlot = code.parameterSlot(0);
+            code.aload(0)
+                .getfield(art.CD(), fieldName, CD_nRef)
+                .aload(ctxSlot)
+                .invokevirtual(CD_nRef, "get", md(CD_Object, CD_Ctx));
+
+            ClassDesc retCd = getterDesc.getReturn(0).cd;
+            if (getterDesc.isOptimized) {
+                TypeConstant type = prop.getType();
+                ClassDesc    cd   = getCCDesc(type.removeNullable());
+                if (type.isNullable()) {
+                    unboxNullable(code, type, cd);
+                } else {
+                    code.checkcast(cd);
+                    unbox(code, type);
+                }
+
+                for (int i = getterDesc.optimizedReturns.length - 1; i > 0; i--) {
+                    JitParamDesc pd = getterDesc.optimizedReturns[i];
+                    storeToContext(code, pd.cd, pd.altIndex, ctxSlot);
+                }
+                addReturn(code, retCd);
+            } else {
+                code.checkcast(retCd)
+                    .areturn();
+            }
+        });
+
+        if (getterDesc.isOptimized) {
+            assembleMethodWrapper(classBuilder, getterName, getterDesc);
+        }
+
+        String        setterName = prop.ensureSetterJitMethodName(typeSystem);
+        JitMethodDesc setterDesc = prop.getSetterJitDesc(this, thisType);
+
+        classBuilder.withMethodBody(setterName + (setterDesc.isOptimized ? OPT : ""),
+                setterDesc.isOptimized ? setterDesc.optimizedMD : setterDesc.standardMD,
+                ClassFile.ACC_PUBLIC, code -> {
+
+            int ctxSlot = code.parameterSlot(0);
+            if (thisType.isConst()) {
+                throwReadOnly(code, prop.getName(), ctxSlot);
+                return;
+            }
+
+            code.aload(0)
+                .aload(ctxSlot)
+                .invokevirtual(CD_nObject, "$checkImmut", MD_xvmVoid)
+                .aload(0)
+                .getfield(art.CD(), fieldName, CD_nRef)
+                .aload(ctxSlot);
+
+            JitParamDesc[] params = setterDesc.isOptimized
+                    ? setterDesc.optimizedParams : setterDesc.standardParams;
+            for (int i = 0; i < params.length; i++) {
+                load(code, params[i].cd, code.parameterSlot(i + 1));
+            }
+
+            if (setterDesc.isOptimized) {
+                if (prop.getType().isNullable()) {
+                    boxNullable(code, prop.getType());
+                } else {
+                    box(code, prop.getType());
+                }
+            }
+            code.invokevirtual(CD_nRef, "set", md(CD_void, CD_Ctx, CD_Object))
+                .return_();
+        });
+
+        if (setterDesc.isOptimized) {
+            assembleMethodWrapper(classBuilder, setterName, setterDesc);
+        }
+    }
+
     private void assemblePropertyGetter(ClassBuilder classBuilder, PropertyInfo prop) {
         String        jitName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc  = prop.getGetterJitDesc(this, thisType);
@@ -1522,11 +1757,10 @@ public class CommonBuilder
     }
 
     private void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop, String getterName) {
-        String jitFieldName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-
-        ClassDesc     CD_this = art.CD();
-        int           flags   = ClassFile.ACC_PUBLIC;
-        JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
+        String        jitFieldName = prop.ensureJitName(typeSystem);
+        ClassDesc     CD_this      = art.CD();
+        int           flags        = ClassFile.ACC_PUBLIC;
+        JitMethodDesc jmd          = prop.getGetterJitDesc(this, thisType);
         if (jmd.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
         }
@@ -1628,14 +1862,13 @@ public class CommonBuilder
     }
 
     private void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop, String setterName) {
-        String jitFieldName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-
-        ClassDesc      CD_this = art.CD();
-        JitMethodDesc  jmd     = prop.getSetterJitDesc(this, thisType);
-        boolean        isOpt   = jmd.isOptimized;
-        MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = isOpt ? setterName + OPT : setterName;
-        int            flags   = ClassFile.ACC_PUBLIC;
+        String         jitFieldName = prop.ensureJitName(typeSystem);
+        ClassDesc      CD_this      = art.CD();
+        JitMethodDesc  jmd          = prop.getSetterJitDesc(this, thisType);
+        boolean        isOpt        = jmd.isOptimized;
+        MethodTypeDesc md           = isOpt ? jmd.optimizedMD : jmd.standardMD;
+        String         jitName      = isOpt ? setterName + OPT : setterName;
+        int            flags        = ClassFile.ACC_PUBLIC;
 
         if (jmd.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
@@ -1772,7 +2005,7 @@ public class CommonBuilder
         assert !prop.isConstant();
 
         String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
-        String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        String jitFieldName  = prop.ensureJitName(typeSystem);
 
         ClassDesc CD_this = art.CD();
         int       flags   = ClassFile.ACC_PUBLIC;
@@ -1890,7 +2123,14 @@ public class CommonBuilder
 
         boolean assembleDeclared = !typeInfo.isAbstract();
 
-        for (MethodInfo method : typeInfo.getMethods().values()) {
+        for (Map.Entry<MethodConstant, MethodInfo> entry : typeInfo.getMethods().entrySet()) {
+            MethodInfo method = entry.getValue();
+            if (entry.getKey().getNamespace() instanceof PropertyConstant property &&
+                    typeInfo.findProperty(property) instanceof PropertyInfo prop &&
+                    prop.isJitInflated()) {
+                // annotation bodies execute on the property's Ref implementation
+                continue;
+            }
             if (method.isNative()) {
                 continue; // not our responsibility
             }

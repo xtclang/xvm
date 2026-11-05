@@ -1065,7 +1065,13 @@ public abstract class OpCallable extends Op {
         TypeConstant typeTarget;
         ClassDesc    cdTarget;
         String       sJitCtor;
-        if (infoTarget.getFormat() == Format.MIXIN) {
+        if (Builder.isEmbedded(infoTarget.getFormat())) {
+            // omit the no-op call and its synthetic body, matching the check in
+            // AnnotationHelper.assembleAnnotationConstructors()
+            if (infoCtor.getHead().getMethodStructure().isNoOp()) {
+                return -1;
+            }
+
             typeTarget = bctx.thisType;
             cdTarget   = bctx.builder.art.CD();
             sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);

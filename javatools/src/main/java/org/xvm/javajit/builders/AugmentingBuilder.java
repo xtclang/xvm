@@ -127,7 +127,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
-        String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        String      jitName = prop.ensureJitName(typeSystem);
         JitTypeDesc jtd     = prop.getType().getJitDesc(this);
 
         boolean isNativeField = switch (jtd.flavor) {
@@ -375,10 +375,6 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected boolean isNativeField(String jitName) {
-        FieldModel fm = findField(jitName);
-        if (fm != null) {
-            return true;
-        }
-        return false;
+        return findField(jitName) != null;
     }
 }

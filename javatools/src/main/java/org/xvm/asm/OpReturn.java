@@ -142,14 +142,18 @@ public abstract class OpReturn
                     Builder.store(code, cd, slotR);
                     break;
 
-                case "Primitive->Widened",
+                case "Primitive->Specific",
+                     "XvmPrimitive->Specific",
+                     "Primitive->Widened",
                      "XvmPrimitive->Widened":
                     // e.g.: (Int|String) v = f(); where f() returns an Int value
                     Builder.box(code, regRet);
                     Builder.store(code, pdRet.cd, slotR);
                     break;
 
-                case "NullablePrimitive->Widened",
+                case "NullablePrimitive->Specific",
+                     "NullableXvmPrimitive->Specific",
+                     "NullablePrimitive->Widened",
                      "NullableXvmPrimitive->Widened":
                     // the null flag selects either a boxed payload or Ecstasy Null
                     Builder.boxNullable(code, regRet.type());
@@ -296,13 +300,17 @@ public abstract class OpReturn
                     code.checkcast(pdRet.cd);
                     break;
 
-                case "Primitive->Widened",
+                case "Primitive->Specific",
+                     "XvmPrimitive->Specific",
+                     "Primitive->Widened",
                      "XvmPrimitive->Widened":
                     Builder.box(code, regRet);
                     cd = pdRet.cd;
                     break;
 
-                case "NullablePrimitive->Widened",
+                case "NullablePrimitive->Specific",
+                     "NullableXvmPrimitive->Specific",
+                     "NullablePrimitive->Widened",
                      "NullableXvmPrimitive->Widened":
                     Builder.boxNullable(code, regRet.type());
                     cd = pdRet.cd;

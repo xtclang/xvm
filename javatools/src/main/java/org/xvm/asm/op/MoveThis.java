@@ -10,7 +10,9 @@ import java.lang.constant.ClassDesc;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -164,7 +166,7 @@ public class MoveThis
     @Override
     public void computeTypes(BuildContext bctx) {
         TypeConstant type = bctx.thisType;
-        for (int i = 0; i < m_cSteps; i++) {
+        for (int i = 0, steps = getOuterSteps(bctx); i < steps; i++) {
             type = type.getParentType();
         }
 
@@ -184,7 +186,7 @@ public class MoveThis
         ClassDesc    cd   = bctx.builder.art.CD();
 
         code.aload(0);
-        for (int i = 0; i < m_cSteps; i++) {
+        for (int i = 0, steps = getOuterSteps(bctx); i < steps; i++) {
             code.getfield(cd, Outer, CD_nObject);
 
             type = type.getParentType();
@@ -194,6 +196,17 @@ public class MoveThis
 
         bctx.storeValue(code, m_nToValue, bctx.getReturnType(m_nToValue));
         return -1;
+    }
+
+    /**
+     * @return the number of {@link Outer} steps to the requested enclosing instance
+     */
+    private int getOuterSteps(BuildContext bctx) {
+        // property annotation lambdas are bound directly to the property owner
+        MethodStructure method = bctx.methodStruct;
+        return method.isLambda() && method.getParent().getParent() instanceof PropertyStructure
+                ? Math.max(0, m_cSteps - 1)
+                : m_cSteps;
     }
 
     @Override

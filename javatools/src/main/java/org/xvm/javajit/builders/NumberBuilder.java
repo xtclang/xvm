@@ -98,7 +98,7 @@ public class NumberBuilder extends AugmentingBuilder {
                 prop = typeInfo.findProperty(prop.getName());
                 assert prop != null;
 
-                String jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+                String jitName = prop.ensureJitName(typeSystem);
                 BiConsumer<CodeBuilder, JitMethodDesc> generator = getPropertyCodeGenerator(jitName);
                 if (generator != null && generatedProperties.add(jitName)) {
                     assemblePrimitivePropertyAccessor(classBuilder, prop, declaredProp, generator);
