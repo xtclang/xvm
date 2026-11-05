@@ -73,6 +73,12 @@ internal class XdkProjectQueries(
         errors: ErrorListener,
     ): EmbeddingSupport.Compilation = compiler(input, repository, errors).also { compiled.incrementAndGet() }
 
+    /**
+     * The diagnostics last reported, when the graph's inputs are those they were made from, or null: a check that
+     * reads the inputs, with no compile, lexing or parsing.
+     */
+    fun reported(): List<CompilationResult>? = diagnosticCache.snapshot().takeIf { it.revision == revision() }?.results
+
     /** Read-only graph compilation, with no live AST installation or artificial open buffers. */
     fun diagnostics(): List<CompilationResult> {
         val revision = revision()

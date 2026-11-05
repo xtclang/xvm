@@ -54,6 +54,7 @@ import org.xvm.lsp.util.snapshot
 import org.xvm.tool.ModuleInfo
 import java.io.File
 import java.io.IOException
+import java.io.UncheckedIOException
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -2180,11 +2181,33 @@ class XdkAdapter
             val root =
                 synchronized(lifecycle) { project.buildOrder().firstOrNull()?.uri }
                     ?: return CompletableFuture.completedFuture(emptyList())
+            reportedDiagnostics(root)?.let { return CompletableFuture.completedFuture(it) }
             return projectQuery(
                 ProjectQueryKey(root, ProjectQueryKind.DIAGNOSTICS, requestId = UUID.randomUUID()),
                 emptyList(),
             ) {
                 it.diagnostics()
+            }
+        }
+
+        /**
+         * The graph's diagnostics as last reported, when its sources, overlays and dependencies are those they were
+         * made from, or null. An idle client pulls them again and again, and each pull reads the graph's files again,
+         * for a change that no watcher reported, but needs no job on the compiler worker, and no lexing or parsing.
+         */
+        private fun reportedDiagnostics(root: String): List<CompilationResult>? {
+            val (graph, libraries, buffers) =
+                synchronized(lifecycle) {
+                    if (closed || discovery.get().problem != null || project.scope(root) == null) return null
+                    Triple(project, dependencies, overlays.toMap())
+                }
+            return try {
+                XdkProjectQueries(graph, buffers, libraries, compiler::compileTree, { false }, diagnosticCache = diagnosticCache)
+                    .reported()
+            } catch (_: IOException) {
+                null
+            } catch (_: UncheckedIOException) {
+                null
             }
         }
 
