@@ -1,13 +1,16 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
+import org.xvm.asm.ConstantPool
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleStructure
 import org.xvm.asm.PackageStructure
 import org.xvm.asm.XvmStructure
 import org.xvm.asm.constants.IdentityConstant
+import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.model.Location
 
 /**
@@ -61,6 +64,25 @@ internal object XdkTests {
         return tests.takeIf { it.isNotEmpty() }?.let {
             XdkTest("", module.simpleName(), XdkTest.MODULE, locations[module], children(it, 0, locations))
         }
+    }
+
+    /**
+     * The tests of the module that the compiled sources [roots] declare, whose declarations are at [locations]; null
+     * when it has none, or the sources declare no module. Runs on the compiler worker, which owns the module's
+     * structures.
+     */
+    fun of(
+        roots: Collection<AstNode>,
+        locations: Map<XvmStructure, Location>,
+    ): XdkTest? {
+        val module =
+            roots
+                .asSequence()
+                .flatMap { it.descendants() }
+                .filterIsInstance<TypeCompositionStatement>()
+                .firstOrNull { it.category.id == Token.Id.MODULE }
+                ?.component as? ModuleStructure
+        return module?.let { ConstantPool.withPool(it.constantPool).use { _ -> of(it, roots, locations) } }
     }
 
     /** A test method, and the packages and classes it is in, from the module's child down to its own class. */
