@@ -12,7 +12,7 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
 import com.intellij.driver.sdk.ui.ui
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /**
  * Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent
@@ -26,7 +26,7 @@ fun Driver.structure(
     val visible = withContext(OnDispatcher.EDT) { getToolWindow("Structure").isVisible() }
     if (!visible) invokeAction("ActivateStructureToolWindow", component = editor.component)
     val tree = ui.structureToolWindow().waitAndGetStructureTree()
-    awaitUi("Structure contains $include and excludes $exclude", 45.seconds) {
+    awaitUi("Structure contains $include and excludes $exclude", HANG_LIMIT) {
         tree.expandAll()
         val rows = tree.collectExpandedPaths().map { it.path.last() }
 
@@ -81,7 +81,7 @@ fun Driver.selectionParents(
             }
         }
     invokeAction("EditorSelectWord", component = editor.component)
-    awaitUi("native selection action receives compiler selection parents", 45.seconds) {
+    awaitUi("native selection action receives compiler selection parents", HANG_LIMIT) {
         val future = support.getValidLSPFuture()
         if (
             future == null ||
@@ -112,12 +112,12 @@ fun Driver.selectionParents(
             } == true
         }
     }
-    awaitUi("first structural selection contains the cursor", 15.seconds) {
+    awaitUi("first structural selection contains the cursor", HANG_LIMIT) {
         selection().let { at in it && it.first < it.last }
     }
     val first = selection()
     invokeAction("EditorSelectWord", component = editor.component)
-    awaitUi("parent structural selection contains the first selection", 15.seconds) {
+    awaitUi("parent structural selection contains the first selection", HANG_LIMIT) {
         selection().let { it.first <= first.first && it.last >= first.last && it != first }
     }
     check(editor.text == original)

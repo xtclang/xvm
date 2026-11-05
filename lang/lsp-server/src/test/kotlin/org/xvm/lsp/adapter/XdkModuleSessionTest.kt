@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.tool.ModuleInfo
@@ -241,14 +242,14 @@ class XdkModuleSessionTest {
             { sources, errors ->
                 if (first.getAndSet(false)) {
                     started.countDown()
-                    check(release.await(10, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                 }
                 embedding.compileModule(sources, null, errors)
             },
         ).use { adapter ->
             val old = adapter.compileAsync(root.toURI().toString(), root.readText())
             try {
-                check(started.await(10, SECONDS))
+                check(started.await(HANG_SECONDS, SECONDS))
                 val latest =
                     adapter.compileAsync(
                         member.toURI().toString(),
@@ -259,7 +260,7 @@ class XdkModuleSessionTest {
                 assertThat(old.isCancelled).isTrue()
                 assertThat(adapter.getCachedResult(root.toURI().toString())).isNull()
                 release.countDown()
-                assertThat(latest.get(20, SECONDS).diagnostics).anyMatch {
+                assertThat(latest.get(HANG_SECONDS, SECONDS).diagnostics).anyMatch {
                     it.code == "COMPILER-38"
                 }
                 assertThat(adapter.getCachedResult(member.toURI().toString())?.diagnostics)

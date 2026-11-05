@@ -3,7 +3,7 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /** Captures painted token text and attributes for lexical and semantic highlighting comparisons. */
 private data class HighlightToken(
@@ -25,7 +25,7 @@ private fun ParityWorkspace.highlightTokens(doc: ParityWorkspace.Document): List
             .orEmpty()
     val support = with(driver) { semanticSupport(doc.editor).getSemanticTokensSupport() }
     val values =
-        awaitUi("native semantic highlighting uses the current document", 30.seconds, getter = {
+        awaitUi("native semantic highlighting uses the current document", HANG_LIMIT, getter = {
             support.getValidLSPFuture()?.takeIf { it.isDone() && !it.isCompletedExceptionally() }?.let { future ->
                 future
                     .get()
@@ -82,7 +82,7 @@ internal fun ParityScenarios.highlightingCases() {
         }
         val probe = with(driver) { utility(HighlightingProbe::class) }
         val annotationOffset = doc.at("@Marked", 1)
-        awaitUi("native annotation decorator markup is installed", 30.seconds) {
+        awaitUi("native annotation decorator markup is installed", HANG_LIMIT) {
             with(driver) {
                 withContext(OnDispatcher.EDT) {
                     probe.semanticOverlays(doc.editor.editor, annotationOffset).any { "DECORATOR" in it }

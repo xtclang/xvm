@@ -4,7 +4,7 @@ import com.google.gson.JsonObject
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
-import kotlin.time.Duration.Companion.seconds
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 /** Indentation while typing; registered after the build mode cases to keep catalog order. */
 internal fun ParityScenarios.onTypeCases() {
@@ -29,7 +29,7 @@ internal fun ParityScenarios.onTypeCases() {
 
                 fun caret() = withContext(OnDispatcher.EDT) { typing.caretOffset(editor.editor) }
                 runCatching {
-                    awaitUi("$name: the cursor line is indented by $indent", 10.seconds) { indentAt(document.text, caret()) == indent }
+                    awaitUi("$name: the cursor line is indented by $indent", HANG_LIMIT) { indentAt(document.text, caret()) == indent }
                     // the server's on-type edits for the same keystroke leave the line where it is, so no late
                     // on-type edit can still change it
                     settle(document)

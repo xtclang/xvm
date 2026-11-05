@@ -12,6 +12,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
@@ -49,12 +50,12 @@ internal class ClientNotificationsTest {
             assertThat(calls).isEmpty()
             refresh.initialized()
             refresh.request(*ClientRefresh.Feature.entries.toTypedArray())
-            val first = requireNotNull(calls.poll(5, SECONDS))
+            val first = requireNotNull(calls.poll(HANG_SECONDS, SECONDS))
             assertThat(first.first).isEqualTo(methods.getValue(feature))
             repeat(20) { refresh.request(*ClientRefresh.Feature.entries.toTypedArray()) }
             assertThat(calls).isEmpty()
             first.second.completeExceptionally(IllegalStateException("Client refused refresh"))
-            val retry = requireNotNull(calls.poll(5, SECONDS))
+            val retry = requireNotNull(calls.poll(HANG_SECONDS, SECONDS))
             assertThat(retry.first).isEqualTo(first.first)
             refresh.request(feature)
             refresh.close()
@@ -80,11 +81,11 @@ internal class ClientNotificationsTest {
                 refresh.request(ClientRefresh.Feature.INLAYS, ClientRefresh.Feature.FOLDING)
                 verifyNoInteractions(client)
                 refresh.request(ClientRefresh.Feature.LENSES)
-                val first = requireNotNull(calls.poll(5, SECONDS))
+                val first = requireNotNull(calls.poll(HANG_SECONDS, SECONDS))
                 repeat(50) { refresh.request(ClientRefresh.Feature.LENSES) }
                 assertThat(calls).isEmpty()
                 first.complete(null)
-                val second = requireNotNull(calls.poll(5, SECONDS))
+                val second = requireNotNull(calls.poll(HANG_SECONDS, SECONDS))
                 refresh.request(ClientRefresh.Feature.LENSES)
                 refresh.close()
                 second.complete(null)
@@ -114,14 +115,14 @@ internal class ClientNotificationsTest {
                 verifyNoInteractions(client)
                 trace.configure("messages")
                 trace.completed(span, null)
-                val message = requireNotNull(messages.poll(5, SECONDS))
+                val message = requireNotNull(messages.poll(HANG_SECONDS, SECONDS))
                 assertThat(message.message)
                     .contains("textDocument/hover", "replied")
                     .doesNotContain("private")
                 assertThat(message.verbose).isNull()
                 trace.configure("verbose")
                 trace.completed(span, ResponseErrorCode.ContentModified.value)
-                val verbose = requireNotNull(messages.poll(5, SECONDS))
+                val verbose = requireNotNull(messages.poll(HANG_SECONDS, SECONDS))
                 assertThat(verbose.verbose).contains("request=${span.id}").doesNotContain("private")
                 trace.configure("off")
                 trace.completed(span, null)

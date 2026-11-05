@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.eclipse.lsp4j.services.LanguageClient
 import org.mockito.Mockito.mock
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.server.DebugMessageParams
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.RunExitedParams
@@ -34,7 +35,7 @@ internal class DebugClient :
     ): List<JsonObject> {
         val received = mutableListOf<JsonObject>()
         while (received.none(last)) {
-            val next = messages.poll(60, SECONDS) ?: error("no DAP message within 60 s after $received")
+            val next = messages.poll(HANG_SECONDS, SECONDS) ?: error("no DAP message within $HANG_SECONDS s after $received")
             if (next.sessionId == sessionId) received += next.message
         }
         return received

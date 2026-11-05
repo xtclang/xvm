@@ -1,10 +1,17 @@
 package org.xvm.lsp.adapter
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * On-type formatting through the compiler adapter, as an editor sends it: the text right after the
@@ -52,7 +59,21 @@ class XdkOnTypeFormattingTest {
     }
 
     @Test
-    fun `a request in a large file is quick`() {
+    fun `a request in a large file does the work of one in a small file, two lexing passes and no compile`() {
+        // the formatter re-indents from the lexer's tokens, and lexes its result again to check that every token is
+        // kept: two passes over the text, and no parse or compile, whose cost a keystroke must not take on. The trace
+        // counts them, so the check does not depend on the machine's speed.
+        val work =
+            listOf(1, 100).map { classes ->
+                val source = source(classes)
+                XdkAdapter().use { adapter ->
+                    adapter.compile(URI, source)
+                    traced { adapter.onTypeFormatting(URI, blankInLastClass(source), 0, "\n", FormattingOptions(4, true)) }
+                }
+            }
+        assertThat(work).containsOnly(mapOf("javatools Lexer.lex(presentation)" to 2))
+
+        // the times, for a person to compare with the 5 ms target; no bound, which a slow or loaded machine would fail
         val source = largeSource()
         XdkAdapter().use { adapter ->
             adapter.compile(URI, source)
@@ -60,9 +81,34 @@ class XdkOnTypeFormattingTest {
             println(
                 "compiler adapter on-type formatting, ${source.lines().size} lines: median ${times.median} ms, slowest ${times.slowest} ms",
             )
-            // the target is 5 ms; this bound catches a regression without failing on a slower build machine
-            assertThat(times.median).isLessThan(20.0)
         }
+    }
+
+    /**
+     * The work [request] does on this thread, from the server's trace: how many compiler API calls and compiler queue
+     * jobs of each kind and operation it starts.
+     */
+    private fun traced(request: () -> Unit): Map<String, Int> {
+        val thread = Thread.currentThread().name
+        val entries = CopyOnWriteArrayList<JsonObject>()
+        val logger = LoggerFactory.getLogger("org.xvm.lsp.trace") as Logger
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    entries += JsonParser.parseString(event.formattedMessage).asJsonObject
+                }
+            }.apply { start() }
+        logger.addAppender(appender)
+        try {
+            request()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        return entries
+            .filter { it["thread"].asString == thread }
+            .groupBy { "${it["kind"].asString} ${it["operation"].asString}" }
+            .mapValues { (_, events) -> events.map { it["id"].asLong }.distinct().size }
     }
 
     private fun apply(
@@ -87,16 +133,22 @@ class XdkOnTypeFormattingTest {
         )
 
         /** A module of about 1,200 lines: 100 classes, each with methods, statements and blank lines. */
-        fun largeSource(): String =
+        fun largeSource(): String = source(100)
+
+        /** A module of [classes] classes, each with methods, statements and blank lines, about 12 lines each. */
+        fun source(classes: Int): String =
             buildString {
                 append("module Large {\n")
-                repeat(100) { index ->
+                repeat(classes) { index ->
                     append("    class C$index {\n        Int value = $index;\n\n")
                     append("        Int twice() {\n            Int x = value;\n            if (x > 0) {\n")
                     append("                x = x * 2;\n            }\n            return x;\n        }\n    }\n\n")
                 }
                 append("}\n")
             }
+
+        /** The blank line after the last class's first property in [source]: the same place in a small and a large file. */
+        fun blankInLastClass(source: String): Int = source.lines().indexOfLast { it.trim().startsWith("Int value = ") } + 1
 
         /** Times one request on each of 100 blank lines spread through [source], after 20 to warm up. */
         fun timeRequests(

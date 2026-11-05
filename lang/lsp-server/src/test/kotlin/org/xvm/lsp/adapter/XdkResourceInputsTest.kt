@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Files
@@ -33,7 +34,7 @@ class XdkResourceInputsTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("Assets", source.toURI().toString())),
             )
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
             assertThat(adapter.compile(source.toURI().toString(), source.readText()).diagnostics)
                 .isEmpty()
         }
@@ -80,7 +81,7 @@ class XdkResourceInputsTest {
                 )
             adapter.replaceSourceModules(graph)
 
-            fun pull() = adapter.workspaceDiagnosticsAsync().get(30, SECONDS)
+            fun pull() = adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)
             assertThat(pull()).allMatch { it.success }
             assertThat(compiled).containsExactly("Assets", "Consumer", "Independent")
             compiled.clear()
@@ -145,7 +146,7 @@ class XdkResourceInputsTest {
             assertThat(
                 adapter
                     .workspaceDiagnosticsAsync()
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .single()
                     .success,
             ).isFalse()
@@ -154,7 +155,7 @@ class XdkResourceInputsTest {
             assertThat(
                 adapter
                     .workspaceDiagnosticsAsync()
-                    .get(30, SECONDS)
+                    .get(HANG_SECONDS, SECONDS)
                     .single()
                     .success,
             ).isTrue()

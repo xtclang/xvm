@@ -91,6 +91,6 @@ object ServerRuntimePage {
         destination: String,
     ) {
         // Driver calls this on a background thread. The bounded wait is for completion, not a delay.
-        ExportServerLogsAction.export(project, Path.of(destination)).get(30, SECONDS)
+        ExportServerLogsAction.export(project, Path.of(destination)).get(HANG_SECONDS, SECONDS)
     }
 }

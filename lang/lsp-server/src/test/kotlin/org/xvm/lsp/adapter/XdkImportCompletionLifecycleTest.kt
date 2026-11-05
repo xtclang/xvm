@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -41,7 +42,7 @@ class XdkImportCompletionLifecycleTest {
             { sources, repository, errors ->
                 if (hold.compareAndSet(true, false)) {
                     entered.countDown()
-                    check(release.await(20, SECONDS))
+                    check(release.await(HANG_SECONDS, SECONDS))
                     // A callback that ignores cancellation still cannot publish stale edits.
                     support.compileModule(sources, repository, ErrorList())
                 } else {
@@ -55,7 +56,7 @@ class XdkImportCompletionLifecycleTest {
                 adapter.compile(uri, text)
                 hold.set(true)
                 val query = adapter.getCompletionsAsync(uri, 0, text.indexOf("Doc") + 3, null)
-                assertThat(entered.await(20, SECONDS)).isTrue()
+                assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
                 when (change) {
                     "edit" -> adapter.compileAsync(uri, "\n$text")
                     "close" -> adapter.closeDocument(uri)
