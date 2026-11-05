@@ -929,7 +929,9 @@ class XtcTextDocumentService(
                 )
             },
         ) { results ->
-            val current = diagnosticReports.record(results)
+            // a module's tests are part of its root document's report, so that a client that lists them again as its
+            // diagnostics change, as VS Code's Testing view does, follows a change to them in closed files too
+            val current = diagnosticReports.record(results, (adapter as? XdkAdapter)?.testsByRoot().orEmpty())
             diagnosticReports.workspace(
                 current,
                 params.previousResultIds.orEmpty().associate { it.uri to it.value },
