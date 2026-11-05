@@ -46,6 +46,77 @@ class LanguageServerDebugProcessHandlerTest {
     }
 
     @Test
+    fun `a line typed in the session's console while the program runs is its input, and the client's messages go on`() {
+        val sessions = DebugSessions()
+        val server = FakeServer().apply { started.complete(Unit) }
+        val handler = LanguageServerDebugProcessHandler(sessions) { CompletableFuture.completedFuture(server.proxy) }
+        val events = Events(handler)
+        handler.startNotify()
+
+        // the console writes a typed line to the stream that the client writes its messages to
+        handler.processInput.write("Grüße\n".toByteArray(Charsets.UTF_8))
+        handler.processInput.flush()
+        handler.write("""{"seq":1,"type":"request","command":"threads"}""")
+        val typed = server.messages.first().message
+        assertThat(typed["command"].asString).isEqualTo("evaluate")
+        assertThat(typed["arguments"].asJsonObject["expression"].asString).isEqualTo("Grüße")
+        assertThat(typed["arguments"].asJsonObject["context"].asString).isEqualTo("repl")
+        // without a stop, no frame: the adapter takes the line as the program's input
+        assertThat(typed["arguments"].asJsonObject.has("frameId")).isFalse()
+        assertThat(server.messages.map { it.message["command"].asString }).containsExactly("evaluate", "threads")
+
+        // the answer to the input is empty, and the client never sees the request's response
+        sessions.receive(DebugMessageParams("session-1", response(typed, """{"result":""}""")))
+        assertThat(events.text(ProcessOutputTypes.STDOUT)).isEmpty()
+        handler.destroyProcess()
+    }
+
+    @Test
+    fun `a line typed in the session's console while the program is stopped runs in the stopped frame, and shows its answer`() {
+        val sessions = DebugSessions()
+        val server = FakeServer().apply { started.complete(Unit) }
+        val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+        val events = Events(handler)
+        handler.startNotify()
+
+        fun receive(json: String) = sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(json).asJsonObject))
+        receive("""{"seq":3,"type":"event","event":"stopped","body":{"reason":"breakpoint","threadId":1}}""")
+        receive(
+            """{"seq":4,"type":"response","request_seq":2,"command":"stackTrace","success":true,""" +
+                """"body":{"stackFrames":[{"id":7,"name":"deal","line":73},{"id":8,"name":"run","line":6}]}}""",
+        )
+        handler.processInput.write("size()\n".toByteArray())
+        val typed = server.messages.last().message
+        assertThat(typed["arguments"].asJsonObject["frameId"].asInt).isEqualTo(7)
+        sessions.receive(DebugMessageParams("session-1", response(typed, """{"result":"42","variablesReference":0}""")))
+        // the answer is console output, a DAP output event that the client prints
+        val output = events.text(ProcessOutputTypes.STDOUT)
+        assertThat(output).contains("\"event\":\"output\"", "\"output\":\"42\\n\"").doesNotContain("\"request_seq\":${typed["seq"]}")
+
+        // once the client resumes the program, a typed line is its input again
+        handler.write("""{"seq":5,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+        handler.processInput.write("\n".toByteArray())
+        assertThat(
+            server.messages
+                .last()
+                .message["arguments"]
+                .asJsonObject
+                .has("frameId"),
+        ).isFalse()
+        handler.destroyProcess()
+    }
+
+    /** The session's successful response to [request], with [body]. */
+    private fun response(
+        request: JsonObject,
+        body: String,
+    ): JsonObject =
+        JsonParser
+            .parseString(
+                """{"seq":90,"type":"response","request_seq":${request["seq"]},"command":"evaluate","success":true,"body":$body}""",
+            ).asJsonObject
+
+    @Test
     fun `messages the client writes before the session exists wait for it, then go in order`() {
         val server = FakeServer()
         val handler = LanguageServerDebugProcessHandler(DebugSessions()) { CompletableFuture.completedFuture(server.proxy) }
