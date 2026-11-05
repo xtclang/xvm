@@ -74,9 +74,12 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         this.testMethods = objects.listProperty(String.class);
         this.testReport = objects.property(String.class);
 
-        // A debugged run always runs, and its results are not cached
-        getOutputs().upToDateWhen(task -> !((XtcTestTask) task).getDebug().isPresent());
+        // A debugged run always runs, and its results are not cached; nor a reported one, whose report is the output
+        // that a tool reads as the tests run, which no cached or up-to-date result has
+        getOutputs().upToDateWhen(task -> !watched((XtcTestTask) task));
         getOutputs().doNotCacheIf("the tests are debugged", task -> ((XtcTestTask) task).getDebug().isPresent());
+        getOutputs().doNotCacheIf("a tool reads the tests' report as they run",
+                task -> ((XtcTestTask) task).getTestReport().isPresent());
     }
 
     @Input
@@ -144,6 +147,15 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     @Optional
     public Property<@NotNull String> getTestReport() {
         return testReport;
+    }
+
+    /**
+     * @return whether something outside the build watches {@code task}'s run as it happens: a debugger, or a tool that
+     *         reads its {@link #getTestReport() report}, so that it runs even when its inputs have not changed; static,
+     *         as Gradle takes a task's getter, an {@code is} method too, for a property that needs an annotation
+     */
+    static boolean watched(final XtcTestTask task) {
+        return task.getDebug().isPresent() || task.getTestReport().isPresent();
     }
 
     @Internal
