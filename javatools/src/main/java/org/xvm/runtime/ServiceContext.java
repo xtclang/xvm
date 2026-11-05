@@ -659,6 +659,12 @@ public class ServiceContext {
                         iPC = Op.R_RETURN;
                         continue; // nextOp
 
+                    case Op.R_RESET:
+                        // the debugger restarts a frame of a fiber that ran code in its stop: the
+                        // frame that waited there goes up a frame, as from the debugger's op
+                        iPC = Op.R_RESET;
+                        continue; // nextOp
+
                     default:
                         if (iResult < 0) {
                             throw new IllegalStateException();
