@@ -292,6 +292,20 @@ class XdkMethodExtractionTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["§        emit(input);", "        §emit(input);"])
+    fun `whole lines selected as an editor selects them extract the statements on them`(first: String) {
+        // the selection ends at the start of the line after the statements, and starts at a line's start or its code
+        query(
+            "module Extract {\n    void emit(Int value) {}\n    void run(Int input) {\n$first\n        emit(input + 1);\n§    }\n}\n",
+            title = "Extract statements to private method",
+        ) { _, changed ->
+            assertThat(changed)
+                .contains("private void extractedMethod(Int input)", "        extractedMethod(input);\n    }")
+                .containsOnlyOnce("emit(input);")
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `inferred result from another module uses its source alias for source and binary dependencies`(binary: Boolean) {
         CompilerTestSupport.configure()
