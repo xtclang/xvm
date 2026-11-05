@@ -6,18 +6,17 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.FileStructure
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkCodeActionCache
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -135,7 +134,7 @@ class XdkIncrementalBaseTest {
                 Range(Position(0, 0), Position(0, 0)),
                 emptyList(),
                 setOf(CodeActionKind.REFACTOR_INLINE),
-            ).get(HANG_SECONDS, SECONDS)
+            ).awaited()
         return compiles.get() - start
     }
 

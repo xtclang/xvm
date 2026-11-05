@@ -25,15 +25,15 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaitAsserted
+import org.xvm.lsp.awaited
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks negotiated semantic-token delta, refresh and reopen behavior through the compiler server.
@@ -85,12 +85,12 @@ class XdkSemanticTokenProtocolTest {
             service.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(document.uri, "xtc", 1, source)),
             )
-            val before = service.semanticTokensFull(SemanticTokensParams(document)).get(HANG_SECONDS, SECONDS)
+            val before = service.semanticTokensFull(SemanticTokensParams(document)).awaited()
             assertThat(before.data).isNotEmpty()
             val unchanged =
                 service
                     .semanticTokensFullDelta(SemanticTokensDeltaParams(document, before.resultId))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
             assertThat(unchanged.right.edits).isEmpty()
             service.didChange(
                 DidChangeTextDocumentParams(
@@ -101,7 +101,7 @@ class XdkSemanticTokenProtocolTest {
             val delta =
                 service
                     .semanticTokensFullDelta(SemanticTokensDeltaParams(document, before.resultId))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .right
             assertThat(delta.edits).hasSize(1)
             assertThat(delta.edits.single().data).containsExactly(1)
@@ -109,10 +109,10 @@ class XdkSemanticTokenProtocolTest {
                 service
                     .semanticTokensRange(
                         SemanticTokensRangeParams(document, Range(Position(1, 0), Position(2, 0))),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             assertThat(range.data)
                 .isEqualTo(
-                    service.semanticTokensFull(SemanticTokensParams(document)).get(HANG_SECONDS, SECONDS).data,
+                    service.semanticTokensFull(SemanticTokensParams(document)).awaited().data,
                 )
             service.didClose(DidCloseTextDocumentParams(document))
             service.didOpen(
@@ -122,10 +122,10 @@ class XdkSemanticTokenProtocolTest {
                 service
                     .semanticTokensFullDelta(
                         SemanticTokensDeltaParams(document, before.resultId),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                     .isLeft,
             ).isTrue()
-            verify(client, timeout(HANG_SECONDS * 1_000).atLeastOnce()).refreshSemanticTokens()
+            awaitAsserted { verify(client, atLeastOnce()).refreshSemanticTokens() }
         }
     }
 
@@ -144,7 +144,7 @@ class XdkSemanticTokenProtocolTest {
                             TextDocumentIdentifier("file:///Tokens.x"),
                             "old",
                         ),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             }.hasMessageContaining("not negotiated")
         }
     }

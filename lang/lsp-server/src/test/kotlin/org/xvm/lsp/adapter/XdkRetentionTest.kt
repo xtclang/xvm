@@ -6,17 +6,16 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Heavy
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
 import org.xvm.lsp.util.Watched
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.NANOSECONDS
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Verifies that dependency replacement, editing, renaming and cursor queries release compiler graphs:
@@ -116,13 +115,13 @@ class XdkRetentionTest {
                 val started = System.nanoTime()
                 val storm =
                     (0..7).map { edit -> adapter.compileAsync(uri, "$CONSUMER // $cycle:$edit") }
-                assertThat(storm.last().get(HANG_SECONDS, SECONDS).success).isTrue()
+                assertThat(storm.last().awaited().success).isTrue()
                 assertThat(storm.dropLast(1)).allMatch { it.isCancelled }
                 timings += System.nanoTime() - started
                 val renamed =
                     adapter
                         .renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed")
-                        .get(HANG_SECONDS, SECONDS)
+                        .awaited()
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
                 val headerQuery = cycle % (cursorCases.size + 1) == cursorCases.size
                 val (marked, expected) =
@@ -157,7 +156,7 @@ class XdkRetentionTest {
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
                 val column = incomplete.lastIndexOf(prefix) + prefix.length
                 assertThat(
-                    adapter.getCompletionsAsync(uri, 0, column).get(HANG_SECONDS, SECONDS).map {
+                    adapter.getCompletionsAsync(uri, 0, column).awaited().map {
                         it.label
                     },
                 ).contains(expected)

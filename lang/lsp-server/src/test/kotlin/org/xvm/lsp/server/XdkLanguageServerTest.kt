@@ -26,13 +26,13 @@ import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -40,7 +40,6 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises compiler-backed server behavior across dependency replacement, diagnostics and shutdown.
@@ -92,7 +91,7 @@ class XdkLanguageServerTest {
                             TextDocumentIdentifier(URI),
                             Position(0, source.indexOf("value")),
                         ),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                     .left
                     .single()
             assertThat(target.uri).isEqualTo("file:///Library.x")
@@ -105,7 +104,7 @@ class XdkLanguageServerTest {
         val server = XtcLanguageServer(MockAdapter(), statuses::add)
         server.exit()
         assertThat(statuses).containsExactly(1)
-        server.shutdown().get(HANG_SECONDS, SECONDS)
+        server.shutdown().awaited()
         server.exit()
         assertThat(statuses).containsExactly(1, 0)
     }
@@ -180,10 +179,10 @@ class XdkLanguageServerTest {
 
         fun closeDocument() = documents.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(URI)))
 
-        fun next(): PublishDiagnosticsParams = checkNotNull(published.poll(HANG_SECONDS, SECONDS)) { "no diagnostic publication" }
+        fun next(): PublishDiagnosticsParams = checkNotNull(published.awaited()) { "no diagnostic publication" }
 
         override fun close() {
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 
@@ -293,7 +292,7 @@ class XdkLanguageServerTest {
                 session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             assertThat(outline.isDone).isFalse()
             adapter.finish(0)
-            assertThat(outline.get(HANG_SECONDS, SECONDS).map { it.right.name }).contains("Waiting")
+            assertThat(outline.awaited().map { it.right.name }).contains("Waiting")
             assertThat(adapter.count).isEqualTo(1)
         }
     }
@@ -309,7 +308,7 @@ class XdkLanguageServerTest {
                 session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             assertThat(adapter.count).isEqualTo(2)
             adapter.finish(1)
-            assertThat(outline.get(HANG_SECONDS, SECONDS).map { it.right.name }).contains("Retired")
+            assertThat(outline.awaited().map { it.right.name }).contains("Retired")
         }
     }
 
@@ -322,7 +321,7 @@ class XdkLanguageServerTest {
                 session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             session.change("module New {}", 2)
             adapter.finish(0)
-            assertThatThrownBy { outline.get(HANG_SECONDS, SECONDS) }
+            assertThatThrownBy { outline.awaited() }
                 .hasMessageContaining("Document changed during analysis")
         }
     }
@@ -402,7 +401,7 @@ class XdkLanguageServerTest {
             val definition =
                 session.documents
                     .definition(DefinitionParams(document, cursor))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .left
                     .single()
             assertThat(definition.uri).isEqualTo(URI)
@@ -412,7 +411,7 @@ class XdkLanguageServerTest {
                     session.documents
                         .references(
                             ReferenceParams(document, cursor, ReferenceContext(includeDeclaration)),
-                        ).get(HANG_SECONDS, SECONDS)
+                        ).awaited()
                 assertThat(references).allMatch { it.uri == URI }
                 val expected =
                     if (includeDeclaration) {
@@ -426,7 +425,7 @@ class XdkLanguageServerTest {
             val highlights =
                 session.documents
                     .documentHighlight(DocumentHighlightParams(document, cursor))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
             assertThat(highlights.map { it.range })
                 .containsExactly(range(declaration), range(write), range(read))
         }

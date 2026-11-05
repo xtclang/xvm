@@ -19,13 +19,12 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks watcher events against incomplete-source snapshot inputs. Late directory creation can preserve a
@@ -57,7 +56,7 @@ class XdkCursorWatchTest {
                 },
                 { source, _, cursor, repository, errors ->
                     entered.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                     support.analyzeIncomplete(source, cursor, repository, errors)
                 },
             )
@@ -73,7 +72,7 @@ class XdkCursorWatchTest {
             )
             server.textDocumentService
                 .documentSymbol(DocumentSymbolParams(document))
-                .get(HANG_SECONDS, SECONDS)
+                .awaited()
             val cursor =
                 server.textDocumentService.completion(
                     CompletionParams(
@@ -81,7 +80,7 @@ class XdkCursorWatchTest {
                         Position(0, overlay.indexOf("text.si") + "text.si".length),
                     ),
                 )
-            assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(entered.awaited()).isTrue()
             if (changed) member.writeText("class Box { Int added = 1; }")
             server.workspaceService.didChangeWatchedFiles(
                 DidChangeWatchedFilesParams(
@@ -93,16 +92,16 @@ class XdkCursorWatchTest {
             )
             release.countDown()
             if (changed) {
-                val failure = assertThrows<ExecutionException> { cursor.get(HANG_SECONDS, SECONDS) }
+                val failure = assertThrows<ExecutionException> { cursor.awaited() }
                 val error = failure.cause as ResponseErrorException
                 assertThat(error.responseError.code)
                     .isEqualTo(ResponseErrorCode.ContentModified.value)
             } else {
-                assertThat(cursor.get(HANG_SECONDS, SECONDS).left.map { it.label }).contains("size")
+                assertThat(cursor.awaited().left.map { it.label }).contains("size")
             }
         } finally {
             release.countDown()
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 }
