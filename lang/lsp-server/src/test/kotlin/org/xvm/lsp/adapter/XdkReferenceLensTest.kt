@@ -76,6 +76,39 @@ class XdkReferenceLensTest {
     }
 
     @Test
+    fun `a constructor's finally block has no lens of its own`() {
+        val source =
+            """
+            module Cards {
+                class Deck {
+                    construct(String label) {
+                        this.label = label;
+                    } finally {
+                        count++;
+                    }
+                    String label;
+                    Int count;
+                }
+                Deck make() = new Deck("d");
+            }
+            """.trimIndent()
+        val file =
+            directory
+                .resolve("Cards.x")
+                .toFile()
+                .canonicalFile
+                .apply { writeText(source) }
+        val uri = file.toURI().toString()
+        XdkAdapter().use { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Cards", uri)))
+            assertThat(adapter.compile(uri, source).diagnostics).isEmpty()
+            val lenses = adapter.getCodeLenses(uri).filter { it.command?.command == "xtc.showReferences" }
+            // the class, its constructor, its properties and the module's method; not the finally block on line 4
+            assertThat(lenses.map { it.range.start.line }).containsExactly(1, 2, 7, 8, 10)
+        }
+    }
+
+    @Test
     fun `shared documentation action works in the configured project without changing disk`() {
         val data = scenario("X278")
         val source = data["source"].asString
