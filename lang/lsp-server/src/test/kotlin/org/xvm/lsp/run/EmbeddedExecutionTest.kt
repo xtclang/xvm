@@ -127,6 +127,22 @@ class EmbeddedExecutionTest {
                 }
             }
             """,
+            """
+            module Spawner {
+                service Box {
+                    Int value() = 1;
+                }
+
+                void run() {
+                    @Inject Console console;
+                    console.print("started");
+                    while (True) {
+                        Box box = new Box();
+                        box.value();
+                    }
+                }
+            }
+            """,
         ).forEach { source ->
             val errors = ErrorList()
             val module = EmbeddingSupport.instance().compile(source.trimIndent(), null, errors)
@@ -455,6 +471,36 @@ class EmbeddedExecutionTest {
         started.get(HANG_SECONDS, SECONDS)
         worker.stop(id)
         exited.get(HANG_SECONDS, SECONDS)
+
+        assertThat(run("Exit").code).isEqualTo(42)
+    }
+
+    @Test
+    fun `a stopped program's end is no error, though its stop makes what it runs fail`() {
+        val output = StringBuffer()
+        val exited = CompletableFuture<String?>()
+        val started = CompletableFuture<Unit>()
+        val id =
+            worker.start(
+                RunWorkerProcess.Request(listOf(lib.path), "Spawner", "run", emptyList(), directory.toString()),
+                object : ProgramEvents {
+                    override fun output(text: String) {
+                        output.append(text)
+                        if ("started" in output) started.complete(Unit)
+                    }
+
+                    override fun exited(
+                        code: Long?,
+                        error: String?,
+                    ) {
+                        exited.complete(error)
+                    }
+                },
+            )
+        started.get(HANG_SECONDS, SECONDS)
+        // the stop terminates the program's container, whose next service it then cannot make, or call
+        worker.stop(id)
+        assertThat(exited.get(HANG_SECONDS, SECONDS)).describedAs("the stopped run's error").isNull()
 
         assertThat(run("Exit").code).isEqualTo(42)
     }

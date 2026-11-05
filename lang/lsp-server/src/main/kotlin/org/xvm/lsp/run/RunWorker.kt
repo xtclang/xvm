@@ -94,6 +94,12 @@ object RunWorker {
         private val active = ConcurrentHashMap<Long, EmbeddingSupport.Control>()
         private val inputs = ConcurrentHashMap<Long, ConsoleInput>()
 
+        /**
+         * The runs asked to stop. A stop terminates the program's container, which makes whatever the program does next
+         * fail, as making or calling a service does: that failure is the stop's, not the program's, and is no error.
+         */
+        private val stopped = ConcurrentHashMap.newKeySet<Long>()
+
         /** The runtime debugger of each run started with breakpoints. */
         private val debuggers = DebugCommands(channel.debug)
 
@@ -174,7 +180,7 @@ object RunWorker {
                                 EmbeddingSupport.instance().registeredConsoles(),
                                 active.size + inputs.size + debuggers.held(),
                             )
-                        channel.exit(id, control.result(), errors.failure())
+                        channel.exit(id, control.result(), if (stopped.remove(id)) null else errors.failure())
                         channel.usage(id, kept)
                     }
                 }
@@ -192,6 +198,7 @@ object RunWorker {
         }
 
         fun stop(id: Long) {
+            if (active.containsKey(id)) stopped += id
             // a program waiting for a line gets the end of input, so nothing stays blocked on it
             inputs[id]?.end()
             // closing kills the task and waits for it, so keep the command reader responsive; it also
