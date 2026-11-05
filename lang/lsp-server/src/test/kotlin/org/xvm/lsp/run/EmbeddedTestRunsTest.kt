@@ -177,6 +177,42 @@ class EmbeddedTestRunsTest {
 
     @Test
     @Slow
+    fun `a test that throws other than by failing an assertion is aborted, a disabled one skipped, and the console counts both`() {
+        val broken = source("Broken.x", BROKEN)
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Broken", broken)))
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
+                runs.run(RunParams(module = "Broken", moduleName = "Broken", runId = "broken", tests = emptyList())).awaited()
+                val exit = client.exits.awaited()!!
+                val output = client.output.toString()
+                val events = client.events("broken")
+                val finished = events.filter { it.event == TestEvent.FINISHED }.associateBy { it.id }
+
+                assertThat(finished.getValue("Broken:void passes()").status).isEqualTo("passed")
+                // a plain assert throws IllegalState, and assert:once an Assertion, which extends it
+                assertThat(finished.getValue("Broken:void fails()").status).isEqualTo("failed")
+                assertThat(finished.getValue("Broken:void failsOnce()").status).isEqualTo("failed")
+                val breaks = finished.getValue("Broken:void breaks()")
+                assertThat(breaks.status).isEqualTo("aborted")
+                assertThat(breaks.message).isEqualTo("not yet")
+                assertThat(breaks.details).contains("Unsupported").contains("(Broken.x:23)")
+                assertThat(events.filter { it.event == TestEvent.SKIPPED }.map { it.id to it.message })
+                    .containsExactly("Broken:void waits()" to "later")
+                assertThat(finished).doesNotContainKey("Broken:void waits()")
+                // the console's summary of the module agrees with the events
+                assertThat(output)
+                    .contains("(passed=1 failed=2 skipped=1 errors=1)")
+                    .doesNotContain("waits ran")
+                assertThat(exit.exitCode).isNotZero()
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    @Slow
     fun `a run of one selected test runs it alone, and passes`() {
         val mathy = source("Mathy.x", MATHY)
         val client = RunClient()
@@ -336,6 +372,46 @@ class EmbeddedTestRunsTest {
                         @Inject Console console;
                         console.print("inside works");
                     }
+                }
+            }
+            """.trimIndent() + "\n"
+
+        /**
+         * Tests that pass, fail an assertion, throw another exception, which aborts the test, and are disabled; line 23
+         * throws.
+         */
+        val BROKEN =
+            """
+            module Broken {
+                package xunit import xunit.xtclang.org;
+
+                @Test
+                void passes() {
+                    assert 1 + 1 == 2;
+                }
+
+                @Test
+                void fails() {
+                    Int n = 1;
+                    assert n + n == 3 as "one and one are not three";
+                }
+
+                @Test
+                void failsOnce() {
+                    Int n = 1;
+                    assert:once n + n == 3 as "one and one are still not three";
+                }
+
+                @Test
+                void breaks() {
+                    throw new Unsupported("not yet");
+                }
+
+                @Test
+                @xunit.annotations.Disabled("later")
+                void waits() {
+                    @Inject Console console;
+                    console.print("waits ran");
                 }
             }
             """.trimIndent() + "\n"
