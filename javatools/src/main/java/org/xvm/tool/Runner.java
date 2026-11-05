@@ -137,10 +137,23 @@ public class Runner extends Launcher<RunnerOptions> {
             }
             checkErrors("module identification");
 
-            fileBin   = requireNonNull(info).getBinaryFile();
+            // a test module in its project's test source directory, as "xtc init" makes one, imports
+            // the project's modules: they compile with it, and load from the project's binary
+            // directory; when one of them changed, the test module compiles again with it
+            List<File> projectModules = requireNonNull(info).isTestSource()
+                    ? info.getProjectModuleFiles()
+                    : List.of();
+            List<File> modulePath = withProjectBinaries(opts.getModulePath(), info, projectModules);
+            if (!projectModules.isEmpty()) {
+                repo = configureLibraryRepo(modulePath);
+            }
+            boolean fProjectChanged = !opts.isCompileDisabled() && projectModules.stream()
+                    .anyMatch(file -> !new ModuleInfo(file, true).isUpToDate());
+
+            fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
 
-            boolean fCompile = false;
+            boolean fCompile = fProjectChanged;
             if (!binExists) {
                 String qualName = info.getQualifiedModuleName();
                 module = repo.loadModule(qualName);
@@ -183,9 +196,11 @@ public class Runner extends Launcher<RunnerOptions> {
                 //   be consistent. This feels a bit brittle.
                 var builder = CompilerOptions.builder()
                         .addInputFile(fileSpec)
-                        .addModulePath(opts.getModulePath())
+                        .addModulePath(modulePath)
                         .enableDeduction(opts.mayDeduceLocations())
-                        .enableVerbose(opts.isVerbose());
+                        .enableVerbose(opts.isVerbose())
+                        .forceRebuild(fProjectChanged);
+                projectModules.forEach(builder::addInputFile);
                 outFile.ifPresent(builder::setOutputLocation);
 
                 int exitCode = new Compiler(builder.build(), m_console, f_errs).run();
@@ -196,7 +211,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
-                repo      = configureLibraryRepo(opts.getModulePath());
+                repo      = configureLibraryRepo(withProjectBinaries(opts.getModulePath(), info, projectModules));
                 module    = repo.loadModule(info.getQualifiedModuleName());
             }
 
@@ -437,6 +452,21 @@ public class Runner extends Launcher<RunnerOptions> {
         return repo.getModuleNames().stream()
                 .filter(name -> name.startsWith(qualName + '.'))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    /**
+     * The module path for a test module that imports its project's modules: the project's binary
+     * directory, once it exists, ahead of the given path; otherwise the given path.
+     */
+    private static List<File> withProjectBinaries(List<File> path, ModuleInfo info, List<File> projectModules) {
+        File dir = info.getBinaryDir();
+        if (projectModules.isEmpty() || dir == null || !dir.isDirectory() || path.contains(dir)) {
+            return path;
+        }
+        var result = new ArrayList<File>(path.size() + 1);
+        result.add(dir);
+        result.addAll(path);
+        return result;
     }
 
     @Override
