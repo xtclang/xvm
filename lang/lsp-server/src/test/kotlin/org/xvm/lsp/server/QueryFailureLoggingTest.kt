@@ -12,14 +12,13 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaited
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletionException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 /** Internal query failures need a local stack trace; ordinary cancellation and protocol rejections do not. */
 class QueryFailureLoggingTest {
@@ -63,9 +62,9 @@ class QueryFailureLoggingTest {
         logger.addAppender(appender)
         try {
             XtcLanguageServer(adapter).use { server ->
-                assertThatThrownBy { server.workspaceService.symbol(WorkspaceSymbolParams("Value")).get(HANG_SECONDS, SECONDS) }
+                assertThatThrownBy { server.workspaceService.symbol(WorkspaceSymbolParams("Value")).awaited() }
                     .isInstanceOf(Exception::class.java)
-                assertThat(finished.await(HANG_SECONDS, SECONDS)).isTrue()
+                assertThat(finished.awaited()).isTrue()
             }
             return events.filter { it.level == Level.ERROR }
         } finally {

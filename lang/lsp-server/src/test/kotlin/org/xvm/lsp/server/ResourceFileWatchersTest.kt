@@ -10,13 +10,12 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Forces stalled and failed watcher registration/removal replies. The queue must recover, IDs must not be
@@ -43,14 +42,14 @@ class ResourceFileWatchersTest {
             .unregisterCapability(any())
         ResourceFileWatchers().use { watchers ->
             val root = setOf("file:///external/a/")
-            val first = watchers.update(client, root).get(HANG_SECONDS, SECONDS)
-            assertThat(watchers.update(client, emptySet()).get(HANG_SECONDS, SECONDS)).isEmpty()
-            val next = watchers.update(client, root).get(HANG_SECONDS, SECONDS)
+            val first = watchers.update(client, root).awaited()
+            assertThat(watchers.update(client, emptySet()).awaited()).isEmpty()
+            val next = watchers.update(client, root).awaited()
             assertThat(next.values).doesNotContainAnyElementsOf(first.values)
             assertThat(removals).hasSize(2)
             assertThat(removals.last().unregisterations.map { it.id })
                 .containsExactlyElementsOf(first.values)
-            watchers.update(client, root).get(HANG_SECONDS, SECONDS)
+            watchers.update(client, root).awaited()
             assertThat(removals).hasSize(2)
         }
     }
@@ -77,28 +76,28 @@ class ResourceFileWatchersTest {
                 val first = watchers.update(client, setOf("file:///external/a/"))
                 val oldId =
                     registered
-                        .poll(HANG_SECONDS, SECONDS)
+                        .awaited()
                         .registrations
                         .single()
                         .id
-                val lateReply = replies.poll(HANG_SECONDS, SECONDS)
-                deadlines.poll(HANG_SECONDS, SECONDS).complete(null)
-                assertThat(first.get(HANG_SECONDS, SECONDS)).isEmpty()
+                val lateReply = replies.awaited()
+                deadlines.awaited().complete(null)
+                assertThat(first.awaited()).isEmpty()
                 val second = watchers.update(client, setOf("file:///external/a/"))
                 val newId =
                     registered
-                        .poll(HANG_SECONDS, SECONDS)
+                        .awaited()
                         .registrations
                         .single()
                         .id
-                replies.poll(HANG_SECONDS, SECONDS).complete(null)
-                assertThat(second.get(HANG_SECONDS, SECONDS).values).containsExactly(newId)
+                replies.awaited().complete(null)
+                assertThat(second.awaited().values).containsExactly(newId)
                 lateReply.complete(null)
-                assertThat(removed.poll(HANG_SECONDS, SECONDS).unregisterations.map { it.id })
+                assertThat(removed.awaited().unregisterations.map { it.id })
                     .containsExactly(oldId)
                 assertThat(newId).isNotEqualTo(oldId)
                 assertThat(
-                    watchers.update(client, setOf("file:///external/a/")).get(HANG_SECONDS, SECONDS).values,
+                    watchers.update(client, setOf("file:///external/a/")).awaited().values,
                 ).containsExactly(newId)
             }
     }
@@ -115,18 +114,18 @@ class ResourceFileWatchersTest {
         ResourceFileWatchers { CompletableFuture<Void>().also(deadlines::add) }
             .use { watchers ->
                 val root = setOf("file:///external/a/")
-                val first = watchers.update(client, root).get(HANG_SECONDS, SECONDS)
-                deadlines.poll(HANG_SECONDS, SECONDS) // completed registration's cancelled timer
+                val first = watchers.update(client, root).awaited()
+                deadlines.awaited() // completed registration's cancelled timer
                 val empty = watchers.update(client, emptySet())
-                deadlines.poll(HANG_SECONDS, SECONDS).complete(null)
-                assertThat(empty.get(HANG_SECONDS, SECONDS)).isEmpty()
+                deadlines.awaited().complete(null)
+                assertThat(empty.awaited()).isEmpty()
                 val replacing = watchers.update(client, root)
-                deadlines.poll(HANG_SECONDS, SECONDS) // replacement registration's cancelled timer
-                deadlines.poll(HANG_SECONDS, SECONDS).complete(null) // retire the unanswered removal retry
-                val second = replacing.get(HANG_SECONDS, SECONDS)
+                deadlines.awaited() // replacement registration's cancelled timer
+                deadlines.awaited().complete(null) // retire the unanswered removal retry
+                val second = replacing.awaited()
                 assertThat(second.values).doesNotContainAnyElementsOf(first.values)
                 removal.complete(null)
-                assertThat(watchers.update(client, root).get(HANG_SECONDS, SECONDS)).isEqualTo(second)
+                assertThat(watchers.update(client, root).awaited()).isEqualTo(second)
             }
     }
 
@@ -142,10 +141,10 @@ class ResourceFileWatchersTest {
         val watchers = ResourceFileWatchers()
         val first = watchers.update(client, setOf("file:///external/a/"))
         val second = watchers.update(client, setOf("file:///external/b/"))
-        started.get(HANG_SECONDS, SECONDS)
+        started.awaited()
         watchers.close()
-        assertThat(first.get(HANG_SECONDS, SECONDS)).isEmpty()
-        assertThat(second.get(HANG_SECONDS, SECONDS)).isEmpty()
+        assertThat(first.awaited()).isEmpty()
+        assertThat(second.awaited()).isEmpty()
         assertThat(watchers.update(client, setOf("file:///external/c/")).join()).isEmpty()
     }
 
@@ -167,7 +166,7 @@ class ResourceFileWatchersTest {
         val watchers = ResourceFileWatchers()
         val root = directory.resolve("generated/assets")
         val uri = root.toUri().toString()
-        watchers.update(client, setOf(uri)).get(HANG_SECONDS, SECONDS)
+        watchers.update(client, setOf(uri)).awaited()
 
         fun patterns() =
             (
@@ -185,16 +184,16 @@ class ResourceFileWatchersTest {
                 directory.toUri().toString() to "generated",
             )
         Files.createDirectory(root.parent)
-        watchers.update(client, setOf(uri)).get(HANG_SECONDS, SECONDS)
+        watchers.update(client, setOf(uri)).awaited()
         assertThat(patterns().last().baseUri.right).isEqualTo(root.parent.toUri().toString())
         assertThat(patterns().last().pattern).isEqualTo("assets")
         assertThat(removals).hasSize(1)
         Files.createDirectory(root)
-        watchers.update(client, setOf(uri)).get(HANG_SECONDS, SECONDS)
+        watchers.update(client, setOf(uri)).awaited()
         assertThat(registrations).hasSize(2)
         // Retain the parent subscription even while the root exists, for delete/recreate.
         Files.delete(root)
-        watchers.update(client, setOf(uri)).get(HANG_SECONDS, SECONDS)
+        watchers.update(client, setOf(uri)).awaited()
         assertThat(registrations).hasSize(2)
     }
 
@@ -224,12 +223,12 @@ class ResourceFileWatchersTest {
         assertThat(a.isDone).isFalse()
         assertThat(b.isDone).isFalse()
         first.complete(null)
-        val firstIds = a.get(HANG_SECONDS, SECONDS)
-        val secondIds = b.get(HANG_SECONDS, SECONDS)
+        val firstIds = a.awaited()
+        val secondIds = b.awaited()
         assertThat(secondIds.keys).containsExactly("file:///external/b/")
         assertThat(removals.single().unregisterations.map { it.id })
             .containsExactly(firstIds.values.single())
-        watchers.update(client, emptySet()).get(HANG_SECONDS, SECONDS)
+        watchers.update(client, emptySet()).awaited()
         assertThat(registrations).hasSize(2)
         assertThat(removals.last().unregisterations.map { it.id })
             .containsExactly(secondIds.values.single())

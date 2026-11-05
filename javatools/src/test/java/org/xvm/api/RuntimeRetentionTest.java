@@ -28,12 +28,12 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 import org.xvm.runtime.template._native.reflect.xRTSignature;
 
 import org.xvm.runtime.template._native.temporal.xNanosTimer.TimerHandle;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -42,12 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * interpreter down ends, and the values its templates cache, which each runtime makes for itself.
  */
 public class RuntimeRetentionTest {
-    /**
-     * How long the test waits for a run before it fails as hung. It ends only a hang: an hour,
-     * which no run reaches however slow or loaded the machine is, so no result depends on speed.
-     */
-    private static final Duration RUN_LIMIT = Duration.ofHours(1);
-
     @Test
     public void shuttingDownAnInterpreterCancelsItsTimersAlarmsAndEndsItsThreads() throws Exception {
         EmbeddingSupport support   = run("Alarms");
@@ -107,7 +101,7 @@ public class RuntimeRetentionTest {
         Control control = support.run(module, new PrintWriter(new StringWriter(), true), null, null, errs);
         assertNotNull(control, () -> name + " did not start: " + errs.getErrors());
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
         return support;
     }

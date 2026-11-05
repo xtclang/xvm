@@ -19,7 +19,6 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -38,6 +37,7 @@ import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Line;
 import org.xvm.runtime.SessionDebugger.Stop;
 
+import org.xvm.testing.Await;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import org.xvm.util.Severity;
@@ -59,13 +59,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * test resources.
  */
 public class DebugOptionTest {
-    /**
-     * How long the test waits for the debugged program to stop or end before it fails as hung. It
-     * ends only a hang: an hour, which no run reaches however slow or loaded the machine is, so no
-     * result depends on speed.
-     */
-    private static final long LIMIT_SECONDS = 3_600;
-
     /**
      * A module whose run() prints a number; its first line with code is line 4.
      */
@@ -148,13 +141,13 @@ public class DebugOptionTest {
         String options = "listen:127.0.0.1:0,suspend,agent=" + agent();
         var    run     = CompletableFuture.supplyAsync(() -> launch(options, false, new Messages()));
 
-        Stop stop = STOPS.poll(LIMIT_SECONDS, TimeUnit.SECONDS);
+        Stop stop = Await.poll(STOPS);
         assertNotNull(stop, "the program did not stop at its breakpoint");
         assertEquals("breakpoint", stop.reason());
         assertEquals(List.of(1), stop.breakpointIds());
         debugger.resume();
 
-        assertEquals(0, run.get(LIMIT_SECONDS, TimeUnit.SECONDS));
+        assertEquals(0, Await.get(run));
         assertEquals(List.of("start listen:127.0.0.1:0,suspend Debugged", "ended 0", "closed"), events());
     }
 
