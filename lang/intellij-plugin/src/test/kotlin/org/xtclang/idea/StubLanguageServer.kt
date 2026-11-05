@@ -1,10 +1,14 @@
 package org.xtclang.idea
 
+import com.intellij.openapi.extensions.DefaultPluginDescriptor
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
+import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
+import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -42,6 +46,7 @@ import org.eclipse.lsp4j.services.LanguageClientAware
 import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
+import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.XtcClientFeatures
 import java.io.InputStream
 import java.io.OutputStream
@@ -58,14 +63,16 @@ import java.util.concurrent.Future
  * with the word before the caret, as the real server does, and signature help with its [signature], and records the
  * methods it is asked for. With [diagnostics] it has a diagnostic provider with a workspace report, as the real server
  * does: a document's pull reports its [pulled] diagnostics, and the workspace report has the [reported] ones. The
- * client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's own. [LightEditor] connects it as the
- * Ecstasy server, with the plugin's own client features, so LSP4IJ's code runs as it does against the real server.
+ * client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's own. Each connection runs [connecting]
+ * as it starts, on LSP4IJ's thread, where a test can hold it. [LightEditor] connects it as the Ecstasy server, with the
+ * plugin's own client features, so LSP4IJ's code runs as it does against the real server.
  */
 class StubLanguageServer(
     val completions: List<String> = emptyList(),
     val signature: SignatureHelp? = null,
     val diagnostics: Boolean = false,
     val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
+    val connecting: () -> Unit = {},
 ) : LanguageServer,
     LanguageClientAware,
     TextDocumentService,
@@ -88,10 +95,12 @@ class StubLanguageServer(
     /** The documents of the workspace report and their diagnostics, by URI, which the report has in URI order. */
     val reported = ConcurrentHashMap<String, List<Diagnostic>>()
 
-    /** The client, for the requests the server sends it. */
-    @Volatile
-    lateinit var languageClient: LanguageClient
-        private set
+    /** The client of each connection that LSP4IJ has made to the server, in order. */
+    val clients = CopyOnWriteArrayList<LanguageClient>()
+
+    /** The client of the latest connection, for the requests the server sends it. */
+    val languageClient: LanguageClient
+        get() = clients.last()
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> =
         CompletableFuture.completedFuture(
@@ -108,7 +117,7 @@ class StubLanguageServer(
         )
 
     override fun connect(client: LanguageClient) {
-        languageClient = client
+        clients += client
     }
 
     override fun shutdown(): CompletableFuture<Any> = CompletableFuture.completedFuture(null)
@@ -174,17 +183,43 @@ class StubLanguageServer(
 
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) = Unit
 
-    /** The server a test connects, which [Factory] hands LSP4IJ. */
-    internal companion object {
-        @Volatile
-        var connected: StubLanguageServer? = null
+    /**
+     * LSP4IJ's extension for the stub as the Ecstasy server, in place of the plugin's. Its factory, which LSP4IJ keeps
+     * as the extension's, serves this server alone: a wrapper that LSP4IJ starts for an earlier test's extension, even
+     * one disposed with it, connects to that test's server, never to a later test's.
+     */
+    fun extension(): ServerExtensionPointBean {
+        val extension =
+            ServerExtensionPointBean().apply {
+                id = CompilerSettings.SERVER_ID
+                name = "Ecstasy Language Server"
+                factoryClass = Factory::class.java.name
+                pluginDescriptor = DefaultPluginDescriptor(PluginId.getId("org.xtclang.idea.test"), javaClass.classLoader)
+            }
+        // LSP4IJ makes the factory from its class name and keeps it; made now, it takes this server
+        synchronized(StubLanguageServer) {
+            making = this
+            try {
+                check(extension.instance is Factory)
+            } finally {
+                making = null
+            }
+        }
+        return extension
     }
 
-    /** LSP4IJ's factory for the stub, in place of the plugin's XtcLanguageServerFactory. */
-    class Factory : LanguageServerFactory {
-        override fun createConnectionProvider(project: Project): StreamConnectionProvider = Connection(checkNotNull(connected))
+    private companion object {
+        /** The server of the [Factory] that [extension] is making. */
+        var making: StubLanguageServer? = null
+    }
 
-        override fun createLanguageClient(project: Project): LanguageClientImpl = checkNotNull(connected).client(project)
+    /** LSP4IJ's factory for the stub, in place of the plugin's XtcLanguageServerFactory, for the server of its [extension]. */
+    class Factory : LanguageServerFactory {
+        private val server = checkNotNull(making) { "a stub factory is made only by StubLanguageServer.extension()" }
+
+        override fun createConnectionProvider(project: Project): StreamConnectionProvider = Connection(server)
+
+        override fun createLanguageClient(project: Project): LanguageClientImpl = server.client(project)
 
         override fun createClientFeatures(): LSPClientFeatures = XtcClientFeatures()
     }
@@ -193,27 +228,50 @@ class StubLanguageServer(
     private class Connection(
         private val server: StubLanguageServer,
     ) : StreamConnectionProvider {
-        private lateinit var client: Socket
-        private lateinit var listening: Future<Void>
+        // LSP4IJ can stop a connection on another thread while it starts, as when a test ends before its server has
+        // connected. The stop throws nothing into LSP4IJ's removal of the server, which would then leave the disposed
+        // wrapper among the project's started servers, and a start that a stop came before never reaches the server
+        private val lock = Any()
+
+        @Volatile
+        private var client: Socket? = null
+
+        /** The server's launcher, once it listens; guarded by [lock]. */
+        private var listening: Future<Void>? = null
+
+        /** Guarded by [lock]. */
+        private var stopped = false
 
         override fun start() {
+            server.connecting()
             ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { listener ->
                 val accepted = CompletableFuture.supplyAsync { listener.accept() }
-                client = Socket(InetAddress.getLoopbackAddress(), listener.localPort)
+                val socket = Socket(InetAddress.getLoopbackAddress(), listener.localPort)
                 val end = accepted.get()
-                val launcher = LSPLauncher.createServerLauncher(server, end.getInputStream(), end.getOutputStream())
-                server.connect(launcher.remoteProxy)
-                listening = launcher.startListening()
+                synchronized(lock) {
+                    if (stopped) {
+                        socket.close()
+                        end.close()
+                        throw CannotStartProcessException("The connection was stopped as it started")
+                    }
+                    val launcher = LSPLauncher.createServerLauncher(server, end.getInputStream(), end.getOutputStream())
+                    client = socket
+                    listening = launcher.startListening()
+                    server.connect(launcher.remoteProxy)
+                }
             }
         }
 
-        override fun getInputStream(): InputStream = client.getInputStream()
+        override fun getInputStream(): InputStream = checkNotNull(client).getInputStream()
 
-        override fun getOutputStream(): OutputStream = client.getOutputStream()
+        override fun getOutputStream(): OutputStream = checkNotNull(client).getOutputStream()
 
         override fun stop() {
-            client.close()
-            listening.cancel(true)
+            synchronized(lock) {
+                stopped = true
+                client?.close()
+                listening?.cancel(true)
+            }
         }
     }
 }
