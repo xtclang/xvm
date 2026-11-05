@@ -109,11 +109,12 @@ class XtcLspConnectionProvider(
          * intention list, an Automatic request with no only, drops every quick fix; the server need not prove them
          * for that list.
          * TODO LSP4IJ: UP74 — LSP4IJ waits on the EDT for the answers to its Automatic requests, when the lightbulb or
-         * Alt+Enter sorts its intentions by their text; the server waits for a full answer only a short budget, and
-         * then answers from what it has proved already.
+         * Alt+Enter sorts its intentions by their text. The plugin does not ask the server to answer them within a
+         * budget, from what it has proved already: LSP4IJ 0.21 keeps a partial answer for the document's version and
+         * never asks again, so the actions proved after it never show. The EDT waits for the full answer until LSP4IJ
+         * releases our #1871.
          */
-        internal val LSP4IJ_CODE_ACTIONS =
-            mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true, "automaticFromCache" to true))
+        internal val LSP4IJ_CODE_ACTIONS = mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true))
 
         /**
          * Resolve the LSP server JAR from a plugin directory. Returns the path to
