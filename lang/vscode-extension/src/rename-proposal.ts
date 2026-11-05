@@ -78,8 +78,46 @@ export async function renameWithConfiguration(
         }, token).catch(error => client.handleFailedRequest(renameRequest, token, error, null, false)));
 }
 
-/** File-operation participation contributes only extra edits; VS Code owns the requested moves. */
-export async function moveWithConfiguration(client: LanguageClient, event: vscode.FileWillRenameEvent): Promise<vscode.WorkspaceEdit | null> {
+/**
+ * The moved sources among [moved], files or folders, whose types the project uses elsewhere, as the server's references
+ * of each file's declaration say.
+ */
+export async function usedElsewhere(moved: readonly vscode.Uri[], token: vscode.CancellationToken): Promise<vscode.Uri[]> {
+    const sources = (await Promise.all(moved.map(uri => uri.path.endsWith('.x') ? [uri]
+        : vscode.workspace.findFiles(new vscode.RelativePattern(uri, '**/*.x'), undefined, 100, token)))).flat();
+    const used: vscode.Uri[] = [];
+    for (const source of sources) {
+        if (token.isCancellationRequested) break;
+        const symbols = await vscode.commands.executeCommand<(vscode.DocumentSymbol | vscode.SymbolInformation)[] | undefined>(
+            'vscode.executeDocumentSymbolProvider', source).then(value => value ?? [], () => []);
+        const declaration = symbols[0];
+        if (!declaration) continue;
+        const at = 'selectionRange' in declaration ? declaration.selectionRange.start : declaration.location.range.start;
+        const references = await vscode.commands.executeCommand<vscode.Location[] | undefined>('vscode.executeReferenceProvider', source, at)
+            .then(value => value ?? [], () => []);
+        if (references.some(reference => reference.uri.toString() !== source.toString())) used.push(source);
+    }
+    return used;
+}
+
+/** What VS Code shows when it moves [moved] sources that the project uses without the server's edits for those uses. */
+export function unupdatedReferences(moved: readonly vscode.Uri[], reason?: string): string {
+    const names = moved.map(uri => uri.path.split('/').pop()).join(', ');
+    return `Ecstasy: the references to ${names} were not updated for this move${reason ? `: ${reason}` : ''}. `
+        + 'The language server could not prove edits that keep them compiling, and VS Code moves the files anyway.';
+}
+
+/**
+ * File-operation participation contributes only extra edits; VS Code owns the requested moves. A participant cannot
+ * refuse a move, so when the server refuses its edits for sources that the project uses, [warn] says so: the move
+ * leaves those uses as they were.
+ */
+export async function moveWithConfiguration(
+    client: LanguageClient,
+    event: vscode.FileWillRenameEvent,
+    used: typeof usedElsewhere = usedElsewhere,
+    warn: (message: string) => void = message => void vscode.window.showWarningMessage(message),
+): Promise<vscode.WorkspaceEdit | null> {
     // TODO VSCODE: UP23 — the participant cannot replace/reorder host moves. Independently
     // relocated children must precede parents for apply, but native Undo also replays inverse
     // moves in forward order. Overlapping moves need an upstream reversal fix as well as
@@ -90,11 +128,25 @@ export async function moveWithConfiguration(client: LanguageClient, event: vscod
     if (event.files.some(move => owned.some(uri => uri === move.oldUri.toString() || uri.startsWith(move.oldUri.toString().replace(/\/$/, '') + '/')))) {
         throw new Error('Moving workspace roots or their settings requires reopening the workspace.');
     }
-    return proposalWithConfiguration(client, event.files[0].oldUri, event.token,
-        () => client.sendRequest(moveRequest, {
-            files: event.files.map(move => ({ oldUri: move.oldUri.toString(), newUri: move.newUri.toString() }))
-        }, event.token).catch(error => client.handleFailedRequest(moveRequest, event.token, error, null, false)),
+    let refused = false;
+    let reason: string | undefined;
+    const edit = await proposalWithConfiguration(client, event.files[0].oldUri, event.token,
+        async () => {
+            const proposal = await client.sendRequest(moveRequest, {
+                files: event.files.map(move => ({ oldUri: move.oldUri.toString(), newUri: move.newUri.toString() }))
+            }, event.token).catch(error => {
+                reason = error instanceof Error ? error.message : String(error);
+                return client.handleFailedRequest(moveRequest, event.token, error, null, false);
+            });
+            refused = proposal === null;
+            return proposal;
+        },
         event.files.map(move => move.oldUri.toString()));
+    if (refused && !event.token.isCancellationRequested) {
+        const unupdated = await used(event.files.map(move => move.oldUri), event.token);
+        if (unupdated.length) warn(unupdatedReferences(unupdated, reason));
+    }
+    return edit;
 }
 
 async function proposalWithConfiguration(
