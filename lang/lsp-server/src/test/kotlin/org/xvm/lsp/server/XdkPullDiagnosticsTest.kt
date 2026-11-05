@@ -470,6 +470,45 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `a deleted file whose diagnostics came from its own pulls is cleared by the next workspace pull`() {
+        val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val member =
+            directory.resolve("Pull/Bad.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Bad extends Missing {}")
+            }
+        val uri = member.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", root.toURI().toString())))
+            session.open(uri, member.readText(), 1)
+            assertThat(session.pull(uri).left.items).isNotEmpty()
+            // as VS Code's client closes a document: one last pull of it, then it forgets the document's result IDs,
+            // so that a later workspace pull names none for it
+            session.server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
+            assertThat(session.pull(uri).left.items).isNotEmpty()
+            assertThat(member.delete()).isTrue()
+            session.server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(listOf(FileEvent(uri, FileChangeType.Deleted))),
+            )
+            val reports =
+                session
+                    .workspace()
+                    .items
+                    .map { it.left }
+                    .filter { it.uri.endsWith("/Bad.x") }
+            assertThat(reports).describedAs("the deleted file's report").hasSize(1)
+            assertThat(reports.single().items).isEmpty()
+            // once: the report is the client's last of it
+            assertThat(
+                session
+                    .workspace()
+                    .items
+                    .map { it.left?.uri ?: it.right.uri },
+            ).noneMatch { it.endsWith("/Bad.x") }
+        }
+    }
+
+    @Test
     fun `result identifiers are scoped to a document and a server`() {
         val id =
             Session().use { session ->
