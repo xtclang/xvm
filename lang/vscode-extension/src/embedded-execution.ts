@@ -290,6 +290,8 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
     private readonly input = new ConsoleLineEditor();
     private running = false;
     private inputEnded = false;
+    /** Whether the task was stopped, whose program's end then says so, not how the program exited. */
+    private stopping = false;
 
     constructor(client: () => LanguageClient | undefined, private readonly target: RunTarget) {
         super(client, 'run', target.label);
@@ -310,6 +312,7 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
             return;
         }
         const client = this.client();
+        this.stopping = true;
         void client?.sendRequest<boolean>('xtc/stopRun', { runId: this.runId })
             .then(active => {
                 if (!active) this.exited(undefined, 'Stopped.');
@@ -352,7 +355,8 @@ class RunTerminal extends ExecutionTerminal implements RunSession {
         if (error) {
             this.line(`\n${error}`);
         }
-        this.line(`\nProcess finished with exit code ${exitCode ?? 1}`);
+        // a stopped program did not finish: the worker reports its exit code as 143
+        this.line(this.stopping ? '\nProcess stopped' : `\nProcess finished with exit code ${exitCode ?? 1}`);
         this.finish(exitCode ?? 1);
     }
 
