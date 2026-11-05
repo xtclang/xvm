@@ -47,6 +47,10 @@ import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ModuleRepository;
 
+import org.xvm.runtime.Container;
+import org.xvm.runtime.Fiber;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
 import org.xvm.runtime.SessionDebugger.Completion;
@@ -65,6 +69,8 @@ import org.xvm.runtime.SessionDebugger.Stop;
 import org.xvm.runtime.SessionDebugger.ThreadInfo;
 import org.xvm.runtime.SessionDebugger.Variable;
 import org.xvm.runtime.SessionDebugger.Watchable;
+
+import org.xvm.runtime.template._native.temporal.xLocalClock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -109,6 +115,12 @@ public class SessionDebuggerTest {
     Path sourceDir;
 
     private static EmbeddingSupport support;
+
+    /**
+     * Prints where the runtime's fibers are once a run's close has not returned for a minute
+     * ({@link #watchCloses}).
+     */
+    private static Thread closeWatchdog;
 
     /**
      * A module whose run() passes an object, an array and a string to a method, which stops on line
@@ -467,9 +479,9 @@ public class SessionDebuggerTest {
             """;
 
     /**
-     * A module whose run() starts a Worker service counting to 3,000,000, one line at a time, and
-     * stops at line 18, while it counts, then asks it for its count, prints it and returns it;
-     * the count is on line 7. busy() adds up 0 to 19,999, which is 199,990,000.
+     * A module whose run() starts a Worker service counting to 3,000,000, one line at a time, on
+     * line 7, prints "working" on line 18, then asks the worker for its count on line 19, prints
+     * it and returns it.
      */
     private static final String PROGRAM = """
             module Program {
@@ -480,6 +492,37 @@ public class SessionDebuggerTest {
                         for (Int i : 0 ..< 3_000_000) {
                             ++done;
                         }
+                    }
+
+                    Int finished() = done;
+                }
+
+                Int run() {
+                    Worker worker = new Worker();
+                    worker.work^();
+                    @Inject Console console;
+                    console.print("working");
+                    Int done = worker.finished();
+                    console.print($"done {done}");
+                    return done;
+                }
+            }
+            """;
+
+    /**
+     * A module whose run() starts a Worker service, which adds to its count on line 7 for as long
+     * as its going is True, prints "working" on line 17, then asks the worker for its count, prints
+     * it and returns it. The loop is on one line, so the worker reaches that line only where it
+     * checks going, before it adds. busy() adds up 0 to 19,999, which is 199,990,000.
+     */
+    private static final String GOING = """
+            module Going {
+                service Worker {
+                    Int     done;
+                    Boolean going = True;
+
+                    void work() {
+                        while (going) {++done;}
                     }
 
                     Int finished() = done;
@@ -508,6 +551,11 @@ public class SessionDebuggerTest {
     /**
      * A module whose run() has two Counter services count at once, one to 2,000,000 and one to
      * 3,000,000, on line 7, and returns the sum of their counts once both are done, 5,000,000.
+     * run() starts the second counter only once it has read a line of input, which the tests type
+     * once the first counter has stopped the program, so the second starts in that stop and waits
+     * at its first line. run() does all of that, and asks for the counts, on one line, since a stop
+     * holds a fiber only where a line starts: it then waits for the counts, never at a line, so
+     * only the counters wait at one.
      */
     private static final String ALONE = """
             module Alone {
@@ -524,11 +572,10 @@ public class SessionDebuggerTest {
                 }
 
                 Int run() {
+                    @Inject Console console;
                     Counter first  = new Counter();
                     Counter second = new Counter();
-                    first.count^(2_000_000);
-                    second.count^(3_000_000);
-                    return first.counted() + second.counted();
+                    first.count^(2_000_000); console.readLine(); second.count^(3_000_000); return first.counted() + second.counted();
                 }
             }
             """;
@@ -791,7 +838,8 @@ public class SessionDebuggerTest {
 
     @BeforeAll
     static void configure() throws URISyntaxException {
-        support = new EmbeddingSupport().configure(xdk(), null);
+        support       = new EmbeddingSupport().configure(xdk(), null);
+        closeWatchdog = Thread.ofPlatform().daemon().name("close watchdog").start(SessionDebuggerTest::watchCloses);
     }
 
     /**
@@ -800,7 +848,63 @@ public class SessionDebuggerTest {
      */
     @AfterAll
     static void shutdown() {
+        closeWatchdog.interrupt();
         support.shutdownInterpreter();
+    }
+
+    /**
+     * Print the runtime's containers, their services and the fibers of those with their frames,
+     * once a thread has been in a run's close for a minute, so that a run that does not end shows
+     * where it is stuck. It only prints, once for each stalled close: RUN_LIMIT still bounds the
+     * close, and decides the test's result.
+     */
+    private static void watchCloses() {
+        Map<Thread, Long> closingSince = new HashMap<>();
+        try {
+            while (true) {
+                Thread.sleep(5_000);
+                long now = System.nanoTime();
+                Map<Thread, StackTraceElement[]> stacks = Thread.getAllStackTraces();
+                closingSince.keySet().retainAll(stacks.keySet());
+                stacks.forEach((thread, stack) -> {
+                    boolean closing = Stream.of(stack).anyMatch(element -> element.getMethodName().equals("close")
+                            && element.getClassName().equals(InterpreterControl.class.getName()));
+                    if (!closing) {
+                        closingSince.remove(thread);
+                    } else if (now - closingSince.computeIfAbsent(thread, _ -> now) > TimeUnit.MINUTES.toNanos(1)) {
+                        System.err.println("A close has not returned for a minute on " + thread.getName() + ":\n" + fibers());
+                        closingSince.put(thread, Long.MAX_VALUE);
+                    }
+                });
+            }
+        } catch (InterruptedException e) {
+            // the tests have ended
+        }
+    }
+
+    /**
+     * @return the runtime's containers, their services and the fibers of those with their frames
+     */
+    private static String fibers() {
+        StringBuilder text = new StringBuilder();
+        try {
+            for (Container container : xLocalClock.INSTANCE.f_container.f_runtime.containers()) {
+                text.append(container.getModule()).append(": ").append(container.getStatus()).append('\n');
+                for (ServiceContext service : container.getServices()) {
+                    text.append("  ").append(service).append(": ").append(service.getStatus()).append('\n');
+                    for (Fiber fiber : service.getFibers()) {
+                        text.append("    fiber ").append(fiber.getId()).append(": ").append(fiber.getStatus()).append('\n');
+                        for (Frame frame = fiber.getFrame(); frame != null; frame = frame.f_framePrev) {
+                            text.append("      ").append(frame).append('\n');
+                        }
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            // the runtime changes while it is read; what was read so far still shows where it is
+            text.append(e).append('\n');
+        }
+        return text.toString();
     }
 
     @Test
@@ -941,19 +1045,30 @@ public class SessionDebuggerTest {
     @Test
     public void aStopListsTheFibersThatDoNotWaitAtALineWithWhatTheyDoAndTheStacksOfThoseThatStandStill()
             throws Exception {
-        Path  source  = compile("Waits", PROGRAM.replace("Program", "Waits"));
+        // run() starts the worker on line 19, where it asks for the count: a stop holds a fiber only
+        // where a line starts, so once the worker counts, run() goes on to ask, also while the
+        // program is stopped, and then waits for the answer
+        Path  source  = compile("Waits", PROGRAM.replace("Program", "Waits").replace("worker.work^();", "")
+                .replace("Int done = worker.finished();", "worker.work^(); Int done = worker.finished();"));
         Stops stops   = new Stops();
         var   session = new SessionDebugger(stops);
         session.addModule(input().loadModule("Waits"));
-        // by then, run() has asked the busy worker for its count, and waits for the answer
         session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "done == 100000", null, null)));
 
         StringWriter output  = new StringWriter();
         Control      control = run("Waits", output, session);
         try (control) {
             Stop             stop    = stops.next();
-            List<ThreadInfo> threads = session.threads();
-            List<String>     names   = threads.stream().map(ThreadInfo::name).toList();
+            List<ThreadInfo> threads = assertTimeoutPreemptively(RUN_LIMIT, () -> {
+                while (true) {
+                    List<ThreadInfo> all = session.threads();
+                    if (all.stream().anyMatch(thread -> thread.name().equals("Waits (waiting)"))) {
+                        return all;
+                    }
+                    Thread.sleep(10);
+                }
+            });
+            List<String> names = threads.stream().map(ThreadInfo::name).toList();
             // the stopped fiber, run()'s that waits, and the worker's fiber for that call, once it
             // has taken it
             assertEquals(List.of("Worker", "Waits (waiting)"), names.subList(0, 2));
@@ -982,11 +1097,12 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("Alone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
-        StringWriter output  = new StringWriter();
-        Control      control = run("Alone", output, session);
+        StringWriter          output  = new StringWriter();
+        BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
+        Control               control = run("Alone", output, session, typed(lines));
         try (control) {
             int    alone = stops.next().threadId();
-            int    other = counting(session, alone);
+            int    other = counting(session, lines, alone);
             String count = evaluate(session, top(session, other), "n").value();
             assertFalse(session.resume(Integer.MAX_VALUE));
 
@@ -1015,11 +1131,12 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("StepsAlone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
-        StringWriter output  = new StringWriter();
-        Control      control = run("StepsAlone", output, session);
+        StringWriter          output  = new StringWriter();
+        BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
+        Control               control = run("StepsAlone", output, session, typed(lines));
         try (control) {
             int    alone = stops.next().threadId();
-            int    other = counting(session, alone);
+            int    other = counting(session, lines, alone);
             String count = evaluate(session, top(session, other), "n").value();
 
             session.setBreakpoints(source.toString(), List.of());
@@ -1044,17 +1161,21 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("PausesAlone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
-        StringWriter output  = new StringWriter();
-        Control      control = run("PausesAlone", output, session);
+        StringWriter          output  = new StringWriter();
+        BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
+        Control               control = run("PausesAlone", output, session, typed(lines));
         try (control) {
             int    alone = stops.next().threadId();
-            int    other = counting(session, alone);
+            int    other = counting(session, lines, alone);
             String count = evaluate(session, top(session, other), "n").value();
 
-            // the first counter has nearly 2,000,000 to count alone, longer than the pause takes
+            // the first counter goes on alone with the pause already asked for: it leaves its wait
+            // only once this thread lets go of the debugger's lock, which it holds meanwhile
             session.setBreakpoints(source.toString(), List.of());
-            assertTrue(session.resume(alone));
-            session.pause();
+            synchronized (session) {
+                assertTrue(session.resume(alone));
+                session.pause();
+            }
             Stop paused = stops.next();
             assertEquals(alone, paused.threadId());
             assertEquals("pause", paused.reason());
@@ -1074,11 +1195,12 @@ public class SessionDebuggerTest {
         session.addModule(input().loadModule("EndsAlone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
-        StringWriter output  = new StringWriter();
-        Control      control = run("EndsAlone", output, session);
+        StringWriter          output  = new StringWriter();
+        BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
+        Control               control = run("EndsAlone", output, session, typed(lines));
         try (control) {
             int    alone = stops.next().threadId();
-            int    other = counting(session, alone);
+            int    other = counting(session, lines, alone);
             String count = evaluate(session, top(session, other), "n").value();
 
             session.setBreakpoints(source.toString(), List.of());
@@ -1880,17 +2002,21 @@ public class SessionDebuggerTest {
         StringWriter output  = new StringWriter();
         Control      control = run("Ticks", output, session);
         try (control) {
+            // once it has printed a tick, every line it reaches is in the loop or in the code the
+            // loop calls
             assertTimeoutPreemptively(RUN_LIMIT, () -> {
-                while (!output.toString().contains("spinning")) {
+                while (ticks(output) == 0) {
                     Thread.sleep(10);
                 }
             });
             session.pause();
             Stop stop = stops.next();
             assertEquals("pause", stop.reason());
-            StackFrameInfo top = session.stackTrace(stop.threadId()).getFirst();
-            assertEquals("Ticks.run", top.name());
-            assertTrue(top.line() >= 7 && top.line() <= 9, "stopped in the loop: " + top.line());
+            // a pause stops at the next line of any code, also of the library code that the loop
+            // calls to print a tick, whose frames are then above the loop's
+            StackFrameInfo loop = session.stackTrace(stop.threadId()).getLast();
+            assertEquals("Ticks.run", loop.name());
+            assertTrue(loop.line() >= 7 && loop.line() <= 9, "stopped in the loop: " + loop.line());
 
             // a pause while stopped does nothing: the program runs on after it resumes, as a tick
             // it prints after the resume shows, which a pause still pending would have stopped first
@@ -2547,21 +2673,21 @@ public class SessionDebuggerTest {
             CompletableFuture<Variable> line = session.run(caller, "console.readLine()", RUN_LIMIT);
             assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(line));
             CompletableFuture<List<Variable>> vars   = session.variables(locals);
-            CompletableFuture<Variable>       second = session.run(twice, "n + 1", RUN_LIMIT);
-            // the run cannot answer before its line is typed, so a read or a run that did not wait
-            // for it would answer first
-            List<String>           answered = new CopyOnWriteArrayList<>();
-            CompletableFuture<?>[] answers  = {
-                    line.whenComplete((_, _) -> answered.add("line")),
-                    vars.whenComplete((_, _) -> answered.add("variables")),
-                    second.whenComplete((_, _) -> answered.add("second"))};
+            CompletableFuture<Variable>       second = session.run(caller, "console.readLine()", RUN_LIMIT);
+            // the run cannot answer before its line is typed, and neither can a read or a run that
+            // waits for it; each answer comes on a thread of its own, so the order in which they
+            // come is not the order in which they were made
+            assertFalse(vars.isDone());
+            assertFalse(second.isDone());
 
+            // the read is made once the run ends, and the other run starts after it: the read
+            // answers while that run waits for a line of its own, and the run takes the next line
             lines.add("typed");
             assertEquals("typed", line.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
             assertEquals("21", byName(vars.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS)).get("n").value());
-            assertEquals("22", second.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
-            CompletableFuture.allOf(answers).get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
-            assertEquals(List.of("line", "variables", "second"), answered);
+            assertTrue(reading.tryAcquire(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS), () -> "not read: " + answer(second));
+            lines.add("next");
+            assertEquals("next", second.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
 
             // a run that the program's resume finds in progress ends at once; its code, which waits
             // for input, unwinds once it has its line, and the program then goes on
@@ -2723,46 +2849,60 @@ public class SessionDebuggerTest {
     @Test
     public void aRunOfTheWholeProgramLetsItsOtherFibersRunPastTheirBreakpointsAndThenWaitAgainFurtherOn()
             throws Exception {
-        Path  source  = compile("Program", PROGRAM);
-        Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
-        session.addModule(input().loadModule("Program"));
-        session.setBreakpoints(source.toString(), List.of(new Line(1, 18)));
+        // the worker counts until it is told to stop, so it still counts whenever the test looks
+        Path                  source  = compile("Going", GOING);
+        Stops                 stops   = new Stops();
+        var                   session = new SessionDebugger(stops);
+        BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
+        session.addModule(input().loadModule("Going"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 17)));
 
         StringWriter output  = new StringWriter();
-        Control      control = run("Program", output, session);
+        Control      control = run("Going", output, session, typed(lines));
         try (control) {
             Stop stop = stops.next();
-            // the worker's fiber waits at a line of its loop, part of the way through it
+            // the worker's fiber waits at the line of its loop, where it checks going before it adds
             waitingAtLines(session, 2);
             int main   = session.stackTrace(stop.threadId()).getFirst().id();
             int worker = session.threads().stream().filter(t -> t.id() != stop.threadId()).findFirst().orElseThrow().id();
             int frame  = session.stackTrace(worker).getFirst().id();
             long count = Long.parseLong(evaluate(session, frame, "done").value());
 
-            // while the whole program runs, the worker counts on, past a breakpoint on its count,
-            // which does not stop it; once the run ends, it waits again, further on, with frames
-            // of its own, and its old ones no longer read anything
-            session.setBreakpoints(source.toString(), List.of(new Line(1, 18), new Line(2, 7)));
-            assertEquals("199990000", session.run(main, "busy()", RUN_LIMIT, true)
-                    .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
+            // while the whole program runs, the worker counts on: the run's code waits for a line
+            // of input, which comes once the worker has left its wait, so it adds before it waits
+            // again; once the run ends, it waits again, further on, with frames of its own, and
+            // its old ones no longer read anything
+            CompletableFuture<Variable> busy = session.run(main, "busy() + console.readLine().size", RUN_LIMIT, true);
+            assertTimeoutPreemptively(RUN_LIMIT, () -> {
+                while (session.threads().stream().anyMatch(t -> t.id() == worker && !t.name().endsWith(")"))) {
+                    Thread.sleep(10);
+                }
+            });
+            lines.add("");
+            assertEquals("199990000", busy.get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
             waitingAtLines(session, 2);
-            int again = session.stackTrace(worker).getFirst().id();
+            int  again = session.stackTrace(worker).getFirst().id();
+            long done  = Long.parseLong(evaluate(session, again, "done").value());
             assertNotEquals(frame, again);
-            assertTrue(Long.parseLong(evaluate(session, again, "done").value()) > count);
+            assertTrue(done > count, done + " > " + count);
             assertFails("The frame is not one of the stopped program's, so nothing can be evaluated in it.", session,
                     frame, "done");
 
-            // code that waits on the worker's work gets its answer, once the worker is done
-            assertEquals("3000000", session.run(main, "worker.finished()", RUN_LIMIT, true)
+            // told to stop, the worker goes on past a breakpoint on its count, which does not stop
+            // it, and ends its work without adding, and code that waits on the work gets its answer
+            session.setBreakpoints(source.toString(), List.of(new Line(1, 17), new Line(2, 7)));
+            int self = byName(read(session, session.scopes(again).getFirst().variablesReference())).get("this")
+                    .variablesReference();
+            assertEquals("False", set(session, self, "going", "False").value());
+            assertEquals(String.valueOf(done), session.run(main, "worker.finished()", RUN_LIMIT, true)
                     .get(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS).value());
             assertTrue(session.isStopped());
 
             // the program goes on from its stop, which the worker's breakpoint never added to
             session.resume();
             assertTimeoutPreemptively(RUN_LIMIT, control::join);
-            assertEquals(3_000_000L, control.result());
-            assertTrue(output.toString().contains("done 3000000"), output.toString());
+            assertEquals(done, control.result());
+            assertTrue(output.toString().contains("done " + done), output.toString());
             assertNull(stops.poll());
         }
     }
@@ -2870,10 +3010,15 @@ public class SessionDebuggerTest {
     }
 
     /**
+     * Type the line that an {@link #ALONE} module's run() reads before it starts the second
+     * counter, once the first has stopped the program.
+     *
      * @return the ID of a fiber other than the specified one that waits at a line of a Counter's
      *         count, with the variables of its frames, once one does
      */
-    private static int counting(SessionDebugger session, int except) throws InterruptedException {
+    private static int counting(SessionDebugger session, BlockingQueue<String> lines, int except)
+            throws InterruptedException {
+        lines.add("");
         long deadline = System.nanoTime() + RUN_LIMIT.toNanos();
         while (System.nanoTime() < deadline) {
             for (ThreadInfo thread : session.threads()) {
@@ -2938,6 +3083,20 @@ public class SessionDebuggerTest {
                 new PrintWriter(output, true), consoleInput, sourceDir.toFile(), session, errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         return control;
+    }
+
+    /**
+     * @return console input whose reads wait for, and take, the lines that the test adds
+     */
+    private static ConsoleInput typed(BlockingQueue<String> lines) {
+        return _ -> {
+            try {
+                return lines.poll(RUN_LIMIT.toSeconds(), TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        };
     }
 
     /**
