@@ -1313,12 +1313,13 @@ class XtcLanguageServer internal constructor(
 
     /**
      * The tests of each source module, from its latest compilation, as trees under the module: a test's selector is
-     * what a run's `tests` take to run it alone ([RunParams.tests]).
+     * what a run's `tests` take to run it alone ([RunParams.tests]). A module no editor has opened has them from the
+     * workspace pull's compile, which this brings up to date as a pull does.
      */
     @JsonRequest("xtc/tests")
     fun tests(): CompletableFuture<List<XdkModuleTests>> =
         supplyAsync("xtc/tests", "test modules") {
-            (adapter as? XdkAdapter)?.tests().orEmpty()
+            (adapter as? XdkAdapter)?.testsAsync()?.join().orEmpty()
         }
 
     @JsonRequest("xtc/stopRun")

@@ -14,11 +14,12 @@ internal class XdkDiagnosticIndex {
         val dependencies: Map<String, String>,
     )
 
-    /** Diagnostics and optional emitted artifact from one set of module inputs. */
+    /** Diagnostics, the module's tests and optional emitted artifact from one set of module inputs. */
     data class Build(
         val key: Key,
         val result: CompilationResult,
         val artifact: XdkDependency?,
+        val tests: XdkTest? = null,
     )
 
     /** Published diagnostic results and reusable builds for one project revision. */
