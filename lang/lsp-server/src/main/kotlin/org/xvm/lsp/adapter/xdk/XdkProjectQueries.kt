@@ -1180,6 +1180,7 @@ internal class XdkProjectQueries(
         val owner =
             project.modules.values.singleOrNull { it.uri == project.scope(uri) }
                 ?: return emptyList()
+        val packages = before.within(setOf(owner.uri)).packageImports
         val actions =
             names
                 .flatMap { XdkAutoImports.targets(it, before) }
@@ -1189,7 +1190,7 @@ internal class XdkProjectQueries(
                     checkCurrent()
                     val graph = importGraph(owner, target) ?: return@mapNotNull null
                     val edit =
-                        XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
+                        XdkAutoImports.edit(text, owner.name, target, packages) ?: return@mapNotNull null
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
                     val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) {
@@ -1231,6 +1232,7 @@ internal class XdkProjectQueries(
         val vacated = texts + (source to text.removeRange(start, end))
         val base = if (XdkAutoImports.parses(vacated.getValue(source))) compile(vacated) else null
         val before = base ?: compile(texts, Proof.REPAIR) ?: return emptyList()
+        val packages = before.within(setOf(owner.uri)).packageImports
         val items =
             XdkAutoImports
                 .matchingTargets(prefix.text, before)
@@ -1240,7 +1242,7 @@ internal class XdkProjectQueries(
                     checkCurrent()
                     val graph = importGraph(owner, target) ?: return@mapNotNull null
                     val imported =
-                        XdkAutoImports.edit((if (base == null) texts else vacated).getValue(source), owner.name, target)
+                        XdkAutoImports.edit((if (base == null) texts else vacated).getValue(source), owner.name, target, packages)
                             ?: return@mapNotNull null
                     // LSP requires additional edits to be disjoint from the replacement edit; an import made in the code
                     // without the name is at the same offset in the code with it only when it comes before the name.
