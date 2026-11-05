@@ -26,6 +26,33 @@ import java.util.concurrent.TimeUnit.SECONDS
  * work stopped, and protocol spans must distinguish request direction and end at actual reply delivery.
  */
 class ExecutionTraceTest {
+    /**
+     * The trace's events are lines of its own file only: on stderr, which VS Code shows as the server's errors, and in
+     * server.log they would bury the server's own messages, as every trace event did.
+     */
+    @Test
+    fun `trace events go to the trace file and not to stderr or the server log`() {
+        val trace = LoggerFactory.getLogger("org.xvm.lsp.trace") as Logger
+        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
+        val seen = CopyOnWriteArrayList<ILoggingEvent>()
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    seen += event
+                }
+            }.apply { start() }
+        root.addAppender(appender)
+        try {
+            ExecutionTrace.api("ExecutionTraceTest.probe") {}
+            assertThat(seen.filter { it.loggerName == trace.name }).isEmpty()
+            assertThat(trace.getAppender("EXECUTION_TRACE")).isNotNull()
+            assertThat(root.getAppender("STDERR")).isNotNull()
+        } finally {
+            root.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
     @Test
     fun `queue lists preserve order and cancellation does not pretend running work stopped`() {
         Recording().use { trace ->
