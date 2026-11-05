@@ -26,6 +26,7 @@ import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.lsp.model.toLsp
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration
@@ -100,6 +101,31 @@ class CodeActionKindsTest {
                 val titles = titles(documents, null, only)
                 assertThat(backend.asked.last()).describedAs("only %s", only).isEqualTo(expected)
                 assertThat(titles).describedAs("only %s", only).containsExactlyInAnyOrderElementsOf(expected.map { it.name })
+            }
+        }
+    }
+
+    @Test
+    fun `the provider declares each kind an action can have, and no other, and answers a request for it`() {
+        val server = XtcLanguageServer(Backend())
+        val declared =
+            try {
+                server.connect(mock(LanguageClient::class.java))
+                server
+                    .initialize(initialization(null))
+                    .awaited()
+                    .capabilities.codeActionProvider
+                    .let { if (it.isRight) it.right.codeActionKinds.orEmpty() else emptyList() }
+            } finally {
+                server.shutdown().awaited()
+            }
+        // VS Code enables Organize Imports and its key, and the editor menu's Refactor and Source Action, by these names
+        assertThat(declared).contains("quickfix", "refactor", "source", "source.organizeImports")
+        // the kinds an action can have are the adapter's: each is declared, and each declared is one of them
+        assertThat(declared).containsExactlyInAnyOrderElementsOf(CodeActionKind.entries.map { it.toLsp() })
+        session(null) { _, documents ->
+            declared.forEach { kind ->
+                assertThat(request(documents, null, listOf(kind)).awaited().map { it.right.kind }).describedAs(kind).contains(kind)
             }
         }
     }
@@ -186,25 +212,7 @@ class CodeActionKindsTest {
         val server = XtcLanguageServer(backend)
         try {
             server.connect(mock(LanguageClient::class.java))
-            server
-                .initialize(
-                    InitializeParams().apply {
-                        initializationOptions = options
-                        capabilities =
-                            ClientCapabilities().apply {
-                                textDocument =
-                                    TextDocumentClientCapabilities().apply {
-                                        codeAction =
-                                            CodeActionCapabilities().apply {
-                                                codeActionLiteralSupport =
-                                                    CodeActionLiteralSupportCapabilities(
-                                                        CodeActionKindCapabilities(listOf("quickfix", "refactor", "source")),
-                                                    )
-                                            }
-                                    }
-                            }
-                    },
-                ).awaited()
+            server.initialize(initialization(options)).awaited()
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module Kinds {}")))
             body(backend, documents)
@@ -212,6 +220,25 @@ class CodeActionKindsTest {
             server.shutdown().awaited()
         }
     }
+
+    /** A client's initialization, with its [options], that takes code action literals of the three base kinds. */
+    private fun initialization(options: Any?) =
+        InitializeParams().apply {
+            initializationOptions = options
+            capabilities =
+                ClientCapabilities().apply {
+                    textDocument =
+                        TextDocumentClientCapabilities().apply {
+                            codeAction =
+                                CodeActionCapabilities().apply {
+                                    codeActionLiteralSupport =
+                                        CodeActionLiteralSupportCapabilities(
+                                            CodeActionKindCapabilities(listOf("quickfix", "refactor", "source")),
+                                        )
+                                }
+                        }
+                }
+        }
 
     private companion object {
         const val URI = "file:///workspace/Kinds.x"
