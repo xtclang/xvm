@@ -7,6 +7,7 @@ import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
@@ -24,6 +25,8 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Worker-only whole-graph queries. Capture every configured module before compiling any of them.
@@ -34,7 +37,7 @@ internal class XdkProjectQueries(
     private val project: XdkProject,
     private val overlays: Map<String, String>,
     private val dependencies: XdkDependencies,
-    private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val compiler: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
     private val cancelled: () -> Boolean,
     private val discoverImports: Boolean = false,
     private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
@@ -58,6 +61,17 @@ internal class XdkProjectQueries(
     private val texts =
         sources.values.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value }
     private val uris = sources.values.flatMap { it.sourceUris.entries }.associate { it.toPair() }
+
+    private val compiled = AtomicInteger()
+
+    /** The module compiles that this query ran so far, which the server's log reports. */
+    val compiles: Int get() = compiled.get()
+
+    private fun compileTree(
+        input: ModuleInfo,
+        repository: ModuleRepository?,
+        errors: ErrorListener,
+    ): EmbeddingSupport.Compilation = compiler(input, repository, errors).also { compiled.incrementAndGet() }
 
     /** Read-only graph compilation, with no live AST installation or artificial open buffers. */
     fun diagnostics(): List<CompilationResult> {
@@ -882,13 +896,32 @@ internal class XdkProjectQueries(
     /**
      * Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. A quick
      * fix names the request's [diagnostics] it resolves, those overlapping the code it repairs, so editors
-     * can offer it on the problem itself.
+     * can offer it on the problem itself. [compiled] gets the module compiles it ran, also when it is cancelled.
      */
     fun codeActions(
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic> = emptyList(),
         kinds: Set<CodeActionKind> = CodeActionKind.entries.toSet(),
+        compiled: (CodeActionCompiles) -> Unit = {},
+    ): List<CodeAction> {
+        val start = compiles
+        // the compiles of the revision's compile, when this request made it, rather than found it in the cache
+        val made = AtomicReference<Int?>()
+        try {
+            return answer(uri, range, diagnostics, kinds, made)
+        } finally {
+            val base = made.get()
+            compiled(CodeActionCompiles(base ?: 0, compiles - start - (base ?: 0), base == null))
+        }
+    }
+
+    private fun answer(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+        kinds: Set<CodeActionKind>,
+        made: AtomicReference<Int?>,
     ): List<CodeAction> {
         fun resolved(target: SemanticModel.Range) =
             diagnostics.filter {
@@ -902,7 +935,14 @@ internal class XdkProjectQueries(
         // meanwhile keeps nothing: its compiles may have stopped short, and checkCurrent() throws before it is kept.
         val revision = revision()
         val base =
-            actionCache.base(revision) { since -> build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() } } ?: return emptyList()
+            actionCache.base(revision) { since ->
+                val start = compiles
+                try {
+                    build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() }
+                } finally {
+                    made.set(compiles - start)
+                }
+            } ?: return emptyList()
         val before = base.facts
         val complete =
             before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
