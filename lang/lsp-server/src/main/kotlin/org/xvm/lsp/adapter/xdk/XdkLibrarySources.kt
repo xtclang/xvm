@@ -88,6 +88,16 @@ internal object XdkLibrarySources {
 
     fun owns(uri: String): Boolean = source(uri) != null
 
+    /**
+     * True when [uri] is one of the read-only copies, as navigation or a debugger's stack frame opens them: a library's
+     * own source, which belongs to no project, so its compile on its own reports errors that are not its own.
+     */
+    fun isCopy(uri: String): Boolean {
+        if (copies.isEmpty()) return false
+        val file = XdkSources.file(uri)?.toPath() ?: return false
+        return copies.values.any { it == file }
+    }
+
     fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
 
     /** A parsed name is not proof: require one exact artifact declaration at this source range. */
