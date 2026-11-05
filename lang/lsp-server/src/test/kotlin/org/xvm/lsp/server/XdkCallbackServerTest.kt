@@ -1,7 +1,6 @@
 package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.Position
@@ -13,16 +12,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaitUntil
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Forces compiler completion and transport cancellation around document locks. Callbacks must release the
@@ -55,7 +54,7 @@ class XdkCallbackServerTest {
                     column: Int,
                 ): List<TypeHierarchyItem> {
                     navigationEntered.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                     return emptyList()
                 }
             }
@@ -70,20 +69,20 @@ class XdkCallbackServerTest {
                 ),
             )
             val response = documents.completion(CompletionParams(document, Position(0, 0)))
-            await().atMost(HANG_SECONDS, SECONDS).until { pending.numberOfDependents > 0 }
+            awaitUntil { pending.numberOfDependents > 0 }
             val navigation =
                 documents.prepareTypeHierarchy(TypeHierarchyPrepareParams(document, Position(0, 0)))
-            assertThat(navigationEntered.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(navigationEntered.awaited()).isTrue()
             // LSP4J cancels while holding its request-map lock. Completion of a different
             // response can need that lock, so cancellation must return without waiting here.
             val canceled = CompletableFuture.supplyAsync { response.cancel(false) }
-            assertThat(canceled.get(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(canceled.awaited()).isTrue()
             release.countDown()
-            assertThat(navigation.get(HANG_SECONDS, SECONDS)).isEmpty()
-            await().atMost(HANG_SECONDS, SECONDS).until { pending.isCancelled }
+            assertThat(navigation.awaited()).isEmpty()
+            awaitUntil { pending.isCancelled }
         } finally {
             release.countDown()
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 
@@ -107,7 +106,7 @@ class XdkCallbackServerTest {
                             CompletableFuture
                                 .supplyAsync(
                                     {
-                                        check(release.await(HANG_SECONDS, SECONDS))
+                                        check(release.awaited())
                                         delegate.compile(uri, content)
                                     },
                                     worker,
@@ -125,7 +124,7 @@ class XdkCallbackServerTest {
                         CompletableFuture
                             .supplyAsync(
                                 {
-                                    check(release.await(HANG_SECONDS, SECONDS))
+                                    check(release.awaited())
                                     emptyList<CompletionItem>()
                                 },
                                 worker,
@@ -142,7 +141,7 @@ class XdkCallbackServerTest {
                         // cycle.
                         return worker
                             .submit<List<TypeHierarchyItem>> { emptyList() }
-                            .get(HANG_SECONDS, SECONDS)
+                            .awaited()
                     }
                 }
             val server = XtcLanguageServer(backend)
@@ -167,8 +166,8 @@ class XdkCallbackServerTest {
                         )
                     }
                 }
-                val pending = callbackQueued.get(HANG_SECONDS, SECONDS)
-                await().atMost(HANG_SECONDS, SECONDS).until { pending.numberOfDependents > 0 }
+                val pending = callbackQueued.awaited()
+                awaitUntil { pending.numberOfDependents > 0 }
                 // A barrier behind the pending work proves that its callback precedes navigation.
                 val queued = CountDownLatch(1)
                 worker.execute { queued.countDown() }
@@ -176,13 +175,13 @@ class XdkCallbackServerTest {
                     documents.prepareTypeHierarchy(
                         TypeHierarchyPrepareParams(TextDocumentIdentifier(uri), Position(0, 0)),
                     )
-                assertThat(navigationEntered.await(HANG_SECONDS, SECONDS)).isTrue()
+                assertThat(navigationEntered.awaited()).isTrue()
                 release.countDown()
-                assertThat(queued.await(HANG_SECONDS, SECONDS)).isTrue()
-                assertThat(result.get(HANG_SECONDS, SECONDS)).isEmpty()
+                assertThat(queued.awaited()).isTrue()
+                assertThat(result.awaited()).isEmpty()
             } finally {
                 release.countDown()
-                server.shutdown().get(HANG_SECONDS, SECONDS)
+                server.shutdown().awaited()
             }
         }
     }

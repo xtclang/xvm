@@ -11,11 +11,10 @@ import org.xvm.asm.MethodStructure
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.MethodDeclarationStatement
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
+import org.xvm.lsp.awaited
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises completion and signature help with missing enclosing delimiters. Recovery must preserve the
@@ -225,7 +224,7 @@ class XdkDelimiterRecoveryTest {
             val uri = member.toURI().toString()
             adapter.compile(uri, member.readText())
             val cached = adapter.getCachedResult(uri)
-            val model = adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(HANG_SECONDS, SECONDS)!!
+            val model = adapter.analyzeAtAsync(uri, Position(0, prefix.length)).awaited()!!
             assertThat(
                 model.sites
                     .single()

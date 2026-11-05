@@ -4,13 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.TimeSource
 
@@ -39,13 +38,13 @@ class XdkDiagnosticIndexTest {
             adapter.replaceSourceModules(
                 listOf(XdkSourceModule("Defaults", root.toURI().toString())),
             )
-            val reports = adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)
+            val reports = adapter.workspaceDiagnosticsAsync().awaited()
             assertThat(reports).hasSize(1)
             assertThat(reports.single().success).isFalse()
             assertThat(reports.single().diagnostics.map { it.code }).contains("PARSER-24")
             assertThat(reports.single().diagnostics.map { it.code }).doesNotContain("EMB-5")
             root.writeText("module Defaults { enum Kind default(Plain) {Plain, Fancy} }")
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -84,19 +83,19 @@ class XdkDiagnosticIndexTest {
         ).use { adapter ->
             adapter.replaceSourceModules(graph)
             val cold = TimeSource.Monotonic.markNow()
-            val first = adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)
+            val first = adapter.workspaceDiagnosticsAsync().awaited()
             val coldTime = cold.elapsedNow()
             assertThat(first).hasSize(21).allMatch { it.success }
             assertThat(compiled.values.sumOf { it.get() }).isEqualTo(21)
             val warm = TimeSource.Monotonic.markNow()
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).isEqualTo(first)
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).isEqualTo(first)
             val warmTime = warm.elapsedNow()
             assertThat(compiled.values.sumOf { it.get() }).isEqualTo(21)
             directory
                 .resolve("Node0.x")
                 .toFile()
                 .writeText("module Node0 { static String value() = \"changed\"; }")
-            val changed = adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)
+            val changed = adapter.workspaceDiagnosticsAsync().awaited()
             assertThat(changed.single { it.uri.endsWith("App.x") }.diagnostics).isNotEmpty()
             assertThat(compiled.getValue("Node0").get()).isEqualTo(2)
             assertThat(compiled.getValue("App").get()).isEqualTo(2)
@@ -105,9 +104,9 @@ class XdkDiagnosticIndexTest {
             }
             assertThat(compiled.values.sumOf { it.get() }).isEqualTo(23)
             adapter.replaceSourceModules(graph.filter { it.name != "Node19" })
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).hasSize(20)
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).hasSize(20)
             adapter.replaceSourceModules(graph)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).hasSize(21)
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).hasSize(21)
             assertThat(compiled.getValue("Node19").get()).isEqualTo(2)
             println(
                 "Closed diagnostic graph: roots=21, cold=$coldTime, warm=$warmTime, initialCompiles=21, unchangedCompiles=0, editedClosureCompiles=2",
@@ -129,7 +128,7 @@ class XdkDiagnosticIndexTest {
                 },
                 { sources, repository, errors ->
                     started.countDown()
-                    check(release.await(HANG_SECONDS, SECONDS))
+                    check(release.awaited())
                     EmbeddingSupport.instance().compileModule(sources, repository, errors)
                 },
                 { _, _, _, _, _ -> error("No cursor analysis") },
@@ -139,13 +138,13 @@ class XdkDiagnosticIndexTest {
                 listOf(XdkSourceModule("Concurrent", file.toURI().toString())),
             )
             val first = adapter.workspaceDiagnosticsAsync()
-            assertThat(started.await(HANG_SECONDS, SECONDS)).isTrue()
+            assertThat(started.awaited()).isTrue()
             val canceled = adapter.workspaceDiagnosticsAsync()
             val second = adapter.workspaceDiagnosticsAsync()
             assertThat(canceled.cancel(false)).isTrue()
             release.countDown()
-            assertThat(first.get(HANG_SECONDS, SECONDS)).allMatch { it.success }
-            assertThat(second.get(HANG_SECONDS, SECONDS)).isEqualTo(first.join())
+            assertThat(first.awaited()).allMatch { it.success }
+            assertThat(second.awaited()).isEqualTo(first.join())
             assertThat(canceled.isCancelled).isTrue()
         } finally {
             release.countDown()
