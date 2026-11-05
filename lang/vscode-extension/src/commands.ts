@@ -60,10 +60,13 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             return vscode.commands.executeCommand('editor.action.showReferences',
                 vscode.Uri.parse(uri), new vscode.Position(at.line, at.character), targets);
         }),
-        // From the Run lens (source URI and module name), the editor title button or the keyboard (active
-        // editor), or the command palette (asks for a module name).
-        vscode.commands.registerCommand('xtc.runModule', async (uri?: string, moduleName?: string) => {
-            const document = activeEcstasyDocument();
+        // From the Run lens (source URI and module name), the editor title button or context menu (the editor's
+        // resource, and their own context object, which is no module name), the keyboard (active editor), or the
+        // command palette (asks for a module name).
+        vscode.commands.registerCommand('xtc.runModule', async (target?: string | vscode.Uri, name?: unknown) => {
+            const uri = target instanceof vscode.Uri ? target.toString() : target;
+            let moduleName = typeof name === 'string' ? name : undefined;
+            const document = uri ? vscode.workspace.textDocuments.find(each => each.uri.toString() === uri) : activeEcstasyDocument();
             const source = uri ?? document?.uri.toString();
             const folder = source ? vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(source)) : undefined;
             const mode = buildMode(folder ?? vscode.workspace.workspaceFolders?.[0]);
