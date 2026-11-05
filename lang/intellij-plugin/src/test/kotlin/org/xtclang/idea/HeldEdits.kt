@@ -5,7 +5,6 @@ import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
-import java.util.concurrent.TimeUnit.SECONDS
 
 /** LSP4IJ's synchronizer of [file] with the language server, once the server has the file open. */
 internal fun CodeInsightTestFixture.synchronizer(file: PsiFile): DocumentContentSynchronizer {
@@ -13,11 +12,11 @@ internal fun CodeInsightTestFixture.synchronizer(file: PsiFile): DocumentContent
         LanguageServiceAccessor
             .getInstance(project)
             .getLanguageServers(file, { true }, { true })
-            .get(HANG_SECONDS, SECONDS)
+            .awaited()
             .single()
             .serverWrapper
     val synchronizer = checkNotNull(server.getOpenedDocument(server.toUri(file.virtualFile))?.synchronizer)
-    synchronizer.didOpenFuture.get(HANG_SECONDS, SECONDS)
+    synchronizer.didOpenFuture.awaited()
     return synchronizer
 }
 
