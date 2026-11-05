@@ -107,7 +107,8 @@ internal object LspJsonOptions {
             }
         }
 
-    private fun lookup(
+    /** The value of [key] in [raw], such as a nested options object for the readers above; null when it has none. */
+    fun lookup(
         raw: Any?,
         key: String,
     ): Any? =
