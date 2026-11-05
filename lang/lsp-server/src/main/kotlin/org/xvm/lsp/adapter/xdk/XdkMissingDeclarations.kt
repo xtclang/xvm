@@ -9,6 +9,7 @@ import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.compiler.ast.NewExpression
 import org.xvm.compiler.ast.ReturnStatement
+import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.Range
 
@@ -95,31 +96,47 @@ internal object XdkMissingDeclarations {
                 }
             return XdkRename.Edit(at, at, "$newline$indent    $declaration$newline$indent")
         }
+
+        // A class to create for a new expression of a type nothing declares, with no arguments: its use is the type.
+        fun constructed(node: NewExpression): Candidate? {
+            if (node.isVirtualNew || node.hasSquareBrackets() || node.arguments.isNotEmpty() ||
+                node.isComponentNode || node.unregisteredBody.isPresent
+            ) {
+                return null
+            }
+            val type = node.childNodes().singleOrNull() as? NamedTypeExpression ?: return null
+            val name = type.name.takeIf(XdkRename::identifier) ?: return null
+            val start = XdkRename.offset(text, position(type.startPosition)) ?: return null
+            val end = XdkRename.offset(text, position(type.endPosition)) ?: return null
+            if (text.substring(start, end) != name) return null
+            val owner =
+                generateSequence(parents[node]) { parents[it] }.filterIsInstance<TypeCompositionStatement>().firstOrNull() ?: return null
+            if (owner.category.id != Token.Id.MODULE) return null
+            return Candidate(name, SemanticModel.SymbolKind.TYPE, location(type), insertion(owner, "class $name {}") ?: return null)
+        }
+
+        // The statement of a block that holds a node, the node itself when it is one.
+        fun statement(node: AstNode): AstNode? = generateSequence(node) { parents[it] }.firstOrNull { parents[it] is StatementBlock }
         return parents.keys
             .mapNotNull { node ->
                 when (node) {
-                    is NewExpression -> {
-                        if (node.isVirtualNew || node.hasSquareBrackets() || node.arguments.isNotEmpty() ||
-                            node.isComponentNode || node.unregisteredBody.isPresent
-                        ) {
+                    is NewExpression -> constructed(node)?.takeIf { selected(node.childNodes().single()) }
+
+                    // The same class for a use of its name that the compiler reports unresolved in the statement that
+                    // constructs it, as the type of "Joker joker = new Joker();": the statement's first error, and so the
+                    // only diagnostic that an editor asks a quick fix for.
+                    is NamedTypeExpression -> {
+                        if (parents[node] is NewExpression || !selected(node)) return@mapNotNull null
+                        val use = location(node)
+                        if (model.occurrences.none { it.symbol == null && it.name == node.name && it.range == use.range }) {
                             return@mapNotNull null
                         }
-                        val type = node.childNodes().singleOrNull() as? NamedTypeExpression ?: return@mapNotNull null
-                        val name = type.name.takeIf(XdkRename::identifier) ?: return@mapNotNull null
-                        if (!selected(type)) return@mapNotNull null
-                        val start = XdkRename.offset(text, position(type.startPosition)) ?: return@mapNotNull null
-                        val end = XdkRename.offset(text, position(type.endPosition)) ?: return@mapNotNull null
-                        if (text.substring(start, end) != name) return@mapNotNull null
-                        val owner =
-                            generateSequence(parents[node]) { parents[it] }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
-                                ?: return@mapNotNull null
-                        if (owner.category.id != Token.Id.MODULE) return@mapNotNull null
-                        Candidate(
-                            name,
-                            SemanticModel.SymbolKind.TYPE,
-                            location(type),
-                            insertion(owner, "class $name {}") ?: return@mapNotNull null,
-                        )
+                        val held = statement(node) ?: return@mapNotNull null
+                        parents.keys
+                            .filterIsInstance<NewExpression>()
+                            .filter { statement(it) === held }
+                            .firstNotNullOfOrNull { constructed(it)?.takeIf { candidate -> candidate.name == node.name } }
+                            ?.copy(use = use)
                     }
 
                     is NameExpression -> {
@@ -153,6 +170,6 @@ internal object XdkMissingDeclarations {
 
                     else -> null
                 }
-            }.distinct()
+            }.distinctBy { Triple(it.name, it.kind, it.edit) }
     }
 }
