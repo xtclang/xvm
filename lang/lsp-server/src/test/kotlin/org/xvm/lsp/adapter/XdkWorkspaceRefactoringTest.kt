@@ -88,6 +88,73 @@ class XdkWorkspaceRefactoringTest {
     }
 
     @Test
+    fun `organize imports removes the imports nothing uses and sorts the rest`() {
+        // HashMap is one of the names every module imports implicitly, so its import is unused
+        val text =
+            "module App {\n" +
+                "    import ecstasy.maps.HasherMap;\n" +
+                "    import ecstasy.maps.HashMap;\n" +
+                "    import ecstasy.collections.ReverseList;\n\n" +
+                "    HasherMap<Int, Int>? map = Null;\n" +
+                "    ReverseList<Int>? list = Null;\n}\n"
+        assertThat(organized("App", text))
+            .isEqualTo(
+                "module App {\n" +
+                    "    import ecstasy.collections.ReverseList;\n" +
+                    "    import ecstasy.maps.HasherMap;\n\n" +
+                    "    HasherMap<Int, Int>? map = Null;\n" +
+                    "    ReverseList<Int>? list = Null;\n}\n",
+            )
+    }
+
+    @Test
+    fun `organize imports removes an unused import's line and offers nothing when imports are clean`() {
+        assertThat(organized("Lone", "module Lone {\n    import ecstasy.maps.HashMap;\n\n    Int run() = 1;\n}\n"))
+            .isEqualTo("module Lone {\n\n    Int run() = 1;\n}\n")
+        assertThat(
+            organized(
+                "Clean",
+                "module Clean {\n    import ecstasy.collections.ConstOrdinalList;\n    ConstOrdinalList? list = Null;\n}\n",
+            ),
+        ).isNull()
+    }
+
+    /** [text] after its "Organize imports" action, which must compile; null when the action is not offered. */
+    private fun organized(
+        name: String,
+        text: String,
+    ): String? {
+        val uri = source(name, text)
+        return XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            val actions =
+                adapter
+                    .getCodeActions(uri, Range(Position(0, 0), Position(0, 0)), emptyList())
+                    .filter { it.kind == CodeAction.CodeActionKind.SOURCE_ORGANIZE_IMPORTS }
+            assertThat(actions.size).isLessThanOrEqualTo(1)
+            actions.singleOrNull()?.let { action ->
+                val edit = requireNotNull(action.edit)
+                assertThat(edit.versioned).isTrue()
+                assertThat(action.title).isEqualTo("Organize imports")
+                applied(text, edit.changes.getValue(uri)).also {
+                    assertThat(adapter.compile(uri, it).diagnostics).isEmpty()
+                }
+            }
+        }
+    }
+
+    private fun applied(
+        text: String,
+        edits: List<TextEdit>,
+    ): String {
+        fun offset(position: Position): Int = text.splitToSequence("\n").take(position.line).sumOf { it.length + 1 } + position.column
+        return edits
+            .sortedByDescending { offset(it.range.start) }
+            .fold(text) { value, edit -> value.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText) }
+    }
+
+    @Test
     fun `binary types and broken graphs do not yield source refactoring edits`() {
         val text =
             "module App { package xml import xml.xtclang.org; void use(xml.Document doc) {} }"
