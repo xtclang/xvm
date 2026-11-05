@@ -17,10 +17,17 @@ import org.xvm.lsp.model.toLsp
 import java.io.File
 import java.net.URI
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /** Called under the document lifecycle lock. IDs belong to this server and one document's items. */
 internal class DiagnosticReports {
     private val entries = mutableMapOf<String, Entry>()
+
+    /**
+     * The documents whose current items no report has given the client yet, by their identities: a report of theirs
+     * that the client holds may still change, as it pulls again. Read without the lock, by the server's status.
+     */
+    private val unreported = ConcurrentHashMap.newKeySet<String>()
 
     /** Diagnostic items and their result ID, retained for unchanged pull-diagnostic responses. */
     private data class Entry(
@@ -39,8 +46,12 @@ internal class DiagnosticReports {
             }
         if (entries[key]?.diagnostics != items) {
             entries[key] = Entry(UUID.randomUUID().toString(), items)
+            unreported += key
         }
     }
+
+    /** The documents whose current items no report has given the client yet, as their canonical URIs. */
+    fun unreported(): List<String> = unreported.sorted()
 
     fun record(results: List<CompilationResult>): Set<String> {
         val uris = results.flatMap { it.documentUris }.toSet()
@@ -82,6 +93,8 @@ internal class DiagnosticReports {
                         },
                     )
                 }.takeIf { it.isNotEmpty() }
+        unreported -= identity(uri)
+        others?.keys?.forEach { unreported -= identity(it) }
         return if (previous == entry.id) {
             DocumentDiagnosticReport(
                 RelatedUnchangedDocumentDiagnosticReport(entry.id).apply {
@@ -119,6 +132,7 @@ internal class DiagnosticReports {
                 (oldUris + currentUris).values.sorted().map { uri ->
                     recordIfAbsent(uri)
                     val entry = entries.getValue(identity(uri))
+                    unreported -= identity(uri)
                     if (previousIds[identity(uri)] == entry.id) {
                         WorkspaceDocumentDiagnosticReport(
                             WorkspaceUnchangedDocumentDiagnosticReport(
@@ -139,6 +153,7 @@ internal class DiagnosticReports {
                 },
             )
         entries.keys.retainAll(currentUris.keys)
+        unreported.retainAll(entries.keys)
         return result
     }
 
@@ -175,5 +190,8 @@ internal class DiagnosticReports {
             }
         }.getOrDefault(uri)
 
-    fun clear() = entries.clear()
+    fun clear() {
+        entries.clear()
+        unreported.clear()
+    }
 }
