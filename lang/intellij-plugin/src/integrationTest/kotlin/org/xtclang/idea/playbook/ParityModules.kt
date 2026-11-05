@@ -1,6 +1,8 @@
 package org.xtclang.idea.playbook
 
+import com.intellij.driver.client.utility
 import com.intellij.driver.sdk.invokeAction
+import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 
@@ -37,6 +39,45 @@ internal fun ParityScenarios.moduleCases() {
         check(diagnostics(root) { true }.none { it.code == data.string("diagnosticCode") })
         replace(root, fixture(data.string("rootFile")))
         clean(child)
+    }
+    case("X341") { data ->
+        val root = project()
+        val member = data.string("memberFile")
+        val path = directory.resolve(member).toString()
+        val broken = fixture(root.file).replace(data.string("replaceFrom"), data.string("replaceWith"))
+        val problems = with(driver) { utility(ProblemFilesProbe::class) }
+        val ide = with(driver) { singleProject() }
+
+        fun closed(errors: Boolean) =
+            awaitUi(
+                "closed $id/$member ${if (errors) "has errors and is" else "has none and is no"} problem file",
+                HANG_LIMIT,
+                errorMessage = {
+                    "Closed $id/$member: problem file ${problems.problem(ide, path)}, " +
+                        "errors LSP4IJ holds ${problems.closedErrors(ide, path)}"
+                },
+            ) { problems.problem(ide, path) == errors && (problems.closedErrors(ide, path) > 0) == errors }
+
+        // the member is not open, and the root's edit breaks it
+        replace(root, broken)
+        closed(errors = true)
+        replace(root, fixture(root.file))
+        closed(errors = false)
+        // opened while broken, it has the errors pulled for it, only those, and none once the root is restored
+        replace(root, broken)
+        closed(errors = true)
+        val child = open(member)
+        diagnostics(child) { items -> items.any { it.severity == "Error" } }
+        replace(root, fixture(root.file))
+        clean(child)
+        awaitUi("open $id/$member is no problem file", HANG_LIMIT) { !problems.problem(ide, path) }
+        // broken again and closed, it is a problem file with its errors again, and the undo clears it
+        replace(root, broken)
+        errors(child)
+        closeEditor(child)
+        closed(errors = true)
+        replace(root, fixture(root.file))
+        closed(errors = false)
     }
     case("X24") { data ->
         val root = project()
