@@ -1881,6 +1881,37 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a debug launch waits for configurationDone however late it comes, and the breakpoint set before it stops the program`() {
+        CompilerTestSupport.configure()
+        val module = source("Runs.x", RUNS.trimIndent())
+        val path = directory.resolve("Runs.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
+            // the session handles its requests in order, so the launch has asked for its build once this is answered;
+            // the compiler builds in order too, so the launch's build has finished once this later one has
+            sessions.request(id, 3, "threads")
+            client.until(id) { it.response == "threads" }
+            assertThat(adapter.buildAsync("Runs", rebuild = false).get(HANG_SECONDS, SECONDS).succeeded).isTrue()
+
+            // the client sets its breakpoint only now, after the build, and the program has waited for it
+            sessions.request(id, 4, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
+            sessions.request(id, 5, "configurationDone")
+            val stop = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+            assertThat(stop["reason"].asString).isEqualTo("breakpoint")
+            sessions.request(id, 6, "continue", """{"threadId": ${stop["threadId"].asInt}}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(6)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `terminating a debug session while its module builds keeps the program from starting`() {
         CompilerTestSupport.configure()
         val late = source("Waits.x", "module Waits { void run() { @Inject Console console; console.print(\"started\"); } }")
@@ -1891,7 +1922,7 @@ class EmbeddedExecutionTest {
             val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            // without configurationDone, the program would start only after a short wait
+            // without configurationDone, the launch waits for it until the session ends
             sessions.request(id, 2, "launch", """{"module": "Waits"}""")
             sessions.request(id, 3, "terminate")
             val messages = client.until(id) { it.event == "terminated" }
