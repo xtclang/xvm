@@ -104,6 +104,8 @@ internal class EmbeddedBuild(
                     override fun getBuildDescriptor() = descriptor
                 },
             )
+        // the previous build's errors leave Project Errors as this one starts, as a build view's leave the Build window
+        EmbeddedBuildProblems.getInstance(project).started()
         progress.output("${if (rebuild) "Rebuilding" else "Building"} with the embedded compiler...\n", ProcessOutputType.STDOUT)
         XtcBuildSettings.gradleNotUsed(project.basePath?.let(Path::of))?.let { progress.output("$it\n", ProcessOutputType.STDOUT) }
         return EmbeddedExecution
@@ -132,6 +134,7 @@ internal class EmbeddedBuild(
         build: BuildResponse,
     ) {
         EmbeddedExecution.describe(build.copy(diagnostics = emptyList())).forEach { progress.output("$it\n", ProcessOutputType.STDOUT) }
+        EmbeddedBuildProblems.getInstance(project).report(build)
         build.diagnostics.forEach { document ->
             val file = EmbeddedExecution.file(document.uri)
             document.diagnostics.forEach { diagnostic ->
