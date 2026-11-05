@@ -3,10 +3,12 @@ package org.xtclang.idea.dap
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationOptions
 import com.intellij.execution.executors.DefaultDebugExecutor
+import com.intellij.execution.impl.ConsoleViewImpl
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
@@ -129,7 +131,8 @@ class XtcDebugAdapterDescriptor(
     /**
      * The client of an Ecstasy Attach configuration ([XtcAttachConfiguration]) sends `attach`, and on stop
      * `disconnect`, which detaches; the descriptor's own mode stays [DebugMode.LAUNCH], so that LSP4IJ starts
-     * [startServer], which carries the session over the language server's connection.
+     * [startServer], which carries the session over the language server's connection. The session's console takes
+     * typed lines too ([DebugConsoleInput]).
      */
     override fun createClient(
         debugProcess: DAPDebugProcess,
@@ -138,15 +141,23 @@ class XtcDebugAdapterDescriptor(
         debugMode: DebugMode,
         serverTrace: ServerTrace,
         parentClient: DAPClient?,
-    ): DAPClient =
-        super.createClient(
-            debugProcess,
-            dapParameters,
-            isDebug,
-            if (environment.runProfile is XtcAttachConfiguration) DebugMode.ATTACH else debugMode,
-            serverTrace,
-            parentClient,
-        )
+    ): DAPClient {
+        val client =
+            super.createClient(
+                debugProcess,
+                dapParameters,
+                isDebug,
+                if (environment.runProfile is XtcAttachConfiguration) DebugMode.ATTACH else debugMode,
+                serverTrace,
+                parentClient,
+            )
+        val handler = debugProcess.processHandler as? LanguageServerDebugProcessHandler
+        val console = debugProcess.createConsole() as? ConsoleViewImpl
+        if (parentClient == null && handler != null && console != null) {
+            ApplicationManager.getApplication().invokeLater { DebugConsoleInput.attach(console, handler) }
+        }
+        return client
+    }
 
     override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig(0)
 
