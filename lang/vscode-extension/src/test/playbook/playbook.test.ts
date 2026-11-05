@@ -16,7 +16,7 @@ import { inlineCompletionCases } from './inlineCompletion';
 import { librarySettingsCases } from './librarySettings';
 import { liveWorkspaceCases } from './liveWorkspace';
 import { localRefactoringCases, memberActionCases } from './memberActions';
-import { moduleCases } from './modules';
+import { closedMemberCases, moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { onTypeCases } from './onType';
 import { platformCases } from './platform';
@@ -111,6 +111,7 @@ suite('XdkAdapter playbook', function () {
     commandLineDebugCases();
     testExplorerCases();
     gradleTestCases();
+    closedMemberCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
