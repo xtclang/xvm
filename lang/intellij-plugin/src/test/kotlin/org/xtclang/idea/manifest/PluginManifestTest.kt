@@ -94,6 +94,7 @@ class PluginManifestTest {
                 "defaultLiveTemplates", // /liveTemplates/Ecstasy.xml snippets
                 "liveTemplateContext", // the ECSTASY context those snippets apply in
                 "lang.commenter", // Ctrl+/ via XtcCommenter
+                "lang.importOptimizer", // Optimize Imports via XtcImportOptimizer
                 "renameHandler", // guarded compiler rename via XtcRenameHandler
                 "refactoring.moveHandler", // compiler preflight before native filesystem mutation
                 "langCodeStyleSettingsProvider", // Settings -> Code Style -> Ecstasy

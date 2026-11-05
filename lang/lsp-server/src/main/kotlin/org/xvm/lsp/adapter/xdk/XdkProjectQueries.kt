@@ -878,18 +878,30 @@ internal class XdkProjectQueries(
             if (!complete) {
                 autoImports(uri, source, text, range, before, ::resolved)
             } else {
-                XdkImports.candidates(text).mapNotNull { candidate ->
+                fun proved(candidate: XdkImports.Candidate): CodeAction? {
                     checkCurrent()
                     val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
-                    val after = compile(plan.proposed) ?: return@mapNotNull null
-                    if (!XdkRename.preservesBindings(before, after, plan)) return@mapNotNull null
-                    CodeAction(
+                    val after = compile(plan.proposed) ?: return null
+                    if (!XdkRename.preservesBindings(before, after, plan)) return null
+                    return CodeAction(
                         candidate.title,
                         candidate.kind,
                         edit =
                             WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                     )
                 }
+                val imports = XdkImports.imports(text)
+                val removals =
+                    XdkImports.removals(imports).mapNotNull { (import, candidate) ->
+                        proved(candidate)?.let { import to it }
+                    }
+                // Organize imports removes every import proved unused on its own and sorts the rest;
+                // when the removals do not prove together, it only sorts.
+                val unused = removals.map { it.first }.toSet()
+                val organized =
+                    XdkImports.organize(text, imports, unused)?.let(::proved)
+                        ?: if (unused.isEmpty()) null else XdkImports.organize(text, imports, emptySet())?.let(::proved)
+                listOfNotNull(organized) + removals.map { it.second }
             }
         val missing =
             if (complete) {
