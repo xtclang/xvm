@@ -11,7 +11,10 @@ import org.xvm.lsp.model.Diagnostic
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration
 
 /**
  * What LSP4IJ's code action requests cost on the tour's card game, counted as module compiles, never as time: its
@@ -24,6 +27,9 @@ class XdkCodeActionPatternTest {
 
     /** The module compiles so far; the compiler queue runs them one at a time. */
     private val compiles = AtomicInteger()
+
+    /** Module compiles wait until it is released. */
+    private val hold = AtomicReference(CountDownLatch(0))
 
     /** The kinds of LSP4IJ's intention list request, as the server asks the adapter for them. */
     private val intentions = CodeActionKind.entries.toSet() - CodeActionKind.QUICKFIX
@@ -123,6 +129,51 @@ class XdkCodeActionPatternTest {
         }
     }
 
+    // TODO LSP4IJ: UP74 — LSP4IJ waits on the EDT for an Automatic request's answer, so the server asks the adapter for
+    // it within a budget, which tests set
+    @Test
+    fun `after an edit, an answer within no budget compiles nothing, and the next one has every action`() {
+        session { adapter, root ->
+            val (uri, caret) = unusedHand(adapter, root)
+            val start = compiles.get()
+            // the compiler is held, so the full answer cannot come; the cached one comes while it is held
+            val held = CountDownLatch(1).also(hold::set)
+            val first =
+                try {
+                    adapter.getCodeActionsWithinAsync(uri, caret, emptyList(), intentions, Duration.ZERO).awaited()
+                } finally {
+                    // the revision's compile and import proofs, which the answer leaves out, are proved meanwhile
+                    held.countDown()
+                }
+            adapter.provingCodeActions().awaited()
+            val proved = compiles.get() - start
+            val (next, again) = answered { adapter.getCodeActionsWithinAsync(uri, caret, emptyList(), intentions, Duration.ZERO) }
+            val full = answered { adapter.getCodeActionsAsync(uri, caret, emptyList(), intentions) }
+            println(
+                "module compiles: the answer within no budget 0, proved meanwhile $proved, the next one $again, a full one " +
+                    "${full.second}; actions ${next.map { it.title }}",
+            )
+            assertThat(first).isEmpty()
+            assertThat(next.map { it.title }).containsExactly("Organize imports", "Remove unused import 'Hand'")
+            assertThat(proved).isEqualTo(UNUSED_HAND)
+            assertThat(again).isZero()
+            assertThat(full.second).isZero()
+            assertThat(next).isEqualTo(full.first)
+        }
+    }
+
+    @Test
+    fun `after an edit, an answer within a budget that the proofs fit has every action`() {
+        session { adapter, root ->
+            val (uri, caret) = unusedHand(adapter, root)
+            val (actions, compiled) =
+                answered { adapter.getCodeActionsWithinAsync(uri, caret, emptyList(), intentions, Duration.INFINITE) }
+            println("module compiles: the answer within a budget it fits $compiled")
+            assertThat(actions.map { it.title }).containsExactly("Organize imports", "Remove unused import 'Hand'")
+            assertThat(compiled).isEqualTo(UNUSED_HAND)
+        }
+    }
+
     @Test
     fun `the tour's unused import in PlayerTest is offered its removal, PlayerTest compiled for the revision and each proof`() {
         session { adapter, root ->
@@ -180,8 +231,8 @@ class XdkCodeActionPatternTest {
         val text = file.readText().replaceFirst(old, new)
         val diagnostics = adapter.compile(uri, text).diagnostics
         val at = caret(text.lines())
-        val listed = answered { adapter.getCodeActionsAsync(uri, at, emptyList(), intentions) }
-        val fixes = answered { adapter.getCodeActionsAsync(uri, at, diagnostics.under(at), setOf(CodeActionKind.QUICKFIX)) }
+        val listed = titled { adapter.getCodeActionsAsync(uri, at, emptyList(), intentions) }
+        val fixes = titled { adapter.getCodeActionsAsync(uri, at, diagnostics.under(at), setOf(CodeActionKind.QUICKFIX)) }
         return listed to fixes
     }
 
@@ -199,10 +250,16 @@ class XdkCodeActionPatternTest {
     }
 
     /** The titles of what [request] answers, and the module compiles it runs. */
-    private fun answered(request: () -> CompletableFuture<List<CodeAction>>): Pair<List<String>, Int> {
-        val start = compiles.get()
-        val titles = request().awaited().map { it.title }
-        return titles to compiles.get() - start
+    private fun titled(request: () -> CompletableFuture<List<CodeAction>>): Pair<List<String>, Int> =
+        answered(request).let { (actions, compiled) -> actions.map { it.title } to compiled }
+
+    /** PlayerTest.x of [root] after an edit that leaves Hand imported, which nothing uses: its URI and a caret on Hand. */
+    private fun unusedHand(
+        adapter: XdkAdapter,
+        root: File,
+    ): Pair<String, Range> {
+        val (uri, lines) = edited(adapter, root, listOf("Card", "GameConstants", "Hand", "Player", "Rank", "Suit"))
+        return uri to caret(lines, "Hand", 2)
     }
 
     /** PlayerTest.x of [root] after Optimize Imports, as tour run 7 left it, analyzed as its didChange has it. */
@@ -240,12 +297,16 @@ class XdkCodeActionPatternTest {
     }
 
     /** The module compiles that [request] runs. */
-    private fun counted(request: () -> CompletableFuture<List<CodeAction>>): Int {
+    private fun counted(request: () -> CompletableFuture<List<CodeAction>>): Int = answered(request).second
+
+    /** What [request] answers, and the module compiles it runs. */
+    private fun answered(request: () -> CompletableFuture<List<CodeAction>>): Pair<List<CodeAction>, Int> {
         val start = compiles.get()
-        request().awaited()
-        return compiles.get() - start
+        val actions = request().awaited()
+        return actions to compiles.get() - start
     }
 
+    /** A session whose module compiles wait while [hold] is held, and count once they are done. */
     private fun session(body: (XdkAdapter, File) -> Unit) {
         CompilerTestSupport.configure()
         val support = EmbeddingSupport.instance()
@@ -254,8 +315,8 @@ class XdkCodeActionPatternTest {
         XdkAdapter(
             { source, repository, errors -> support.compileModule(source, repository, errors) },
             { sources, repository, errors ->
-                compiles.incrementAndGet()
-                support.compileModule(sources, repository, errors)
+                check(hold.get().awaited())
+                support.compileModule(sources, repository, errors).also { compiles.incrementAndGet() }
             },
             { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
         ).use { adapter ->
@@ -270,5 +331,11 @@ class XdkCodeActionPatternTest {
 
         /** PlayerTest's imports after Optimize Imports. */
         const val IMPORTS = 5
+
+        /**
+         * The compiles that prove the import cleanup of PlayerTest with Hand unused: the revision's, every module, then
+         * PlayerTest alone for each of its six imports and for the cleanup that removes Hand.
+         */
+        const val UNUSED_HAND = MODULES + 6 + 1
     }
 }
