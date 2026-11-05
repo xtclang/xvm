@@ -14,6 +14,7 @@ import org.xvm.lsp.adapter.xdk.CompilerQueueTrace
 import org.xvm.lsp.awaited
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -168,7 +169,8 @@ class ExecutionTraceTest {
     @Test
     fun `protocol trace ends at the reply and separates bidirectional IDs`() {
         TraceRecording().use { trace ->
-            ProtocolTrace().use { protocol ->
+            val open = ConcurrentHashMap<Any, String>()
+            ProtocolTrace(open = open).use { protocol ->
                 val received = protocol.wrap(MessageConsumer {}, received = true)
                 val sent = protocol.wrap(MessageConsumer {}, received = false)
                 received.consume(
@@ -185,12 +187,15 @@ class ExecutionTraceTest {
                 )
                 assertThat(trace.entries.map { it["event"].asString })
                     .containsExactly("start", "start")
+                // the client's request is open until the server's reply, and the server's own request is not one
+                assertThat(open.values).containsExactly("textDocument/hover")
                 sent.consume(
                     ResponseMessage().apply {
                         setId(7)
                         result = "hover"
                     },
                 )
+                assertThat(open).isEmpty()
                 received.consume(
                     ResponseMessage().apply {
                         setId(7)

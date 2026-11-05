@@ -88,6 +88,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -141,6 +142,9 @@ class XtcLanguageServer internal constructor(
     private val refresh = ClientRefresh { client }
     internal val readOnlyDocuments = ReadOnlyDocuments(adapter)
     internal val clientTrace = ClientTrace { client }
+
+    /** The client's requests the server has received and not yet answered, by their IDs, with their methods. */
+    internal val openRequests = ConcurrentHashMap<Any, String>()
     internal val partialResults = PartialResults(client = { client })
     private val embeddedRuns = EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits))
     private val debugSessions = DebugSessions(embeddedRuns, { client })
@@ -1395,6 +1399,8 @@ class XtcLanguageServer internal constructor(
                     },
                 "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+                // what the server is still answering, but this request, which an idle server has none of
+                "openRequests" to openRequests.values.filter { it != "xtc/languageServiceStatus" }.sorted(),
                 "heap" to
                     ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
                         mapOf(
