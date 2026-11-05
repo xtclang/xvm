@@ -8,14 +8,13 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageProducer
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.HANG_SECONDS
+import org.xtclang.idea.awaited
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 /** A connection's requests that still wait when the server's messages end are cancelled, not left waiting forever. */
 class PendingRequestsTest {
@@ -42,7 +41,7 @@ class PendingRequestsTest {
 
             // the server's output ends, as when its process exits or is stopped
             fromServer.close()
-            listening.get(HANG_SECONDS, SECONDS)
+            listening.awaited()
             assertThat(hover).isCancelled()
         }
     }

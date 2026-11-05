@@ -5,14 +5,12 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteAction
 import com.intellij.testFramework.runInEdtAndWait
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import org.xtclang.idea.HANG_SECONDS
 import org.xtclang.idea.LightEditor
+import org.xtclang.idea.awaitCall
 import org.xtclang.idea.holdingEdits
 import org.xtclang.idea.synchronizer
-import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -29,7 +27,7 @@ class HeldEditsTest {
         // an edit that is not sent while the waits run; the bound only ends a hang
         val unsent = CompletableFuture<Void>()
         try {
-            assertTimeoutPreemptively(Duration.ofSeconds(HANG_SECONDS)) {
+            awaitCall {
                 runInEdtAndWait {
                     assertThat(ApplicationManager.getApplication().isDispatchThread).isTrue()
                     awaitSent(unsent)
