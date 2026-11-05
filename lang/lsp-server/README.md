@@ -926,7 +926,10 @@ Use `XTC_LSP_TRACE_DIR` or `-Dxtc.trace.directory` to select a directory; use
 `XTC_LSP_TRACE_LEVEL=OFF` or `-Dxtc.trace.level=OFF` to disable it. System properties take precedence.
 Files roll at 10 MB by default with seven days/50 MB of archives retained per stream.
 Active files are additional. Machine-local plugin settings control these limits and keep up to
-five stopped-server sessions; pruning runs on startup and protects active processes. Use
+five stopped-server sessions; pruning runs on startup and protects active processes. A running server
+holds an OS lock on `server.lock` in its session directory, which the system releases when the process ends,
+and pruning keeps a session whose lock is held whatever the PID and start time in its name say; a session
+without that file, from an earlier server, is judged by them. Use
 `XTC_LSP_LOG_DIR` or `-Dxtc.logs.directory` to change the parent directory for both logs; an
 explicit trace-directory override remains independent. Export from either plugin saves bounded
 recent tails and status, with truncation described in the ZIP manifest.
