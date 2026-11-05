@@ -213,7 +213,7 @@ class XtcLanguageServerTest {
             assertThat(caps.renameProvider?.right?.prepareProvider)
                 .describedAs("rename prepareProvider")
                 .isTrue()
-            assertThat(caps.codeActionProvider?.left).describedAs("codeAction").isTrue()
+            assertThat(caps.codeActionProvider?.right?.codeActionKinds).describedAs("codeAction").contains("source.organizeImports")
             assertThat(caps.documentFormattingProvider?.left).describedAs("formatting").isTrue()
             assertThat(caps.documentRangeFormattingProvider?.right?.rangesSupport)
                 .describedAs("rangeFormatting")

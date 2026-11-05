@@ -66,6 +66,7 @@ import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
+import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
@@ -364,6 +365,12 @@ class XtcLanguageServer internal constructor(
     companion object {
         /** The pull-diagnostics provider identifier the server registers and accepts in diagnostic requests. */
         const val PULL_DIAGNOSTICS_IDENTIFIER = "xtc"
+
+        /**
+         * The kinds of the server's code actions, those an action can have, which its parents, refactor and source,
+         * are among: quick fixes, the refactorings and the source actions, Organize Imports among them.
+         */
+        internal val CODE_ACTION_KINDS: List<String> = CodeAction.CodeActionKind.entries.map { it.toLsp() }
 
         /** Edits during a workspace walk make its result stale; give up after this many walks in a row. */
         private const val MAX_RESCANS = 5
@@ -966,13 +973,13 @@ class XtcLanguageServer internal constructor(
                         workDoneProgress = true
                     },
                 )
+            // the kinds, as VS Code enables Organize Imports, its key and the editor menu's Refactor and Source Action
+            // entries only for a provider that declares theirs
             codeActionProvider =
                 if (!presentation.codeActions) {
                     Either.forLeft(false)
-                } else if (resolvesCodeActionEdit) {
-                    Either.forRight(CodeActionOptions().apply { resolveProvider = true })
                 } else {
-                    Either.forLeft(true)
+                    Either.forRight(CodeActionOptions(CODE_ACTION_KINDS).apply { resolveProvider = resolvesCodeActionEdit })
                 }
             if (
                 !presentation.actionLiterals &&
