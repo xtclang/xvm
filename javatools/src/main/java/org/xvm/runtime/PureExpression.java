@@ -32,6 +32,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
@@ -67,6 +68,15 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * compiler requires, except a shift's count, which is an {@code Int}. A literal takes the type of
  * the other side, as the compiler converts it; between two literals, an operator computes what the
  * compiler would.
+ *
+ * <p>Where {@code ==} or {@code !=} compares it with a value of an enumeration, an enum value can be
+ * written by the name of the enumeration, as {@code rank == Rank.Queen}, or by a path that ends in
+ * that name, as {@code Cards.Rank.Queen}: it is looked up by its name among the values of the other
+ * side's own enumeration, which the runtime holds natively, so nothing of the program runs and no
+ * module is searched. A path whose first name is a variable or a field of {@code this} reads those
+ * instead. As in the program, {@code Null} is a value of no enumeration but {@code Nullable}, so it
+ * is not equal to {@code Rank.Queen}; nothing else is compared with an enum value written so, and
+ * it is read nowhere else.
  *
  * <p>The values are read, and the operations run, on the thread of the waiting fiber whose frame
  * holds them, through that frame's stack, which is left as it was.
@@ -149,8 +159,7 @@ record PureExpression(String text, Node root) {
             case Numeral(_, String literal, Format format) -> new Literal(literal(waitingFrame, format, literal, node));
             case Text(_, String value) -> new Value(xString.makeHandle(value));
             case Char(_, char value) -> new Value(xChar.makeHandle(value));
-            case Field(String path, Node target, String name) ->
-                    new Value(field(waitingFrame, onTheWay(waitingFrame, frame, target, path), name, path));
+            case Field field -> new Value(fieldOf(waitingFrame, frame, field));
             case Element(String path, Node target, Node index) ->
                     new Value(element(waitingFrame, onTheWay(waitingFrame, frame, target, path),
                             index(waitingFrame, frame, index), path));
@@ -208,8 +217,12 @@ record PureExpression(String text, Node root) {
         }
         }
 
-        Operand one = operand(waitingFrame, frame, left);
-        Operand two = operand(waitingFrame, frame, right);
+        boolean equality = op == Id.COMP_EQ || op == Id.COMP_NEQ;
+        Operand one      = equality ? comparand(waitingFrame, frame, left) : operand(waitingFrame, frame, left);
+        Operand two      = equality ? comparand(waitingFrame, frame, right) : operand(waitingFrame, frame, right);
+        if (one instanceof EnumName || two instanceof EnumName) {
+            return new Value(xBoolean.makeHandle(isNamedValue(binary, one, two) == (op == Id.COMP_EQ)));
+        }
         if (one instanceof Literal(LiteralConstant first) && two instanceof Literal(LiteralConstant second)) {
             return folded(waitingFrame, () -> first.apply(op, second), binary);
         }
@@ -240,6 +253,61 @@ record PureExpression(String text, Node root) {
         }
         TypeConstant type = one.getType();
         return ((BooleanHandle) run(waitingFrame, binary, () -> type.callEquals(waitingFrame, one, two, Op.A_STACK))).get();
+    }
+
+    /**
+     * @return an operand of {@code ==} or {@code !=}: also an enum value written by the name of its
+     *         enumeration, {@code Type.Value} or a path that ends in the enumeration's name, when
+     *         nothing in the frame has the path's first name, since a variable or field of that
+     *         name is read instead
+     */
+    private static Operand comparand(Frame waitingFrame, Frame frame, Node node) {
+        if (node instanceof Field(String text, Node target, String value)
+                && names(target) instanceof List<String> path && !isNamed(frame, path.getFirst())) {
+            return new EnumName(text, path.getLast(), value);
+        }
+        return operand(waitingFrame, frame, node);
+    }
+
+    /**
+     * @return true if the enum value that one side writes by its name is the other side's value,
+     *         looked up in the enumeration of that value, natively, by the value's name
+     *
+     * @throws IllegalArgumentException if the other side is not a value of an enumeration, the
+     *                                  name is not that enumeration's, or it has no such value
+     */
+    private static boolean isNamedValue(Binary binary, Operand left, Operand right) {
+        boolean  first = left instanceof EnumName;
+        EnumName name  = (EnumName) (first ? left : right);
+        Operand  other = first ? right : left;
+        Node     node  = first ? binary.right() : binary.left();
+        if (!(other instanceof Value)) {
+            throw new IllegalArgumentException(binary.text() + ": " + name.text() + " is compared only with a value of its"
+                    + " enumeration, not with " + node.text() + ".");
+        }
+
+        ObjectHandle value = assigned(other, node);
+        if (value == xNullable.NULL && !name.type().equals("Nullable")) {
+            // as in the program, Null is a value of no other enumeration
+            return false;
+        }
+        if (!(value instanceof EnumHandle enumValue)) {
+            throw new IllegalArgumentException(binary.text() + ": " + name.text() + " is compared only with a value of its"
+                    + " enumeration, and " + node.text() + " is " + SessionDebugger.typeText(value) + ".");
+        }
+
+        xEnum  enumeration = enumValue.getTemplate();
+        String type        = enumeration.getStructure().getName();
+        if (!type.equals(name.type())) {
+            throw new IllegalArgumentException(binary.text() + ": " + node.text() + " is a value of " + type + ", not of "
+                    + name.type() + ".");
+        }
+        int ordinal = enumeration.getNames().indexOf(name.value());
+        if (ordinal < 0) {
+            throw new IllegalArgumentException(binary.text() + ": " + type + " has no value \"" + name.value()
+                    + "\"; its values are " + String.join(", ", enumeration.getNames()) + ".");
+        }
+        return enumValue.getOrdinal() == ordinal;
     }
 
     private static BooleanHandle compare(Frame waitingFrame, Binary binary, Operand left, Operand right) {
@@ -426,6 +494,8 @@ record PureExpression(String text, Node root) {
         return switch (operand) {
             case Value(ObjectHandle value) -> value;
             case Literal(LiteralConstant literal) -> handle(waitingFrame, literal, node);
+            case EnumName name -> throw new IllegalArgumentException(name.text()
+                    + " is read only where == or != compares it with a value of its enumeration.");
         };
     }
 
@@ -504,19 +574,81 @@ record PureExpression(String text, Node root) {
             return frame.m_hException;
         }
 
+        int variable = variableIndex(frame, name);
+        if (variable >= 0) {
+            return frame.f_ahVar[variable];
+        }
+        FieldInfo field = fieldOfThis(frame, name);
+        if (field != null) {
+            return ((GenericHandle) frame.f_hThis).getField(field.getIndex());
+        }
+        throw new IllegalArgumentException("There is no variable \"" + name + "\" in this frame.");
+    }
+
+    /**
+     * @return true if the frame has a value of the specified name, as {@link #named} reads it
+     */
+    private static boolean isNamed(Frame frame, String name) {
+        return switch (name) {
+            case "True", "False", "Null", "this", SessionDebugger.EXCEPTION -> true;
+            default -> variableIndex(frame, name) >= 0 || fieldOfThis(frame, name) != null;
+        };
+    }
+
+    /**
+     * @return the index of the frame's innermost variable of the specified name, or -1
+     */
+    private static int variableIndex(Frame frame, String name) {
         for (int i = frame.getCurrentVarCount() - 1; i >= 0; i--) {
             VarInfo info = frame.getVarInfo(i);
             if (info != null && name.equals(info.getName())) {
-                return frame.f_ahVar[i];
+                return i;
             }
         }
-        if (frame.f_hThis instanceof GenericHandle self) {
-            FieldInfo field = DebugConsole.getFieldLayout(self.getComposition()).get(name);
-            if (field != null) {
-                return self.getField(field.getIndex());
+        return -1;
+    }
+
+    /**
+     * @return the field of {@code this} of the specified name, or null
+     */
+    private static FieldInfo fieldOfThis(Frame frame, String name) {
+        return frame.f_hThis instanceof GenericHandle self
+                ? DebugConsole.getFieldLayout(self.getComposition()).get(name)
+                : null;
+    }
+
+    /**
+     * @return the names of a path of names only, such as {@code Cards.Rank}, or null for any other
+     *         node
+     */
+    private static List<String> names(Node node) {
+        return switch (node) {
+            case Name(String name) -> List.of(name);
+            case Field(_, Node target, String name) -> {
+                List<String> path = names(target);
+                if (path == null) {
+                    yield null;
+                }
+                var names = new ArrayList<>(path);
+                names.add(name);
+                yield names;
             }
+            default -> null;
+        };
+    }
+
+    /**
+     * @return the field that a path reads; a path that starts with a name nothing in the frame
+     *         has, and goes on to a type's name, as an enum value's does, says where that is read
+     */
+    private static ObjectHandle fieldOf(Frame waitingFrame, Frame frame, Field field) {
+        if (names(field.target()) instanceof List<String> path && !isNamed(frame, path.getFirst())
+                && Character.isUpperCase(path.getLast().charAt(0))) {
+            throw new IllegalArgumentException("There is no variable \"" + path.getFirst() + "\" in this frame, and an enum"
+                    + " value written by its enumeration's name, such as " + field.text() + ", is read only where == or !="
+                    + " compares it with a value of that enumeration.");
         }
-        throw new IllegalArgumentException("There is no variable \"" + name + "\" in this frame.");
+        return field(waitingFrame, onTheWay(waitingFrame, frame, field.target(), field.text()), field.name(), field.text());
     }
 
     /**
@@ -883,6 +1015,17 @@ record PureExpression(String text, Node root) {
     }
 
     private record Literal(LiteralConstant literal) implements Operand {
+    }
+
+    /**
+     * An enum value written by the name of its enumeration, as {@code Rank.Queen}, which the other
+     * side of {@code ==} or {@code !=} looks up in its own enumeration.
+     *
+     * @param text   the text that writes it
+     * @param type   the enumeration's name: the last name of the path before the value's
+     * @param value  the value's name
+     */
+    private record EnumName(String text, String type, String value) implements Operand {
     }
 
     /**
