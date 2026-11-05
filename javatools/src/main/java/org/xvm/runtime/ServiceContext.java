@@ -343,8 +343,7 @@ public class ServiceContext {
             if (frame != null) {
                 terminateFiber(frame.f_fiber, 0);
             }
-            System.err.println("Unexpected service execution failure: " + f_sName);
-            e.printStackTrace(System.err);
+            Runtime.reportFailure("Unexpected service execution failure: " + f_sName, e);
             return !f_queueSuspended.isReady();
         } finally {
             tloCtx[0] = ctxPrior;
@@ -374,13 +373,35 @@ public class ServiceContext {
      */
     public void execute(boolean fAllowInlineExecution) {
         if (fAllowInlineExecution && drainWork()) {
-            if (isTerminated()) {
-                f_container.terminate(this);
-            } else {
-                releaseSchedulingLock();
-            }
+            drained();
         } else {
             f_container.schedule(this);
+        }
+    }
+
+    /**
+     * Called by the holder of the scheduling lock once {@link #drainWork()} has nothing more to do.
+     * A terminated service keeps the lock, so that nothing runs it again. But a service without a
+     * handle looks terminated as soon as its shutdown is requested, and a request that came after
+     * drainWork() last looked has not been performed: the service then drains once more, which
+     * performs it. A service that ended without one, as by its own shutdown, has nothing to perform
+     * for a request that comes after this; see {@link #requestShutdown()}.
+     */
+    void drained() {
+        if (!isTerminated()) {
+            releaseSchedulingLock();
+            return;
+        }
+
+        boolean fPending;
+        synchronized (this) {
+            fPending = m_fShutdownRequested && !m_futureShutdown.isDone();
+            m_fEnded = !fPending;
+        }
+        if (fPending) {
+            f_container.schedule(this);
+        } else {
+            f_container.terminate(this);
         }
     }
 
@@ -903,40 +924,45 @@ public class ServiceContext {
      * Terminate all existing fibers and reject all queued requests.
      */
     private void terminate() {
-        m_hService = null;
+        // the shutdown completes even if a step here fails, as the container's kill waits for it;
+        // drainWork() reports the failure
+        try {
+            m_hService = null;
 
-        WrapperException exception = xException.serviceTerminated(null, f_sName).getException();
-        Message message;
-        while ((message = f_queueMsg.poll()) != null) {
-            message.f_future.completeExceptionally(exception);
+            WrapperException exception = xException.serviceTerminated(null, f_sName).getException();
+            Message message;
+            while ((message = f_queueMsg.poll()) != null) {
+                message.f_future.completeExceptionally(exception);
+            }
+
+            FiberQueue qFiber = f_queueSuspended;
+            if (m_frameCurrent != null) {
+                qFiber.add(m_frameCurrent);
+                m_frameCurrent = null;
+            }
+
+            Set<Fiber> setFibers = f_setFibers;
+            while (!qFiber.isEmpty()) {
+                Frame frame = qFiber.getAny();
+                Fiber fiber = frame.f_fiber;
+
+                fiber.setStatus(FiberStatus.Terminating, 0);
+
+                // this will respond immediately with an exception from "Fiber.prepareRun()"
+                execute(frame);
+
+                setFibers.remove(fiber);
+            }
+
+            // fibers that have been terminated earlier and still have pending requests may not be in the queue
+            setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
+
+            assert setFibers.isEmpty();
+
+            f_container.terminate(this);
+        } finally {
+            m_futureShutdown.complete(null);
         }
-
-        FiberQueue qFiber = f_queueSuspended;
-        if (m_frameCurrent != null) {
-            qFiber.add(m_frameCurrent);
-            m_frameCurrent = null;
-        }
-
-        Set<Fiber> setFibers = f_setFibers;
-        while (!qFiber.isEmpty()) {
-            Frame frame = qFiber.getAny();
-            Fiber fiber = frame.f_fiber;
-
-            fiber.setStatus(FiberStatus.Terminating, 0);
-
-            // this will respond immediately with an exception from "Fiber.prepareRun()"
-            execute(frame);
-
-            setFibers.remove(fiber);
-        }
-
-        // fibers that have been terminated earlier and still have pending requests may not be in the queue
-        setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
-
-        assert setFibers.isEmpty();
-
-        f_container.terminate(this);
-        m_futureShutdown.complete(null);
     }
 
     /**
@@ -949,7 +975,13 @@ public class ServiceContext {
         if (future == null) {
             m_futureShutdown     = future = new CompletableFuture<>();
             m_fShutdownRequested = true;
-            ensureScheduled(true);
+            if (m_fEnded) {
+                // a service that has ended keeps its scheduling lock, so nothing would perform the
+                // shutdown; there is nothing left to shut down
+                future.complete(null);
+            } else {
+                ensureScheduled(true);
+            }
         }
         return future;
     }
@@ -2189,6 +2221,11 @@ public class ServiceContext {
      * True once this service has been asked to shut down.
      */
     private volatile boolean m_fShutdownRequested;
+
+    /**
+     * True once this service has ended and keeps its scheduling lock for good; guarded by this.
+     */
+    private boolean m_fEnded;
 
     /**
      * The unhandled exception notification.
