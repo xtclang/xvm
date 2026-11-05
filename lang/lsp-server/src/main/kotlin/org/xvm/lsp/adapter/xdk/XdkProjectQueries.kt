@@ -39,6 +39,7 @@ internal class XdkProjectQueries(
     private val discoverImports: Boolean = false,
     private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
     private val navigationIndex: XdkNavigationIndex = XdkNavigationIndex(),
+    private val actionCache: XdkCodeActionCache = XdkCodeActionCache(),
     // The folders discovery walks; a root moved outside them would leave the discovered graph.
     private val discoveryFolders: List<File> = emptyList(),
 ) {
@@ -897,7 +898,10 @@ internal class XdkProjectQueries(
             }
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
-        val before = compile(texts, Proof.REPAIR) ?: return emptyList()
+        // The requests of one revision share its compile and its import cleanup. A request cancelled or replaced
+        // meanwhile keeps nothing: its compiles may have stopped short, and checkCurrent() throws before it is kept.
+        val revision = revision()
+        val before = actionCache.before(revision) { compile(texts, Proof.REPAIR).also { checkCurrent() } } ?: return emptyList()
         val complete =
             before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
                 project.modules.values.all { module ->
@@ -910,34 +914,34 @@ internal class XdkProjectQueries(
             } else if (CodeActionKind.SOURCE !in kinds && CodeActionKind.SOURCE_ORGANIZE_IMPORTS !in kinds) {
                 emptyList()
             } else {
-                fun proved(candidate: XdkImports.Candidate): CodeAction? {
-                    checkCurrent()
-                    val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
-                    val after = compile(plan.proposed) ?: return null
-                    if (!XdkRename.preservesBindings(before, after, plan)) return null
-                    return CodeAction(
-                        candidate.title,
-                        candidate.kind,
-                        edit =
-                            WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
-                    )
-                }
-                val imports = XdkImports.imports(text)
-                val removals =
-                    XdkImports.removals(imports).mapNotNull { (import, candidate) ->
-                        proved(candidate)?.let { import to it }
-                    }
-                // Organize imports removes every import proved unused on its own and sorts the rest;
-                // when the removals do not prove together, it only sorts.
-                val unused = removals.map { it.first }.toSet()
-                val organized =
-                    if (CodeActionKind.SOURCE_ORGANIZE_IMPORTS !in kinds) {
-                        null
-                    } else {
-                        XdkImports.organize(text, imports, unused)?.let(::proved)
-                            ?: if (unused.isEmpty()) null else XdkImports.organize(text, imports, emptySet())?.let(::proved)
-                    }
-                listOfNotNull(organized) + if (CodeActionKind.SOURCE in kinds) removals.map { it.second } else emptyList()
+                // Both kinds come from the same removal proofs, so a revision proves the cleanup once, for both.
+                actionCache
+                    .imports(revision, source) {
+                        fun proved(candidate: XdkImports.Candidate): CodeAction? {
+                            checkCurrent()
+                            val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+                            val after = compile(plan.proposed) ?: return null
+                            if (!XdkRename.preservesBindings(before, after, plan)) return null
+                            return CodeAction(
+                                candidate.title,
+                                candidate.kind,
+                                edit =
+                                    WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            )
+                        }
+                        val imports = XdkImports.imports(text)
+                        val removals =
+                            XdkImports.removals(imports).mapNotNull { (import, candidate) ->
+                                proved(candidate)?.let { import to it }
+                            }
+                        // Organize imports removes every import proved unused on its own and sorts the rest;
+                        // when the removals do not prove together, it only sorts.
+                        val unused = removals.map { it.first }.toSet()
+                        val organized =
+                            XdkImports.organize(text, imports, unused)?.let(::proved)
+                                ?: if (unused.isEmpty()) null else XdkImports.organize(text, imports, emptySet())?.let(::proved)
+                        (listOfNotNull(organized) + removals.map { it.second }).also { checkCurrent() }
+                    }.filter { it.kind in kinds }
             }
         val missing =
             if (complete || !quickFixes) {
