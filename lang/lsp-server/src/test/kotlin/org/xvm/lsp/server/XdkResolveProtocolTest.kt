@@ -217,7 +217,8 @@ class XdkResolveProtocolTest {
                     ).awaited()
                     .capabilities
             assertThat(capabilities.completionProvider.resolveProvider).isEqualTo(resolve)
-            assertThat(capabilities.codeActionProvider.isRight).isEqualTo(resolve)
+            // the options declare the action kinds either way, and the resolve provider only when edits resolve
+            assertThat(capabilities.codeActionProvider.right.resolveProvider).isEqualTo(resolve)
             body(server)
         }
     }
