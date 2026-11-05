@@ -491,7 +491,7 @@ object DebugSessionUi {
             val editor = expressionEditor(project, dialog, deadline)
             // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment is not physical, although its view provider has
             //  the event system on, so an edit of it fails IntelliJ's Document/PSI check; the pick is inserted only
-            //  into a physical one, as #1763 makes it
+            //  into a physical one, as #1763 and the plugin's PhysicalExpressionFragments make it
             var physical = false
             ApplicationManager.getApplication().invokeAndWait {
                 physical = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)?.isPhysical == true

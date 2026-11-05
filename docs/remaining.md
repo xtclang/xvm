@@ -767,7 +767,8 @@ passes with the workaround disabled. The gates are in
   with R10e: with a plugin built from `main`, X320's chosen completions make `box.count`, with no IDE
   error (`run-8742366318524741203`). Gate: a breakpoint with Suspend unchecked and a log expression,
   with no IDE error; X320 in IntelliJ through the inserted text, its 0.21.0 path and UP37 tags
-  removed.
+  removed, with the plugin's bridge, `PhysicalExpressionFragments` (2026-11-05), which also ends the
+  daemon's restart every 300 ms while a session is paused.
 - [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), merged 2026-10-25): LSP4IJ announces `supportsInvalidatedEvent` and
   handles `invalidated`, refreshing the threads, the stopped stacks and the views. Gate: X314 and X315
   full in IntelliJ, their `invalidated` checks restored.
