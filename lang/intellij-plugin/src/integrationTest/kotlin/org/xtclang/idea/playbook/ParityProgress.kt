@@ -26,6 +26,29 @@ internal fun ParityScenarios.progressCases() {
         val document = open(data.string("file"))
         val title = "Finding references"
 
+        /** Restarts the language server as a user does, with the CLI, which reaches the editor and asks it to. */
+        fun restart() {
+            val script =
+                Path
+                    .of(System.getProperty("xtc.playbook.scenarios"))
+                    .parent.parent.parent
+                    .resolve("scripts/xtc-lsp")
+            val project = with(driver) { singleProject().getBasePath() }
+            val restart =
+                ProcessBuilder("python3", script.toString(), "restart", "--project", project, "--ide", "intellij")
+                    .redirectErrorStream(true)
+                    .start()
+            try {
+                check(restart.waitFor(HANG_SECONDS, SECONDS)) { "CLI restart timed out" }
+                val output = restart.inputStream.bufferedReader().readText()
+                check(restart.exitValue() == 0) { output }
+            } finally {
+                if (restart.isAlive) restart.destroyForcibly()
+            }
+        }
+
+        fun holdReferences(file: String?) = with(driver) { utility(ProgressUi::class).holdReferences(file) }
+
         fun workload(methods: Int) =
             "module ${data.string("module")} {\n    static Int value = 1;\n" +
                 (0 until methods).joinToString("\n") {
@@ -61,6 +84,16 @@ internal fun ParityScenarios.progressCases() {
             return pending
         }
         try {
+            // the reference searches in this file wait until they are canceled, so that the case acts on work that has
+            // not finished however fast the machine is: the server it restarts holds them
+            holdReferences(data.string("file"))
+            val held = requireNotNull(protocol.server().getCurrentProcessId())
+            restart()
+            with(driver) {
+                awaitUi("the server that holds the searches starts", HANG_LIMIT) {
+                    protocol.server().getCurrentProcessId() != held && !utility(ProgressUi::class).alive(held)
+                }
+            }
             val canceled = start(large)
             with(driver) {
                 awaitUi("visible progress Cancel control", HANG_LIMIT) {
@@ -87,24 +120,10 @@ internal fun ParityScenarios.progressCases() {
             val wrapper = protocol.server()
             val previous = requireNotNull(wrapper.getCurrentProcessId())
             val pending = start(large + "// unsaved restart\n")
-            // The CLI must reach the editor, then reuse its normal restart and unsaved-buffer replay.
-            val script =
-                Path
-                    .of(System.getProperty("xtc.playbook.scenarios"))
-                    .parent.parent.parent
-                    .resolve("scripts/xtc-lsp")
-            val project = with(driver) { singleProject().getBasePath() }
-            val restart =
-                ProcessBuilder("python3", script.toString(), "restart", "--project", project, "--ide", "intellij")
-                    .redirectErrorStream(true)
-                    .start()
-            try {
-                check(restart.waitFor(HANG_SECONDS, SECONDS)) { "CLI restart timed out" }
-                val output = restart.inputStream.bufferedReader().readText()
-                check(restart.exitValue() == 0) { output }
-            } finally {
-                if (restart.isAlive) restart.destroyForcibly()
-            }
+            // The CLI must reach the editor, then reuse its normal restart and unsaved-buffer replay. The server it
+            // starts holds no search, as the rest of the run's do not.
+            holdReferences(null)
+            restart()
             with(driver) {
                 awaitUi("old process exits and pending request retires", HANG_LIMIT) {
                     pending.isDone() && !utility(ProgressUi::class).alive(previous)
@@ -116,6 +135,7 @@ internal fun ParityScenarios.progressCases() {
             clean(document)
             with(driver) { awaitUi("retired progress disappears", HANG_LIMIT) { !visible() } }
         } finally {
+            holdReferences(null)
             with(driver) {
                 withContext(OnDispatcher.EDT) { utility(ProgressUi::class).hide(singleProject()) }
             }
@@ -141,4 +161,6 @@ internal interface ProgressUi {
     ): Boolean
 
     fun alive(pid: Long): Boolean
+
+    fun holdReferences(file: String?)
 }
