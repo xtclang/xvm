@@ -63,6 +63,9 @@ class StubLanguageServer(
     /** The caret's line, as the client has sent it, of each completion the client has asked for. */
     val completionLines = CopyOnWriteArrayList<String>()
 
+    /** The caret's line, as the client has sent it, of each signature help the client has asked for. */
+    val signatureLines = CopyOnWriteArrayList<String>()
+
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> =
         CompletableFuture.completedFuture(
             InitializeResult(
@@ -101,6 +104,7 @@ class StubLanguageServer(
     }
 
     override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp?> {
+        signatureLines += texts[params.textDocument.uri]?.lines()?.getOrNull(params.position.line).orEmpty()
         requests += "textDocument/signatureHelp"
         return CompletableFuture.completedFuture(signature)
     }

@@ -2,6 +2,7 @@ package org.xtclang.idea.lsp
 
 import com.intellij.codeInsight.hint.ParameterInfoControllerBase
 import com.intellij.lang.parameterInfo.LanguageParameterInfo
+import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.fixtures.CompletionAutoPopupTester
 import com.intellij.testFramework.runInEdtAndGet
@@ -17,6 +18,7 @@ import org.xtclang.idea.HANG_SECONDS
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.XtcIntelliJLanguage
+import org.xtclang.idea.holdingEdits
 import java.util.concurrent.TimeUnit
 
 /** Parameter info pops up as a call's `(` is typed in an Ecstasy file, with the language server's signature. */
@@ -55,5 +57,21 @@ class XtcParameterInfoTest {
         }
         assertThat(editor.server.requests).contains("textDocument/signatureHelp")
         assertThat(runInEdtAndGet { ParameterInfoControllerBase.existsForEditor(editor.fixture.editor) }).isTrue()
+    }
+
+    @Test
+    fun `a call's parenthesis whose edit LSP4IJ still holds is the server's when it is asked for the signature`() {
+        val server = editor.server
+        editor.open("Calls.x", "module M {\n    void run(Deck deck) {\n        <caret>\n    }\n}\n") { file ->
+            holdingEdits(file) { type("deck.deal(") }
+            performEditorAction(IdeActions.ACTION_EDITOR_SHOW_PARAMETER_INFO)
+        }
+        // the request goes from a pooled thread
+        val hung = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
+        while (server.signatureLines.isEmpty() && System.nanoTime() < hung) {
+            runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
+            Thread.sleep(10)
+        }
+        assertThat(server.signatureLines.firstOrNull()).isEqualTo("        deck.deal(")
     }
 }
