@@ -128,6 +128,9 @@
         <!-- Run Configuration Producer - auto-creates run configs from .x file context -->
         <runConfigurationProducer
             implementation="org.xtclang.idea.run.XtcRunConfigurationProducer"/>
+        <!-- Run All Ecstasy Tests: on the project's folder or its test sources, every test module's tests in one run -->
+        <runConfigurationProducer
+            implementation="org.xtclang.idea.run.XtcAllTestsConfigurationProducer"/>
 
         <!-- IconProvider for .x PSI files in contexts that do not ask the file type directly. -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
