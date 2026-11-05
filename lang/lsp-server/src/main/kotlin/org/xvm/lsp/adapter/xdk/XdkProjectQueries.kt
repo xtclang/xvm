@@ -1552,7 +1552,7 @@ internal class XdkProjectQueries(
      * changes and the modules that depend on them: the others have the inputs they had, so they keep their facts and
      * artifacts, and a module that did not compile then does not now. With [since], an earlier revision's compile, the
      * revision's own compile of its sources does the same for the modules whose sources changed since, unless it cannot
-     * be sure of the rest ([recompiled]). A move, another graph or resources of their own compile it all.
+     * be sure of the rest ([changedSince]). A move, another graph or resources of their own compile it all.
      */
     private fun build(
         text: Map<String, String>,
@@ -1574,25 +1574,43 @@ internal class XdkProjectQueries(
         val revisions = dependencies.modules.mapValues { it.value.revision }
         val plain = moves.isEmpty() && graph === project && resourceMoves == null && resourceSnapshots.isEmpty()
         val prior = if (reuse != null) reuse.takeIf { plain } else since?.takeIf { plain && proof == Proof.REPAIR && text === texts }
-        val edited =
+        // the modules whose own sources changed, by root URI
+        val changed =
             when {
                 prior == null -> null
 
                 prior === reuse ->
                     (text.keys + texts.keys)
                         .filter { path -> text[path] != texts[path] }
-                        .mapNotNull { path -> project.scope(File(path)) }
-                        .flatMapTo(hashSetOf(), project::affected)
+                        .mapNotNullTo(hashSetOf()) { path -> project.scope(File(path)) }
 
-                else -> recompiled(prior, inputs, revisions)
+                else -> changedSince(prior, inputs, revisions)
             }
+        val edited = changed?.flatMapTo(hashSetOf(), project::affected)
         // as a module's compile rejects a source that no module of the graph holds
         if (edited != null && text.keys.any { graph.scope(it) == null }) return null
+        // the edited modules, by name, that a module depending on them compiles against as it did
+        val alike = hashSetOf<String>()
+
+        // A module whose own sources are unchanged, and whose edited dependencies all compiled to an artifact with
+        // the API they had, compiles as it did: it keeps its compile, unless its facts name one of them by revision.
+        fun unchangedBy(module: XdkSourceModule): Boolean {
+            val upstream = graph.buildOrder(module.uri).filter { it.uri != module.uri && it.uri in edited.orEmpty() }
+            return prior != null &&
+                changed != null &&
+                module.uri !in changed &&
+                upstream.all { it.name in alike } &&
+                prior.facts
+                    .module(module.uri)
+                    ?.binaryModules
+                    ?.none { name -> upstream.any { it.name == name } } == true
+        }
         val attempts =
             graph
                 .buildOrder()
                 .mapNotNull { module ->
-                    if (prior != null && edited != null && module.uri !in edited) {
+                    if (prior != null && edited != null && (module.uri !in edited || unchangedBy(module))) {
+                        if (module.uri in edited) alike += module.name
                         checkCurrent()
                         val artifact = prior.artifacts[module.name]
                         if (artifact == null && proof == Proof.COMPLETE) return null
@@ -1732,7 +1750,17 @@ internal class XdkProjectQueries(
                         failed(heard.errors)
                         return null
                     }
-                    artifacts[module.name] = compilation.toDependency()
+                    val artifact = compilation.toDependency()
+                    artifacts[module.name] = artifact
+                    // only a module that others depend on needs its API compared
+                    if (
+                        prior != null &&
+                        edited != null &&
+                        project.affected(module.uri).any { it != module.uri } &&
+                        prior.artifacts[module.name]?.api == artifact.api
+                    ) {
+                        alike += module.name
+                    }
                     if (proof == Proof.REPAIR) {
                         missingDestinations[module.name] =
                             compilation.missingMethodDestinations(module.dependencies + XdkLibraries.moduleNames)
@@ -1752,12 +1780,12 @@ internal class XdkProjectQueries(
     }
 
     /**
-     * The modules that a revision's compile compiles when it starts from [since], an earlier revision's compile: those
-     * whose sources, as [inputs] has them by module name, changed since, and the modules that depend on them, by root
-     * URI. Null when it may not start from it, and compiles every module: the graph or its modules changed, or the
+     * The modules whose sources, as [inputs] has them by module name, changed since [since], an earlier revision's
+     * compile, by root URI: a revision's compile that starts from it compiles them, and the modules that depend on
+     * them. Null when it may not start from it, and compiles every module: the graph or its modules changed, or the
      * binary dependencies' [revisions], or a module upstream of a changed one did not compile then.
      */
-    private fun recompiled(
+    private fun changedSince(
         since: XdkCodeActionCache.Base,
         inputs: Map<String, XdkSources.Inputs>,
         revisions: Map<String, String>,
@@ -1768,7 +1796,7 @@ internal class XdkProjectQueries(
         if (changed.any { module -> project.buildOrder(module.uri).any { it.name != module.name && it.name !in since.artifacts } }) {
             return null
         }
-        return changed.flatMapTo(hashSetOf()) { project.affected(it.uri) }
+        return changed.mapTo(hashSetOf()) { it.uri }
     }
 
     /** What a module's compile reported, each error as a line that two compiles of the same give alike. */
