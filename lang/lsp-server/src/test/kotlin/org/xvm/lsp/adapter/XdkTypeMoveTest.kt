@@ -355,6 +355,33 @@ class XdkTypeMoveTest {
     }
 
     @Test
+    fun `a reference where the new package's name is an inherited property imports the moved type`() {
+        write("App.x", "module App { Suit first() = Suit.Hearts; }")
+        write("App/Suit.x", "enum Suit { Hearts, Spades }")
+        write(
+            "App/CardCollection.x",
+            "class CardCollection(String label) {\n    private Int[] cards = new Int[];\n    void add(Int card) {\n" +
+                "        cards.add(card);\n    }\n}\n",
+        )
+        // as the tour's cardGame has it, with the references in a constructor's finally block
+        write(
+            "App/Deck.x",
+            "class Deck extends CardCollection {\n    construct(String label) {\n        construct CardCollection(label);\n" +
+                "    } finally {\n        for (Suit suit : Suit.values) {\n            add(suit.ordinal);\n        }\n    }\n\n" +
+                "    Suit first() = Suit.Hearts;\n}\n",
+        )
+        Files.createDirectories(directory.resolve("App/cards"))
+        session { adapter ->
+            move(adapter, mapOf(uri("App/Suit.x") to uri("App/cards/Suit.x")))
+            assertThat(read("App.x")).contains("cards.Suit first() = cards.Suit.Hearts;")
+            // in Deck "cards" is the property it inherits, so the type is imported instead of qualified
+            assertThat(read("App/Deck.x"))
+                .startsWith("import cards.Suit;\n")
+                .contains("for (Suit suit : Suit.values)", "Suit first() = Suit.Hearts;")
+        }
+    }
+
+    @Test
     fun `unused type moves into an explicit empty package`() {
         write("App.x", "module App {}")
         write("App/tools/Box.x", "class Box {}")
