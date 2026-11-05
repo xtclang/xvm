@@ -392,6 +392,18 @@ class XdkDependencyTest {
             .isInstanceOf(IllegalArgumentException::class.java)
     }
 
+    @Test
+    fun `dependencies come in name order whatever the order they are configured in`() {
+        val names = listOf("Kilo", "Alpha", "Juliet", "Echo", "Bravo", "India", "Delta", "Hotel", "Charlie", "Golf", "Foxtrot")
+        val libraries = names.map { dependency("module $it { static Int value() = 1; }", "file:///$it.x") }
+        // a Map.copyOf, as the modules were, iterates in an order that each JVM randomizes
+        assertThat(XdkDependencies(libraries).modules.keys).containsExactlyElementsOf(names.sorted())
+        XdkAdapter().use { adapter ->
+            adapter.replaceDependencies(libraries)
+            assertThat(adapter.libraryConfiguration().map { it["module"] }).containsExactlyElementsOf(names.sorted())
+        }
+    }
+
     private fun dependency(
         source: String,
         uri: String = LIBRARY_URI,
