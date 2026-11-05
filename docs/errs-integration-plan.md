@@ -6,8 +6,8 @@ passed and X218 failed on UP23, in one window; IntelliJ with LSP4IJ 0.21.0
 implemented there, with X283 failing once to stray keystrokes. On 2026-10-29, with
 `vscode-languageclient` 11.0.0, VS Code passed 332 again, X218 failing, and with the stricter
 diagnostics waits (`b2f452c2f2`) every case passed, VS Code's 337 but X218 and IntelliJ's 329 in the
-playbook container ([remaining.md](remaining.md#test-harness-stability)). The catalog has 342 cases
-since R13's X338–X340, which pass in selected container runs in both editors. The earlier checkpoint,
+playbook container ([remaining.md](remaining.md#test-harness-stability)). The catalog has 343 cases
+since X341, a closed member's errors; R13's X338–X340 pass in selected container runs in both editors. The earlier checkpoint,
 [October 7 acceptance](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07), covered all 284
 shared cases then: IntelliJ 282 passed/two partial in one uninterrupted process;
 VS Code 281 passed/three failed across the full attempt and recorded continuations. UP16/UP23
@@ -1874,7 +1874,7 @@ do not satisfy this track. Debug sessions launch real runs since 2026-10-22 (R6)
 debugger (R7) stops, steps and evaluates in both editors.
 
 Current native automation inventory (2026-11-04): the shared catalog,
-`lang/test-fixtures/compiler-playbook/scenarios.json`, has **342 cases**: X1–X340 except the retired
+`lang/test-fixtures/compiler-playbook/scenarios.json`, has **343 cases**: X1–X341 except the retired
 X273–X275, CFG1–CFG3, 7a.8 and 7a.9, plus startup. The latest full-catalog runs are those of
 2026-10-28 named at the top of this plan; before them, the
 [October 7 284-case checkpoint](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07). The cases
