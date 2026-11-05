@@ -203,3 +203,36 @@ export function moduleCases(): void {
         }
     });
 }
+
+/** The errors of a module member that is not open, which the workspace's diagnostics report. */
+export function closedMemberCases(): void {
+    playbook('X341', async (workspace, data) => {
+        const root = await workspace.project();
+        const member = workspace.uri(data.memberFile);
+        const broken = fixture(data.rootFile).replace(data.replaceFrom, data.replaceWith);
+        const errors = (values: vscode.Diagnostic[]) => values.some(item => item.severity === vscode.DiagnosticSeverity.Error);
+        // the member is not open, and the root's edit breaks it
+        assert.ok(!vscode.window.tabGroups.all.flatMap(group => group.tabs).some(tab =>
+            tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === member.toString()), 'The member is not open');
+        await workspace.replace(root, broken);
+        await diagnostics(member, errors, 'Closed member error');
+        await workspace.replace(root, fixture(data.rootFile));
+        await noErrors(member);
+        // opened while broken, it has its errors once, and none once the root is restored
+        await workspace.replace(root, broken);
+        await diagnostics(member, errors, 'Closed member error again');
+        const child = await workspace.open(data.memberFile);
+        const shown = await diagnostics(child.uri, errors, 'Open member error');
+        const distinct = new Set(shown.map(item => `${item.range.start.line}:${item.range.start.character}:${item.message}`));
+        assert.strictEqual(distinct.size, shown.length, `Each error once: ${shown.map(item => item.message).join('; ')}`);
+        await workspace.replace(root, fixture(data.rootFile));
+        await noErrors(child.uri);
+        // broken again and closed, its errors stay listed, and the undo clears them
+        await workspace.replace(root, broken);
+        await diagnostics(child.uri, errors, 'Open member error again');
+        await workspace.discard(child);
+        await diagnostics(member, errors, 'Closed member error once more');
+        await workspace.replace(root, fixture(data.rootFile));
+        await noErrors(member);
+    });
+}

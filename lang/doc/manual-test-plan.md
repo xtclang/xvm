@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **342 scenarios**: X1–X340 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **343 scenarios**: X1–X341 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 342 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 343 scenarios; a partial-coverage result is not a full pass.
 
 On a desktop the playbook's editor takes the focus, and keystrokes typed elsewhere reach it. To keep
 both editors off the desktop, run the same playbooks in a Linux container on Xvfb with
@@ -1525,7 +1525,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 342 scenarios: X1–X340 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 343 scenarios: X1–X341 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1540,7 +1540,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 342 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 343 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3970,6 +3970,16 @@ project's `testXtc`, which takes them as `--test-class` and `--test-method`, and
 | ID | Actions | Expected result |
 |---|---|---|
 | X340 | Make the application project `GradleTested` as X337 makes `GradleDebugged`, choose the Gradle build mode, and replace `src/test/x/GradleTestedTest.x` with a class `MathTest` with the tests `adds`, `fails`, whose assertion on line 13 fails with `one and one are not three`, and `works`, which prints `inside works` on line 19. Run the tests of `MathTest` (VS Code: the cursor on its name, **Run Test at Cursor**; IntelliJ: Run of its gutter icon). Set a breakpoint on line 19 and debug `works` (VS Code: **Debug Test at Cursor** on its name; IntelliJ: Debug of its icon); when it stops, continue. | The run runs `./gradlew -q testXtc --module=GradleTestedTest --test-class=MathTest --test-report=json` and marks `adds` and `works` passed and `fails` failed with its message (VS Code: on line 13). Debug runs `testXtc` with `--test-method=MathTest.works` under the debugger, which stops on line 19; continuing runs `works` to its end, and it passes, alone. |
+
+### A closed member's errors (X341)
+
+With the Project fixtures of X21–X28: `Project.x` open, `Project/Child.x` written to disk and not opened. IntelliJ
+pulls diagnostics for open files only, so the plugin asks for the server's workspace report and gives LSP4IJ the
+closed files' (UP69); VS Code's client pulls the workspace report itself.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X341 | Keep Child closed. Change Base's name to `Renamed` in the root without saving, then undo. Change it again, open Child, then undo in the root. Change it once more, close Child, then undo. | Without opening Child: IntelliJ draws `Project/Child.x` red in the Project view, and VS Code's Problems panel lists Child's errors; undo clears both. Opened while broken, Child shows its errors once, and none after the undo, with no red left on the file. Closed while broken, Child is red and listed again, and the undo clears it. IntelliJ's Problems view has the selected file's errors in its File tab and a **Build**'s errors in Project Errors, so a closed file's errors show there only after a Build. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
