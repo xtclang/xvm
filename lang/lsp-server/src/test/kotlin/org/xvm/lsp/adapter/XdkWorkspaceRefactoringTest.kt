@@ -341,6 +341,25 @@ class XdkWorkspaceRefactoringTest {
     }
 
     @Test
+    fun `auto import reuses the package that already imports the type's module`() {
+        source("Library", "module Library { class Widget {} class Gadget {} }")
+        val text = "module App { package lib import Library; lib.Gadget gadget = new lib.Gadget(); Widget make() = new Widget(); }"
+        val uri = source("App", text)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
+            val at = text.indexOf("Widget")
+            val action =
+                adapter
+                    .getCodeActions(uri, Range(Position(0, at), Position(0, at)), emptyList())
+                    .single { it.title == "Import 'Widget' from Library" }
+            val edits = requireNotNull(action.edit).changes.getValue(uri)
+            assertThat(edits.map { it.newText.trim() }).containsExactly("import lib.Widget;")
+            assertThat(adapter.compile(uri, apply(text, edits)).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
     fun `auto import withholds edits when a separate error prevents a complete proof`() {
         val text = "module App { Document echo(Document doc) = doc; Missing broken; }"
         val uri = source("App", text)
