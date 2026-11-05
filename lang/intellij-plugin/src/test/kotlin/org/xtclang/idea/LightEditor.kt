@@ -63,6 +63,8 @@ class LightEditor(
             try {
                 // the next test reuses the light project, and the wrappers that LSP4IJ keeps for it: the removal of this
                 // test's server disposes only its own, and a failed test can leave more
+                // TODO LSP4IJ: UP76 — a disposed wrapper asked for its server starts again, and one left
+                // behind would connect to the next test's server
                 runInEdtAndWait { LanguageServiceAccessor.getInstance(project).projectClosing(project) }
             } finally {
                 errors.finish()
