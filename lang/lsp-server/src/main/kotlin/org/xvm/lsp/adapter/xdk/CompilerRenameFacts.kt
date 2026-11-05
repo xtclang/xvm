@@ -181,6 +181,9 @@ internal class CompilerRenameFacts(
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
 
+    /** The facts of the module whose root is [scope], as they were merged, or null for one that was not. */
+    fun module(scope: String): CompilerRenameFacts? = modules[scope]
+
     companion object {
         fun merge(modules: Map<String, CompilerRenameFacts>): CompilerRenameFacts {
             val attempts = modules.values
