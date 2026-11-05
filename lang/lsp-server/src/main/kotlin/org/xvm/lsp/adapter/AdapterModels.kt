@@ -174,6 +174,16 @@ data class CodeAction(
     }
 }
 
+/**
+ * The module compiles that a code action request ran: those of its revision's compile, none when it came from the
+ * cache, and those of its proofs.
+ */
+data class CodeActionCompiles(
+    val base: Int,
+    val proofs: Int,
+    val cachedBase: Boolean,
+)
+
 /** Semantic tokens for enhanced syntax highlighting. */
 data class SemanticTokens(
     val data: List<Int>,
