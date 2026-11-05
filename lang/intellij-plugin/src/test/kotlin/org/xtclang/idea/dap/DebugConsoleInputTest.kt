@@ -9,6 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.xtclang.idea.LightEditor
+import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
 import org.xtclang.idea.lsp.DebugSessionResponse
@@ -16,7 +17,6 @@ import org.xtclang.idea.lsp.XtcLanguageServer
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.time.Duration.Companion.hours
 
 /**
  * LSP4IJ's own debug console, attached to the session's process as LSP4IJ attaches it, takes a typed line to the
@@ -49,11 +49,9 @@ class DebugConsoleInputTest {
             DebugConsoleInput.attach(console, handler)
             console.component
             console.type(checkNotNull(console.editor), "label\n")
-            // the console sends the line on another thread; a hang bound only, never reached when it is sent
-            val deadline = System.nanoTime() + 1.hours.inWholeNanoseconds
-            while (messages.isEmpty() && System.nanoTime() < deadline) {
-                PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-                Thread.sleep(10)
+            // the console sends the line on another thread
+            awaitUntil("the console's line") {
+                messages.isNotEmpty() || false.also { PlatformTestUtil.dispatchAllEventsInIdeEventQueue() }
             }
         }
         val request = messages.single().message
