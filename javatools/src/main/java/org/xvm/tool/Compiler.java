@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import java.util.stream.Stream;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -154,9 +156,17 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         List<File>       resDirs   = opts.getResourceLocations();
         File             outputLoc = opts.getOutputLocation().orElse(null);
-        List<ModuleInfo> targets   = selectTargets(opts.getInputLocations(), resDirs, outputLoc);
+        List<ModuleInfo> targets   = withProjectModules(selectTargets(opts.getInputLocations(), resDirs, outputLoc), outputLoc);
 
         prevModules = targets;
+        // a test module's project modules link from the project's binary directory when up to date
+        var path = Stream.concat(
+                targets.stream().flatMap(info -> info.withProjectBinaries(List.of()).stream()),
+                opts.getModulePath().stream()).distinct().toList();
+        if (!path.equals(opts.getModulePath())) {
+            libraryPath = path;
+            repoLib     = null;
+        }
 
         int cTargets = targets.size();
         if (cTargets == 0) {
@@ -212,7 +222,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         }
         checkErrors("target selection");
 
-        boolean fRebuild = opts.isForcedRebuild();
+        // a test module compiles again with a project module that changed, which it imports
+        boolean fRebuild = opts.isForcedRebuild() || targets.stream().anyMatch(ModuleInfo::isProjectChanged);
         var     verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
@@ -423,10 +434,33 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return the library repository
      */
+    /**
+     * Add the modules of the projects that test modules among the targets import, as
+     * {@link ModuleInfo#getProjectModuleFiles()} names them, unless they are targets already: a
+     * test module in its project's test source directory compiles with them, whether "xtc build",
+     * "xtc run" or "xtc test" compiles it.
+     *
+     * @param targets    the selected targets
+     * @param outputLoc  the output location, if one was specified
+     *
+     * @return the targets, with the project modules after them
+     */
+    protected List<ModuleInfo> withProjectModules(List<ModuleInfo> targets, File outputLoc) {
+        var sources = targets.stream().map(ModuleInfo::getSourceFile).toList();
+        var added   = targets.stream()
+                .flatMap(info -> info.getProjectModuleFiles().stream())
+                .distinct()
+                .filter(file -> !sources.contains(file))
+                .toList();
+        return added.isEmpty()
+                ? targets
+                : Stream.concat(targets.stream(), selectTargets(added, List.of(), outputLoc).stream()).toList();
+    }
+
     protected ModuleRepository ensureLibraryRepo() {
         if (repoLib == null) {
             log(INFO, "Creating and pre-populating library and build repositories");
-            repoLib = configureLibraryRepo(options().getModulePath());
+            repoLib = configureLibraryRepo(libraryPath == null ? options().getModulePath() : libraryPath);
         }
         return repoLib;
     }
@@ -769,6 +803,11 @@ public class Compiler extends Launcher<CompilerOptions> {
     protected Strictness strictLevel = Strictness.Normal;
 
     protected ModuleRepository repoLib;
+    /**
+     * The module path of the library repository: the options' module path, behind the binary
+     * directories of the projects whose test modules compile here; null until targets are known.
+     */
+    protected List<File>       libraryPath;
     protected List<ModuleInfo> prevModules;
     protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;

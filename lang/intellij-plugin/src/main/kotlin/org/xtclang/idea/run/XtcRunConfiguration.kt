@@ -278,7 +278,8 @@ class XtcRunConfiguration(
 
         /**
          * `xtc test`'s command line, as a command-line test run's: [module]'s [tests], all of them for none, which
-         * `xtc test` finds by its name as `xtc run` does, with xunit's `json` report and the `--debug` options [debug].
+         * `xtc test` finds by its name as `xtc run` does, or in the project's `src/test/x`, where it compiles with the
+         * project's modules it imports, with xunit's `json` report and the `--debug` options [debug].
          */
         fun xtcTestCommandLine(
             module: String,

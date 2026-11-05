@@ -137,10 +137,19 @@ public class Runner extends Launcher<RunnerOptions> {
             }
             checkErrors("module identification");
 
-            fileBin   = requireNonNull(info).getBinaryFile();
+            // a test module in its project's test source directory, as "xtc init" makes one, imports
+            // the project's modules: they load from the project's binary directory, and the compiler
+            // compiles them with it, as "xtc build" does; when one of them changed, it compiles again
+            List<File> modulePath = requireNonNull(info).withProjectBinaries(opts.getModulePath());
+            if (!modulePath.equals(opts.getModulePath())) {
+                repo = configureLibraryRepo(modulePath);
+            }
+            boolean fProjectChanged = !opts.isCompileDisabled() && info.isProjectChanged();
+
+            fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
 
-            boolean fCompile = false;
+            boolean fCompile = fProjectChanged;
             if (!binExists) {
                 String qualName = info.getQualifiedModuleName();
                 module = repo.loadModule(qualName);
@@ -196,7 +205,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
-                repo      = configureLibraryRepo(opts.getModulePath());
+                repo      = configureLibraryRepo(info.withProjectBinaries(opts.getModulePath()));
                 module    = repo.loadModule(info.getQualifiedModuleName());
             }
 
