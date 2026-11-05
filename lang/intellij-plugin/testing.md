@@ -62,7 +62,7 @@ payloads; `-PplaybookRetainedRuns=N` changes that count, and a `.keep-artifacts`
 | Approach | Headless? | GUI? | What It Tests | Complexity | CI-Ready? |
 |---|---|---|---|---|---|
 | **Unit tests** (current) | Yes | No | Pure utility logic | Lowest | Yes |
-| **Platform test framework** | Yes | No | Extensions, services, PSI, actions | Low–Medium | Yes |
+| **Platform test framework** (light tests) | Yes | No | Extensions, services, PSI, actions | Low–Medium | Yes |
 | **`testIde` custom tasks** | Yes | No | Same as above, multi-version | Medium | Yes |
 | **Starter+Driver (`testIdeUi`)** | Xvfb on Linux | Yes | Full UI interaction, real IDE | High | Yes (with Xvfb) |
 | **`runIde`** | No | Yes | Manual exploratory testing | N/A | No |
@@ -83,6 +83,11 @@ integration, or anything that requires the IntelliJ application environment.
 ---
 
 ## 2. IntelliJ Platform Test Framework (Headless)
+
+The plugin's light tests use it in JUnit 5: a test registers `LightEditor` (src/test) with
+`@RegisterExtension`, which opens a light in-memory project with the plugin and its dependencies
+loaded, and each test opens an `.x` file in an editor there. No language server runs; they check
+what IntelliJ itself does in an Ecstasy file.
 
 The IntelliJ Platform provides a functional test framework that boots a **real IntelliJ
 application environment** entirely in-process, with no GUI. Tests run against real
