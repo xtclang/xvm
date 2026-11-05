@@ -1140,6 +1140,79 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `the card game's dealAll restarts at its first line, as the top frame or a lower one, also after the Debug Console ran code`() {
+        CompilerTestSupport.configure()
+        val game = directory.resolve("cardGame").toFile()
+        File(System.getProperty("xtc.composite.root"), "lang/test-fixtures/tour/cardGame/src/main/x").copyRecursively(game)
+        val module = game.resolve("cardGame.x").toURI().toString()
+        val collection = game.resolve("cardGame/CardCollection.x").path
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(game.path))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("cardGame", module)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            var seq = 0
+
+            fun send(
+                command: String,
+                arguments: String? = null,
+                last: (JsonObject) -> Boolean = { it.response == command },
+            ): List<JsonObject> {
+                sessions.request(id, ++seq, command, arguments)
+                return client.until(id, last)
+            }
+            sessions.request(id, ++seq, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(id, ++seq, "launch", """{"module": "cardGame", "moduleUri": "$module"}""")
+            // dealAll's line, where initializeGame deals the rest of the deck to the draw pile
+            sessions.request(id, ++seq, "setBreakpoints", """{"source": {"path": "$collection"}, "breakpoints": [{"line": 82}]}""")
+            val thread = send("configurationDone") { it.event == "stopped" }.last()["body"].asJsonObject["threadId"].asInt
+            send("setBreakpoints", """{"source": {"path": "$collection"}, "breakpoints": []}""")
+
+            fun frames() =
+                send("stackTrace", """{"threadId": $thread}""")
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+
+            // initializeGame calls dealAll again, which stops at its first line; until the fix, a restart after the Debug
+            // Console ran code was answered, and the program then ended
+            fun restartDealAll() {
+                val dealAll = frames().single { it["name"].asString == "CardCollection.dealAll" }
+                assertThat(dealAll["canRestart"].asBoolean).isTrue()
+                val restarted =
+                    send("restartFrame", """{"frameId": ${dealAll["id"].asInt}}""") { it.event in setOf("stopped", "terminated") }
+                assertThat(restarted.single { it.response == "restartFrame" }["success"].asBoolean).isTrue()
+                assertThat(restarted.last().event).isEqualTo("stopped")
+                assertThat(restarted.last()["body"].asJsonObject["reason"].asString).isEqualTo("restart")
+                assertThat(frames().take(2).map { it["name"].asString to it["line"].asInt })
+                    .containsExactly("CardCollection.dealAll" to 82, "Eights.initializeGame" to 31)
+            }
+
+            fun evaluate(frame: JsonObject) {
+                val answer = send("evaluate", """{"expression": "size() + 1", "frameId": ${frame["id"].asInt}, "context": "repl"}""")
+                assertThat(answer.last()["success"].asBoolean).isTrue()
+            }
+
+            // the top frame
+            restartDealAll()
+            // a lower one: the line's first call, size(), is on top
+            send("stepIn", """{"threadId": $thread}""") { it.event == "stopped" }
+            assertThat(frames().first()["name"].asString).isEqualTo("CardCollection.size")
+            restartDealAll()
+            // a lower one, once the Debug Console has run code in the frame on top, as in the tour
+            send("stepIn", """{"threadId": $thread}""") { it.event == "stopped" }
+            evaluate(frames().first())
+            restartDealAll()
+            // the top frame, once the Debug Console has run code in it
+            evaluate(frames().first())
+            restartDealAll()
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a stop lists the fibers that do not wait at a line, with what they do, and the stack of one that waits`() {
         CompilerTestSupport.configure()
         val module = source("Waits.x", PROGRAM.trimIndent().replace("Program", "Waits"))
