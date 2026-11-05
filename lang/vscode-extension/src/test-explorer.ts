@@ -32,7 +32,7 @@ interface ModuleTests {
 }
 
 /** What a test item runs: in its module, by its root URI, the xunit selector and its kind. */
-interface Selection {
+export interface Selection {
     module: string;
     uri: string;
     selector: string;
@@ -47,6 +47,9 @@ const NOT_FINISHED = 'The test run ended before this test did.';
 
 /** The message of a chosen test that never started, as when its module did not build. */
 const NOT_RUN = 'This test did not run; the test output says why.';
+
+/** The message of a chosen test whose module a stopped run did not reach. */
+export const NOT_REACHED = 'This test did not run: the run was stopped before its module.';
 
 /** The version of xunit's events that this extension reads. */
 const EVENTS_VERSION = 1;
@@ -106,11 +109,7 @@ export function registerTestExplorer(context: vscode.ExtensionContext, client: (
         const testRun = controller.createTestRun(request);
         try {
             const chosen = selected(request.include ?? topLevel(controller.items), new Set(request.exclude ?? []));
-            for (const items of byModule(chosen, selections).values()) {
-                if (token.isCancellationRequested) {
-                    break;
-                }
-                const results = new Results(testRun, items, selections);
+            await runModules(testRun, chosen, selections, token, async (items, results) => {
                 const tests = items.some(it => selections.get(it)?.kind === 'module')
                     ? []
                     : items.map(it => selections.get(it)!).map(({ selector, kind }) => ({ selector, kind }));
@@ -120,8 +119,7 @@ export function registerTestExplorer(context: vscode.ExtensionContext, client: (
                     : buildMode(vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(selection.uri))) === 'gradle'
                         ? runGradleTests(selection, tests, results, token)
                         : runTests(client(), selection, tests, results, token));
-                results.end();
-            }
+            });
         } finally {
             testRun.end();
         }
@@ -188,6 +186,24 @@ export function selected(chosen: readonly vscode.TestItem[], excluded: ReadonlyS
 /** The items of a collection, without their children. */
 function topLevel(items: vscode.TestItemCollection): vscode.TestItem[] {
     return [...items].map(([, it]) => it);
+}
+
+/**
+ * Runs the modules of the [chosen] items in [testRun], each in turn by [runModule], which reports its tests to the
+ * module's results, and then ends them. Once [token] is canceled, as a stop does, a module the run has not reached
+ * ends with its chosen tests not run, so that each test the run chose has a result.
+ */
+export async function runModules(testRun: vscode.TestRun, chosen: readonly vscode.TestItem[], selections: WeakMap<vscode.TestItem, Selection>,
+                                 token: vscode.CancellationToken, runModule: (items: vscode.TestItem[], results: Results) => Promise<void>): Promise<void> {
+    for (const items of byModule(chosen, selections).values()) {
+        const results = new Results(testRun, items, selections);
+        if (token.isCancellationRequested) {
+            results.notReached();
+            continue;
+        }
+        await runModule(items, results);
+        results.end();
+    }
 }
 
 /** The items by their module, in the order of each module's first. */
@@ -371,6 +387,11 @@ class Results {
         this.running.forEach(it => this.errored(it, NOT_FINISHED));
         this.running.clear();
         this.tests.filter(it => !this.ended.has(it)).forEach(it => this.errored(it, NOT_RUN));
+    }
+
+    /** Ends the chosen tests as not run, as when a stopped run did not reach their module. */
+    notReached(): void {
+        this.tests.forEach(it => this.errored(it, NOT_REACHED));
     }
 
     /** Errors the chosen tests with [message], as when their module did not build. */
