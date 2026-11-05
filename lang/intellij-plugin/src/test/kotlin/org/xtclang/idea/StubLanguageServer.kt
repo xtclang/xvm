@@ -9,6 +9,7 @@ import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
+import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -94,6 +95,10 @@ class StubLanguageServer(
 
     /** The documents of the workspace report and their diagnostics, by URI, which the report has in URI order. */
     val reported = ConcurrentHashMap<String, List<Diagnostic>>()
+
+    /** How the server resolves a code action, as codeAction/resolve answers: by default, as it came. */
+    @Volatile
+    var resolve: (CodeAction) -> CodeAction = { it }
 
     /** The client of each connection that LSP4IJ has made to the server, in order. */
     val clients = CopyOnWriteArrayList<LanguageClient>()
@@ -182,6 +187,11 @@ class StubLanguageServer(
     override fun didChangeConfiguration(params: DidChangeConfigurationParams) = Unit
 
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) = Unit
+
+    override fun resolveCodeAction(unresolved: CodeAction): CompletableFuture<CodeAction> {
+        requests += "codeAction/resolve"
+        return CompletableFuture.completedFuture(resolve(unresolved))
+    }
 
     /**
      * LSP4IJ's extension for the stub as the Ecstasy server, in place of the plugin's. Its factory, which LSP4IJ keeps
