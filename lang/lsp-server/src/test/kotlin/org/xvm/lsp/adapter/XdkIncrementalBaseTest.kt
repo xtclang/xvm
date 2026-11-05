@@ -7,9 +7,13 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.FileStructure
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkCodeActionCache
+import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.XdkProject
+import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaited
 import java.io.ByteArrayOutputStream
@@ -31,11 +35,15 @@ class XdkIncrementalBaseTest {
     /** The module compiles so far; the compiler queue runs them one at a time. */
     private val compiles = AtomicInteger()
 
-    /** What a revision's compile gives each module, by its name: its errors, whether it has facts, its artifact. */
+    /**
+     * What a revision's compile gives each module, by its name: its errors, whether it has facts, its artifact, and the
+     * modules that its facts name by artifact revision.
+     */
     private data class Outcome(
         val errors: Map<String, List<String>>,
         val facts: Set<String>,
         val artifacts: Map<String, String>,
+        val named: Map<String, Set<String>>,
     )
 
     @Test
@@ -51,10 +59,94 @@ class XdkIncrementalBaseTest {
     }
 
     @Test
-    fun `an edit of the root module compiles every module that depends on it`() {
+    fun `an edit of the root module that moves its declarations compiles every module that depends on it`() {
         val root = cardGame()
         val card = root.resolve("src/main/x/cardGame/Card.x")
+        // the modules that depend on it name its declarations where they are
         assertThat(incremental(root, null, mapOf(card to "// edited\n" + card.readText()))).isEqualTo(CARD_GAME)
+    }
+
+    @Test
+    fun `a body edit of the root module after its declarations compiles it alone`() {
+        val root = cardGame()
+        val hand = root.resolve("src/main/x/cardGame/Hand.x")
+        // the tour's unused local, in the last method's body: the modules that depend on it compile as they did
+        val edited = hand.readText().replaceFirst("        console.print();\n", "        Int unused = 0;\n        console.print();\n")
+        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(1)
+    }
+
+    @Test
+    fun `a body edit of the root module before a declaration compiles every module that depends on it`() {
+        val root = cardGame()
+        val hand = root.resolve("src/main/x/cardGame/Hand.x")
+        // the constructor's body grows by a line, which moves display, declared after it
+        val edited =
+            hand.readText().replaceFirst(
+                "        construct CardCollection(label);\n",
+                "        construct CardCollection(label);\n\n",
+            )
+        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(CARD_GAME)
+    }
+
+    @Test
+    fun `a signature edit of the root module compiles every module that depends on it`() {
+        val root = cardGame()
+        val hand = root.resolve("src/main/x/cardGame/Hand.x")
+        val edited = hand.readText().replaceFirst("    void display() {", "    void display(Int indent = 0) {")
+        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(CARD_GAME)
+    }
+
+    @Test
+    fun `an edit of a constant's value in the root module compiles every module that depends on it`() {
+        val root = cardGame()
+        val constants = root.resolve("src/main/x/cardGame/GameConstants.x")
+        val edited = constants.readText().replaceFirst("static Int INITIAL_HAND_SIZE = 5;", "static Int INITIAL_HAND_SIZE = 7;")
+        assertThat(incremental(root, null, mapOf(constants to edited))).isEqualTo(CARD_GAME)
+    }
+
+    @Test
+    fun `an edit of a computed constant's expression in the root module compiles it alone`() {
+        val root = cardGame()
+        val constants = root.resolve("src/main/x/cardGame/GameConstants.x")
+        val edited =
+            constants.readText().replaceFirst(
+                "static Int DECK_SIZE = Rank.values.size * Suit.values.size;",
+                "static Int DECK_SIZE = Suit.values.size * Rank.values.size;",
+            )
+        // its value comes from its initializer's code, which the modules that use it do not compile against
+        assertThat(incremental(root, null, mapOf(constants to edited))).isEqualTo(1)
+    }
+
+    @Test
+    fun `a module whose facts name an edited one by revision is compiled, though the edit kept the API`() {
+        val root =
+            directory.toRealPath().toFile().also { root ->
+                root.resolve("Lib.x").writeText(LIB)
+                root.resolve("Use.x").writeText(USE)
+            }
+        val graph = XdkProject(libraryAndUse(root))
+        val lib = graph.modules.getValue("Lib").uri
+        val use = graph.modules.getValue("Use").uri
+        val edited = mapOf(root.resolve("Lib.x").toURI().toString() to LIB.replace("return 1;", "return 2;"))
+        val cache = XdkCodeActionCache()
+        revision(graph, emptyMap(), cache)
+        // A member with no declaration in a project module is named by its artifact's revision, which changes with any
+        // edit. Every member that Use could name in Lib has a declaration, as on the card game, so the case adds that
+        // name of Lib to Use's facts from the revision before.
+        val before = cache.base()!!
+        val named =
+            CompilerRenameFacts.merge(
+                mapOf(
+                    "compiled" to before.facts.module(use)!!,
+                    "named" to CompilerRenameFacts(emptyList(), emptyMap(), binaryModules = setOf("Lib")),
+                ),
+            )
+        val seeded = before.copy(facts = CompilerRenameFacts.merge(mapOf(lib to before.facts.module(lib)!!, use to named)))
+        cache.base("seeded") { seeded }
+        // Lib's edit, in one's body, keeps its API, but Use is compiled, as its facts name Lib by revision
+        assertThat(revision(graph, edited, cache)).isEqualTo(2)
+        val whole = XdkCodeActionCache().also { revision(graph, edited, it) }
+        assertThat(outcome(cache.base()!!)).isEqualTo(outcome(whole.base()!!))
     }
 
     @Test
@@ -116,6 +208,36 @@ class XdkIncrementalBaseTest {
         return compiled
     }
 
+    /**
+     * The module compiles of the revision's compile of [graph], with [overlays] in place of its files, as a code action
+     * request makes it, from the compile that [cache] keeps of the revision before.
+     */
+    private fun revision(
+        graph: XdkProject,
+        overlays: Map<String, String>,
+        cache: XdkCodeActionCache,
+    ): Int {
+        CompilerTestSupport.configure()
+        val support = EmbeddingSupport.instance()
+        val start = compiles.get()
+        XdkProjectQueries(
+            graph,
+            overlays,
+            XdkDependencies(emptyList()),
+            { sources, repository, errors ->
+                support.compileModule(sources, repository, errors).also { compiles.incrementAndGet() }
+            },
+            { false },
+            actionCache = cache,
+        ).codeActions(
+            graph.buildOrder().first().uri,
+            Range(Position(0, 0), Position(0, 0)),
+            emptyList(),
+            setOf(CodeActionKind.REFACTOR_INLINE),
+        )
+        return compiles.get() - start
+    }
+
     /** The module compiles of a code action request that asks only for the revision's compile. */
     private fun compiled(
         adapter: XdkAdapter,
@@ -147,6 +269,13 @@ class XdkIncrementalBaseTest {
                     base.facts.module(it.uri) != null
                 }.mapTo(sortedSetOf()) { it.name },
             base.artifacts.mapValues { fingerprint(it.value) },
+            modules.associate { module ->
+                module.name to
+                    base.facts
+                        .module(module.uri)
+                        ?.binaryModules
+                        .orEmpty()
+            },
         )
     }
 
@@ -197,6 +326,13 @@ class XdkIncrementalBaseTest {
             }
         }
 
+    /** Lib, and Use, which depends on it. */
+    private fun libraryAndUse(root: File): List<XdkSourceModule> =
+        listOf(
+            XdkSourceModule("Lib", root.resolve("Lib.x").toURI().toString()),
+            XdkSourceModule("Use", root.resolve("Use.x").toURI().toString(), setOf("Lib")),
+        )
+
     private fun modules(root: File): List<XdkSourceModule> =
         listOf(
             XdkSourceModule("Base", root.resolve("Base.x").toURI().toString()),
@@ -215,5 +351,25 @@ class XdkIncrementalBaseTest {
         const val BROKEN_MIDDLE = "module Middle { package base import Base; static Int two() = base.none(); }"
         const val TOP = "module Top { package middle import Middle; Int three() = middle.two() + 1; }"
         const val OTHER = "module Other { Int four() = 4; }"
+
+        /** A function, whose body Lib's edit changes. */
+        val LIB =
+            """
+            module Lib {
+                static Int one() {
+                    return 1;
+                }
+            }
+            """.trimIndent() + "\n"
+
+        /** A use of Lib's function. */
+        val USE =
+            """
+            module Use {
+                package lib import Lib;
+
+                Int two() = lib.one() + 1;
+            }
+            """.trimIndent() + "\n"
     }
 }

@@ -177,6 +177,11 @@ internal class CompilerRenameFacts(
      * module's, so read one module's through [within].
      */
     val packageImports: Map<String, String> = emptyMap(),
+    /**
+     * The project's modules whose artifacts these facts name by revision, for a member with no declaration: facts that
+     * name none of a module's are as true against another artifact of it with the same [XdkDependency.api].
+     */
+    val binaryModules: Set<String> = emptySet(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -221,6 +226,7 @@ internal class CompilerRenameFacts(
                 ),
                 attempts.flatMapTo(linkedSetOf()) { it.constantProperties },
                 attempts.flatMap { it.packageImports.entries }.associate { it.toPair() },
+                attempts.flatMapTo(sortedSetOf()) { it.binaryModules },
             )
         }
     }
@@ -264,6 +270,7 @@ internal fun captureRenameFacts(
                 }
             }.mapTo(hashSetOf()) { it.id }
     val identities = mutableMapOf<Constant, ProofIdentity>()
+    val binaryModules = sortedSetOf<String>()
 
     fun identity(constant: Constant): ProofIdentity =
         identities.getOrPut(constant) {
@@ -401,6 +408,7 @@ internal fun captureRenameFacts(
                     if (index == null) {
                         ProofIdentity.Unproven()
                     } else {
+                        binaryModules += module
                         ProofIdentity.Binary(
                             XdkDependency.SymbolKey(
                                 module,
@@ -592,5 +600,7 @@ internal fun captureRenameFacts(
                     )
                 },
             ),
+        // last, once every identity above is made
+        binaryModules = binaryModules.toSortedSet(),
     )
 }
