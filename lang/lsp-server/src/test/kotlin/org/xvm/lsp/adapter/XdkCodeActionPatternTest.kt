@@ -71,7 +71,7 @@ class XdkCodeActionPatternTest {
             val next = caret(lines, "Player player", 2)
             val clean = counted { adapter.getCodeActionsAsync(uri, next, emptyList(), intentions) }
             // the quick fixes the list hides would prove there an import of the Player that the broken method leaves
-            // unresolved, up to the module that is still broken
+            // unresolved: a compile of every module up to PlayerTest, which it leaves broken, and which comes last
             val hidden = counted { adapter.getCodeActionsAsync(uri, next, emptyList(), setOf(CodeActionKind.QUICKFIX)) }
             // a client that lists quick fixes with the rest, as VS Code's lightbulb does, gets the one already proved
             val everyKind = counted { adapter.getCodeActionsAsync(uri, caret(lines, "new Joker", 6), emptyList()) }
@@ -84,7 +84,7 @@ class XdkCodeActionPatternTest {
             assertThat(onError).isZero()
             assertThat(atNew).isZero()
             assertThat(clean).isZero()
-            assertThat(hidden).isPositive()
+            assertThat(hidden).isEqualTo(MODULES)
             assertThat(everyKind).isZero()
         }
     }

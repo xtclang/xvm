@@ -62,6 +62,21 @@ class XdkBlockedModuleTest {
         }
     }
 
+    @Test
+    fun `the dependencies a module lacks are named in name order`() {
+        CompilerTestSupport.configure()
+        val missing = listOf("Kilo", "Alpha", "Juliet", "Echo", "Bravo", "India", "Delta", "Hotel", "Charlie", "Golf", "Foxtrot")
+        val consumer = write("Consumer.x", "module Consumer {}\n")
+        val uri = consumer.toURI().toString()
+        XdkAdapter().use { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Consumer", uri, missing.toSet())))
+            val result = adapter.compile(uri, "module Consumer {}\n")
+            // a Set.copyOf, as a module's dependencies were, iterates in an order that each JVM randomizes
+            assertThat(result.diagnostics.filter { it.code == Diagnostic.Codes.DEPENDENCY_FAILED }.map { it.message })
+                .containsExactly("Dependencies unavailable: ${missing.sorted().joinToString()}")
+        }
+    }
+
     private companion object {
         const val LIBRARY = "module Library { static Int value() = 1; }"
         const val BROKEN_LIBRARY = "module Library { static Int value() = \"text\"; }"
