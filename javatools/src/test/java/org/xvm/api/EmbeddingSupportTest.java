@@ -234,6 +234,40 @@ public class EmbeddingSupportTest {
         assertTrue(output.toString().contains(message), output.toString());
     }
 
+    /**
+     * An exception that a future's whenComplete callback throws is its service's unhandled
+     * exception, as the runtime reports other exceptions that nothing catches. The future that
+     * whenComplete returns gets the exception too, but a caller mostly drops it, so that alone
+     * leaves no trace. Here the program's own handler of unhandled exceptions learns of it, and
+     * run() waits for that; without the report it would wait until the test's limit.
+     */
+    @Test
+    public void anExceptionThatAWhenCompleteCallbackThrowsIsReportedAsUnhandled() {
+        ModuleStructure module = compile("""
+                module Callbacks {
+                    void run() {
+                        @Inject Console console;
+                        @Future String reported;
+                        this:service.registerUnhandledExceptionNotification(e -> {reported = e.text ?: "";});
+
+                        @Future Int value;
+                        &value.whenComplete((v, e) -> {throw new IllegalState("from the callback");});
+                        value = 1;
+                        console.print($"reported: {reported}");
+                    }
+                }
+                """);
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Callbacks did not start: " + errs.getErrors());
+
+        try (control) {
+            await(control);
+        }
+        assertTrue(output.toString().contains("reported: from the callback"), output.toString());
+    }
+
     @Test
     public void closingASuspendedRunTerminatesIt() throws InterruptedException {
         ModuleStructure module = compile("""
