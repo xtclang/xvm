@@ -196,6 +196,9 @@ class XtcDebugServer(
     private var installedFunctions: List<FunctionBreakpointRequest> = emptyList()
     private val lastBreakpoint = AtomicInteger()
 
+    /** Where the program installed each breakpoint, by its ID: its file's path and its line, as the program reported. */
+    private val placed = ConcurrentHashMap<Int, Pair<String, Int>>()
+
     /** 0 for a client that counts lines and columns from 1, as DAP does by default, -1 for one that counts from 0. */
     @Volatile
     private var lineBase = 0
@@ -252,6 +255,9 @@ class XtcDebugServer(
 
         /** The answer to `exceptionInfo` for a fiber that did not stop the program at an exception. */
         const val NO_EXCEPTION = "The thread did not stop the program at an exception."
+
+        /** How the description of a stop at a breakpoint whose condition cannot be evaluated starts, then says why. */
+        const val UNEVALUATED_CONDITION = "The condition cannot be evaluated: "
 
         /** A breakpoint set before the program starts. */
         const val PENDING = "Installed when the program starts."
@@ -416,6 +422,7 @@ class XtcDebugServer(
 
             else ->
                 runs.setBreakpoints(runId, breakpoints.getValue(path)).thenApply { states ->
+                    place(states, path)
                     SetBreakpointsResponse().apply { this.breakpoints = states.map { breakpoint(it, path) }.toTypedArray() }
                 }
         }
@@ -442,6 +449,7 @@ class XtcDebugServer(
                 else -> runs.setFunctionBreakpoints(runId, requests)
             }
         return states.thenApply { installed ->
+            place(installed)
             SetFunctionBreakpointsResponse().apply { breakpoints = installed.map(::breakpoint).toTypedArray() }
         }
     }
@@ -1276,6 +1284,7 @@ class XtcDebugServer(
         }
 
     private fun sendStopped(stop: StopState) {
+        unevaluated(stop)?.let(::console)
         client?.stopped(
             StoppedEventArguments().apply {
                 reason = stop.reason
@@ -1287,6 +1296,29 @@ class XtcDebugServer(
                 hitBreakpointIds = stop.breakpointIds.takeIf { it.isNotEmpty() }?.toTypedArray()
             },
         )
+    }
+
+    /**
+     * For a stop at a breakpoint whose condition cannot be evaluated, the console line that says so: the breakpoint's
+     * file and line, its condition, and why. The stop's description says why too, but not every client shows it;
+     * LSP4IJ 0.21.0 shows it nowhere, while every client shows console output. Null for any other stop.
+     */
+    private fun unevaluated(stop: StopState): String? {
+        val why = stop.description?.takeIf { it.startsWith(UNEVALUATED_CONDITION) }?.removePrefix(UNEVALUATED_CONDITION) ?: return null
+        val id = stop.breakpointIds.singleOrNull() ?: return null
+        val condition =
+            (breakpoints.values + installed.values).firstNotNullOfOrNull { file -> file.breakpoints.firstOrNull { it.id == id } }?.condition
+                ?: (functionBreakpoints + installedFunctions).firstOrNull { it.id == id }?.condition
+        val at = placed[id]?.let { (path, line) -> " at $path:$line" }.orEmpty()
+        return "The condition ${condition?.let { "`$it` " }.orEmpty()}of the breakpoint$at cannot be evaluated: $why"
+    }
+
+    /** Remembers where the program installed the breakpoints of [states], in the file at [path] or at their own. */
+    private fun place(
+        states: List<BreakpointState>,
+        path: String? = null,
+    ) {
+        states.filter { it.verified }.forEach { state -> (path ?: state.path)?.let { placed[state.id] = it to state.line } }
     }
 
     /** Steps a stopped fiber, [alone] if so asked; the stop where the step ends is reported as a `stopped` event. */
@@ -1335,6 +1367,7 @@ class XtcDebugServer(
         path: String,
         states: List<BreakpointState>,
     ) {
+        place(states, path)
         states.forEach { state ->
             client?.breakpoint(
                 BreakpointEventArguments().apply {
@@ -1347,6 +1380,7 @@ class XtcDebugServer(
 
     /** Tells the client how the function breakpoints were installed. */
     private fun functionsChanged(states: List<BreakpointState>) {
+        place(states)
         states.forEach { state ->
             client?.breakpoint(
                 BreakpointEventArguments().apply {
