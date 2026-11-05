@@ -1,11 +1,12 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.notification.Notification
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.progress.util.ProgressIndicatorUtils
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
@@ -13,6 +14,9 @@ import java.util.concurrent.CompletableFuture
 
 /** Shared preflight ownership for the file-tree Rename and Move actions. */
 internal object XtcFileOperations {
+    /** The plugin's notifications' group, which plugin.xml declares. */
+    const val NOTIFICATIONS = "Ecstasy Language Server"
+
     fun isSourcePath(file: VirtualFile): Boolean =
         if (!file.isDirectory) {
             file.extension == "x"
@@ -59,7 +63,9 @@ internal object XtcFileOperations {
                 if (failure == null) {
                     completed()
                 } else {
-                    Messages.showErrorDialog(project, failure, "Ecstasy Refactoring")
+                    // the operation ran in the background, and its answer can come after other changes, an Undo's
+                    // among them: a notification says so, where a modal dialog would hold the IDE until it is closed
+                    Notification(NOTIFICATIONS, "Ecstasy Refactoring", failure, NotificationType.ERROR).notify(project)
                 }
             }
         }
