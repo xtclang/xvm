@@ -2340,6 +2340,9 @@ class XtcTextDocumentService(
                 }
             },
             uri = params.textDocument.uri,
+            // Typing does not wait for compilation: the formatter reads the text as sent, and LSP4IJ waits for
+            // the answer 500 ms in the editor's write action, then drops it
+            sourceOnly = true,
         ) {
             val options =
                 AdapterFormattingOptions(
