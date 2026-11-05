@@ -35,6 +35,18 @@ class XdkInferredPresentationTest {
     }
 
     @Test
+    fun `an inferred local of the module's own type is hinted by the type's name, as the source names it`() {
+        val source =
+            "module Inferred { class Point(Int x) {} void run() { val point = new Point(1); " +
+                "val points = new Point[]; val named = new HashMap<String, Point>(); } }"
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
+            assertThat(adapter.getInlayHints(URI, ALL).filter { it.kind == InlayHint.InlayHintKind.TYPE }.map { it.label })
+                .containsExactly(": Point", ": Array<Point>", ": HashMap<String, Point>")
+        }
+    }
+
+    @Test
     fun `explicit lambda parameters omit type hints but retain the inferred return`() {
         val source =
             "module Inferred { void run() { function String(String) fn = (String value) -> value; } }"
