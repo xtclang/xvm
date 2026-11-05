@@ -23,10 +23,9 @@ import com.intellij.driver.sdk.waitForIndicators
 import com.intellij.driver.sdk.waitForProblemsViewFile
 import com.intellij.openapi.progress.ProcessCanceledException
 import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 /** Selects the harness workload, including feature checks and focused lifecycle or responsiveness runs. */
@@ -112,7 +111,7 @@ class CompilerPlaybook(
     ) {
         with(driver) {
             case(if (persistencePhase == 0) "START" else "START_REOPEN", "Packaged XTC and pinned LSP4IJ load") {
-                waitForIndicators(2.minutes)
+                waitForIndicators(HANG_LIMIT)
                 withContext(OnDispatcher.EDT) {
                     utility(PlaybookProgress::class).install(singleProject())
                 }
@@ -190,7 +189,7 @@ class CompilerPlaybook(
                 library.text = scenario.edit.apply(fixtures.getValue(scenario.file))
                 val changed = open(scenario.consumer)
                 changed.awaitError()
-                awaitUi("consumer owns its type mismatch", 45.seconds) {
+                awaitUi("consumer owns its type mismatch", HANG_LIMIT) {
                     currentDiagnostics(changed)?.let { items ->
                         items.isNotEmpty() &&
                             items.none {
@@ -231,7 +230,7 @@ class CompilerPlaybook(
                     val text = expected.edit.apply(fixtures.getValue(scenario.file))
                     editor.text = text
                     val range = offset(text, expected.rangeStart)..offset(text, expected.rangeEnd)
-                    awaitUi("compiler diagnostic at shared source span", 45.seconds) {
+                    awaitUi("compiler diagnostic at shared source span", HANG_LIMIT) {
                         currentDiagnostics(editor) != null &&
                             editor.diagnostics().any {
                                 it.severity == expected.severity &&
@@ -239,7 +238,7 @@ class CompilerPlaybook(
                                     it.description.contains(expected.messageContains, ignoreCase = true)
                             }
                     }
-                    awaitUi("compiler diagnostic codes, source, and nonempty ranges", 45.seconds) {
+                    awaitUi("compiler diagnostic codes, source, and nonempty ranges", HANG_LIMIT) {
                         currentDiagnostics(editor)?.let { items ->
                             items.isNotEmpty() &&
                                 items.all {
@@ -299,7 +298,7 @@ class CompilerPlaybook(
             ) {
                 val scenario = shared.warning
                 val editor = open(scenario.file)
-                awaitUi("one duplicate-annotation warning", 45.seconds) {
+                awaitUi("one duplicate-annotation warning", HANG_LIMIT) {
                     currentDiagnostics(editor) != null &&
                         editor.diagnostics().let { values ->
                             values.size == scenario.count &&
@@ -315,7 +314,7 @@ class CompilerPlaybook(
                 }
                 problems(editor)
                 val data = shared.scenarios.getValue(scenario.id)
-                awaitUi("compiler warning metadata", 45.seconds) {
+                awaitUi("compiler warning metadata", HANG_LIMIT) {
                     currentDiagnostics(editor)?.let { items ->
                         items.size == scenario.count &&
                             items.all {
@@ -344,7 +343,7 @@ class CompilerPlaybook(
                 restore(data.text("errorFile"))
                 val restored = open(scenario.file)
                 restored.text = fixtures.getValue(scenario.file)
-                awaitUi("restored compiler warning", 45.seconds) {
+                awaitUi("restored compiler warning", HANG_LIMIT) {
                     currentDiagnostics(restored)?.let { items ->
                         items.size == scenario.count && items.single().code == scenario.code
                     } == true
@@ -783,7 +782,7 @@ class CompilerPlaybook(
                 if (variant["validAfterAcceptance"].asBoolean) {
                     editor.awaitDiagnostics(emptyList())
                 } else {
-                    awaitUi("missing array bracket remains a diagnostic", 30.seconds) {
+                    awaitUi("missing array bracket remains a diagnostic", HANG_LIMIT) {
                         currentDiagnostics(editor)?.isNotEmpty() == true && editor.diagnostics().isNotEmpty()
                     }
                 }
@@ -947,7 +946,7 @@ class CompilerPlaybook(
                 awaitUi(
                     message = "unfinished declaration body fold $expected",
                     errorMessage = { "Expected native fold $expected; actual: ${folds(editor)}" },
-                    timeout = 45.seconds,
+                    timeout = HANG_LIMIT,
                 ) {
                     expected in folds(editor)
                 }
@@ -984,7 +983,7 @@ class CompilerPlaybook(
             chooseTargets(reopened, expected, expected.last()) {
                 invokeAction("LSP.GotoTypeDefinition", component = reopened.component)
             }
-            awaitUi("selected union declaration opens", 30.seconds) {
+            awaitUi("selected union declaration opens", HANG_LIMIT) {
                 withContext(OnDispatcher.EDT) {
                     service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
                         reopened.text
@@ -1058,7 +1057,7 @@ class CompilerPlaybook(
             val editor = open(data.text("file"))
             editor.awaitDiagnostics(emptyList())
             structure(editor, data.strings("symbolNames"))
-            awaitUi("native fold regions", 45.seconds) {
+            awaitUi("native fold regions", HANG_LIMIT) {
                 folds(editor).size >= data.values["minimumFolds"].asInt
             }
             selectionParents(
@@ -1238,7 +1237,7 @@ class CompilerPlaybook(
                 } +
                 data.text("moduleEnd")
             editor.awaitError()
-            awaitUi("bounded source diagnostics without an internal compiler failure", 45.seconds) {
+            awaitUi("bounded source diagnostics without an internal compiler failure", HANG_LIMIT) {
                 currentDiagnostics(editor)?.let { items ->
                     items.isNotEmpty() &&
                         items.count { it.severity == "Error" } <=
@@ -1257,7 +1256,7 @@ class CompilerPlaybook(
         check(positions.isNotEmpty())
         caret(editor, 0)
         invokeAction("GotoNextError", component = editor.component)
-        awaitUi("Next Problem moves to an actual compiler diagnostic", 15.seconds) {
+        awaitUi("Next Problem moves to an actual compiler diagnostic", HANG_LIMIT) {
             withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().getOffset() in positions }
         }
         // Next Problem also shows a diagnostic hint; dismiss it before another editor/tool-window
@@ -1289,7 +1288,7 @@ class CompilerPlaybook(
             }
         if (!visible) invokeAction("ActivateProblemsViewToolWindow", component = editor.component)
         selectProblemsViewTab(HIGHLIGHTING_PANEL_ID)
-        awaitUi("Problems tool window is visible", 15.seconds) {
+        awaitUi("Problems tool window is visible", HANG_LIMIT) {
             withContext(OnDispatcher.EDT) {
                 utility(ProblemsViewToolWindowUtils::class)
                     .getToolWindow(singleProject())
@@ -1297,7 +1296,7 @@ class CompilerPlaybook(
             }
         }
         waitForProblemsViewFile(file)
-        awaitUi("Problems rows match editor diagnostic locations, including clearing", 45.seconds) {
+        awaitUi("Problems rows match editor diagnostic locations, including clearing", HANG_LIMIT) {
             getProblemsViewProblems(file)
                 .map { it.getLine() to it.getColumn() }
                 .sortedWith(compareBy({ it.first }, { it.second })) == expected
@@ -1433,7 +1432,7 @@ class CompilerPlaybook(
                     fun runSaved(message: String) {
                         // a configuration saved with the module's root file
                         execution.run(project, module, file.toUri().toString(), "")
-                        awaitUi(message, 60.seconds) { execution.exitCode(module) != Int.MIN_VALUE }
+                        awaitUi(message, HANG_LIMIT) { execution.exitCode(module) != Int.MIN_VALUE }
                         val output = execution.output(module)
                         check(execution.exitCode(module) == data.values["exitCode"].asInt) {
                             "Exit code ${execution.exitCode(module)}: $output"
@@ -1446,7 +1445,7 @@ class CompilerPlaybook(
                     files.refreshAndFindFileByPath(folder.toString())
                     files.refreshAndFindFileByPath(renamed.toString())
                     val editor = open(data.text("destinationFile"))
-                    awaitUi("Run lens on the renamed root", 45.seconds) {
+                    awaitUi("Run lens on the renamed root", HANG_LIMIT) {
                         data.text("runTitle") in withContext(OnDispatcher.EDT) { lenses.titles(editor.editor) }
                     }
                     runSaved("run of the saved configuration after the rename finishes")
@@ -1539,7 +1538,7 @@ class CompilerPlaybook(
                         editor.text.indexOf(data.text("anchor")),
                         data.text("replacement"),
                     )
-                    awaitUi("all source rename edits applied", 45.seconds) {
+                    awaitUi("all source rename edits applied", HANG_LIMIT) {
                         editor.text.split(data.text("replacement")).size - 1 ==
                             data.values["edits"].asInt
                     }
@@ -1556,7 +1555,7 @@ class CompilerPlaybook(
                 editor.awaitDiagnostics(emptyList())
                 val root = Path.of(editor.editor.getVirtualFile().getPath()).parent
                 rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
-                awaitUi("type rename moves the member file", 45.seconds) {
+                awaitUi("type rename moves the member file", HANG_LIMIT) {
                     Files.exists(root.resolve(data.text("destination"))) &&
                         !Files.exists(root.resolve(data.text("member"))) &&
                         editor.text.contains(data.text("replacement"))
@@ -1581,7 +1580,7 @@ class CompilerPlaybook(
                     reopened.text.indexOf(data.text("replacement")),
                     data.text("anchor"),
                 )
-                awaitUi("reverse rename restores source and the member", 45.seconds) {
+                awaitUi("reverse rename restores source and the member", HANG_LIMIT) {
                     Files.exists(root.resolve(data.text("member"))) &&
                         !Files.exists(root.resolve(data.text("destination"))) &&
                         reopened.text == data.text("source")
@@ -1727,7 +1726,7 @@ class CompilerPlaybook(
                         data.rows("files").forEach { file ->
                             val target = open("$id/${file["file"].asString}")
                             val expected = file[if (applied && file.has("expected")) "expected" else "source"].asString
-                            awaitUi("additional refactoring file ${file["file"].asString}", 45.seconds) { target.text == expected }
+                            awaitUi("additional refactoring file ${file["file"].asString}", HANG_LIMIT) { target.text == expected }
                         }
                     }
                     val initiallyBroken = data.values["initiallyValid"]?.asBoolean == false
@@ -1761,7 +1760,7 @@ class CompilerPlaybook(
                     quickFix(editor, at, data.text("title"), selectionEnd)
                     val destination = if (companion) open(data.text("destinationFile")) else editor
                     val destinationOriginal = if (companion) data.text("destinationSource") else original
-                    awaitUi("local refactoring matches shared source", 45.seconds) { destination.text == data.text("expected") }
+                    awaitUi("local refactoring matches shared source", HANG_LIMIT) { destination.text == data.text("expected") }
                     additionalFiles(true)
                     callerDiagnostics(false)
                     val history =
@@ -1770,7 +1769,7 @@ class CompilerPlaybook(
                         val target = if (companion) open(data.text("destinationFile")) else editor
                         focusEditor(target)
                         invokeAction(action, now = false, component = target.component)
-                        awaitUi("$action local refactoring", 45.seconds) { target.text == expected }
+                        awaitUi("$action local refactoring", HANG_LIMIT) { target.text == expected }
                         additionalFiles(action == "\$Redo")
                         callerDiagnostics(expected == destinationOriginal && initiallyBroken)
                     }
@@ -1803,7 +1802,7 @@ class CompilerPlaybook(
                         editor.text.indexOf(variant["anchor"].asString),
                         variant["title"].asString,
                     )
-                    awaitUi("native import quick fix applied", 45.seconds) {
+                    awaitUi("native import quick fix applied", HANG_LIMIT) {
                         variant["importText"].asString in editor.text
                     }
                     editor.awaitDiagnostics(emptyList())
@@ -1813,7 +1812,7 @@ class CompilerPlaybook(
                     editor.text = marked.replace("§", "")
                     editor.awaitError()
                     accept(editor, marked.indexOf('§'), variant["label"].asString, variant["expected"].asString)
-                    awaitUi("completion imports the selected type", 45.seconds) {
+                    awaitUi("completion imports the selected type", HANG_LIMIT) {
                         variant["importText"].asString in editor.text
                     }
                     editor.awaitDiagnostics(emptyList())
@@ -1911,7 +1910,7 @@ class CompilerPlaybook(
         val target =
             awaitUi(
                 message = "File is available: $file",
-                timeout = 10.seconds,
+                timeout = HANG_LIMIT,
                 getter = { findFile(relativePath = file) },
                 checker = { it != null },
             )
@@ -1925,7 +1924,7 @@ class CompilerPlaybook(
         // A focused run may edit the very first file. Wait for the client's initial snapshot to be
         // sent before changing its document; merely opening the tab does not mean LSP startup
         // ended.
-        awaitUi("language client opened $file", 45.seconds) {
+        awaitUi("language client opened $file", HANG_LIMIT) {
             service<LanguageClients>(singleProject())
                 .getStartedServers()
                 .flatMap { it.getOpenedDocuments() }
@@ -1956,7 +1955,7 @@ class CompilerPlaybook(
         val targetOffset = offset(fixtures.getValue(location.targetFile), location.target)
         caret(editor, offset(editor.text, location.cursor))
         invokeAction("GotoDeclaration", component = editor.component)
-        awaitUi("definition ${location.targetFile}:$targetOffset", 45.seconds) {
+        awaitUi("definition ${location.targetFile}:$targetOffset", HANG_LIMIT) {
             withContext(OnDispatcher.EDT) {
                 service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let {
                     it.getVirtualFile().getPath().endsWith("/${location.targetFile}") &&
@@ -1987,7 +1986,7 @@ class CompilerPlaybook(
             errorMessage = {
                 "Origin: $origin; selected: ${selected()}; diagnostics: ${editor.diagnostics()}"
             },
-            timeout = 45.seconds,
+            timeout = HANG_LIMIT,
         ) {
             selected()?.let { it != origin } == true
         }
@@ -2035,7 +2034,7 @@ class CompilerPlaybook(
     }
 
     private fun JEditorUiComponent.diagnostics(): List<Diagnostic> =
-        awaitUiNotNull("read editor diagnostics", 45.seconds) { readDiagnostics() }
+        awaitUiNotNull("read editor diagnostics", HANG_LIMIT) { readDiagnostics() }
 
     private fun JEditorUiComponent.readDiagnostics(): List<Diagnostic>? =
         try {
@@ -2053,7 +2052,7 @@ class CompilerPlaybook(
     private fun JEditorUiComponent.awaitError() {
         awaitUi(
             message = "compiler error in editor",
-            timeout = 45.seconds,
+            timeout = HANG_LIMIT,
             errorMessage = { "Source: $text; editor diagnostics: ${readDiagnostics()}" },
         ) {
             driver.currentDiagnostics(this)?.isNotEmpty() == true && readDiagnostics()?.any { it.severity == "ERROR" } == true
@@ -2064,7 +2063,7 @@ class CompilerPlaybook(
         awaitUi(
             message = "diagnostics $expected",
             errorMessage = { "Expected $expected; editor diagnostics: ${readDiagnostics()}" },
-            timeout = 45.seconds,
+            timeout = HANG_LIMIT,
         ) {
             driver.currentDiagnostics(this)?.size == expected.size && readDiagnostics() == expected
         }

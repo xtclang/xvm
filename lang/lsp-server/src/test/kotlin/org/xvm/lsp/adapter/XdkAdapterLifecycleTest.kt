@@ -6,6 +6,7 @@ import org.xvm.api.EmbeddingSupport.Compilation
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -33,7 +34,7 @@ class XdkAdapterLifecycleTest {
             seen.add(text)
             if (seen.size == 1) {
                 started.countDown()
-                check(release.await(10, SECONDS)) { "test did not release compiler" }
+                check(release.await(HANG_SECONDS, SECONDS)) { "test did not release compiler" }
             }
             // Deliberately ignore cancellation: even a compiler stage that cannot stop must
             // never install its old result after an edit, close or shutdown.
@@ -41,7 +42,7 @@ class XdkAdapterLifecycleTest {
             return Compilation.forFile(FileStructure("Fixture"))
         }
 
-        fun awaitStart() = check(started.await(10, SECONDS)) { "compiler did not start" }
+        fun awaitStart() = check(started.await(HANG_SECONDS, SECONDS)) { "compiler did not start" }
     }
 
     @Test
@@ -55,7 +56,7 @@ class XdkAdapterLifecycleTest {
                 assertThat(old.isCancelled).isTrue()
                 assertThat(adapter.getCachedResult(URI)).isNull()
                 compiler.release.countDown()
-                val result = latest.get(10, SECONDS)
+                val result = latest.get(HANG_SECONDS, SECONDS)
                 assertThat(result.diagnostics.single().message).contains("latest")
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(result)
             } finally {
@@ -75,8 +76,8 @@ class XdkAdapterLifecycleTest {
                 val latest = adapter.compileAsync(URI, "latest")
                 assertThat(superseded).allMatch { it.isCancelled }
                 compiler.release.countDown()
-                blocker.get(10, SECONDS)
-                latest.get(10, SECONDS)
+                blocker.get(HANG_SECONDS, SECONDS)
+                latest.get(HANG_SECONDS, SECONDS)
                 assertThat(compiler.seen).containsExactly("blocker", "latest")
             } finally {
                 compiler.release.countDown()
@@ -98,7 +99,7 @@ class XdkAdapterLifecycleTest {
                 compiler.release.countDown()
                 assertThat(
                     reopened
-                        .get(10, SECONDS)
+                        .get(HANG_SECONDS, SECONDS)
                         .diagnostics
                         .single()
                         .message,
@@ -122,7 +123,7 @@ class XdkAdapterLifecycleTest {
                 assertThat(cancelled.cancel(false)).isTrue()
                 compiler.release.countDown()
                 // Completion of the next job proves that the cancelled worker has finished.
-                adapter.compileAsync("file:///Other.x", "next").get(10, SECONDS)
+                adapter.compileAsync("file:///Other.x", "next").get(HANG_SECONDS, SECONDS)
                 assertThat(adapter.getCachedResult(URI)).isNull()
             } finally {
                 compiler.release.countDown()

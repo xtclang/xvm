@@ -91,6 +91,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -118,7 +119,7 @@ import kotlin.time.Duration.Companion.seconds
  * with the reason `entry`. `evaluate` in a stopped frame evaluates expressions, such as `point.x + 1` or
  * `ints[i] > 0`, for watches and hovers without running the program's code: variables, their fields and elements,
  * literals, and operators that the runtime computes natively. A line typed in the console is evaluated so too, and
- * what that refuses, such as a call, runs as code on the stopped fiber, for at most [CONSOLE_LIMIT]; `cancel` ends it
+ * what that refuses, such as a call, runs as code on the stopped fiber, for at most [Limits.console]; `cancel` ends it
  * sooner, and once code has run, `invalidated` tells a client that takes it to read the variables again. A launch
  * with `evaluationRunsProgram` lets the whole program run while such code does, for a program whose code waits on
  * work that its other fibers do; they then wait at their next line once it ends, and `invalidated` asks for everything
@@ -132,12 +133,18 @@ import kotlin.time.Duration.Companion.seconds
  * breakpoints, and the session ends with `terminated`; the program's own exit ends it as a launched one's does.
  *
  * [afterResponse] runs a task after the message being handled has been answered, which is when the `initialized`
- * event may be sent.
+ * event may be sent. [limits] bound what the session runs for the client, its defaults unless a test lifts them.
  */
 class XtcDebugServer(
     private val runs: DebugRuns,
     private val afterResponse: Executor,
+    private val limits: Limits = Limits(),
 ) : IDebugProtocolServer {
+    /** How long code typed in the console may run on the stopped fiber, [console]: [CONSOLE_LIMIT] by default. */
+    data class Limits(
+        val console: Duration = CONSOLE_LIMIT,
+    )
+
     @Volatile
     private var client: XtcDebugClient? = null
 
@@ -986,7 +993,7 @@ class XtcDebugServer(
      * In a stopped frame, a watch, a hover or a line typed in the debug console evaluates an expression, such as
      * `point.x + 1` or `ints[i] > 0`, without running the program's code; what cannot be evaluated fails with the
      * reason. What that refuses in a console line, such as a call, runs as code on the stopped fiber, for at most
-     * [CONSOLE_LIMIT], and answers with its value's `toString()`; `cancel` ends it sooner, with [CANCELLED]. Once
+     * [Limits.console], and answers with its value's `toString()`; `cancel` ends it sooner, with [CANCELLED]. Once
      * code has run, `invalidated` tells a client that takes it that the variables may have changed.
      * Without a frame, as while the program runs, a line typed in the debug console is the program's console input.
      */
@@ -1005,7 +1012,7 @@ class XtcDebugServer(
                         .exceptionallyCompose {
                             evaluation.start {
                                 val program = evaluationRunsProgram
-                                runs.run(runId, frameId, args.expression, CONSOLE_LIMIT, program, hex).also { run ->
+                                runs.run(runId, frameId, args.expression, limits.console, program, hex).also { run ->
                                     run.whenComplete { _, _ -> ran(program) }
                                 }
                             }

@@ -13,10 +13,10 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 internal fun Driver.semanticSupport(editor: JEditorUiComponent): NativeSemanticSupport =
     withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
@@ -62,7 +62,7 @@ internal fun Driver.nativeLocations(
                 else -> support.getImplementationSupport()
             }
         invoke()
-        awaitUi("native $kind receives no targets", 45.seconds) {
+        awaitUi("native $kind receives no targets", HANG_LIMIT) {
             val future = feature.getValidLSPFuture()
             future != null &&
                 future.isDone() &&
@@ -87,15 +87,15 @@ internal fun Driver.nativeLocations(
             if (expected.size > 1) {
                 // The row count check and the choice are one IDE step, so a chooser that closes in between chooses nothing.
                 val choices = utility(NativePopupChoices::class)
-                awaitUi("native $kind chooser has ${expected.size} targets", 45.seconds) {
+                awaitUi("native $kind chooser has ${expected.size} targets", HANG_LIMIT) {
                     inspection.recover()
                     withContext(OnDispatcher.EDT) { choices.chooseTableRow(index, expected.size) }
                 }
-                awaitUi("native $kind chooser closes", 15.seconds) { withContext(OnDispatcher.EDT) { choices.tableRows() } == null }
+                awaitUi("native $kind chooser closes", HANG_LIMIT) { withContext(OnDispatcher.EDT) { choices.tableRows() } == null }
             }
             awaitUi(
                 message = "$kind opens an exact source target",
-                timeout = 30.seconds,
+                timeout = HANG_LIMIT,
                 getter = {
                     withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
                         service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
@@ -139,7 +139,7 @@ internal fun Driver.nativeHover(
     document.editor.scrollToCaretNow()
     invokeAction("QuickJavaDoc", component = document.editor.component)
     val protocol = ClientProtocol(this)
-    awaitUi("native documentation contains $pattern", 45.seconds) {
+    awaitUi("native documentation contains $pattern", HANG_LIMIT) {
         val future = support.getValidLSPFuture()
         future != null &&
             future.isDone() &&
@@ -169,7 +169,7 @@ internal fun Driver.nativeHierarchy(
     )
     val className = if (kind == "type") "LSPTypeHierarchyBrowser" else "LSPCallHierarchyBrowser"
     val browser = ui.x("//div[@class='$className']")
-    awaitUi("native $kind hierarchy contains $names", 45.seconds) {
+    awaitUi("native $kind hierarchy contains $names", HANG_LIMIT) {
         browser.present() &&
             browser.tree().collectExpandedPaths().let { rows ->
                 names.all { name -> rows.any { path -> path.path.last().contains(name) } }

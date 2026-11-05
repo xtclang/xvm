@@ -8,11 +8,11 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.singleProject
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
 import java.nio.file.StandardOpenOption.CREATE
-import kotlin.time.Duration.Companion.seconds
 
 // TODO LSP4IJ: UP17 — the underlying IntelliJ interval tree scales poorly when many ranges are
 // invalidated together. Keep this diagnostic and freeze gate until the platform repair is verified.
@@ -55,7 +55,7 @@ fun Driver.largeFileEditing(
         val before =
             awaitUi(
                 "large-file highlighting is installed before replacement",
-                60.seconds,
+                HANG_LIMIT,
                 getter = { withContext(OnDispatcher.EDT) { utility(LargeFileProbe::class).snapshot(file) } },
                 checker = { value ->
                     JsonParser.parseString(value).asJsonObject["markupModels"].asJsonArray.sumOf {

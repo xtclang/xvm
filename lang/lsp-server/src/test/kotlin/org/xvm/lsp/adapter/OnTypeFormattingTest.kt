@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import org.xvm.lsp.treesitter.XtcParser
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -316,14 +317,35 @@ class OnTypeFormattingTest {
     @DisplayName("Large file")
     inner class LargeFileTests {
         @Test
-        @DisplayName("a request in a large file is quick")
+        @DisplayName("a request in a large file visits the nodes that one in a small file does")
         fun requestInLargeFile() {
+            // the formatter reads the tree where the line is, the node there and its ancestors, so the nodes it visits
+            // follow the line's nesting, not the file's length. They are counted, so the check does not depend on the
+            // machine's speed.
+            val formatter = AdapterFormatter()
+            val config = FormattingConfig.resolve(defaultOptions)
+            val visits =
+                listOf(1, 100).map { classes ->
+                    val source = XdkOnTypeFormattingTest.source(classes)
+                    val line = XdkOnTypeFormattingTest.blankInLastClass(source)
+                    XtcParser().use { parser ->
+                        parser.parse(source).use { tree ->
+                            val counted = CountedTree(tree)
+                            val edits = formatter.onTypeFormatting(counted, line, 0, "\n", config)
+                            assertThat(edits).isNotEmpty().isEqualTo(formatter.onTypeFormatting(tree, line, 0, "\n", config))
+                            counted.visits
+                        }
+                    }
+                }
+            assertThat(visits.last()).isPositive().isEqualTo(visits.first())
+            println("tree-sitter on-type formatting visits ${visits.first()} nodes in a file of 1 class, as in one of 100")
+
+            // the times, for a person to compare; no bound, which a slow or loaded machine would fail
             val source = XdkOnTypeFormattingTest.largeSource()
             val uri = freshUri()
             ts.compile(uri, source)
             val times = XdkOnTypeFormattingTest.timeRequests(source) { line -> ts.onTypeFormatting(uri, line, 0, "\n", defaultOptions) }
             println("tree-sitter on-type formatting, ${source.lines().size} lines: median ${times.median} ms, slowest ${times.slowest} ms")
-            assertThat(times.median).isLessThan(5.0)
         }
     }
 
@@ -636,6 +658,41 @@ class OnTypeFormattingTest {
             // Should use default indent size, not the tab size
             assertThat(config.indentSize).isEqualTo(4)
             assertThat(config.insertSpaces).isFalse()
+        }
+    }
+
+    /** [tree], counting the nodes it hands out, [visits]: by nodeAt, and as a node's parent, children or child. */
+    private class CountedTree(
+        private val tree: AdapterTree,
+    ) : AdapterTree by tree {
+        var visits = 0
+            private set
+
+        override val root: AdapterNode
+            get() = counted(tree.root)
+
+        override fun nodeAt(
+            line: Int,
+            column: Int,
+        ): AdapterNode? = tree.nodeAt(line, column)?.let(::counted)
+
+        private fun counted(node: AdapterNode): AdapterNode {
+            ++visits
+            return CountedNode(node)
+        }
+
+        private inner class CountedNode(
+            private val node: AdapterNode,
+        ) : AdapterNode by node {
+            override val parent: AdapterNode?
+                get() = node.parent?.let(::counted)
+
+            override val children: List<AdapterNode>
+                get() = node.children.map(::counted)
+
+            override fun childByFieldName(fieldName: String): AdapterNode? = node.childByFieldName(fieldName)?.let(::counted)
+
+            override fun childByType(nodeType: String): AdapterNode? = node.childByType(nodeType)?.let(::counted)
         }
     }
 }

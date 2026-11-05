@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -172,7 +173,7 @@ class XdkRenameTest {
                 XdkAdapter { source, errors ->
                     if (attempts.incrementAndGet() == 2) {
                         entered.countDown()
-                        check(release.await(20, SECONDS))
+                        check(release.await(HANG_SECONDS, SECONDS))
                     }
                     EmbeddingSupport.instance().compileModule(source, null, errors)
                 }
@@ -181,7 +182,7 @@ class XdkRenameTest {
                 CompilerTestSupport.configure()
                 assertThat(adapter.compile(URI, text).success).isTrue()
                 val result = adapter.renameAsync(URI, 0, text.indexOf("local"), "value")
-                assertThat(entered.await(20, SECONDS)).isTrue()
+                assertThat(entered.await(HANG_SECONDS, SECONDS)).isTrue()
                 if (close) adapter.closeDocument(URI) else adapter.compileAsync(URI, "\n$text")
                 assertThat(result.isCancelled).isTrue()
             } finally {
