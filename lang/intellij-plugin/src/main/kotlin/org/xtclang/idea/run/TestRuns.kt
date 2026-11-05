@@ -25,6 +25,7 @@ import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil
 import com.intellij.execution.testframework.sm.runner.OutputToGeneralTestEventsConverter
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.sm.runner.SMTestLocator
+import com.intellij.execution.testframework.sm.runner.ui.SMTRunnerConsoleView
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
@@ -72,13 +73,7 @@ internal class EmbeddedTestState(
     ): ExecutionResult {
         val handler = EmbeddedExecution.runHandler(environment.project, request, label)
         ProcessTerminatedListener.attach(handler)
-        val console =
-            SMTestRunnerConnectionUtil.createAndAttachConsole(
-                TEST_FRAMEWORK,
-                handler,
-                XtcTestConsoleProperties(configuration, executor),
-            )
-        return DefaultExecutionResult(console, handler)
+        return testResult(handler, XtcTestConsoleProperties(configuration, executor))
     }
 }
 
@@ -98,13 +93,25 @@ internal class TestCommandLineState(
         runner: ProgramRunner<*>,
     ): ExecutionResult {
         val handler = startProcess()
-        val console =
-            SMTestRunnerConnectionUtil.createAndAttachConsole(
-                TEST_FRAMEWORK,
-                handler,
-                XtcTestConsoleProperties(configuration, executor),
-            )
-        return DefaultExecutionResult(console, handler)
+        return testResult(handler, XtcTestConsoleProperties(configuration, executor))
+    }
+}
+
+/**
+ * A test run's result: the test console, attached to [handler], and its Rerun Failed Tests, which the run's toolbar
+ * shows beside Rerun only as a restart action that the result gives it, reading the failed tests from the console's
+ * tree; none under Debug ([XtcTestConsoleProperties.createRerunFailedTestsAction]).
+ */
+private fun testResult(
+    handler: ProcessHandler,
+    properties: XtcTestConsoleProperties,
+): ExecutionResult {
+    val console = SMTestRunnerConnectionUtil.createAndAttachConsole(TEST_FRAMEWORK, handler, properties)
+    return DefaultExecutionResult(console, handler).apply {
+        properties.createRerunFailedTestsAction(console)?.let { rerun ->
+            (console as? SMTRunnerConsoleView)?.let { view -> rerun.setModelProvider { view.resultsViewer } }
+            setRestartActions(rerun)
+        }
     }
 }
 
