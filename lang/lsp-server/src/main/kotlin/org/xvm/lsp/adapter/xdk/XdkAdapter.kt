@@ -1170,7 +1170,7 @@ class XdkAdapter
                 request.result.complete(
                     CompilationResult.withDiagnostics(
                         request.uri,
-                        result.diagnostics,
+                        reported(request.uri, result.diagnostics),
                         result.document(request.uri)?.symbols.orEmpty(),
                         result.documentUris,
                     ),
@@ -1186,7 +1186,21 @@ class XdkAdapter
         }
 
         override fun getCachedResult(uri: String): CompilationResult? =
-            analysis(uri)?.let { CompilationResult.withDiagnostics(uri, it.diagnostics, it.symbols) }
+            analysis(uri)?.let { CompilationResult.withDiagnostics(uri, reported(uri, it.diagnostics), it.symbols) }
+
+        /**
+         * The diagnostics of [uri]'s compile that are reported: none of a library source's read-only copy, as a stack
+         * frame or navigation opens it. It belongs to no project, so compiled on its own, which gives its outline, it
+         * cannot resolve what its library gives it, such as a file include or the library's names.
+         */
+        private fun reported(
+            uri: String,
+            diagnostics: List<Diagnostic>,
+        ): List<Diagnostic> {
+            if (XdkLibrarySources.isCopy(uri)) return emptyList()
+            val copies = diagnostics.mapTo(hashSetOf()) { it.location.uri }.filterTo(hashSetOf(), XdkLibrarySources::isCopy)
+            return if (copies.isEmpty()) diagnostics else diagnostics.filterNot { it.location.uri in copies }
+        }
 
         /**
          * Captured compilation inputs and scheduling state for one module analysis. Later workspace changes
