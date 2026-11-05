@@ -1064,6 +1064,39 @@ public class SessionDebuggerTest {
     }
 
     @Test
+    public void aFrameRestartsAfterItsFiberRanCodeInTheStop() throws Exception {
+        Path  source  = compile("Restarts", RESTARTS);
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Restarts"));
+        session.setBreakpoints(source.toString(), List.of(new Line(1, 16)));
+
+        StringWriter output  = new StringWriter();
+        Control      control = run("Restarts", output, session);
+        try (control) {
+            // the fiber runs code for the Debug Console, and then waits in the stop again
+            Stop                 stop   = stops.next();
+            List<StackFrameInfo> frames = session.stackTrace(stop.threadId());
+            assertEquals("42", Await.get(session.run(frames.getFirst().id(), "n * 2", Await.LIVELOCK)).value());
+            session.setBreakpoints(source.toString(), List.of());
+
+            // outer() again, from run(), as without the code that ran
+            assertTrue(session.restartFrame(frames.get(1).id()));
+            Stop restart = stops.next();
+            assertEquals("restart", restart.reason());
+            assertEquals("Restarts.outer:10", where(session, restart));
+            assertEquals(List.of("Restarts.outer", "Restarts.run"),
+                    session.stackTrace(restart.threadId()).stream().map(StackFrameInfo::name).toList());
+
+            session.resume();
+            Await.run(control::join);
+            assertEquals(42L, control.result());
+            assertEquals(2, output.toString().split("outer 20", -1).length - 1, output.toString());
+            assertEquals(null, stops.poll());
+        }
+    }
+
+    @Test
     public void aStopListsTheFibersThatDoNotWaitAtALineWithWhatTheyDoAndTheStacksOfThoseThatStandStill()
             throws Exception {
         // run() starts the worker on line 19, where it asks for the count: a stop holds a fiber only
