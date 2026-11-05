@@ -17,16 +17,16 @@ import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaitAsserted
+import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks `textDocument/inlineValue` over the protocol: the stopped method's parameters and locals as lookups by
@@ -72,7 +72,7 @@ class XdkInlineValueProtocolTest {
                                     workspace = WorkspaceClientCapabilities().apply { inlineValue = InlineValueWorkspaceCapabilities(true) }
                                 }
                         },
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                     .capabilities
             assertThat(capabilities.inlineValueProvider?.left).isTrue()
             server.initialized(InitializedParams())
@@ -88,14 +88,14 @@ class XdkInlineValueProtocolTest {
                             Range(Position(0, 0), Position(8, 0)),
                             InlineValueContext(1, Range(stopped, stopped)),
                         ),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
             assertThat(values).allSatisfy {
                 assertThat(it.isInlineValueVariableLookup).isTrue()
                 assertThat(it.inlineValueVariableLookup.isCaseSensitiveLookup).isTrue()
             }
             assertThat(values.map { it.inlineValueVariableLookup.let { lookup -> lookup.variableName to lookup.range.start.line } })
                 .containsExactly("n" to 2, "before" to 3, "before" to 4, "n" to 4)
-            verify(client, timeout(HANG_SECONDS * 1_000).atLeastOnce()).refreshInlineValues()
+            awaitAsserted { verify(client, atLeastOnce()).refreshInlineValues() }
         }
     }
 }

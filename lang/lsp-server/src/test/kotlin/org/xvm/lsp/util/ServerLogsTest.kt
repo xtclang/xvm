@@ -5,14 +5,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.awaited
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.util.Base64
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.zip.ZipInputStream
 
 /**
@@ -162,7 +161,7 @@ class ServerLogsTest {
 
         override fun close() {
             input.close()
-            if (!process.waitFor(HANG_SECONDS, SECONDS)) process.destroyForcibly()
+            if (!process.awaited()) process.destroyForcibly()
             output.close()
         }
     }

@@ -10,14 +10,13 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
 import java.net.URI
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Compiles evaluated build-model inputs across source sets and projects. Checks dependency visibility,
@@ -59,7 +58,7 @@ class XdkBuildModelTest {
             }
         XdkAdapter().use { adapter ->
             adapter.replaceBuildInputs(model(inputs).resolve())
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
             adapter.replaceSourceModules(listOf(XdkSourceModule("Consumer", consumer)))
             assertThat(
                 adapter.compile(consumer, Path.of(URI(consumer)).toFile().readText()).success,
@@ -93,7 +92,7 @@ class XdkBuildModelTest {
             .containsExactly("Assets")
         XdkAdapter().use { adapter ->
             adapter.replaceBuildInputs(inputs)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
             assertThat(
                 adapter.effectiveSourceModules().single { it.name == "Assets" }.resourceRoots,
             ).containsExactly(processed.toURI().toString())
@@ -104,12 +103,12 @@ class XdkBuildModelTest {
             assertThat(
                 adapter
                     .workspaceDiagnosticsAsync()
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .single()
                     .success,
             ).isFalse()
             adapter.replaceBuildInputs(inputs)
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -174,7 +173,7 @@ class XdkBuildModelTest {
                 )
             }.hasMessageContaining("Cyclic")
             assertThat(adapter.effectiveSourceModules().map { it.name }).containsExactly("Good")
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 

@@ -17,9 +17,8 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.util.concurrent.TimeUnit.SECONDS
+import org.xvm.lsp.awaited
 
 /**
  * Checks template and name-completion wire edits against snippet and indentation capabilities. Minimal
@@ -30,7 +29,7 @@ class XdkSyntaxCompletionProtocolTest {
     fun `missing declaration names use a plain empty edit at the original Unicode position`() {
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(mock(LanguageClient::class.java))
-            server.initialize(params(true)).get(HANG_SECONDS, SECONDS)
+            server.initialize(params(true)).awaited()
             val line = "    /* 😀 */ String "
             val text = "module Editing {\r\n$line= \"\";\r\n}"
             val service = server.textDocumentService
@@ -39,7 +38,7 @@ class XdkSyntaxCompletionProtocolTest {
             val item =
                 service
                     .completion(CompletionParams(TextDocumentIdentifier(URI), position))
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .left
                     .single()
             assertThat(item.label).isEqualTo("string")
@@ -56,14 +55,14 @@ class XdkSyntaxCompletionProtocolTest {
         listOf(false, true).forEach { snippets ->
             XtcLanguageServer(XdkAdapter()).use { server ->
                 server.connect(mock(LanguageClient::class.java))
-                server.initialize(params(snippets)).get(HANG_SECONDS, SECONDS)
+                server.initialize(params(snippets)).awaited()
                 val text = "module Editing {\n    void run() {\n        if\n    }\n}"
                 val service = server.textDocumentService
                 service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
                 val items =
                     service
                         .completion(CompletionParams(TextDocumentIdentifier(URI), Position(2, 10)))
-                        .get(HANG_SECONDS, SECONDS)
+                        .awaited()
                         .left
                 val item = items.single { it.label == "if block" }
                 assertThat(item.insertTextFormat)
@@ -88,14 +87,14 @@ class XdkSyntaxCompletionProtocolTest {
         listOf(false, true).forEach { snippets ->
             XtcLanguageServer(XdkAdapter()).use { server ->
                 server.connect(mock(LanguageClient::class.java))
-                server.initialize(params(snippets)).get(HANG_SECONDS, SECONDS)
+                server.initialize(params(snippets)).awaited()
                 val text = "module Editing { void take(function Int(Int) action) {} void run() { take(); } }"
                 val service = server.textDocumentService
                 service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
                 val item =
                     service
                         .completion(CompletionParams(TextDocumentIdentifier(URI), Position(0, text.lastIndexOf("take(") + 5)))
-                        .get(HANG_SECONDS, SECONDS)
+                        .awaited()
                         .left
                         .single { it.label == "(arg1) -> TODO()" }
                 assertThat(item.insertTextFormat).isEqualTo(if (snippets) InsertTextFormat.Snippet else InsertTextFormat.PlainText)
@@ -110,7 +109,7 @@ class XdkSyntaxCompletionProtocolTest {
         listOf(false, true).forEach { snippets ->
             XtcLanguageServer(XdkAdapter()).use { server ->
                 server.connect(mock(LanguageClient::class.java))
-                server.initialize(params(snippets)).get(HANG_SECONDS, SECONDS)
+                server.initialize(params(snippets)).awaited()
                 val text =
                     "module Editing {\n    class Hand { Int size() = 0; void addCard(String card) {} }\n" +
                         "    void run(Hand hand) {\n        hand.\n    }\n}"
@@ -119,7 +118,7 @@ class XdkSyntaxCompletionProtocolTest {
                 val items =
                     service
                         .completion(CompletionParams(TextDocumentIdentifier(URI), Position(3, 13)))
-                        .get(HANG_SECONDS, SECONDS)
+                        .awaited()
                         .left
                 val add = items.single { it.label == "addCard" }
                 assertThat(add.insertTextFormat).isEqualTo(if (snippets) InsertTextFormat.Snippet else InsertTextFormat.PlainText)

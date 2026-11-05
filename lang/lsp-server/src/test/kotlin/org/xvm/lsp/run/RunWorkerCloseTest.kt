@@ -3,10 +3,11 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.LIVELOCK
+import org.xvm.lsp.awaitUntil
+import org.xvm.lsp.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
@@ -21,11 +22,11 @@ class RunWorkerCloseTest {
         try {
             // the stuck one never closes, so the limit ends the wait however fast the machine is
             val gaveUp = CompletableFuture.supplyAsync { closeAll(listOf(quick, stuck), 2.seconds) }
-            assertThat(gaveUp.get(HANG_SECONDS, SECONDS)).isFalse()
-            await().atMost(HANG_SECONDS, SECONDS).until { closed.get() == 1 }
+            assertThat(gaveUp.awaited()).isFalse()
+            awaitUntil { closed.get() == 1 }
 
             // with a limit that only a hang reaches, closing returns once both have closed
-            assertThat(closeAll(listOf(quick, quick), HANG_SECONDS.seconds)).isTrue()
+            assertThat(closeAll(listOf(quick, quick), LIVELOCK)).isTrue()
             assertThat(closed.get()).isEqualTo(3)
         } finally {
             never.countDown()
