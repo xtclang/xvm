@@ -176,6 +176,12 @@ internal class SequentialProcessHandler(
  * Produces Run All Ecstasy Tests from the Project window's context: on the project's own folder, its `src`, its
  * `src/test` or its test sources' `src/test/x`, an Ecstasy Application configuration that runs every test module's
  * tests, each in turn, with the project's build mode.
+ *
+ * The context menu offers only the configurations that rank first. In a Gradle project, Gradle's "Tests in" replaces
+ * every other configuration of the same folder, so Run All gives the test sources as its source element where the
+ * folder holds no Java or Kotlin tests: a source element inside another's ranks before it, ahead of what replaces
+ * what, and Gradle's, which would run only the JVM tests, then is not offered. Where the folder holds JVM tests, Run
+ * All gives the folder, and Gradle's "Tests in" stays.
  */
 class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType().configurationFactories.first()
@@ -193,8 +199,26 @@ class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConf
         configuration.tests = emptyList()
         configuration.runWith = XtcRunMode.PROJECT
         configuration.name = NAME
-        sourceElement.set(directory)
+        sourceElement.set(rankingElement(directory) ?: directory)
         return true
+    }
+
+    /**
+     * The element inside [directory] that Run All gives as its source, so that it ranks before Gradle's configuration
+     * of [directory], or null where [directory] holds Java or Kotlin tests, which Gradle's runs: the test sources'
+     * folder below [directory], or in the test sources themselves, their first module by name.
+     */
+    private fun rankingElement(directory: PsiDirectory): PsiElement? {
+        val root = directory.project.guessProjectDir() ?: return null
+        if (holdsJvmTests(directory.virtualFile, root)) return null
+        val tests = root.findFileByRelativePath(TESTS) ?: return null
+        val manager = directory.manager
+        return if (tests == directory.virtualFile) {
+            directory.files.filter { it.virtualFile.extension == "x" }.minByOrNull { it.name }
+                ?: directory.subdirectories.minByOrNull { it.name }
+        } else {
+            manager.findDirectory(tests)
+        }
     }
 
     override fun isConfigurationFromContext(
@@ -211,6 +235,12 @@ class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConf
         /** Where `xtc init` puts a project's test modules, under its folder. */
         private const val TESTS = "src/test/x"
 
+        /** Where a Gradle project's tests are, the Ecstasy ones in its `x`, and a JVM language's beside them. */
+        private const val TEST_SOURCES = "src/test"
+
+        /** The extensions of the Java and Kotlin sources whose tests Gradle's configurations run. */
+        private val JVM_SOURCES = setOf("java", "kt")
+
         /** Whether [directory] holds the project's test sources: [root]'s `src/test/x`, or a folder of [root]'s on its way. */
         fun holdsTests(
             directory: VirtualFile,
@@ -218,6 +248,29 @@ class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConf
         ): Boolean {
             val tests = root?.findFileByRelativePath(TESTS)?.takeIf { it.isDirectory } ?: return false
             return VfsUtilCore.isAncestor(root, directory, false) && VfsUtilCore.isAncestor(directory, tests, false)
+        }
+
+        /**
+         * Whether the project's tests that [directory] holds, those of [root]'s `src/test` below it, include Java or
+         * Kotlin sources beside the Ecstasy ones.
+         */
+        fun holdsJvmTests(
+            directory: VirtualFile,
+            root: VirtualFile,
+        ): Boolean {
+            val tests = root.findFileByRelativePath(TEST_SOURCES) ?: return false
+            val scope =
+                when {
+                    VfsUtilCore.isAncestor(directory, tests, false) -> tests
+                    VfsUtilCore.isAncestor(tests, directory, false) -> directory
+                    else -> return false
+                }
+            var found = false
+            VfsUtilCore.iterateChildrenRecursively(scope, null) { file ->
+                found = !file.isDirectory && file.extension in JVM_SOURCES
+                !found
+            }
+            return found
         }
     }
 }

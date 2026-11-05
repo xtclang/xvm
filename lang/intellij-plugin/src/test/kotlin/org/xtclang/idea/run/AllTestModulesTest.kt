@@ -1,11 +1,25 @@
 package org.xtclang.idea.run
 
+import com.intellij.execution.actions.ConfigurationContext
+import com.intellij.execution.actions.ConfigurationFromContext
+import com.intellij.execution.actions.LazyRunConfigurationProducer
+import com.intellij.execution.actions.RunConfigurationProducer
+import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiManager
+import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -77,6 +91,82 @@ class AllTestModulesTest {
             // a project without test sources has no Run All
             assertThat(XtcAllTestsConfigurationProducer.holdsTests(main, main.parent.parent)).isFalse()
         }
+    }
+
+    @Test
+    fun `in a Gradle project it ranks before Gradle's Tests in on the test sources that hold no JVM tests`() {
+        RunConfigurationProducer.EP_NAME.point.registerExtension(GradleTestsIn(), editor.fixture.testRootDisposable)
+        editor.fixture.addFileToProject("src/test/x/DeckTest.x", "module DeckTest {}")
+
+        // without the test sources' own element as Run All's source, Gradle's replaces it, and the menu has only Gradle's
+        assertThat(offered("src/test/x")).containsExactly(XtcAllTestsConfigurationProducer.NAME)
+        assertThat(offered("src/test")).containsExactly(XtcAllTestsConfigurationProducer.NAME)
+    }
+
+    @Test
+    fun `where the tests are JVM ones too, Gradle's Tests in stays offered`() {
+        RunConfigurationProducer.EP_NAME.point.registerExtension(GradleTestsIn(), editor.fixture.testRootDisposable)
+        editor.fixture.addFileToProject("src/test/x/DeckTest.x", "module DeckTest {}")
+        editor.fixture.addFileToProject("src/test/java/DeckJavaTest.java", "class DeckJavaTest {}")
+
+        assertThat(offered("src/test")).contains("Tests in 'test'")
+        // the Ecstasy test sources themselves still hold no JVM test
+        assertThat(offered("src/test/x")).containsExactly(XtcAllTestsConfigurationProducer.NAME)
+    }
+
+    /** The configurations that the Project window's context menu offers on the light project's folder [path]. */
+    private fun offered(path: String): List<String> =
+        runInEdtAndGet {
+            val project = editor.fixture.project
+            val folder = checkNotNull(editor.fixture.tempDirFixture.getFile(path)) { "No folder $path" }
+            val directory = checkNotNull(PsiManager.getInstance(project).findDirectory(folder)) { "No directory $path" }
+            val data =
+                SimpleDataContext
+                    .builder()
+                    .add(CommonDataKeys.PROJECT, project)
+                    .add(PlatformCoreDataKeys.PSI_ELEMENT_ARRAY, arrayOf<PsiElement>(directory))
+                    .add(PlatformCoreDataKeys.MODULE, editor.fixture.module)
+                    .build()
+            ConfigurationContext
+                .getFromContext(data, ActionPlaces.PROJECT_VIEW_POPUP)
+                .configurationsFromContext
+                .orEmpty()
+                .map { it.configuration.name }
+        }
+
+    /**
+     * Gradle's Tests in, as it ranks in a project whose tests Gradle runs, the default: preferred to, and replacing,
+     * every other configuration of its folder, as GradleTestRunConfigurationProducer's answers are. Gradle's own
+     * produces only for a linked Gradle module, which the light project has not.
+     */
+    private class GradleTestsIn : LazyRunConfigurationProducer<XtcRunConfiguration>() {
+        override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType().configurationFactories.first()
+
+        override fun setupConfigurationFromContext(
+            configuration: XtcRunConfiguration,
+            context: ConfigurationContext,
+            sourceElement: Ref<PsiElement>,
+        ): Boolean {
+            val directory = context.psiLocation as? PsiDirectory ?: return false
+            configuration.name = "Tests in '${directory.name}'"
+            sourceElement.set(directory)
+            return true
+        }
+
+        override fun isConfigurationFromContext(
+            configuration: XtcRunConfiguration,
+            context: ConfigurationContext,
+        ): Boolean = false
+
+        override fun isPreferredConfiguration(
+            self: ConfigurationFromContext,
+            other: ConfigurationFromContext,
+        ): Boolean = true
+
+        override fun shouldReplace(
+            self: ConfigurationFromContext,
+            other: ConfigurationFromContext,
+        ): Boolean = true
     }
 
     /** A run that prints [text] as it starts, and ends with [exitCode] then, or, for none, only when stopped. */
