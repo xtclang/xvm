@@ -31,6 +31,11 @@ internal data class ClientPresentation(
     val signatureActiveParameters: Boolean = false,
     val pullDiagnosticRelatedInformation: Boolean = false,
     val pullDiagnosticTags: Set<DiagnosticTag> = emptySet(),
+    /**
+     * The client asks for quick fixes per diagnostic, with only `quickfix`, and hides them from the list its automatic
+     * requests without only fill, as its initialization option `xtcCodeActions.quickFixesPerDiagnostic` says.
+     */
+    val quickFixesPerDiagnostic: Boolean = false,
 ) {
     val codeActions: Boolean
         get() = actionLiterals || applyEdit
@@ -143,6 +148,11 @@ internal data class ClientPresentation(
                         ?.valueSet
                         .orEmpty()
                         .toSet(),
+                quickFixesPerDiagnostic =
+                    LspJsonOptions.boolean(
+                        LspJsonOptions.lookup(params.initializationOptions, "xtcCodeActions"),
+                        "quickFixesPerDiagnostic",
+                    ) == true,
             )
         }
 
