@@ -218,6 +218,59 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `idle workspace pulls of an unchanged graph lex, parse and queue nothing after the first`() {
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    static Int value() = Util.ONE;\n}\n") }
+        directory.resolve("Lib").toFile().mkdirs()
+        val util = directory.resolve("Lib/Util.x").toFile().apply { writeText("class Util {\n    static Int ONE = 1;\n}\n") }
+        val app =
+            directory.resolve("App.x").toFile().apply {
+                writeText("module App {\n    package lib import Lib;\n\n    Int run() = lib.value() / 1;\n}\n")
+            }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Lib", lib.toURI().toString()),
+                    XdkSourceModule("App", app.toURI().toString(), setOf("Lib")),
+                ),
+            )
+            val first = session.workspace().items.map { it.left }
+            assertThat(first.map { it.uri.substringAfterLast('/') }).containsExactlyInAnyOrder("App.x", "Lib.x", "Util.x")
+            val previous = first.map { PreviousResultId(it.uri, it.resultId) }
+            TraceRecording().use { trace ->
+                // VS Code pulls again every 2 s with the result IDs it has, and IntelliJ's closed-file bridge with none
+                repeat(3) {
+                    assertThat(session.workspace(previous).items.map { it.right.resultId })
+                        .containsExactlyInAnyOrderElementsOf(first.map { it.resultId })
+                }
+                repeat(2) {
+                    assertThat(session.workspace().items.map { it.left }).containsExactlyInAnyOrderElementsOf(first)
+                }
+                assertThat(trace.count("Lexer.lex(presentation)")).isZero()
+                assertThat(trace.count("Parser.parseModuleName(snapshot)")).isZero()
+                assertThat(trace.count("project-DIAGNOSTICS", "submitted")).isZero()
+            }
+            // a change on disk with no watcher notification still reaches the next pull, which then queues its job
+            TraceRecording().use { trace ->
+                util.writeText("class Util {\n    static Int ONE = missing;\n}\n")
+                val changed =
+                    session
+                        .workspace(previous)
+                        .items
+                        .filter { it.isLeft }
+                        .map { it.left }
+                assertThat(changed.single { it.uri.endsWith("Util.x") }.items).isNotEmpty()
+                assertThat(trace.count("project-DIAGNOSTICS", "submitted")).isEqualTo(1)
+            }
+        }
+    }
+
+    /** The trace's [event]s of [operation]: the compiler's lexes and parses, and the compiler queue's jobs. */
+    private fun TraceRecording.count(
+        operation: String,
+        event: String = "start",
+    ): Int = entries.count { it["operation"]?.asString == operation && it["event"]?.asString == event }
+
+    @Test
     fun `closed member pulls retain standalone module errors and follow watched file changes`() {
         val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
         val members = directory.resolve("Pull").toFile().apply { mkdirs() }
