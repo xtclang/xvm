@@ -31,7 +31,8 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Worker-only whole-graph queries. Capture every configured module before compiling any of them.
  * Proof compilations never update the live diagnostics, source build cache or editor buffers. Only
- * detached locations/edits leave this object; compiler identities die with each query.
+ * detached locations/edits leave this object; compiler identities die with each query. One that answers
+ * [fromCache] compiles nothing: it answers code actions from the [actionCache] alone, which any thread can.
  */
 internal class XdkProjectQueries(
     private val project: XdkProject,
@@ -45,6 +46,7 @@ internal class XdkProjectQueries(
     private val actionCache: XdkCodeActionCache = XdkCodeActionCache(),
     // The folders discovery walks; a root moved outside them would leave the discovered graph.
     private val discoveryFolders: List<File> = emptyList(),
+    private val fromCache: Boolean = false,
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -899,10 +901,35 @@ internal class XdkProjectQueries(
             XdkRename.preservesBindings(before.within(affected), after.within(movedScopes), plan)
     }
 
+    /** A code action request, by what its answer depends on in one revision. */
+    private data class ActionRequest(
+        val uri: String,
+        val range: Range,
+        val diagnostics: List<Diagnostic>,
+        val kinds: Set<CodeActionKind>,
+    )
+
+    /**
+     * The code actions that [codeActions] answers, from the cache alone, and whether they are all of them: the
+     * revision's answer to the same request, or else those that its cached compile and proofs prove, which can be
+     * none.
+     */
+    fun cachedCodeActions(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+        kinds: Set<CodeActionKind>,
+    ): Pair<List<CodeAction>, Boolean> {
+        check(fromCache) { "A query that compiles answers in full" }
+        actionCache.answer(revision(), ActionRequest(uri, range, diagnostics, kinds))?.let { return it to true }
+        return codeActions(uri, range, diagnostics, kinds) to false
+    }
+
     /**
      * Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. A quick
      * fix names the request's [diagnostics] it resolves, those overlapping the code it repairs, so editors
-     * can offer it on the problem itself. [compiled] gets the module compiles it ran, also when it is cancelled.
+     * can offer it on the problem itself. The answer is kept for the revision's next request of the same. [compiled]
+     * gets the module compiles it ran, also when it is cancelled.
      */
     fun codeActions(
         uri: String,
@@ -941,12 +968,16 @@ internal class XdkProjectQueries(
         // meanwhile keeps nothing: its compiles may have stopped short, and checkCurrent() throws before it is kept.
         val revision = revision()
         val base =
-            actionCache.base(revision) { since ->
-                val start = compiles
-                try {
-                    build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() }
-                } finally {
-                    made.set(compiles - start)
+            if (fromCache) {
+                actionCache.base(revision)
+            } else {
+                actionCache.base(revision) { since ->
+                    val start = compiles
+                    try {
+                        build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() }
+                    } finally {
+                        made.set(compiles - start)
+                    }
                 }
             } ?: return emptyList()
         val before = base.facts
@@ -961,6 +992,8 @@ internal class XdkProjectQueries(
                 if (quickFixes) autoImports(uri, source, text, range, before, revision, ::resolved) else emptyList()
             } else if (CodeActionKind.SOURCE !in kinds && CodeActionKind.SOURCE_ORGANIZE_IMPORTS !in kinds) {
                 emptyList()
+            } else if (fromCache) {
+                actionCache.imports(revision, source).orEmpty().filter { it.kind in kinds }
             } else {
                 // Both kinds come from the same removal proofs, so a revision proves the cleanup once, for both.
                 actionCache
@@ -1232,7 +1265,8 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
-        return if (isCurrent()) {
+        if (!isCurrent()) return emptyList()
+        val answer =
             before.models
                 .filter { CodeActionKind.SOURCE in kinds && it.sourceName == source && Files.isWritable(File(source).toPath()) }
                 .flatMap { XdkDocumentation.actions(uri, text, range, it) }
@@ -1247,9 +1281,8 @@ internal class XdkProjectQueries(
                     safeDelete,
                     method,
                 )
-        } else {
-            emptyList()
-        }
+        if (!fromCache) actionCache.answered(revision, ActionRequest(uri, range, diagnostics, kinds), answer)
+        return answer
     }
 
     /**
@@ -1264,8 +1297,12 @@ internal class XdkProjectQueries(
         proposed: Map<String, String>,
         proof: Proof = Proof.COMPLETE,
     ): CompilerRenameFacts? =
-        actionCache.compiled(revision, proof to proposed) {
-            compile(proposed, proof, reuse = actionCache.base(revision)).also { checkCurrent() }
+        if (fromCache) {
+            actionCache.compiled(revision, proof to proposed)
+        } else {
+            actionCache.compiled(revision, proof to proposed) {
+                compile(proposed, proof, reuse = actionCache.base(revision)).also { checkCurrent() }
+            }
         }
 
     private fun autoImports(
@@ -1301,7 +1338,13 @@ internal class XdkProjectQueries(
                         XdkAutoImports.edit(text, owner.name, target, packages) ?: return@mapNotNull null
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
                     val after =
-                        (if (graph === project) shared(revision, plan.proposed) else compile(plan.proposed, graph = graph))
+                        (
+                            when {
+                                graph === project -> shared(revision, plan.proposed)
+                                fromCache -> null
+                                else -> compile(plan.proposed, graph = graph)
+                            }
+                        )
                             ?: return@mapNotNull null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) {
                         return@mapNotNull null
