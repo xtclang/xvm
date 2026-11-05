@@ -146,7 +146,15 @@ internal class DiagnosticReports {
         // A removed root/file must explicitly clear the client's previous report. Do not retain
         // tombstones indefinitely: an unknown old ID simply receives another empty full report.
         val currentUris = current.associateBy(::identity)
-        val oldUris = previous.keys.associateBy(::identity)
+        // A document's own pulls give it no result ID that the client names in a workspace pull: VS Code's client
+        // forgets them as it closes the document. Once the document is gone, as a deleted file is, its items stay on
+        // the client unless this report clears them, once, as the entry it drops below.
+        val gone =
+            entries
+                .filter { (key, entry) -> key !in currentUris && entry.diagnostics.isNotEmpty() }
+                .keys
+                .associateWith { it }
+        val oldUris = gone + previous.keys.associateBy(::identity)
         val previousIds = previous.mapKeys { identity(it.key) }
         val documentVersions = versions.mapKeys { identity(it.key) }
         (oldUris - currentUris.keys).values.forEach { record(it, emptyList()) }
