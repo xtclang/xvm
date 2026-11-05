@@ -13,6 +13,7 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import com.redhat.devtools.lsp4ij.dap.DebugMode
 import com.redhat.devtools.lsp4ij.dap.client.DAPClient
@@ -162,6 +163,12 @@ class XtcDebugAdapterDescriptor(
     override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig(0)
 
     override fun getFileType(): FileType? = FileTypeManager.getInstance().getFileTypeByExtension("x")
+
+    // TODO LSP4IJ: UP37 — LSP4IJ 0.21.0's expression fragment is never physical; see PhysicalExpressionFragments
+    override fun createDebuggerEditorsProvider(
+        fileType: FileType?,
+        debugProcess: DAPDebugProcess,
+    ): XDebuggerEditorsProvider = PhysicalExpressionFragments(fileType, debugProcess)
 
     override fun isDebuggableFile(
         file: VirtualFile,
