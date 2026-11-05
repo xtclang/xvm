@@ -102,7 +102,7 @@ internal class TestCommandLineState(
  * shows beside Rerun only as a restart action that the result gives it, reading the failed tests from the console's
  * tree; none under Debug ([XtcTestConsoleProperties.createRerunFailedTestsAction]).
  */
-private fun testResult(
+internal fun testResult(
     handler: ProcessHandler,
     properties: XtcTestConsoleProperties,
 ): ExecutionResult {
@@ -137,9 +137,14 @@ internal class XtcTestConsoleProperties(
         consoleProperties: TestConsoleProperties,
     ): OutputToGeneralTestEventsConverter = XtcTestEventsConverter(testFrameworkName, consoleProperties)
 
-    // under Debug, the rerun would be LSP4IJ's DAP launch, which takes the configuration itself and no rerun's profile
+    // under Debug, the rerun would be LSP4IJ's DAP launch, which takes the configuration itself and no rerun's profile;
+    // a rerun of all the test modules' failed tests would need each module's own, which its selectors do not name
     override fun createRerunFailedTestsAction(consoleView: ConsoleView): AbstractRerunFailedTestsAction? =
-        if (executor.id == DefaultDebugExecutor.EXECUTOR_ID) null else XtcRerunFailedTestsAction(consoleView).also { it.init(this) }
+        if (executor.id == DefaultDebugExecutor.EXECUTOR_ID || (configuration as? XtcRunConfiguration)?.allTestModules == true) {
+            null
+        } else {
+            XtcRerunFailedTestsAction(consoleView).also { it.init(this) }
+        }
 }
 
 /**

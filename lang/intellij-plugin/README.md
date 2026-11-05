@@ -239,7 +239,15 @@ a saved configuration can name tests too. They run as the configuration's **Run 
 xunit reports each test as an event of its `json` report, which IntelliJ's test console reads into
 its tree of the module's tests, passed, failed, errored or skipped, with the tests' output; a test's
 **Jump to Source** opens its declaration. A failure's stack is the console's text. Under Debug the
-test console is a **Tests** tab of the debug session. Gradle mode needs a Gradle plugin and XDK with
+test console is a **Tests** tab of the debug session.
+
+**Run 'All Ecstasy Tests'**, in the Project window's context menu of the project's folder, `src`,
+`src/test` or `src/test/x`, runs every test module's tests into one test console: embedded and with
+`xtc test` each module in turn, and in Gradle mode one `testXtc` for all of them. **Stop** stops the
+module that runs and starts no other. It has no **Rerun Failed Tests** and no Debug yet, as both go by
+one module's tests.
+
+Gradle mode needs a Gradle plugin and XDK with
 `testXtc`'s test options and the JSON report, and command-line mode the `xtc` on the `PATH`, whose
 XDK must have this plugin's javatools.
 
