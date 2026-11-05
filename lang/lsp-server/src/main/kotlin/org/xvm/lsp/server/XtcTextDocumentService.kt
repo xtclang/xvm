@@ -10,6 +10,7 @@ import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionTriggerKind
 import org.eclipse.lsp4j.CodeLens
 import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.Command
@@ -1541,9 +1542,15 @@ class XtcTextDocumentService(
         val context = params.context.diagnostics.orEmpty()
         val originals = context.associateBy { Diagnostic.fromLsp(params.textDocument.uri, it) }
         // LSP lets a server leave uncomputed the kinds that `only` leaves out; the client filters them out anyway
+        // TODO LSP4IJ: UP68 — its intention list, an Automatic request with no only, hides the quick fixes it asks for per
+        // diagnostic with only quickfix, so that request leaves them out rather than prove them for nothing.
+        val hidden =
+            params.context.only == null &&
+                params.context.triggerKind == CodeActionTriggerKind.Automatic &&
+                server.presentation.quickFixesPerDiagnostic
         val kinds =
             AdapterCodeActionKind.entries.filterTo(linkedSetOf()) {
-                ClientPresentation.matchesActionKind(it.toLsp(), params.context.only)
+                ClientPresentation.matchesActionKind(it.toLsp(), params.context.only) && !(hidden && it == AdapterCodeActionKind.QUICKFIX)
             }
         return queryAsync(
             "textDocument/codeAction",
