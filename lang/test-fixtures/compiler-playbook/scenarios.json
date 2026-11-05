@@ -10710,10 +10710,10 @@
       "values": {
         "file": "Broken.x",
         "moduleStart": "module Broken {\n",
-        "declarationCount": 150,
+        "declarationCount": 600,
         "declaration": "Missing${0} value${1};",
         "moduleEnd": "\n}",
-        "maximumErrors": 100,
+        "maximumErrors": 512,
         "diagnosticCode": "EMB-5"
       },
       "intellij": {
