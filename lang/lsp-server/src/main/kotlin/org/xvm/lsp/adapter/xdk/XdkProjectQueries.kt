@@ -901,7 +901,8 @@ internal class XdkProjectQueries(
         // The requests of one revision share its compile and its import cleanup. A request cancelled or replaced
         // meanwhile keeps nothing: its compiles may have stopped short, and checkCurrent() throws before it is kept.
         val revision = revision()
-        val before = actionCache.before(revision) { compile(texts, Proof.REPAIR).also { checkCurrent() } } ?: return emptyList()
+        val base = actionCache.base(revision) { build(texts, Proof.REPAIR)?.also { checkCurrent() } } ?: return emptyList()
+        val before = base.facts
         val complete =
             before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
                 project.modules.values.all { module ->
@@ -920,7 +921,7 @@ internal class XdkProjectQueries(
                         fun proved(candidate: XdkImports.Candidate): CodeAction? {
                             checkCurrent()
                             val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
-                            val after = compile(plan.proposed) ?: return null
+                            val after = compile(plan.proposed, reuse = base) ?: return null
                             if (!XdkRename.preservesBindings(before, after, plan)) return null
                             return CodeAction(
                                 candidate.title,
@@ -1208,12 +1209,17 @@ internal class XdkProjectQueries(
      * A code action's proof compile of [proposed], which the requests of one [revision] share: editors ask on every
      * cursor move, and a quick fix's request and the intention list's prove the same candidate. A request cancelled or
      * replaced meanwhile keeps nothing, as its compile may have stopped short; checkCurrent() throws before it is kept.
+     * It compiles only the modules that [proposed] changes and those that depend on them, with the revision's compile of
+     * the others.
      */
     private fun shared(
         revision: String,
         proposed: Map<String, String>,
         proof: Proof = Proof.COMPLETE,
-    ): CompilerRenameFacts? = actionCache.compiled(revision, proof to proposed) { compile(proposed, proof).also { checkCurrent() } }
+    ): CompilerRenameFacts? =
+        actionCache.compiled(revision, proof to proposed) {
+            compile(proposed, proof, reuse = actionCache.base(revision)).also { checkCurrent() }
+        }
 
     private fun autoImports(
         uri: String,
@@ -1447,15 +1453,52 @@ internal class XdkProjectQueries(
         resourceMoves: XdkResourceMoves? = null,
         resourceSnapshots: Map<XdkSourceModule, XdkResources> = emptyMap(),
         failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
-    ): CompilerRenameFacts? {
+        reuse: XdkCodeActionCache.Base? = null,
+    ): CompilerRenameFacts? = build(text, proof, moves, graph, resourceMoves, resourceSnapshots, failed, reuse)?.facts
+
+    /**
+     * The compile of [text], and what a proof needs of it to compile only some modules. With [reuse], the revision's
+     * compile of this query's own sources, it compiles only the modules whose sources [text] changes and the modules
+     * that depend on them: the others have the inputs they had, so they keep their facts and artifacts, and a module
+     * that did not compile then does not now. A move, another graph or resources of their own compile it all.
+     */
+    private fun build(
+        text: Map<String, String>,
+        proof: Proof = Proof.COMPLETE,
+        moves: Map<String, String> = emptyMap(),
+        graph: XdkProject = project,
+        resourceMoves: XdkResourceMoves? = null,
+        resourceSnapshots: Map<XdkSourceModule, XdkResources> = emptyMap(),
+        failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
+        reuse: XdkCodeActionCache.Base? = null,
+    ): XdkCodeActionCache.Base? {
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val missingDestinations = mutableMapOf<String, Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination>>()
+        val edited =
+            reuse
+                ?.takeIf { moves.isEmpty() && graph === project && resourceMoves == null && resourceSnapshots.isEmpty() }
+                ?.let {
+                    (text.keys + texts.keys)
+                        .filter { path -> text[path] != texts[path] }
+                        .mapNotNull { path -> project.scope(File(path)) }
+                        .flatMapTo(hashSetOf(), project::affected)
+                }
+        // as a module's compile rejects a source that no module of the graph holds
+        if (edited != null && text.keys.any { graph.scope(it) == null }) return null
         val attempts =
             graph
                 .buildOrder()
                 .mapNotNull { module ->
+                    if (reuse != null && edited != null && module.uri !in edited) {
+                        checkCurrent()
+                        val artifact = reuse.artifacts[module.name]
+                        if (artifact == null && proof == Proof.COMPLETE) return null
+                        artifact?.let { artifacts[module.name] = it }
+                        reuse.destinations[module.name]?.let { missingDestinations[module.name] = it }
+                        return@mapNotNull reuse.facts.module(module.uri)?.let { module.uri to it }
+                    }
                     val source =
                         sources.entries
                             .firstOrNull {
@@ -1593,7 +1636,11 @@ internal class XdkProjectQueries(
                     module.uri to facts
                 }.toMap()
         checkCurrent()
-        return CompilerRenameFacts.merge(attempts)
+        return XdkCodeActionCache.Base(
+            CompilerRenameFacts.merge(attempts),
+            artifacts.filterKeys(project.modules::containsKey),
+            missingDestinations,
+        )
     }
 
     private fun checkCurrent() {
