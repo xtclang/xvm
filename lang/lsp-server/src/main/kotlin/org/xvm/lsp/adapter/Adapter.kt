@@ -9,6 +9,7 @@ import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.treesitter.SemanticTokenEncoder
 import java.io.Closeable
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration
 
 /**
  * Interface for adapting XTC compiler operations into clean, immutable results.
@@ -664,6 +665,19 @@ interface Adapter : Closeable {
         kinds: Set<CodeAction.CodeActionKind> = CodeAction.CodeActionKind.entries.toSet(),
     ): CompletableFuture<List<CodeAction>> =
         CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics).filter { it.kind in kinds })
+
+    /**
+     * As [getCodeActionsAsync], waiting for its compiler work no longer than [budget]: an adapter whose actions cost
+     * compiler work then answers with those it has proved already, proves the rest meanwhile, and answers the next such
+     * request with them.
+     */
+    fun getCodeActionsWithinAsync(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+        kinds: Set<CodeAction.CodeActionKind>,
+        budget: Duration,
+    ): CompletableFuture<List<CodeAction>> = getCodeActionsAsync(uri, range, diagnostics, kinds)
 
     /**
      * Get semantic tokens for enhanced syntax highlighting.
