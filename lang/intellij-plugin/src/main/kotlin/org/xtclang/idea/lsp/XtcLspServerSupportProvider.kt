@@ -105,6 +105,13 @@ class XtcLspConnectionProvider(
         private val startNotificationShown = AtomicBoolean(false)
 
         /**
+         * TODO LSP4IJ: UP68 — LSP4IJ asks for quick fixes per diagnostic under the caret, with only quickfix, and its
+         * intention list, an Automatic request with no only, drops every quick fix; the server need not prove them
+         * for that list.
+         */
+        internal val LSP4IJ_CODE_ACTIONS = mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true))
+
+        /**
          * Resolve the LSP server JAR from a plugin directory. Returns the path to
          * `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
          */
@@ -179,7 +186,7 @@ class XtcLspConnectionProvider(
             .validated(project)
             // TODO LSP4IJ: UP02 — native willSaveWaitUntil is absent; keep server save edits disabled.
             .copy(saveFormatting = "editor")
-            .initializationOptions()
+            .initializationOptions() + LSP4IJ_CODE_ACTIONS
 
     override fun start() {
         logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")

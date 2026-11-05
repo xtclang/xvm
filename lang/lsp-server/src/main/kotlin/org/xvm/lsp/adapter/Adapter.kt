@@ -653,11 +653,17 @@ interface Adapter : Closeable {
         diagnostics: List<Diagnostic>,
     ): List<CodeAction>
 
+    /**
+     * The code actions of the [kinds] a client asked for, as its `context.only` names them; an adapter whose actions
+     * cost compiler work leaves the other kinds uncomputed.
+     */
     fun getCodeActionsAsync(
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic>,
-    ): CompletableFuture<List<CodeAction>> = CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics))
+        kinds: Set<CodeAction.CodeActionKind> = CodeAction.CodeActionKind.entries.toSet(),
+    ): CompletableFuture<List<CodeAction>> =
+        CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics).filter { it.kind in kinds })
 
     /**
      * Get semantic tokens for enhanced syntax highlighting.
