@@ -90,13 +90,35 @@ class XdkCodeActionPatternTest {
     }
 
     @Test
-    fun `after Optimize Imports, the intention list's request compiles the project and proves each import`() {
+    fun `after Optimize Imports, the intention list's request compiles PlayerTest and proves each import`() {
+        session { adapter, root ->
+            // the requests before the edit compile the revision before it
+            val player = root.resolve("src/test/x/PlayerTest.x")
+            val first =
+                counted {
+                    adapter.getCodeActionsAsync(
+                        player.toURI().toString(),
+                        Range(Position(0, 0), Position(0, 0)),
+                        emptyList(),
+                        intentions,
+                    )
+                }
+            val (uri, lines) = organized(adapter, root)
+            val full = counted { adapter.getCodeActionsAsync(uri, caret(lines, "GameConstants", 4), emptyList(), intentions) }
+            println("module compiles: the intention list before Optimize Imports $first, after it $full")
+            // the edited revision's compile, PlayerTest alone, on which no module depends, as it starts from the compile of
+            // the revision before, then the proof that each of the five imports is used, PlayerTest alone again: tour run 7
+            // waited 13.9 s on the EDT for 43, every proof and the revision's compile compiling 7 or 8 modules
+            assertThat(full).isEqualTo(1 + IMPORTS)
+        }
+    }
+
+    @Test
+    fun `the first request of a session compiles every module, with nothing to start from`() {
         session { adapter, root ->
             val (uri, lines) = organized(adapter, root)
             val full = counted { adapter.getCodeActionsAsync(uri, caret(lines, "GameConstants", 4), emptyList(), intentions) }
-            println("module compiles: the intention list after Optimize Imports $full")
-            // the edited revision's compile, every module, then the proof that each of the five imports is used, PlayerTest
-            // alone, on which no module depends: tour run 7 waited 13.9 s on the EDT for 43, each proof compiling 7 modules
+            println("module compiles: the intention list after Optimize Imports, first of the session $full")
             assertThat(full).isEqualTo(MODULES + IMPORTS)
         }
     }
