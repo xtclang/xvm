@@ -70,6 +70,12 @@ class XtcRunConfiguration(
     /** The module's tests that xunit runs instead of its entry method, all of them for an empty list; null for none. */
     var tests: List<TestSelector>? = null
 
+    /**
+     * Every test module's tests, as Run All Ecstasy Tests runs them, each module in turn, into one test console
+     * ([AllTestModulesState]); the module, its method and its tests are then unused.
+     */
+    var allTestModules = false
+
     /** The mode this configuration runs with now: never [XtcRunMode.PROJECT]. */
     fun effectiveRunMode(): XtcRunMode =
         when (runWith) {
@@ -85,7 +91,7 @@ class XtcRunConfiguration(
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcRunSettingsEditor()
 
     override fun checkConfiguration() {
-        if (effectiveRunMode() == XtcRunMode.EMBEDDED && moduleName.isBlank() && moduleUri.isBlank()) {
+        if (!allTestModules && effectiveRunMode() == XtcRunMode.EMBEDDED && moduleName.isBlank() && moduleUri.isBlank()) {
             throw RuntimeConfigurationError("An embedded run needs the module name")
         }
     }
@@ -96,6 +102,14 @@ class XtcRunConfiguration(
     ): RunProfileState? {
         // Debug is LSP4IJ's DAP client, whose session in the language server builds and runs as embedded runs do
         if (executor.id == DefaultDebugExecutor.EXECUTOR_ID) return super.getState(executor, environment)
+        if (allTestModules) {
+            // Gradle's testXtc runs every test module itself, without --module
+            return if (effectiveRunMode() == XtcRunMode.GRADLE) {
+                TestCommandLineState(this, environment, createGradleTestCommandLine(emptyList()))
+            } else {
+                AllTestModulesState(this, environment)
+            }
+        }
         return when (val mode = effectiveRunMode()) {
             XtcRunMode.EMBEDDED -> {
                 val label = moduleName.ifBlank { moduleUri }
@@ -137,7 +151,8 @@ class XtcRunConfiguration(
      * with Gradle and `xtc run`, whose task or command runs the program under the session's debugger (see
      * [org.xtclang.idea.dap.DebugTasks]).
      */
-    override fun canRun(executorId: String): Boolean = executorId == DefaultDebugExecutor.EXECUTOR_ID && effectiveRunMode() in DEBUGGABLE
+    override fun canRun(executorId: String): Boolean =
+        executorId == DefaultDebugExecutor.EXECUTOR_ID && effectiveRunMode() in DEBUGGABLE && !allTestModules
 
     override fun getDebugAdapterServer(): DebugAdapterServerDefinition? =
         DebugAdapterManager.getInstance().getDebugAdapterServerById(XtcDebugAdapterFactory.SERVER_ID)
@@ -163,7 +178,7 @@ class XtcRunConfiguration(
             exePath = gradleWrapper()
             if (quietMode) addParameter("-q")
             addParameter("testXtc")
-            moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
+            moduleName.takeIf { it.isNotBlank() && !allTestModules }?.let { addParameter("--module=$it") }
             addParameters(gradleTestOptions(tests))
             workDirectory = project.basePath?.let { Path(it).toFile() }
             logger.info("Running Gradle tests: $commandLineString")
@@ -191,6 +206,7 @@ class XtcRunConfiguration(
         quietMode = element.getAttributeValue("quietMode")?.toBoolean() ?: true
         stopOnEntry = element.getAttributeValue("stopOnEntry")?.toBoolean() ?: false
         evaluationRunsProgram = element.getAttributeValue("evaluationRunsProgram")?.toBoolean() ?: false
+        allTestModules = element.getAttributeValue("allTestModules")?.toBoolean() ?: false
         tests =
             element.getChild(TESTS)?.getChildren(TEST)?.map { test ->
                 TestSelector(test.getAttributeValue(SELECTOR).orEmpty(), test.getAttributeValue(KIND) ?: ServerTest.TEST)
@@ -207,6 +223,7 @@ class XtcRunConfiguration(
         element.setAttribute("quietMode", quietMode.toString())
         element.setAttribute("stopOnEntry", stopOnEntry.toString())
         element.setAttribute("evaluationRunsProgram", evaluationRunsProgram.toString())
+        element.setAttribute("allTestModules", allTestModules.toString())
         element.removeChild(TESTS)
         tests?.let { chosen ->
             element.addContent(
