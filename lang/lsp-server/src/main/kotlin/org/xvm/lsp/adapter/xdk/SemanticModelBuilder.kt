@@ -1919,9 +1919,15 @@ private class SemanticModelBuilder(
                 if (symbol.kind !in setOf(SymbolKind.VARIABLE, SymbolKind.PARAMETER)) return@mapNotNull null
                 val source = symbol.declarationSource ?: return@mapNotNull null
                 val range = symbol.declaration ?: return@mapNotNull null
+                // An @Inject local is a Ref only to receive its injected value where it is declared; that value never
+                // changes, unlike that of a local with any other Ref or Var annotation, such as @Future or @Volatile.
+                val injected =
+                    register.isVar &&
+                        register.ensureRegType(true).annotations.map { it.annotationClass } ==
+                        listOf(register.originalType.constantPool.clzInject())
                 // The compiler still calls a register effectively final when &name lets a Var change it.
-                val plain = !register.isVar && register !in referenced
-                Value(SourceLocation(source, range), register.originalType, register.isEffectivelyFinal && plain, plain)
+                val plain = (!register.isVar || injected) && register !in referenced
+                Value(SourceLocation(source, range), register.originalType, register.isEffectivelyFinal && plain, plain, injected)
             }
         val nodes = nodesIn(requireNotNull(compilation.parsed()))
         val modules = compilerModuleAliases(nodes)
@@ -1952,15 +1958,20 @@ private class SemanticModelBuilder(
             declarations.filterValues { all -> all.all { it.stable } }.keys.toCollection(linkedSetOf()),
             sourceTypes,
             declarations.filterValues { all -> all.all { it.plain } }.keys.toCollection(linkedSetOf()),
+            declarations.filterValues { all -> all.all { it.injected && it.plain } }.keys.toCollection(linkedSetOf()),
         )
     }
 
-    /** A local or parameter: plain when no Ref or Var can change it, stable when it is plain and never changes. */
+    /**
+     * A local or parameter: plain when no Ref or Var can change it, stable when it is plain and never changes, and
+     * injected when @Inject alone annotates it.
+     */
     private data class Value(
         val location: SourceLocation,
         val type: TypeConstant,
         val stable: Boolean,
         val plain: Boolean,
+        val injected: Boolean,
     )
 
     /** Inspect validated initializers on the worker; do not retain ASTs or infer purity from spelling. */

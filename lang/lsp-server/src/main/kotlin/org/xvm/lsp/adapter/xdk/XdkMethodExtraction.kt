@@ -223,9 +223,17 @@ internal object XdkMethodExtraction {
 
                         else -> return null
                     }
-                if (type is AnnotatedTypeExpression) return null
+                // An injected local's value is given where it is declared, so the helper takes it as a plain parameter
+                // of the declared type. Any other annotated local stays: a parameter would not keep what @Future,
+                // @Volatile or another Ref or Var annotation does to it.
+                val declared =
+                    when {
+                        type !is AnnotatedTypeExpression -> type
+                        declaration in facts.injectedValues -> type.childNodes().filterIsInstance<TypeExpression>().singleOrNull()
+                        else -> null
+                    }?.takeUnless { it is AnnotatedTypeExpression } ?: return null
                 val spelled =
-                    if (type is VariableTypeExpression) {
+                    if (declared is VariableTypeExpression) {
                         // val/var writes no type: spell the initializer's compiler type. The proof checks that the
                         // parameter has the declaration's own type, so a narrower or wider spelling is refused.
                         val value =
@@ -239,7 +247,7 @@ internal object XdkMethodExtraction {
                             ),
                         ] ?: return null
                     } else {
-                        spelling(type) ?: return null
+                        spelling(declared) ?: return null
                     }
                 Capture(declaration, symbol.kind, symbol.name, spelled, 0, 0, writes)
             }
