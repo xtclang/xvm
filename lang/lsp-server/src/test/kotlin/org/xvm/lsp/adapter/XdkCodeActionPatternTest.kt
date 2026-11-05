@@ -7,6 +7,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.awaited
+import org.xvm.lsp.model.Diagnostic
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -120,6 +121,88 @@ class XdkCodeActionPatternTest {
             println("module compiles: the intention list after Optimize Imports, first of the session $full")
             assertThat(full).isEqualTo(MODULES + IMPORTS)
         }
+    }
+
+    @Test
+    fun `the tour's unused import in PlayerTest is offered its removal, PlayerTest compiled for the revision and each proof`() {
+        session { adapter, root ->
+            val (listed, fixes) =
+                tourEdit(
+                    adapter,
+                    root.resolve("src/test/x/PlayerTest.x"),
+                    "    import cardGame.Card;\n",
+                    "    import cardGame.Card;\n    import cardGame.Deck;\n",
+                ) { caret(it, "import cardGame.Deck", "import cardGame.".length) }
+            println("unused import: intention list $listed, quick fixes $fixes")
+            assertThat(listed.first).contains("Remove unused import 'Deck'")
+            // PlayerTest for the revision, as it starts from the revision before, then for the cleanup's proofs: the
+            // removal of each of its seven imports, and Organize imports; tour run 8b, with no compile to start from,
+            // took 16 and 4,989 ms, and IntelliJ's Alt+Enter waited for it
+            assertThat(listed.second).isEqualTo(1 + 7 + 1)
+            // the removal is no quick fix, so LSP4IJ's request for the diagnostic under the caret never has it
+            assertThat(fixes).isEqualTo(emptyList<String>() to 0)
+        }
+    }
+
+    @Test
+    fun `the tour's unused local in Hand is offered its removal, every module compiled for the revision and its proof`() {
+        session { adapter, root ->
+            val (listed, fixes) =
+                tourEdit(
+                    adapter,
+                    root.resolve("src/main/x/cardGame/Hand.x"),
+                    "        console.print();\n",
+                    "        Int unused = 0;\n        console.print();\n",
+                ) { caret(it, "Int unused", "Int un".length) }
+            println("unused local: intention list $listed, quick fixes $fixes")
+            assertThat(listed.first).contains("Remove unused local variable")
+            // Hand is in cardGame, on which every module depends: the revision's compile and the removal's proof each
+            // compile them all, as tour run 8b's did, 16 in 4,481 ms
+            assertThat(listed.second).isEqualTo(MODULES + MODULES)
+            assertThat(fixes).isEqualTo(emptyList<String>() to 0)
+        }
+    }
+
+    /**
+     * The tour's edit of [file], its first [old] replaced by [new], analyzed as its didChange has it, after a request of
+     * the revision before it: what LSP4IJ's two requests at the [caret] then answer, the intention list's and the quick
+     * fixes' for the diagnostics under it, each as its actions' titles and the module compiles it ran.
+     */
+    private fun tourEdit(
+        adapter: XdkAdapter,
+        file: File,
+        old: String,
+        new: String,
+        caret: (List<String>) -> Range,
+    ): Pair<Pair<List<String>, Int>, Pair<List<String>, Int>> {
+        val uri = file.toURI().toString()
+        counted { adapter.getCodeActionsAsync(uri, Range(Position(0, 0), Position(0, 0)), emptyList(), intentions) }
+        val text = file.readText().replaceFirst(old, new)
+        val diagnostics = adapter.compile(uri, text).diagnostics
+        val at = caret(text.lines())
+        val listed = answered { adapter.getCodeActionsAsync(uri, at, emptyList(), intentions) }
+        val fixes = answered { adapter.getCodeActionsAsync(uri, at, diagnostics.under(at), setOf(CodeActionKind.QUICKFIX)) }
+        return listed to fixes
+    }
+
+    /** The diagnostics whose range holds [range]'s start, as LSP4IJ asks for each diagnostic under the caret. */
+    private fun List<Diagnostic>.under(range: Range): List<Diagnostic> {
+        fun offset(
+            line: Int,
+            column: Int,
+        ) = (line.toLong() shl 32) + column
+        val caret = offset(range.start.line, range.start.column)
+        return filter {
+            val at = it.location
+            offset(at.startLine, at.startColumn) <= caret && caret <= offset(at.endLine, at.endColumn)
+        }
+    }
+
+    /** The titles of what [request] answers, and the module compiles it runs. */
+    private fun answered(request: () -> CompletableFuture<List<CodeAction>>): Pair<List<String>, Int> {
+        val start = compiles.get()
+        val titles = request().awaited().map { it.title }
+        return titles to compiles.get() - start
     }
 
     /** PlayerTest.x of [root] after Optimize Imports, as tour run 7 left it, analyzed as its didChange has it. */
