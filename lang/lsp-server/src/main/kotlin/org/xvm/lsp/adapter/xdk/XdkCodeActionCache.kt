@@ -25,23 +25,35 @@ internal class XdkCodeActionCache {
     )
 
     /**
-     * A revision's compile: its facts, and what lets a proof compile only the modules its edit affects, the others being
-     * as they were: the artifact of each module that compiled, by its name, and the missing-method destinations of each.
+     * A revision's compile: its facts, and what lets a proof, or the next revision's compile, compile only the modules
+     * an edit affects, the others being as they were. By module name: the artifact of each module that compiled, the
+     * missing-method destinations of each, the errors each compile reported, and the sources each was compiled from;
+     * and the graph and the binary dependencies' revisions that they were compiled with.
      */
     data class Base(
         val facts: CompilerRenameFacts,
         val artifacts: Map<String, XdkDependency>,
         val destinations: Map<String, Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination>>,
+        val errors: Map<String, List<String>> = emptyMap(),
+        val inputs: Map<String, XdkSources.Inputs> = emptyMap(),
+        val project: XdkProject? = null,
+        val dependencies: Map<String, String> = emptyMap(),
     )
 
-    /** The compile of [revision]: [compile]'s, unless a request of the revision already compiled it. */
+    /**
+     * The compile of [revision]: [compile]'s, unless a request of the revision already compiled it. [compile] gets the
+     * latest compile of an earlier revision, if one is kept, to start from.
+     */
     fun base(
         revision: String,
-        compile: () -> Base?,
-    ): Base? = base(revision) ?: compile()?.also { base -> update(revision) { it.copy(base = base) } }
+        compile: (Base?) -> Base?,
+    ): Base? = base(revision) ?: compile(base())?.also { base -> update(revision) { it.copy(base = base) } }
 
     /** The compile of [revision], if a request of the revision compiled it. */
     fun base(revision: String): Base? = entry(revision).base
+
+    /** The latest revision's compile, whichever revision that is, if a request compiled it. */
+    fun base(): Base? = current.get().base
 
     /** The import cleanup of [source] in [revision]: [prove]'s, unless a request of the revision already proved it. */
     fun imports(

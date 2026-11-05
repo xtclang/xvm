@@ -7,6 +7,7 @@ import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
@@ -24,6 +25,8 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Worker-only whole-graph queries. Capture every configured module before compiling any of them.
@@ -34,7 +37,7 @@ internal class XdkProjectQueries(
     private val project: XdkProject,
     private val overlays: Map<String, String>,
     private val dependencies: XdkDependencies,
-    private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val compiler: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
     private val cancelled: () -> Boolean,
     private val discoverImports: Boolean = false,
     private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
@@ -58,6 +61,17 @@ internal class XdkProjectQueries(
     private val texts =
         sources.values.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value }
     private val uris = sources.values.flatMap { it.sourceUris.entries }.associate { it.toPair() }
+
+    private val compiled = AtomicInteger()
+
+    /** The module compiles that this query ran so far, which the server's log reports. */
+    val compiles: Int get() = compiled.get()
+
+    private fun compileTree(
+        input: ModuleInfo,
+        repository: ModuleRepository?,
+        errors: ErrorListener,
+    ): EmbeddingSupport.Compilation = compiler(input, repository, errors).also { compiled.incrementAndGet() }
 
     /** Read-only graph compilation, with no live AST installation or artificial open buffers. */
     fun diagnostics(): List<CompilationResult> {
@@ -882,13 +896,32 @@ internal class XdkProjectQueries(
     /**
      * Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. A quick
      * fix names the request's [diagnostics] it resolves, those overlapping the code it repairs, so editors
-     * can offer it on the problem itself.
+     * can offer it on the problem itself. [compiled] gets the module compiles it ran, also when it is cancelled.
      */
     fun codeActions(
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic> = emptyList(),
         kinds: Set<CodeActionKind> = CodeActionKind.entries.toSet(),
+        compiled: (CodeActionCompiles) -> Unit = {},
+    ): List<CodeAction> {
+        val start = compiles
+        // the compiles of the revision's compile, when this request made it, rather than found it in the cache
+        val made = AtomicReference<Int?>()
+        try {
+            return answer(uri, range, diagnostics, kinds, made)
+        } finally {
+            val base = made.get()
+            compiled(CodeActionCompiles(base ?: 0, compiles - start - (base ?: 0), base == null))
+        }
+    }
+
+    private fun answer(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+        kinds: Set<CodeActionKind>,
+        made: AtomicReference<Int?>,
     ): List<CodeAction> {
         fun resolved(target: SemanticModel.Range) =
             diagnostics.filter {
@@ -901,7 +934,15 @@ internal class XdkProjectQueries(
         // The requests of one revision share its compile and its import cleanup. A request cancelled or replaced
         // meanwhile keeps nothing: its compiles may have stopped short, and checkCurrent() throws before it is kept.
         val revision = revision()
-        val base = actionCache.base(revision) { build(texts, Proof.REPAIR)?.also { checkCurrent() } } ?: return emptyList()
+        val base =
+            actionCache.base(revision) { since ->
+                val start = compiles
+                try {
+                    build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() }
+                } finally {
+                    made.set(compiles - start)
+                }
+            } ?: return emptyList()
         val before = base.facts
         val complete =
             before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
@@ -1457,10 +1498,12 @@ internal class XdkProjectQueries(
     ): CompilerRenameFacts? = build(text, proof, moves, graph, resourceMoves, resourceSnapshots, failed, reuse)?.facts
 
     /**
-     * The compile of [text], and what a proof needs of it to compile only some modules. With [reuse], the revision's
-     * compile of this query's own sources, it compiles only the modules whose sources [text] changes and the modules
-     * that depend on them: the others have the inputs they had, so they keep their facts and artifacts, and a module
-     * that did not compile then does not now. A move, another graph or resources of their own compile it all.
+     * The compile of [text], and what a proof, or the next revision's compile, needs of it to compile only some modules.
+     * With [reuse], the revision's compile of this query's own sources, it compiles only the modules whose sources [text]
+     * changes and the modules that depend on them: the others have the inputs they had, so they keep their facts and
+     * artifacts, and a module that did not compile then does not now. With [since], an earlier revision's compile, the
+     * revision's own compile of its sources does the same for the modules whose sources changed since, unless it cannot
+     * be sure of the rest ([recompiled]). A move, another graph or resources of their own compile it all.
      */
     private fun build(
         text: Map<String, String>,
@@ -1471,33 +1514,43 @@ internal class XdkProjectQueries(
         resourceSnapshots: Map<XdkSourceModule, XdkResources> = emptyMap(),
         failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
         reuse: XdkCodeActionCache.Base? = null,
+        since: XdkCodeActionCache.Base? = null,
     ): XdkCodeActionCache.Base? {
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val missingDestinations = mutableMapOf<String, Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination>>()
+        val reported = mutableMapOf<String, List<String>>()
+        val inputs = sources.entries.associate { (module, source) -> module.name to source.inputs }
+        val revisions = dependencies.modules.mapValues { it.value.revision }
+        val plain = moves.isEmpty() && graph === project && resourceMoves == null && resourceSnapshots.isEmpty()
+        val prior = if (reuse != null) reuse.takeIf { plain } else since?.takeIf { plain && proof == Proof.REPAIR && text === texts }
         val edited =
-            reuse
-                ?.takeIf { moves.isEmpty() && graph === project && resourceMoves == null && resourceSnapshots.isEmpty() }
-                ?.let {
+            when {
+                prior == null -> null
+
+                prior === reuse ->
                     (text.keys + texts.keys)
                         .filter { path -> text[path] != texts[path] }
                         .mapNotNull { path -> project.scope(File(path)) }
                         .flatMapTo(hashSetOf(), project::affected)
-                }
+
+                else -> recompiled(prior, inputs, revisions)
+            }
         // as a module's compile rejects a source that no module of the graph holds
         if (edited != null && text.keys.any { graph.scope(it) == null }) return null
         val attempts =
             graph
                 .buildOrder()
                 .mapNotNull { module ->
-                    if (reuse != null && edited != null && module.uri !in edited) {
+                    if (prior != null && edited != null && module.uri !in edited) {
                         checkCurrent()
-                        val artifact = reuse.artifacts[module.name]
+                        val artifact = prior.artifacts[module.name]
                         if (artifact == null && proof == Proof.COMPLETE) return null
                         artifact?.let { artifacts[module.name] = it }
-                        reuse.destinations[module.name]?.let { missingDestinations[module.name] = it }
-                        return@mapNotNull reuse.facts.module(module.uri)?.let { module.uri to it }
+                        prior.destinations[module.name]?.let { missingDestinations[module.name] = it }
+                        prior.errors[module.name]?.let { reported[module.name] = it }
+                        return@mapNotNull prior.facts.module(module.uri)?.let { module.uri to it }
                     }
                     val source =
                         sources.entries
@@ -1611,6 +1664,7 @@ internal class XdkProjectQueries(
                                 } else {
                                     partial
                                 }
+                            reported[module.name] = described(heard.errors)
                             return@mapNotNull module.uri to repaired
                         }
                         failed(heard.errors)
@@ -1622,6 +1676,7 @@ internal class XdkProjectQueries(
                             errors,
                             includeMembers = proof == Proof.REPAIR,
                         )
+                    reported[module.name] = described(heard.errors)
                     if (heard.hasSeriousErrors() || errors.isAbortDesired) {
                         checkCurrent()
                         if (proof != Proof.COMPLETE) return@mapNotNull null
@@ -1640,8 +1695,38 @@ internal class XdkProjectQueries(
             CompilerRenameFacts.merge(attempts),
             artifacts.filterKeys(project.modules::containsKey),
             missingDestinations,
+            reported,
+            inputs,
+            project,
+            revisions,
         )
     }
+
+    /**
+     * The modules that a revision's compile compiles when it starts from [since], an earlier revision's compile: those
+     * whose sources, as [inputs] has them by module name, changed since, and the modules that depend on them, by root
+     * URI. Null when it may not start from it, and compiles every module: the graph or its modules changed, or the
+     * binary dependencies' [revisions], or a module upstream of a changed one did not compile then.
+     */
+    private fun recompiled(
+        since: XdkCodeActionCache.Base,
+        inputs: Map<String, XdkSources.Inputs>,
+        revisions: Map<String, String>,
+    ): Set<String>? {
+        if (since.project?.sameConfiguration(project) != true || since.dependencies != revisions) return null
+        if (inputs.keys != project.modules.keys || since.inputs.keys != inputs.keys) return null
+        val changed = project.buildOrder().filter { since.inputs[it.name] != inputs[it.name] }
+        if (changed.any { module -> project.buildOrder(module.uri).any { it.name != module.name && it.name !in since.artifacts } }) {
+            return null
+        }
+        return changed.flatMapTo(hashSetOf()) { project.affected(it.uri) }
+    }
+
+    /** What a module's compile reported, each error as a line that two compiles of the same give alike. */
+    private fun described(errors: List<ErrorListener.ErrorInfo>): List<String> =
+        errors.map {
+            "${it.severity} ${it.code} ${it.source?.fileName}:${it.line}:${it.offset}-${it.endLine}:${it.endOffset} ${it.messageText}"
+        }
 
     private fun checkCurrent() {
         if (cancelled()) throw CancellationException()
