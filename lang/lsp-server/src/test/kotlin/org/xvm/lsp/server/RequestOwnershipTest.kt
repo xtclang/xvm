@@ -7,12 +7,11 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -53,7 +52,7 @@ class RequestOwnershipTest {
             analysis.complete(MockAdapter().compile(uri, "module Owned {}"))
             assertThat(
                 surviving
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .contents.right.value,
             ).isEqualTo("Int")
             assertThat(queries.get()).isEqualTo(1)

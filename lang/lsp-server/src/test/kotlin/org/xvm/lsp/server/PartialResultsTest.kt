@@ -10,15 +10,15 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaited
+import org.xvm.lsp.awaitedTermination
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -41,7 +41,7 @@ class PartialResultsTest {
             val token = Either.forRight<String, Int>(12)
             val result = publisher.publish(token, source, {}, PartialResults::list)
             source.complete(values)
-            assertThat(result.get(HANG_SECONDS, SECONDS)).isEmpty()
+            assertThat(result.awaited()).isEmpty()
             assertThat(events.map { it.token }).containsOnly(token)
             assertThat(events.map { (it.value.right as List<*>).size }).containsExactly(64, 64, 2)
             assertThat(events.flatMap { it.value.right as List<*> })
@@ -70,7 +70,7 @@ class PartialResultsTest {
             doAnswer {
                 events.add(it.getArgument(0))
                 entered.complete(null)
-                release.get(HANG_SECONDS, SECONDS)
+                release.awaited()
                 null
             }.`when`(client)
                 .notifyProgress(any())
@@ -83,7 +83,7 @@ class PartialResultsTest {
                         PartialResults::list,
                     )
                 try {
-                    entered.get(HANG_SECONDS, SECONDS)
+                    entered.awaited()
                     when (mode) {
                         "cancel" -> result.cancel(false)
                         "stale" -> current.set(false)
@@ -92,11 +92,11 @@ class PartialResultsTest {
                 } finally {
                     release.complete(null)
                 }
-                assertThatThrownBy { result.get(HANG_SECONDS, SECONDS) }.isInstanceOf(Exception::class.java)
+                assertThatThrownBy { result.awaited() }.isInstanceOf(Exception::class.java)
                 if (mode != "close") {
-                    dispatcher.submit {}.get(HANG_SECONDS, SECONDS)
+                    dispatcher.submit {}.awaited()
                 } else {
-                    assertThat(dispatcher.awaitTermination(HANG_SECONDS, SECONDS)).isTrue()
+                    assertThat(dispatcher.awaitedTermination()).isTrue()
                 }
                 assertThat(events).hasSize(1)
             }
@@ -120,7 +120,7 @@ class PartialResultsTest {
                     {},
                     PartialResults::list,
                 )
-            assertThatThrownBy { result.get(HANG_SECONDS, SECONDS) }.hasMessageContaining("failed")
+            assertThatThrownBy { result.awaited() }.hasMessageContaining("failed")
             assertThat(events).isEmpty()
         }
     }
@@ -156,7 +156,7 @@ class PartialResultsTest {
             assertThat(
                 server.workspaceService
                     .symbol(query)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .left,
             ).isEmpty()
             assertThat(events.flatMap { it.value.right as List<*> }).hasSize(130)
@@ -164,7 +164,7 @@ class PartialResultsTest {
             assertThat(
                 server.workspaceService
                     .symbol(query)
-                    .get(HANG_SECONDS, SECONDS)
+                    .awaited()
                     .left,
             ).hasSize(130)
             assertThat(events).hasSize(3)

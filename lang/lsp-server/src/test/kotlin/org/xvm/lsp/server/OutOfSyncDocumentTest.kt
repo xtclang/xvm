@@ -25,13 +25,14 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.awaitUntil
+import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.lsp.what
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * An editor change the server cannot apply leaves the two texts different. The server must say so and
@@ -66,11 +67,7 @@ class OutOfSyncDocumentTest {
 
         /** Analysis publishes asynchronously; wait for the report the test expects. */
         fun awaitCodes(accept: (List<String?>) -> Boolean): List<String?> {
-            val deadline = System.nanoTime() + SECONDS.toNanos(HANG_SECONDS)
-            while (!accept(codes())) {
-                check(System.nanoTime() < deadline) { "unexpected diagnostics ${codes()}" }
-                Thread.sleep(20)
-            }
+            awaitUntil(what { "the diagnostics the test expects, not ${codes()}" }) { accept(codes()) }
             return codes()
         }
     }
@@ -95,7 +92,7 @@ class OutOfSyncDocumentTest {
                                     }
                             }
                     },
-                ).get(HANG_SECONDS, SECONDS)
+                ).awaited()
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", version, TEXT)))
         }
 
@@ -110,7 +107,7 @@ class OutOfSyncDocumentTest {
         fun hover(): CompletableFuture<*> = documents.hover(HoverParams(TextDocumentIdentifier(URI), Position(0, 7)))
 
         override fun close() {
-            server.shutdown().get(HANG_SECONDS, SECONDS)
+            server.shutdown().awaited()
         }
     }
 
@@ -122,7 +119,7 @@ class OutOfSyncDocumentTest {
     ) = TextDocumentContentChangeEvent(Range(Position(line, start), Position(line, end)), text)
 
     private fun assertRefused(request: CompletableFuture<*>) {
-        assertThatThrownBy { request.get(HANG_SECONDS, SECONDS) }
+        assertThatThrownBy { request.awaited() }
             .isInstanceOf(ExecutionException::class.java)
             .cause()
             .isInstanceOfSatisfying(ResponseErrorException::class.java) {
@@ -158,7 +155,7 @@ class OutOfSyncDocumentTest {
             session.change(patch(5, 0, 0, "x"))
             assertRefused(session.hover())
             session.change(TextDocumentContentChangeEvent(TEXT), patch(0, 0, 0, ""))
-            session.hover().get(HANG_SECONDS, SECONDS)
+            session.hover().awaited()
             session.client.awaitCodes { Diagnostic.Codes.DOCUMENT_OUT_OF_SYNC !in it }
         }
     }
@@ -168,7 +165,7 @@ class OutOfSyncDocumentTest {
         Session().use { session ->
             session.change(patch(5, 0, 0, "x"))
             session.reopen()
-            session.hover().get(HANG_SECONDS, SECONDS)
+            session.hover().awaited()
             session.client.awaitCodes { Diagnostic.Codes.DOCUMENT_OUT_OF_SYNC !in it }
         }
     }

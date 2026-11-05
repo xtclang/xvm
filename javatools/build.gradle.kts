@@ -57,6 +57,8 @@ dependencies {
     implementation(libs.slf4j.nop) // to avoid startup warnings while preserving no-op logging
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
+    // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
+    testImplementation(testFixtures(libs.javatools.utils))
     // the runner and the runtime's system modules; the runner brings the libraries it needs
     testXtcModules(libs.xdk.ecstasy)
     testXtcModules(libs.xdk.runner)

@@ -4,16 +4,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkRenameScope
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.io.File
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises rename proofs spanning explicit external roots and unsaved consumers. Missing or changed captured
@@ -39,7 +38,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(HANG_SECONDS, SECONDS),
+                        ).awaited(),
                 )
             val scope = requireNotNull(proposal.scope)
             assertThat(scope.boundary).isEqualTo(XdkRenameScope.Boundary.CONFIGURED_GRAPH)
@@ -72,7 +71,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(HANG_SECONDS, SECONDS),
+                        ).awaited(),
                 )
             val overlay =
                 CONSUMER.replace("box.pick(input = 1)", "box.pick(input = 1) + box.pick(input = 2)")
@@ -85,7 +84,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(HANG_SECONDS, SECONDS),
+                        ).awaited(),
                 )
             assertThat(requireNotNull(after.scope).revision)
                 .isNotEqualTo(requireNotNull(before.scope).revision)
@@ -152,7 +151,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        ).get(HANG_SECONDS, SECONDS),
+                        ).awaited(),
                 )
             assertThat(requireNotNull(proposal.scope).boundary)
                 .isEqualTo(XdkRenameScope.Boundary.DISCOVERED_GRAPH)

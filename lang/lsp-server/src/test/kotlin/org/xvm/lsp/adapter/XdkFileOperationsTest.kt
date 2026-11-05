@@ -3,13 +3,12 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.awaited
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises compiler-proven file, package and module moves as combined graph edits. Checks reference/resource
@@ -29,7 +28,7 @@ class XdkFileOperationsTest {
                     uri("App/Box.x") to uri("App/Crate.x"),
                     uri("App/Other.x") to uri("App/Second.x"),
                 )
-            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).awaited())
             assertThat(edit.versioned).isTrue()
             assertThat(edit.renames).isEmpty()
             assertThat(Files.readString(directory.resolve("App.x"))).contains("new Box()")
@@ -37,7 +36,7 @@ class XdkFileOperationsTest {
             assertThat(Files.readString(directory.resolve("App.x")))
                 .contains("new Crate()", "new Second()")
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -47,14 +46,14 @@ class XdkFileOperationsTest {
         write("App/tools/Box.x", "class Box {}")
         session { adapter ->
             val moves = mapOf(uri("App/tools") to uri("App/util"))
-            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).awaited())
             assertThat(edit.renames).isEmpty()
             apply(edit, moves)
             assertThat(Files.readString(directory.resolve("App.x")))
                 .contains("util.Box")
                 .doesNotContain("tools.Box")
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -68,14 +67,14 @@ class XdkFileOperationsTest {
         )
         session { adapter ->
             val moves = mapOf(uri("Library.x") to uri("Renamed.x"))
-            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).awaited())
             assertThat(edit.renames.keys.map { Path.of(URI(it)).fileName.toString() })
                 .containsExactly("Library")
             apply(edit, moves)
             assertThat(Files.readString(directory.resolve("Consumer.x")))
                 .contains("package lib import Renamed")
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -89,14 +88,14 @@ class XdkFileOperationsTest {
         write("old/data.txt", "resource survives the proposed move")
         session { adapter ->
             val moves = mapOf(uri("old") to uri("moved"))
-            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).awaited())
             assertThat(edit.changes).isEmpty()
             assertThat(directory.resolve("moved")).doesNotExist()
             apply(edit, moves)
             assertThat(Files.readString(directory.resolve("moved/data.txt")))
                 .isEqualTo("resource survives the proposed move")
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -120,11 +119,11 @@ class XdkFileOperationsTest {
                     uri("old") to uri("destination/old"),
                     uri("second") to uri("destination/second"),
                 )
-            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).awaited())
             assertThat(edit.changes).isEmpty()
             apply(edit, moves)
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
             assertThat(Files.readString(directory.resolve("destination/old/data.txt")))
                 .isEqualTo("resource")
         }
@@ -138,13 +137,13 @@ class XdkFileOperationsTest {
         Files.createDirectory(directory.resolve("moved"))
         session { adapter ->
             val moves = mapOf(uri("Library.x") to uri("moved/Library.x"))
-            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(HANG_SECONDS, SECONDS))
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).awaited())
             assertThat(edit.changes).isEmpty()
             assertThat(edit.renames.values.map { Path.of(URI(it)) }).containsExactly(directory.resolve("moved/Library"))
             apply(edit, moves)
             assertThat(directory.resolve("moved/Library/Box.x")).exists()
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.workspaceDiagnosticsAsync().get(HANG_SECONDS, SECONDS)).allMatch { it.success }
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
         }
     }
 
@@ -157,12 +156,12 @@ class XdkFileOperationsTest {
         Files.createDirectories(directory.resolve("elsewhere"))
         session { adapter ->
             adapter.initializeWorkspace(listOf(directory.resolve("ws").toString()))
-            assertThat(adapter.renameFilesAsync(mapOf(uri("ws/App.x") to uri("ws/moved/App.x"))).get(HANG_SECONDS, SECONDS)).isNull()
+            assertThat(adapter.renameFilesAsync(mapOf(uri("ws/App.x") to uri("ws/moved/App.x"))).awaited()).isNull()
             assertThat(
-                adapter.renameFilesAsync(mapOf(uri("ws/Library.x") to uri("elsewhere/Library.x"))).get(HANG_SECONDS, SECONDS),
+                adapter.renameFilesAsync(mapOf(uri("ws/Library.x") to uri("elsewhere/Library.x"))).awaited(),
             ).isNull()
             assertThat(
-                adapter.renameFilesAsync(mapOf(uri("ws/Library.x") to uri("ws/moved/Library.x"))).get(HANG_SECONDS, SECONDS),
+                adapter.renameFilesAsync(mapOf(uri("ws/Library.x") to uri("ws/moved/Library.x"))).awaited(),
             ).isNotNull()
         }
         assertThat(directory.resolve("ws/App.x")).exists()
@@ -178,25 +177,25 @@ class XdkFileOperationsTest {
             assertThat(
                 adapter
                     .renameFilesAsync(mapOf(uri("App/Box.x") to uri("App/Occupied.x")))
-                    .get(HANG_SECONDS, SECONDS),
+                    .awaited(),
             ).isNull()
             assertThat(
                 adapter
                     .renameFilesAsync(
                         mapOf(uri("App") to uri("Other"), uri("App/Box.x") to uri("App/New.x")),
-                    ).get(HANG_SECONDS, SECONDS),
+                    ).awaited(),
             ).isNull()
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("App.x"))))
             assertThat(
                 adapter
                     .renameFilesAsync(mapOf(uri("App.x") to uri("Renamed.x")))
-                    .get(HANG_SECONDS, SECONDS),
+                    .awaited(),
             ).isNull()
             Files.createSymbolicLink(directory.resolve("alias.x"), directory.resolve("App/Box.x"))
             assertThat(
                 adapter
                     .renameFilesAsync(mapOf(uri("alias.x") to uri("renamed.x")))
-                    .get(HANG_SECONDS, SECONDS),
+                    .awaited(),
             ).isNull()
             assertThat(Files.readString(directory.resolve("App.x"))).contains("new Box()")
         }

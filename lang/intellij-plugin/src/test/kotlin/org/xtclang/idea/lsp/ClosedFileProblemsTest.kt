@@ -23,13 +23,13 @@ import org.eclipse.lsp4j.Range
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
-import org.xtclang.idea.HANG_SECONDS
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
+import org.xtclang.idea.awaitUntil
+import org.xtclang.idea.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 
 // TODO LSP4IJ: UP69 — LSP4IJ 0.21.0 asks for no workspace report, so only ClosedDocumentDiagnostics gets a closed
 // file's errors to IntelliJ. Keep these tests when the bridge goes: they check what IntelliJ shows, whichever of
@@ -135,7 +135,7 @@ class ClosedFileProblemsTest {
             )
         val features = connection().clientFeatures
         LSPDiagnosticUtils.clearProblem(setOf(checkNotNull(features.getFileUri(child))), features, editor.fixture.project)
-        cleared.get(HANG_SECONDS, TimeUnit.SECONDS)
+        cleared.awaited()
         await("Child.x is a problem file again") { problems.isProblemFile(child) }
         assertThat(closedCodes(child)).containsExactly("unknown-type")
     }
@@ -199,7 +199,7 @@ class ClosedFileProblemsTest {
 
     /** The server's refresh, as it sends one after each analysis, answered. */
     private fun refresh() {
-        server.languageClient.refreshDiagnostics().get(HANG_SECONDS, TimeUnit.SECONDS)
+        server.languageClient.refreshDiagnostics().awaited()
     }
 
     private fun connection(): LanguageServerWrapper = LanguageServiceAccessor.getInstance(editor.fixture.project).startedServers.single()
@@ -222,11 +222,6 @@ class ClosedFileProblemsTest {
         what: String,
         condition: () -> Boolean,
     ) {
-        val hung = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
-        while (!condition()) {
-            check(System.nanoTime() < hung) { "Hung waiting until $what" }
-            runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
-            Thread.sleep(10)
-        }
+        awaitUntil(what) { condition() || false.also { runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() } } }
     }
 }

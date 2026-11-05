@@ -26,9 +26,9 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.awaited
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -62,7 +62,7 @@ class LibraryContentProtocolTest {
                 documents
                     .definition(
                         DefinitionParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("getPassword") + 5)),
-                    ).get(HANG_SECONDS, SECONDS)
+                    ).awaited()
                     .left
                     .single()
             val content =
@@ -78,12 +78,12 @@ class LibraryContentProtocolTest {
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, content)))
             val middle = Position(target.range.start.line, target.range.start.character + 5)
             val document = TextDocumentIdentifier(target.uri)
-            assertThatThrownBy { documents.prepareRename(PrepareRenameParams(document, middle)).get(HANG_SECONDS, SECONDS) }
+            assertThatThrownBy { documents.prepareRename(PrepareRenameParams(document, middle)).awaited() }
                 .hasCauseInstanceOf(ResponseErrorException::class.java)
                 .hasRootCauseMessage(
                     "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it.",
                 )
-            assertThat(documents.rename(RenameParams(document, middle, "readPassword")).get(HANG_SECONDS, SECONDS)).isNull()
+            assertThat(documents.rename(RenameParams(document, middle, "readPassword")).awaited()).isNull()
         }
     }
 
@@ -159,7 +159,7 @@ class LibraryContentProtocolTest {
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, text.replace("\n", "\r\n"))))
             val moniker = MonikerParams(TextDocumentIdentifier(target.uri), target.range.start)
-            val original = documents.moniker(moniker).get(HANG_SECONDS, SECONDS)
+            val original = documents.moniker(moniker).awaited()
             assertThat(original).hasSize(1)
             documents.didChange(
                 DidChangeTextDocumentParams(
@@ -167,7 +167,7 @@ class LibraryContentProtocolTest {
                     listOf(TextDocumentContentChangeEvent("module Forged {}")),
                 ),
             )
-            assertThat(documents.moniker(moniker).get(HANG_SECONDS, SECONDS)).isEmpty()
+            assertThat(documents.moniker(moniker).awaited()).isEmpty()
             assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
             documents.didChange(
                 DidChangeTextDocumentParams(
@@ -175,11 +175,11 @@ class LibraryContentProtocolTest {
                     listOf(TextDocumentContentChangeEvent(text.replace("const String", "const  String"))),
                 ),
             )
-            assertThat(documents.moniker(moniker).get(HANG_SECONDS, SECONDS)).isEmpty()
+            assertThat(documents.moniker(moniker).awaited()).isEmpty()
             documents.didChange(
                 DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 4), listOf(TextDocumentContentChangeEvent(text))),
             )
-            assertThat(documents.moniker(moniker).get(HANG_SECONDS, SECONDS)).isEqualTo(original)
+            assertThat(documents.moniker(moniker).awaited()).isEqualTo(original)
             // A library URI's text cannot change, so a dependency change asks the client to fetch no view again.
             server.replaceCompilerDependencies(emptyList())
             assertThat(notifications.poll(2, SECONDS)).isNull()
@@ -194,7 +194,7 @@ class LibraryContentProtocolTest {
         return server.textDocumentService
             .definition(
                 DefinitionParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("String"))),
-            ).get(HANG_SECONDS, SECONDS)
+            ).awaited()
             .left
             .single()
     }

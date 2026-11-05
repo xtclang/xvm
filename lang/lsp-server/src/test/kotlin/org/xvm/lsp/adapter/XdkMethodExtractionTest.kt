@@ -10,19 +10,18 @@ import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
 import org.xvm.debug.ProgramEvents
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.run.HANG_LIMITS
+import org.xvm.lsp.awaited
+import org.xvm.lsp.run.LIVELOCK_LIMITS
 import org.xvm.lsp.run.RunWorkerProcess
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks generated helper methods, signatures and captured inputs through trial compilation. Preserves
@@ -627,7 +626,7 @@ class XdkMethodExtractionTest {
         DirRepository(lib, false).storeModule(module)
         val printed = StringBuffer()
         val exited = CompletableFuture<String?>()
-        RunWorkerProcess(limits = HANG_LIMITS).use { workers ->
+        RunWorkerProcess(limits = LIVELOCK_LIMITS).use { workers ->
             workers.start(
                 RunWorkerProcess.Request(listOf(lib.path), "Extract", "run", emptyList(), directory.toString()),
                 object : ProgramEvents {
@@ -643,7 +642,7 @@ class XdkMethodExtractionTest {
                     }
                 },
             )
-            assertThat(exited.get(HANG_SECONDS, SECONDS)).isNull()
+            assertThat(exited.awaited()).isNull()
         }
         return printed.toString()
     }

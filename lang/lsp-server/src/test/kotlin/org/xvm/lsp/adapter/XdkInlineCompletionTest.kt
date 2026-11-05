@@ -4,10 +4,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkInlineCompletions
-import java.util.concurrent.TimeUnit.SECONDS
+import org.xvm.lsp.awaited
 
 /**
  * Exercises compiler-backed inline suggestions for names, members and literals. Checks fitting and explicit-
@@ -34,7 +33,7 @@ class XdkInlineCompletionTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, source)
             val cached = adapter.getCachedResult(URI)
-            val items = adapter.getInlineCompletionsAsync(URI, position, InlineCompletionContext(false)).get(HANG_SECONDS, SECONDS)
+            val items = adapter.getInlineCompletionsAsync(URI, position, InlineCompletionContext(false)).awaited()
             assertThat(items.map { it.newText }).contains("answer")
             if (statement.startsWith("consume")) assertThat(items.map { it.newText }).doesNotContain("answerText")
             assertThat(items.map { it.range }).containsOnly(Range(position.copy(column = position.column - 3), position))
@@ -63,7 +62,7 @@ class XdkInlineCompletionTest {
             val at = Position(before.count { it == '\n' }, before.substringAfterLast('\n').length)
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, marked.replace("§", ""))
-                val edits = adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(automatic)).get(HANG_SECONDS, SECONDS)
+                val edits = adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(automatic)).awaited()
                 assertThat(edits.map { it.newText }).describedAs(statement).containsExactlyInAnyOrderElementsOf(expected)
             }
         }
@@ -74,7 +73,7 @@ class XdkInlineCompletionTest {
         XdkAdapter().use { adapter ->
             listOf(URI, "ecstasy-library://ecstasy.xtclang.org/revision/String.x").forEach { uri ->
                 assertThat(
-                    adapter.getInlineCompletionsAsync(uri, Position(0, 0), InlineCompletionContext(false)).get(HANG_SECONDS, SECONDS),
+                    adapter.getInlineCompletionsAsync(uri, Position(0, 0), InlineCompletionContext(false)).awaited(),
                 ).isEmpty()
                 assertThat(adapter.getCachedResult(uri)).isNull()
             }
@@ -97,14 +96,14 @@ class XdkInlineCompletionTest {
         val at = Position(before.count { it == '\n' }, before.substringAfterLast('\n').length)
         XdkAdapter().use { adapter ->
             adapter.compile(URI, marked.replace("§", ""))
-            assertThat(adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(true)).get(HANG_SECONDS, SECONDS)).isEmpty()
+            assertThat(adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(true)).awaited()).isEmpty()
             assertThat(
-                adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(false)).get(HANG_SECONDS, SECONDS).map { it.newText },
+                adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(false)).awaited().map { it.newText },
             ).contains("answer", "another")
             adapter.compile(URI, marked.replace("an§", "ans"))
             val next = at.copy(column = at.column + 1)
             assertThat(
-                adapter.getInlineCompletionsAsync(URI, next, InlineCompletionContext(true)).get(HANG_SECONDS, SECONDS).map { it.newText },
+                adapter.getInlineCompletionsAsync(URI, next, InlineCompletionContext(true)).awaited().map { it.newText },
             ).containsExactly("answer")
         }
     }

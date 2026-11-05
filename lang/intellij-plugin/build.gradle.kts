@@ -388,6 +388,8 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.lang.intellij.junit4.compat)
     testImplementation(libs.assertj)
+    // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
+    testImplementation(testFixtures(libs.javatools.utils))
     add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.kodein)
     add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.coroutines)
     // The standalone Starter JVM has no IDE classloader to supply Kotlin's standard library.
