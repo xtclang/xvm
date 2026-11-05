@@ -140,7 +140,9 @@ suite('XdkAdapter playbook', function () {
     playbook('7a.9', async (workspace, data) => {
         const document = await workspace.open(data.file, data.moduleStart + Array.from({ length: data.declarationCount }, (_, index) => scenarioText(data.declaration, index, index)).join('\n') + data.moduleEnd);
         const result = await diagnostics(document.uri, values => values.length > 0, 'Invalid source diagnostics');
-        assert.ok(result.filter(item => item.severity === vscode.DiagnosticSeverity.Error).length <= data.maximumErrors, `${result.length} diagnostics`);
+        // more unresolvable names than the compiler's budget of serious errors: the report stops at the budget
+        const errors = result.filter(item => item.severity === vscode.DiagnosticSeverity.Error).length;
+        assert.ok(errors <= data.maximumErrors && errors < data.declarationCount, `${errors} errors for ${data.declarationCount} declarations`);
         assert.ok(result.every(item => diagnosticCode(item) !== data.diagnosticCode));
     });
 });
