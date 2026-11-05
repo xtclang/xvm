@@ -748,55 +748,81 @@ class XdkAdapter
                     overlays[uri] = content
                     val scope = analysisScope(uri)
                     scopes[uri] = scope
-                    val sourceScopes = project.buildOrder(scope).mapTo(mutableSetOf(scope)) { it.uri }
-                    val overlayScopes = analysisScopes(overlays.keys)
-                    val request =
-                        Request(
-                            scope,
-                            uri,
-                            overlays.filterKeys {
-                                overlayScopes[it] in sourceScopes
-                            },
-                            dependencies,
-                            project,
-                            discovery.get().problem,
-                            queueTrace,
-                            ::runCompilation,
-                        )
-                    request.result.whenComplete { _, _ ->
-                        if (request.result.isCancelled) {
-                            val obsolete =
-                                synchronized(lifecycle) {
-                                    removeQueued(request)
-                                    if (requests.remove(scope, request)) {
-                                        completed.remove(scope)
-                                        retireQueries(scope)
-                                    } else {
-                                        emptyList()
-                                    }
-                                }
-                            obsolete.forEach { it.result.cancel(false) }
-                        }
-                    }
-                    val (retired, obsoleteQueries) = retireRequests(project.affected(scope))
-                    requests[scope] = request
-                    scheduled[request] =
-                        debouncer.schedule(
-                            {
-                                synchronized(lifecycle) {
-                                    if (scheduled.remove(request) != null && !isStale(request)) {
-                                        compiles.execute(request.task.ready())
-                                    }
-                                }
-                            },
-                            DEBOUNCE_MILLIS,
-                            TimeUnit.MILLISECONDS,
-                        )
-                    Submission(request = request, retired = retired, obsoleteQueries = obsoleteQueries)
+                    submit(scope, uri, retire = true)
                 }
             submission.retired.forEach { it.result.cancel(false) }
             submission.obsoleteQueries.forEach { it.result.cancel(false) }
             return submission.request.result
+        }
+
+        /**
+         * The analysis of the module that holds [uri], a file of the project that is not open, with its text on disk:
+         * the module's current or pending one, as any member's compile analyzes the closed members from disk too, or
+         * else a new one. That one changes no input, so it retires nothing. Null when [uri] is open, or not a file of
+         * a configured or discovered module.
+         */
+        internal fun closedAnalysisAsync(uri: String): CompletableFuture<CompilationResult>? =
+            synchronized(lifecycle) {
+                if (closed || uri in overlays || isLibraryDocument(uri)) return null
+                val file = XdkSources.file(uri)?.takeIf(File::isFile) ?: return null
+                val scope = project.scope(file) ?: return null
+                requests[scope]?.result ?: submit(scope, uri, retire = false).request.result
+            }
+
+        /**
+         * Called under lifecycle. Queues a compile of [scope] for [uri], with the open documents of the modules it
+         * builds; one that brings a new input, [retire], first retires the analyses that it affects.
+         */
+        private fun submit(
+            scope: String,
+            uri: String,
+            retire: Boolean,
+        ): Submission {
+            val sourceScopes = project.buildOrder(scope).mapTo(mutableSetOf(scope)) { it.uri }
+            val overlayScopes = analysisScopes(overlays.keys)
+            val request =
+                Request(
+                    scope,
+                    uri,
+                    overlays.filterKeys {
+                        overlayScopes[it] in sourceScopes
+                    },
+                    dependencies,
+                    project,
+                    discovery.get().problem,
+                    queueTrace,
+                    ::runCompilation,
+                )
+            request.result.whenComplete { _, _ ->
+                if (request.result.isCancelled) {
+                    val obsolete =
+                        synchronized(lifecycle) {
+                            removeQueued(request)
+                            if (requests.remove(scope, request)) {
+                                completed.remove(scope)
+                                retireQueries(scope)
+                            } else {
+                                emptyList()
+                            }
+                        }
+                    obsolete.forEach { it.result.cancel(false) }
+                }
+            }
+            val (retired, obsoleteQueries) = if (retire) retireRequests(project.affected(scope)) else emptyList<Request>() to emptyList()
+            requests[scope] = request
+            scheduled[request] =
+                debouncer.schedule(
+                    {
+                        synchronized(lifecycle) {
+                            if (scheduled.remove(request) != null && !isStale(request)) {
+                                compiles.execute(request.task.ready())
+                            }
+                        }
+                    },
+                    DEBOUNCE_MILLIS,
+                    TimeUnit.MILLISECONDS,
+                )
+            return Submission(request = request, retired = retired, obsoleteQueries = obsoleteQueries)
         }
 
         /**
