@@ -7251,34 +7251,6 @@ public abstract class TypeConstant
     }
 
     /**
-     * TODO
-     *
-     * @param loader
-     *
-     * @return
-     */
-    protected TypeConstant buildJitICType(ModuleLoader loader) {
-        if (isModifyingType()) {
-            return getUnderlyingType().buildJitICType(loader);
-        }
-        throw new UnsupportedOperationException("type=" + this.toString());
-    }
-
-    /**
-     * TODO
-     *
-     * @param loader
-     *
-     * @return
-     */
-    protected TypeConstant buildJitCCType(ModuleLoader loader) {
-        if (isModifyingType()) {
-            return getUnderlyingType().buildJitCCType(loader);
-        }
-        throw new UnsupportedOperationException("type=" + this.toString());
-    }
-
-    /**
      * @param ts  the TypeSystem within which this type exists
      *
      * @return true iff the JIT JIC name is the same as the JIT JCC name
@@ -7303,7 +7275,7 @@ public abstract class TypeConstant
      * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
     public TypeConstant getJitICType(TypeSystem ts) {
-        return ensureJitInfo(ts).jicType;
+        return ensureJitInfo(ts).jicType();
     }
 
     /**
@@ -7339,7 +7311,7 @@ public abstract class TypeConstant
      * @see <a href="https://github.com/xtclang/xvm/blob/master/doc/jit_class_names.txt">jit_class_names.txt</a>
      */
     public TypeConstant getJitCCType(TypeSystem ts) {
-        return ensureJitInfo(ts).jicType;
+        return ensureJitInfo(ts).jccType();
     }
 
     /**

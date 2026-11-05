@@ -633,10 +633,7 @@ public abstract class RelationalTypeConstant
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-    @Override
-    protected TypeConstant buildJitCCType(ModuleLoader loader) {
-        return getConstantPool().typeObject();
-    }
+    // TODO @Override
 
     // ----- run-time support ----------------------------------------------------------------------
 

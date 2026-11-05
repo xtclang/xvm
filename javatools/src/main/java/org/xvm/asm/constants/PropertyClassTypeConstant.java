@@ -266,11 +266,7 @@ public class PropertyClassTypeConstant
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-    @Override
-    protected TypeConstant buildJitCCType(ModuleLoader loader) {
-        // TODO
-        return getRefType().buildJitCCType(loader);
-    }
+    // TODO @Override
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

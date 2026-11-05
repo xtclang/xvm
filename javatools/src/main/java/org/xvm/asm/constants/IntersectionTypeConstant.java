@@ -718,6 +718,44 @@ public class IntersectionTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+    // TODO this has to be part of buildJitInfo()
+//    @Override
+//    protected TypeConstant buildJitCCType(ModuleLoader loader) {
+//        return combineJitType(loader.typeSystem, m_constType1, m_constType2);
+//    }
+//
+//    private static TypeConstant combineJitType(TypeSystem ts, TypeConstant type1, TypeConstant type2) {
+//        if (type1.isFormalType()) {
+//            return combineJitType(ts, type1.resolveConstraints(), type2);
+//        }
+//
+//        if (type2.isFormalType()) {
+//            return combineJitType(ts, type1, type2.resolveConstraints());
+//        }
+//
+//        if (type1.isJitPrimitive()) {
+//            return type1.getJitCCType(ts);
+//        }
+//
+//        if (type2.isJitPrimitive()) {
+//            return type2.getJitCCType(ts);
+//        }
+//
+//        // while the original intersection contributions are not assignable to each other, the
+//        // canonical types might be
+//        type1 = type1.getJitCCType(ts);
+//        type2 = type2.getJitCCType(ts);
+//
+//        return type2.isA(type1)
+//                ? type1
+//                : type1.isA(type2)
+//                ? type2
+//                : type2.getConstantPool().typeObject();
+        return null;
+    }
+
+    @Override
     public boolean isJavaPrimitive() {
         return m_constType1.isJavaPrimitive() || m_constType2.isJavaPrimitive();
     }
@@ -725,40 +763,6 @@ public class IntersectionTypeConstant
     @Override
     public boolean isXvmPrimitive() {
         return m_constType1.isXvmPrimitive() || m_constType2.isXvmPrimitive();
-    }
-
-    @Override
-    protected TypeConstant buildJitCCType(ModuleLoader loader) {
-        return combineJitType(loader.typeSystem, m_constType1, m_constType2);
-    }
-
-    private static TypeConstant combineJitType(TypeSystem ts, TypeConstant type1, TypeConstant type2) {
-        if (type1.isFormalType()) {
-            return combineJitType(ts, type1.resolveConstraints(), type2);
-        }
-
-        if (type2.isFormalType()) {
-            return combineJitType(ts, type1, type2.resolveConstraints());
-        }
-
-        if (type1.isJitPrimitive()) {
-            return type1.getJitCCType(ts);
-        }
-
-        if (type2.isJitPrimitive()) {
-            return type2.getJitCCType(ts);
-        }
-
-        // while the original intersection contributions are not assignable to each other, the
-        // canonical types might be
-        type1 = type1.getJitCCType(ts);
-        type2 = type2.getJitCCType(ts);
-
-        return type2.isA(type1)
-                ? type1
-                : type1.isA(type2)
-                    ? type2
-                    : type2.getConstantPool().typeObject();
     }
 
     // ----- run-time support ----------------------------------------------------------------------

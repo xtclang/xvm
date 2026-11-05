@@ -807,6 +807,124 @@ public class ParameterizedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        // TODO building the Info
+        // protected JitInfo buildJitInfo(ModuleLoader loader) {
+        // virtual ? JICForm.Generic : JICForm.GenericChild
+
+        // TODO move this up to buildJitInfo
+//        protected TypeConstant TODObuildJitCCType(ModuleLoader loader) {
+//            assert isSingleUnderlyingClass(true);
+//
+//            TypeConstant typeJit = m_typeJitCallable;
+//            if (typeJit != null) {
+//                return typeJit;
+//            }
+//
+//            ConstantPool pool = getConstantPool();
+//            if (isTuple()) {
+//                // Tuple has a variable number of parameters; every specialization uses nTuple
+//                return m_typeJitCallable = pool.typeTuple();
+//            }
+//
+//            ClassStructure clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+//            var            listTypeParams = clz.getTypeParamsAsList();
+//            var            listContribs   = clz.collectConditionalIncorporates(this);
+//
+//            TypeConstant typeOrig = m_constType;
+//            // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
+//            if (typeOrig.isArray() && !getParamType(0).isJitPrimitive()) {
+//                return pool.ensureArrayType(pool.typeObject());
+//            }
+//
+//            boolean fFunction;
+//            if ((fFunction = typeOrig.isFunction()) || typeOrig.isMethod()) {
+//                // functions are special; we need to canonicalize the params and return types
+//
+//                TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
+//                TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
+//                boolean        fDiff        = false;
+//
+//                TypeConstant[] atypeCanon = toCallableTypes(ts, atypeParams);
+//                if (atypeCanon != null) {
+//                    atypeParams = atypeCanon;
+//                    fDiff       = true;
+//                }
+//                atypeCanon = toCallableTypes(ts, atypeReturns);
+//                if (atypeCanon != null) {
+//                    atypeReturns = atypeCanon;
+//                    fDiff        = true;
+//                }
+//
+//                return fDiff
+//                        ? fFunction
+//                        ? pool.buildFunctionType(atypeParams, atypeReturns)
+//                        : pool.buildMethodType(m_atypeParams[0], atypeParams, atypeReturns)
+//                        : this;
+//            }
+//
+//            TypeConstant typeResolved = typeOrig.getJitCCType(ts);
+//            boolean      fTrivial     = true;
+//
+//            // we need to normalize the parameters, since omitted defaults must produce the same JCC as
+//            // the normalized type; take for example MapCollector's declaration:
+//            //      MapCollector<Key, Value, Result extends Map<Key, Value>>
+//            // naturally JCC for MC<Int, Object> must be identical to MC<Int, Object, Map<Int, Object>>
+//            TypeConstant[] aconstOriginal  = normalizeParameters().getParamTypesArray();
+//            TypeConstant[] aconstCanonical = aconstOriginal;
+//            for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
+//                TypeConstant typeParamOriginal = aconstOriginal[i];
+//                if (typeParamOriginal.isJitPrimitive()) {
+//                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
+//                            aconstOriginal[i].getJitCCType(ts));
+//                    fTrivial = false;
+//                } else {
+//                    var            entryParam     = listTypeParams.get(i);
+//                    StringConstant constName      = entryParam.getKey();
+//                    TypeConstant   typeConstraint = entryParam.getValue().resolveGenerics(pool,
+//                            clz.new SimpleTypeResolver(pool, Arrays.asList(aconstCanonical)));
+//
+//                    // drop the actual type down to the constraint
+//                    if (typeConstraint.isFormalTypeSequence()) {
+//                        aconstCanonical = cow(aconstOriginal, aconstCanonical, i, pool.typeObject());
+//                    } else if (!typeConstraint.equals(typeParamOriginal)) {
+//                        aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeConstraint);
+//
+//                        if (!typeConstraint.equals(pool.typeObject())) {
+//                            fTrivial = false;
+//                        }
+//                    }
+//
+//                    if (listContribs == null) {
+//                        continue;
+//                    }
+//
+//                    // narrow the actual type up to the conditional contribution's constraint
+//                    for (Contribution contrib : listContribs) {
+//                        TypeConstant typeContrib = contrib.getTypeParams().get(constName);
+//                        if (typeContrib == null) {
+//                            // indicates a non-constrained formal type
+//                            typeContrib = pool.typeObject();
+//                        }
+//                        aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeContrib);
+//
+//                        if (!typeContrib.equals(pool.typeObject())) {
+//                            fTrivial = false;
+//                        }
+//                    }
+//                }
+//            }
+//
+//            return m_typeJitCallable = fTrivial
+//                    ? typeResolved // TerminalTypeConstant
+//                    : typeResolved == typeOrig && aconstCanonical == m_atypeParams
+//                    ? this
+//                    : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
+//        }
+        return null;
+    }
+
+    @Override
     protected String buildJitClassNameImpl(ModuleLoader loader, boolean jic) {
         TypeConstant   type   = getUnderlyingType();
         TypeConstant[] params = m_atypeParams;
@@ -848,117 +966,7 @@ public class ParameterizedTypeConstant
         return null;
     }
 
-    @Override
-    protected TypeConstant buildJitCCType(ModuleLoader loader) {
-        assert isSingleUnderlyingClass(true);
-
-        TypeConstant typeJit = m_typeJitCallable;
-        if (typeJit != null) {
-            return typeJit;
-        }
-
-        ConstantPool pool = getConstantPool();
-        if (isTuple()) {
-            // Tuple has a variable number of parameters; every specialization uses nTuple
-            return m_typeJitCallable = pool.typeTuple();
-        }
-
-        ClassStructure clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-        var            listTypeParams = clz.getTypeParamsAsList();
-        var            listContribs   = clz.collectConditionalIncorporates(this);
-
-        TypeConstant typeOrig = m_constType;
-        // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
-        if (typeOrig.isArray() && !getParamType(0).isJitPrimitive()) {
-            return pool.ensureArrayType(pool.typeObject());
-        }
-
-        boolean fFunction;
-        if ((fFunction = typeOrig.isFunction()) || typeOrig.isMethod()) {
-            // functions are special; we need to canonicalize the params and return types
-
-            TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
-            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
-            boolean        fDiff        = false;
-
-            TypeConstant[] atypeCanon = toCallableTypes(ts, atypeParams);
-            if (atypeCanon != null) {
-                atypeParams = atypeCanon;
-                fDiff       = true;
-            }
-            atypeCanon = toCallableTypes(ts, atypeReturns);
-            if (atypeCanon != null) {
-                atypeReturns = atypeCanon;
-                fDiff        = true;
-            }
-
-            return fDiff
-                    ? fFunction
-                        ? pool.buildFunctionType(atypeParams, atypeReturns)
-                        : pool.buildMethodType(m_atypeParams[0], atypeParams, atypeReturns)
-                    : this;
-        }
-
-        TypeConstant typeResolved = typeOrig.getJitCCType(ts);
-        boolean      fTrivial     = true;
-
-        // we need to normalize the parameters, since omitted defaults must produce the same JCC as
-        // the normalized type; take for example MapCollector's declaration:
-        //      MapCollector<Key, Value, Result extends Map<Key, Value>>
-        // naturally JCC for MC<Int, Object> must be identical to MC<Int, Object, Map<Int, Object>>
-        TypeConstant[] aconstOriginal  = normalizeParameters().getParamTypesArray();
-        TypeConstant[] aconstCanonical = aconstOriginal;
-        for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
-            TypeConstant typeParamOriginal = aconstOriginal[i];
-            if (typeParamOriginal.isJitPrimitive()) {
-                aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
-                        aconstOriginal[i].getJitCCType(ts));
-                fTrivial = false;
-            } else {
-                var            entryParam     = listTypeParams.get(i);
-                StringConstant constName      = entryParam.getKey();
-                TypeConstant   typeConstraint = entryParam.getValue().resolveGenerics(pool,
-                        clz.new SimpleTypeResolver(pool, Arrays.asList(aconstCanonical)));
-
-                // drop the actual type down to the constraint
-                if (typeConstraint.isFormalTypeSequence()) {
-                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i, pool.typeObject());
-                } else if (!typeConstraint.equals(typeParamOriginal)) {
-                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeConstraint);
-
-                    if (!typeConstraint.equals(pool.typeObject())) {
-                        fTrivial = false;
-                    }
-                }
-
-                if (listContribs == null) {
-                    continue;
-                }
-
-                // narrow the actual type up to the conditional contribution's constraint
-                for (Contribution contrib : listContribs) {
-                    TypeConstant typeContrib = contrib.getTypeParams().get(constName);
-                    if (typeContrib == null) {
-                        // indicates a non-constrained formal type
-                        typeContrib = pool.typeObject();
-                    }
-                    aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeContrib);
-
-                    if (!typeContrib.equals(pool.typeObject())) {
-                        fTrivial = false;
-                    }
-                }
-            }
-        }
-
-        return m_typeJitCallable = fTrivial
-                ? typeResolved // TerminalTypeConstant
-                : typeResolved == typeOrig && aconstCanonical == m_atypeParams
-                    ? this
-                    : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
-    }
-
-    /**
+     /**
      * @return an array of converted callable JIT types; null if no changes were made
      */
     private TypeConstant[] toCallableTypes(TypeSystem ts, TypeConstant[] atype) {

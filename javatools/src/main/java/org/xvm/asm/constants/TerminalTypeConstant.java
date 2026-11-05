@@ -628,6 +628,7 @@ public class TerminalTypeConstant
                 return constFormal.getConstraintType().resolveConstraints(fPendingOnly);
             }
         }
+
         return this;
     }
 
@@ -1937,50 +1938,42 @@ public class TerminalTypeConstant
             return constId.getReferredToType().ensureJitInfo(loader.typeSystem);
         }
 
-        TypeConstant jccType      = buildJitCCType(loader);
+        if (isFormalType()) {
+            JitInfo info = resolveConstraints().ensureJitInfo(loader.typeSystem);
+            return new JitInfo(
+                    this,
+                    null,
+                    JICForm.Abstract,
+                    null,
+                    info.jccType(),
+                    info.jccInterface(),
+                    info.jccName());
+        }
+
+        assert isSingleUnderlyingClass(true);
+
+        TypeConstant jccType      = removeAutoNarrowing();
         String       jccName      = jccType.buildJitClassName(loader, false);
-        boolean      jccInterface = false;
+        boolean      jccInterface = jccType.isVirtualChild(); // TODO derived virtual child class
         TypeConstant jicType      = jccType;
         String       jicName      = jccName;
         JICForm      jicForm      = JICForm.Simple;
         if (!isJitJicJcc(loader.typeSystem)) {
-            jicType = jccType;
-            jicType = buildJitCCType(loader);
+            if (isFormalType() || isInterfaceType() || isTuple() || isTypeOfType() ||
+                    !ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE)) {
+                jicType = null;
+                jicForm = JICForm.Abstract;
+                jicName = null;
+            } else {
+                jicType = removeAutoNarrowing();
+                jicName = jicType.buildJitClassName(loader, true);
+                if (isFormalType()) {
+                    jicForm = JICForm.Dynamic;
+                } else {
+                    jicForm = jicType.isVirtualChild() ? JICForm.Simple : JICForm.Child;
+                }
+            }
         }
-        JICForm      jicForm = JICForm.Abstract;
-        if (jicType == null)
-        assert jicType.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-//        return type;
-// JCC
-//        //TODO
-//        if (isModifyingType()) {
-//            return getUnderlyingType().getJitCCType();
-//        }
-//        // Terminal, Virtual or InnerChild
-//        assert isSingleUnderlyingClass(true);
-//        return removeAutoNarrowing();
-
-        TypeConstant jicType = null; // TODO
-        TypeConstant jccType;
-        if (isFormalType()) {
-            jicType = null;
-            jicForm = JICForm.Abstract; // TODO or Dynamic with funky constructors
-            jccType = resolveConstraints();
-        } else {
-            assert isSingleUnderlyingClass(true);
-            jccType = removeAutoNarrowing();
-        }
-
-// interface calc from TypeConstant
-//        // Tuple and Type are always represented by native classes
-//        TypeConstant typeJit = getJitCCType();
-//        return typeJit.isInterfaceType()
-//                && !typeJit.isTuple()
-//                && !typeJit.isTypeOfType();
-// interface calc from terminal
-//        return isFormalType()
-//                ? resolveConstraints().isJitInterface(bctx.typeSystem)
-//                : super.isJitInterface(ts);
 
         return new JitInfo(this, jicType, jicForm, jicName, jccType, jccInterface, jccName);
     }
@@ -2045,14 +2038,6 @@ public class TerminalTypeConstant
             throw new IllegalStateException("unexpected defining constant: " + constant);
         }
     }
-
-// TODO
-//    @Override
-//    public TypeConstant getJitCCType() {
-//        return isFormalType()
-//                ? resolveConstraints().getJitCCType()
-//                : super.getJitCCType();
-//    }
 
     @Override
     public boolean isJavaPrimitive() {
