@@ -94,6 +94,8 @@ class PluginManifestTest {
                 "defaultLiveTemplates", // /liveTemplates/Ecstasy.xml snippets
                 "liveTemplateContext", // the ECSTASY context those snippets apply in
                 "lang.commenter", // Ctrl+/ via XtcCommenter
+                "braceMatcher", // typed brackets stay unpaired, as in plain text, via XtcBraceMatcher
+                "codeInsight.wordCompletionFilter", // the file's words when the server completes nothing
                 "lang.importOptimizer", // Optimize Imports via XtcImportOptimizer
                 "renameHandler", // guarded compiler rename via XtcRenameHandler
                 "refactoring.moveHandler", // compiler preflight before native filesystem mutation
@@ -117,32 +119,58 @@ class PluginManifestTest {
     }
 
     @Test
-    @DisplayName("registers for Ecstasy what LSP4IJ registers for TEXT, which an Ecstasy file's PSI was")
+    @DisplayName("registers for Ecstasy what LSP4IJ registers for TEXT or TextMate only, or says why not")
     fun lsp4ijTextFeaturesApplyToEcstasy() {
         // LSP4IJ registers some features only for the TEXT and TextMate languages. An Ecstasy file's PSI is of the
-        // Ecstasy language since XtcParserDefinition, so each needs its own registration, with LSP4IJ's class.
-        // A file's view provider comes by its file type's language, Ecstasy, so LSP4IJ's TEXT one never applied;
-        // XtcParameterInfoHandler is the plugin's own signature help.
-        val lsp4ij =
-            javaClass.classLoader
-                .getResources("META-INF/plugin.xml")
-                .toList()
-                .map { url -> parse(url.openStream()) }
-                // the test classpath can hold LSP4IJ's jar more than once
-                .first {
-                    it
-                        .getElementsByTagName("id")
-                        .item(0)
-                        ?.textContent
-                        ?.trim() == "com.redhat.devtools.lsp4ij"
-                }
-        val text =
-            registrations(lsp4ij, "TEXT")
-                .filterNot { (tag, _) -> tag == "lang.fileViewProviderFactory" || tag == "codeInsight.parameterInfo" }
-        assertThat(text.map { it.first }).contains("lang.foldingBuilder", "lang.psiStructureViewFactory")
-        val missing = text - registrations(pluginXml, "Ecstasy")
+        // Ecstasy language since XtcParserDefinition, so each needs a registration for Ecstasy, with LSP4IJ's class
+        // or a class of the plugin's that extends it, unless NOT_FOR_ECSTASY says why not
+        val lsp4ij = lsp4ijPluginXml()
+        val textOnly = registrations(lsp4ij, "TEXT") + registrations(lsp4ij, "textmate")
+        assertThat(textOnly.map { it.first })
+            .contains("lang.foldingBuilder", "lang.psiStructureViewFactory", "codeInsight.parameterInfo")
+        val ecstasy = registrations(pluginXml, "Ecstasy")
+        val missing =
+            textOnly
+                .filterNot { (tag, theirs) ->
+                    tag in NOT_FOR_ECSTASY || ecstasy.any { (ours, by) -> ours == tag && extends(by, theirs) }
+                }.toSet()
         assertThat(missing).withFailMessage("plugin.xml registers none of these for Ecstasy: %s", missing).isEmpty()
+        assertThat(NOT_FOR_ECSTASY.keys - textOnly.map { it.first }.toSet())
+            .withFailMessage("LSP4IJ no longer registers these for TEXT or TextMate; drop their reasons")
+            .isEmpty()
     }
+
+    @Test
+    @DisplayName("accounts for each LSP4IJ extension whose code acts in TEXT or TextMate files only")
+    fun lsp4ijTextChecksAreAccountedFor() {
+        // these are registered for every language but act only where LSP4IJ's code finds a TEXT or TextMate file;
+        // TEXT_CHECKS says what an Ecstasy file has instead, so one that LSP4IJ renames or adds needs a look
+        val elements = lsp4ijPluginXml().getElementsByTagName("*")
+        val ids = (0 until elements.length).map { (elements.item(it) as Element).getAttribute("id") }.toSet()
+        assertThat(TEXT_CHECKS.keys - ids).withFailMessage("LSP4IJ has none of these extensions any more").isEmpty()
+    }
+
+    private fun lsp4ijPluginXml(): Element =
+        javaClass.classLoader
+            .getResources("META-INF/plugin.xml")
+            .toList()
+            .map { url -> parse(url.openStream()) }
+            // the test classpath can hold LSP4IJ's jar more than once
+            .first {
+                it
+                    .getElementsByTagName("id")
+                    .item(0)
+                    ?.textContent
+                    ?.trim() == "com.redhat.devtools.lsp4ij"
+            }
+
+    /** Whether the class [ours] is the class [theirs] or extends it. */
+    private fun extends(
+        ours: String,
+        theirs: String,
+    ): Boolean = ours == theirs || load(theirs).isAssignableFrom(load(ours))
+
+    private fun load(name: String): Class<*> = Class.forName(name, false, javaClass.classLoader)
 
     /** The extensions of com.intellij that [root] registers for [language], as their tag and class. */
     private fun registrations(
@@ -280,5 +308,29 @@ class PluginManifestTest {
         assertThat(fileType.getAttribute("extensions").split(';'))
             .withFailMessage("Ecstasy file type must claim the x extension.")
             .contains("x")
+    }
+
+    private companion object {
+        /** LSP4IJ's registrations for TEXT or TextMate, by tag, that an Ecstasy file needs none of, and why. */
+        val NOT_FOR_ECSTASY =
+            mapOf(
+                "lang.fileViewProviderFactory" to
+                    "a file's view provider comes by its file type's language, Ecstasy before and after the PSI, so " +
+                    "LSP4IJ's, which splits a file without structure by its semantic tokens, never applied",
+            )
+
+        /** LSP4IJ's extensions, by id, that act in TEXT or TextMate files only, and what an Ecstasy file has instead. */
+        val TEXT_CHECKS =
+            mapOf(
+                "LSPEditorImprovementsTypedHandler" to "abstract and TextMate file types only; XtcBraceMatcher",
+                "LSPImprovedTextMateNestedBracesTypedHandler" to "TextMate's file type only; XtcEnterAfterUnmatchedBraceHandler",
+                "LSPClientSideOnTypeFormattingTypedHandler" to "TextMate's brace pairs only; the server's on-type formatting",
+                "LSPEditorImprovementsBackspaceHandler" to "abstract and TextMate file types only; nothing is paired to delete",
+                "LSPEditorImprovementsEnterBetweenBracesHandler" to "abstract and TextMate file types only; XtcEnterHandlerDelegate",
+                "LSPCompletionContributor" to
+                    "outside TEXT and TextMate, a typed prefix is the PSI leaf at the caret, a word by XtcLexer, and " +
+                    "the file's words when the server has nothing come by XtcWordCompletionFilter",
+                "LSPSemanticTokensHighlightVisitor" to "outside TEXT and TextMate, highlights the file's tokens at once, not by element",
+            )
     }
 }
