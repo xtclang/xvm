@@ -55,6 +55,9 @@ object RunWorker {
     /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
     private val STOP_LIMIT = 5.seconds
 
+    /** The exit code of a run that was stopped, as a process that a stop terminates reports it: 128 and SIGTERM's 15. */
+    const val STOPPED = 143L
+
     @JvmStatic
     fun main(args: Array<String>) {
         val channel = RunWorkerChannel(PrintStream(FileOutputStream(FileDescriptor.out), false, Charsets.UTF_8))
@@ -96,7 +99,9 @@ object RunWorker {
 
         /**
          * The runs asked to stop. A stop terminates the program's container, which makes whatever the program does next
-         * fail, as making or calling a service does: that failure is the stop's, not the program's, and is no error.
+         * fail, as making or calling a service does: that failure is the stop's, not the program's, so it is no error,
+         * the program's output after the stop, such as the runtime's report of its unhandled exception, is not shown,
+         * and the run exits with [STOPPED].
          */
         private val stopped = ConcurrentHashMap.newKeySet<Long>()
 
@@ -180,7 +185,8 @@ object RunWorker {
                                 EmbeddingSupport.instance().registeredConsoles(),
                                 active.size + inputs.size + debuggers.held(),
                             )
-                        channel.exit(id, control.result(), if (stopped.remove(id)) null else errors.failure())
+                        val stop = stopped.remove(id)
+                        channel.exit(id, if (stop) STOPPED else control.result(), if (stop) null else errors.failure())
                         channel.usage(id, kept)
                     }
                 }
@@ -198,7 +204,10 @@ object RunWorker {
         }
 
         fun stop(id: Long) {
-            if (active.containsKey(id)) stopped += id
+            if (active.containsKey(id)) {
+                stopped += id
+                output?.mute()
+            }
             // a program waiting for a line gets the end of input, so nothing stays blocked on it
             inputs[id]?.end()
             // closing kills the task and waits for it, so keep the command reader responsive; it also
@@ -342,12 +351,16 @@ internal class OutputBatches(
     private val pending = StringBuilder()
     private var scheduled = false
 
+    /** Whether what is written from now on is dropped, as a stopped run's is. */
+    private var muted = false
+
     @Synchronized
     override fun write(
         buffer: CharArray,
         offset: Int,
         length: Int,
     ) {
+        if (muted) return
         var from = offset
         val end = offset + length
         while (from < end) {
@@ -380,6 +393,13 @@ internal class OutputBatches(
     /** Sends everything still waiting; the run's exit follows its output. */
     @Synchronized
     override fun close() = sendPending(all = true)
+
+    /** Sends what was written so far, and drops whatever is written after it. */
+    @Synchronized
+    fun mute() {
+        sendPending(all = true)
+        muted = true
+    }
 
     /** Sends what waits, keeping a trailing high surrogate for the next batch unless [all]. */
     private fun sendPending(all: Boolean) {
