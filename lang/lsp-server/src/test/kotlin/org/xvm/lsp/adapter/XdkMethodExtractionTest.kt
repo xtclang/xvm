@@ -6,14 +6,23 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.debug.ProgramEvents
+import org.xvm.lsp.HANG_SECONDS
+import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.run.HANG_LIMITS
+import org.xvm.lsp.run.RunWorkerProcess
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Checks generated helper methods, signatures and captured inputs through trial compilation. Preserves
@@ -137,6 +146,7 @@ class XdkMethodExtractionTest {
     @ValueSource(
         strings = [
             "@Volatile Int stored = input;\nreturn §stored + 1§;",
+            "@Future Int later = input;\nreturn §later + 1§;",
             "Var<Int> ref = &input;\nref.set(2);\nreturn §input + 1§;",
             "Int fixed = input;\nVar<Int> ref = &fixed;\nreturn §fixed + 1§;",
         ],
@@ -339,6 +349,44 @@ class XdkMethodExtractionTest {
                 "total = local;",
             )
         }
+    }
+
+    @Test
+    fun `statements using an injected local take it as a plain parameter`() {
+        query(INJECTED, title = "Extract statements to private method") { _, changed ->
+            assertThat(changed).contains(
+                "@Inject Console console;",
+                "extractedMethod(console, count);",
+                "private void extractedMethod(Console console, Int count)",
+                "console.print(\"done\");",
+            )
+        }
+    }
+
+    @Slow
+    @Test
+    fun `statements using an injected local print the same once extracted`() {
+        query(INJECTED, title = "Extract statements to private method") { text, changed ->
+            assertThat(output(changed)).isEqualTo(output(text)).contains("count=3", "done")
+        }
+    }
+
+    @Test
+    fun `statements using a future local are refused`() {
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    @Future Int later = input;
+                    §emit(later);
+                    emit(later + 1);§
+                }
+            }
+            """.trimIndent(),
+            expected = false,
+            title = "Extract statements to private method",
+        ) { _, _ -> error("Unexpected extraction") }
     }
 
     @Test
@@ -554,5 +602,50 @@ class XdkMethodExtractionTest {
             assertThat(file.readText()).isEqualTo(text)
             check(text, changed)
         }
+    }
+
+    /** What the module Extract in [source] prints when it runs, in an execution worker of its own. */
+    private fun output(source: String): String {
+        val errors = ErrorList()
+        val module = EmbeddingSupport.instance().compile(source, null, errors)
+        assertThat(module).describedAs(errors.errors.toString()).isNotNull()
+        val lib = Files.createTempDirectory(directory, "lib").toFile()
+        DirRepository(lib, false).storeModule(module)
+        val printed = StringBuffer()
+        val exited = CompletableFuture<String?>()
+        RunWorkerProcess(limits = HANG_LIMITS).use { workers ->
+            workers.start(
+                RunWorkerProcess.Request(listOf(lib.path), "Extract", "run", emptyList(), directory.toString()),
+                object : ProgramEvents {
+                    override fun output(text: String) {
+                        printed.append(text)
+                    }
+
+                    override fun exited(
+                        code: Long?,
+                        error: String?,
+                    ) {
+                        exited.complete(error)
+                    }
+                },
+            )
+            assertThat(exited.get(HANG_SECONDS, SECONDS)).isNull()
+        }
+        return printed.toString()
+    }
+
+    private companion object {
+        /** Statements that print through an injected Console and a plain local, selected between the § marks. */
+        val INJECTED =
+            """
+            module Extract {
+                void run() {
+                    @Inject Console console;
+                    Int count = 3;
+                    §console.print($"count={count}");
+                    console.print("done");§
+                }
+            }
+            """.trimIndent()
     }
 }
