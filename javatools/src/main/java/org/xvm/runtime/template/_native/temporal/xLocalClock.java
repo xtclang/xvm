@@ -87,27 +87,26 @@ public class xLocalClock
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {
         case "schedule": {
-            GenericHandle  hWakeup = (GenericHandle)  ahArg[0];
-            FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
-            BooleanHandle  hKeep   = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.FALSE;
-            long           ldtNow  = frame.f_context.f_container.currentTimeMillis();
-            long           ldtWakeup;
-            long           cDelay;
+            GenericHandle  hWakeup   = (GenericHandle)  ahArg[0];
+            FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
+            BooleanHandle  hKeep     = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.FALSE;
+            Container      container = frame.f_context.f_container;
+            long           ldtNow    = container.currentTimeMillis();
+            Wakeup         wakeup;
             if (hWakeup.getType().equals(frame.poolContext().typeDuration())) {
                 // hWakeUp is "Duration"
                 LongLong llPicos = ((LongLongHandle) hWakeup.getField(null, "picoseconds")).getValue();
 
-                cDelay    = llPicos.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
-                ldtWakeup = ldtNow + cDelay;
+                wakeup = Wakeup.after(llPicos.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue(), ldtNow);
             } else {
-                // hWakeUp is "Time"
+                // hWakeUp is "Time", a wall-clock time
                 LongLong llEpoch = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
 
-                ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
-                cDelay    = Math.max(0, ldtWakeup - ldtNow);
+                wakeup = Wakeup.at(llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue(), ldtNow,
+                        container.getTimeFrozen());
             }
 
-            return invokeSchedule(frame, ldtWakeup, cDelay, hAlarm, hKeep, iReturn);
+            return invokeSchedule(frame, wakeup.ldtDue(), wakeup.cDelay(), hAlarm, hKeep, iReturn);
         }
         }
 
@@ -182,6 +181,43 @@ public class xLocalClock
 
     protected JavaLong timezoneMillis(Frame frame) {
         return xInt64.makeHandle(TimeZone.getDefault().getOffset(System.currentTimeMillis()));
+    }
+
+    /**
+     * When an alarm is due, as the time of the container that sets it, and how long the Java timer
+     * waits before it first checks. The container's time stands still while it is frozen, as while
+     * the debugger holds the program stopped: {@link Container#currentTimeMillis} leaves out the
+     * time it has been frozen for, so an alarm is due once the program has run for as long as it
+     * waits. Time frozen while the alarm is pending delays it ({@link Alarm#run}), and time frozen
+     * before it was set does not.
+     *
+     * @param ldtDue  when the alarm is due, as the container's time, in milliseconds
+     * @param cDelay  how long the timer waits before it first checks, in milliseconds
+     */
+    record Wakeup(long ldtDue, long cDelay) {
+        /**
+         * @param cDelay  how long the alarm waits, in milliseconds
+         * @param ldtNow  the container's time now
+         *
+         * @return the wakeup of an alarm that is due once the specified time has passed
+         */
+        static Wakeup after(long cDelay, long ldtNow) {
+            return new Wakeup(ldtNow + cDelay, cDelay);
+        }
+
+        /**
+         * @param ldtWall  the wall-clock time the alarm is set for, as {@code Clock.now} tells it,
+         *                 in milliseconds
+         * @param ldtNow   the container's time now
+         * @param cFrozen  how long the container's time has been frozen for so far, in milliseconds
+         *
+         * @return the wakeup of an alarm set for the wall-clock time, which is that time as the
+         *         container's time: without the time frozen so far, as the container's now is
+         */
+        static Wakeup at(long ldtWall, long ldtNow, long cFrozen) {
+            long ldtDue = ldtWall - cFrozen;
+            return new Wakeup(ldtDue, Math.max(0, ldtDue - ldtNow));
+        }
     }
 
     /**
