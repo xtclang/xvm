@@ -19,6 +19,7 @@ import org.xvm.lsp.adapter.CallHierarchyIncomingCall
 import org.xvm.lsp.adapter.CallHierarchyItem
 import org.xvm.lsp.adapter.CallHierarchyOutgoingCall
 import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CodeLens
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.CompletionItem
@@ -983,6 +984,7 @@ class XdkAdapter
                     val request =
                         ProjectRequest(key, project, dependencies, overlays.toMap(), queueTrace) { work: ProjectRequest<T> ->
                             fun stale(): Boolean = projectQueries[key] !== work || work.result.isCancelled
+                            var queries: XdkProjectQueries? = null
                             try {
                                 if (stale()) throw CancellationException()
                                 val result =
@@ -999,7 +1001,7 @@ class XdkAdapter
                                                 navigationIndex = navigationIndex,
                                                 actionCache = actionCache,
                                                 discoveryFolders = discovery.get().folders,
-                                            ),
+                                            ).also { queries = it },
                                         )
                                     } catch (_: IOException) {
                                         unavailable
@@ -1015,6 +1017,21 @@ class XdkAdapter
                                 throw failure
                             } finally {
                                 projectQueries.remove(key, work)
+                                // a code action request's line is the server's, which knows how the request ended
+                                val compiles = queries?.compiles ?: 0
+                                if (compiles > 0 && key.kind != ProjectQueryKind.CODE_ACTIONS) {
+                                    logger.info(
+                                        "project query: kind={} uri={} outcome={} compiles={}",
+                                        key.kind.name.lowercase(),
+                                        key.uri.substringAfterLast('/'),
+                                        when {
+                                            work.result.isCancelled -> "cancelled"
+                                            work.result.isCompletedExceptionally -> "failed"
+                                            else -> "completed"
+                                        },
+                                        compiles,
+                                    )
+                                }
                             }
                         }
                     request to replacePending(projectQueries, key, request)
@@ -2457,12 +2474,21 @@ class XdkAdapter
             range: Range,
             diagnostics: List<Diagnostic>,
             kinds: Set<CodeAction.CodeActionKind>,
+        ): CompletableFuture<List<CodeAction>> = getCodeActionsAsync(uri, range, diagnostics, kinds) {}
+
+        /** As [getCodeActionsAsync]; [compiled] gets the module compiles that the request ran, which the server logs. */
+        fun getCodeActionsAsync(
+            uri: String,
+            range: Range,
+            diagnostics: List<Diagnostic>,
+            kinds: Set<CodeAction.CodeActionKind>,
+            compiled: (CodeActionCompiles) -> Unit,
         ): CompletableFuture<List<CodeAction>> =
             if (kinds.isEmpty()) {
                 CompletableFuture.completedFuture(emptyList())
             } else if (hasProject(uri)) {
                 projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range, kinds = kinds), emptyList()) {
-                    it.codeActions(uri, range, diagnostics, kinds)
+                    it.codeActions(uri, range, diagnostics, kinds, compiled)
                 }
             } else {
                 CompletableFuture.completedFuture(
@@ -2855,6 +2881,9 @@ class XdkAdapter
         private val diagnosticCache = XdkDiagnosticIndex()
         private val navigationIndex = XdkNavigationIndex()
         private val actionCache = XdkCodeActionCache()
+
+        /** The latest revision's compile for code actions, if one was compiled; tests compare its modules' outcomes. */
+        internal fun codeActionBase(): XdkCodeActionCache.Base? = actionCache.base()
 
         /**
          * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
