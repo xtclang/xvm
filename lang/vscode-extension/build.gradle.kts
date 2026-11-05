@@ -312,6 +312,10 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
     description = "Run XdkAdapter playbook in VS Code"
     finalizedBy(pruneTestReports)
+    // the extension suite drives a VS Code window of its own on the same display, so the two must not overlap, as
+    // tasks of one project can with the configuration cache, even under --no-parallel: each would take the other's
+    // focus, and the tour's frames would show both
+    mustRunAfter(testVscodeExtension)
     dependsOn(":lsp-server:prepareLibraryPlaybook")
     val selectedCases = providers.gradleProperty("compilerPlaybookCases")
     val multiRoot =
