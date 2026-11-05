@@ -898,7 +898,7 @@ public class EmbeddingSupport {
         }
 
         var cursors = new CursorBinding.Collector();
-        var attempt = compileModule(listener -> parsed, input, host, cursors);
+        var attempt = runCompiler(listener -> parsed, input, host, cursors, CompilationGoal.PARTIAL).compiler().result();
         // Anonymous construction can replace its deferred body with an owned class/validation
         // clone. Publish only surviving syntax, never the pre-validation cursor identity.
         // Primary-constructor defaults can expose the same surviving node through both the
@@ -941,16 +941,15 @@ public class EmbeddingSupport {
     }
 
     private Compilation compileModule(Function<ErrorListener, ParsedSources> parse, ModuleRepository input, ErrorListener errs) {
-        return compileModule(parse, input, errs, CursorBinding.Collector.NONE);
+        return runCompiler(parse, input, errs, CursorBinding.Collector.NONE, CompilationGoal.MODULE).compiler().result();
     }
 
-    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
-                                     ModuleRepository input, ErrorListener errs, CursorBinding.Collector cursors) {
-        return runCompiler(parse, input, errs, cursors, CompilationGoal.MODULE).compiler().result();
-    }
-
-    /** Selects declaration resolution alone or the full validation and emission pipeline. */
-    private enum CompilationGoal { DECLARATIONS, MODULE }
+    /**
+     * Selects declaration resolution alone, the full validation and emission pipeline, or that
+     * pipeline up to its first error, as a partial analysis needs: the diagnostic of its incomplete
+     * site is what stops the method that holds it from emitting.
+     */
+    private enum CompilationGoal { DECLARATIONS, MODULE, PARTIAL }
 
     /** Keeps partial compiler state alongside whether the requested goal completed successfully. */
     private record CompilerAttempt(EmbeddingCompiler compiler, boolean succeeded) {}
@@ -1071,11 +1070,14 @@ public class EmbeddingSupport {
             prelinkSystemLibraries(repoLib);
             checkErrors("system library linking");
 
+            // The launcher stops the next compilation stage on any error. Each stage still goes on
+            // past its own errors, subject to the host's budget and cancellation, and so reports
+            // all of them: a stage logging to the launcher directly would stop at its first error,
+            // and a changed method would be an error in one of its callers instead of in each. A
+            // partial analysis is the exception, which stops at its incomplete site's error.
+            var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), m_errors::isAbortDesired);
             StatementBlock block;
             try {
-                // The launcher stops the next compilation stage on any error. Parsing can still
-                // recover within its own stage, subject to the host's budget and cancellation.
-                var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), m_errors::isAbortDesired);
                 var parsed = parse.apply(errs);
                 block = this.ast = parsed.root();
                 this.sourceTrees = parsed.sources();
@@ -1101,7 +1103,7 @@ public class EmbeddingSupport {
                 return checkErrors("source parsing");
             }
 
-            var compiler = new Compiler(stmtModule, this, bindings, cursors);
+            var compiler = new Compiler(stmtModule, goal == CompilationGoal.PARTIAL ? this : errs, bindings, cursors);
             var struct = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {

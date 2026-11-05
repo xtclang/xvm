@@ -103,6 +103,55 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `callers in a module's other files, opened one after another, pull the error that their callee's edit made`() {
+        CompilerTestSupport.configure()
+        Path
+            .of(System.getProperty("xtc.composite.root"), "lang/test-fixtures/tour/cardGame/src/main/x")
+            .toFile()
+            .copyRecursively(directory.toFile())
+
+        // the files' real paths, as an editor has them: the temporary directory can be a link
+        fun uri(name: String) =
+            directory
+                .resolve(name)
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+
+        fun text(name: String) = directory.resolve(name).toFile().readText()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("cardGame", uri("cardGame.x"))))
+            val player = "cardGame/Player.x"
+            session.open(uri(player), text(player), 1)
+            assertThat(session.pull(uri(player)).left.items).isEmpty()
+            val changed =
+                text(player).replace(
+                    "static Boolean cardMatches(Card card1, Card card2)",
+                    "static Boolean cardMatches(Card card1, Card card2, Boolean strict)",
+                )
+            session.change(uri(player), changed, 2)
+            assertThat(
+                session
+                    .pull(uri(player))
+                    .left.items
+                    .map { it.message.left },
+            ).anyMatch { "cardMatches" in it }
+            // as the IntelliJ tour opens them: one, its pull, then the next
+            listOf("cardGame/FirstMatch.x", "cardGame/SaveEights.x").forEach { caller ->
+                session.open(uri(caller), text(caller), 1)
+                assertThat(
+                    session
+                        .pull(uri(caller))
+                        .left.items
+                        .map { it.message.left },
+                ).`as`(caller)
+                    .anyMatch { "cardMatches" in it }
+            }
+        }
+    }
+
+    @Test
     fun `pull negotiates one channel and unchanged reports become full after repair`() {
         Session().use { session ->
             assertThat(session.capabilities.diagnosticProvider.identifier).isEqualTo("xtc")

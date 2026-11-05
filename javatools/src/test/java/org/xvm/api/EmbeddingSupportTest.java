@@ -65,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.WARNING;
 
 /**
@@ -115,6 +116,36 @@ public class EmbeddingSupportTest {
         ErrorList errs = new ErrorList(25);
         assertNull(support.compile("module Broken { void run( }", repo(), errs));
         assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
+    }
+
+    /**
+     * A stage reports every error it finds before the compilation stops, as the command-line
+     * compiler does: an editor shows a changed method as an error in each of its callers, not only
+     * in the first one compiled.
+     */
+    @Test
+    public void aCompilationReportsTheErrorsOfEveryClass() {
+        ErrorList errs = new ErrorList(25);
+        assertNull(support.compile("""
+                module Callers {
+                    class First {
+                        void call() {
+                            missing();
+                        }
+                    }
+                    class Second {
+                        void call() {
+                            missing();
+                        }
+                    }
+                }
+                """, repo(), errs));
+        assertEquals(List.of(3, 8), errs.getErrors().stream()
+                .filter(err -> err.getSeverity() == ERROR)
+                .map(ErrorInfo::getLine)
+                .distinct()
+                .sorted()
+                .toList(), errs.getErrors().toString());
     }
 
     @Test
