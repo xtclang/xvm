@@ -7,6 +7,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.HANG_SECONDS
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
@@ -77,6 +78,51 @@ class XdkCodeActionCostTest {
         }
     }
 
+    @Test
+    fun `a proof of an edit in one module compiles the modules that depend on it, whose facts decide it`() {
+        CompilerTestSupport.configure()
+        val support = EmbeddingSupport.instance()
+        val lib =
+            directory
+                .resolve("Lib.x")
+                .toFile()
+                .canonicalFile
+                .apply { writeText(LIB) }
+        val app =
+            directory
+                .resolve("App.x")
+                .toFile()
+                .canonicalFile
+                .apply { writeText(APP) }
+        XdkAdapter(
+            { source, repository, errors -> support.compileModule(source, repository, errors) },
+            { sources, repository, errors ->
+                compiles.incrementAndGet()
+                support.compileModule(sources, repository, errors)
+            },
+            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+        ).use { adapter ->
+            val uri = app.toURI().toString()
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Lib", lib.toURI().toString()), XdkSourceModule("App", uri, setOf("Lib"))))
+            val diagnostic = adapter.compile(uri, APP).diagnostics.single()
+            val at = diagnostic.location
+            val span = Range(Position(at.startLine, at.startColumn), Position(at.endLine, at.endColumn))
+            val (actions, proving) = counted { adapter.getCodeActionsAsync(uri, span, listOf(diagnostic), setOf(CodeActionKind.QUICKFIX)) }
+            println("module compiles: creating Lib's method that App calls $proving")
+            // the fix edits Lib, and it proves only as App's call binds to the method it adds: App is compiled again
+            assertThat(actions.map { it.title }).containsExactly("Create public method 'missing' in 'Other'")
+            assertThat(
+                actions
+                    .single()
+                    .edit
+                    ?.changes
+                    ?.keys,
+            ).containsExactly(lib.toURI().toString())
+            // the revision's compile, Lib and App, then the fix's proof, Lib, which it edits, and App, which depends on it
+            assertThat(proving).isEqualTo(2 + 2)
+        }
+    }
+
     /** The actions a request answers with, and the module compiles it ran. */
     private fun counted(request: () -> CompletableFuture<List<CodeAction>>): Pair<List<CodeAction>, Int> {
         val start = compiles.get()
@@ -110,6 +156,10 @@ class XdkCodeActionCostTest {
     }
 
     private companion object {
+        /** A library, and a module that depends on it and calls a method that the library's class does not have. */
+        const val LIB = "module Lib { class Other {} }"
+        const val APP = "module App { package lib import Lib; Object read(lib.Other peer, String value) { return peer.missing(value); } }"
+
         /** Three imports that every module has implicitly, so each is unused, and a selection, `input + 2`, to extract. */
         val SOURCE =
             """

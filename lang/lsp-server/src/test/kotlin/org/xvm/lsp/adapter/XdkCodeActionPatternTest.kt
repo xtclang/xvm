@@ -71,7 +71,7 @@ class XdkCodeActionPatternTest {
             val next = caret(lines, "Player player", 2)
             val clean = counted { adapter.getCodeActionsAsync(uri, next, emptyList(), intentions) }
             // the quick fixes the list hides would prove there an import of the Player that the broken method leaves
-            // unresolved: a compile of every module up to PlayerTest, which it leaves broken, and which comes last
+            // unresolved: a compile of PlayerTest, which it leaves broken, and on which no module depends
             val hidden = counted { adapter.getCodeActionsAsync(uri, next, emptyList(), setOf(CodeActionKind.QUICKFIX)) }
             // a client that lists quick fixes with the rest, as VS Code's lightbulb does, gets the one already proved
             val everyKind = counted { adapter.getCodeActionsAsync(uri, caret(lines, "new Joker", 6), emptyList()) }
@@ -79,14 +79,49 @@ class XdkCodeActionPatternTest {
                 "module compiles: quick fixes for the error $fix, intention list on it $onError, at new Jo|ker $atNew, " +
                     "on the next statement $clean, quick fixes there $hidden, every kind at new Jo|ker $everyKind",
             )
-            // the compile of the edited project, then the proof of Create class 'Joker', each over every module
-            assertThat(fix).isEqualTo(MODULES + MODULES)
+            // the compile of the edited project, every module, then the proof of Create class 'Joker', PlayerTest alone
+            assertThat(fix).isEqualTo(MODULES + 1)
             assertThat(onError).isZero()
             assertThat(atNew).isZero()
             assertThat(clean).isZero()
-            assertThat(hidden).isEqualTo(MODULES)
+            assertThat(hidden).isEqualTo(1)
             assertThat(everyKind).isZero()
         }
+    }
+
+    @Test
+    fun `after Optimize Imports, the intention list's request compiles the project and proves each import`() {
+        session { adapter, root ->
+            val (uri, lines) = organized(adapter, root)
+            val full = counted { adapter.getCodeActionsAsync(uri, caret(lines, "GameConstants", 4), emptyList(), intentions) }
+            println("module compiles: the intention list after Optimize Imports $full")
+            // the edited revision's compile, every module, then the proof that each of the five imports is used, PlayerTest
+            // alone, on which no module depends: tour run 7 waited 13.9 s on the EDT for 43, each proof compiling 7 modules
+            assertThat(full).isEqualTo(MODULES + IMPORTS)
+        }
+    }
+
+    /** PlayerTest.x of [root] after Optimize Imports, as tour run 7 left it, analyzed as its didChange has it. */
+    private fun organized(
+        adapter: XdkAdapter,
+        root: File,
+    ) = edited(adapter, root, listOf("Card", "GameConstants", "Player", "Rank", "Suit"))
+
+    /** PlayerTest.x of [root] with [imports] in place of its own, analyzed as a didChange has it: its URI and lines. */
+    private fun edited(
+        adapter: XdkAdapter,
+        root: File,
+        imports: List<String>,
+    ): Pair<String, List<String>> {
+        val file = root.resolve("src/test/x/PlayerTest.x")
+        val uri = file.toURI().toString()
+        val text =
+            file.readText().replace(
+                listOf("Card", "Player", "Hand", "Suit", "Rank", "GameConstants").joinToString("") { "    import cardGame.$it;\n" },
+                imports.joinToString("") { "    import cardGame.$it;\n" },
+            )
+        assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+        return uri to text.lines()
     }
 
     /** An empty selection [offset] characters into the first [word] of [lines]. */
@@ -128,5 +163,8 @@ class XdkCodeActionPatternTest {
     private companion object {
         /** The card game's modules: the game and its seven test modules. */
         const val MODULES = 8
+
+        /** PlayerTest's imports after Optimize Imports. */
+        const val IMPORTS = 5
     }
 }
