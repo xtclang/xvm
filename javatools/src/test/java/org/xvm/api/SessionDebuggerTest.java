@@ -47,6 +47,10 @@ import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ModuleRepository;
 
+import org.xvm.runtime.Container;
+import org.xvm.runtime.Fiber;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.SessionDebugger;
 import org.xvm.runtime.SessionDebugger.Breakpoint;
 import org.xvm.runtime.SessionDebugger.Completion;
@@ -65,6 +69,8 @@ import org.xvm.runtime.SessionDebugger.Stop;
 import org.xvm.runtime.SessionDebugger.ThreadInfo;
 import org.xvm.runtime.SessionDebugger.Variable;
 import org.xvm.runtime.SessionDebugger.Watchable;
+
+import org.xvm.runtime.template._native.temporal.xLocalClock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -109,6 +115,12 @@ public class SessionDebuggerTest {
     Path sourceDir;
 
     private static EmbeddingSupport support;
+
+    /**
+     * Prints where the runtime's fibers are once a run's close has not returned for a minute
+     * ({@link #watchCloses}).
+     */
+    private static Thread closeWatchdog;
 
     /**
      * A module whose run() passes an object, an array and a string to a method, which stops on line
@@ -826,7 +838,8 @@ public class SessionDebuggerTest {
 
     @BeforeAll
     static void configure() throws URISyntaxException {
-        support = new EmbeddingSupport().configure(xdk(), null);
+        support       = new EmbeddingSupport().configure(xdk(), null);
+        closeWatchdog = Thread.ofPlatform().daemon().name("close watchdog").start(SessionDebuggerTest::watchCloses);
     }
 
     /**
@@ -835,7 +848,63 @@ public class SessionDebuggerTest {
      */
     @AfterAll
     static void shutdown() {
+        closeWatchdog.interrupt();
         support.shutdownInterpreter();
+    }
+
+    /**
+     * Print the runtime's containers, their services and the fibers of those with their frames,
+     * once a thread has been in a run's close for a minute, so that a run that does not end shows
+     * where it is stuck. It only prints, once for each stalled close: RUN_LIMIT still bounds the
+     * close, and decides the test's result.
+     */
+    private static void watchCloses() {
+        Map<Thread, Long> closingSince = new HashMap<>();
+        try {
+            while (true) {
+                Thread.sleep(5_000);
+                long now = System.nanoTime();
+                Map<Thread, StackTraceElement[]> stacks = Thread.getAllStackTraces();
+                closingSince.keySet().retainAll(stacks.keySet());
+                stacks.forEach((thread, stack) -> {
+                    boolean closing = Stream.of(stack).anyMatch(element -> element.getMethodName().equals("close")
+                            && element.getClassName().equals(InterpreterControl.class.getName()));
+                    if (!closing) {
+                        closingSince.remove(thread);
+                    } else if (now - closingSince.computeIfAbsent(thread, _ -> now) > TimeUnit.MINUTES.toNanos(1)) {
+                        System.err.println("A close has not returned for a minute on " + thread.getName() + ":\n" + fibers());
+                        closingSince.put(thread, Long.MAX_VALUE);
+                    }
+                });
+            }
+        } catch (InterruptedException e) {
+            // the tests have ended
+        }
+    }
+
+    /**
+     * @return the runtime's containers, their services and the fibers of those with their frames
+     */
+    private static String fibers() {
+        StringBuilder text = new StringBuilder();
+        try {
+            for (Container container : xLocalClock.INSTANCE.f_container.f_runtime.containers()) {
+                text.append(container.getModule()).append(": ").append(container.getStatus()).append('\n');
+                for (ServiceContext service : container.getServices()) {
+                    text.append("  ").append(service).append(": ").append(service.getStatus()).append('\n');
+                    for (Fiber fiber : service.getFibers()) {
+                        text.append("    fiber ").append(fiber.getId()).append(": ").append(fiber.getStatus()).append('\n');
+                        for (Frame frame = fiber.getFrame(); frame != null; frame = frame.f_framePrev) {
+                            text.append("      ").append(frame).append('\n');
+                        }
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            // the runtime changes while it is read; what was read so far still shows where it is
+            text.append(e).append('\n');
+        }
+        return text.toString();
     }
 
     @Test
