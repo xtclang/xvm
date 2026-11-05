@@ -26,7 +26,13 @@ class XdkCompletionSignatureTest {
             assertThat(items.filter { it.label == "choose" }).hasSize(2)
             assertThat(items.single { it.label == "label" }.kind)
                 .isEqualTo(CompletionItem.CompletionKind.PROPERTY)
-            assertThat(items).allSatisfy { assertThat(it.insertText).isEqualTo(it.label) }
+            // a method's item inserts its call: whole with no argument to give, as a snippet with arguments
+            assertThat(items).allSatisfy {
+                val call = it.kind == CompletionItem.CompletionKind.METHOD && it.snippet == null
+                assertThat(it.insertText).isEqualTo(if (call) "${it.label}()" else it.label)
+            }
+            assertThat(items.single { it.label == "echo" }.snippet).isEqualTo("echo(\$0)")
+            assertThat(items.single { it.label == "label" }.snippet).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(diagnostics)
         }
     }
