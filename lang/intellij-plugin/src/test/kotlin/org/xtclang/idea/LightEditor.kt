@@ -2,7 +2,10 @@ package org.xtclang.idea
 
 import com.intellij.diagnostic.PluginException
 import com.intellij.openapi.application.AccessToken
+import com.intellij.openapi.extensions.DefaultPluginDescriptor
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.psi.PsiFile
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.LoggedErrorProcessor
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
@@ -10,22 +13,28 @@ import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.fixtures.impl.LightTempDirTestFixtureImpl
 import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
+import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
 import org.jetbrains.plugins.textmate.TextMateService
 import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.xtclang.idea.lsp.CompilerSettings
 import java.nio.file.Path
 
 /**
  * A light platform test's in-memory project, with the plugin and its dependencies loaded, for what IntelliJ does
  * in an Ecstasy file. A test registers it with `@RegisterExtension`; each test opens its own file, highlighted by
- * TextMate's Ecstasy grammar as in the IDE. No language server runs: these tests check the IDE's side.
+ * TextMate's Ecstasy grammar as in the IDE. The language server is [server], a stub in the test's JVM, so that
+ * LSP4IJ's side runs as it does against the real one.
  */
-class LightEditor :
-    BeforeEachCallback,
+class LightEditor(
+    val server: StubLanguageServer = StubLanguageServer(),
+) : BeforeEachCallback,
     AfterEachCallback {
-    private lateinit var fixture: CodeInsightTestFixture
+    /** The test's fixture; [open] gives it a file and runs on the EDT, as most tests need. */
+    lateinit var fixture: CodeInsightTestFixture
+        private set
     private lateinit var errors: AccessToken
 
     override fun beforeEach(context: ExtensionContext) {
@@ -44,6 +53,20 @@ class LightEditor :
             )
             TextMateService.getInstance().reloadEnabledBundles()
         }
+        StubLanguageServer.connected = server
+        ExtensionTestUtil.maskExtensions(
+            ServerExtensionPointBean.EP_NAME,
+            listOf(
+                ServerExtensionPointBean().apply {
+                    id = CompilerSettings.SERVER_ID
+                    name = "Ecstasy Language Server"
+                    factoryClass = StubLanguageServer.Factory::class.java.name
+                    pluginDescriptor = DefaultPluginDescriptor(PluginId.getId("org.xtclang.idea.test"), javaClass.classLoader)
+                },
+            ),
+            fixture.testRootDisposable,
+            true,
+        )
     }
 
     override fun afterEach(context: ExtensionContext) {
