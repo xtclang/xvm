@@ -7,7 +7,8 @@ import com.intellij.lang.Language
  *
  * This is a minimal Language singleton that enables IntelliJ platform features requiring a Language
  * instance, such as Code Style settings. plugin.xml explicitly registers TextMate's syntax and
- * editor highlighter providers for this language/file type, using [XtcTextMateBundleProvider].
+ * editor highlighter providers for this language/file type, using [XtcTextMateBundleProvider], and
+ * [XtcParserDefinition] gives its files a PSI of this language.
  *
  * **Important:** The Language ID must NOT be `"xtc"` — that ID is used by the TextMate bundle
  * (package.json `languages[0].id`). If both use the same ID, IntelliJ associates `.x` files with
