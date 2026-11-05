@@ -118,6 +118,12 @@ val copyCompilerModelImport =
         into(layout.projectDirectory.dir("resources"))
     }
 
+/** The services a task action uses, injected, as the configuration cache needs them. */
+interface InjectedFileSystem {
+    @get:Inject
+    val fs: FileSystemOperations
+}
+
 val npmCompile =
     tasks.register<NpmTask>("npmCompile") {
         description = "Compile TypeScript"
@@ -128,7 +134,19 @@ val npmCompile =
         inputs.file(layout.projectDirectory.file("tsconfig.json"))
         inputs.files(layout.projectDirectory.file("package.json"), layout.projectDirectory.file("package-lock.json"))
         inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
-        outputs.dir(layout.projectDirectory.dir("out"))
+        val out = layout.projectDirectory.dir("out")
+        val sources = layout.projectDirectory.dir("src")
+        outputs.dir(out)
+        // tsc writes what the sources compile to and leaves the rest: a compiled test whose source is gone, as another
+        // branch's, would stay in out/, where the suite's **/*.test.js finds and runs it. The compile starts from none,
+        // and runs again, however up to date it is otherwise, while out/ has a script that no source compiles to.
+        val injected = objects.newInstance<InjectedFileSystem>()
+        doFirst { injected.fs.delete { delete(out) } }
+        outputs.upToDateWhen {
+            out.asFile.walkTopDown().filter { it.isFile && it.name.endsWith(".js") }.all { script ->
+                sources.file(script.relativeTo(out.asFile).path.removeSuffix(".js") + ".ts").asFile.isFile
+            }
+        }
     }
 
 // Bundle separately from tsc's development output so packaging never rewrites npmCompile's files.
