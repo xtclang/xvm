@@ -10,24 +10,35 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionOptions
 import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticRegistrationOptions
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.launch.LSPLauncher
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.services.LanguageClientAware
 import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
@@ -45,13 +56,18 @@ import java.util.concurrent.Future
 /**
  * A language server for light tests, in the test's JVM: it answers completion with the test's [completions] that start
  * with the word before the caret, as the real server does, and signature help with its [signature], and records the
- * methods it is asked for. [LightEditor] connects it as the Ecstasy server, with the plugin's own client features, so
- * LSP4IJ's code runs as it does against the real server.
+ * methods it is asked for. With [diagnostics] it has a diagnostic provider with a workspace report, as the real server
+ * does: a document's pull reports its [pulled] diagnostics, and the workspace report has the [reported] ones. The
+ * client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's own. [LightEditor] connects it as the
+ * Ecstasy server, with the plugin's own client features, so LSP4IJ's code runs as it does against the real server.
  */
 class StubLanguageServer(
     val completions: List<String> = emptyList(),
     val signature: SignatureHelp? = null,
+    val diagnostics: Boolean = false,
+    val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
 ) : LanguageServer,
+    LanguageClientAware,
     TextDocumentService,
     WorkspaceService {
     /** The methods the client has asked for, in order. */
@@ -66,6 +82,17 @@ class StubLanguageServer(
     /** The caret's line, as the client has sent it, of each signature help the client has asked for. */
     val signatureLines = CopyOnWriteArrayList<String>()
 
+    /** What a pull of a document's diagnostics reports, by the document's URI; none for a document not here. */
+    val pulled = ConcurrentHashMap<String, List<Diagnostic>>()
+
+    /** The documents of the workspace report and their diagnostics, by URI, which the report has in URI order. */
+    val reported = ConcurrentHashMap<String, List<Diagnostic>>()
+
+    /** The client, for the requests the server sends it. */
+    @Volatile
+    lateinit var languageClient: LanguageClient
+        private set
+
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> =
         CompletableFuture.completedFuture(
             InitializeResult(
@@ -73,9 +100,16 @@ class StubLanguageServer(
                     setTextDocumentSync(TextDocumentSyncKind.Full)
                     completionProvider = CompletionOptions(false, listOf("."))
                     signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
+                    if (diagnostics) {
+                        diagnosticProvider = DiagnosticRegistrationOptions(true, true).apply { identifier = "stub" }
+                    }
                 },
             ),
         )
+
+    override fun connect(client: LanguageClient) {
+        languageClient = client
+    }
 
     override fun shutdown(): CompletableFuture<Any> = CompletableFuture.completedFuture(null)
 
@@ -109,6 +143,21 @@ class StubLanguageServer(
         return CompletableFuture.completedFuture(signature)
     }
 
+    override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> {
+        requests += "textDocument/diagnostic"
+        val items = pulled[params.textDocument.uri].orEmpty()
+        return CompletableFuture.completedFuture(DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(items)))
+    }
+
+    override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
+        requests += "workspace/diagnostic"
+        val items =
+            reported.toSortedMap().map { (uri, diagnostics) ->
+                WorkspaceDocumentDiagnosticReport(WorkspaceFullDocumentDiagnosticReport(diagnostics, uri, null))
+            }
+        return CompletableFuture.completedFuture(WorkspaceDiagnosticReport(items))
+    }
+
     override fun didOpen(params: DidOpenTextDocumentParams) {
         texts[params.textDocument.uri] = params.textDocument.text
     }
@@ -135,7 +184,7 @@ class StubLanguageServer(
     class Factory : LanguageServerFactory {
         override fun createConnectionProvider(project: Project): StreamConnectionProvider = Connection(checkNotNull(connected))
 
-        override fun createLanguageClient(project: Project): LanguageClientImpl = LanguageClientImpl(project)
+        override fun createLanguageClient(project: Project): LanguageClientImpl = checkNotNull(connected).client(project)
 
         override fun createClientFeatures(): LSPClientFeatures = XtcClientFeatures()
     }
@@ -152,7 +201,9 @@ class StubLanguageServer(
                 val accepted = CompletableFuture.supplyAsync { listener.accept() }
                 client = Socket(InetAddress.getLoopbackAddress(), listener.localPort)
                 val end = accepted.get()
-                listening = LSPLauncher.createServerLauncher(server, end.getInputStream(), end.getOutputStream()).startListening()
+                val launcher = LSPLauncher.createServerLauncher(server, end.getInputStream(), end.getOutputStream())
+                server.connect(launcher.remoteProxy)
+                listening = launcher.startListening()
             }
         }
 
