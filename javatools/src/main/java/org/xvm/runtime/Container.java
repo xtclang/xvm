@@ -537,9 +537,10 @@ public abstract class Container
     }
 
     /**
-     * @return the time (in milliseconds) this container has been frozen for
+     * @return the time (in milliseconds) this container has been frozen for, which
+     *         {@link #currentTimeMillis} leaves out of the wall-clock time
      */
-    private long getTimeFrozen() {
+    public long getTimeFrozen() {
         long      cFrozen   = 0L;
         Container container = this;
         do {
