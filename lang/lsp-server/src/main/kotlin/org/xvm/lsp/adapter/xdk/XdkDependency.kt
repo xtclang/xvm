@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.security.MessageDigest
+import java.util.Collections
 import java.util.HexFormat
 import java.util.Map.copyOf as immutableMap
 
@@ -28,7 +29,8 @@ class XdkDependency
         documents: Map<String, ReadOnlyDocument> = emptyMap(),
         documentation: Map<Int, String> = emptyMap(),
     ) {
-        internal val documents: Map<String, ReadOnlyDocument> = immutableMap(documents)
+        /** By URI, in URI order, as the server's info lists them; a Map.copyOf's order changes with each JVM. */
+        internal val documents: Map<String, ReadOnlyDocument> = Collections.unmodifiableMap(documents.toSortedMap())
 
         /**
          * The doc comments of attached sources by constant index, which the artifact does not keep. The revision covers
@@ -141,7 +143,8 @@ internal data class DependencyDeclaration(
 internal class XdkDependencies(
     dependencies: List<XdkDependency>,
 ) {
-    val modules: Map<String, XdkDependency> = immutableMap(dependencies.associateBy { it.module })
+    /** By module name, in name order, as the server's info lists them; a Map.copyOf's order changes with each JVM. */
+    val modules: Map<String, XdkDependency> = Collections.unmodifiableMap(dependencies.associateBy { it.module }.toSortedMap())
 
     init {
         require(modules.size == dependencies.size) { "Duplicate dependency module" }

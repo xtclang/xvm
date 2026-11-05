@@ -4,7 +4,6 @@ import java.io.File
 import java.util.Collections
 import java.util.List.copyOf as immutableList
 import java.util.Map.copyOf as immutableMap
-import java.util.Set.copyOf as immutableSet
 
 /**
  * Explicit host configuration; dependency names may identify source modules or binary artifacts.
@@ -18,7 +17,9 @@ class XdkSourceModule(
     internal val root: File =
         requireNotNull(XdkSources.file(uri)) { "A source module requires a file URI: $uri" }
     val uri: String = root.toURI().toString()
-    val dependencies: Set<String> = immutableSet(dependencies)
+
+    /** In name order, as diagnostics list them; a Set.copyOf's order changes with each JVM. */
+    val dependencies: Set<String> = Collections.unmodifiableSet(dependencies.toSortedSet())
     internal val resourceFiles: List<File>? =
         resourceRoots
             ?.map {
