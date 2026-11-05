@@ -910,7 +910,7 @@ internal class XdkProjectQueries(
         val quickFixes = CodeActionKind.QUICKFIX in kinds
         val actions =
             if (!complete) {
-                if (quickFixes) autoImports(uri, source, text, range, before, ::resolved) else emptyList()
+                if (quickFixes) autoImports(uri, source, text, range, before, revision, ::resolved) else emptyList()
             } else if (CodeActionKind.SOURCE !in kinds && CodeActionKind.SOURCE_ORGANIZE_IMPORTS !in kinds) {
                 emptyList()
             } else {
@@ -966,7 +966,7 @@ internal class XdkProjectQueries(
                                 .mapValues { (_, edits) -> edits.flatten() }
                         if (changes.keys.any { it !in uris || !Files.isWritable(File(it).toPath()) }) return@mapNotNull null
                         val plan = XdkRename.Plan(texts, changes)
-                        val after = compile(plan.proposed) ?: return@mapNotNull null
+                        val after = shared(revision, plan.proposed) ?: return@mapNotNull null
                         if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit.member)) {
                             return@mapNotNull null
                         }
@@ -991,7 +991,7 @@ internal class XdkProjectQueries(
                         checkCurrent()
                         if (!Files.isWritable(File(source).toPath())) return@mapNotNull null
                         val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
-                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@mapNotNull null
+                        val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@mapNotNull null
                         if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.proves(after, plan)) {
                             return@mapNotNull null
                         }
@@ -1011,7 +1011,7 @@ internal class XdkProjectQueries(
                 checkCurrent()
                 val edit = candidate.edit(text) ?: return@mapNotNull null
                 val plan = XdkRename.Plan(texts, mapOf(source to edit.all))
-                val after = compile(plan.proposed) ?: return@mapNotNull null
+                val after = shared(revision, plan.proposed) ?: return@mapNotNull null
                 if (
                     !XdkRename.preservesMemberAdditions(
                         before,
@@ -1041,7 +1041,7 @@ internal class XdkProjectQueries(
                             mapOf(source to candidate.edits),
                             relocations = mapOf(source to listOf(candidate.relocation)),
                         )
-                    val after = compile(plan.proposed) ?: return@let null
+                    val after = shared(revision, plan.proposed) ?: return@let null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) return@let null
                     CodeAction(
                         candidate.title,
@@ -1063,7 +1063,7 @@ internal class XdkProjectQueries(
                                 mapOf(source to candidate.edits),
                                 relocations = mapOf(source to listOf(candidate.relocation)),
                             )
-                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (candidate.expression != null &&
                             !XdkRename.preservesRelocatedType(before, after, plan, candidate.expression)
                         ) {
@@ -1086,7 +1086,7 @@ internal class XdkProjectQueries(
                     XdkMemberInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
                         val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
-                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (!XdkRename.preservesMemberInline(before, after, plan, candidate)) return@let null
                         CodeAction(
                             candidate.title,
@@ -1104,7 +1104,7 @@ internal class XdkProjectQueries(
                     XdkMemberInline.everyUse(text, range, model, before)?.let { candidate ->
                         checkCurrent()
                         val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
-                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (!XdkRename.preservesMemberRemoval(before, after, plan, candidate)) return@let null
                         CodeAction(
                             candidate.title,
@@ -1122,7 +1122,7 @@ internal class XdkProjectQueries(
                     XdkLocalRemoval.candidate(text, range, model, before.removableLocals)?.let { candidate ->
                         checkCurrent()
                         val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
-                        val after = compile(plan.proposed) ?: return@let null
+                        val after = shared(revision, plan.proposed) ?: return@let null
                         if (!XdkRename.preservesLocalRemoval(before, after, plan, candidate.removed)) return@let null
                         CodeAction(
                             "Remove unused local variable",
@@ -1140,7 +1140,7 @@ internal class XdkProjectQueries(
                     XdkSafeDelete.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
                         val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
-                        val after = compile(plan.proposed) ?: return@let null
+                        val after = shared(revision, plan.proposed) ?: return@let null
                         if (!XdkRename.preservesSafeDelete(before, after, plan, candidate)) return@let null
                         // A public member's consumers are the configured modules', which the title names.
                         val modules = project.modules.keys.sorted()
@@ -1172,7 +1172,7 @@ internal class XdkProjectQueries(
                                 mapOf(source to candidate.edits),
                                 relocations = mapOf(source to listOf(candidate.relocation)),
                             )
-                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (!XdkRename.preservesMethodExtraction(before, after, plan, candidate)) return@let null
                         CodeAction(
                             if (candidate.statements) "Extract statements to private method" else "Extract expression to private method",
@@ -1204,12 +1204,24 @@ internal class XdkProjectQueries(
         }
     }
 
+    /**
+     * A code action's proof compile of [proposed], which the requests of one [revision] share: editors ask on every
+     * cursor move, and a quick fix's request and the intention list's prove the same candidate. A request cancelled or
+     * replaced meanwhile keeps nothing, as its compile may have stopped short; checkCurrent() throws before it is kept.
+     */
+    private fun shared(
+        revision: String,
+        proposed: Map<String, String>,
+        proof: Proof = Proof.COMPLETE,
+    ): CompilerRenameFacts? = actionCache.compiled(revision, proof to proposed) { compile(proposed, proof).also { checkCurrent() } }
+
     private fun autoImports(
         uri: String,
         source: String,
         text: String,
         range: Range,
         before: CompilerRenameFacts,
+        revision: String,
         resolved: (SemanticModel.Range) -> List<Diagnostic>,
     ): List<CodeAction> {
         val models = before.models.filter { it.sourceName == source }
@@ -1235,7 +1247,9 @@ internal class XdkProjectQueries(
                     val edit =
                         XdkAutoImports.edit(text, owner.name, target, packages) ?: return@mapNotNull null
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
-                    val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
+                    val after =
+                        (if (graph === project) shared(revision, plan.proposed) else compile(plan.proposed, graph = graph))
+                            ?: return@mapNotNull null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) {
                         return@mapNotNull null
                     }
