@@ -18,10 +18,14 @@ import java.util.HexFormat
 internal object XdkAttachedSources {
     private val directory by lazy { Files.createTempDirectory("xtc-attached-sources-") }
 
-    /** Mapping from dependency symbols to attached source locations and read-only source documents. */
+    /**
+     * Mapping from dependency symbols to attached source locations and doc comments, and the read-only source
+     * documents.
+     */
     data class Index(
         val declarations: Map<Int, SemanticModel.SourceLocation>,
         val documents: Map<String, ReadOnlyDocument>,
+        val documentation: Map<Int, String>,
     )
 
     fun read(
@@ -103,10 +107,14 @@ internal object XdkAttachedSources {
                             candidates,
                             method?.takeIf { it.sourceText != null }?.sourceLineNumber,
                         ) { it.firstLine..it.lastLine }
-                            ?.let { identity.position to SemanticModel.SourceLocation(source.first, it.range) }
-                    }.toMap()
+                            ?.let { Triple(identity.position, SemanticModel.SourceLocation(source.first, it.range), it.documentation) }
+                    }
             require(declarations.isNotEmpty()) { "No matching artifact declarations in attached sources for ${dependency.module}" }
-            Index(declarations, files.values.associate { it.first to it.second })
+            Index(
+                declarations.associate { (index, location) -> index to location },
+                files.values.associate { it.first to it.second },
+                declarations.mapNotNull { (index, _, documentation) -> documentation?.let { index to it } }.toMap(),
+            )
         }
     }
 }

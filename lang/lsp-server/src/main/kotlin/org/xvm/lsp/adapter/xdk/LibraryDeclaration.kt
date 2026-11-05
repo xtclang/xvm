@@ -11,15 +11,19 @@ import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
-/** Declaration located in attached library source, with the source range used for navigation. */
+/**
+ * Declaration located in attached library source, with the source range used for navigation and its doc comment, which
+ * a compiled module does not keep.
+ */
 internal data class LibraryDeclaration(
     val path: List<String>,
     val range: SemanticModel.Range,
     val firstLine: Int,
     val lastLine: Int,
+    val documentation: String?,
 )
 
-/** Parse declaration spans shared by bundled and explicitly attached library sources. */
+/** Parse declaration spans and doc comments shared by bundled and explicitly attached library sources. */
 internal fun libraryDeclarations(
     text: String,
     path: String,
@@ -38,12 +42,13 @@ internal fun libraryDeclarations(
             node: AstNode,
             parents: List<String>,
         ) {
-            val token =
+            // the name, and the doc comment as the compiler formats a project's own
+            val (token, documentation) =
                 when (node) {
-                    is TypeCompositionStatement -> node.nameToken
-                    is MethodDeclarationStatement -> node.nameToken
-                    is PropertyDeclarationStatement -> node.nameToken
-                    else -> null
+                    is TypeCompositionStatement -> node.nameToken to node.documentation
+                    is MethodDeclarationStatement -> node.nameToken to node.documentation
+                    is PropertyDeclarationStatement -> node.nameToken to node.documentation
+                    else -> null to null
                 }
             val module = node is TypeCompositionStatement && node.category.id == Token.Id.MODULE
             val names = if (token == null || module) parents else parents + token.valueText
@@ -59,6 +64,7 @@ internal fun libraryDeclarations(
                         SemanticModel.Range(at(token.startPosition), at(token.endPosition)),
                         Source.calculateLine(node.startPosition),
                         Source.calculateLine(node.endPosition),
+                        documentation?.trim()?.takeIf { it.isNotEmpty() },
                     ),
                 )
             }

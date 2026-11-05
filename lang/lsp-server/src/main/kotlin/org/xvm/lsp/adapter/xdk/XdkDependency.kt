@@ -26,12 +26,19 @@ class XdkDependency
         private val artifact: ByteArray,
         declarations: Map<Int, SemanticModel.SourceLocation>,
         documents: Map<String, ReadOnlyDocument> = emptyMap(),
+        documentation: Map<Int, String> = emptyMap(),
     ) {
         internal val documents: Map<String, ReadOnlyDocument> = immutableMap(documents)
 
+        /**
+         * The doc comments of attached sources by constant index, which the artifact does not keep. The revision covers
+         * them through the locations, whose source names carry the source text's revision.
+         */
+        internal val documentation: Map<Int, String> = immutableMap(documentation)
+
         internal fun withSources(roots: List<File>): XdkDependency {
             val index = XdkAttachedSources.read(this, roots)
-            return XdkDependency(module, artifact, index.declarations, index.documents)
+            return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation)
         }
 
         internal val symbolIndex: XdkArtifactSymbols by lazy { XdkArtifactSymbols.capture(artifact) }
@@ -117,11 +124,13 @@ class XdkDependency
     }
 
 /**
- * Worker-only join; compiler equality handles overloads and foreign pools, never display strings.
+ * Worker-only join; compiler equality handles overloads and foreign pools, never display strings. The documentation
+ * is the declaration's doc comment from its source, which a compiled module does not keep.
  */
 internal data class DependencyDeclaration(
     val key: XdkDependency.SymbolKey,
     val location: SemanticModel.SourceLocation,
+    val documentation: String?,
 )
 
 /**
@@ -159,6 +168,7 @@ internal class XdkDependencies(
                             DependencyDeclaration(
                                 XdkDependency.SymbolKey(name, dependency.revision, index),
                                 location,
+                                dependency.documentation[index],
                             ),
                         )
                     }
