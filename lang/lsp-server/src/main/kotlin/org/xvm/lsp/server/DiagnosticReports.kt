@@ -143,8 +143,9 @@ internal class DiagnosticReports {
         relatedInformation: Boolean,
         tags: Set<DiagnosticTag> = emptySet(),
     ): WorkspaceDiagnosticReport {
-        // A removed root/file must explicitly clear the client's previous report. Do not retain
-        // tombstones indefinitely: an unknown old ID simply receives another empty full report.
+        // A removed root/file must explicitly clear the client's previous report, with an empty report whose result ID
+        // is REMOVED's. That needs no tombstone: a client that names it again, as VS Code's does in each pull after,
+        // is told nothing changed, and an unknown old ID receives another empty full report.
         val currentUris = current.associateBy(::identity)
         // A document's own pulls give it no result ID that the client names in a workspace pull: VS Code's client
         // forgets them as it closes the document. Once the document is gone, as a deleted file is, its items stay on
@@ -157,12 +158,16 @@ internal class DiagnosticReports {
         val oldUris = gone + previous.keys.associateBy(::identity)
         val previousIds = previous.mapKeys { identity(it.key) }
         val documentVersions = versions.mapKeys { identity(it.key) }
-        (oldUris - currentUris.keys).values.forEach { record(it, emptyList()) }
         val result =
             WorkspaceDiagnosticReport(
                 (oldUris + currentUris).values.sorted().map { uri ->
-                    recordIfAbsent(uri)
-                    val entry = entries.getValue(identity(uri))
+                    val entry =
+                        if (identity(uri) in currentUris) {
+                            recordIfAbsent(uri)
+                            entries.getValue(identity(uri))
+                        } else {
+                            REMOVED
+                        }
                     unreported -= identity(uri)
                     if (previousIds[identity(uri)] == entry.id) {
                         WorkspaceDocumentDiagnosticReport(
@@ -224,5 +229,10 @@ internal class DiagnosticReports {
     fun clear() {
         entries.clear()
         unreported.clear()
+    }
+
+    private companion object {
+        /** The report of a document that is no longer current: no items, under a result ID that no recorded one has. */
+        val REMOVED = Entry("removed", emptyList())
     }
 }
