@@ -81,14 +81,17 @@ fun Driver.startupEditing(
                     workspace.published(current.file) { rows ->
                         if (expected == invalid) rows.isNotEmpty() else rows.isEmpty()
                     }
+                    val report = FinalReport(this@startupEditing, current.editor, "startup $phase diagnostics reach the editor")
                     awaitUi("startup $phase diagnostics reach the editor", HANG_LIMIT) {
-                        current.editor.installedDiagnostics().let { diagnostics ->
+                        val painted = current.editor.installedDiagnostics()
+                        val done =
                             if (expected == invalid) {
-                                diagnostics.any { "unknownDuringStartup" in it.description }
+                                painted.any { "unknownDuringStartup" in it.description }
                             } else {
-                                diagnostics.isEmpty()
+                                painted.isEmpty()
                             }
-                        }
+                        report.check(currentDiagnostics(current.editor), painted, done)
+                        done
                     }
                     awaitUi("startup $phase folds match the shortened buffer", HANG_LIMIT) {
                         folds(current.editor).let { ranges ->
