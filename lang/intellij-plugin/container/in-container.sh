@@ -56,8 +56,9 @@ start_display() {
 # the clock that tour.json's step times use; the run's reports get both
 recorder=""
 start_recording() {
-    [ "${XTC_RECORD_VIDEO:-}" = "1" ] || return 0
+    # /out outlives a run: a run that records nothing must not take an earlier run's screen for its own
     rm -f /out/screen.mp4 /out/screen.start
+    [ "${XTC_RECORD_VIDEO:-}" = "1" ] || return 0
     date +%s%3N > /out/screen.start
     ffmpeg -nostdin -loglevel error -f x11grab -draw_mouse 1 -framerate 15 -video_size 1920x1200 -i :99 \
         -c:v libx264 -preset veryfast -crf 30 -pix_fmt yuv420p /out/screen.mp4 > /out/ffmpeg.log 2>&1 &
@@ -138,6 +139,17 @@ case "$mode" in
         if [ -d "$vscode_reports" ]; then
             mkdir -p /out/vscode-reports
             rsync -a "$vscode_reports/" /out/vscode-reports/
+        fi
+        # the screen of a recorded VS Code tour, whose tour.json names this recording by its start: into its run's
+        # directory, where the composer cuts the steps' clips from it
+        if [ -f /out/screen.mp4 ] && [ -d /out/vscode-reports/vscode-tour ]; then
+            recorded=$(cat /out/screen.start)
+            for run in /out/vscode-reports/vscode-tour/run-*/; do
+                if [ -f "$run/tour.json" ] && grep -q '"file": "screen.mp4"' "$run/tour.json" \
+                    && grep -q "\"start\": $recorded," "$run/tour.json"; then
+                    cp /out/screen.mp4 /out/screen.start "$run"
+                fi
+            done
         fi
         exit "$status"
         ;;
