@@ -707,7 +707,8 @@
         "package": "vsce package",
         "lint": "eslint src/",
         "test:vscode": "node ./scripts/run-vscode-tests.cjs",
-        "test:playbook": "node ./scripts/run-vscode-tests.cjs --playbook"
+        "test:playbook": "node ./scripts/run-vscode-tests.cjs --playbook",
+        "test:tour": "node ./scripts/run-vscode-tests.cjs --tour"
     },
     "dependencies": {
         "jdk-utils": "^0.7.0",
