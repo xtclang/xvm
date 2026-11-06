@@ -106,6 +106,101 @@ class LanguageServerDebugProcessHandlerTest {
         handler.destroyProcess()
     }
 
+    @Test
+    fun `a continue's answer reaches the client once the program stops or ends, which keeps Run to Cursor's breakpoint until then`() {
+        val sessions = DebugSessions()
+        val server = FakeServer().apply { started.complete(Unit) }
+        val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+        val events = Events(handler)
+        handler.startNotify()
+
+        fun receive(json: String) = sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(json).asJsonObject))
+
+        fun output() = events.text(ProcessOutputTypes.STDOUT)
+
+        // TODO LSP4IJ: UP44 — LSP4IJ 0.21.0 removes Run to Cursor's temporary breakpoint once its continue is answered;
+        //  answered only at the next stop, the program reaches the cursor however long it takes
+        handler.write("""{"seq":5,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+        receive("""{"seq":6,"type":"response","request_seq":5,"command":"continue","success":true,"body":{}}""")
+        receive("""{"seq":7,"type":"event","event":"output","body":{"category":"stdout","output":"counted\n"}}""")
+        assertThat(output()).contains("counted").doesNotContain("\"command\":\"continue\"")
+        receive("""{"seq":8,"type":"event","event":"stopped","body":{"reason":"breakpoint","threadId":1}}""")
+        assertThat(output().indexOf("\"request_seq\":5")).isPositive().isLessThan(output().indexOf("\"event\":\"stopped\""))
+
+        // the answer to the next continue comes as the program ends
+        handler.write("""{"seq":9,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+        receive("""{"seq":10,"type":"response","request_seq":9,"command":"continue","success":true,"body":{}}""")
+        assertThat(output()).doesNotContain("\"request_seq\":9")
+        receive("""{"seq":11,"type":"event","event":"exited","body":{"exitCode":3}}""")
+        assertThat(output().indexOf("\"request_seq\":9")).isPositive().isLessThan(output().indexOf("\"event\":\"exited\""))
+
+        // a continue that the session refuses is answered at once, as the program does not run
+        handler.write("""{"seq":12,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+        receive("""{"seq":13,"type":"response","request_seq":12,"command":"continue","success":false,"message":"not stopped"}""")
+        assertThat(output()).contains("\"request_seq\":12")
+
+        // and so is one whose program the session ends
+        handler.write("""{"seq":14,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+        receive("""{"seq":15,"type":"response","request_seq":14,"command":"continue","success":true,"body":{}}""")
+        receive("""{"seq":16,"type":"event","event":"terminated","body":{}}""")
+        assertThat(output().indexOf("\"request_seq\":14")).isPositive().isLessThan(output().indexOf("\"event\":\"terminated\""))
+        handler.destroyProcess()
+    }
+
+    @Test
+    fun `while a continue's answer waits, the client's other requests go on, and a pause stops the program with that answer first`() {
+        val sessions = DebugSessions()
+        val server = FakeServer().apply { started.complete(Unit) }
+        val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+        val events = Events(handler)
+        handler.startNotify()
+
+        fun receive(json: String) = sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(json).asJsonObject))
+
+        fun output() = events.text(ProcessOutputTypes.STDOUT)
+
+        // the program runs on, and waits for its input, as the tour's game does
+        handler.write("""{"seq":5,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+        receive("""{"seq":6,"type":"response","request_seq":5,"command":"continue","success":true,"body":{}}""")
+        receive("""{"seq":7,"type":"event","event":"output","body":{"category":"stdout","output":"Press Enter for next turn...\n"}}""")
+        // a pause, as LSP4IJ's main sends it: the threads, then pause; both go to the session and are answered at once
+        handler.write("""{"seq":8,"type":"request","command":"threads"}""")
+        handler.write("""{"seq":9,"type":"request","command":"pause","arguments":{"threadId":1}}""")
+        assertThat(server.messages.map { it.message["command"].asString }).containsExactly("continue", "threads", "pause")
+        receive("""{"seq":10,"type":"response","request_seq":8,"command":"threads","success":true,"body":{"threads":[]}}""")
+        receive("""{"seq":11,"type":"response","request_seq":9,"command":"pause","success":true}""")
+        assertThat(output()).contains("\"request_seq\":8", "\"request_seq\":9").doesNotContain("\"request_seq\":5")
+        receive("""{"seq":12,"type":"event","event":"stopped","body":{"reason":"pause","threadId":1}}""")
+        assertThat(output().indexOf("\"request_seq\":5")).isPositive().isLessThan(output().indexOf("\"event\":\"stopped\""))
+        handler.destroyProcess()
+    }
+
+    @Test
+    fun `a session that ends while a continue's answer waits gives the client that answer first, however it ends`() {
+        fun ending(end: (DebugSessions, LanguageServerDebugProcessHandler) -> Unit): Events {
+            val sessions = DebugSessions()
+            val server = FakeServer().apply { started.complete(Unit) }
+            val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+            val events = Events(handler)
+            handler.startNotify()
+            handler.write("""{"seq":5,"type":"request","command":"continue","arguments":{"threadId":1}}""")
+            val answer = """{"seq":6,"type":"response","request_seq":5,"command":"continue","success":true,"body":{}}"""
+            sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(answer).asJsonObject))
+            assertThat(events.text(ProcessOutputTypes.STDOUT)).doesNotContain("\"request_seq\":5")
+            end(sessions, handler)
+            assertThat(events.text(ProcessOutputTypes.STDOUT)).contains("\"request_seq\":5")
+            return events
+        }
+
+        // Stop, which ends the session and its program, and the process once the client has the answer
+        assertThat(ending { _, handler -> handler.destroyProcess() }.outputAtExit).contains("\"request_seq\":5")
+        // a detach
+        ending { _, handler -> handler.detachProcess() }
+        // the language server, stopped
+        val stopped = ending { sessions, _ -> sessions.endAll("The Ecstasy language server stopped") }
+        assertThat(stopped.outputAtExit).contains("\"request_seq\":5")
+    }
+
     /** The session's successful response to [request], with [body]. */
     private fun response(
         request: JsonObject,
@@ -282,6 +377,10 @@ class LanguageServerDebugProcessHandlerTest {
         @Volatile
         var exitCode: Int? = null
 
+        /** The process's output as it terminated. */
+        @Volatile
+        var outputAtExit: String? = null
+
         init {
             handler.addProcessListener(this)
         }
@@ -296,6 +395,7 @@ class LanguageServerDebugProcessHandlerTest {
         }
 
         override fun processTerminated(event: ProcessEvent) {
+            outputAtExit = text(ProcessOutputTypes.STDOUT)
             exitCode = event.exitCode
         }
     }

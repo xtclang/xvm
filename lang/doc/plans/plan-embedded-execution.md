@@ -543,8 +543,9 @@ this bridge; they cannot be inferred from compiler type hints.
   pausing one fiber while the others stay stopped.
   *Run to Cursor (2026-10-27):* both editors add a temporary breakpoint and continue, which the
   server already handled; `EmbeddedExecutionTest` checks that sequence, and shared X323 passes in
-  VS Code. In IntelliJ it is partial: LSP4IJ removes the temporary breakpoint once `continue` is
-  answered, so a program that takes longer to reach the cursor runs past it (UP44).
+  VS Code. In IntelliJ it was partial: LSP4IJ removes the temporary breakpoint once `continue` is
+  answered, so a program that takes longer to reach the cursor ran past it (UP44); since 2026-11-06
+  the plugin answers `continue` only once the program stops or ends, and X323 is full there too.
   *Step into a call (2026-10-27):* `stepInTargets` lists the calls of a stopped frame's line, from its
   ops, and `stepIn` with a `targetId` stops in the chosen one, letting the line's other calls run, or
   at the next line if the line does not make it (worker protocol 19, shared X327).
