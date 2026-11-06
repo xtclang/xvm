@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -38,6 +39,7 @@ import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
@@ -505,6 +507,54 @@ class XdkPullDiagnosticsTest {
                     .items
                     .map { it.left?.uri ?: it.right.uri },
             ).noneMatch { it.endsWith("/Bad.x") }
+        }
+    }
+
+    @Test
+    fun `a moved file's old report is cleared once, and is unchanged in the pulls that name its result ID`() {
+        val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val member =
+            directory.resolve("Pull/Bad.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Bad extends Missing {}")
+            }
+        val moved = File(member.parentFile, "Moved.x")
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", root.toURI().toString())))
+            // as VS Code's client pulls: each pull names every document's result ID that the reports so far gave it
+            val known = linkedMapOf<String, String>()
+
+            fun pull() =
+                session.workspace(known.map { (uri, id) -> PreviousResultId(uri, id) }).items.onEach { report ->
+                    report.left?.let { known[it.uri] = it.resultId }
+                    report.right?.let { known[it.uri] = it.resultId }
+                }
+
+            fun full(
+                items: List<WorkspaceDocumentDiagnosticReport>,
+                name: String,
+            ) = items.mapNotNull { it.left }.filter { it.uri.endsWith("/$name") }
+            assertThat(full(pull(), "Bad.x").single().items).isNotEmpty()
+            // as VS Code renames a closed file: the file moves, and the watcher reports the old one deleted and the
+            // new one created
+            assertThat(member.renameTo(moved)).isTrue()
+            session.server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(
+                    listOf(
+                        FileEvent(member.toURI().toString(), FileChangeType.Deleted),
+                        FileEvent(moved.toURI().toString(), FileChangeType.Created),
+                    ),
+                ),
+            )
+            val cleared = full(pull(), "Bad.x")
+            assertThat(cleared).describedAs("the old file's report").hasSize(1)
+            assertThat(cleared.single().items).isEmpty()
+            // the client names the cleared report's result ID in each pull after it: nothing has changed since
+            repeat(3) { round ->
+                assertThat(pull().filter { it.isLeft }.map { it.left.uri })
+                    .describedAs("the full reports of pull ${round + 3}")
+                    .isEmpty()
+            }
         }
     }
 
