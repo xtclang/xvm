@@ -102,6 +102,9 @@
             implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"/>
         <!-- A flat PSI of the Ecstasy language, so that what IntelliJ looks up by a file's language applies. -->
         <lang.parserDefinition language="Ecstasy" implementationClass="org.xtclang.idea.XtcParserDefinition"/>
+        <!-- Quick Documentation of a completion item that only its resolve documents (LSP4IJ UP78) -->
+        <platform.backend.documentation.symbolTargetProvider
+                implementation="org.xtclang.idea.lsp.CompletionDocumentationTargets"/>
         <!-- LSP4IJ registers these for TEXT and TextMate PSI only, which an Ecstasy file's PSI is not. -->
         <lang.psiStructureViewFactory language="Ecstasy"
             implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
