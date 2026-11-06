@@ -184,7 +184,7 @@ internal class SequentialProcessHandler(
  * All gives the folder, and Gradle's "Tests in" stays.
  */
 class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfiguration>() {
-    override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType().configurationFactories.first()
+    override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType.instance.configurationFactories.first()
 
     override fun setupConfigurationFromContext(
         configuration: XtcRunConfiguration,
