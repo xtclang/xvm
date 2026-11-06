@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { LanguageClient, RenameFile, RenameFilesParams, RenameParams, RequestType, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import {
+    LanguageClient, LSPErrorCodes, RenameFile, RenameFilesParams, RenameParams, RequestType, ResponseError, TextDocumentEdit, WorkspaceEdit
+} from 'vscode-languageclient/node';
 import { SourceModule, sourceGraphEdits, sourceGraphKey, sourceModulesIn } from './source-graph-configuration';
 
 interface RenameProposal {
@@ -8,6 +10,12 @@ interface RenameProposal {
 }
 const renameRequest = new RequestType<RenameParams, RenameProposal | null, void>('xtc/rename');
 const moveRequest = new RequestType<RenameFilesParams, RenameProposal | null, void>('xtc/renameFiles');
+
+/**
+ * How many times a move asks the server again for its edits when a change of the project overtook its answer, as the
+ * server's ContentModified says: that refuses the proof it was working on, not the move.
+ */
+const MOVE_RETRIES = 3;
 
 /** VS Code's native Rename saves affected files when files.refactoring.autoSave is enabled.
  * Without that save, moving an edited model can lose its text Undo. Reordering the operations
@@ -130,18 +138,26 @@ export async function moveWithConfiguration(
     }
     let refused = false;
     let reason: string | undefined;
-    const edit = await proposalWithConfiguration(client, event.files[0].oldUri, event.token,
+    let overtaken = false;
+    const propose = () => proposalWithConfiguration(client, event.files[0].oldUri, event.token,
         async () => {
+            overtaken = false;
             const proposal = await client.sendRequest(moveRequest, {
                 files: event.files.map(move => ({ oldUri: move.oldUri.toString(), newUri: move.newUri.toString() }))
             }, event.token).catch(error => {
                 reason = error instanceof Error ? error.message : String(error);
+                overtaken = error instanceof ResponseError && error.code === LSPErrorCodes.ContentModified;
                 return client.handleFailedRequest(moveRequest, event.token, error, null, false);
             });
             refused = proposal === null;
             return proposal;
         },
         event.files.map(move => move.oldUri.toString()));
+    let edit = await propose();
+    // a change of the project while the server proved the move, such as a file written on disk, which it learns of
+    // as it comes, overtakes the proof: the server proves the move again, of the project as it now is
+    for (let retries = 0; overtaken && retries < MOVE_RETRIES && !event.token.isCancellationRequested; retries++) edit = await propose();
+    if (overtaken) reason = `the project changed each of the ${MOVE_RETRIES + 1} times the language server proved it`;
     if (refused && !event.token.isCancellationRequested) {
         const unupdated = await used(event.files.map(move => move.oldUri), event.token);
         if (unupdated.length) warn(unupdatedReferences(unupdated, reason));
