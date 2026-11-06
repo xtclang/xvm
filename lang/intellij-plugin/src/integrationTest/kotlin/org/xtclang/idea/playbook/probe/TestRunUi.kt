@@ -1,12 +1,21 @@
 package org.xtclang.idea.playbook.probe
 
 import com.google.gson.JsonObject
+import com.intellij.execution.ProgramRunnerUtil
+import com.intellij.execution.RunManager
+import com.intellij.execution.configurations.ConfigurationTypeUtil
+import com.intellij.execution.executors.DefaultRunExecutor
+import com.intellij.execution.filters.HyperlinkInfo
 import com.intellij.execution.impl.ConsoleViewImpl
+import com.intellij.execution.testframework.Printable
+import com.intellij.execution.testframework.Printer
+import com.intellij.execution.testframework.actions.AbstractRerunFailedTestsAction
 import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsAdapter
 import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener
 import com.intellij.execution.testframework.sm.runner.SMTestProxy
 import com.intellij.execution.testframework.sm.runner.states.TestStateInfo
 import com.intellij.execution.testframework.sm.runner.ui.SMTRunnerConsoleView
+import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.execution.ui.RunContentManager
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
@@ -31,6 +40,9 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import org.xtclang.idea.run.XtcRunConfiguration
+import org.xtclang.idea.run.XtcRunConfigurationType
+import org.xtclang.idea.run.XtcRunMode
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.SwingUtilities
 
@@ -43,7 +55,7 @@ object TestRunUi {
     /** The latest result of each test, by its location. */
     private val results = ConcurrentHashMap<String, JsonObject>()
 
-    /** The tests that started and have no result, by their locations. */
+    /** The tests that started and have not ended, by their locations. */
     private val running = ConcurrentHashMap.newKeySet<String>()
     private val sessions = ConcurrentHashMap<String, XDebugSession>()
     private val watched = ConcurrentHashMap.newKeySet<Project>()
@@ -54,15 +66,20 @@ object TestRunUi {
         bus.subscribe(
             SMTRunnerEventsListener.TEST_STATUS,
             object : SMTRunnerEventsAdapter() {
-                override fun onTestStarted(test: SMTestProxy) {
-                    test.locationUrl?.let(running::add)
-                }
+                override fun onTestStarted(test: SMTestProxy) = record(project, test)
 
                 override fun onTestFinished(test: SMTestProxy) = record(project, test)
 
                 override fun onTestFailed(test: SMTestProxy) = record(project, test)
 
                 override fun onTestIgnored(test: SMTestProxy) = record(project, test)
+
+                // a stopped run ends its tests that did not finish, terminated or not run, which no other event
+                // says; only those, as a run's end can come after the results of its tests were reset for the next
+                override fun onTestingFinished(testsRoot: SMTestProxy.SMRootTestProxy) =
+                    testsRoot.allTests
+                        .filter { it.isLeaf && state(it) in setOf("terminated", "not run") }
+                        .forEach { record(project, it) }
             },
         )
         bus.subscribe(
@@ -82,17 +99,9 @@ object TestRunUi {
         val url = test.locationUrl ?: return
         val result =
             JsonObject().apply {
-                addProperty(
-                    "state",
-                    when {
-                        test.isDefect && test.isIgnored -> "ignored"
-                        test.isDefect -> "failed"
-                        else -> "passed"
-                    },
-                )
-                test.errorMessage?.let { addProperty("message", it) }
-                // a test that ended in an exception other than a failed assertion, which the console shows as an error
-                if (test.magnitudeInfo == TestStateInfo.Magnitude.ERROR_INDEX) addProperty("error", true)
+                addProperty("state", state(test))
+                // an ignored test's reason is in what the console prints of it, its state keeps it nowhere else
+                (test.errorMessage ?: printed(test).trim().takeIf { test.isIgnored && it.isNotEmpty() })?.let { addProperty("message", it) }
             }
         // where the console goes for the test: its location, through the plugin's locator
         ApplicationManager.getApplication().runReadAction {
@@ -102,7 +111,113 @@ object TestRunUi {
             }
         }
         results[url] = result
-        running.remove(url)
+        if (result["state"].asString == "running") running.add(url) else running.remove(url)
+    }
+
+    /**
+     * A test's state as the console shows it, by its magnitude: `passed`, `failed` (a failed assertion or comparison),
+     * `error` (an exception other than a failed assertion), `ignored` (skipped), `terminated` (one a stop ended),
+     * `not run`, or `running`.
+     */
+    private fun state(test: SMTestProxy): String =
+        when (test.magnitudeInfo) {
+            TestStateInfo.Magnitude.PASSED_INDEX, TestStateInfo.Magnitude.COMPLETE_INDEX -> "passed"
+            TestStateInfo.Magnitude.FAILED_INDEX -> "failed"
+            TestStateInfo.Magnitude.ERROR_INDEX -> "error"
+            TestStateInfo.Magnitude.IGNORED_INDEX, TestStateInfo.Magnitude.SKIPPED_INDEX -> "ignored"
+            TestStateInfo.Magnitude.TERMINATED_INDEX -> "terminated"
+            TestStateInfo.Magnitude.NOT_RUN_INDEX -> "not run"
+            TestStateInfo.Magnitude.RUNNING_INDEX -> "running"
+        }
+
+    /** What the console prints of [test]: its output, and an ignored test's reason. */
+    private fun printed(test: SMTestProxy): String {
+        val text = StringBuilder()
+        test.printOn(
+            object : Printer {
+                override fun print(
+                    printed: String,
+                    contentType: ConsoleViewContentType,
+                ) {
+                    text.append(printed)
+                }
+
+                override fun onNewAvailable(printable: Printable) = printable.printOn(this)
+
+                override fun printHyperlink(
+                    printed: String,
+                    info: HyperlinkInfo?,
+                ) {
+                    text.append(printed)
+                }
+
+                override fun mark() {}
+            },
+        )
+        return text.toString()
+    }
+
+    /** The run, or test run, whose tab is named [name]: its content descriptor, as the Run window has it. */
+    private fun descriptor(
+        project: Project,
+        name: String,
+    ) = checkNotNull(RunContentManager.getInstance(project).allDescriptors.lastOrNull { it.displayName == name }) {
+        "No run $name: ${RunContentManager.getInstance(project).allDescriptors.map { it.displayName }}"
+    }
+
+    /** Stops the run named [name], as its Stop button does. */
+    @JvmStatic
+    fun stop(
+        project: Project,
+        name: String,
+    ) {
+        ApplicationManager.getApplication().invokeAndWait { descriptor(project, name).processHandler?.destroyProcess() }
+    }
+
+    /**
+     * Chooses Rerun Failed Tests on the run named [name], as its button on the run's toolbar does: the action that the
+     * run's result gives as a restart action. Fails when the run has none.
+     */
+    @JvmStatic
+    fun rerunFailed(
+        project: Project,
+        name: String,
+    ) {
+        ApplicationManager.getApplication().invokeAndWait {
+            val run = descriptor(project, name)
+            val action =
+                checkNotNull(run.restartActions.filterIsInstance<AbstractRerunFailedTestsAction>().singleOrNull()) {
+                    "The run $name has no Rerun Failed Tests: ${run.restartActions.map { it.templateText }}"
+                }
+            val context = DataManager.getInstance().getDataContext(run.component)
+            ActionUtil.performAction(
+                action,
+                AnActionEvent.createEvent(action, context, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null),
+            )
+        }
+    }
+
+    /** Runs an Ecstasy test configuration of [module]'s tests, all of them, with the xtc command line, named [module]. */
+    @JvmStatic
+    fun runCommandLine(
+        project: Project,
+        module: String,
+        uri: String,
+    ) {
+        watch(project)
+        ApplicationManager.getApplication().invokeAndWait {
+            val runManager = RunManager.getInstance(project)
+            val factory = ConfigurationTypeUtil.findConfigurationType(XtcRunConfigurationType::class.java).configurationFactories.first()
+            val settings = runManager.createConfiguration(module, factory)
+            (settings.configuration as XtcRunConfiguration).apply {
+                moduleName = module
+                moduleUri = uri
+                runWith = XtcRunMode.COMMAND_LINE
+                tests = emptyList()
+            }
+            runManager.setTemporaryConfiguration(settings)
+            ProgramRunnerUtil.executeConfiguration(settings, DefaultRunExecutor.getRunExecutorInstance())
+        }
     }
 
     /** Forgets the results and sessions, and starts recording them for [project]. */
@@ -114,7 +229,7 @@ object TestRunUi {
         sessions.clear()
     }
 
-    /** The locations of the tests that started since [reset] and have no result, one to a line. */
+    /** The locations of the tests that started since [reset] and have not ended, one to a line. */
     @JvmStatic
     fun running(): String = running.sorted().joinToString("\n")
 
@@ -154,7 +269,7 @@ object TestRunUi {
             consoles.none(ConsoleViewImpl::hasDeferredOutput)
     }
 
-    /** Each test's latest result by its location: its `state`, a failure's `message`, and its location's `line`. */
+    /** Each test's latest result by its location: its `state` ([state]), a failure's `message`, and its location's `line`. */
     @JvmStatic
     fun results(): String = JsonObject().apply { results.forEach { (url, result) -> add(url, result) } }.toString()
 
