@@ -87,7 +87,7 @@
  *   xtc/compilerSourceModules                       step The compiler
  *   xtc/discoverConsumers                           the Compiler page's Add consumers from folders: playbook X99, X105
  *   xtc/rename                                      steps Rename, Renamed everywhere, Rename a class; checks Undo takes the rename
- *                                                   back in one step, once asked, as a change of the project, renaming a local
+ *                                                   back in one step, without asking, as a change of the project, renaming a local
  *                                                   and a parameter renames their uses
  *   xtc/renameFiles                                 checks renaming a file renames its type and every use, moving a class to
  *                                                   another package, renaming the file renames its type
@@ -1100,7 +1100,9 @@ private fun Tour.diagnostics() {
         check(choose("Create private method")) { "No Create private method fix: ${rows()}" }
     }
     verify("Undo takes the created method back in one step, without asking, as a change of one file") {
-        open(source("Eights.x"), 0)
+        // the file's editor as the step left it: opened at a line, the caret would leave the change, and the first Undo
+        //  would only take it back there
+        selectFile(source("Eights.x"))
         // the step before creates the method; without it there is nothing to undo, and the check would pass for it
         expect("announce(Player" in fileText(source("Eights.x"))) { "No created method to undo: Create a method made none" }
         undo(asks = false) { fileText(source("Eights.x")).let { "announce(current);" in it && "announce(Player" !in it } }
@@ -1228,9 +1230,11 @@ private fun Tour.refactoring() {
     ) {
         check(confirm("Refactor")) { "The rename dialog did not take the new name" }
     }
-    verify("Undo takes the rename back in one step, once asked, as a change of the project") {
-        open(source("Player.x"), 0)
-        undo(asks = true) { fileText(source("Player.x")).let { "drawUntilMatch" !in it && "conditional Card drawForMatch(" in it } }
+    // the plugin applies a rename as a write command whose undo asks nothing, as WriteCommandAction's default policy is,
+    //  unlike IntelliJ's own refactorings, whose undo asks first
+    verify("Undo takes the rename back in one step, without asking, as a change of the project") {
+        selectFile(source("Player.x"))
+        undo(asks = false) { fileText(source("Player.x")).let { "drawUntilMatch" !in it && "conditional Card drawForMatch(" in it } }
         compilesCleanly(source("Player.x"))
     }
     restore()

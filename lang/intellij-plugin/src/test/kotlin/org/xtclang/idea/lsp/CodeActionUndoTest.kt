@@ -1,17 +1,26 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.ide.DataManager
+import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.AnActionResult
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.ex.AnActionListener
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.keymap.KeymapManager
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
@@ -37,6 +46,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.awaitUntil
+import java.awt.event.KeyEvent
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
@@ -44,7 +54,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 /**
  * A code action that the server resolves, such as Create private method, edits one file: Undo in that file's editor takes
  * it back as a typed change is, at once, without asking first, as IntelliJ asks only for a change of the project. So does
- * the Undo action that Ctrl+Z performs there, with the editor's context.
+ * the Undo action that Ctrl+Z performs there, with the editor's context, and the keymap's Undo key itself, through the
+ * IDE's key dispatch, while the caret is where the edit left it. Once the caret has left it, IntelliJ's first Undo only
+ * takes the caret back to the change, and the next one takes the change back.
  */
 class CodeActionUndoTest {
     @JvmField
@@ -81,7 +93,78 @@ class CodeActionUndoTest {
         }
     }
 
-    /** Creates a private method with a resolved code action in Root.x, runs [undo] on the EDT, and checks it took it back. */
+    @Test
+    fun `the Undo key in the file's editor takes a resolved code action's edit of that file back in one press`() {
+        createMethodThenUndo { project, _ -> pressUndo(project) }
+    }
+
+    @Test
+    fun `the Undo key, once the caret has left the edit, first takes the caret back to it, and the next press the edit`() {
+        createMethodThenUndo { project, root ->
+            val textEditor = checkNotNull(FileEditorManager.getInstance(project).selectedTextEditor) { "No editor of Root.x" }
+            val created = textEditor.document.text
+            val caret = textEditor.caretModel.offset
+            // as opening the file at its first line does
+            FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, root, 0, 0), true)
+            assertThat(textEditor.caretModel.offset).isNotEqualTo(caret)
+            pressUndo(project)
+            assertThat(textEditor.document.text).isEqualTo(created)
+            assertThat(textEditor.caretModel.offset).isEqualTo(caret)
+            pressUndo(project)
+        }
+    }
+
+    /**
+     * Presses the active keymap's Undo key in the selected editor, as a key event that the IDE's event queue dispatches,
+     * which runs the action that the keymap binds, and checks that it ran Undo.
+     */
+    private fun pressUndo(project: Project) {
+        val stroke =
+            checkNotNull(
+                KeymapUtil
+                    .getActiveKeymapShortcuts(IdeActions.ACTION_UNDO)
+                    .shortcuts
+                    .filterIsInstance<KeyboardShortcut>()
+                    .firstOrNull { it.secondKeyStroke == null }
+                    ?.firstKeyStroke,
+            ) { "No Undo key in the keymap ${KeymapManager.getInstance().activeKeymap.name}" }
+        val textEditor = checkNotNull(FileEditorManager.getInstance(project).selectedTextEditor) { "No editor of Root.x" }
+        val performed = CopyOnWriteArrayList<String>()
+        val connection = ApplicationManager.getApplication().messageBus.connect()
+        connection.subscribe(
+            AnActionListener.TOPIC,
+            object : AnActionListener {
+                override fun afterActionPerformed(
+                    action: AnAction,
+                    event: AnActionEvent,
+                    result: AnActionResult,
+                ) {
+                    if (result.isPerformed) performed += ActionManager.getInstance().getId(action) ?: action.javaClass.name
+                }
+            },
+        )
+        try {
+            val key =
+                KeyEvent(
+                    textEditor.contentComponent,
+                    KeyEvent.KEY_PRESSED,
+                    System.currentTimeMillis(),
+                    stroke.modifiers,
+                    stroke.keyCode,
+                    KeyEvent.CHAR_UNDEFINED,
+                )
+            IdeEventQueue.getInstance().dispatchEvent(key)
+            UIUtil.dispatchAllInvocationEvents()
+        } finally {
+            connection.disconnect()
+        }
+        assertThat(performed).containsExactly(IdeActions.ACTION_UNDO)
+    }
+
+    /**
+     * Creates a private method with a resolved code action in Root.x, with the caret at the call that names it, as Alt+Enter
+     * there does, runs [undo] on the EDT, and checks it took it back.
+     */
     private fun createMethodThenUndo(undo: (Project, VirtualFile) -> Unit) {
         val text = "module Root {\n    void run() {\n        announce();\n    }\n}\n"
         val root = file("Root.x", text)
@@ -93,6 +176,10 @@ class CodeActionUndoTest {
             }
         }
         open(root)
+        runInEdtAndWait {
+            editor.fixture.editor.caretModel
+                .moveToOffset(text.indexOf("announce"))
+        }
         val project = editor.fixture.project
         val dialogs = CopyOnWriteArrayList<String>()
         // Undo's question, if it asks one, answered No, so that the change stays and the test sees it
