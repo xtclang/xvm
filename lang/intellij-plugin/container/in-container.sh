@@ -97,6 +97,11 @@ copy_runs() {
             for logs in "$ide"/*/"XtcCompilerPlaybook-$name"/log; do
                 [ -d "$logs" ] && rsync -a --exclude 'indexing-diagnostic/' "$logs/" "/out/runs/$name/ide-log/"
             done
+            # the run's own IDE folder, its config, system and logs, once its logs are copied: about 240 MB a run,
+            # which filled the machine's disk; the IDE build cache beside them stays
+            for folder in "$ide"/*/"XtcCompilerPlaybook-$name"; do
+                [ -d "$folder" ] && rm -rf "$folder"
+            done
             echo "copied $name"
         fi
     done
