@@ -736,6 +736,8 @@ internal interface TourProbe {
 
     fun dialogShowing(): Boolean
 
+    fun dialogTitled(title: String): Boolean
+
     fun buttonEnabled(text: String): Boolean
 
     fun fileHas(
@@ -1107,9 +1109,10 @@ internal fun TourProbe.confirm(
 /**
  * Undoes the selected editor's last change, as the keymap's Undo shortcut there does, Ctrl+Z or Cmd+Z, and fails
  * unless the change is [undone] then. The editor must be as the change left it, as [TourProbe.selectFile] keeps it:
- * IntelliJ's first Undo after the caret has left the change only takes the caret back to it. IntelliJ asks first
- * whether to undo a command whose undo policy asks for it, as its own refactorings' does, and the plugin's commands, a
- * rename's too, do not: [asks] says which this is, and the question is answered.
+ * IntelliJ's first Undo after the caret has left the change only takes the caret back to it. Undo asks first whether to
+ * take back a change of the project, such as a rename that changed several files, as it asks for IntelliJ's own
+ * refactorings, and not a change of one file, such as a quick fix's: [asks] says which this is. The question is a
+ * dialog titled Undo, with OK and Cancel, and OK answers it.
  */
 internal fun TourProbe.undo(
     asks: Boolean,
@@ -1139,8 +1142,8 @@ internal fun TourProbe.undo(
     // an undo as [undo] asks for it, its question answered: how it ended
     fun undid(undo: () -> Unit): String {
         undo()
-        val asked = within(HANG) { undone() || buttonEnabled("Undo") } && !undone()
-        if (asked) confirm("Undo")
+        val asked = within(HANG) { undone() || dialogTitled("Undo") } && !undone()
+        if (asked) confirm("OK")
         return when {
             within(HANG) { undone() } -> "undid it${if (asked) ", once asked" else ""}"
             asked -> "asked, and did not undo it"
@@ -1156,19 +1159,21 @@ internal fun TourProbe.undo(
                 "not tried"
             } else {
                 redoDirectly()
+                // a redo of a change of the project asks first too, in a dialog titled Redo
+                if (within(HANG) { !undone() || dialogTitled("Redo") } && dialogTitled("Redo")) confirm("OK")
                 if (within(HANG) { !undone() }) undid { undoByAction() } else "not tried, as the redo did not redo it"
             }
         "$direct; then, redone, the Undo action performed with the editor's context: $byAction"
     }
-    expect(within(HANG) { undone() || buttonEnabled("Undo") }) {
+    expect(within(HANG) { undone() || dialogTitled("Undo") }) {
         "Undo neither undid the change nor asked whether to; ${notes()}; UndoManager's undo of the selected editor, " +
             "asked directly then: ${directly()}"
     }
     if (asks) {
         expect(!undone()) { "Undo did not ask first" }
-        expect(confirm("Undo")) { "Undo's question did not take its answer" }
+        expect(confirm("OK")) { "Undo's question did not take its answer: ${popupText()}" }
     } else {
-        expect(!buttonEnabled("Undo")) { "Undo asked first" }
+        expect(!dialogTitled("Undo")) { "Undo asked first: ${popupText()}" }
     }
     expect(within(HANG) { undone() }) { "Undo did not undo the change; ${notes()}" }
 }
