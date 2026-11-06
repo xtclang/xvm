@@ -481,6 +481,8 @@ internal interface TourProbe {
         line: Int,
     )
 
+    fun selectFile(path: String)
+
     fun close(path: String)
 
     fun caret(
@@ -1104,8 +1106,10 @@ internal fun TourProbe.confirm(
 
 /**
  * Undoes the selected editor's last change, as the keymap's Undo shortcut there does, Ctrl+Z or Cmd+Z, and fails
- * unless the change is [undone] then. IntelliJ first asks whether to undo a command that changed the project, such as a
- * rename, and not a change of one file, such as a quick fix's: [asks] says which this is, and the question is answered.
+ * unless the change is [undone] then. The editor must be as the change left it, as [TourProbe.selectFile] keeps it:
+ * IntelliJ's first Undo after the caret has left the change only takes the caret back to it. IntelliJ asks first
+ * whether to undo a command whose undo policy asks for it, as its own refactorings' does, and the plugin's commands, a
+ * rename's too, do not: [asks] says which this is, and the question is answered.
  */
 internal fun TourProbe.undo(
     asks: Boolean,
@@ -1117,7 +1121,7 @@ internal fun TourProbe.undo(
     val focus = focusState()
     val path = editor()["path"].asString
     val text = fileText(path).lines()
-    // the keymap's Undo key in the focused editor, as a user presses it: the action alone, from the tour, undid nothing
+    // the keymap's Undo key in the focused editor, as a user presses it
     focusedEditor()
     val pressed = editorShortcut("\$Undo")
     val notes = {
@@ -1129,8 +1133,9 @@ internal fun TourProbe.undo(
             "at the key: $pressed; ${path.substringAfterLast('/')} since: $change"
     }
 
-    // where Ctrl+Z ran the Undo action and it undid nothing, whether UndoManager itself undoes, asked directly, as the
-    //  action asks it: runs 16 and 18b got "ran $Undo" with the document unchanged
+    // where the key ran the Undo action and it undid nothing, whether UndoManager itself undoes, asked directly, as the
+    //  action asks it: runs 16 and 18b got "ran $Undo" with the document unchanged, and the direct undo, the second,
+    //  undid it, as the key's had only taken the caret back to the change, which the step had opened its file away from
     // an undo as [undo] asks for it, its question answered: how it ended
     fun undid(undo: () -> Unit): String {
         undo()
@@ -1143,7 +1148,7 @@ internal fun TourProbe.undo(
         }
     }
     // then, redone, the Undo action performed with the editor's context, as CodeActionUndoTest performs it and undoes:
-    //  it undoing here too points at the key's own way in, its dispatch
+    //  the redo leaves the caret at the change, so this one undoes at once
     val directly = {
         val direct = undid { undoDirectly() }
         val byAction =
