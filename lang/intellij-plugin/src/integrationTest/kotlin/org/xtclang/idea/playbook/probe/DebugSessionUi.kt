@@ -26,6 +26,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -165,7 +166,7 @@ object DebugSessionUi {
     ) {
         watch(project)
         sessions.remove(name(module))
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             if (breakpointLine > 0) {
                 val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
                 XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, breakpointLine - 1)
@@ -200,7 +201,7 @@ object DebugSessionUi {
     ) {
         watch(project)
         sessions.remove(name(module))
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, breakpointLine - 1)
             val runManager = RunManager.getInstance(project)
@@ -241,7 +242,7 @@ object DebugSessionUi {
                 ?.processHandler
                 ?.takeIf { it.isProcessTerminated }
                 ?.exitCode
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             (session.consoleView as? ConsoleViewImpl)?.let { console ->
                 // the console's editor is made with its component, which the Debug tool window may not have shown yet
                 console.component
@@ -263,8 +264,14 @@ object DebugSessionUi {
         project: Project,
         module: String,
         path: String,
+    ): String = variables(checkNotNull(session(project, module)) { "No debug session of $module" }, path)
+
+    /** The variables of [session]'s paused top frame, or along [path], as [variables] answers them for a module's session. */
+    internal fun variables(
+        session: XDebugSession,
+        path: String,
     ): String {
-        var shown = locals(project, module)
+        var shown = locals(session)
         path.split('/').filter { it.isNotEmpty() }.forEach { name -> shown = children(named(shown, name, path)) }
         return JsonArray().apply { (0 until shown.size()).forEach { add(presentation(shown.getName(it), shown.getValue(it))) } }.toString()
     }
@@ -280,7 +287,7 @@ object DebugSessionUi {
         path: String,
     ): String {
         val names = path.split('/').filter { it.isNotEmpty() }
-        var shown = locals(project, module)
+        var shown = locals(checkNotNull(session(project, module)) { "No debug session of $module" })
         names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
         val link = CompletableFuture<XFullValueEvaluator>()
         named(shown, names.last(), path).computePresentation(
@@ -333,7 +340,7 @@ object DebugSessionUi {
     ): Boolean {
         val action = ActionManager.getInstance().getAction("DAP.HexadecimalValues") as? ToggleAction ?: return false
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val context =
                 SimpleDataContext
                     .builder()
@@ -359,7 +366,7 @@ object DebugSessionUi {
         pages: Int,
     ): String {
         val names = path.split('/').filter { it.isNotEmpty() }
-        var shown = locals(project, module)
+        var shown = locals(checkNotNull(session(project, module)) { "No debug session of $module" })
         names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
         val collected = XValueChildrenList()
         var left = 0
@@ -415,7 +422,7 @@ object DebugSessionUi {
             next = null
             batch = CompletableFuture()
             // the node's action runs on the event thread, as when the user opens it
-            ApplicationManager.getApplication().invokeAndWait { open.run() }
+            boundedEdt(ModalityState.defaultModalityState()) { open.run() }
             batch.get(HANG_SECONDS, TimeUnit.SECONDS)
         }
         return JsonObject()
@@ -441,9 +448,16 @@ object DebugSessionUi {
         module: String,
         path: String,
         expression: String,
+    ): String = setValue(checkNotNull(session(project, module)) { "No debug session of $module" }, path, expression)
+
+    /** Sets the value at [path] of [session]'s paused top frame to [expression], as [setValue] does for a module's session. */
+    internal fun setValue(
+        session: XDebugSession,
+        path: String,
+        expression: String,
     ): String {
         val names = path.split('/').filter { it.isNotEmpty() }
-        var shown = locals(project, module)
+        var shown = locals(session)
         names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
         val modifier = checkNotNull(named(shown, names.last(), path).modifier) { "${names.last()} has no Set Value" }
         val result = CompletableFuture<String>()
@@ -481,7 +495,7 @@ object DebugSessionUi {
         val insertsAtOnce = settings.AUTOCOMPLETE_ON_CODE_COMPLETION
         lateinit var dialog: XDebuggerEvaluationDialog
         // the dialog is not modal, so it shows and this goes on
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             dialog =
                 XDebuggerEvaluationDialog(session, session.debugProcess.editorsProvider, XExpressionImpl.fromText(text), position, false)
             dialog.show()
@@ -493,7 +507,7 @@ object DebugSessionUi {
             //  the event system on, so an edit of it fails IntelliJ's Document/PSI check; the pick is inserted only
             //  into a physical one, as #1763 and the plugin's PhysicalExpressionFragments make it
             var physical = false
-            ApplicationManager.getApplication().invokeAndWait {
+            boundedEdt(ModalityState.defaultModalityState()) {
                 physical = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)?.isPhysical == true
                 settings.AUTOCOMPLETE_ON_CODE_COMPLETION = false
                 editor.selectionModel.removeSelection()
@@ -503,12 +517,12 @@ object DebugSessionUi {
             // before the dialog takes the focus closes, so completion starts again if none has shown for a while
             var focused = false
             while (!focused && System.nanoTime() < deadline) {
-                ApplicationManager.getApplication().invokeAndWait { focused = editor.contentComponent.isFocusOwner }
+                boundedEdt(ModalityState.defaultModalityState()) { focused = editor.contentComponent.isFocusOwner }
                 if (!focused) Thread.sleep(100)
             }
 
             fun invoke() =
-                ApplicationManager.getApplication().invokeAndWait {
+                boundedEdt(ModalityState.defaultModalityState()) {
                     CodeCompletionHandlerBase(CompletionType.BASIC).invokeCompletion(project, editor)
                 }
             invoke()
@@ -521,7 +535,7 @@ object DebugSessionUi {
                 check(System.nanoTime() < deadline) { "No completion $pick of $text: \"${editor.document.text}\"" }
                 Thread.sleep(100)
                 var shown = false
-                ApplicationManager.getApplication().invokeAndWait {
+                boundedEdt(ModalityState.defaultModalityState()) {
                     val lookup = LookupManager.getActiveLookup(editor) as LookupImpl?
                     shown = lookup != null
                     val item = lookup?.items?.firstOrNull { it.lookupString == pick }
@@ -543,7 +557,7 @@ object DebugSessionUi {
                 }
             }
             var completed = ""
-            ApplicationManager.getApplication().invokeAndWait { completed = editor.document.text }
+            boundedEdt(ModalityState.defaultModalityState()) { completed = editor.document.text }
             return JsonObject()
                 .apply {
                     add("items", items)
@@ -551,7 +565,7 @@ object DebugSessionUi {
                     addProperty("text", completed)
                 }.toString()
         } finally {
-            ApplicationManager.getApplication().invokeAndWait {
+            boundedEdt(ModalityState.defaultModalityState()) {
                 settings.AUTOCOMPLETE_ON_CODE_COMPLETION = insertsAtOnce
                 dialog.close(DialogWrapper.CANCEL_EXIT_CODE)
             }
@@ -567,7 +581,7 @@ object DebugSessionUi {
         while (true) {
             var editor: Editor? = null
             var shown = emptyList<String>()
-            ApplicationManager.getApplication().invokeAndWait {
+            boundedEdt(ModalityState.defaultModalityState()) {
                 val editors = EditorFactory.getInstance().allEditors.filter { SwingUtilities.isDescendingFrom(it.component, dialog.window) }
                 val files = PsiDocumentManager.getInstance(project)
                 editor = editors.firstOrNull { files.getPsiFile(it.document) != null }
@@ -580,12 +594,8 @@ object DebugSessionUi {
     }
 
     /** The paused session's top frame's Locals, as the Variables view shows them. */
-    private fun locals(
-        project: Project,
-        module: String,
-    ): XValueChildrenList {
-        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        val frame = checkNotNull(session.currentStackFrame) { "The debug session of $module is not paused" }
+    private fun locals(session: XDebugSession): XValueChildrenList {
+        val frame = checkNotNull(session.currentStackFrame) { "The debug session ${session.sessionName} is not paused" }
         val groups = children(frame).bottomGroups
         return children(checkNotNull(groups.firstOrNull { it.name == "Locals" }) { "No Locals in ${groups.map { it.name }}" })
     }
@@ -607,7 +617,7 @@ object DebugSessionUi {
         kind: String,
     ) {
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             when (kind) {
                 "over" -> session.stepOver(false)
                 "into" -> session.stepInto()
@@ -646,9 +656,16 @@ object DebugSessionUi {
         module: String,
         expression: String,
         origin: XEvaluationOrigin?,
+    ): String = evaluate(checkNotNull(session(project, module)) { "No debug session of $module" }, expression, origin)
+
+    /** Evaluates [expression] in [session]'s paused top frame, as the evaluation's [origin] asks for it, as [evaluateFrom] does. */
+    internal fun evaluate(
+        session: XDebugSession,
+        expression: String,
+        origin: XEvaluationOrigin?,
     ): String {
-        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        val evaluator = checkNotNull(session.currentStackFrame?.evaluator) { "The debug session of $module has no frame evaluator" }
+        val evaluator =
+            checkNotNull(session.currentStackFrame?.evaluator) { "The debug session ${session.sessionName} has no frame evaluator" }
         val result = CompletableFuture<JsonObject>()
         val callback =
             object : XDebuggerEvaluator.XEvaluationCallback {
@@ -678,7 +695,7 @@ object DebugSessionUi {
     @JvmStatic
     fun hintShown(): Boolean {
         var shown = false
-        ApplicationManager.getApplication().invokeAndWait { shown = HintManager.getInstance().hasShownHintsThatWillHideByOtherHint(false) }
+        boundedEdt(ModalityState.defaultModalityState()) { shown = HintManager.getInstance().hasShownHintsThatWillHideByOtherHint(false) }
         return shown
     }
 
@@ -686,7 +703,7 @@ object DebugSessionUi {
     @JvmStatic
     fun hintTexts(): String {
         val texts = JsonArray()
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             Window.getWindows().filter { it.isShowing }.forEach { window ->
                 UIUtil
                     .uiTraverser(window)
@@ -776,7 +793,7 @@ object DebugSessionUi {
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
         val process = session.debugProcess
         val state = JsonObject()
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             state.addProperty("sourcesShown", session.ui?.findContent(LOADED_SOURCES) != null)
             state.addProperty("modulesShown", session.ui?.findContent(MODULES) != null)
         }
@@ -841,9 +858,11 @@ object DebugSessionUi {
     fun threads(
         project: Project,
         module: String,
-    ): String {
-        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        val context = checkNotNull(session.suspendContext) { "The debug session of $module is not paused" }
+    ): String = threads(checkNotNull(session(project, module)) { "No debug session of $module" })
+
+    /** [session]'s threads, as [threads] answers them for a module's session. */
+    internal fun threads(session: XDebugSession): String {
+        val context = checkNotNull(session.suspendContext) { "The debug session ${session.sessionName} is not paused" }
         return JsonArray()
             .apply {
                 context.executionStacks.forEach { stack ->
@@ -862,7 +881,11 @@ object DebugSessionUi {
     fun smartStepTargets(
         project: Project,
         module: String,
-    ): String = JsonArray().apply { smartStepVariants(project, module).forEach { add(it.text) } }.toString()
+    ): String = smartStepTargets(checkNotNull(session(project, module)) { "No debug session of $module" })
+
+    /** The Smart Step Into variants where [session] stopped, as [smartStepTargets] answers them for a module's session. */
+    internal fun smartStepTargets(session: XDebugSession): String =
+        JsonArray().apply { smartStepVariants(session).forEach { add(it.text) } }.toString()
 
     /** Steps the module's paused session into the Smart Step Into variant with the given [text], as choosing it does. */
     @JvmStatic
@@ -873,8 +896,8 @@ object DebugSessionUi {
     ) {
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
         val handler = smartStepHandler(session)
-        val variant = smartStepVariants(project, module).single { it.text == text }
-        ApplicationManager.getApplication().invokeAndWait { session.smartStepInto(handler, variant) }
+        val variant = smartStepVariants(session).single { it.text == text }
+        boundedEdt(ModalityState.defaultModalityState()) { session.smartStepInto(handler, variant) }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -883,12 +906,8 @@ object DebugSessionUi {
             session.debugProcess.smartStepIntoHandler,
         ) { "No Smart Step Into handler" } as XSmartStepIntoHandler<XSmartStepIntoVariant>
 
-    private fun smartStepVariants(
-        project: Project,
-        module: String,
-    ): List<XSmartStepIntoVariant> {
-        val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        val position = checkNotNull(session.currentPosition) { "The debug session of $module is not paused" }
+    private fun smartStepVariants(session: XDebugSession): List<XSmartStepIntoVariant> {
+        val position = checkNotNull(session.currentPosition) { "The debug session ${session.sessionName} is not paused" }
         return checkNotNull(smartStepHandler(session).computeSmartStepVariantsAsync(position).blockingGet(30_000)) {
             "No Smart Step Into variants"
         }
@@ -933,7 +952,7 @@ object DebugSessionUi {
         val frame = frames.first { SimpleColoredText().also(it::customizePresentation).toString().contains(name) }
         select(proxy, stack, frame, frame === frames.first())
         check(resetFrameOffered(project)) { "Reset Frame is not offered on $name" }
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             ActionManager.getInstance().getAction(RESET_FRAME).actionPerformed(resetFrameEvent(project))
         }
     }
@@ -967,7 +986,7 @@ object DebugSessionUi {
         frame: XStackFrame,
         top: Boolean,
     ) {
-        ApplicationManager.getApplication().invokeAndWait { call(proxy, "setCurrentStackFrame", stack, frame, top) }
+        boundedEdt(ModalityState.defaultModalityState()) { call(proxy, "setCurrentStackFrame", stack, frame, top) }
         val handler = checkNotNull(call(proxy, "getDropFrameHandler")) { "No drop-frame handler" }
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
         while (call(proxy, "getCurrentStackFrame") !== frame || call(handler, "canDropFrame", frame).toString() == "UNSURE") {
@@ -984,7 +1003,7 @@ object DebugSessionUi {
      */
     private fun resetFrameOffered(project: Project): Boolean {
         var offered = false
-        ApplicationManager.getApplication().invokeAndWait { offered = resetFrameEvent(project).presentation.isEnabledAndVisible }
+        boundedEdt(ModalityState.defaultModalityState()) { offered = resetFrameEvent(project).presentation.isEnabledAndVisible }
         return offered
     }
 
@@ -1004,7 +1023,7 @@ object DebugSessionUi {
         line: Int,
     ) {
         val session = checkNotNull(session(project, module)) { "No debug session of $module" }
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             val position = checkNotNull(XDebuggerUtil.getInstance().createPosition(file, line - 1)) { "No line $line in $uri" }
             session.runToPosition(position, false)
@@ -1020,7 +1039,7 @@ object DebugSessionUi {
         breakpointLine: Int,
         condition: String,
     ) {
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             val line = breakpointLine - 1
 
@@ -1046,7 +1065,7 @@ object DebugSessionUi {
         uri: String,
         line: Int,
     ) {
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, line - 1)
         }
@@ -1065,7 +1084,7 @@ object DebugSessionUi {
     ): String {
         val session = checkNotNull(session(project, module) as? XDebugSessionImpl) { "No debug session of $module" }
         val states = JsonArray()
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             XDebuggerManager
                 .getInstance(project)
@@ -1109,7 +1128,7 @@ object DebugSessionUi {
         val type =
             XBreakpointType.EXTENSION_POINT_NAME.extensionList.firstOrNull { it.id == FUNCTION_BREAKPOINT }
                 as? XBreakpointType<XBreakpoint<XBreakpointProperties<*>>, XBreakpointProperties<*>> ?: return false
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val properties = checkNotNull(type.createProperties()) { "No properties for a function breakpoint" }
             properties.javaClass.getMethod("setName", String::class.java).invoke(properties, name)
             ApplicationManager.getApplication().runWriteAction {
@@ -1131,7 +1150,7 @@ object DebugSessionUi {
     ): String {
         val session = checkNotNull(session(project, module) as? XDebugSessionImpl) { "No debug session of $module" }
         val states = JsonArray()
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             XDebuggerManager
                 .getInstance(project)
                 .breakpointManager.allBreakpoints
@@ -1167,7 +1186,7 @@ object DebugSessionUi {
         uri: String,
     ): String {
         val values = JsonArray()
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             // the Variables view, as the Debug tool window shows it on a stop, computes the values that are drawn inline
             ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.DEBUG)?.show()
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
@@ -1213,7 +1232,7 @@ object DebugSessionUi {
         val names = path.split('/')
         val node = names.fold<String, XDebuggerTreeNode>(tree.root) { parent, name -> child(tree, parent, name) } as XValueNodeImpl
         var offered = false
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             // selected in the tree, whose data context then carries the selection as the backend reads it
             tree.selectionPath = node.path
             val context = DataManager.getInstance().getDataContext(tree)
@@ -1236,7 +1255,7 @@ object DebugSessionUi {
     ): String {
         val session = session(project, module) as? XDebugSessionImpl
         val states = JsonArray()
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             XDebuggerManager
                 .getInstance(project)
                 .breakpointManager.allBreakpoints
@@ -1267,7 +1286,7 @@ object DebugSessionUi {
     /** Removes the line breakpoints, as the gutter does, and leaves the others. */
     @JvmStatic
     fun clearLineBreakpoints(project: Project) {
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val manager = XDebuggerManager.getInstance(project).breakpointManager
             ApplicationManager.getApplication().runWriteAction {
                 manager.allBreakpoints.filterIsInstance<XLineBreakpoint<*>>().forEach(manager::removeBreakpoint)
@@ -1284,7 +1303,7 @@ object DebugSessionUi {
     /** The Variables view of the session that the Debug tool window shows, which it shows as a stop does. */
     private fun variablesTree(project: Project): XDebuggerTree {
         var tree: XDebuggerTree? = null
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val window = ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.DEBUG)
             window?.show()
             tree =
@@ -1307,7 +1326,7 @@ object DebugSessionUi {
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
         while (true) {
             var found: XDebuggerTreeNode? = null
-            ApplicationManager.getApplication().invokeAndWait {
+            boundedEdt(ModalityState.defaultModalityState()) {
                 val pending = ArrayDeque(listOf(parent))
                 while (found == null && pending.isNotEmpty()) {
                     val node = pending.removeFirst()
@@ -1337,7 +1356,7 @@ object DebugSessionUi {
         line: Int,
         text: String,
     ) {
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             val document = checkNotNull(FileDocumentManager.getInstance().getDocument(file)) { "No document of $uri" }
             WriteCommandAction.runWriteCommandAction(project) { document.insertString(document.getLineStartOffset(line - 1), text) }
@@ -1347,7 +1366,7 @@ object DebugSessionUi {
     /** Removes every line breakpoint of the project. */
     @JvmStatic
     fun clearBreakpoints(project: Project) {
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val manager = XDebuggerManager.getInstance(project).breakpointManager
             ApplicationManager.getApplication().runWriteAction { manager.allBreakpoints.forEach(manager::removeBreakpoint) }
         }
@@ -1500,7 +1519,8 @@ object DebugSessionUi {
         }
     }
 
-    private fun frames(stack: XExecutionStack): JsonArray =
+    /** The stack's frames, each with its `name`, `file` and 1-based `line`, as the Frames view shows them. */
+    internal fun frames(stack: XExecutionStack): JsonArray =
         JsonArray().apply {
             stackFrames(stack).forEach { frame ->
                 add(
