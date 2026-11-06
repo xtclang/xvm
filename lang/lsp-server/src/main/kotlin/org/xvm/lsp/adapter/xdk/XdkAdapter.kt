@@ -367,6 +367,14 @@ class XdkAdapter
             uri.startsWith("${XdkLibrarySources.SCHEME}:") ||
                 XdkLibrarySources.owns(uri) || synchronized(lifecycle) { dependencies.modules.values.any { uri in it.documents } }
 
+        /**
+         * Whether [uri] is a library document that is not compiled. A library source's read-only copy is compiled on
+         * its own, which gives its outline, whether or not navigation has parsed it yet (and owns it): a compile that
+         * names one of its declarations parses it, so which one it is depends on what was compiled before. None of a
+         * copy's diagnostics are reported.
+         */
+        private fun isUncompiledLibraryDocument(uri: String): Boolean = isLibraryDocument(uri) && !XdkLibrarySources.isCopy(uri)
+
         internal fun libraryConfiguration(): List<Map<String, Any>> =
             synchronized(lifecycle) {
                 dependencies.modules.values.map { dependency ->
@@ -764,7 +772,7 @@ class XdkAdapter
             uri: String,
             content: String,
         ): CompletableFuture<CompilationResult> {
-            if (isLibraryDocument(uri)) {
+            if (isUncompiledLibraryDocument(uri)) {
                 return CompletableFuture.completedFuture(CompilationResult.success(uri, emptyList()))
             }
             updateDocument(uri, content)
@@ -1470,7 +1478,8 @@ class XdkAdapter
 
         /** Closing restores disk headers and returns exactly the scopes retired by that change. */
         fun closeDocumentAndRefresh(uri: String): Set<String> {
-            if (isLibraryDocument(uri)) return emptySet()
+            // a copy's compile keeps its text until it closes, even when navigation has parsed it since it opened
+            if (isUncompiledLibraryDocument(uri)) return emptySet()
             val (retired, obsoleteQueries) =
                 synchronized(lifecycle) {
                     val scope = scopes.remove(uri) ?: analysisScope(uri)
