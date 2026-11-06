@@ -1,26 +1,18 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.ide.DataManager
-import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.AnActionResult
 import com.intellij.openapi.actionSystem.IdeActions
-import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.ex.ActionUtil
-import com.intellij.openapi.actionSystem.ex.AnActionListener
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
-import com.intellij.openapi.keymap.KeymapManager
-import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
@@ -46,7 +38,6 @@ import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.awaitUntil
-import java.awt.event.KeyEvent
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
@@ -112,53 +103,6 @@ class CodeActionUndoTest {
             assertThat(textEditor.caretModel.offset).isEqualTo(caret)
             pressUndo(project)
         }
-    }
-
-    /**
-     * Presses the active keymap's Undo key in the selected editor, as a key event that the IDE's event queue dispatches,
-     * which runs the action that the keymap binds, and checks that it ran Undo.
-     */
-    private fun pressUndo(project: Project) {
-        val stroke =
-            checkNotNull(
-                KeymapUtil
-                    .getActiveKeymapShortcuts(IdeActions.ACTION_UNDO)
-                    .shortcuts
-                    .filterIsInstance<KeyboardShortcut>()
-                    .firstOrNull { it.secondKeyStroke == null }
-                    ?.firstKeyStroke,
-            ) { "No Undo key in the keymap ${KeymapManager.getInstance().activeKeymap.name}" }
-        val textEditor = checkNotNull(FileEditorManager.getInstance(project).selectedTextEditor) { "No editor of Root.x" }
-        val performed = CopyOnWriteArrayList<String>()
-        val connection = ApplicationManager.getApplication().messageBus.connect()
-        connection.subscribe(
-            AnActionListener.TOPIC,
-            object : AnActionListener {
-                override fun afterActionPerformed(
-                    action: AnAction,
-                    event: AnActionEvent,
-                    result: AnActionResult,
-                ) {
-                    if (result.isPerformed) performed += ActionManager.getInstance().getId(action) ?: action.javaClass.name
-                }
-            },
-        )
-        try {
-            val key =
-                KeyEvent(
-                    textEditor.contentComponent,
-                    KeyEvent.KEY_PRESSED,
-                    System.currentTimeMillis(),
-                    stroke.modifiers,
-                    stroke.keyCode,
-                    KeyEvent.CHAR_UNDEFINED,
-                )
-            IdeEventQueue.getInstance().dispatchEvent(key)
-            UIUtil.dispatchAllInvocationEvents()
-        } finally {
-            connection.disconnect()
-        }
-        assertThat(performed).containsExactly(IdeActions.ACTION_UNDO)
     }
 
     /**
