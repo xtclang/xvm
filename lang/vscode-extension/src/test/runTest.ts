@@ -22,6 +22,10 @@ async function main(): Promise<void> {
         await (await import('./runLifecycle.js')).runLifecycle(extensionRoot, args.includes('--shared-process'));
         return;
     }
+    if (args.includes('--tour')) {
+        await (await import('./runTour.js')).runTour(extensionRoot, args.filter(argument => argument !== '--tour'));
+        return;
+    }
     if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases=') && !argument.startsWith('--theme=') && argument !== '--lexical-baseline')) {
         throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root, --cancel-ui, --theme=NAME and --lexical-baseline, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
     }
