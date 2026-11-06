@@ -325,10 +325,14 @@ val testVscodeExtension =
         inputs.dir(layout.projectDirectory.dir("src/test"))
     }
 
-// Runs the compiler playbook inside VS Code and the host/protocol checks referenced by it.
+// Runs the compiler playbook inside VS Code and the host/protocol checks referenced by it. With -PvscodeTour=true it
+// runs the tour instead, which records the extension's features for its video and checks them, on a project that
+// xtc init makes; -PvscodeTourSections=<ids> records only those sections, and -PvscodeTourHang=<seconds> shortens
+// its bound against a hang, an hour, for a quicker look at failing checks. The tour needs xdk:installDist, and its
+// Gradle-mode steps publishLocal.
 tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
-    description = "Run XdkAdapter playbook in VS Code"
+    description = "Run XdkAdapter playbook in VS Code, or with -PvscodeTour=true the tour"
     finalizedBy(pruneTestReports)
     // the extension suite drives a VS Code window of its own on the same display, so the two must not overlap, as
     // tasks of one project can with the configuration cache, even under --no-parallel: each would take the other's
@@ -339,11 +343,14 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
     val multiRoot =
         providers.gradleProperty("compilerPlaybookMultiRoot").map(String::toBoolean).orElse(false)
     val cancelUi = providers.gradleProperty("compilerPlaybookCancelUi").map(String::toBoolean).orElse(false)
+    val tour = providers.gradleProperty("vscodeTour").map(String::toBoolean).orElse(false)
+    val tourSections = providers.gradleProperty("vscodeTourSections").orElse("")
+    val tourHang = providers.gradleProperty("vscodeTourHang").orElse("")
     dependsOn("assemble")
-    if (!selectedCases.isPresent) {
+    if (!selectedCases.isPresent && !tour.get()) {
         dependsOn(":lsp-server:test", ":lsp-server:compilerStdioTest")
     }
-    args.set(
+    val playbookArgs =
         selectedCases
             .orElse("")
             .zip(multiRoot) { cases, multipleRoots ->
@@ -352,8 +359,16 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
                         cases.takeIf(String::isNotEmpty)?.let { "--cases=$it" },
                         "--multi-root".takeIf { multipleRoots },
                     )
-            }.zip(cancelUi) { arguments, visibleCancel -> arguments + listOfNotNull("--cancel-ui".takeIf { visibleCancel }) },
-    )
+            }.zip(cancelUi) { arguments, visibleCancel -> arguments + listOfNotNull("--cancel-ui".takeIf { visibleCancel }) }
+    val tourArgs =
+        tourSections.zip(tourHang) { sections, hang ->
+            listOf("run", "test:tour", "--") +
+                listOfNotNull(
+                    sections.takeIf(String::isNotEmpty)?.let { "--tour-sections=$it" },
+                    hang.takeIf(String::isNotEmpty)?.let { "--tour-hang=$it" },
+                )
+        }
+    args.set(tour.flatMap { if (it) tourArgs else playbookArgs })
     inputs.dir(layout.projectDirectory.dir("src/test"))
     inputs.file(layout.projectDirectory.file("../doc/manual-test-plan.md"))
     inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
