@@ -139,6 +139,7 @@ status=0
 "$engine" run --rm --init --name "xvm-playbook-$stamp" \
     --memory "${XTC_CONTAINER_MEMORY:-7g}" --shm-size 1g --security-opt label=disable \
     -e XTC_COMMIT="$commit" -e XTC_BRANCH="$branch" -e XTC_PLAYBOOK_DIRTY="$dirty" \
+    -e XTC_RECORD_VIDEO="${XTC_RECORD_VIDEO:-}" \
     -v xvm-playbook-gradle:/gradle \
     -v xvm-playbook-work:/work \
     -v xvm-playbook-m2:/home/playbook/.m2 \
