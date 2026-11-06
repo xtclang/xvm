@@ -8,9 +8,6 @@ import com.intellij.driver.sdk.FileEditorManager
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
-import com.intellij.driver.sdk.ui.components.elements.button
-import com.intellij.driver.sdk.ui.components.elements.dialog
-import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
@@ -89,12 +86,7 @@ fun Driver.renameFamily(
     focusEditor(renamed)
     invokeAction("\$Undo", now = false, component = renamed.component)
     awaitUi("$id one Undo restores every source and path", HANG_LIMIT) {
-        val confirmation = ui.dialog(title = "Undo")
-        if (confirmation.present()) {
-            withContext(OnDispatcher.EDT) {
-                cast(confirmation.button("Undo").component, NativeButton::class).doClick()
-            }
-        }
+        answerUndoQuestion("Undo")
         files.all { file ->
             val original = file["file"].asString
             Files.exists(root.resolve(original)) &&
@@ -113,6 +105,7 @@ fun Driver.renameFamily(
         focusEditor(restored)
         invokeAction("\$Redo", now = false, component = restored.component)
         awaitUi("$id Redo restores graph, sources and paths", HANG_LIMIT) {
+            answerUndoQuestion("Redo")
             graphContains("Renamed.example.org") &&
                 !graphContains("Library.example.org") &&
                 files.all { file ->
@@ -125,12 +118,7 @@ fun Driver.renameFamily(
         focusEditor(redone)
         invokeAction("\$Undo", now = false, component = redone.component)
         awaitUi("$id second Undo restores the original graph and sources", HANG_LIMIT) {
-            val confirmation = ui.dialog(title = "Undo")
-            if (confirmation.present()) {
-                withContext(OnDispatcher.EDT) {
-                    cast(confirmation.button("Undo").component, NativeButton::class).doClick()
-                }
-            }
+            answerUndoQuestion("Undo")
             graphContains("Library.example.org") &&
                 !graphContains("Renamed.example.org") &&
                 files.all { file ->
