@@ -230,24 +230,34 @@ class CompilerPlaybook(
                     val text = expected.edit.apply(fixtures.getValue(scenario.file))
                     editor.text = text
                     val range = offset(text, expected.rangeStart)..offset(text, expected.rangeEnd)
+                    val span = FinalReport(driver, editor, "compiler diagnostic at shared source span")
                     awaitUi("compiler diagnostic at shared source span", HANG_LIMIT) {
-                        currentDiagnostics(editor) != null &&
-                            editor.diagnostics().any {
+                        val received = currentDiagnostics(editor)
+                        val painted = received?.let { editor.diagnostics() }
+                        val done =
+                            painted?.any {
                                 it.severity == expected.severity &&
                                     it.start in range &&
                                     it.description.contains(expected.messageContains, ignoreCase = true)
-                            }
+                            } == true
+                        span.check(received, painted, done)
+                        done
                     }
+                    val codes = FinalReport(driver, editor, "compiler diagnostic codes, source, and nonempty ranges")
                     awaitUi("compiler diagnostic codes, source, and nonempty ranges", HANG_LIMIT) {
-                        currentDiagnostics(editor)?.let { items ->
-                            items.isNotEmpty() &&
-                                items.all {
-                                    it.code?.startsWith(expected.codePrefix) == true &&
-                                        it.source == "Ecstasy" &&
-                                        it.start.first > 0 &&
-                                        it.start != it.end
-                                }
-                        } == true
+                        val received = currentDiagnostics(editor)
+                        val done =
+                            received?.let { items ->
+                                items.isNotEmpty() &&
+                                    items.all {
+                                        it.code?.startsWith(expected.codePrefix) == true &&
+                                            it.source == "Ecstasy" &&
+                                            it.start.first > 0 &&
+                                            it.start != it.end
+                                    }
+                            } == true
+                        codes.check(received, done)
+                        done
                     }
                     problems(editor)
                     nextProblem(editor)
@@ -257,6 +267,13 @@ class CompilerPlaybook(
                 }
                 editor.text = fixtures.getValue(scenario.file) + scenario.cleanAppend
                 editor.awaitDiagnostics(emptyList())
+                // a wait for an error the clean source cannot have fails once its report is final and the editor has
+                // highlighted it, not at its bound, an hour on
+                val waited = TimeSource.Monotonic.markNow()
+                val failure = runCatching { editor.awaitError() }.exceptionOrNull()
+                check(failure is IllegalStateException && "is final, with nothing under way" in failure.message.orEmpty()) {
+                    "Waiting for an error in clean source, after ${waited.elapsedNow()}: $failure"
+                }
             }
             case(
                 shared.definitions.id,
@@ -782,8 +799,13 @@ class CompilerPlaybook(
                 if (variant["validAfterAcceptance"].asBoolean) {
                     editor.awaitDiagnostics(emptyList())
                 } else {
+                    val report = FinalReport(this, editor, "missing array bracket remains a diagnostic")
                     awaitUi("missing array bracket remains a diagnostic", HANG_LIMIT) {
-                        currentDiagnostics(editor)?.isNotEmpty() == true && editor.diagnostics().isNotEmpty()
+                        val received = currentDiagnostics(editor)
+                        val painted = received?.let { editor.diagnostics() }
+                        val done = received?.isNotEmpty() == true && painted?.isNotEmpty() == true
+                        report.check(received, painted, done)
+                        done
                     }
                 }
                 val accepted =
@@ -2058,22 +2080,32 @@ class CompilerPlaybook(
 
     // the editor's diagnostics count once the client holds the server's report for its current text
     private fun JEditorUiComponent.awaitError() {
+        val report = FinalReport(driver, this, "compiler error in editor")
         awaitUi(
             message = "compiler error in editor",
             timeout = HANG_LIMIT,
             errorMessage = { "Source: $text; editor diagnostics: ${readDiagnostics()}" },
         ) {
-            driver.currentDiagnostics(this)?.isNotEmpty() == true && readDiagnostics()?.any { it.severity == "ERROR" } == true
+            val received = driver.currentDiagnostics(this)
+            val painted = received?.let { readDiagnostics() }
+            val done = received?.isNotEmpty() == true && painted?.any { it.severity == "ERROR" } == true
+            report.check(received, painted, done)
+            done
         }
     }
 
     private fun JEditorUiComponent.awaitDiagnostics(expected: List<Diagnostic>) {
+        val report = FinalReport(driver, this, "diagnostics $expected")
         awaitUi(
             message = "diagnostics $expected",
             errorMessage = { "Expected $expected; editor diagnostics: ${readDiagnostics()}" },
             timeout = HANG_LIMIT,
         ) {
-            driver.currentDiagnostics(this)?.size == expected.size && readDiagnostics() == expected
+            val received = driver.currentDiagnostics(this)
+            val painted = received?.let { readDiagnostics() }
+            val done = received?.size == expected.size && painted == expected
+            report.check(received, painted, done)
+            done
         }
     }
 }
