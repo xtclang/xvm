@@ -67,12 +67,29 @@ class XdkIncrementalBaseTest {
     }
 
     @Test
-    fun `a body edit of the root module after its declarations compiles it alone`() {
+    fun `a body edit of the root module after all but its private declarations compiles it alone`() {
         val root = cardGame()
         val hand = root.resolve("src/main/x/cardGame/Hand.x")
-        // the tour's unused local, in the last method's body: the modules that depend on it compile as they did
+        // the tour's unused local, in display's body, which moves only heading, private, declared after it: the modules
+        // that depend on it compile as they did
         val edited = hand.readText().replaceFirst("        console.print();\n", "        Int unused = 0;\n        console.print();\n")
         assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(1)
+    }
+
+    @Test
+    fun `an edit that moves only private declarations compiles the module alone, as the modules that compiled cannot name them`() {
+        val root = counter(USE_COUNTER)
+        val lib = root.resolve("Lib.x")
+        assertThat(incremental(root, ::libraryAndUse, mapOf(lib to COUNTER.replace(NEXT_BODY, "$UNUSED$NEXT_BODY")))).isEqualTo(1)
+    }
+
+    @Test
+    fun `an edit that moves only private declarations compiles a module that did not compile, as its facts name them`() {
+        // Use's compile fails at the call of step, which is not accessible: its facts are what the compile got that
+        // far, and they name Counter's members where they are, step and PROMPT too
+        val root = counter(USE_STEP)
+        val lib = root.resolve("Lib.x")
+        assertThat(incremental(root, ::libraryAndUse, mapOf(lib to COUNTER.replace(NEXT_BODY, "$UNUSED$NEXT_BODY")))).isEqualTo(2)
     }
 
     @Test
@@ -326,6 +343,13 @@ class XdkIncrementalBaseTest {
             }
         }
 
+    /** Lib, with [COUNTER], and Use, with [use], which depends on it. */
+    private fun counter(use: String): File =
+        directory.toRealPath().toFile().also { root ->
+            root.resolve("Lib.x").writeText(COUNTER)
+            root.resolve("Use.x").writeText(use)
+        }
+
     /** Lib, and Use, which depends on it. */
     private fun libraryAndUse(root: File): List<XdkSourceModule> =
         listOf(
@@ -369,6 +393,47 @@ class XdkIncrementalBaseTest {
                 package lib import Lib;
 
                 Int two() = lib.one() + 1;
+            }
+            """.trimIndent() + "\n"
+
+        /** The body of Counter's public method, which an edit grows by [UNUSED], moving the private members after it. */
+        const val NEXT_BODY = "            return step();\n"
+
+        const val UNUSED = "            Int unused = 0;\n"
+
+        /** A class with a public method, and after it a private method and a private constant, as the card game's Hand. */
+        val COUNTER =
+            """
+            module Lib {
+                class Counter {
+                    Int next() {
+                        return step();
+                    }
+
+                    private Int step() = 1;
+
+                    private static String PROMPT = "Next";
+                }
+            }
+            """.trimIndent() + "\n"
+
+        /** A use of Counter's public method. */
+        val USE_COUNTER =
+            """
+            module Use {
+                package lib import Lib;
+
+                Int two() = new lib.Counter().next() + 1;
+            }
+            """.trimIndent() + "\n"
+
+        /** A call of Counter's private method, which does not compile. */
+        val USE_STEP =
+            """
+            module Use {
+                package lib import Lib;
+
+                Int two() = new lib.Counter().step() + 1;
             }
             """.trimIndent() + "\n"
     }
