@@ -29,7 +29,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * framed as an adapter on stdio writes them, which LSP4IJ's console does not show. The session starts with the
  * process, and messages written before it exists wait for it. Ending the process ends the session, which stops the program it launched, and the
  * process's exit code is the program's, from the session's `exited` event. A line typed in the session's console,
- * which IntelliJ writes to the same input, is what it is in a debug console: see [DebugConsoleLines].
+ * which IntelliJ writes to the same input, is what it is in a debug console: see [DebugConsoleLines]. The answer to a
+ * `continue` reaches the client once the program stops or ends again, or the session ends, which Run to Cursor needs
+ * with LSP4IJ 0.21.0.
  */
 internal class LanguageServerDebugProcessHandler(
     private val sessions: DebugSessions,
@@ -43,6 +45,7 @@ internal class LanguageServerDebugProcessHandler(
     DebugSessions.Session {
     private val lock = Any()
     private val waiting = mutableListOf<JsonObject>()
+    private val continues = mutableListOf<JsonObject>()
     private var connection: Connection? = null
     private val finished = AtomicBoolean()
     private val console = DebugConsoleLines()
@@ -149,12 +152,31 @@ internal class LanguageServerDebugProcessHandler(
         if (message["type"]?.asString == "response" && message["command"]?.asString == "stackTrace") {
             frameSources(framePaths(message))
         }
-        notifyTextAvailable(DapFrames.frame(message.toString()), ProcessOutputTypes.STDOUT)
+        // TODO LSP4IJ: UP44 — LSP4IJ 0.21.0 removes Run to Cursor's temporary breakpoint once the continue request is
+        //  answered, not when the program stops there, so a program that takes longer than that round trip to reach
+        //  the cursor runs past it. The client gets a continue's answer once the program next stops or ends, or the
+        //  session does, which keeps the breakpoint until then, as LSP4IJ's fix (#1773) and VS Code do; nothing else
+        //  in LSP4IJ waits for that answer: its other requests, a pause or a stop among them, go on meanwhile
+        if (message["type"]?.asString == "response" && message["command"]?.asString == "continue" &&
+            message["success"]?.asBoolean == true
+        ) {
+            synchronized(continues) { continues += message }
+            return
+        }
+        if (message["type"]?.asString == "event" && message["event"]?.asString in RUN_ENDS) answerContinues()
+        forward(message)
     }
+
+    /** Gives the client [message], as an adapter on stdio writes it. */
+    private fun forward(message: JsonObject) = notifyTextAvailable(DapFrames.frame(message.toString()), ProcessOutputTypes.STDOUT)
+
+    /** Gives the client the answers to its continues that wait for the program to stop or end, in order. */
+    private fun answerContinues() = synchronized(continues) { continues.toList().also { continues.clear() } }.forEach(::forward)
 
     override fun ended(reason: String) {
         if (finished.compareAndSet(false, true)) {
             forget()
+            answerContinues()
             notifyTextAvailable("\n$reason\n", ProcessOutputTypes.STDERR)
             notifyProcessTerminated(1)
         }
@@ -168,10 +190,11 @@ internal class LanguageServerDebugProcessHandler(
 
     override fun getProcessInput(): OutputStream = input
 
-    /** Ends the session, which stops its program, then the process. */
+    /** Ends the session, which stops its program, then the process, whose client has every answer it waits for. */
     private fun finish(notify: () -> Unit) {
         if (finished.compareAndSet(false, true)) {
             forget()?.let { it.server.debugEnd(DebugSessionParams(it.sessionId)) }
+            answerContinues()
             notify()
         }
     }
@@ -180,6 +203,11 @@ internal class LanguageServerDebugProcessHandler(
         synchronized(lock) {
             connection?.also { sessions.remove(it.sessionId) }
         }
+
+    private companion object {
+        /** The events after which a resumed program no longer runs: it stopped, or it ended. */
+        val RUN_ENDS = setOf("stopped", "exited", "terminated")
+    }
 }
 
 /** The files of a `stackTrace` response's frames whose source has a path, each once. */
