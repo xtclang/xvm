@@ -61,15 +61,19 @@ import java.util.concurrent.Future
 
 /**
  * A language server for light tests, in the test's JVM: it answers completion with the test's [completions] that start
- * with the word before the caret, as the real server does, and signature help with its [signature], and records the
- * methods it is asked for. With [diagnostics] it has a diagnostic provider with a workspace report, as the real server
- * does: a document's pull reports its [pulled] diagnostics, and the workspace report has the [reported] ones. The
- * client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's own. Each connection runs [connecting]
- * as it starts, on LSP4IJ's thread, where a test can hold it. [LightEditor] connects it as the Ecstasy server, with the
- * plugin's own client features, so LSP4IJ's code runs as it does against the real server.
+ * with the word before the caret, each with a detail, as the real server does, and signature help with its [signature],
+ * and records the methods it is asked for. With [completionDocumentation] it resolves completion items, and gives an
+ * item its documentation only then, as the real server does. With [diagnostics] it has a diagnostic provider with a
+ * workspace report, as the real server does: a document's pull reports its [pulled] diagnostics, and the workspace
+ * report has the [reported] ones. The client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's
+ * own. Each connection runs [connecting] as it starts, on LSP4IJ's thread, where a test can hold it. [LightEditor]
+ * connects it as the Ecstasy server, with the plugin's own client features, so LSP4IJ's code runs as it does against
+ * the real server.
  */
 class StubLanguageServer(
     val completions: List<String> = emptyList(),
+    /** The documentation that completionItem/resolve gives each of the [completions], by label. */
+    val completionDocumentation: Map<String, String> = emptyMap(),
     val signature: SignatureHelp? = null,
     val diagnostics: Boolean = false,
     val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
@@ -89,6 +93,9 @@ class StubLanguageServer(
 
     /** The caret's line, as the client has sent it, of each signature help the client has asked for. */
     val signatureLines = CopyOnWriteArrayList<String>()
+
+    /** The label of each completion item the client has asked to resolve, in order. */
+    val resolvedCompletions = CopyOnWriteArrayList<String>()
 
     /** What a pull of a document's diagnostics reports, by the document's URI; none for a document not here. */
     val pulled = ConcurrentHashMap<String, List<Diagnostic>>()
@@ -112,7 +119,7 @@ class StubLanguageServer(
             InitializeResult(
                 ServerCapabilities().apply {
                     setTextDocumentSync(TextDocumentSyncKind.Full)
-                    completionProvider = CompletionOptions(false, listOf("."))
+                    completionProvider = CompletionOptions(completionDocumentation.isNotEmpty(), listOf("."))
                     signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
                     if (diagnostics) {
                         diagnosticProvider = DiagnosticRegistrationOptions(true, true).apply { identifier = "stub" }
@@ -145,10 +152,19 @@ class StubLanguageServer(
             completions.filter { it.startsWith(word) }.map { label ->
                 CompletionItem(label).apply {
                     kind = CompletionItemKind.Class
+                    detail = "class $label"
                     textEdit = Either.forLeft(TextEdit(Range(start, caret), label))
                 }
             }
         return CompletableFuture.completedFuture(Either.forLeft(items))
+    }
+
+    override fun resolveCompletionItem(unresolved: CompletionItem): CompletableFuture<CompletionItem> {
+        requests += "completionItem/resolve"
+        resolvedCompletions += unresolved.label
+        return CompletableFuture.completedFuture(
+            unresolved.apply { documentation = completionDocumentation[label]?.let { Either.forLeft(it) } },
+        )
     }
 
     override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp?> {
