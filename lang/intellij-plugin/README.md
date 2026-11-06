@@ -199,9 +199,10 @@ Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `docs/re
 LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration's **Stop at the
 program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code.
 **Smart Step Into** (`Shift+F7`) chooses which call on the line to step into. **Run to Cursor**
-stops at the cursor's line only when the program gets there quickly: LSP4IJ 0.21.0 removes its
-temporary breakpoint once the program resumes, so a program that takes longer runs past it (UP44,
-fixed in LSP4IJ pull request [#1773](https://github.com/redhat-developer/lsp4ij/pull/1773)). The
+stops at the cursor's line however long the program takes to get there: LSP4IJ 0.21.0 removes its
+temporary breakpoint once its `continue` is answered, so the plugin answers that only once the
+program stops or ends (UP44, fixed in LSP4IJ pull request
+[#1773](https://github.com/redhat-developer/lsp4ij/pull/1773)). The
 Frames view's thread list has every service and fiber of the program, the ones that wait at a line
 first, each with what it does, and a frame of a bundled XDK library's code opens the library's
 bundled source, read-only. Function breakpoints, breakpoints on a field's value, **Reset Frame**,
