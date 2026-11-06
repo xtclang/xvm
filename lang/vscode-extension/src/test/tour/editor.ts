@@ -12,9 +12,16 @@ import type { TourUi } from './ui';
  */
 let input: TourUi | undefined;
 
-/** Lets [ui] be the input of the helpers below, or none, while a recorded step acts. */
-export function actingBy(ui: TourUi | undefined): void {
-    input = ui;
+/** Whether a step acts, recorded or not: then [open] gives the file's editor the keyboard, as a click in it does. */
+let acting = false;
+
+/**
+ * Lets a step act by [ui], which is the input of the helpers below when the step is [recorded], or ends its act, with
+ * none.
+ */
+export function actingBy(ui: TourUi | undefined, recorded: boolean): void {
+    acting = ui !== undefined;
+    input = recorded ? ui : undefined;
 }
 
 /**
@@ -57,10 +64,11 @@ export async function open(file: string, text?: string, delta = 0, occurrence = 
             () => vscode.window.activeTextEditor !== undefined && vscode.window.activeTextEditor !== before);
     }
     const active = vscode.window.activeTextEditor;
-    // while a recorded step acts, the editor takes the keyboard, as a click in it does: an earlier step can have left it
-    // in a view or the panel, as the Test Results' or the Debug Console's, where a paste or F9 would go
+    // while a step acts, the editor takes the keyboard, as a click in it does: an earlier step can have left it in a
+    // view or the panel, as the Variables view, the Test Results' or the Debug Console's, where a paste or F9 would go,
+    // and where an editor's command that needs the keyboard in the editor, as Run to Cursor does, does nothing
     const editor = active?.document.uri.fsPath === file
-        ? input ? await vscode.window.showTextDocument(active.document, { viewColumn: active.viewColumn, preserveFocus: false }) : active
+        ? acting ? await vscode.window.showTextDocument(active.document, { viewColumn: active.viewColumn, preserveFocus: false }) : active
         : await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(file)), { preview: false });
     if (text !== undefined) await at(text, delta, occurrence);
     return editor;
@@ -129,6 +137,15 @@ export async function select(text: string, occurrence = 0): Promise<void> {
     const start = offsetOf(editor.document, text, occurrence);
     editor.selection = new vscode.Selection(editor.document.positionAt(start + text.length), editor.document.positionAt(start));
     editor.revealRange(editor.selection, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    // the window takes the selection from the API a moment later, and the keys that a recorded step presses next reach
+    // it by another way, which can come first and act on the selection before: the status bar shows the selection once
+    // the window has it
+    const ui = input;
+    if (ui) {
+        const caret = editor.selection.active;
+        const shown = `Ln ${caret.line + 1}, Col ${caret.character + 1} (${text.length} selected)`;
+        await ui.waiter('The editor has the selection', async () => (await ui.text('status:Ln ')).includes(shown));
+    }
 }
 
 /**
