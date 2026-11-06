@@ -113,7 +113,9 @@ class XdkSafeDeleteTest {
 
         fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
         val changed = text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-        assertThat(changed).isEqualTo(text.substring(0, text.indexOf("    void display()")) + "}\n")
+        // display's lines go, and the private heading after them stays
+        val display = text.indexOf("    void display()")
+        assertThat(changed).isEqualTo(text.removeRange(display, text.indexOf("\n    }\n", display) + "\n    }\n".length))
 
         // the graph with the removal, compiled from nothing
         val removed = cardGame(directory.resolve("removed")).also { it.resolve(HAND).writeText(changed) }
