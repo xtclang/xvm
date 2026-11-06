@@ -2,6 +2,7 @@ package org.xtclang.idea.run
 
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationType
+import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.openapi.project.Project
 import org.xtclang.idea.XtcIconProvider
@@ -24,6 +25,15 @@ class XtcRunConfigurationType : ConfigurationType {
     override fun getId() = "XtcRunConfiguration"
 
     override fun getConfigurationFactories(): Array<ConfigurationFactory> = arrayOf(XtcConfigurationFactory(this))
+
+    companion object {
+        /**
+         * The registered type. RunManager lists a type's configurations by the type's identity, so a configuration
+         * made from another instance's factory is not among them, and a producer never finds it again.
+         */
+        val instance: XtcRunConfigurationType
+            get() = ConfigurationTypeUtil.findConfigurationType(XtcRunConfigurationType::class.java)
+    }
 }
 
 /** Factory for creating Ecstasy run configurations. */
