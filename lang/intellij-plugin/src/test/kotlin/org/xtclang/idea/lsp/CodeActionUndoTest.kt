@@ -1,9 +1,18 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
@@ -34,7 +43,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A code action that the server resolves, such as Create private method, edits one file: Undo in that file's editor takes
- * it back as a typed change is, at once, without asking first, as IntelliJ asks only for a change of the project.
+ * it back as a typed change is, at once, without asking first, as IntelliJ asks only for a change of the project. So does
+ * the Undo action that Ctrl+Z performs there, with the editor's context.
  */
 class CodeActionUndoTest {
     @JvmField
@@ -49,6 +59,30 @@ class CodeActionUndoTest {
 
     @Test
     fun `Undo in the file's editor takes a resolved code action's edit of that file back, without asking`() {
+        createMethodThenUndo { project, root ->
+            val fileEditor = checkNotNull(FileEditorManager.getInstance(project).getSelectedEditor(root)) { "No editor of Root.x" }
+            assertThat(UndoManager.getInstance(project).isUndoAvailable(fileEditor)).isTrue()
+            UndoManager.getInstance(project).undo(fileEditor)
+        }
+    }
+
+    @Test
+    fun `Ctrl+Z's Undo action in the file's editor takes a resolved code action's edit of that file back`() {
+        createMethodThenUndo { project, root ->
+            // as Ctrl+Z in the editor does: the Undo action, updated and performed with the editor component's context
+            val textEditor = checkNotNull(FileEditorManager.getInstance(project).selectedTextEditor) { "No editor of Root.x" }
+            val undo = ActionManager.getInstance().getAction(IdeActions.ACTION_UNDO)
+            val context = DataManager.getInstance().getDataContext(textEditor.contentComponent)
+            val event = AnActionEvent.createEvent(undo, context, null, ActionPlaces.KEYBOARD_SHORTCUT, ActionUiKind.NONE, null)
+            assertThat(
+                context.getData(PlatformCoreDataKeys.FILE_EDITOR),
+            ).isEqualTo(FileEditorManager.getInstance(project).getSelectedEditor(root))
+            assertThat(ActionUtil.performAction(undo, event).isPerformed).isTrue()
+        }
+    }
+
+    /** Creates a private method with a resolved code action in Root.x, runs [undo] on the EDT, and checks it took it back. */
+    private fun createMethodThenUndo(undo: (Project, VirtualFile) -> Unit) {
         val text = "module Root {\n    void run() {\n        announce();\n    }\n}\n"
         val root = file("Root.x", text)
         val method = "\n\n    private void announce() {}"
@@ -73,11 +107,7 @@ class CodeActionUndoTest {
                 XtcRenameEdit.requestAction(connection(), CodeAction("Create private method 'announce'")),
             )
             await("the method is created") { method in document(root) }
-            runInEdtAndWait {
-                val fileEditor = checkNotNull(FileEditorManager.getInstance(project).getSelectedEditor(root)) { "No editor of Root.x" }
-                assertThat(UndoManager.getInstance(project).isUndoAvailable(fileEditor)).isTrue()
-                UndoManager.getInstance(project).undo(fileEditor)
-            }
+            runInEdtAndWait { undo(project, root) }
             assertThat(dialogs).isEmpty()
             assertThat(document(root)).isEqualTo(text)
         } finally {
