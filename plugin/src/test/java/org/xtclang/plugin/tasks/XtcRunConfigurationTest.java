@@ -11,7 +11,6 @@ import java.util.List;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.internal.TaskInternal;
-import org.gradle.api.internal.TaskOutputsInternal;
 import org.gradle.testfixtures.ProjectBuilder;
 
 import org.junit.jupiter.api.Test;
@@ -67,7 +66,7 @@ class XtcRunConfigurationTest {
     @Test
     void reportedAndDebuggedTestRunsAlwaysRun() {
         final var task = newProject().getTasks().named("testXtc", XtcTestTask.class).get();
-        final var outputs = (TaskOutputsInternal) task.getOutputs();
+        final var outputs = task.getOutputs();
         assertTrue(outputs.getUpToDateSpec().isSatisfiedBy((TaskInternal) task));
         assertTrue(outputs.getDoNotCacheIfSpecs().stream().noneMatch(spec -> spec.isSatisfiedBy((TaskInternal) task)));
 
@@ -77,7 +76,7 @@ class XtcRunConfigurationTest {
 
         final var debugged = newProject().getTasks().named("testXtc", XtcTestTask.class).get();
         debugged.getDebug().set("listen:5005");
-        final var debuggedOutputs = (TaskOutputsInternal) debugged.getOutputs();
+        final var debuggedOutputs = debugged.getOutputs();
         assertFalse(debuggedOutputs.getUpToDateSpec().isSatisfiedBy((TaskInternal) debugged));
     }
 
