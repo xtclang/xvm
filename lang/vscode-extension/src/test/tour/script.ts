@@ -32,7 +32,7 @@
  * | textDocument/foldingRange                 | step "Folding"                                                    |
  * | textDocument/prepareRename, rename        | step "Rename a method"                                            |
  * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Rename a class"; check "Undo a rename" |
- * | textDocument/codeAction, codeAction/resolve | steps "Quick fixes", "Create a method", "Add an import", "Refactorings", "Extracted to a local", "Extract a method"; check "Safe delete", "Generate a doc comment" |
+ * | textDocument/codeAction, codeAction/resolve | steps "Quick fixes", "Create a method", "Add an import", "Refactorings", "Extracted to a local", "Extract a method"; checks "Undo a quick fix", "Safe delete", "Generate a doc comment" |
  * | source.organizeImports                    | step "Organize imports"                                           |
  * | executeCommandProvider                    | - not advertised to VS Code, which takes code actions as literals |
  * | textDocument/formatting                   | step "Format the document"                                        |
@@ -1094,20 +1094,34 @@ async function diagnostics(tour: Tour): Promise<void> {
             expect(rows.some(each => each.includes("Create private method 'announce'")), () => rows.join(' | '));
         },
     });
+    // Eights.x as the fix finds it, which Undo is to bring back
+    let unfixed: string | undefined;
     await tour.shot({
         title: 'Create a method',
         caption: 'The fix writes the method, with the parameter types that the call implies, for its body to be filled in.',
         feature: 'codeAction/resolve',
         focus: 'editor',
         settleMs: 3_000,
-        act: async () => { await chooseAction(tour, 'Create private method'); },
+        act: async () => {
+            unfixed = await text(eights);
+            await chooseAction(tour, 'Create private method');
+        },
         until: async () => /announce\(Player/.test(await text(eights)),
         check: async () => {
             expect(/announce\(Player/.test(await text(eights)), () => 'No announce method in Eights.x');
             await compiles(tour, eights);
         },
-        after: async () => { await tour.restore(); },
     });
+    await tour.verify('Undo a quick fix', 'codeAction/resolve', async () => {
+        await open(eights);
+        const fixed = await text(eights);
+        await pressUndo(tour);
+        await tour.until('Ctrl+Z changes Eights.x', async () => await text(eights) !== fixed, () => text(eights));
+        // the one press takes the fix's edit back whole: the file is as the fix found it, its call of announce typed
+        const undone = await text(eights);
+        expect(undone === unfixed, () => `Eights.x after one Ctrl+Z is not as before the fix, at ${difference(unfixed!, undone)}`);
+    }, [{ missing: 'no created method to undo', holds: async () => unfixed !== undefined && /announce\(Player/.test(await text(eights)) }]);
+    await tour.restore();
     const deckTest = tour.test('DeckTest.x');
     await tour.shot({
         title: 'Add an import',
