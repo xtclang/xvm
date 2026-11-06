@@ -1326,16 +1326,27 @@ object TourUi {
     }
 
     /**
-     * Presses [keys] together, as a user does, such as CONTROL+Z, where the keyboard focus is, which the tour gives the
-     * selected editor first: the keys go to it as the window system delivers them, which runs the action that the
-     * keymap binds. One string, as the driver passes no array of strings. Answers where the focus is as the keys go, as
-     * [focusState], and which key presses reached the IDE and which actions it ran, by the time its event queue is
-     * idle after them.
+     * Presses the active keymap's first one-stroke shortcut for the action [id] as keys, as a user does, such as Ctrl+Z
+     * for Undo in Default for XWin and Cmd+Z in macOS, where the keyboard focus is, which the tour gives the selected
+     * editor first: the keys go to it as the window system delivers them, which runs the action that the keymap binds.
+     * It presses nothing unless the selected editor has the focus, as the window system gives keys to the app in front,
+     * which on a desktop need not be the IDE. Answers the keys and where the focus is as they go, as [focusState], and
+     * which key presses reached the IDE and which actions it ran, by the time its event queue is idle after them.
      */
     @JvmStatic
-    fun editorKeys(keys: String): String {
+    fun editorShortcut(id: String): String {
+        val stroke =
+            checkNotNull(
+                KeymapUtil
+                    .getActiveKeymapShortcuts(id)
+                    .shortcuts
+                    .filterIsInstance<KeyboardShortcut>()
+                    .firstOrNull { it.secondKeyStroke == null }
+                    ?.firstKeyStroke,
+            ) { "No one-stroke shortcut for $id in the keymap ${KeymapManager.getInstance().activeKeymap.name}" }
+        val keys = KeymapUtil.getKeystrokeText(stroke)
         val focus = focusState()
-        val codes = keys.split("+").map { KeyEvent::class.java.getField("VK_$it").getInt(null) }
+        if (!editorFocused()) return "$keys, not pressed, as the selected editor does not have the focus: $focus"
         // which of the keys reach the IDE, and what it runs for them, for a failure's message
         val got = CopyOnWriteArrayList<String>()
         val ran = CopyOnWriteArrayList<String>()
@@ -1392,19 +1403,15 @@ object TourUi {
         )
         Toolkit.getDefaultToolkit().addAWTEventListener(keyListener, AWTEvent.KEY_EVENT_MASK)
         try {
-            Robot().apply {
-                autoDelay = 30
-                codes.forEach(::keyPress)
-                codes.reversed().forEach(::keyRelease)
-                waitForIdle()
-            }
+            press(stroke)
+            Robot().waitForIdle()
             // the keys' events, once the EDT has dispatched what is queued
             anyEdt {}
         } finally {
             Toolkit.getDefaultToolkit().removeAWTEventListener(keyListener)
             connection.disconnect()
         }
-        return "$focus; by the EDT's idle the IDE got ${got.ifEmpty { listOf("no key") }.joinToString()}, " +
+        return "$keys, with $focus; by the EDT's idle the IDE got ${got.ifEmpty { listOf("no key") }.joinToString()}, " +
             "and ran ${ran.ifEmpty { listOf("no action") }.joinToString()}"
     }
 

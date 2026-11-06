@@ -504,7 +504,7 @@ internal interface TourProbe {
 
     fun expandGroup(title: String): Boolean
 
-    fun editorKeys(keys: String): String
+    fun editorShortcut(id: String): String
 
     fun problemFile(path: String): Boolean
 
@@ -1103,30 +1103,30 @@ internal fun TourProbe.confirm(
 }
 
 /**
- * Undoes the selected editor's last change, as Ctrl+Z there does, and fails unless the change is [undone] then. IntelliJ
- * first asks whether to undo a command that changed the project, such as a rename, and not a change of one file, such
- * as a quick fix's: [asks] says which this is, and the question is answered.
+ * Undoes the selected editor's last change, as the keymap's Undo shortcut there does, Ctrl+Z or Cmd+Z, and fails
+ * unless the change is [undone] then. IntelliJ first asks whether to undo a command that changed the project, such as a
+ * rename, and not a change of one file, such as a quick fix's: [asks] says which this is, and the question is answered.
  */
 internal fun TourProbe.undo(
     asks: Boolean,
     undone: () -> Boolean,
 ) {
     val before = undoable()
-    // where the focus is and what the selected editor's document holds before Ctrl+Z, and where the focus is when it
+    // where the focus is and what the selected editor's document holds before the key, and where the focus is when it
     // goes, so that a failure says what the key reached
     val focus = focusState()
     val path = editor()["path"].asString
     val text = fileText(path).lines()
-    // Ctrl+Z in the focused editor, as a user presses it: the action alone, from the tour, undid nothing
+    // the keymap's Undo key in the focused editor, as a user presses it: the action alone, from the tour, undid nothing
     focusedEditor()
-    val pressed = editorKeys("CONTROL+Z")
+    val pressed = editorShortcut("\$Undo")
     val notes = {
         val after = fileText(path).lines()
         val lost = (text - after.toSet()).take(LINES).map(String::trim)
         val gained = (after - text.toSet()).take(LINES).map(String::trim)
         val change = if (lost.isEmpty() && gained.isEmpty()) "unchanged" else "lost $lost and gained $gained"
         "it was to undo $before, and now ${undoable()}; the Undo action is ${undoActionState()}; the focus before: $focus; " +
-            "at Ctrl+Z: $pressed; ${path.substringAfterLast('/')} since: $change"
+            "at the key: $pressed; ${path.substringAfterLast('/')} since: $change"
     }
 
     // where Ctrl+Z ran the Undo action and it undid nothing, whether UndoManager itself undoes, asked directly, as the
@@ -1143,7 +1143,7 @@ internal fun TourProbe.undo(
         }
     }
     // then, redone, the Undo action performed with the editor's context, as CodeActionUndoTest performs it and undoes:
-    //  it undoing here too points at Ctrl+Z's own way in, the key's dispatch
+    //  it undoing here too points at the key's own way in, its dispatch
     val directly = {
         val direct = undid { undoDirectly() }
         val byAction =
