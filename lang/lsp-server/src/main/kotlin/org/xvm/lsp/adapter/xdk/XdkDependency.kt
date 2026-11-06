@@ -2,9 +2,11 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ConstantPool
+import org.xvm.asm.Constants.Access
 import org.xvm.asm.FileStructure
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleRepository
+import org.xvm.asm.PropertyStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.compiler.BuildRepository
@@ -75,15 +77,33 @@ class XdkDependency
          * is. A module that depends on this one compiles against another artifact with the same as it did against this
          * one, and its facts name this one's declarations at the same places.
          */
-        internal val api: String by lazy {
+        internal val api: String get() = apis.all
+
+        /**
+         * [api] without where the private methods and properties are, and what they declare. A module that compiled
+         * against this one cannot name them, so against another artifact with the same it compiles as it did, and its
+         * facts name this one's declarations at the same places. The facts of a module whose compile failed are what it
+         * got that far, which name every member of a type it used, private ones too: [api] is what keeps those.
+         */
+        internal val accessibleApi: String get() = apis.accessible
+
+        /** [api] and [accessibleApi], from one read of the artifact. */
+        private class Apis(
+            val all: String,
+            val accessible: String,
+        )
+
+        private val apis: Apis by lazy {
             ExecutionTrace.api("FileStructure.api", module) {
                 val file = FileStructure(ByteArrayInputStream(artifact))
                 ConstantPool.withPool(file.constantPool).use {
                     val pool = file.constantPool
-                    // read before the write below renumbers the constants
+                    // read before the write below renumbers the constants, each with whether it is private
                     val located =
                         declarations.entries.map { (index, location) ->
-                            "${pool.getConstant(index)} ${location.sourceName} ${location.range}"
+                            val constant = pool.getConstant(index)
+                            val place = "$constant ${location.sourceName} ${location.range}"
+                            place to (constant is IdentityConstant && isPrivate(constant))
                         }
                     val methods =
                         pool.constants
@@ -104,16 +124,34 @@ class XdkDependency
                             sourceDir = null
                         }
                     }
-                    val digest = MessageDigest.getInstance("SHA-256")
-                    digest.update(ByteArrayOutputStream().also(file::writeTo).toByteArray())
-                    (located.sorted() + implemented.sorted()).forEach {
-                        digest.update(it.toByteArray(Charsets.UTF_8))
-                        digest.update(0)
+                    val stripped = ByteArrayOutputStream().also(file::writeTo).toByteArray()
+
+                    fun digest(places: List<String>): String {
+                        val digest = MessageDigest.getInstance("SHA-256")
+                        digest.update(stripped)
+                        (places.sorted() + implemented.sorted()).forEach {
+                            digest.update(it.toByteArray(Charsets.UTF_8))
+                            digest.update(0)
+                        }
+                        return HexFormat.of().formatHex(digest.digest())
                     }
-                    HexFormat.of().formatHex(digest.digest())
+                    Apis(digest(located.map { it.first }), digest(located.filterNot { it.second }.map { it.first }))
                 }
             }
         }
+
+        /**
+         * Whether [identity] is a private method or property, other than a constructor, or is declared in one: what
+         * only its own class can name.
+         */
+        private fun isPrivate(identity: IdentityConstant): Boolean =
+            generateSequence(identity) { it.parentConstant }.any { parent ->
+                when (val component = parent.component) {
+                    is MethodStructure -> !component.isConstructor && component.access == Access.PRIVATE
+                    is PropertyStructure -> component.access == Access.PRIVATE
+                    else -> false
+                }
+            }
 
         /** Constant-table symbol identity qualified by its module and immutable artifact revision. */
         data class SymbolKey(
