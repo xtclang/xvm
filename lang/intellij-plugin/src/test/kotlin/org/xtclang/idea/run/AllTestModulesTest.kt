@@ -1,5 +1,7 @@
 package org.xtclang.idea.run
 
+import com.intellij.execution.RunManager
+import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.ConfigurationFromContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
@@ -114,25 +116,57 @@ class AllTestModulesTest {
         assertThat(offered("src/test/x")).containsExactly(XtcAllTestsConfigurationProducer.NAME)
     }
 
+    @Test
+    fun `run again from the test sources, it is the configuration of the first run, not a copy of it`() {
+        editor.fixture.addFileToProject("src/test/x/DeckTest.x", "module DeckTest {}")
+        val runs = RunManager.getInstance(editor.fixture.project)
+        try {
+            val first = runFrom("src/test/x")
+            val second = runFrom("src/test/x")
+
+            assertThat(second).isSameAs(first)
+            assertThat(runs.allSettings.map { it.name }).containsExactly(XtcAllTestsConfigurationProducer.NAME)
+        } finally {
+            // the next test's light project is this one
+            runInEdtAndWait { runs.allSettings.forEach(runs::removeConfiguration) }
+        }
+    }
+
+    /**
+     * The configuration that Run in the Project window's context menu on the folder [path] runs: the context's existing
+     * one, or else the context's own, which becomes the temporary configuration.
+     */
+    private fun runFrom(path: String): RunnerAndConfigurationSettings =
+        runInEdtAndGet {
+            val context = context(path)
+            context.findExisting() ?: checkNotNull(context.configuration) { "Nothing to run on $path" }.also {
+                RunManager.getInstance(editor.fixture.project).setTemporaryConfiguration(it)
+            }
+        }
+
     /** The configurations that the Project window's context menu offers on the light project's folder [path]. */
     private fun offered(path: String): List<String> =
         runInEdtAndGet {
-            val project = editor.fixture.project
-            val folder = checkNotNull(editor.fixture.tempDirFixture.getFile(path)) { "No folder $path" }
-            val directory = checkNotNull(PsiManager.getInstance(project).findDirectory(folder)) { "No directory $path" }
-            val data =
-                SimpleDataContext
-                    .builder()
-                    .add(CommonDataKeys.PROJECT, project)
-                    .add(PlatformCoreDataKeys.PSI_ELEMENT_ARRAY, arrayOf<PsiElement>(directory))
-                    .add(PlatformCoreDataKeys.MODULE, editor.fixture.module)
-                    .build()
-            ConfigurationContext
-                .getFromContext(data, ActionPlaces.PROJECT_VIEW_POPUP)
+            context(path)
                 .configurationsFromContext
                 .orEmpty()
                 .map { it.configuration.name }
         }
+
+    /** The Project window's context on the light project's folder [path]. */
+    private fun context(path: String): ConfigurationContext {
+        val project = editor.fixture.project
+        val folder = checkNotNull(editor.fixture.tempDirFixture.getFile(path)) { "No folder $path" }
+        val directory = checkNotNull(PsiManager.getInstance(project).findDirectory(folder)) { "No directory $path" }
+        val data =
+            SimpleDataContext
+                .builder()
+                .add(CommonDataKeys.PROJECT, project)
+                .add(PlatformCoreDataKeys.PSI_ELEMENT_ARRAY, arrayOf<PsiElement>(directory))
+                .add(PlatformCoreDataKeys.MODULE, editor.fixture.module)
+                .build()
+        return ConfigurationContext.getFromContext(data, ActionPlaces.PROJECT_VIEW_POPUP)
+    }
 
     /**
      * Gradle's Tests in, as it ranks in a project whose tests Gradle runs, the default: preferred to, and replacing,
