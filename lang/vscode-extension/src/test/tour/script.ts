@@ -168,7 +168,7 @@ import {
 import {
     active, at, caretLine, command, compiles, current, editing, errors, hasError, launch, lineOf, open, output, positionOf, problems, replace, select, text, type,
 } from './editor';
-import { settingsGroups } from './inputs';
+import { commandKeys, settingsGroups } from './inputs';
 import { NEEDS, type Tour } from './tour';
 
 /** What the tour found of the server's and the debug adapter's features, for results.json. */
@@ -180,6 +180,9 @@ const IMPORT_SUIT = /Import '[\w.]*Suit'|import for 'Suit'/;
 /** The tests of the card game's modules, and of DeckTest's, which the test steps run. */
 const ALL_TESTS = 64;
 const DECK_TESTS = 8;
+
+/** The sources that declare or call Player.cardMatches, which the Refactoring section renames, as its caption names them. */
+const RENAMED = ['FirstMatch.x', 'Player.x', 'PlayerTest.x', 'SaveEights.x'];
 
 /** The tour's steps, in order. */
 export async function script(tour: Tour, coverage: Coverage): Promise<void> {
@@ -1185,6 +1188,8 @@ async function refactoring(tour: Tour): Promise<void> {
     tour.section('refactoring', 'Refactoring');
     const player = tour.source('Player.x');
     const eights = tour.source('Eights.x');
+    // the rename starts at the player's call, as the IntelliJ tour's does
+    const call = 'cardMatches(card, prev)';
     await tour.shot({
         title: 'Rename a method',
         caption: 'F2 renames a method: the box takes the new name, which the server checks before anything changes.',
@@ -1192,49 +1197,65 @@ async function refactoring(tour: Tour): Promise<void> {
         focus: 'css:.rename-box',
         settleMs: 2_000,
         act: async () => {
-            await open(player, 'return drawForMatch(eights, prev);', 'return draw'.length);
+            await open(player, call, 'card'.length);
             await tour.ui.focusEditor();
             await launch('editor.action.rename');
             await renameBox(tour);
             await tour.ui.press('Control+a');
-            await tour.ui.type('drawUntilMatch');
+            await tour.ui.type('canFollow');
         },
         check: async () => {
             // the box has the new name, the server's prepareRename has said what it renames, and nothing has changed
             const value = await tour.ui.page.locator('.rename-box input').first().inputValue({ timeout: 2_000 }).catch(() => '');
-            expect(value === 'drawUntilMatch', () => `The rename box has ${JSON.stringify(value)}`);
+            expect(value === 'canFollow', () => `The rename box has ${JSON.stringify(value)}`);
             const prepared = await command<{ range: vscode.Range; placeholder: string } | undefined>('vscode.prepareRename',
-                active().document.uri, positionOf('drawForMatch(eights, prev)', 'draw'.length));
-            expect(prepared?.placeholder === 'drawForMatch', () => `prepareRename answered ${JSON.stringify(prepared)}`);
-            expect((await text(player)).includes('drawForMatch(eights, prev)'), () => 'Player.x changed before Enter');
+                active().document.uri, positionOf(call, 'card'.length));
+            expect(prepared?.placeholder === 'cardMatches', () => `prepareRename answered ${JSON.stringify(prepared)}`);
+            expect(await text(player) === (await tour.originals()).get(player), () => 'Player.x changed before Enter');
         },
     });
     await tour.shot({
         title: 'Renamed everywhere',
-        caption: 'Enter renames the declaration and every use, in every file of the project, as one change that Undo reverts.',
+        caption: "Enter renames the method and every call of it, here and in FirstMatch.x, SaveEights.x and the test module's PlayerTest.x: "
+            + 'one change of four files, which one Undo takes back in all of them.',
         feature: 'xtc/rename',
         focus: 'editor',
         settleMs: 3_000,
         act: async () => { await tour.ui.press('Enter'); },
-        until: async () => (await text(player)).includes('drawUntilMatch(eights, prev)'),
+        until: async () => (await text(player)).includes('canFollow(card, prev)'),
         check: async () => {
-            const source = await text(player);
-            expect(!source.includes('drawForMatch') && source.includes('conditional Card drawUntilMatch('), () => 'Player.x was not renamed');
-            await compiles(tour, player);
+            const originals = await tour.originals();
+            const users = [...originals].filter(([, source]) => source.includes('cardMatches(')).map(([file]) => path.basename(file)).sort();
+            expect(users.join(', ') === RENAMED.join(', '), () => `The sources that use cardMatches: ${users.join(', ')}`);
+            // every source as the rename should leave it: its declaration and calls renamed, and nothing else changed
+            const renamed = new Map([...originals].map(([file, source]) => [file, source.replace(/\bcardMatches\(/g, 'canFollow(')]));
+            await tour.until('Every use is renamed, and nothing else changed', async () => (await differing(tour, renamed)).length === 0,
+                () => differing(tour, renamed));
+            await projectCompiles(tour);
         },
     });
     await tour.verify('Undo a rename', 'xtc/rename', async () => {
         await open(player);
-        await tour.ui.focusEditor();
-        await command('undo');
-        // undoing a change of several files asks whether to undo it in all of them
-        const dialog = tour.ui.page.locator('.monaco-dialog-box .monaco-button').filter({ hasText: /Undo in/ }).first();
-        const undone = async () => (await text(player)).includes('drawForMatch(eights, prev)');
-        await tour.until('The undo asks or is done', async () => await dialog.count() > 0 || await undone(), () => text(player));
-        if (await dialog.count() > 0) await tour.ui.click(dialog);
-        await tour.until('The rename is undone', undone, () => text(player));
-        await tour.restore();
-    });
+        const renamed = await text(player);
+        await pressUndo(tour);
+        // VS Code takes a rename of several files back in all of them at once, without asking: its UndoRedoService asks
+        // whether to undo such a change in all its files or in this one only, but not for one that is part of an undo
+        // group with others, and _isPartOfUndoGroup finds every bulk edit's, a rename's too, part of one, as it counts
+        // the change itself, on top of another file's stack, as another of its group (VS Code 1.140). The files that
+        // Undo leaves dirty, and that no tab showed, open in tabs then, as VS Code opens every dirty file
+        const question = 'css:.monaco-dialog-box';
+        await tour.until('Ctrl+Z undoes, or asks', async () => await text(player) !== renamed || await tour.ui.showing(question), () => text(player));
+        if (await tour.ui.showing(question)) {
+            const asked = await tour.ui.text(question);
+            await tour.ui.press('Escape');
+            throw new Error(`Undo asked first, which VS Code 1.140 does not for a rename, and the question was canceled: ${asked}`);
+        }
+        const originals = await tour.originals();
+        await tour.until(`One Ctrl+Z takes the rename back in its ${RENAMED.length} files`, async () => (await differing(tour, originals)).length === 0,
+            () => differing(tour, originals));
+        await compiles(tour, player);
+    }, [{ missing: 'no rename to undo', holds: async () => (await text(player)).includes('canFollow(') }]);
+    await tour.restore();
     await tour.shot({
         title: 'Rename a class',
         caption: "Renaming a class renames its file too, as Ecstasy's one type per file expects, and every use of it.",
@@ -1396,6 +1417,49 @@ async function refactoring(tour: Tour): Promise<void> {
     });
     await tour.restore();
     await tour.verifyRestored();
+}
+
+/**
+ * Presses Undo's key, Ctrl+Z, in the active editor, in every run, as the user does: a check acts without the recorded
+ * input, by which [command] would press it, and what it checks is what the key does.
+ */
+async function pressUndo(tour: Tour): Promise<void> {
+    await tour.ui.focusEditor();
+    await tour.ui.press(...commandKeys('undo')!);
+}
+
+/** The project's sources that are not as [expected] has them, by their texts, each with where it first differs. */
+async function differing(tour: Tour, expected: ReadonlyMap<string, string>): Promise<string[]> {
+    const found: string[] = [];
+    for (const [file, source] of expected) {
+        const now = await text(file);
+        if (now !== source) found.push(`${path.relative(tour.project, file)} at ${difference(source, now)}`);
+    }
+    return found;
+}
+
+/** Where [actual] first differs from [expected], for a failure's message: the line, as each has it. */
+function difference(expected: string, actual: string): string {
+    const wanted = expected.split('\n');
+    const found = actual.split('\n');
+    const first = wanted.findIndex((line, index) => line !== found[index]);
+    const at = first < 0 ? wanted.length : first;
+    return `line ${at + 1}: ${JSON.stringify(found[at] ?? '')}, not ${JSON.stringify(wanted[at] ?? '')}`;
+}
+
+/**
+ * Fails unless, within a hang's bound, VS Code shows no error in the project: for each source that a tab shows, as its
+ * current text's report. The client pulls the diagnostics of those only; the others' come with the server's report of
+ * the workspace.
+ */
+async function projectCompiles(tour: Tour): Promise<void> {
+    const tabbed = () => vscode.window.tabGroups.all.flatMap(group => group.tabs).flatMap(tab =>
+        tab.input instanceof vscode.TabInputText && tab.input.uri.scheme === 'file' && tab.input.uri.fsPath.endsWith('.x') ? [tab.input.uri.fsPath] : []);
+    const broken = () => vscode.languages.getDiagnostics()
+        .filter(([, items]) => items.some(item => item.severity === vscode.DiagnosticSeverity.Error))
+        .map(([uri]) => path.relative(tour.project, uri.fsPath));
+    await tour.until('The project compiles', () => tabbed().every(file => current(file)) && broken().length === 0,
+        () => ({ errors: broken(), outdated: tabbed().filter(file => !current(file)).map(file => path.basename(file)) }));
 }
 
 /** Creates [joker] in the Explorer, fills it in its editor, checks that it compiles, and deletes it in the Explorer. */
