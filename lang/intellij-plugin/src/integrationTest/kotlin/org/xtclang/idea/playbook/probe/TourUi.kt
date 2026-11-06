@@ -432,6 +432,19 @@ object TourUi {
         }
 
     /**
+     * Selects the editor of the file at [path], opening it if it is not open, as a click on its tab does: unlike [open],
+     * it leaves the caret where it was. IntelliJ's first Undo after the caret has left the last change only takes the
+     * caret back to it, and undoes nothing.
+     */
+    @JvmStatic
+    fun selectFile(path: String): Unit =
+        onEdt {
+            checkNotNull(
+                FileEditorManager.getInstance(project()).openFile(file(path), true).firstOrNull { it is TextEditor },
+            ) { "$path did not open in a text editor" }
+        }
+
+    /**
      * Moves the selected editor's caret [delta] characters, within its text, as an arrow key does, without a key: a key
      * pressed while the IDE is busy waits in the queue for whatever opens next.
      */
