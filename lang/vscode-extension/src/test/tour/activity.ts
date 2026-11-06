@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { getClient } from '../../lsp-client';
 import type { DapMessage } from './tour';
 
 /**
@@ -28,12 +29,27 @@ interface Work {
 
 /** A trace entry of the server, as far as the tour reads it. */
 interface TraceEntry {
+    sequence?: number;
+    time?: string;
     id?: number;
     parent?: number;
     kind?: string;
     operation?: string;
     event?: string;
     direction?: string;
+}
+
+/** What a change of a file on disk leaves: the file, written or made, or no file, deleted. */
+export type FileChange = 'written' | 'deleted';
+
+/**
+ * Files that the tour changes on disk, whose watcher events the server is to receive, as [Activity.expectFiles] watches
+ * for them: those the tour's watcher has yet to see, by their paths, and the request that marks the language client's
+ * connection once it has seen them all.
+ */
+interface ExpectedFiles {
+    pending: Map<string, FileChange>;
+    marker?: { answered: boolean; server: boolean };
 }
 
 /**
@@ -58,6 +74,14 @@ export class Activity implements vscode.Disposable {
     private readonly spans = new Map<string, { operation: string; parent?: string }>();
     /** What last happened, and when. */
     private last: Work = { what: 'the tour started', since: Date.now() };
+    /** The files changed on disk whose events the server is to receive, as [expectFiles] watches for them. */
+    private readonly expected: ExpectedFiles[] = [];
+    /** The newest xtc/healthCheck request the server's traces have, by its server's process ID and its sequence there. */
+    private healthCheck: { pid: number; sequence: number; time: number } | undefined;
+    /** The sequence of the latest workspace/didChangeWatchedFiles that each server received, by its process ID. */
+    private readonly watchedFiles = new Map<number, number>();
+    /** The read of the traces under way, which the next one follows: two at once would take the same lines twice. */
+    private reading: Promise<void> = Promise.resolve();
     private readonly subscriptions: vscode.Disposable[];
 
     constructor(private readonly traces: string | undefined, private readonly dap: readonly { from: 'vscode' | 'adapter'; message: DapMessage }[],
@@ -78,9 +102,60 @@ export class Activity implements vscode.Disposable {
         ];
         // a file written, made or deleted, by the tour, a refactoring or a build, which the Explorer and the server follow
         const files = vscode.workspace.createFileSystemWatcher('**/*');
-        this.subscriptions.push(files, files.onDidCreate(uri => this.happened(`${path.basename(uri.path)} was made`)),
-            files.onDidChange(uri => this.happened(`${path.basename(uri.path)} was written`)),
-            files.onDidDelete(uri => this.happened(`${path.basename(uri.path)} was deleted`)));
+        this.subscriptions.push(files, files.onDidCreate(uri => this.changed(uri, 'written', 'made')),
+            files.onDidChange(uri => this.changed(uri, 'written', 'written')),
+            files.onDidDelete(uri => this.changed(uri, 'deleted', 'deleted')));
+    }
+
+    /** Takes the watcher's event of [uri], which [change] left as [what] says. */
+    private changed(uri: vscode.Uri, change: FileChange, what: string): void {
+        this.happened(`${path.basename(uri.path)} was ${what}`);
+        for (const expected of this.expected) {
+            if (expected.pending.get(uri.fsPath) !== change) continue;
+            expected.pending.delete(uri.fsPath);
+            if (expected.pending.size > 0 || expected.marker) continue;
+            // the language client's watcher has the event in this same dispatch, and sends it within its next
+            // didChangeWatchedFiles, a while later: a request sent now goes to the server before that notification
+            const client = getClient();
+            const marker = { answered: !client?.isRunning(), server: !!client?.isRunning() };
+            expected.marker = marker;
+            if (client?.isRunning()) {
+                void client.sendRequest('xtc/healthCheck').then(undefined, () => { marker.server = false; })
+                    .finally(() => { marker.answered = true; });
+            }
+        }
+    }
+
+    /**
+     * Watches for the events of [changes], the source files that the tour is about to write or delete on disk, by
+     * their paths, and answers whether the server has received them, which a wait can wait for. The language client
+     * sends a file's events to the server a while after the watcher's, and a refactoring that the server proves
+     * meanwhile is out of date as they come: as the tour's watcher sees the last of them, in the same dispatch as the
+     * client's watcher, a request marks the client's connection, and the next didChangeWatchedFiles that the server
+     * receives after it has them. [waiting] says what it still waits for, and [dispose] ends the watch.
+     */
+    expectFiles(changes: ReadonlyMap<string, FileChange>): { taken: () => Promise<boolean>; waiting: () => string } & vscode.Disposable {
+        // the language client watches the sources only
+        const expected: ExpectedFiles = { pending: new Map([...changes].filter(([file]) => file.endsWith('.x'))) };
+        const watched = expected.pending.size > 0;
+        if (watched) this.expected.push(expected);
+        return {
+            taken: async () => {
+                const marker = expected.marker;
+                if (!watched || (marker?.answered && !marker.server)) return true;
+                if (!marker?.answered) return false;
+                await this.readTraces();
+                const check = this.healthCheck;
+                return check !== undefined && (this.watchedFiles.get(check.pid) ?? -1) > check.sequence;
+            },
+            waiting: () => expected.pending.size > 0
+                ? `the watcher's events of ${[...expected.pending].map(([file, change]) => `${vscode.workspace.asRelativePath(file)} ${change}`).join(', ')}`
+                : expected.marker?.answered ? "the server's didChangeWatchedFiles after the marker" : "the marker's answer",
+            dispose: () => {
+                const at = this.expected.indexOf(expected);
+                if (at >= 0) this.expected.splice(at, 1);
+            },
+        };
     }
 
     dispose(): void {
@@ -153,9 +228,15 @@ export class Activity implements vscode.Disposable {
 
     /**
      * Reads what the server's traces have gained since the last read: its requests' and compiles' starts and ends. The
-     * work of a server that has ended, as one that a restart replaced, is under way no more.
+     * work of a server that has ended, as one that a restart replaced, is under way no more. A read follows the one
+     * under way, which a wait's condition and its look at what is under way can both ask for.
      */
-    private async readTraces(): Promise<void> {
+    private readTraces(): Promise<void> {
+        this.reading = this.reading.then(() => this.readNewLines(), () => this.readNewLines());
+        return this.reading;
+    }
+
+    private async readNewLines(): Promise<void> {
         if (!this.traces) return;
         const files = (await fs.readdir(this.traces, { recursive: true }).catch(() => [] as string[]))
             .filter(file => /lsp-trace-.*\.jsonl$/.test(file)).map(file => path.join(this.traces!, file));
@@ -205,6 +286,7 @@ export class Activity implements vscode.Disposable {
             if (this.spans.size > SPANS) this.spans.delete(this.spans.keys().next().value!);
         }
         const background = this.background(key);
+        if (pid !== undefined && entry.sequence !== undefined) this.marks(entry, pid, entry.sequence);
         if (entry.kind === 'lsp-request' && entry.direction !== 'to-client') {
             if (entry.event === 'start') this.requests.set(key, { what: entry.operation, since: Date.now(), pid });
             if (entry.event === 'end') {
@@ -216,6 +298,17 @@ export class Activity implements vscode.Disposable {
             if (entry.event === 'submitted' || entry.event === 'start') this.compiles.set(key, { what: entry.operation, since: Date.now(), pid });
             if (entry.event === 'end' || entry.event === 'removed' || entry.event === 'cancel-or-failure-signalled') this.compiles.delete(key);
             this.happened(`the compiler's ${entry.operation}`);
+        }
+    }
+
+    /** Notes [entry] of the server [pid] at [sequence] when it is a marker of [expectFiles], or a file event it waits for. */
+    private marks(entry: TraceEntry, pid: number, sequence: number): void {
+        if (entry.kind === 'lsp-request' && entry.operation === 'xtc/healthCheck' && entry.event === 'start') {
+            const time = Date.parse(entry.time ?? '');
+            if (this.healthCheck === undefined || time > this.healthCheck.time) this.healthCheck = { pid, sequence, time };
+        }
+        if (entry.kind === 'lsp-notification' && entry.operation === 'workspace/didChangeWatchedFiles' && entry.event === 'received') {
+            this.watchedFiles.set(pid, Math.max(sequence, this.watchedFiles.get(pid) ?? -1));
         }
     }
 
