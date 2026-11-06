@@ -129,9 +129,10 @@ const TOUR_SETTINGS = {
     // VS Code keeps one code action request at a time: an automatic one for the light bulb, as a cursor or marker moves,
     // cancels a Ctrl+. still waiting for the server, which then shows nothing; without the light bulb there is none
     'editor.lightbulb.enabled': 'off',
-    // the server's execution trace, which the protocol section reads, kept whole for a run of every section: 50 MB
-    // by default, of which the oldest files go first
-    'xtc.server.logs': { totalSizeMb: 1000 },
+    // the servers' execution traces, which the protocol section reads, kept whole for a run of every section: a
+    // server's are 50 MB by default, of which the oldest files go first, and a server that starts deletes the sessions
+    // of all but the newest 5 that have ended, which each restart, language adapter and attached program has one of
+    'xtc.server.logs': { totalSizeMb: 1000, retainedSessions: 20 },
     // VS Code moves or renames a file without the server's edits once its participants take longer than this, a minute
     // by default, which the server's proof of a move can on a loaded machine: an hour, as the tour's bound for a hang
     'files.participants.timeout': 3_600_000,
