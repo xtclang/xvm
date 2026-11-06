@@ -95,6 +95,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
 
+/** The request that asks whether the server has work in hand, which its own answer leaves out. */
+internal const val BUSY = "xtc/busy"
+
+/** How many of the client's [open] requests, by their IDs with their methods, the server is still answering, but [BUSY]. */
+internal fun answering(open: Map<Any, String>): Int = open.values.count { it != BUSY }
+
 /**
  * Ecstasy Language Server implementation using LSP4J.
  *
@@ -1421,6 +1427,26 @@ class XtcLanguageServer internal constructor(
                     },
             ),
         )
+
+    /**
+     * Whether the server has work in hand that a client may be waiting for: the client's requests it has received and
+     * not answered, this one left out, and its compiler's jobs, running, queued or waiting out their debounce, after
+     * which it refreshes the diagnostics. A client that waits for something to change, such as an editor's test, can
+     * tell from it that nothing on the server's side is coming.
+     */
+    @Suppress("unused") // JSON-RPC entry point, which the IntelliJ tour's waits ask
+    @JsonRequest(BUSY)
+    fun busy(): CompletableFuture<Map<String, Any?>> {
+        val queue = (adapter as? XdkAdapter)?.compilerQueueSnapshot().orEmpty()
+
+        fun size(key: String) = (queue[key] as? Int) ?: 0
+        return CompletableFuture.completedFuture(
+            mapOf(
+                "requests" to answering(openRequests),
+                "compilerJobs" to size("runningSize") + size("queueSize") + size("debouncingSize"),
+            ),
+        )
+    }
 
     @Suppress("unused") // JSON-RPC entry point invoked by both editor plugins through LSP4J.
     @JsonRequest("xtc/exportLogs")

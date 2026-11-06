@@ -15,6 +15,10 @@ interface XtcLanguageServer : LanguageServer {
     @JsonRequest("xtc/languageServiceStatus")
     fun languageServiceStatus(): CompletableFuture<Map<String, Any?>>
 
+    /** The server's work in hand: the requests it has not answered, and its compiler's jobs. */
+    @JsonRequest("xtc/busy")
+    fun busy(): CompletableFuture<Map<String, Any?>>
+
     @JsonRequest("xtc/exportLogs")
     fun exportLogs(): CompletableFuture<Map<String, String>>
 
