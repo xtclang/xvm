@@ -174,12 +174,7 @@ internal fun ParityScenarios.typeMoveCases() {
                     }
                     invokeGlobalBackendAction(action, project = singleProject(), now = false)
                     awaitUi("$action restores the source path", HANG_LIMIT) {
-                        val confirm = ui.dialog(title = if (moved) "Redo" else "Undo")
-                        if (confirm.present()) {
-                            withContext(OnDispatcher.EDT) {
-                                cast(confirm.button(if (moved) "Redo" else "Undo").component, NativeButton::class).doClick()
-                            }
-                        }
+                        answerUndoQuestion(if (moved) "Redo" else "Undo")
                         Files.exists(directory.resolve(data.string("to"))) == moved
                     }
                     verify(moved)
