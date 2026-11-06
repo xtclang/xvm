@@ -10639,6 +10639,245 @@
         "limitations": []
       }
     },
+    "X342": {
+      "title": "Stop of a test run partway, while one of its tests waits for what only an hour's timer would complete, ends the run as stopped: a test that ended before the stop keeps its pass, the tests still waiting or not yet run are not passed, and no program of the run is left running",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "VS Code: Run All, then the Test Explorer's Stop once waits() has started; IntelliJ: Run of the module's icon, then the test console's Stop",
+        "waits() waits for a future that a timer completes after an hour, so only Stop ends it, with no timing in the check; no program is left running when the server's languageServiceStatus counts no embedded run",
+        "waits() and lingers() both wait, and the stop comes once either has started, so the case holds whatever order xunit runs the module's tests in, which is not their order in the source"
+      ],
+      "values": {
+        "file": "Halted.x",
+        "module": "Halted",
+        "source": "module Halted {\n    @Test\n    void adds() {\n        assert 1 + 1 == 2;\n    }\n\n    @Test\n    void waits() {\n        @Inject Timer timer;\n        @Future Boolean done;\n        timer.schedule(Duration:1h, () -> {done = True;});\n        assert done;\n    }\n\n    @Test\n    void lingers() {\n        @Inject Timer timer;\n        @Future Boolean done;\n        timer.schedule(Duration:1h, () -> {done = True;});\n        assert done;\n    }\n}\n",
+        "items": [
+          "Halted/",
+          "Halted/adds",
+          "Halted/waits",
+          "Halted/lingers"
+        ],
+        "passed": "Halted/adds",
+        "ended": "The test run ended before this test did",
+        "notRun": "This test did not run",
+        "runAll": "Tests of Halted",
+        "blocking": [
+          "Halted/waits",
+          "Halted/lingers"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X343": {
+      "title": "a test added to a module while the project is open is listed without a restart, in the Test Explorer (IntelliJ: with its icon in the gutter), and runs, and passes",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "The test is typed into the open module and saved; the Test Explorer lists the module's tests again as the server's analysis of the edit changes them"
+      ],
+      "values": {
+        "file": "Grown.x",
+        "module": "Grown",
+        "source": "module Grown {\n    @Test\n    void first() {\n        assert 1 + 1 == 2;\n    }\n}\n",
+        "after": "        assert 1 + 1 == 2;\n    }\n",
+        "added": "\n    @Test\n    void second() {\n        assert 2 + 2 == 4;\n    }\n",
+        "items": [
+          "Grown/",
+          "Grown/first"
+        ],
+        "addedItem": "Grown/second",
+        "nameLine": 8,
+        "nameColumn": 9,
+        "icon": "Test second@7",
+        "runIcon": "Test second"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X344": {
+      "title": "a test that throws is an error, with its exception's message at the line it threw from, apart from a test whose assertion fails, which is a failure",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "A failed assert throws IllegalState, so a test that throws another exception, here Unsupported, is an error: xunit's JSON events say aborted, which VS Code's Test Explorer shows as errored and IntelliJ's test console as an error, and a failed assertion failed"
+      ],
+      "values": {
+        "file": "Thrown.x",
+        "module": "Thrown",
+        "source": "module Thrown {\n    @Test\n    void fails() {\n        Int n = 1;\n        assert n + n == 3 as \"one and one are not three\";\n    }\n\n    @Test\n    void throws() {\n        throw new Unsupported(\"not written yet\");\n    }\n}\n",
+        "items": [
+          "Thrown/",
+          "Thrown/fails",
+          "Thrown/throws"
+        ],
+        "failed": "Thrown/fails",
+        "failure": "one and one are not three",
+        "failureLine": 5,
+        "errored": "Thrown/throws",
+        "error": "not written yet",
+        "errorLine": 10,
+        "runAll": "Tests of Thrown"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X345": {
+      "title": "a disabled test, and one whose precondition fails, are skipped, with their reasons, neither passed nor failed, beside a test that passes",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "xunit's @Disabled skips a test with its reason, and a test that throws xunit's PreconditionFailed is skipped with the exception's text"
+      ],
+      "values": {
+        "file": "Skipped.x",
+        "module": "Skipped",
+        "source": "module Skipped {\n    package xunit import xunit.xtclang.org;\n\n    @Test\n    void runs() {\n        assert 1 + 1 == 2;\n    }\n\n    @Test\n    @xunit.annotations.Disabled(\"not on this machine\")\n    void later() {\n        assert False;\n    }\n\n    @Test\n    void assumes() {\n        throw new xunit.PreconditionFailed(\"no network\");\n    }\n}\n",
+        "items": [
+          "Skipped/",
+          "Skipped/runs",
+          "Skipped/later",
+          "Skipped/assumes"
+        ],
+        "passed": "Skipped/runs",
+        "disabled": "Skipped/later",
+        "disabledReason": "not on this machine",
+        "precondition": "Skipped/assumes",
+        "preconditionReason": "no network",
+        "runAll": "Tests of Skipped"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X346": {
+      "title": "Rerun Failed Tests, after a run with failures, runs only the tests that failed, which fail again, and not the one that passed",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "VS Code: Run All, then Test: Rerun Failed Tests; IntelliJ: Run of the module's icon, then the test console's Rerun Failed Tests, which IntelliJ offers on a run's console, not a debug session's"
+      ],
+      "values": {
+        "file": "Rerun.x",
+        "module": "Rerun",
+        "source": "module Rerun {\n    @Test\n    void adds() {\n        assert 1 + 1 == 2;\n    }\n\n    @Test\n    void fails() {\n        assert 1 + 1 == 3 as \"one and one are not three\";\n    }\n\n    @Test\n    void alsoFails() {\n        assert 2 + 2 == 5 as \"two and two are not five\";\n    }\n}\n",
+        "items": [
+          "Rerun/",
+          "Rerun/adds",
+          "Rerun/fails",
+          "Rerun/alsoFails"
+        ],
+        "passed": "Rerun/adds",
+        "failed": [
+          "Rerun/fails",
+          "Rerun/alsoFails"
+        ],
+        "runAll": "Tests of Rerun"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X347": {
+      "title": "each test's result goes to its test's source, a test of the module's and one of a class nested in a class, whose failure is at the line of its assertion",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "VS Code: each test item's location is its declaration; IntelliJ: the test console goes to each test's declaration, through the xunit:// locator",
+        "Drawer is static: xunit makes a test's fixture with no outer instance, so a test of a class nested in a class, not static, fails with \"testFixture != Null\""
+      ],
+      "values": {
+        "file": "Located.x",
+        "module": "Located",
+        "source": "module Located {\n    @Test\n    void top() {\n        assert 1 + 1 == 2;\n    }\n\n    class Shelf {\n        static class Drawer {\n            @Test\n            void deep() {\n                assert 2 + 2 == 5 as \"two and two are not five\";\n            }\n        }\n    }\n}\n",
+        "items": [
+          "Located/",
+          "Located/top",
+          "Located/Shelf",
+          "Located/Shelf.Drawer",
+          "Located/Shelf.Drawer.deep"
+        ],
+        "tests": {
+          "Located/top": 3,
+          "Located/Shelf.Drawer.deep": 10
+        },
+        "failed": "Located/Shelf.Drawer.deep",
+        "failure": "two and two are not five",
+        "failureLine": 11,
+        "runAll": "Tests of Located"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X348": {
+      "title": "Run All in a project with several test modules runs every module's tests embedded and reports each (IntelliJ: each module's tests, a module at a time)",
+      "manual": [
+        "The tests run embedded, with xunit in a process the language server starts, as X339's do",
+        "VS Code's Run All runs each module's tests in turn; IntelliJ runs a module's tests from its module's icon, and has no action yet that runs every module's tests at once"
+      ],
+      "values": {
+        "modules": [
+          {
+            "file": "FirstSuite.x",
+            "module": "FirstSuite",
+            "source": "module FirstSuite {\n    @Test\n    void one() {\n        assert 1 + 1 == 2;\n    }\n}\n",
+            "runAll": "Tests of FirstSuite"
+          },
+          {
+            "file": "SecondSuite.x",
+            "module": "SecondSuite",
+            "source": "module SecondSuite {\n    @Test\n    void two() {\n        assert 2 + 2 == 4;\n    }\n\n    @Test\n    void three() {\n        assert 3 + 3 == 7 as \"three and three are not seven\";\n    }\n}\n",
+            "runAll": "Tests of SecondSuite"
+          }
+        ],
+        "passed": [
+          "FirstSuite/one",
+          "SecondSuite/two"
+        ],
+        "failed": "SecondSuite/three",
+        "failure": "three and three are not seven"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "IntelliJ runs a module's tests from that module's gutter icon, a module at a time; an action that runs every module's tests at once is not there yet, so the case runs each module's."
+        ]
+      }
+    },
+    "X349": {
+      "title": "the command line's xtc test reports a module's tests as an embedded run does: the same tests passed and failed, with the same failure",
+      "manual": [
+        "IntelliJ: an Ecstasy test configuration for the module that runs with xtc command line runs xtc test --deduce with xunit's json report in the run console, which marks the tests as an embedded run does",
+        "VS Code has no command-line build mode, as X338 says: the case runs the XDK's xtc test -I xvm.xunit.report=json on the module itself, as X336 runs its program with the XDK's xec, and compares its events with the Test Explorer's embedded run"
+      ],
+      "values": {
+        "file": "CliTested.x",
+        "module": "CliTested",
+        "source": "module CliTested {\n    @Test\n    void adds() {\n        assert 1 + 1 == 2;\n    }\n\n    @Test\n    void fails() {\n        Int n = 1;\n        assert n + n == 3 as \"one and one are not three\";\n    }\n}\n",
+        "items": [
+          "CliTested/",
+          "CliTested/adds",
+          "CliTested/fails"
+        ],
+        "passed": "CliTested/adds",
+        "failed": "CliTested/fails",
+        "failure": "one and one are not three",
+        "runAll": "Tests of CliTested",
+        "compiled": [
+          "CliTested.xtc",
+          "build/CliTested.xtc"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
