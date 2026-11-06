@@ -86,9 +86,8 @@
  *   xtc/exportLogs                                  check Export Ecstasy Server Logs saves them as a ZIP
  *   xtc/compilerSourceModules                       step The compiler
  *   xtc/discoverConsumers                           the Compiler page's Add consumers from folders: playbook X99, X105
- *   xtc/rename                                      steps Rename, Renamed everywhere, Rename a class; checks Undo takes the rename
- *                                                   back in one step, without asking, as a change of one file, renaming a local
- *                                                   and a parameter renames their uses
+ *   xtc/rename                                      steps Rename, Renamed everywhere, Undo asks first, Undone everywhere, Rename a
+ *                                                   class; check renaming a local and a parameter renames their uses
  *   xtc/renameFiles                                 checks renaming a file renames its type and every use, moving a class to
  *                                                   another package, renaming the file renames its type
  *   xtc/build                                       steps Build Project, A failed build
@@ -1199,43 +1198,89 @@ private fun Tour.diagnostics() {
 
 private fun Tour.refactoring() {
     section("Refactoring")
+    // Player.cardMatches, which both strategies and the player's tests call too: its rename changes four files, in two
+    //  modules, as the VS Code tour's does
+    val callers = listOf(source("Player.x"), source("FirstMatch.x"), source("SaveEights.x"), test("PlayerTest.x"))
+
+    // whether every caller calls [name], and whether none names [name]
+    fun TourProbe.named(name: String) = callers.all { "$name(" in fileText(it) }
+
+    fun TourProbe.unnamed(name: String) = callers.none { name in fileText(it) }
+
+    // the lines of [caller] that name either method, for a failure's message
+    fun TourProbe.calls(caller: String) =
+        "${caller.substringAfterLast('/')}: " +
+            fileText(caller).lines().filter { "canFollow" in it || "cardMatches" in it }.map(String::trim)
+
     shot(
         "Rename",
         "Shift+F6 renames a method: the dialog checks the new name before anything changes.",
         feature = "textDocument/prepareRename",
         focus = "popup",
-        until = { "drawUntilMatch" in popupText() },
-        check = { popupText().let { expect("drawUntilMatch" in it) { "The dialog: $it" } } },
+        until = { "canFollow" in popupText() },
+        check = { popupText().let { expect("canFollow" in it) { "The dialog: $it" } } },
         settle = 2.seconds,
     ) {
         open(source("Player.x"), 0)
-        at("return drawForMatch(eights, prev);", delta = "return draw".length)
+        at("cardMatches(card, prev)", delta = "card".length)
         action("RenameElement")
         expect(within(HANG) { dialogShowing() }) { "No Rename dialog" }
-        fillDialog("drawUntilMatch")
+        fillDialog("canFollow")
     }
     shot(
         "Renamed everywhere",
-        "The rename changes the declaration and every use, in every file of the project, as one change that Undo reverts.",
+        "The rename changes the declaration and every call, in the player, both strategies and the player's tests, as one " +
+            "change of the project.",
         feature = "xtc/rename",
         focus = "editor",
         check = {
-            fileText(source("Player.x")).let {
-                expect("drawForMatch" !in it && "conditional Card drawUntilMatch(" in it) { "Player.x was not renamed" }
+            callers.forEach { caller ->
+                expect(fileText(caller).let { "canFollow(" in it && "cardMatches(" !in it }) { "Not renamed: ${calls(caller)}" }
             }
-            compilesCleanly(source("Player.x"))
+            // a call that the rename missed would name a method that is gone; an editor analyzes only the file it shows,
+            //  and selected, not opened at a line, Player.x keeps its caret at the rename, where Undo must find it
+            callers.forEach { caller ->
+                selectFile(caller)
+                compilesCleanly(caller)
+            }
         },
         settle = 3.seconds,
-        until = { fileHas(source("Player.x"), "drawUntilMatch(eights, prev)") },
+        until = { named("canFollow") && unnamed("cardMatches(") },
     ) {
         check(confirm("Refactor")) { "The rename dialog did not take the new name" }
     }
-    // drawForMatch has its uses in Player.x alone, so its rename is a change of one file, which Undo takes back without
-    //  asking; one that changes several files asks first, as for IntelliJ's own refactorings
-    verify("Undo takes the rename back in one step, without asking, as a change of one file") {
+    shot(
+        "Undo asks first",
+        "Ctrl+Z takes the rename back in one step, and first asks, as for any change of the project.",
+        feature = "xtc/rename",
+        focus = "popup",
+        until = { dialogTitled("Undo") },
+        check = { popupText().let { expect("Undo Rename?" in it) { "The question: $it" } } },
+        settle = 2.seconds,
+    ) {
+        // the editor as the rename left it: the first Undo after the caret has left the change only takes it back there
         selectFile(source("Player.x"))
-        undo(asks = false) { fileText(source("Player.x")).let { "drawUntilMatch" !in it && "conditional Card drawForMatch(" in it } }
-        compilesCleanly(source("Player.x"))
+        undoKey { named("cardMatches") && unnamed("canFollow") }
+        expect(dialogTitled("Undo")) { "Undo did not ask first" }
+    }
+    shot(
+        "Undone everywhere",
+        "OK takes the rename back in every file at once, and the project compiles as it did.",
+        feature = "xtc/rename",
+        focus = "editor",
+        check = {
+            callers.forEach { caller ->
+                expect(fileText(caller).let { "cardMatches(" in it && "canFollow" !in it }) { "Not undone: ${calls(caller)}" }
+            }
+            callers.forEach { caller ->
+                selectFile(caller)
+                compilesCleanly(caller)
+            }
+        },
+        settle = 3.seconds,
+        until = { named("cardMatches") && unnamed("canFollow") },
+    ) {
+        check(confirm("OK")) { "Undo's question did not take its answer: ${popupText()}" }
     }
     restore()
     shot(
