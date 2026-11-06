@@ -972,15 +972,7 @@ internal fun ParityScenarios.platformCases() {
                     }
                     invokeGlobalBackendAction(action, project = singleProject(), now = false)
                     awaitUi("one $action restores all container paths", HANG_LIMIT) {
-                        val confirm = ui.dialog(title = if (expected) "Redo" else "Undo")
-                        if (confirm.present()) {
-                            withContext(OnDispatcher.EDT) {
-                                cast(
-                                    confirm.button(if (expected) "Redo" else "Undo").component,
-                                    NativeButton::class,
-                                ).doClick()
-                            }
-                        }
+                        answerUndoQuestion(if (expected) "Redo" else "Undo")
                         moved(expected)
                     }
                     clean(document)

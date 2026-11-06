@@ -223,6 +223,18 @@ interface NativeButton {
     fun doClick()
 }
 
+/**
+ * Answers OK to the question that Undo or Redo, as [title] names it, asks before it takes back or makes again a change
+ * of the project, such as a rename or a move that changed several files, if the question shows: IntelliJ's dialog
+ * titled Undo or Redo, with OK and Cancel.
+ */
+internal fun Driver.answerUndoQuestion(title: String) {
+    val question = ui.dialog(title = title)
+    if (question.present()) {
+        withContext(OnDispatcher.EDT) { cast(question.button("OK").component, NativeButton::class).doClick() }
+    }
+}
+
 /** Reads and chooses the rows of the showing list or table popup in one IDE step each. */
 @Remote("org.xtclang.idea.playbook.probe.PopupChoices", plugin = "org.xtclang.playbook.probe")
 internal interface NativePopupChoices {

@@ -1901,6 +1901,10 @@ object TourUi {
     @JvmStatic
     fun dialogShowing(): Boolean = anyEdt { Window.getWindows().any { it is JDialog && it.isShowing } }
 
+    /** Whether a dialog titled [title] shows, such as Undo's question, which asks whether to undo a change of the project. */
+    @JvmStatic
+    fun dialogTitled(title: String): Boolean = anyEdt { Window.getWindows().any { it is JDialog && it.isShowing && it.title == title } }
+
     /** Whether the newest window's button labeled [text] shows and is enabled, as a dialog enables OK once its input is valid. */
     @JvmStatic
     fun buttonEnabled(text: String): Boolean =
