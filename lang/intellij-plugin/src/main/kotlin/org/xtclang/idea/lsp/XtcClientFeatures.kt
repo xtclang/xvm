@@ -123,6 +123,8 @@ class XtcClientFeatures : LSPClientFeatures() {
     }
 
     init {
+        // TODO LSP4IJ: UP78 — Ctrl+Q on an item that has its documentation only on resolve shows nothing
+        setCompletionFeature(CompletionDocumentation())
         setInlayHintFeature(
             object : LSPInlayHintFeature() {
                 override fun isInlayHintSupported(file: PsiFile): Boolean =
