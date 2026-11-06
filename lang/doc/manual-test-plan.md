@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **343 scenarios**: X1–X341 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **351 scenarios**: X1–X349 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 343 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 351 scenarios; a partial-coverage result is not a full pass.
 
 On a desktop the playbook's editor takes the focus, and keystrokes typed elsewhere reach it. To keep
 both editors off the desktop, run the same playbooks in a Linux container on Xvfb with
@@ -1525,7 +1525,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 343 scenarios: X1–X341 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 351 scenarios: X1–X349 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1540,7 +1540,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 343 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 351 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3980,6 +3980,25 @@ closed files' (UP69); VS Code's client pulls the workspace report itself.
 | ID | Actions | Expected result |
 |---|---|---|
 | X341 | Keep Child closed. Change Base's name to `Renamed` in the root without saving, then undo. Change it again, open Child, then undo in the root. Change it once more, close Child, then undo. | Without opening Child: IntelliJ draws `Project/Child.x` red in the Project view, and VS Code's Problems panel lists Child's errors; undo clears both. Opened while broken, Child shows its errors once, and none after the undo, with no red left on the file. Closed while broken, Child is red and listed again, and the undo clears it. IntelliJ's Problems view has the selected file's errors in its File tab and a **Build**'s errors in Project Errors, so a closed file's errors show there only after a Build. |
+
+### xunit tests: stopped, added, errors, skips, reruns, sources, modules and the command line (X342–X349)
+
+As X339, the tests run embedded, with xunit in a process the language server starts, whatever the folder's build
+mode, and xunit reports each test as an event of its `json` report. A failed `assert` throws `IllegalState`, so a
+test that throws another exception is an error, not a failure: xunit's events say `aborted`, which VS Code's Test
+Explorer shows as errored and IntelliJ's test console as an error. The server's `xtc/languageServiceStatus` counts
+the embedded runs it still tracks, which is none once every run, and its program, has ended.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X342 | Write `Halted.x`, a module with three tests: `adds`, which passes; and `waits` and `lingers`, each of which waits for a future that a timer completes after an hour. Run the module's tests (VS Code: Run All; IntelliJ: Run of the module's icon), and Stop the run once `waits` or `lingers` has started (VS Code: the Test Explorer's Stop; IntelliJ: the test console's Stop). xunit runs a module's tests one at a time, in an order that is not the source's. | The run ends as stopped. Neither `waits` nor `lingers` is passed: the one that had started is ended (VS Code: errored, `The test run ended before this test did`; IntelliJ: terminated), the other did not run (VS Code: errored, `This test did not run`; IntelliJ: not run, or no result). `adds` passed if it ran before the stop, and otherwise did not run. The server tracks no embedded run afterwards, so no program of the run is left running. |
+| X343 | Write `Grown.x`, a module with a test `first`, and see it listed. Type a second test, `second`, after `first`, and save. Run `second` (VS Code: **Run Test at Cursor** on its name; IntelliJ: Run of its new gutter icon). | Without a restart, the Test Explorer lists `second` under `Grown` (IntelliJ: the gutter has a test icon on its line). Its run passes it, and only it. |
+| X344 | Write `Thrown.x`, a module with a test `fails`, whose assertion on line 5 fails with `one and one are not three`, and a test `throws`, which throws `Unsupported("not written yet")` on line 10. Run the module's tests. | `fails` is a failure, with its message at line 5. `throws` is an error, apart from it (VS Code: errored; IntelliJ: an error in the test console), with `not written yet` at line 10. |
+| X345 | Write `Skipped.x`, a module that imports xunit, with a test `runs`, which passes, a test `later` with `@xunit.annotations.Disabled("not on this machine")`, and a test `assumes`, which throws xunit's `PreconditionFailed("no network")`. Run the module's tests. | `runs` passed. `later` is skipped, with `not on this machine`, and `assumes` is skipped, with `no network`; neither is passed or failed. |
+| X346 | Write `Rerun.x`, a module with a test `adds`, which passes, and `fails` and `alsoFails`, whose assertions fail. Run the module's tests, then rerun the failed ones (VS Code: **Test: Rerun Failed Tests**; IntelliJ: the run console's **Rerun Failed Tests**, which IntelliJ offers on a run's console, not a debug session's). | The first run passes `adds` and fails the other two. The rerun runs only `fails` and `alsoFails`, which fail again, and not `adds`. |
+| X347 | Write `Located.x`, a module with a test `top` on line 3 and a class `Shelf` with a static class `Drawer` in it, with a test `deep` on line 10, whose assertion on line 11 fails with `two and two are not five`. Run the module's tests, and go to each result's source. | The Test Explorer lists `Located`, `top`, `Shelf`, `Shelf.Drawer` and `Shelf.Drawer.deep`, each test at its declaration's line (IntelliJ: the test console goes to each test's declaration). `deep`'s failure is at line 11. |
+| X348 | Write `FirstSuite.x`, a module with a test `one`, and `SecondSuite.x`, a module with a test `two`, which passes, and `three`, whose assertion fails with `three and three are not seven`. Run every module's tests (VS Code: Run All; IntelliJ: Run of each module's icon, as IntelliJ has no action yet that runs every module's tests at once). | Every module's tests run and are reported: `one` and `two` passed, `three` failed with its message. |
+| X349 | Write `CliTested.x`, a module with a test `adds`, which passes, and `fails`, whose assertion fails with `one and one are not three`. IntelliJ: run an Ecstasy test configuration for `CliTested` with **xtc command line**. VS Code, which has no command-line build mode (X338): run the XDK's `xtc test -I xvm.xunit.report=json CliTested.x` in the folder, as X336 runs the XDK's `xec`, and Run All in the Test Explorer. | IntelliJ runs `xtc test --deduce` with xunit's `json` report in the run console, which marks `adds` passed and `fails` failed with its message, as an embedded run does. VS Code: the command line's events and the Test Explorer's embedded run agree, `adds` passed and `fails` failed with the same message. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

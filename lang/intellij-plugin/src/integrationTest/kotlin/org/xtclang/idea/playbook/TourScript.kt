@@ -2420,8 +2420,8 @@ private fun Tour.testing() {
     verify("a test that throws is an error, apart from a failed assertion") {
         val thrown = testResult("testDeckThrows")
         val failed = testResult("testDeckFailsOnPurpose")
-        expect(failed?.get("state")?.asString == "failed" && failed["error"] == null) { "The failed assertion: $failed" }
-        expect(thrown?.get("state")?.asString == "failed" && thrown["error"]?.asBoolean == true) {
+        expect(failed?.get("state")?.asString == "failed") { "The failed assertion: $failed" }
+        expect(thrown?.get("state")?.asString == "error") {
             "The test that throws: $thrown, not an error, as the failed assertion: $failed"
         }
     }
