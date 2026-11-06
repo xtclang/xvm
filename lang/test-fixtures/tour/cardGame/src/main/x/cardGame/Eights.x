@@ -78,7 +78,7 @@ class Eights {
         console.print($"{one.name} hand size: {one.hand.size()}");
         console.print($"{two.name} hand size: {two.hand.size()}");
         console.print($"Draw pile size: {drawPile.size()}");
-        console.print("Press Enter for next turn...");
+        console.print(PROMPT);
         console.readLine();
     }
 
@@ -106,8 +106,20 @@ class Eights {
             current = nextPlayer(current);
         }
         console.print(GameConstants.DISPLAY_SEPARATOR);
-        Player winner = one.hand.isEmpty() ? one : two;
+        val winner = victor();
         scoreboard.recordWin(winner.name);
         console.print($"{winner.name} wins! ({scoreboard.winsOf(winner.name)} so far)");
+    }
+
+    /**
+     * What each turn asks of the people playing.
+     */
+    private static String PROMPT = "Press Enter for next turn...";
+
+    /**
+     * @return the player who has played their last card, or else the other one
+     */
+    private Player victor() {
+        return one.hand.isEmpty() ? one : two;
     }
 }
