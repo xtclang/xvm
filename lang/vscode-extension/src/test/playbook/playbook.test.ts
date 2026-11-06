@@ -30,6 +30,7 @@ import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases, semanticClosureCases } from './semantics';
 import { syntaxCompletionCases } from './syntaxCompletion';
 import { discoveredRootMoveCases, typeMoveCases } from './typeMoves';
+import { xunitCases } from './xunit';
 import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
 
 suite('XdkAdapter playbook', function () {
@@ -112,6 +113,7 @@ suite('XdkAdapter playbook', function () {
     testExplorerCases();
     gradleTestCases();
     closedMemberCases();
+    xunitCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
