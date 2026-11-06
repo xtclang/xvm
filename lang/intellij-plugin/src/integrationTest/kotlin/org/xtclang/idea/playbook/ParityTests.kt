@@ -193,4 +193,20 @@ internal interface TestRunProbe {
     fun debugState(name: String): String
 
     fun resume(name: String)
+
+    fun stop(
+        project: Project,
+        name: String,
+    )
+
+    fun rerunFailed(
+        project: Project,
+        name: String,
+    )
+
+    fun runCommandLine(
+        project: Project,
+        module: String,
+        uri: String,
+    )
 }
