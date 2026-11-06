@@ -8,7 +8,7 @@ import { State } from 'vscode-languageclient/node';
 import { onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
 import { onDidReportTest, onDidRefreshTests, type TestReport } from '../../test-explorer';
-import { Activity, QUIET_MS } from './activity';
+import { Activity, QUIET_MS, type FileChange } from './activity';
 import { actingBy } from './editor';
 import { DRIVER_CHECK_MS, RECORDING, type Box, type Point, type TourUi } from './ui';
 
@@ -275,11 +275,11 @@ export class Tour implements vscode.Disposable {
         let shot: number | undefined;
         let record: TourStep;
         try {
-            actingBy(RECORDING ? this.ui : undefined);
+            actingBy(this.ui, RECORDING);
             try {
                 await this.bounded(step.act?.(), `${step.title}: its action`);
             } finally {
-                actingBy(undefined);
+                actingBy(undefined, false);
             }
             let waited: string | undefined;
             await this.until(`What the step waits for, and its subject (${focus}), shows`,
@@ -617,10 +617,16 @@ export class Tour implements vscode.Disposable {
         await this.restoreSources();
     }
 
-    /** Puts the project's sources back as [fixture] has them, in the editors and on disk, and deletes the ones steps added. */
+    /**
+     * Puts the project's sources back as [fixture] has them, in the editors and on disk, and deletes the ones steps
+     * added; it ends once the server has the watcher's events of the files it wrote or deleted on disk.
+     */
     async restoreSources(): Promise<void> {
         const sources = this.file('src');
         const originals = await files(this.fixture);
+        // the editors' documents first, which the server has as they change, and then the files on disk that are not
+        // as the fixture has them, and the ones that steps added
+        const writes = new Map<string, string>();
         for (const relative of originals) {
             const text = await fs.readFile(path.join(this.fixture, relative), 'utf8');
             const target = path.join(sources, relative);
@@ -631,24 +637,40 @@ export class Tour implements vscode.Disposable {
                 await vscode.workspace.applyEdit(edit);
             }
             if (document?.isDirty) await document.save();
-            if (await fs.readFile(target, 'utf8').catch(() => undefined) !== text) {
+            if (await fs.readFile(target, 'utf8').catch(() => undefined) !== text) writes.set(target, text);
+        }
+        const added = (await files(sources)).filter(relative => !originals.includes(relative)).map(relative => path.join(sources, relative));
+        // the server has a file changed on disk by the watcher's event only, which the language client sends a while
+        // later; a refactoring that the server proves before then, as the next step's can be, is out of date as it comes
+        const changes = new Map<string, FileChange>([
+            ...[...writes.keys()].map(file => [file, 'written'] as const), ...added.map(file => [file, 'deleted'] as const),
+        ]);
+        const expected = this.activity.expectFiles(changes);
+        try {
+            for (const [target, text] of writes) {
                 await fs.mkdir(path.dirname(target), { recursive: true });
                 await fs.writeFile(target, text);
             }
-        }
-        for (const added of (await files(sources)).filter(relative => !originals.includes(relative))) {
-            const uri = vscode.Uri.file(path.join(sources, added));
-            const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs)
-                .filter(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === uri.fsPath);
-            const document = vscode.workspace.textDocuments.find(each => each.uri.fsPath === uri.fsPath);
-            if (document?.isDirty) {
-                await vscode.window.showTextDocument(document);
-                await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+            for (const file of added) {
+                const uri = vscode.Uri.file(file);
+                const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs)
+                    .filter(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === uri.fsPath);
+                const document = vscode.workspace.textDocuments.find(each => each.uri.fsPath === uri.fsPath);
+                if (document?.isDirty) {
+                    await vscode.window.showTextDocument(document);
+                    await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+                }
+                await vscode.window.tabGroups.close(tabs).then(undefined, () => undefined);
+                await vscode.workspace.fs.delete(uri, { useTrash: false }).then(undefined, () => fs.rm(uri.fsPath, { force: true }));
             }
-            await vscode.window.tabGroups.close(tabs).then(undefined, () => undefined);
-            await vscode.workspace.fs.delete(uri, { useTrash: false }).then(undefined, () => fs.rm(uri.fsPath, { force: true }));
+            await this.until("The server has the watcher's events of the files restored on disk", expected.taken, expected.waiting);
+        } finally {
+            expected.dispose();
+            // only then the directories that steps added: the watcher reports a deleted directory for the files deleted
+            // in it a moment before, whose events it then drops, and the language client, which watches the sources,
+            // sends none
+            await removeEmptyDirectories(sources, this.fixture);
         }
-        await removeEmptyDirectories(sources, this.fixture);
     }
 
     /** Ends every debug session and task of the tour, which stops their programs. */
