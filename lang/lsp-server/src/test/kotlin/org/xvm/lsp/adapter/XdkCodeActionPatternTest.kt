@@ -207,9 +207,10 @@ class XdkCodeActionPatternTest {
                 ) { caret(it, "Int unused", "Int un".length) }
             println("unused local: intention list $listed, quick fixes $fixes")
             assertThat(listed.first).contains("Remove unused local variable")
-            // Hand is in cardGame, on which every module depends, but the edit is in a body, after every declaration:
-            // the revision's compile and the removal's proof each compile cardGame alone, which keeps its API, and keep
-            // the compiles of the rest; tour run 8b's compiled every module for each, 16 in 4,481 ms
+            // Hand is in cardGame, on which every module depends, but the edit is in a body, after every declaration but
+            // the private heading: the revision's compile and the removal's proof each compile cardGame alone, which
+            // keeps its API but where heading is, which no module that compiled can name, and keep the compiles of the
+            // rest; tour run 8b's compiled every module for each, 16 in 4,481 ms
             assertThat(listed.second).isEqualTo(1 + 1)
             assertThat(fixes).isEqualTo(emptyList<String>() to 0)
         }

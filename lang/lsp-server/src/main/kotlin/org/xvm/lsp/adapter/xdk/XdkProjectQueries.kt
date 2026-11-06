@@ -1593,15 +1593,18 @@ internal class XdkProjectQueries(
         if (edited != null && text.keys.any { graph.scope(it) == null }) return null
         // the edited modules, by name, that a module depending on them compiles against as it did
         val alike = hashSetOf<String>()
+        // the edited modules whose private declarations alone moved, which only a module that did not compile names
+        val privatelyMoved = hashSetOf<String>()
 
         // A module whose own sources are unchanged, and whose edited dependencies all compiled to an artifact with
         // the API they had, compiles as it did: it keeps its compile, unless its facts name one of them by revision.
+        // A module that compiled keeps it too when only their private declarations moved, as it cannot name them.
         fun unchangedBy(module: XdkSourceModule): Boolean {
             val upstream = graph.buildOrder(module.uri).filter { it.uri != module.uri && it.uri in edited.orEmpty() }
             return prior != null &&
                 changed != null &&
                 module.uri !in changed &&
-                upstream.all { it.name in alike } &&
+                upstream.all { it.name in alike || (it.name in privatelyMoved && module.name in prior.artifacts) } &&
                 prior.facts
                     .module(module.uri)
                     ?.binaryModules
@@ -1755,13 +1758,12 @@ internal class XdkProjectQueries(
                     val artifact = compilation.toDependency()
                     artifacts[module.name] = artifact
                     // only a module that others depend on needs its API compared
-                    if (
-                        prior != null &&
-                        edited != null &&
-                        project.affected(module.uri).any { it != module.uri } &&
-                        prior.artifacts[module.name]?.api == artifact.api
-                    ) {
-                        alike += module.name
+                    val before = prior?.artifacts?.get(module.name)
+                    if (before != null && edited != null && project.affected(module.uri).any { it != module.uri }) {
+                        when {
+                            before.api == artifact.api -> alike += module.name
+                            before.accessibleApi == artifact.accessibleApi -> privatelyMoved += module.name
+                        }
                     }
                     if (proof == Proof.REPAIR) {
                         missingDestinations[module.name] =
