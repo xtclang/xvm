@@ -1223,16 +1223,26 @@ internal fun ParityScenarios.runEntryCases() {
 
                 // Run to Cursor, on a line in the loop after a long count
                 debugger.runToCursor(project, module, file, cursor)
-                // TODO LSP4IJ: UP44 — LSP4IJ removes Run to Cursor's temporary breakpoint once the continue request is answered,
-                //  not when the program stops there, so the program runs past the cursor to its exit; with a fix it stops at the
-                //  cursor's line, before it prints, and this checks that and Resume to the exit, as VS Code's X323 does
-                val ended =
-                    debugger.awaitState(project, module, "Run to Cursor resumes the program, which runs past the cursor", HANG_LIMIT) {
-                        it.has("exitCode") || (it["suspended"]?.asBoolean == true && it["line"]?.asInt == cursor)
+                // TODO LSP4IJ: UP44 — LSP4IJ 0.21.0 removes Run to Cursor's temporary breakpoint once the continue request is
+                //  answered, which the plugin gives it only once the program stops: the count takes longer than that round trip
+                val stopped =
+                    debugger.awaitState(project, module, "Run to Cursor stops at the cursor's line", HANG_LIMIT) {
+                        it.has("exitCode") || it["suspended"]?.asBoolean == true
                     }
-                check(ended.has("exitCode")) { "Run to Cursor stopped at line $cursor: UP44 is fixed, so X323 is full in IntelliJ: $ended" }
+                val atCursor = !stopped.has("exitCode") && stopped["line"]?.asInt == cursor
+                check(atCursor) { "Run to Cursor did not stop at line $cursor: $stopped" }
+                // the loop's first round, before it prints
+                check(data.string("printed") !in stopped.string("console")) { "Console at the cursor: ${stopped.string("console")}" }
+
+                // no breakpoint stays on the cursor's line: Resume runs the loop's other rounds to the exit, without a stop
+                debugger.resume(project, module)
+                val ended =
+                    debugger.awaitState(project, module, "Resume runs the program to its exit", HANG_LIMIT) {
+                        it.has("exitCode") || it["suspended"]?.asBoolean == true
+                    }
+                check(ended.has("exitCode")) { "Resume stopped again: $ended" }
                 check(ended.int("exitCode") == data.int("exitCode")) { "Debug session: $ended" }
-                check(data.string("output") in ended.string("console")) { "Console after Run to Cursor: ${ended.string("console")}" }
+                check(data.string("output") in ended.string("console")) { "Console after Resume: ${ended.string("console")}" }
             } finally {
                 debugger.clearBreakpoints(project)
             }
