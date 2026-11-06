@@ -1118,6 +1118,23 @@ internal fun TourProbe.undo(
     asks: Boolean,
     undone: () -> Boolean,
 ) {
+    val notes = undoKey(undone)
+    if (asks) {
+        expect(dialogTitled("Undo")) { "Undo did not ask first" }
+        expect(confirm("OK")) { "Undo's question did not take its answer: ${popupText()}" }
+    } else {
+        expect(!dialogTitled("Undo")) { "Undo asked first: ${popupText()}" }
+    }
+    expect(within(HANG) { undone() }) { "Undo did not undo the change; ${notes()}" }
+}
+
+/**
+ * Presses the keymap's Undo shortcut in the selected editor, as [undo] does, and fails unless Undo has then [undone] the
+ * change or asks whether to: a step that shows the question presses it so, and answers it in the next. Answers what a
+ * later failure's message says of the undo. While the question is open, its modal dialog holds every probe call that
+ * waits for the EDT outside it, as reading a document does, so the question is looked for first.
+ */
+internal fun TourProbe.undoKey(undone: () -> Boolean): () -> String {
     val before = undoable()
     // where the focus is and what the selected editor's document holds before the key, and where the focus is when it
     // goes, so that a failure says what the key reached
@@ -1142,7 +1159,7 @@ internal fun TourProbe.undo(
     // an undo as [undo] asks for it, its question answered: how it ended
     fun undid(undo: () -> Unit): String {
         undo()
-        val asked = within(HANG) { undone() || dialogTitled("Undo") } && !undone()
+        val asked = within(HANG) { dialogTitled("Undo") || undone() } && dialogTitled("Undo")
         if (asked) confirm("OK")
         return when {
             within(HANG) { undone() } -> "undid it${if (asked) ", once asked" else ""}"
@@ -1160,22 +1177,16 @@ internal fun TourProbe.undo(
             } else {
                 redoDirectly()
                 // a redo of a change of the project asks first too, in a dialog titled Redo
-                if (within(HANG) { !undone() || dialogTitled("Redo") } && dialogTitled("Redo")) confirm("OK")
+                if (within(HANG) { dialogTitled("Redo") || !undone() } && dialogTitled("Redo")) confirm("OK")
                 if (within(HANG) { !undone() }) undid { undoByAction() } else "not tried, as the redo did not redo it"
             }
         "$direct; then, redone, the Undo action performed with the editor's context: $byAction"
     }
-    expect(within(HANG) { undone() || dialogTitled("Undo") }) {
+    expect(within(HANG) { dialogTitled("Undo") || undone() }) {
         "Undo neither undid the change nor asked whether to; ${notes()}; UndoManager's undo of the selected editor, " +
             "asked directly then: ${directly()}"
     }
-    if (asks) {
-        expect(!undone()) { "Undo did not ask first" }
-        expect(confirm("OK")) { "Undo's question did not take its answer: ${popupText()}" }
-    } else {
-        expect(!dialogTitled("Undo")) { "Undo asked first: ${popupText()}" }
-    }
-    expect(within(HANG) { undone() }) { "Undo did not undo the change; ${notes()}" }
+    return notes
 }
 
 /**
