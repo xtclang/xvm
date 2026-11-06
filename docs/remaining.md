@@ -428,9 +428,9 @@ recorded partial coverage.
 - [x] R11: Run to Cursor in both editors (`SL`) (2026-10-27; shared X323). Both editors add a
   temporary breakpoint and continue, which the server already handled: `EmbeddedExecutionTest` sends
   that sequence, on a line in a loop, and the program stops there once and then runs to its exit.
-  VS Code passes X323, whose program counts to 3,000,000 before the cursor's line. IntelliJ's is
+  VS Code passes X323, whose program counts to 3,000,000 before the cursor's line. IntelliJ's was
   partial: LSP4IJ removes the temporary breakpoint once the continue request is answered, so the
-  program runs past the cursor (UP44).
+  program ran past the cursor (UP44); full since 2026-11-06, with the plugin's workaround.
 - [x] R11: choosing which call on a line to step into (`stepInTargets`) (2026-10-27; shared X327).
   `SessionDebugger.stepInTargets` lists the calls that the line where a fiber waits makes, from its
   ops, in the order of its code, each named by what it calls (`twice(Int)`, `new Point(Int, Int)`);
@@ -945,9 +945,13 @@ passes with the workaround disabled. The gates are in
   [#1773](https://github.com/redhat-developer/lsp4ij/pull/1773) (merged 2026-10-27, unreleased): the
   temporary breakpoint stays until the program next stops, and the session's end forgets it; with a
   plugin built from it, and again from `main` at `e9f8bb42` (`run-11586456472789120644`), X323 stops
-  at the cursor in IntelliJ. To do: after a release with it, make X323
-  full in IntelliJ, its UP44 gate removed. The nightly 0.21.1-20261028-080211 has it: there X323
-  fails with its gate's message, "UP44 is fixed" (`run-793652569316991787`).
+  at the cursor in IntelliJ. The nightly 0.21.1-20261028-080211 has it: there X323 failed with its
+  gate's message, "UP44 is fixed" (`run-793652569316991787`). Since 2026-11-06 the plugin works
+  around it with 0.21.0: its debug process gives the client a `continue`'s answer only once the
+  program next stops or ends (`LanguageServerDebugProcessHandler`), so the temporary breakpoint stays
+  until then, and X323 is full in IntelliJ. The IntelliJ tour's Run to cursor, after ten deals in a
+  just-started worker, had run past dealAll (`run-tour-18322434560654050888`). To do: after a release
+  with #1773, drop the workaround.
 
 ### LSP4IJ: no loaded sources or modules (UP45): our #1774, merged
 
