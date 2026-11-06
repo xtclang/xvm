@@ -286,8 +286,9 @@ class ParityWorkspace(
     fun diagnostics(
         document: Document,
         matches: (List<ReceivedDiagnostic>) -> Boolean,
-    ): List<ReceivedDiagnostic> =
-        with(driver) {
+    ): List<ReceivedDiagnostic> {
+        val report = FinalReport(driver, document.editor, "Diagnostics of $id/${document.file}")
+        return with(driver) {
             awaitUi(
                 message = "current diagnostics for $id/${document.file}",
                 timeout = HANG_LIMIT,
@@ -296,9 +297,14 @@ class ParityWorkspace(
                         (shown?.toString() ?: "no report for its current text; received ${receivedDiagnostics(document.editor)}")
                 },
                 getter = { currentDiagnostics(document.editor) },
-                checker = { it != null && matches(it) },
+                checker = { shown ->
+                    val done = shown != null && matches(shown)
+                    report.check(shown, done)
+                    done
+                },
             )!!
         }
+    }
 
     fun project(): Document {
         val setup = common["project"].asJsonObject

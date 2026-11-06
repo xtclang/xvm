@@ -66,6 +66,14 @@ export function diagnosticReport(uri: vscode.Uri): DiagnosticReport | undefined 
     return diagnosticReports.get(uri.toString());
 }
 
+/** How many of the documents' diagnostic pulls are under way, which a test waits for before it takes a report as final. */
+let pulling = 0;
+
+/** The client's diagnostic pulls of documents under way, from their request to their report. */
+export function pullsInFlight(): number {
+    return pulling;
+}
+
 /** Whether the server's diagnostics are pulled, so that each report is for a known document version. */
 export function pullsDiagnostics(): boolean {
     return client?.initializeResult?.capabilities.diagnosticProvider !== undefined;
@@ -172,11 +180,14 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                         pulls: [...(latest?.pulls ?? []), `${version}: ${outcome}`].slice(-5) });
                 };
                 let report: vsdiag.DocumentDiagnosticReport | null | undefined;
+                pulling++;
                 try {
                     report = await next(document, previousResultId, token);
                 } catch (error) {
                     pulled(`failed: ${error instanceof Error ? error.message : String(error)}`);
                     throw error;
+                } finally {
+                    pulling--;
                 }
                 if (!report) {
                     pulled('no report');
