@@ -2,6 +2,7 @@ package org.xtclang.idea.lsp
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -38,6 +39,8 @@ class XtcRenameEdit
         val edit: WorkspaceEdit,
         private val graph: SourceGraphEdit? = null,
         private val command: String = "Rename",
+        /** Whether Undo asks before it takes back an edit that changes the project: a rename's or a move's, not a code action's. */
+        private val asksUndo: Boolean = true,
     ) {
         /** Return false without changing any file when the request's documents have been retired. */
         fun apply(): Boolean {
@@ -48,6 +51,7 @@ class XtcRenameEdit
                 .writeCommandAction(project)
                 .withName(command)
                 .withGlobalUndo()
+                .withUndoConfirmationPolicy(undoConfirmation())
                 .compute<Boolean, RuntimeException> {
                     val resourceMoves = edit.documentChanges.orEmpty().filter { it.isRight }
                     val targets =
@@ -109,6 +113,19 @@ class XtcRenameEdit
                     }
                 }
         }
+
+        /**
+         * The command's undo policy. IntelliJ's refactorings run with the DEFAULT policy, whose Undo asks first when the
+         * command is global (BaseRefactoringProcessor), as this one always is: a rename or a move that changes more than
+         * one file, or a file's path, asks, and one that changes one file's text undoes at once, as an in-place rename's
+         * does. A code action's edit never asks.
+         */
+        private fun undoConfirmation(): UndoConfirmationPolicy =
+            if (asksUndo && ServerWorkspaceEdit.globalUndo(edit)) {
+                UndoConfirmationPolicy.DEFAULT
+            } else {
+                UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION
+            }
 
         /** Open buffer and synchronizer identity captured before requesting a rename. */
         private data class Buffer(
@@ -181,7 +198,7 @@ class XtcRenameEdit
                                 )
                             }.thenApply { resolved ->
                                 resolved.edit?.let {
-                                    XtcRenameEdit(snapshot, it, command = resolved.title)
+                                    XtcRenameEdit(snapshot, it, command = resolved.title, asksUndo = false)
                                 }
                             }
                     result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
