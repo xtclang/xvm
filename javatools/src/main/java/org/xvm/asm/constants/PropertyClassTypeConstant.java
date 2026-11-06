@@ -24,6 +24,9 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 
@@ -262,13 +265,6 @@ public class PropertyClassTypeConstant
         return Usage.NO;
     }
 
-    // ----- JIT support ---------------------------------------------------------------------------
-
-    @Override
-    public TypeConstant getJitCCType() {
-        return getRefType().getJitCCType();
-    }
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -411,6 +407,44 @@ public class PropertyClassTypeConstant
                 Collections.emptyList(), ListMap.empty(), ListMap.empty(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 null, TypeInfo.Progress.Complete);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getJitCCType() {
+        return getRefType().getJitCCType();
+    }
+
+    @Override
+    public TypeConstant getJitICType() {
+        return this;
+    }
+
+    @Override
+    public String getJitICName(TypeSystem ts) {
+        ModuleLoader  loader = ts.findOwnerLoader(getParentType());
+        TypeConstant  type   = loader.typeSystem.pool().register(this);
+        StringBuilder sbName = new StringBuilder(getProperty().getClassJitName(ts));
+
+        TypeSystem.appendJitSuffix(sbName, type.getPosition());
+
+        return loader.prefix + TypeSystem.escapeJitName(sbName.toString(), true);
+    }
+
+    @Override
+    public String getJitImplName(TypeSystem ts) {
+        return getJitICName(ts);
+    }
+
+    @Override
+    public boolean isJitImplInterface() {
+        return false;
+    }
+
+    @Override
+    public boolean isJitCCInterface() {
+        return getRefType().isJitCCInterface();
     }
 
     // ----- run-time support ----------------------------------------------------------------------

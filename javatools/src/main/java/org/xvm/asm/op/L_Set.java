@@ -103,7 +103,7 @@ public class L_Set
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.buildSetProperty(code, m_nPropId, m_nValue);
+        bctx.buildSetProperty(code, A_THIS, m_nPropId, m_nValue);
         return -1;
     }
 

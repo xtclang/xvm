@@ -202,9 +202,10 @@ public class MoveThis
      * @return the number of {@link Outer} steps to the requested enclosing instance
      */
     private int getOuterSteps(BuildContext bctx) {
-        // property annotation lambdas are bound directly to the property owner
+        // hosted property bodies and annotation lambdas use the containing object as their receiver
         MethodStructure method = bctx.methodStruct;
-        return method.isLambda() && method.getParent().getParent() instanceof PropertyStructure
+        return (bctx.propertyHosting != null || method.isLambda()) &&
+                method.getParent().getParent() instanceof PropertyStructure
                 ? Math.max(0, m_cSteps - 1)
                 : m_cSteps;
     }

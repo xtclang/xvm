@@ -72,6 +72,7 @@ public class RefBuilder extends CommonBuilder {
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
         // [callSuperInitializer]
         // this.$type = type;
+        // [initialize hosted properties]
         // [initialize annotation fields]
         classBuilder.withMethodBody(INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant),
                 ClassFile.ACC_PUBLIC, code -> {
@@ -79,6 +80,7 @@ public class RefBuilder extends CommonBuilder {
             code.aload(0)
                 .aload(code.parameterSlot(1))
                 .putfield(art.CD(), "$type", CD_TypeConstant);
+            initializeHostedProperties(code);
             initializeFields(code, props);
             code.return_();
         });

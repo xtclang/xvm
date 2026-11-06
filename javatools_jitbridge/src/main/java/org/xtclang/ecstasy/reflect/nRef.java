@@ -113,6 +113,13 @@ public class nRef
     }
 
     @Override
+    public boolean peek$p(Ctx ctx) {
+        // annotation interfaces can redeclare the inherited default method as abstract;
+        // provide a concrete class method for their implementations
+        return Var.super.peek$p(ctx);
+    }
+
+    @Override
     public Object get(Ctx ctx) {
         if ($getter == null) {
             // value-backed Ref

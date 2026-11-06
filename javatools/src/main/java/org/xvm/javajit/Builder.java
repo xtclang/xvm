@@ -32,6 +32,7 @@ import org.xvm.javajit.TypeSystem.Artifact;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.javajit.builders.AnnotationHelper;
+import org.xvm.javajit.builders.PropertyHosting;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import org.xvm.javajit.registers.ExtendedSlot;
@@ -129,8 +130,16 @@ public abstract class Builder {
         TypeConstant thisType  = getThisType();
         TypeConstant superType = getSuperType();
         return superType == null
-            ? thisType.isConst() ? CD_nConst : CD_nObject
-            : getImplDesc(superType);
+                ? thisType.isConst() ? CD_nConst : CD_nObject
+                : getImplDesc(superType);
+    }
+
+    /**
+     * @return true iff the property's Ref annotations are implemented on its containing class
+     */
+    public boolean isHostedProperty(PropertyInfo property) {
+        return property.isRefAnnotated() && !property.isJitInflated() &&
+                AnnotationHelper.hasRuntimeAnnotations(property.getRefAnnotations());
     }
 
     /**
@@ -177,8 +186,10 @@ public abstract class Builder {
             // we need to generate a synthetic super
             cd         = getThisCD(bctx);
             isIface    = false;
-            methodName = addJitSuffix(MethodInfo.getJitIdentity(bctx.callChain, 0)
-                                                .ensureJitMethodName(typeSystem), depth);
+            methodName = bctx.propertyHosting instanceof PropertyHosting hosting
+                ? hosting.methodName(MethodInfo.getJitIdentity(bctx.callChain, 0))
+                : MethodInfo.getJitIdentity(bctx.callChain, 0).ensureJitMethodName(typeSystem);
+            methodName = addJitSuffix(methodName, depth);
             bctx.buildSuper(methodName, depth);
         } else {
             TypeConstant type = bctx.isSpecialized
@@ -189,7 +200,8 @@ public abstract class Builder {
             isIface    = type.isJitCCInterface();
             methodName = MethodInfo.getJitIdentity(bctx.callChain, depth).ensureJitMethodName(typeSystem);
         }
-        return JitCallDesc.special(cd, methodName, body.getJitDesc(this, bctx.thisType), isIface);
+        return JitCallDesc.special(cd, methodName,
+                body.getJitDesc(this, bctx.getMethodTargetType()), isIface);
     }
 
     /**
@@ -2799,6 +2811,7 @@ public abstract class Builder {
     public static final String N_nObj         = "org.xtclang.ecstasy.nObject";
     public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRef         = "org.xtclang.ecstasy.reflect.nRef";
+    public static final String N_nRefProp     = "org.xtclang.ecstasy.reflect.nRefProp";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nTuple       = "org.xtclang.ecstasy.nTuple";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
@@ -2892,6 +2905,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nException          = ClassDesc.of(N_nException);
     public static final ClassDesc CD_nObject             = ClassDesc.of(N_nObj);
     public static final ClassDesc CD_nRef                = ClassDesc.of(N_nRef);
+    public static final ClassDesc CD_nRefProp            = ClassDesc.of(N_nRefProp);
     public static final ClassDesc CD_nTuple              = ClassDesc.of(N_nTuple);
     public static final ClassDesc CD_nType               = ClassDesc.of(N_nType);
     public static final ClassDesc CD_nUtil               = ClassDesc.of(N_nUtil);

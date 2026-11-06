@@ -18,6 +18,7 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -28,6 +29,7 @@ import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
+import org.xvm.javajit.builders.PropertyRefBuilder;
 import org.xvm.javajit.builders.PureBuilder;
 import org.xvm.javajit.builders.PureVirtualChildBuilder;
 import org.xvm.javajit.builders.RefBuilder;
@@ -428,6 +430,10 @@ public class TypeSystem {
         ConstantPool pool = pool();
         TypeConstant type = art.type();
 
+        if (type instanceof PropertyClassTypeConstant) {
+            return new PropertyRefBuilder(this, art);
+        }
+
         if (art.shape() == ClassfileShape.Pure) {
             return type.isVirtualChildClass()
                     ? new PureVirtualChildBuilder(this, art)
@@ -563,13 +569,18 @@ public class TypeSystem {
             // e.g. org.xtclang.ecstasy.numbers.Number$compare$Family$UIntegerꖛ7503
             Constant constant = pool().getConstant(id);
             if (constant instanceof TypeConstant type) {
+                if (type instanceof PropertyClassTypeConstant property) {
+                    ClassStructure struct = (ClassStructure) property.getParentType()
+                            .getSingleUnderlyingClass(true).getComponent();
+                    return new Artifact(type, struct, shape, className);
+                }
+
                 // the type suffix identifies the class even when it is nested inside a method
                 ClassStructure struct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
                 if (struct.isParameterized() && type.getParamsCount() == 0) {
                     // the builder requires the formal type to compile a generic parameterized class;
                     // retain annotations so their constructors and methods are generated
-                    type = type.adoptParameters(
-                            pool(), struct.getFormalType().getParamTypesArray());
+                    type = type.adoptParameters(pool(), struct.getFormalType().getParamTypesArray());
                 }
                 return new Artifact(type, struct, shape, className);
             } else {

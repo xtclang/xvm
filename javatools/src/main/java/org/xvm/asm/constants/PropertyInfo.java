@@ -36,8 +36,6 @@ import org.xvm.util.Severity;
 import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
 import static org.xvm.javajit.JitMethodDesc.JMD_VIRTUAL;
 
-import static org.xvm.javajit.builders.AnnotationHelper.hasRuntimeAnnotations;
-
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
  * virtual levels) about a single property as it appears in a particular type.
@@ -1387,10 +1385,11 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * @return true iff the JIT stores this property's value in a separate Ref object
+     * @return true iff the JIT requires a field that stores a Ref object for this property
      */
     public boolean isJitInflated() {
-        return isRefAnnotated() && hasRuntimeAnnotations(getRefAnnotations());
+        // TODO: handle Future in a later phase; keep its stored-Ref implementation for now
+        return containsRefAnnotation(pool().clzFuture());
     }
 
     /**
@@ -1410,12 +1409,21 @@ public class PropertyInfo
     }
 
     /**
+     * @return true iff the JIT must initialize this property's storage using an explicit
+     *         initializer or its type's default value
+     */
+    public boolean requiresJitInitialization() {
+        return isInitialized() ||
+               !isImplicitlyAssigned() && getType().getDefaultValue() != null;
+    }
+
+    /**
      * @return true iff inline primitive storage needs an assignment bit separate from its value
      */
     public boolean requiresJitAssignedBit() {
         // an "@Unassigned T" property with primitive storage needs an "$assigned" bit;
         // all others use the value of "null" for that
-        return isJitPotentiallyUnassigned() && !isJitInflated() && getType().isJitPrimitive();
+        return isJitPotentiallyUnassigned() && getType().isJitPrimitive() && !isJitInflated();
     }
 
     /**

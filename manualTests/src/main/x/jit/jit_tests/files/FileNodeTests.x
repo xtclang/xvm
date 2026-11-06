@@ -86,7 +86,6 @@ class FileNodeTests {
 
     void shouldExist() {
         @Inject FileStore storage;
-
         FileNode rootNode = storage.dirFor(RootPath);
         assert rootNode.exists;
 
@@ -104,19 +103,17 @@ class FileNodeTests {
     }
 
     void shouldHaveCreatedTime() {
-// TODO requires @Lazy support
-//        @Inject FileStore storage;
-//        FileNode rootNode = storage.dirFor(RootPath);
-//        assert rootNode.created > Time.EPOCH;
+        @Inject FileStore storage;
+        FileNode rootNode = storage.dirFor(RootPath);
+        assert rootNode.created > Time.EPOCH;
     }
 
     void shouldHaveCreatedTimeWhenNotExisting() {
-// TODO requires @Lazy support
-//        @Inject FileStore storage;
-//        Path     path = new Path("one/two");
-//        FileNode node = storage.dirFor(path);
-//        assert !node.exists;
-//        assert node.created >= Time.EPOCH;
+        @Inject FileStore storage;
+        Path     path = new Path("one/two");
+        FileNode node = storage.dirFor(path);
+        assert !node.exists;
+        assert node.created >= Time.EPOCH;
     }
 
     void shouldHaveModifiedTime() {

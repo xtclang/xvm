@@ -138,7 +138,7 @@ public class AnnotationHelper {
                 }
 
                 BuildContext bctx = new BuildContext(
-                        builder, method.getTypeInfo(), method, jmd, thisType);
+                        builder, method.getTypeInfo(), method, jmd, thisType, null);
                 builder.doAssembleMethod(classBuilder, bctx, method, name,
                         jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC);
@@ -200,7 +200,7 @@ public class AnnotationHelper {
      *
      * @return the synthetic constructor name, such as {@code @1$2}, using '@' for AT
      */
-    private static String annotationConstructorName(Builder builder, int index, MethodInfo method) {
+    public static String annotationConstructorName(Builder builder, int index, MethodInfo method) {
         // every annotation segment includes an explicit constructor ordinal, including zero
         String name    = method.ensureJitMethodName(builder.typeSystem);
         String ordinal = name.equals("construct") ? "0" : name.substring("construct$".length());

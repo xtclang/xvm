@@ -1,13 +1,16 @@
 
 package propertyInitTests {
 
-    typedef String|Int as StringOrInt;
+    static TestConsole propertyConsole = new TestConsole();
 
     void run() {
         testSimple();
         testPropertySuper();
         testBoundPropertySuper();
         testComplexProperty();
+        testWatchedComplexProperty();
+        testWatchedUnassignedProperty();
+        testLazyProperty();
         testConstructor();
         testMethodProperty();
         testMethodStaticProperties();
@@ -114,6 +117,247 @@ package propertyInitTests {
         test.number = 7;
         assert test.number == 15;
         assert test.number == 15;
+    }
+
+    void testWatchedComplexProperty() {
+        propertyConsole.reset();
+        WatchedComplex test = new WatchedComplex();
+        assert propertyConsole.output() == "construct;validate;";
+        assert test.value == "ello";
+
+        propertyConsole.reset();
+        test.value = "abc";
+        assert test.value == "bc";
+        assert propertyConsole.output() == "set:abc;watch:abc;";
+
+        Var<String> ref = asVar(test.&value);
+        assert ref.assigned;
+        assert ref.is(Watch);
+        assert ref.get() == "bc";
+        assert String value := ref.peek();
+        assert value == "bc";
+        assert propertyConsole.output() == "set:abc;watch:abc;";
+
+        propertyConsole.reset();
+        ref.set("xyz");
+        assert test.value == "yz";
+        assert ref.get() == "yz";
+        assert propertyConsole.output() == "set:xyz;watch:xyz;";
+
+        propertyConsole.reset();
+        assert asLifecycle(ref).status() == "ready";
+        assert propertyConsole.output() == "status;";
+
+        class OtherValue {
+            @Unassigned String value;
+        }
+        OtherValue other = new OtherValue();
+        assert !asLifecycle(ref).sameAssignment(other.&value);
+        other.value = "ready";
+        assert asLifecycle(ref).sameAssignment(other.&value);
+
+        Var<String> asVar(Object value) = value.as(Var<String>);
+        PropertyLifecycle asLifecycle(Object value) = value.as(PropertyLifecycle);
+    }
+
+    class WatchedComplex() {
+        @PropertyLifecycle(v -> propertyConsole.print($"{v};", True))
+        @Watch(v -> propertyConsole.print($"watch:{v};", True))
+        String value {
+            @Override
+            String get() = removeHead(super());
+            @Override
+            void set(String value) {
+                propertyConsole.print($"set:{value};", True);
+                super(value);
+            }
+            private String removeHead(String value) = value.substring(1);
+        } = "hello";
+    }
+
+    void testWatchedUnassignedProperty() {
+        class WatchedUnassigned() {
+            @Unassigned
+            @Watch(v -> propertyConsole.print($"value:{v};", True))
+            String value {
+                @Override
+                String get() {
+                    propertyConsole.print("get;", True);
+                    return super();
+                }
+            }
+
+            @Unassigned
+            @Watch(v -> propertyConsole.print($"wide:{v};", True))
+            Int128 wide;
+
+            @Unassigned
+            @Watch(v -> propertyConsole.print($"nullable:{v};", True))
+            Int? nullable;
+        }
+
+        propertyConsole.reset();
+        WatchedUnassigned test = new WatchedUnassigned();
+        Var<String> valueRef = asVar(test.&value);
+        assert !valueRef.assigned;
+        assert !valueRef.peek();
+        assert propertyConsole.output() == "";
+
+        valueRef.set("ready");
+        assert valueRef.assigned;
+        assert propertyConsole.output() == "value:ready;";
+        assert String value := valueRef.peek();
+        assert value == "ready";
+        assert propertyConsole.output() == "value:ready;get;";
+
+        Ref<Int128> wideRef = test.&wide;
+        assert !wideRef.assigned;
+        assert !wideRef.peek();
+        test.wide = 0;
+        assert wideRef.assigned;
+        assert Int128 wide := wideRef.peek();
+        assert wide == 0;
+
+        Var<Int?> nullableRef = asNullableVar(test.&nullable);
+        assert !nullableRef.assigned;
+        assert !nullableRef.peek();
+        nullableRef.set(Null);
+        assert nullableRef.assigned;
+        assert Int? nullable := nullableRef.peek();
+        assert nullable == Null;
+        assert propertyConsole.output() == "value:ready;get;wide:0;nullable:Null;";
+
+        Var<String> asVar(Object value) = value.as(Var<String>);
+        Var<Int?> asNullableVar(Object value) = value.as(Var<Int?>);
+    }
+
+    @Lazy Int lazyInstance.calc() = 42;
+    // TODO: static annotated properties need shared annotation storage and initialization support
+//    static @Lazy Int lazyStatic.calc() = 42;
+
+    void testLazyProperty() {
+        assert !&lazyInstance.assigned;
+        assert lazyInstance == 42;
+        assert &lazyInstance.assigned;
+//        assert !&lazyStatic.assigned;
+//        assert lazyStatic == 42;
+//        assert &lazyStatic.assigned;
+
+        const Point(Int x, Int y) {
+            @Lazy Int hypo.calc() = x*x + y*y;
+            @Lazy(() -> x*x + y*y) Int hypo2 = 2;
+            @Lazy(() -> x*x + y*y) Int hypo3;
+        }
+
+        Point point = new Point(3, 4);
+        assert !point.&hypo.assigned;
+        assert point.hypo == 25;
+        assert point.&hypo.assigned;
+        assert point.hypo2 == 2;
+        assert !point.&hypo3.assigned;
+        assert point.hypo3 == 25;
+        assert point.&hypo3.assigned;
+
+        class LazyProperties() {
+            @Lazy String text.calc() {
+                propertyConsole.print("text;", True);
+                return "ready";
+            }
+
+            @Lazy Int number.calc() {
+                propertyConsole.print("number;", True);
+                return 42;
+            }
+
+            @Lazy(() -> {
+                propertyConsole.print("lambda;", True);
+                return "lambda";
+            })
+            String supplied;
+
+            @Lazy(() -> {
+                propertyConsole.print("nullable;", True);
+                return Null;
+            })
+            Int? nullable;
+
+            @Watch(v -> propertyConsole.print($"watch:{v};", True))
+            @Lazy
+            Int observed.calc() {
+                propertyConsole.print("observed;", True);
+                return 7;
+            }
+        }
+
+        propertyConsole.reset();
+        LazyProperties test = new LazyProperties();
+        Var<String> textRef = asVar(test.&text);
+        assert !textRef.assigned;
+        assert !textRef.peek();
+        assert propertyConsole.output() == "";
+        assert test.text == "ready";
+        assert textRef.assigned;
+        assert textRef.get() == "ready";
+        assert propertyConsole.output() == "text;";
+
+        Ref<Int> numberRef = test.&number;
+        assert !numberRef.assigned;
+        assert !numberRef.peek();
+        assert numberRef.get() == 42;
+        assert numberRef.assigned;
+        assert test.number == 42;
+        assert propertyConsole.output() == "text;number;";
+
+        Var<String> suppliedRef = asVar(test.&supplied);
+        assert !suppliedRef.assigned;
+        assert suppliedRef.get() == "lambda";
+        assert suppliedRef.assigned;
+        assert test.supplied == "lambda";
+        assert propertyConsole.output() == "text;number;lambda;";
+
+        propertyConsole.reset();
+        Ref<Int?> nullableRef = test.&nullable;
+        assert !nullableRef.assigned;
+        assert !nullableRef.peek();
+        assert propertyConsole.output() == "";
+        assert nullableRef.get() == Null;
+        assert nullableRef.assigned;
+        assert test.nullable == Null;
+        assert propertyConsole.output() == "nullable;";
+
+        propertyConsole.reset();
+        Ref<Int> observedRef = test.&observed;
+        assert !observedRef.assigned;
+        assert observedRef.get() == 7;
+        assert observedRef.assigned;
+        assert test.observed == 7;
+        assert propertyConsole.output() == "observed;watch:7;";
+
+        Var<String> asVar(Object value) = value.as(Var<String>);
+        Var<Int> asIntVar(Object value) = value.as(Var<Int>);
+    }
+
+    annotation PropertyLifecycle(function void(String) record) into Var<String> {
+        private function void(String) record;
+        private Char state = '!';
+
+        construct(function void(String) record) {
+            assert state == '!';
+            this.record = record;
+            record("construct");
+        }
+
+        assert() {
+            assert state == '!';
+            record("validate");
+        }
+
+        String status() {
+            record("status");
+            return "ready";
+        }
+
+        Boolean sameAssignment(Ref<String> other) = this.assigned == other.assigned;
     }
 
     void testConstructor() {
@@ -445,6 +689,8 @@ package propertyInitTests {
     }
 
     class Test() {
+        typedef String|Int as StringOrInt;
+
         Int          i    = 100;
         Int?         ni1  = Null;
         Int?         ni2  = 200;
