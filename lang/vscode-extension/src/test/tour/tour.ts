@@ -254,6 +254,13 @@ export class Tour implements vscode.Disposable {
         return this.file(path.join('src', 'test', 'x', name));
     }
 
+    /** The texts of the project's sources as [fixture] has them, as the tour starts, by their absolute paths. */
+    async originals(): Promise<Map<string, string>> {
+        const sources = this.file('src');
+        return new Map(await Promise.all((await files(this.fixture)).map(async relative =>
+            [path.join(sources, relative), await fs.readFile(path.join(this.fixture, relative), 'utf8')] as const)));
+    }
+
     card(title: string, caption: string, card: TourCard): void {
         if (this.recording) this.steps.push({ number: this.steps.length + 1, section: this.sectionName, title, caption, card });
     }
