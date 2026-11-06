@@ -30,6 +30,7 @@ import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpOptions
@@ -39,6 +40,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.launch.LSPLauncher
@@ -106,6 +108,10 @@ class StubLanguageServer(
     /** How the server resolves a code action, as codeAction/resolve answers: by default, as it came. */
     @Volatile
     var resolve: (CodeAction) -> CodeAction = { it }
+
+    /** How the server answers textDocument/rename: by default, with no edit. */
+    @Volatile
+    var renameEdit: (RenameParams) -> WorkspaceEdit? = { null }
 
     /** The client of each connection that LSP4IJ has made to the server, in order. */
     val clients = CopyOnWriteArrayList<LanguageClient>()
@@ -207,6 +213,11 @@ class StubLanguageServer(
     override fun resolveCodeAction(unresolved: CodeAction): CompletableFuture<CodeAction> {
         requests += "codeAction/resolve"
         return CompletableFuture.completedFuture(resolve(unresolved))
+    }
+
+    override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> {
+        requests += "textDocument/rename"
+        return CompletableFuture.completedFuture(renameEdit(params))
     }
 
     /**
