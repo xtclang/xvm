@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-25-jdk-headless \
         ca-certificates curl unzip zip xz-utils git rsync procps psmisc file less \
-        xvfb xauth x11-utils x11-xserver-utils xdotool openbox imagemagick \
+        xvfb xauth x11-utils x11-xserver-utils xdotool openbox imagemagick ffmpeg \
         libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxinerama1 libxcursor1 libxdamage1 libxcomposite1 \
         libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 libxcb1 libgl1 libegl1 \
         libfreetype6 fontconfig fonts-dejavu-core fonts-dejavu-extra fonts-liberation fonts-noto-color-emoji \
