@@ -1,8 +1,9 @@
 import * as assert from 'node:assert';
+import { realpathSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { diagnosticReport, getClient, pullsDiagnostics, type DiagnosticReport } from '../../lsp-client';
+import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
 import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
@@ -96,9 +97,49 @@ export async function noErrors(uri: vscode.Uri): Promise<void> {
  * server that pushes its diagnostics, has no such version; what VS Code shows is taken as it is.
  */
 export async function diagnostics(uri: vscode.Uri, accept: (values: vscode.Diagnostic[]) => boolean, message: string) {
-    const shown = await eventually(async () => currentDiagnostics(uri), state => state.current && accept(state.values),
-        `${message} in ${uri.fsPath}`);
+    // a report of the current text that does not do is final once nothing could make another: no compile, no request
+    // the server is answering, no pull of the client's, no items of the document's that the server has still to report,
+    // and no compile submitted since, three times in a row
+    let settled = 0;
+    let submitted: number | undefined;
+    const shown = await eventually(async () => {
+        const state = currentDiagnostics(uri);
+        const total = state.current && !accept(state.values) ? await quiet(uri) : undefined;
+        settled = total !== undefined && (settled === 0 || total === submitted) ? settled + 1 : 0;
+        submitted = total;
+        if (settled >= 3) {
+            throw new Error(`${message} in ${uri.fsPath}: the report of its current text is final, with nothing under way that `
+                + `could change it, and has ${JSON.stringify(state.values.map(item => `${diagnosticCode(item)} ${item.message}`))}`);
+        }
+        return state;
+    }, state => state.current && accept(state.values), `${message} in ${uri.fsPath}`);
     return shown.values;
+}
+
+/**
+ * The compiles the server has had submitted, when nothing could change the diagnostics of the document [uri]: no compile
+ * is queued or running, nor any request or pull, and the server has given the client the document's current items;
+ * undefined while anything is.
+ */
+async function quiet(uri: vscode.Uri): Promise<number | undefined> {
+    if (pullsInFlight() > 0) return undefined;
+    const status = await client().sendRequest<{ compilerQueue?: Record<string, number>; openRequests?: string[];
+        unreportedDiagnostics?: string[] }>('xtc/languageServiceStatus');
+    const queue = status.compilerQueue;
+    const compiling = !!queue && (queue.queueSize > 0 || queue.debouncingSize > 0 || queue.runningSize > 0);
+    // the server names a document by its canonical URI
+    const unreported = (status.unreportedDiagnostics ?? []).some(each => canonical(vscode.Uri.parse(each)) === canonical(uri));
+    return compiling || unreported || (status.openRequests ?? []).length > 0 || pullsInFlight() > 0 ? undefined : queue?.submittedTotal ?? 0;
+}
+
+/** The real path of the file [uri], or its path as it is, if it is not a file or there is none. */
+function canonical(uri: vscode.Uri): string {
+    if (uri.scheme !== 'file') return uri.toString();
+    try {
+        return realpathSync(uri.fsPath);
+    } catch {
+        return uri.fsPath;
+    }
 }
 
 /**
