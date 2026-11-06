@@ -222,6 +222,29 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `a library source that a compile named before the debugger opens it keeps its outline`() {
+        CompilerTestSupport.configure()
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/reflect/TypeTemplate.x")))
+        val uri = copy.toUri().toString()
+        // a compile that names one of its declarations parses it, as navigation into it does: any earlier compile in
+        // the server's process, which is how CI's run of the case above met it
+        XdkAdapter().use {
+            it.compile("file:///Named.x", "module Named { import ecstasy.reflect.TypeTemplate; Int count(TypeTemplate type) = 0; }")
+        }
+        assertThat(XdkLibrarySources.owns(uri)).isTrue()
+        Session(pull = false).use { session ->
+            session.open(uri, copy.toFile().readText(), 1)
+            awaitUntil("the open library source's diagnostics are published") { session.published.any { it.uri == uri } }
+            assertThat(session.published.filter { it.uri == uri }.flatMap { it.diagnostics }).isEmpty()
+            assertThat(
+                session.server.textDocumentService
+                    .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                    .awaited(),
+            ).isNotEmpty()
+        }
+    }
+
+    @Test
     fun `workspace pull diagnoses unopened roots and does not install editor buffers`() {
         val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
         Session().use { session ->
