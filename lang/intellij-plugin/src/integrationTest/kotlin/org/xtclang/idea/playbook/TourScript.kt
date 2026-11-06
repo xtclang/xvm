@@ -87,7 +87,7 @@
  *   xtc/compilerSourceModules                       step The compiler
  *   xtc/discoverConsumers                           the Compiler page's Add consumers from folders: playbook X99, X105
  *   xtc/rename                                      steps Rename, Renamed everywhere, Rename a class; checks Undo takes the rename
- *                                                   back in one step, without asking, as a change of the project, renaming a local
+ *                                                   back in one step, without asking, as a change of one file, renaming a local
  *                                                   and a parameter renames their uses
  *   xtc/renameFiles                                 checks renaming a file renames its type and every use, moving a class to
  *                                                   another package, renaming the file renames its type
@@ -1230,9 +1230,9 @@ private fun Tour.refactoring() {
     ) {
         check(confirm("Refactor")) { "The rename dialog did not take the new name" }
     }
-    // the plugin applies a rename as a write command whose undo asks nothing, as WriteCommandAction's default policy is,
-    //  unlike IntelliJ's own refactorings, whose undo asks first
-    verify("Undo takes the rename back in one step, without asking, as a change of the project") {
+    // drawForMatch has its uses in Player.x alone, so its rename is a change of one file, which Undo takes back without
+    //  asking; one that changes several files asks first, as for IntelliJ's own refactorings
+    verify("Undo takes the rename back in one step, without asking, as a change of one file") {
         selectFile(source("Player.x"))
         undo(asks = false) { fileText(source("Player.x")).let { "drawUntilMatch" !in it && "conditional Card drawForMatch(" in it } }
         compilesCleanly(source("Player.x"))
