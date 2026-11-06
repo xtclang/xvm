@@ -13,4 +13,11 @@ class Hand extends CardCollection {
         }
         console.print();
     }
+
+    /**
+     * @return the hand's label and how many cards it holds, as a heading
+     */
+    private String heading() {
+        return $"{label} ({size()})";
+    }
 }

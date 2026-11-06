@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonParser
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.nio.file.Files
@@ -31,15 +32,51 @@ class TourTest {
                 .toSet()
         val ide = PlaybookIde("XtcCompilerPlaybook-${run.fileName}", project, run, reports)
         var tour: Tour? = null
+        var frame: String? = null
+        var actionLog: String? = null
         try {
-            ide.run(options = TOUR_OPTIONS) { tour = Tour(this, project, FIXTURE, run, sections).also { it.script() } }
+            ide.run(options = TOUR_OPTIONS) {
+                tour =
+                    Tour(this, project, FIXTURE, run, sections).also {
+                        // with a screen recording, the pointer, the keys and the typing show what each step does; with
+                        //  -Dxtc.tour.visible=true they go the same way without one, as a recording's run takes them
+                        it.ui.showActions(System.getenv("XTC_RECORD_VIDEO") == "1" || System.getProperty("xtc.tour.visible") == "true")
+                        frame = runCatching { it.ui.frameBounds() }.getOrNull()
+                        try {
+                            it.script()
+                        } finally {
+                            actionLog = runCatching { it.ui.actionLog() }.getOrNull()
+                        }
+                    }
+            }
         } catch (failure: Throwable) {
             Files.writeString(run.resolve("failure.txt"), failure.stackTraceToString())
             throw failure
         } finally {
             val steps = tour?.steps.orEmpty()
             val json = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
-            Files.writeString(run.resolve("tour.json"), json.toJson(mapOf("project" to project.toString(), "steps" to steps)) + "\n")
+            // with a screen recording, when it began, and what the tour pressed and clicked, for its clips
+            val screen =
+                Path.of(System.getenv("XTC_RECORDING_START_FILE") ?: "/out/screen.start").takeIf(Files::isRegularFile)?.let {
+                    mapOf(
+                        "file" to "screen.mp4",
+                        "start" to Files.readString(it).trim().toLong(),
+                        "frame" to frame,
+                    )
+                }
+            val actions = actionLog?.let { JsonParser.parseString(it) }
+            Files.writeString(
+                run.resolve("tour.json"),
+                json.toJson(
+                    mapOf(
+                        "project" to project.toString(),
+                        "screen" to screen,
+                        "steps" to steps,
+                        "checks" to tour?.verifies.orEmpty(),
+                        "actions" to actions,
+                    ),
+                ) + "\n",
+            )
             Files.writeString(
                 run.resolve("results.json"),
                 json.toJson(
@@ -50,6 +87,8 @@ class TourTest {
                         "steps" to steps.size,
                         "checks" to (tour?.checks ?: 0),
                         "failed" to tour?.failures.orEmpty(),
+                        "skippedCount" to (tour?.skipped?.size ?: 0),
+                        "skipped" to tour?.skipped.orEmpty(),
                         "ideFailures" to ide.ideFailures.toList(),
                     ),
                 ) + "\n",
@@ -106,6 +145,16 @@ class TourTest {
                         <option name="autoSaveIfInactive" value="false" />
                         <option name="showTipsOnStartup" value="false" />
                         <option name="confirmExit" value="false" />
+                      </component>
+                    </application>
+                    """.trimIndent(),
+                // the main menu as a menu bar of its own, whose menus a click opens: under the new UI's hamburger
+                //  button, the bar it expands opened File, and a click on Tools closed it or left File open
+                "ui.lnf.xml" to
+                    """
+                    <application>
+                      <component name="UISettings">
+                        <option name="mainMenuDisplayMode" value="SEPARATE_TOOLBAR" />
                       </component>
                     </application>
                     """.trimIndent(),

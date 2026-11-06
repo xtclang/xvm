@@ -1,9 +1,13 @@
 package org.xtclang.idea.playbook.probe
 
 import com.google.gson.JsonObject
+import com.intellij.execution.impl.ConsoleViewImpl
 import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsAdapter
 import com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener
 import com.intellij.execution.testframework.sm.runner.SMTestProxy
+import com.intellij.execution.testframework.sm.runner.states.TestStateInfo
+import com.intellij.execution.testframework.sm.runner.ui.SMTRunnerConsoleView
+import com.intellij.execution.ui.RunContentManager
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -13,6 +17,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.impl.DocumentMarkupModel
 import com.intellij.openapi.editor.markup.GutterIconRenderer
@@ -20,6 +25,7 @@ import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.util.ui.UIUtil
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
@@ -36,6 +42,9 @@ import javax.swing.SwingUtilities
 object TestRunUi {
     /** The latest result of each test, by its location. */
     private val results = ConcurrentHashMap<String, JsonObject>()
+
+    /** The tests that started and have no result, by their locations. */
+    private val running = ConcurrentHashMap.newKeySet<String>()
     private val sessions = ConcurrentHashMap<String, XDebugSession>()
     private val watched = ConcurrentHashMap.newKeySet<Project>()
 
@@ -45,6 +54,10 @@ object TestRunUi {
         bus.subscribe(
             SMTRunnerEventsListener.TEST_STATUS,
             object : SMTRunnerEventsAdapter() {
+                override fun onTestStarted(test: SMTestProxy) {
+                    test.locationUrl?.let(running::add)
+                }
+
                 override fun onTestFinished(test: SMTestProxy) = record(project, test)
 
                 override fun onTestFailed(test: SMTestProxy) = record(project, test)
@@ -78,6 +91,8 @@ object TestRunUi {
                     },
                 )
                 test.errorMessage?.let { addProperty("message", it) }
+                // a test that ended in an exception other than a failed assertion, which the console shows as an error
+                if (test.magnitudeInfo == TestStateInfo.Magnitude.ERROR_INDEX) addProperty("error", true)
             }
         // where the console goes for the test: its location, through the plugin's locator
         ApplicationManager.getApplication().runReadAction {
@@ -87,6 +102,7 @@ object TestRunUi {
             }
         }
         results[url] = result
+        running.remove(url)
     }
 
     /** Forgets the results and sessions, and starts recording them for [project]. */
@@ -94,7 +110,48 @@ object TestRunUi {
     fun reset(project: Project) {
         watch(project)
         results.clear()
+        running.clear()
         sessions.clear()
+    }
+
+    /** The locations of the tests that started since [reset] and have no result, one to a line. */
+    @JvmStatic
+    fun running(): String = running.sorted().joinToString("\n")
+
+    /**
+     * Whether the newest test run's console says the run was stopped before its tests ended, as its tree's root does
+     * ("Terminated", and "Stopped." in its status); on the EDT. The newest run's, of all the run content, whichever
+     * the Run window selects.
+     */
+    @JvmStatic
+    fun stopped(project: Project): Boolean =
+        RunContentManager
+            .getInstance(project)
+            .allDescriptors
+            .mapNotNull { (it.executionConsole as? SMTRunnerConsoleView)?.resultsViewer }
+            .lastOrNull()
+            ?.testsRootNode
+            ?.wasTerminated() == true
+
+    /**
+     * Whether the runs' consoles show all that they will: every run's process has ended, no test run's tree is still in
+     * progress, and each console of each run's content, a test run's and a Gradle build's included, has shown the output
+     * it held back, which this flushes; on the EDT. A console shows its last output only once it flushes it, after the
+     * process has ended.
+     */
+    @JvmStatic
+    fun settled(project: Project): Boolean {
+        val descriptors = RunContentManager.getInstance(project).allDescriptors
+        // the consoles in the runs' content, however a view nests them, as a Gradle build's does in its build view
+        val consoles =
+            descriptors
+                .mapNotNull { it.component }
+                .flatMap { UIUtil.uiTraverser(it).filter(ConsoleViewImpl::class.java).toList() }
+                .distinct()
+        consoles.forEach(ConsoleViewImpl::flushDeferredText)
+        return descriptors.all { it.processHandler?.isProcessTerminated != false } &&
+            descriptors.none { (it.executionConsole as? SMTRunnerConsoleView)?.resultsViewer?.testsRootNode?.isInProgress == true } &&
+            consoles.none(ConsoleViewImpl::hasDeferredOutput)
     }
 
     /** Each test's latest result by its location: its `state`, a failure's `message`, and its location's `line`. */
@@ -161,7 +218,7 @@ object TestRunUi {
         uri: String,
         line: Int,
     ) {
-        ApplicationManager.getApplication().invokeAndWait {
+        boundedEdt(ModalityState.defaultModalityState()) {
             val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
             XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, line - 1)
         }
