@@ -36,7 +36,8 @@
  * | source.organizeImports                    | step "Organize imports"                                           |
  * | executeCommandProvider                    | - not advertised to VS Code, which takes code actions as literals |
  * | textDocument/formatting                   | step "Format the document"                                        |
- * | textDocument/rangeFormatting, rangesFormatting | checks "Format a selection", "Format the selections"           |
+ * | textDocument/rangesFormatting             | checks "Format a selection", "Format the selections"              |
+ * | textDocument/rangeFormatting              | - VS Code asks a server that formats ranges for all of them at once, a selection's one too |
  * | textDocument/onTypeFormatting (\n } ; ))  | step "Format as you type"; check "Format a statement as it ends"  |
  * | textDocument/inlayHint, inlayHint/resolve | step "Inlay hints"                                                |
  * | textDocument/inlineValue                  | check "Inline values"                                             |
@@ -506,8 +507,9 @@ async function editingCode(tour: Tour): Promise<void> {
         },
         after: async () => { await tour.restore(); },
     });
-    await tour.verify('Format a selection', 'textDocument/rangeFormatting', async () => {
-        // one line indented wrong, in the one selection: VS Code asks for one range, as it asks for several above
+    await tour.verify('Format a selection', 'textDocument/rangesFormatting', async () => {
+        // one line indented wrong, in the one selection: VS Code asks for its one range as it asks for several below,
+        // by rangesFormatting, as the server formats ranges (formatDocumentRangesWithProvider, VS Code 1.140)
         const editor = await open(collection);
         await replace('        cards.add(card);', '  cards.add(card);');
         const add = positionOf('  cards.add(card);');
@@ -588,9 +590,22 @@ async function editingCode(tour: Tour): Promise<void> {
         act: async () => {
             await open(eights);
             await tour.ui.focusEditor();
+            // Fold All folds by the ranges the editor computes for the file, and folds nothing when a refresh of the
+            // server's ranges, which its analysis sends, cancels that computation (FoldingController, VS Code 1.140):
+            // while nothing is folded, it folds again once a request for the ranges has ended, as a user would
+            const folded = async () => await tour.ui.page.locator('.editor-group-container.active .codicon-folding-collapsed').count() > 0;
+            let computed = tour.activity.ended('textDocument/foldingRange');
             await command('editor.foldAll');
-            await tour.until('The regions are folded', async () =>
-                await tour.ui.page.locator('.editor-group-container.active .codicon-folding-collapsed').count() > 0);
+            await tour.until('The regions are folded', async () => {
+                if (await folded()) return true;
+                const now = tour.activity.ended('textDocument/foldingRange');
+                if (now !== computed && !tour.activity.serverWork().includes('textDocument/foldingRange')) {
+                    computed = now;
+                    tour.log('Folding: nothing is folded, and the ranges were computed again: Fold All again');
+                    await command('editor.foldAll');
+                }
+                return false;
+            });
             // the class stays open, so that its folded members show
             await at('class Eights', 'class '.length);
             await command('editor.unfold');
@@ -1180,7 +1195,7 @@ async function refactoring(tour: Tour): Promise<void> {
             await open(player, 'return drawForMatch(eights, prev);', 'return draw'.length);
             await tour.ui.focusEditor();
             await launch('editor.action.rename');
-            await tour.until('The rename box', () => tour.ui.showing('css:.rename-box'));
+            await renameBox(tour);
             await tour.ui.press('Control+a');
             await tour.ui.type('drawUntilMatch');
         },
@@ -1230,7 +1245,7 @@ async function refactoring(tour: Tour): Promise<void> {
             await open(tour.source('Scoreboard.x'), 'service Scoreboard', 'service Score'.length);
             await tour.ui.focusEditor();
             await launch('editor.action.rename');
-            await tour.until('The rename box', () => tour.ui.showing('css:.rename-box'));
+            await renameBox(tour);
             await tour.ui.press('Control+a');
             await tour.ui.type('Tally');
             await tour.ui.press('Enter');
@@ -1384,6 +1399,15 @@ async function refactoring(tour: Tour): Promise<void> {
 }
 
 /** Creates [joker] in the Explorer, fills it in its editor, checks that it compiles, and deletes it in the Explorer. */
+/**
+ * Waits for the rename box, until it has the keyboard: it takes it a moment after it shows (RenameWidget, VS Code
+ * 1.140), and until then Ctrl+A and the new name go to the editor, where they replace the file.
+ */
+async function renameBox(tour: Tour): Promise<void> {
+    await tour.until('The rename box', () => tour.ui.showing('css:.rename-box'));
+    await tour.until('The rename box takes the keyboard', () => tour.ui.focusedIn(tour.ui.page.locator('.rename-box input')));
+}
+
 async function createAndDelete(tour: Tour, joker: string): Promise<void> {
     await command('workbench.view.explorer');
     await reveal(tour, vscode.Uri.file(tour.source('Card.x')));
@@ -2894,9 +2918,12 @@ async function settings(tour: Tour): Promise<void> {
         const java = process.env.JAVA_HOME;
         const before = getClient();
         const roots = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-roots-'));
+        // the tour's own retention, which keeps the run's sessions for the protocol section: the server that starts
+        // with these settings deletes the sessions they do not keep
+        const logs = vscode.workspace.getConfiguration('xtc').inspect('server.logs')?.globalValue;
         try {
             await setting('xtc.java.vmOptions', ['-Xmx1500m']);
-            await setting('xtc.server.logs', { historyDays: 3, maxFileMb: 10, totalSizeMb: 50, retainedSessions: 5 });
+            await setting('xtc.server.logs', { historyDays: 3, maxFileMb: 10, totalSizeMb: 1000, retainedSessions: 20 });
             if (java) await setting('xtc.java.home', java);
             await setting('xtc.sourceRoots', [roots]);
             await setting('xtc.languageService.saveFormatting', 'server');
@@ -2916,7 +2943,7 @@ async function settings(tour: Tour): Promise<void> {
             await tour.until('Saving formats the file', async () => (await fs.readFile(collection, 'utf8')).includes('\n            cards.swap(index1, index2);'), () => fs.readFile(collection, 'utf8'));
         } finally {
             for (const name of ['xtc.java.vmOptions', 'xtc.server.logs', 'xtc.java.home', 'xtc.sourceRoots', 'xtc.languageService.saveFormatting', 'xtc.languageService.textSynchronization']) {
-                await setting(name, undefined);
+                await setting(name, name === 'xtc.server.logs' ? logs : undefined);
             }
             await command('notifications.clearAll');
             await command('xtc.restartServer');
@@ -2969,7 +2996,7 @@ async function protocol(tour: Tour, coverage: Coverage): Promise<void> {
     const lsp = ['initialize', 'shutdown', 'textDocument/hover', 'textDocument/completion', 'completionItem/resolve', 'textDocument/definition',
         'textDocument/declaration', 'textDocument/typeDefinition', 'textDocument/implementation', 'textDocument/references', 'textDocument/documentSymbol',
         'textDocument/documentHighlight', 'textDocument/selectionRange', 'textDocument/foldingRange', 'textDocument/prepareRename', 'xtc/rename',
-        'textDocument/codeAction', 'codeAction/resolve', 'textDocument/formatting', 'textDocument/rangeFormatting', 'textDocument/onTypeFormatting',
+        'textDocument/codeAction', 'codeAction/resolve', 'textDocument/formatting', 'textDocument/rangesFormatting', 'textDocument/onTypeFormatting',
         'textDocument/inlayHint', 'textDocument/inlineValue', 'textDocument/documentLink', 'textDocument/signatureHelp', 'textDocument/semanticTokens/full',
         'textDocument/semanticTokens/full/delta', 'textDocument/semanticTokens/range', 'workspace/symbol', 'xtc/renameFiles',
         'textDocument/codeLens', 'codeLens/resolve', 'textDocument/linkedEditingRange', 'textDocument/moniker', 'textDocument/prepareTypeHierarchy',

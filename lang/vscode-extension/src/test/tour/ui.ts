@@ -468,7 +468,12 @@ export class TourUi {
         await this.until(widget, 'The picker');
         // a picker has rows; an input box that closes as the picker opens has none, and must not take the filter
         await this.until(widget.locator('.monaco-list-row').first(), "The picker's rows");
-        if (filter) await this.type(filter);
+        // the filter goes to the picker's box once that has the keyboard: until then, as while the picker before it
+        // still shows as it closes, the keys go where the keyboard was, such as an editor, which the first one edits
+        if (filter) {
+            await this.waiter('The picker takes the keyboard', () => this.focusedIn(widget.locator('input')));
+            await this.type(filter);
+        }
         const row = widget.locator('.monaco-list-row', { hasText: label }).first();
         await this.until(row, `The picker's row ${label}`);
         // Enter takes the focused row, which a recently used one that the filter also matches can be, as Tasks: Rerun
