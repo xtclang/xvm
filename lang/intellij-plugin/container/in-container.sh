@@ -48,6 +48,29 @@ start_display() {
         openbox > /out/openbox.log 2>&1 &
         sleep 1
     fi
+    start_recording
+}
+
+# with XTC_RECORD_VIDEO=1, the whole display as a video, with the pointer, which a tour composes into its steps'
+# clips: /out/screen.mp4, and /out/screen.start, the wall-clock time in epoch milliseconds that its first frame shows,
+# the clock that tour.json's step times use; the run's reports get both
+recorder=""
+start_recording() {
+    [ "${XTC_RECORD_VIDEO:-}" = "1" ] || return 0
+    rm -f /out/screen.mp4 /out/screen.start
+    date +%s%3N > /out/screen.start
+    ffmpeg -nostdin -loglevel error -f x11grab -draw_mouse 1 -framerate 15 -video_size 1920x1200 -i :99 \
+        -c:v libx264 -preset veryfast -crf 30 -pix_fmt yuv420p /out/screen.mp4 > /out/ffmpeg.log 2>&1 &
+    recorder=$!
+    export XTC_RECORDING_START_FILE=/out/screen.start
+}
+
+# ends the recording, which an interrupt lets ffmpeg finish as a playable file
+stop_recording() {
+    [ -n "$recorder" ] || return 0
+    kill -INT "$recorder" 2> /dev/null || true
+    wait "$recorder" 2> /dev/null || true
+    recorder=""
 }
 
 reports=/work/xvm/lang/intellij-plugin/build/reports/compiler-playbook
@@ -67,6 +90,9 @@ copy_runs() {
         if ! grep -qx "$name" "$earlier" && [ ! -f "/out/runs/$name/results.json" ]; then
             mkdir -p "/out/runs/$name"
             rsync -a "$dir/" "/out/runs/$name/"
+            if [ -f /out/screen.mp4 ]; then
+                cp /out/screen.mp4 /out/screen.start "/out/runs/$name/"
+            fi
             local ide="$reports/out/ide-tests/tests"
             for logs in "$ide"/*/"XtcCompilerPlaybook-$name"/log; do
                 [ -d "$logs" ] && rsync -a --exclude 'indexing-diagnostic/' "$logs/" "/out/runs/$name/ide-log/"
@@ -92,6 +118,7 @@ case "$mode" in
             -PincludeBuildLang=true -PincludeBuildAttachLang=true \
             --tests '*CompilerPlaybookTest.compilerPlaybook' \
             "${selection[@]}" "$@" || status=$?
+        stop_recording
         copy_runs
         exit "$status"
         ;;
@@ -99,6 +126,7 @@ case "$mode" in
         start_display
         status=0
         ./gradlew "$@" || status=$?
+        stop_recording
         copy_runs
         # the VS Code extension's reports (its suite, playbook, lifecycle and explorer runs), when there are any
         vscode_reports=/work/xvm/lang/vscode-extension/build/reports
