@@ -97,7 +97,7 @@ class XtcNewProjectWizardStep(
         runCatching {
             val moduleName = projectName.trim().trimEnd('.')
             val runManager = RunManager.getInstance(project)
-            val factory = XtcRunConfigurationType().configurationFactories.first()
+            val factory = XtcRunConfigurationType.instance.configurationFactories.first()
             val settings = runManager.createConfiguration("Run $moduleName", factory)
 
             (settings.configuration as XtcRunConfiguration).apply {
