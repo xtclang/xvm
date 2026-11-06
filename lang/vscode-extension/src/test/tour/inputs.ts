@@ -18,6 +18,7 @@ const COMMAND_KEYS: Record<string, string[]> = {
     'editor.action.triggerSuggest': ['Control+Space'],
     'hideSuggestWidget': ['Escape'],
     'editor.action.commentLine': ['Control+Slash'],
+    'undo': ['Control+KeyZ'],
     'editor.foldAll': ['Control+KeyK', 'Control+Digit0'],
     'editor.unfold': ['Control+Shift+BracketRight'],
     'editor.action.smartSelect.expand': ['Shift+Alt+ArrowRight'],
