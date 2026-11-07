@@ -2,14 +2,19 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionTriggerKind
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MonikerParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentContentCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
@@ -28,6 +33,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.awaited
 import java.net.URI
 import java.nio.file.Files
@@ -84,6 +90,70 @@ class LibraryContentProtocolTest {
                     "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it.",
                 )
             assertThat(documents.rename(RenameParams(document, middle, "readPassword")).awaited()).isNull()
+        }
+    }
+
+    @Test
+    fun `a library source that the debugger opens answers hover and definition, and refuses code actions and rename`() {
+        // the read-only copy that a stack frame in the XDK names, which the client opens as a step goes into it, before
+        // navigation or a compile has named any of its declarations; its compile on its own resolves none of them
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/reflect/ClassTemplate.x")))
+        val uri = copy.toUri().toString()
+        val text = Files.readString(copy)
+        val lines = text.lines()
+
+        fun at(
+            declaration: String,
+            name: String,
+        ) = lines.indexOfFirst { it.trimStart().startsWith(declaration) }.let { Position(it, lines[it].indexOf(name) + 2) }
+        val type = at("interface ClassTemplate", "ClassTemplate")
+        val method = at("conditional String pathWithin(", "pathWithin")
+        // an undocumented method, where a project's own source offers to generate its doc comment
+        val undocumented = at("Int estimateStringLength()", "estimateStringLength")
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(mock(LanguageClient::class.java))
+            server.initialize(editorInitializeParams()).join()
+            server.initialized(InitializedParams())
+            val documents = server.textDocumentService
+            val document = TextDocumentIdentifier(uri)
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+
+            fun hover(position: Position) =
+                documents
+                    .hover(HoverParams(document, position))
+                    .awaited()
+                    ?.contents
+                    ?.right
+                    ?.value
+            assertThat(hover(type)).contains("interface ClassTemplate").contains("the compiled form of an Ecstasy module")
+            assertThat(
+                hover(method),
+            ).contains("conditional String pathWithin()").contains("Determine the path that identifies this ClassTemplate")
+            val definition = documents.definition(DefinitionParams(document, method)).awaited().left
+            assertThat(definition).hasSize(1)
+            assertThat(Path.of(URI(definition.single().uri))).isEqualTo(copy)
+            assertThat(
+                definition
+                    .single()
+                    .range.start.line,
+            ).isEqualTo(method.line)
+
+            assertThat(
+                documents
+                    .codeAction(
+                        CodeActionParams(
+                            document,
+                            Range(undocumented, undocumented),
+                            CodeActionContext(emptyList()).apply { triggerKind = CodeActionTriggerKind.Invoked },
+                        ),
+                    ).awaited(),
+            ).isEmpty()
+            assertThatThrownBy { documents.prepareRename(PrepareRenameParams(document, method)).awaited() }
+                .hasCauseInstanceOf(ResponseErrorException::class.java)
+                .hasRootCauseMessage(
+                    "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it.",
+                )
+            assertThat(documents.rename(RenameParams(document, method, "relativePath")).awaited()).isNull()
         }
     }
 
