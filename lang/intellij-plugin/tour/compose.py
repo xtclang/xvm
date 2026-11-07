@@ -237,6 +237,15 @@ def badge(draw, labels):
     draw.text((x + 12, y + 4), text, font=face, fill=HIGHLIGHT)
 
 
+def length(video_file):
+    """The seconds the file at [video_file] plays, as ffprobe reads them from the container."""
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(video_file)],
+        capture_output=True, text=True, check=True,
+    )
+    return float(probe.stdout.strip() or 0)
+
+
 def clip(step, still, out, speed):
     """
     The step's clip from its run's screen recording, at [speed] and at most CLIP_MAX seconds, with its band, then its
@@ -266,11 +275,7 @@ def clip(step, still, out, speed):
          "-vf", ",".join(chain), "-r", "15", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", str(lapse)],
         check=True,
     )
-    probe = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(lapse)],
-        capture_output=True, text=True, check=True,
-    )
-    duration = float(probe.stdout.strip() or 0)
+    duration = length(lapse)
     stretch = min(1 / speed, CLIP_MAX / duration) if duration > 0 else 1 / speed
     held = out / "clips" / f"still-{step['number']:03d}.png"
     still.save(held)
@@ -537,7 +542,8 @@ def main():
     slides(frames, steps, out)
     checks = failed_checks(tours)
     failures_report(failures, checks, out)
-    total = sum(seconds(step) for step in steps)
+    # of the written video: the clips' stretched and held lengths are not the steps' reading times
+    total = length(out / "tour.mp4")
     print(f"{len(steps)} steps, {total / 60:.1f} minutes; {len(failures)} failed steps, {left} steps left out, "
           f"{len(checks)} failed checks: {out / 'failures.md'}")
 
