@@ -184,8 +184,7 @@ module TestInnerOuter {
         }
     }
 
-    class Crate
-            extends Box {
+    class Crate extends Box {
         @Override
         class Inner {
             @Override
@@ -202,7 +201,7 @@ module TestInnerOuter {
         Holder.Inner inner  = holder.new Inner();
         assert inner.textByOuter == "Held";
         assert inner.outer.text == "Held";
-        console.print($"inner.textByOuter={inner.textByOuter}");
+        // console.print($"inner.textByOuter={inner.textByOuter}");
 
         Shelf.Inner item = new Shelf.Inner(3);
         assert item.size == 3;
@@ -210,12 +209,12 @@ module TestInnerOuter {
         Shelf        shelf  = new Shelf("Top");
         Shelf.Drawer drawer = shelf.new Drawer();
         assert drawer.labelByOuter == "Top";
-        console.print($"item={item}, drawer.labelByOuter={drawer.labelByOuter}");
+        // console.print($"item={item}, drawer.labelByOuter={drawer.labelByOuter}");
 
         Box box = new Box();
         assert box.new Inner().kind() == "box";
         Box crate = new Crate();
         assert crate.new Inner().kind() == "crate";
-        console.print($"box={box.new Inner().kind()}, crate={crate.new Inner().kind()}");
+        // console.print($"box={box.new Inner().kind()}, crate={crate.new Inner().kind()}");
     }
 }
