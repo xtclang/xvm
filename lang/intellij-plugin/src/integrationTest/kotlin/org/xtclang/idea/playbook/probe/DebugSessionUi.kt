@@ -531,9 +531,7 @@ object DebugSessionUi {
             val items = JsonArray()
             var inserted = false
             var done = false
-            while (!done) {
-                check(System.nanoTime() < deadline) { "No completion $pick of $text: \"${editor.document.text}\"" }
-                Thread.sleep(100)
+            awaitInProgress({ "No completion $pick of $text" }) {
                 var shown = false
                 boundedEdt(ModalityState.defaultModalityState()) {
                     val lookup = LookupManager.getActiveLookup(editor) as LookupImpl?
@@ -555,6 +553,7 @@ object DebugSessionUi {
                     invoke()
                     invoked = System.nanoTime()
                 }
+                done
             }
             var completed = ""
             boundedEdt(ModalityState.defaultModalityState()) { completed = editor.document.text }
@@ -988,12 +987,8 @@ object DebugSessionUi {
     ) {
         boundedEdt(ModalityState.defaultModalityState()) { call(proxy, "setCurrentStackFrame", stack, frame, top) }
         val handler = checkNotNull(call(proxy, "getDropFrameHandler")) { "No drop-frame handler" }
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
-        while (call(proxy, "getCurrentStackFrame") !== frame || call(handler, "canDropFrame", frame).toString() == "UNSURE") {
-            check(System.nanoTime() < deadline) {
-                "The debugger did not say whether ${SimpleColoredText().also(frame::customizePresentation)} can be reset"
-            }
-            Thread.sleep(100)
+        awaitInProgress({ "The debugger did not say whether ${SimpleColoredText().also(frame::customizePresentation)} can be reset" }) {
+            call(proxy, "getCurrentStackFrame") === frame && call(handler, "canDropFrame", frame).toString() != "UNSURE"
         }
     }
 
@@ -1323,9 +1318,8 @@ object DebugSessionUi {
         parent: XDebuggerTreeNode,
         name: String,
     ): XDebuggerTreeNode {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
-        while (true) {
-            var found: XDebuggerTreeNode? = null
+        var found: XDebuggerTreeNode? = null
+        awaitInProgress({ "No variable $name in the Variables view" }) {
             boundedEdt(ModalityState.defaultModalityState()) {
                 val pending = ArrayDeque(listOf(parent))
                 while (found == null && pending.isNotEmpty()) {
@@ -1339,10 +1333,9 @@ object DebugSessionUi {
                     }
                 }
             }
-            found?.let { return it }
-            check(System.nanoTime() < deadline) { "No variable $name in the Variables view" }
-            Thread.sleep(100)
+            found != null
         }
+        return checkNotNull(found)
     }
 
     /** The ID of LSP4IJ's DAP function breakpoint type (#1780). */
