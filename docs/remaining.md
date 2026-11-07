@@ -71,6 +71,8 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 - [ ] Agree response-time and memory budgets per supported hardware and platform. The current
   receipts define provisional local budgets only.
+  Deferred until #693 lands (decided 2026-11-07): the provisional budgets stay documented targets,
+  not gates, until then.
 - [ ] Prolonged-session acceptance (editing, restart, process leaks) on each supported platform.
 - [ ] Cross-platform and remote acceptance: Windows, Linux, and restricted or remote workspaces.
 - [x] An uninterrupted full-catalog VS Code run: `run-Pc161s` (2026-10-28, `5e6a0f2391`) ran all
