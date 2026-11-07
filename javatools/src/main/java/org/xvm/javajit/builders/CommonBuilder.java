@@ -704,15 +704,19 @@ public class CommonBuilder
      * Compute the size of the property field.
      */
     protected int computePropertySize(PropertyInfo prop) {
-        if (prop.isRefAnnotated()) {
+        if (prop.isJitInflated()) {
             // TODO
             return ShallowSizeOf.fieldOf(Object.class);
         }
         TypeConstant type = prop.getType();
         ClassDesc    cd   = JitTypeDesc.getPrimitiveFieldClass(type);
-        return cd == null
+        int          size = cd == null
             ? ShallowSizeOf.fieldOf(Object.class)
             : ShallowSizeOf.fieldOf(cd);
+        if (prop.requiresJitAssignedBit()) {
+            size++; // assume an extra boolean
+        }
+        return size;
     }
 
     /**
@@ -821,6 +825,9 @@ public class CommonBuilder
             }
 
             assembleField(classBuilder, prop);
+            if (prop.isJitPotentiallyUnassigned()) {
+                assembleAssignedGetter(classBuilder, prop);
+            }
 
             if (initializer != null && extraMethods.add(initializer)) {
                 MethodInfo methodInfo = getPropertyInitializer(initializer);
@@ -896,6 +903,10 @@ public class CommonBuilder
             return;
         }
 
+        if (prop.requiresJitAssignedBit()) {
+            classBuilder.withField(jitName + Assigned, CD_boolean, flags);
+        }
+
         JitTypeDesc jtd = prop.getType().getJitDesc(this);
         switch (jtd.flavor) {
         case Specific, Widened:
@@ -926,6 +937,46 @@ public class CommonBuilder
         default:
             throw new IllegalStateException("Unsupported property flavor: " + jtd.flavor);
         }
+    }
+
+    /**
+     * Assemble a boolean getter reporting storage assignment without evaluating the property getter.
+     */
+    protected void assembleAssignedGetter(ClassBuilder classBuilder, PropertyInfo prop) {
+
+        String    fieldName   = prop.ensureJitName(typeSystem);
+        boolean   hasAssigned = prop.requiresJitAssignedBit();
+
+        classBuilder.withMethodBody(fieldName + AssignedGet, md(CD_boolean, CD_Ctx),
+                ClassFile.ACC_PUBLIC, code -> {
+
+            if (hasAssigned) {
+                code.aload(0)
+                    .getfield(art.CD(), fieldName + Assigned, CD_boolean)
+                    .ireturn();
+            } else {
+                ClassDesc fieldCD = prop.isJitInflated()
+                        ? CD_nRef
+                        : prop.getType().getJitDesc(this).cd;
+                code.aload(0)
+                    .getfield(art.CD(), fieldName, fieldCD);
+
+                if (prop.isJitInflated()) {
+                    code.aload(code.parameterSlot(0))
+                        .invokevirtual(CD_nRef, "assigned$get$p", md(CD_boolean, CD_Ctx))
+                        .ireturn();
+                } else {
+                    // return v != null
+                    Label unassigned = code.newLabel();
+                    code.ifnull(unassigned)
+                        .iconst_1()
+                        .ireturn()
+                        .labelBinding(unassigned)
+                        .iconst_0()
+                        .ireturn();
+                }
+            }
+        });
     }
 
     /**
@@ -1436,6 +1487,13 @@ public class CommonBuilder
 
             if (doneLbl != null) {
                 code.labelBinding(doneLbl);
+            }
+
+            if (prop.requiresJitAssignedBit()) {
+                // prop$assigned = true;
+                code.aload(0)
+                    .iconst_1()
+                    .putfield(CD_this, jitName + Assigned, CD_boolean);
             }
         }
     }
@@ -1978,6 +2036,13 @@ public class CommonBuilder
                         .aload(argSlot)
                         .putfield(CD_this, jitFieldName, pdStd.cd);
                 }
+            }
+
+            if (prop.requiresJitAssignedBit()) {
+                // prop$assigned = true;
+                code.aload(0)
+                    .iconst_1()
+                    .putfield(CD_this, jitFieldName + Assigned, CD_boolean);
             }
             code.return_();
         });

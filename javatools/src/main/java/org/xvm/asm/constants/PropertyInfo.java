@@ -1394,6 +1394,31 @@ public class PropertyInfo
     }
 
     /**
+     * @return true iff this property has storage annotated by {@code Unassigned}, directly or
+     *         through a derived annotation
+     */
+    public boolean isJitPotentiallyUnassigned() {
+        if (hasField()) {
+            TypeConstant typeUnassigned = pool().clzUnassigned().getType();
+            for (Annotation anno : getRefAnnotations()) {
+                if (anno.getAnnotationType().isA(typeUnassigned)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true iff inline primitive storage needs an assignment bit separate from its value
+     */
+    public boolean requiresJitAssignedBit() {
+        // an "@Unassigned T" property with primitive storage needs an "$assigned" bit;
+        // all others use the value of "null" for that
+        return isJitPotentiallyUnassigned() && !isJitInflated() && getType().isJitPrimitive();
+    }
+
+    /**
      * @return the type of the field owner for this property to be used by the JIT compiler to
      *         generate the direct field access
      */

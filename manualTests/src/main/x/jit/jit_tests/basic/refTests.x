@@ -129,6 +129,7 @@ package refTests {
 
     class UnassignedProp() {
         @Unassigned String value;
+        @Unassigned Int128 wide;
 
         void test() {
             Ref<String> ref = &value;
@@ -139,6 +140,15 @@ package refTests {
             assert ref.assigned;
             assert String actual := ref.peek();
             assert actual == value;
+
+            Ref<Int128> wideRef = &wide;
+            assert !wideRef.assigned;
+            assert !wideRef.peek();
+
+            wide = 0;
+            assert wideRef.assigned;
+            assert Int128 actualWide := wideRef.peek();
+            assert actualWide == 0;
         }
     }
 
@@ -146,6 +156,9 @@ package refTests {
         static Boolean c = True;
 
         String r.get() = "RO";
+        String neverRead.get() {
+            throw new IllegalState("assigned invoked property getter");
+        }
         String v = "orig";
         Int n = 1;
         @Watch(v -> watchConsole.print($"-{v}", True)) String msg;
@@ -157,6 +170,8 @@ package refTests {
             assert ref.assigned;
             assert String value := ref.peek();
             assert value == "RO";
+
+            assert &neverRead.assigned;
 
             Var<String> var = &v;
             var.set("updated");

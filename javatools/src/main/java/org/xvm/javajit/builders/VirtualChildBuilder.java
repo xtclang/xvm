@@ -37,6 +37,7 @@ import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
@@ -209,7 +210,16 @@ public class VirtualChildBuilder extends CommonBuilder {
                 continue;
             }
 
-            String         field   = prop.getFieldIdentity().ensureJitPropertyName(builder.typeSystem);
+            String field = prop.getFieldIdentity().ensureJitPropertyName(builder.typeSystem);
+            if (prop.requiresJitAssignedBit()) {
+                consumer.accept(field + Assigned, CD_boolean);
+            }
+
+            if (prop.isJitInflated()) {
+                consumer.accept(field, CD_nRef);
+                continue;
+            }
+
             JitMethodDesc  getter  = prop.getGetterJitDesc(builder, builder.thisType);
             JitParamDesc[] returns = getter.isOptimized
                     ? getter.getAllOptimizedReturns(0)
@@ -442,6 +452,12 @@ public class VirtualChildBuilder extends CommonBuilder {
             normalizePrimitiveField(code, prop.getType());
             addReturn(code, jmd.getReturn(0).cd);
         } else {
+            if (prop.requiresJitAssignedBit()) {
+                // prop$assigned = true;
+                code.aload(0)
+                    .iconst_1();
+                storeField(code, thisType, field + Assigned, CD_boolean);
+            }
             code.return_();
         }
     }
