@@ -31,7 +31,7 @@
  * | textDocument/selectionRange               | step "Expand the selection"                                       |
  * | textDocument/foldingRange                 | step "Folding"                                                    |
  * | textDocument/prepareRename, rename        | step "Rename a method"                                            |
- * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Rename a class"; check "Undo a rename" |
+ * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Undo the rename", "Undone everywhere", "Rename a class" |
  * | textDocument/codeAction, codeAction/resolve | steps "Quick fixes", "Create a method", "Add an import", "Refactorings", "Extracted to a local", "Extract a method"; checks "Undo a quick fix", "Safe delete", "Generate a doc comment" |
  * | source.organizeImports                    | step "Organize imports"                                           |
  * | executeCommandProvider                    | - not advertised to VS Code, which takes code actions as literals |
@@ -1231,7 +1231,7 @@ async function refactoring(tour: Tour): Promise<void> {
     await tour.shot({
         title: 'Renamed everywhere',
         caption: "Enter renames the method and every call of it, here and in FirstMatch.x, SaveEights.x and the test module's PlayerTest.x: "
-            + 'one change of four files, which one Undo takes back in all of them.',
+            + 'one change of four files.',
         feature: 'xtc/rename',
         focus: 'editor',
         settleMs: 3_000,
@@ -1248,27 +1248,53 @@ async function refactoring(tour: Tour): Promise<void> {
             await projectCompiles(tour);
         },
     });
-    await tour.verify('Undo a rename', 'xtc/rename', async () => {
-        await open(player);
-        const renamed = await text(player);
-        await pressUndo(tour);
-        // VS Code takes a rename of several files back in all of them at once, without asking: its UndoRedoService asks
-        // whether to undo such a change in all its files or in this one only, but not for one that is part of an undo
-        // group with others, and _isPartOfUndoGroup finds every bulk edit's, a rename's too, part of one, as it counts
-        // the change itself, on top of another file's stack, as another of its group (VS Code 1.140). The files that
-        // Undo leaves dirty, and that no tab showed, open in tabs then, as VS Code opens every dirty file
-        const question = 'css:.monaco-dialog-box';
-        await tour.until('Ctrl+Z undoes, or asks', async () => await text(player) !== renamed || await tour.ui.showing(question), () => text(player));
-        if (await tour.ui.showing(question)) {
-            const asked = await tour.ui.text(question);
-            await tour.ui.press('Escape');
-            throw new Error(`Undo asked first, which VS Code 1.140 does not for a rename, and the question was canceled: ${asked}`);
-        }
-        const originals = await tour.originals();
-        await tour.until(`One Ctrl+Z takes the rename back in its ${RENAMED.length} files`, async () => (await differing(tour, originals)).length === 0,
-            () => differing(tour, originals));
-        await compiles(tour, player);
-    }, [{ missing: 'no rename to undo', holds: async () => (await text(player)).includes('canFollow(') }]);
+    // VS Code takes a rename of several files back in all of them at once, without asking: its UndoRedoService asks
+    // whether to undo such a change in all its files or in this one only, but not for one that is part of an undo
+    // group with others, and _isPartOfUndoGroup finds every bulk edit's, a rename's too, part of one, as it counts
+    // the change itself, on top of another file's stack, as another of its group (VS Code 1.140). The files that
+    // Undo leaves dirty, and that no tab showed, open in tabs then, as VS Code opens every dirty file
+    const question = 'css:.monaco-dialog-box';
+    const undone = async () => (await differing(tour, await tour.originals())).length === 0;
+    await tour.shot({
+        title: 'Undo the rename',
+        caption: 'One Ctrl+Z takes the rename back in all four files at once, without asking, and leaves them unsaved: '
+            + 'here the call and the declaration are cardMatches again.',
+        feature: 'xtc/rename',
+        focus: 'editor',
+        settleMs: 3_000,
+        act: async () => {
+            await open(player);
+            await pressUndo(tour);
+        },
+        until: async () => await undone() || await tour.ui.showing(question),
+        check: async () => {
+            if (await tour.ui.showing(question)) {
+                const asked = await tour.ui.text(question);
+                await tour.ui.press('Escape');
+                throw new Error(`Undo asked first, which VS Code 1.140 does not for a rename, and the question was canceled: ${asked}`);
+            }
+            const originals = await tour.originals();
+            await tour.until(`One Ctrl+Z takes the rename back in its ${RENAMED.length} files`, async () => (await differing(tour, originals)).length === 0,
+                () => differing(tour, originals));
+            await compiles(tour, player);
+        },
+        needs: [{ missing: 'no rename to undo', holds: async () => (await text(player)).includes('canFollow(') }],
+    });
+    const playerTest = tour.test('PlayerTest.x');
+    await tour.shot({
+        title: 'Undone everywhere',
+        caption: 'The tests in PlayerTest.x call cardMatches again too, as do both strategies, and the project compiles as it did.',
+        feature: 'xtc/rename',
+        focus: 'editor',
+        settleMs: 3_000,
+        act: async () => { await open(playerTest, 'Player.cardMatches(eight, otherCard)', 'Player.'.length); },
+        check: async () => {
+            const source = await text(playerTest);
+            expect(source.includes('Player.cardMatches(') && !source.includes('canFollow'), () => 'PlayerTest.x still calls canFollow');
+            await projectCompiles(tour);
+        },
+        needs: [{ missing: 'no undone rename', holds: undone }],
+    });
     await tour.restore();
     await tour.shot({
         title: 'Rename a class',
