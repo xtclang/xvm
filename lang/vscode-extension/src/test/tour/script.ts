@@ -76,7 +76,7 @@
  * | xtc/languageServiceStatus                 | step "The effective configuration"                                |
  * | xtc/exportLogs                            | step "Export the server's logs"                                   |
  * | xtc/healthCheck                           | check "The server advertises its features"                        |
- * | xtc/runLenses, xtc/runnableTargets        | - IntelliJ's; VS Code takes the Run lens from textDocument/codeLens |
+ * | xtc/runLenses                             | - IntelliJ's; VS Code takes the Run lens from textDocument/codeLens |
  *
  * Debug adapter (XtcDebugServer)
  * | launch, configurationDone, threads, stackTrace, scopes, variables | step "Debug"; check "Restart debugging" |

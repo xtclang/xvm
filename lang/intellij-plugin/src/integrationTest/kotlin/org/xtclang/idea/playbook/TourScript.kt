@@ -100,7 +100,7 @@
  *   xtc/testEvent                                   steps Test results, A failing test
  *   xtc/debugStart, xtc/debugMessage, xtc/debugEnd  step Debug, and every debugging step
  *   xtc/debugTask (to the client)                   step Debug with Gradle; check in command-line mode, Debug runs xtc
- *   xtc/runnableTargets, xtc/healthCheck            VS Code's; its playbook
+ *   xtc/healthCheck                                 VS Code's; its playbook
  *
  * Debug adapter: XtcDebugServer's capabilities and requests
  *   initialize, launch, configurationDone           step Debug
@@ -229,8 +229,7 @@
  *   IntelliJ's only: xtc/runLenses, as VS Code takes its Run lens from textDocument/codeLens; willRenameFiles, which
  *     VS Code's participant replaces by xtc/renameFiles; the Gradle model's import; the IDE's Build window and Project
  *     Errors
- *   Neither: xtc/runnableTargets, which no client calls (each table called it the other's; the plugin only declares
- *     it); didChangeWorkspaceFolders, which both playbooks cover (WorkspaceFolders, --multi-root); the debug adapter's
+ *   Neither: didChangeWorkspaceFolders, which both playbooks cover (WorkspaceFolders, --multi-root); the debug adapter's
  *     cancel, which LSP4IJ never sends and VS Code only for a request it abandons (playbook X314); executeCommand,
  *     advertised to neither, whose code actions are literals
  */
