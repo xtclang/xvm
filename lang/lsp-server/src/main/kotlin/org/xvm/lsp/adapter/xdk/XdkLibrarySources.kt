@@ -1,8 +1,10 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
+import org.xvm.asm.Component
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.MethodStructure
+import org.xvm.asm.PropertyStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
@@ -77,6 +79,9 @@ internal object XdkLibrarySources {
     ) {
         // Evaluated only on the compiler worker. The cached value contains copied ranges/IDs only.
         val monikers by lazy { declarationMonikers(this) }
+
+        // as monikers, with copied text only
+        val hovers by lazy { declarationHovers(this) }
     }
 
     private fun source(uri: String): SourceFile? {
@@ -90,7 +95,8 @@ internal object XdkLibrarySources {
 
     /**
      * True when [uri] is one of the read-only copies, as navigation or a debugger's stack frame opens them: a library's
-     * own source, which belongs to no project, so its compile on its own reports errors that are not its own.
+     * own source, which belongs to no project, so its compile on its own reports errors that are not its own. [owns] is true
+     * of each copy too.
      */
     fun isCopy(uri: String): Boolean {
         if (copies.isEmpty()) return false
@@ -117,9 +123,49 @@ internal object XdkLibrarySources {
             .orEmpty()
     }
 
+    /**
+     * What hover shows of the artifact declaration whose name is at this source position, from the library's binary, as
+     * [monikers] finds it: its declaration, and its doc comment. Null when there is not exactly one.
+     */
+    fun hover(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): String? = declared(uri, line, column)?.value
+
+    /** The name of the artifact declaration at this source position, as [hover] finds it. */
+    fun definition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SemanticModel.Range? = declared(uri, line, column)?.key
+
+    private fun declared(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Map.Entry<SemanticModel.Range, String>? {
+        if (line < 0 || column < 0) return null
+        val at = SemanticModel.Position(line, column)
+        return source(uri)?.hovers?.entries?.singleOrNull { at in it.key }
+    }
+
     private fun declarationMonikers(source: SourceFile): Map<SemanticModel.Range, SymbolMoniker> {
-        val module = XdkLibraries.module(source.module) ?: return emptyMap()
         val symbols = XdkLibraries.symbolIndex(source.module) ?: return emptyMap()
+        return declarations(source) { identity, _, _ -> symbols.moniker(identity.position, imported = false) }
+    }
+
+    private fun declarationHovers(source: SourceFile): Map<SemanticModel.Range, String> =
+        declarations(source) { _, component, target ->
+            label(component)?.let { "```xtc\n$it\n```" + target.documentation?.let { doc -> "\n\n$doc" }.orEmpty() }
+        }
+
+    /** [value] of each artifact declaration in [source], by its name's range, where exactly one is declared. */
+    private fun <T : Any> declarations(
+        source: SourceFile,
+        value: (IdentityConstant, Component, DependencyDeclaration) -> T?,
+    ): Map<SemanticModel.Range, T> {
+        val module = XdkLibraries.module(source.module) ?: return emptyMap()
         return ConstantPool.withPool(module.constantPool).use {
             module.constantPool.constants
                 .asSequence()
@@ -132,8 +178,8 @@ internal object XdkLibrarySources {
                     val owner = component as? ClassStructure ?: component.getContainingClass(false)
                     if (owner?.sourcePath?.value != source.path) return@mapNotNull null
                     val target = declaration(identity) ?: return@mapNotNull null
-                    val moniker = symbols.moniker(identity.position, imported = false) ?: return@mapNotNull null
-                    target.location.range to moniker
+                    val found = value(identity, component, target) ?: return@mapNotNull null
+                    target.location.range to found
                 }.groupBy({ it.first }, { it.second })
                 .mapNotNull { (range, candidates) -> candidates.distinct().singleOrNull()?.let { range to it } }
                 .toList()
@@ -141,11 +187,33 @@ internal object XdkLibrarySources {
         }
     }
 
+    /** A declaration as hover names it: a type by what it is, a property by its type, a method by its signature. */
+    private fun label(component: Component): String? =
+        when (component) {
+            is ClassStructure -> "${component.format.name.lowercase()} ${component.name}"
+
+            is PropertyStructure -> "${component.type.valueString} ${component.name}"
+
+            is MethodStructure -> {
+                val conditional = component.isConditionalReturn
+                val returns =
+                    component.identityConstant.signature.rawReturns
+                        .drop(if (conditional) 1 else 0)
+                        .map { it.valueString }
+                val result = returns.singleOrNull() ?: if (returns.isEmpty()) "void" else returns.joinToString(prefix = "(", postfix = ")")
+                val parameters = component.paramArray.drop(component.typeParamCount).joinToString { "${it.type.valueString} ${it.name}" }
+                "${if (conditional) "conditional " else ""}$result ${component.name}($parameters)"
+            }
+
+            else -> null
+        }
+
     fun sourceUri(name: String?): String? = name?.takeIf(::owns)
 
     /**
      * The read-only file with the bundled source of [path] in the library [module], which navigation opens too, or null
-     * when [module] is not a bundled library or has no such source.
+     * when [module] is not a bundled library or has no such source. It is parsed as navigation's is, so [owns] is true of
+     * it: a library document, where hover and Go to Definition answer from the library, and which nothing edits.
      */
     fun file(
         module: String,
@@ -153,6 +221,7 @@ internal object XdkLibrarySources {
     ): String? {
         if (module !in XdkLibraries.moduleNames) return null
         val entry = entries[path] ?: return null
+        sources.computeIfAbsent(path) { parse(module, path, entry) }
         return copy(path, entry).toString()
     }
 
