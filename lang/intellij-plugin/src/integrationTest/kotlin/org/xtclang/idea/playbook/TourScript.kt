@@ -656,7 +656,12 @@ private fun Tour.navigation() {
         until = { "reshuffle" in popupText() },
         check = { popupText().let { expect("reshuffle" in it) { "The symbols: ${it.take(300)}" } } },
         settle = 3.seconds,
-        after = { key("ESCAPE") },
+        // the key reaches the popup through the window system, later: in tour run 12813917966189450822 the check's Go
+        //  to symbol came first, while this popup still showed, and opened none
+        after = {
+            key("ESCAPE")
+            within(HANG) { !showing("popup") }
+        },
     ) {
         action("GotoSymbol")
         // its search field takes the name once it has the focus
@@ -667,6 +672,7 @@ private fun Tour.navigation() {
         within(HANG) { runCatching { fill("getOrDefault") }.isSuccess }
         expect(within(HANG) { "getOrDefault" in popupText() && "Map" in popupText() }) { "The symbols: ${popupText().take(400)}" }
         key("ESCAPE")
+        within(HANG) { !showing("popup") }
     }
     shot(
         "The XDK's sources",
