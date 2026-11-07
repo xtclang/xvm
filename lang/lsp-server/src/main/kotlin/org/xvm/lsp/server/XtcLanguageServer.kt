@@ -73,7 +73,6 @@ import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkModuleTests
-import org.xvm.lsp.adapter.xdk.XdkRunnableTarget
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
@@ -1315,13 +1314,6 @@ class XtcLanguageServer internal constructor(
     fun runLenses(params: TextDocumentIdentifier): CompletableFuture<List<RunLens>> =
         supplyAsync("xtc/runLenses", params.uri, { "${it.size} lenses" }) {
             (adapter as? XdkAdapter)?.runLensLines(params.uri).orEmpty().map { (module, line) -> RunLens(module, line) }
-        }
-
-    /** Source modules whose latest compilation declares a callable entry point. */
-    @JsonRequest("xtc/runnableTargets")
-    fun runnableTargets(): CompletableFuture<List<XdkRunnableTarget>> =
-        supplyAsync("xtc/runnableTargets", "entry points") {
-            (adapter as? XdkAdapter)?.runnableTargets().orEmpty()
         }
 
     /**
