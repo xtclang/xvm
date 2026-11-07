@@ -3853,10 +3853,7 @@ public abstract class TypeConstant
                     if (infoPrev != null) {
                         ChildInfo infoNew = infoPrev.layerOn(infoChild);
                         if (infoNew == null) {
-                            // the "Inner" of the implicit "Outer" interface (see buildProcessList)
-                            // is not a super virtual child (ClassStructure.resolveVirtualSuper does
-                            // not see it), so a class's own child of that name covers it instead
-                            // of colliding with it
+                            // a class's own Inner covers the implicit Outer.Inner, which is no super virtual child
                             IdentityConstant idInner = pool.clzInner();
                             if (infoPrev.getIdentity().equals(idInner)) {
                                 infoNew = infoChild;
