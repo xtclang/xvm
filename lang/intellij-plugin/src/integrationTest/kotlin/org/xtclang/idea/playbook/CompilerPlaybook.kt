@@ -26,6 +26,8 @@ import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import kotlin.time.TimeSource
 
 /** Selects the harness workload, including feature checks and focused lifecycle or responsiveness runs. */
@@ -1374,6 +1376,7 @@ class CompilerPlaybook(
         check(completed.none { it.id == id }) { "Duplicate native case $id" }
         val start = TimeSource.Monotonic.markNow()
         println("IntelliJ playbook $id: $description")
+        playbookLine("$id $description: starts")
         if (id != "START" && id != "START_REOPEN") progress(id, "running", description)
         try {
             action()
@@ -1383,6 +1386,8 @@ class CompilerPlaybook(
             completed +=
                 Result(id, description, "passed", start.elapsedNow().inWholeMilliseconds)
                     .also(onResult)
+            val outcome = if (shared.scenarios[id]?.intellij?.coverage == "partial") "partial" else "passed"
+            playbookLine("$id $description: $outcome")
             progress(id, "passed", description)
         } catch (failure: Throwable) {
             val unsafeToContinue = failure.mustStopPlaybook()
@@ -1405,6 +1410,8 @@ class CompilerPlaybook(
                     start.elapsedNow().inWholeMilliseconds,
                     failure.stackTraceToString(),
                 ).also(onResult)
+            val reason = failure.message?.lineSequence()?.firstOrNull { it.isNotBlank() } ?: failure.javaClass.simpleName
+            playbookLine("$id $description: failed — ${reason.trim().take(120)}")
             if (!unsafeToContinue) runCatching { progress(id, "failed", description) }.onFailure(failure::addSuppressed)
             if (
                 !continueAfterFailure ||
@@ -1415,6 +1422,9 @@ class CompilerPlaybook(
             }
         }
     }
+
+    /** A line of the run's progress in the build's output, in the format the VS Code playbook prints. */
+    private fun playbookLine(line: String) = println("[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} $line")
 
     private fun Driver.progress(
         id: String,
