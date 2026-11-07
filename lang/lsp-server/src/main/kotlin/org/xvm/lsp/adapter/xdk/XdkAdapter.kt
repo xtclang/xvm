@@ -369,9 +369,8 @@ class XdkAdapter
 
         /**
          * Whether [uri] is a library document that is not compiled. A library source's read-only copy is compiled on
-         * its own, which gives its outline, whether or not navigation has parsed it yet (and owns it): a compile that
-         * names one of its declarations parses it, so which one it is depends on what was compiled before. None of a
-         * copy's diagnostics are reported.
+         * its own, which gives its outline, whether navigation, a compile that names one of its declarations or a stack
+         * frame wrote it. None of a copy's diagnostics are reported.
          */
         private fun isUncompiledLibraryDocument(uri: String): Boolean = isLibraryDocument(uri) && !XdkLibrarySources.isCopy(uri)
 
@@ -388,18 +387,18 @@ class XdkAdapter
             }
 
         /** Library queries share compiler serialization, cancellation, tracing and shutdown. */
-        private fun libraryMonikers(
+        private fun <T> libraryQuery(
+            name: String,
             uri: String,
-            line: Int,
-            column: Int,
-        ): CompletableFuture<List<SymbolMoniker>> =
+            query: () -> T,
+        ): CompletableFuture<T> =
             synchronized(lifecycle) {
                 if (closed) return closedAdapter()
-                val result = CompletableFuture<List<SymbolMoniker>>()
+                val result = CompletableFuture<T>()
                 val task =
-                    queueTrace.task("library-monikers", uri, result) {
+                    queueTrace.task(name, uri, result) {
                         try {
-                            if (!result.isDone) result.complete(XdkLibrarySources.monikers(uri, line, column))
+                            if (!result.isDone) result.complete(query())
                         } catch (failure: Exception) {
                             result.completeExceptionally(failure)
                         } catch (failure: Error) {
@@ -1951,6 +1950,10 @@ class XdkAdapter
         ): String? {
             val model = analysis(uri)?.semantics
             val hover = model?.let { XdkPresentation.hover(it, line, column) }
+            // a library source's compile on its own may resolve nothing; its library's binary declares what is there
+            if (hover == null && isLibraryDocument(uri)) {
+                return libraryQuery("library-hover", uri) { XdkLibrarySources.hover(uri, line, column) }.join()
+            }
             if (hover == null && model?.status != SemanticModel.Status.COMPLETE) {
                 val partial = analyzeAtAsync(uri, Position(line, column + 1)).join()
                 val site = partial?.sites?.singleOrNull()
@@ -2276,9 +2279,18 @@ class XdkAdapter
             if (module(uri) == null && hasProject(uri)) {
                 return workspaceNavigation(uri)?.definition(uri, line, column)
             }
-            val module = module(uri) ?: return null
-            val declaration =
-                module.document(uri)?.semantics?.definitionLocationAt(line, column) ?: return null
+            val module = module(uri)
+            val declaration = module?.document(uri)?.semantics?.definitionLocationAt(line, column)
+            if (declaration == null) {
+                // as hover, from the library's binary
+                return if (isLibraryDocument(uri)) {
+                    libraryQuery("library-definition", uri) { XdkLibrarySources.definition(uri, line, column) }
+                        .join()
+                        ?.let { locationOf(uri, it.toRange()) }
+                } else {
+                    null
+                }
+            }
             return module.sourceUri(declaration.sourceName)?.let {
                 locationOf(it, declaration.range.toRange())
             }
@@ -2319,7 +2331,7 @@ class XdkAdapter
             line: Int,
             column: Int,
         ): CompletableFuture<List<SymbolMoniker>> {
-            if (isLibraryDocument(uri)) return libraryMonikers(uri, line, column)
+            if (isLibraryDocument(uri)) return libraryQuery("library-monikers", uri) { XdkLibrarySources.monikers(uri, line, column) }
             val current = module(uri)
             if (current == null && hasProject(uri)) {
                 return projectQuery(ProjectQueryKey(uri, ProjectQueryKind.MONIKERS), emptyList()) {
