@@ -1248,7 +1248,7 @@ and VS Code render them automatically from the LSP server response — no plugin
 
 ### 18a. Embedded build and run
 
-**Requests:** `xtc/build`, `xtc/run`, `xtc/runInput`, `xtc/stopRun`, `xtc/runnableTargets`, `xtc/runLenses`,
+**Requests:** `xtc/build`, `xtc/run`, `xtc/runInput`, `xtc/stopRun`, `xtc/runLenses`,
 `xtc/tests`, `xtc/debugStart`, and to the client `xtc/debugTask`; notifications `xtc/runOutput`, `xtc/runExited`,
 `xtc/testEvent`, `xtc/debugMessage` (both ways), `xtc/debugEnd`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors

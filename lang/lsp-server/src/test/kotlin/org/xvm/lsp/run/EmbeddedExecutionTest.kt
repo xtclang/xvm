@@ -2495,7 +2495,6 @@ class EmbeddedExecutionTest {
             assertThat(adapter.compile(app, appText).success).isTrue()
             assertThat(adapter.compile(utility, utilityText).success).isTrue()
 
-            assertThat(adapter.runnableTargets().map { it.module }).containsExactly("App")
             assertThat(adapter.getCodeLensesAsync(app, false).awaited().mapNotNull { it.command?.command })
                 .contains("xtc.runModule")
             assertThat(adapter.getCodeLensesAsync(library, false).awaited().mapNotNull { it.command?.command })
@@ -2566,7 +2565,6 @@ class EmbeddedExecutionTest {
             assertThat(adapter.compile(annotated, annotatedText).success).isTrue()
 
             // the module declares no run method; its annotation does, and the module declaring the annotation is no program
-            assertThat(adapter.runnableTargets().map { it.module }).containsExactly("Annotated")
             assertThat(adapter.getCodeLensesAsync(annotated, false).awaited().mapNotNull { it.command?.command })
                 .contains("xtc.runModule")
             // on the class's worker, which is already started; closing these runs would close it
