@@ -53,9 +53,6 @@ interface XtcLanguageServer : LanguageServer {
     @JsonRequest("xtc/runLenses")
     fun runLenses(params: TextDocumentIdentifier): CompletableFuture<List<RunLens>>
 
-    @JsonRequest("xtc/runnableTargets")
-    fun runnableTargets(): CompletableFuture<List<RunnableTarget>>
-
     /** The xunit tests of each source module, from its latest analysis, as a tree under the module. */
     @JsonRequest("xtc/tests")
     fun tests(): CompletableFuture<List<ModuleTests>>
@@ -259,13 +256,6 @@ data class RunExitedParams(
 data class RunLens(
     val module: String = "",
     val line: Int = 0,
-)
-
-/** A source module whose latest compilation declares a callable entry point. */
-data class RunnableTarget(
-    val module: String = "",
-    val uri: String = "",
-    val method: String = "run",
 )
 
 /** Server rename edit paired with any source-graph change that must be applied in the same transaction. */

@@ -156,10 +156,3 @@ data class XdkModuleTests(
     val uri: String,
     val tests: XdkTest,
 )
-
-/** A source module with an entry method the runner can call, proven from its compiled artifact. */
-data class XdkRunnableTarget(
-    val module: String,
-    val uri: String,
-    val method: String,
-)
