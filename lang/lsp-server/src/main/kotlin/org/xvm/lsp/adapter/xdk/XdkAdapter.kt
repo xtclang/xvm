@@ -526,8 +526,39 @@ class XdkAdapter
                         .toList(),
                 )
             if (order.isEmpty()) return XdkBuild.write(emptyList(), binaries, folder)
-            val compile =
-                Request(scope, scope, snapshot, inputs, graph, null, queueTrace, {}, buildCancelled = { closed || result.isCancelled })
+            val cancelled = { closed || result.isCancelled }
+            // a compile ends cancelled when its modules' files change on disk while it runs: an editor's compile runs
+            // again on the change's file event, but nothing runs a build again, so it compiles again itself, from the
+            // files as they are then, as when the editor saves a file just as the build for a run starts
+            repeat(MAX_BUILD_ATTEMPTS) { attempt ->
+                val built = compileBuild(scope, order, snapshot, inputs, graph, binaries, folder, rebuild, cancelled)
+                if (built != null || cancelled()) return built ?: XdkBuild.cancelled(folder)
+                logger.info(
+                    "embedded build: scope={} inputs changed while compiling, attempt {} of {}",
+                    scope,
+                    attempt + 1,
+                    MAX_BUILD_ATTEMPTS,
+                )
+            }
+            return XdkBuild.cancelled(folder)
+        }
+
+        /**
+         * One compile of a build's [order], as [build] describes; null when it ended cancelled, by [cancelled] or by a
+         * change of its modules' files on disk while it compiled.
+         */
+        private fun compileBuild(
+            scope: String,
+            order: List<XdkSourceModule>,
+            snapshot: Map<String, String>,
+            inputs: XdkDependencies,
+            graph: XdkProject,
+            binaries: XdkDependencies,
+            folder: File,
+            rebuild: Boolean,
+            cancelled: () -> Boolean,
+        ): XdkBuildResult? {
+            val compile = Request(scope, scope, snapshot, inputs, graph, null, queueTrace, {}, buildCancelled = cancelled)
             return try {
                 val (_, modules) =
                     compileClosure(compile, order, { !rebuild }) { module, analysis, reused, sources ->
@@ -550,7 +581,7 @@ class XdkAdapter
                     }
                 XdkBuild.write(modules, binaries, folder)
             } catch (_: CancellationException) {
-                XdkBuild.cancelled(folder)
+                null
             }
         }
 
@@ -3060,6 +3091,9 @@ class XdkAdapter
 
             /** A file event's update is read again when a background walk installs first; it rarely needs a second try. */
             const val MAX_EVENT_ATTEMPTS = 3
+
+            /** A build compiles again when its files change on disk as it compiles; only a file that keeps changing needs a third. */
+            const val MAX_BUILD_ATTEMPTS = 3
 
             /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
             fun cursorPosition(
