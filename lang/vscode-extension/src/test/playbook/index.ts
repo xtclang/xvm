@@ -23,6 +23,11 @@ async function hostResults() {
     }));
 }
 
+/** A line of the run's progress in the build's output, in the format the IntelliJ playbook prints. */
+function progress(line: string): void {
+    console.log(`[playbook] ${new Date().toTimeString().slice(0, 8)} ${line}`);
+}
+
 export async function run(): Promise<void> {
     const directory = process.env.XTC_PLAYBOOK_REPORT_DIR;
     assert.ok(directory, 'Launch with npm run test:playbook or the Gradle playbook task');
@@ -36,14 +41,18 @@ export async function run(): Promise<void> {
         const runner = mocha.run(resolve);
         stopOnUnsafeFailure(runner);
         showTestProgress(runner, 'Ecstasy playbook', test => test.title);
+        runner.on('test', test => progress(`${test.title.replace(':', '')}: starts`));
         runner.on('pass', test => {
+            progress(`${test.title.replace(':', '')}: passed`);
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'passed', durationMs: test.duration });
         });
         runner.on('fail', (test, error) => {
+            progress(`${test.title.replace(':', '')}: failed — ${(error.message ?? '').split('\n').find((line: string) => line.trim())?.trim().slice(0, 120) ?? error.name}`);
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'failed', error: error.stack });
             console.error(`${test.title}\n${error.stack}`);
         });
         runner.on('pending', test => {
+            progress(`${test.title.replace(':', '')}: not-run`);
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'not-run' });
         });
     });
