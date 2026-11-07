@@ -401,8 +401,10 @@ object TourUi {
             .orEmpty()
 
     /**
-     * Whether LSP4IJ has connected the file at [path] to the started Ecstasy language server, as it does with each open
-     * file once a server is up; a request for a file it has not connected yet goes to no server.
+     * Whether LSP4IJ has opened the file at [path] at the started Ecstasy language server, as it does with each open
+     * file once a server is up; a request for a file it has not opened there yet goes to no server. LSP4IJ connects
+     * the file, as the wrapper's isConnectedTo answers, before it sends didOpen: after a restart, File Structure asked
+     * in between showed what LSP4IJ kept of the server before.
      */
     @JvmStatic
     fun serverHasFile(path: String): Boolean =
@@ -410,7 +412,10 @@ object TourUi {
             .getInstance(project())
             .startedServers
             .firstOrNull { it.serverDefinition.id == SERVER_ID && it.serverStatus == ServerStatus.started }
-            ?.isConnectedTo(Path.of(path).toUri()) == true
+            ?.getOpenedDocument(Path.of(path).toUri())
+            ?.synchronizer
+            ?.didOpenFuture
+            ?.let { it.isDone && !it.isCompletedExceptionally } == true
 
     /** Opens the file at [path] in an editor, with the caret at the start of its [line] (zero-based), and focuses it. */
     @JvmStatic
