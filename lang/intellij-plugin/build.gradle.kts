@@ -1030,6 +1030,7 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
                 .get()
                 .asFile.absolutePath,
         )
-        testLogging.events("passed", "skipped", "failed")
+        // the tour's and playbook's progress lines as they come, so a container log shows how far a run is
+        testLogging.events("passed", "skipped", "failed", "standard_out")
     }
 }
