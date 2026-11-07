@@ -2762,9 +2762,12 @@ private fun Tour.settings() {
         try {
             expect(within(HANG) { serverState().let { it.startsWith("started") && it != before } }) { "The server: ${serverState()}" }
             // the tree-sitter adapter has the syntax's features: the file's structure among them, once LSP4IJ has
-            //  connected the file to the new server: File Structure asks the server as it opens, and shows the file
-            //  alone without its answer: run-tour-10558846463380451308 opened it a second before the file connected
-            expect(within(HANG) { serverHasFile(source("Eights.x")) }) { "Eights.x is not connected to the server ${serverState()}" }
+            //  opened the file at the new server: File Structure asks the server as it opens, and shows the file
+            //  alone without its answer: run-tour-10558846463380451308 opened it a second before the file connected.
+            //  Connected is not yet opened: run-tour-7286541464185912361 pressed Ctrl+F12 at 14:26:44.179, the didOpen
+            //  came at 44.695, and the structure was the empty answer of the server before, which refused it as it
+            //  stopped; the green run before it showed that server's symbols, never tree-sitter's
+            expect(within(HANG) { serverHasFile(source("Eights.x")) }) { "Eights.x is not open at the server ${serverState()}" }
             open(source("Eights.x"), 0)
             action("FileStructurePopup")
             expect(within(HANG) { "reshuffle" in popupText() }) { "The structure with tree-sitter: ${popupText().take(300)}" }
