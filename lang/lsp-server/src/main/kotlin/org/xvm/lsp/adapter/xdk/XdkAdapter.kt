@@ -563,12 +563,6 @@ class XdkAdapter
             synchronized(lifecycle) { overlays.entries.firstOrNull { XdkSources.file(it.key) == file }?.value }
                 ?: runCatching { file.readText() }.getOrNull()
 
-        /** Source modules whose latest compilation declares a callable entry point. */
-        fun runnableTargets(): List<XdkRunnableTarget> =
-            project.buildOrder().flatMap { module ->
-                entryMethods(module.uri).map { XdkRunnableTarget(module.name, module.uri, it) }
-            }
-
         /**
          * The tests of each source module, from its latest compilation: its own while an editor has one of its files
          * open, which follows the editor's text, or else the workspace pull's, as last made, which follows its files;
